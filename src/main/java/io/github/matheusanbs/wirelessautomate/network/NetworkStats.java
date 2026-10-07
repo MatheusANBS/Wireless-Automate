@@ -10,6 +10,8 @@ import java.util.UUID;
  * @param averageNanos tempo médio por tick gasto movendo recursos da rede (média móvel)
  * @param lastNanos tempo do último tick
  * @param opsLastSecond entregas que moveram algo no último segundo completo
+ * @param destinationsFull destinos dormindo depois de recusas seguidas (cheios, ver {@link NodeProbe}),
+ *     contados entre os que dormem
  */
 public record NetworkStats(
         UUID id,
@@ -20,5 +22,6 @@ public record NetworkStats(
         int sourcesAwake,
         int sourcesSleeping,
         int destinationsAwake,
-        int destinationsSleeping) {
+        int destinationsSleeping,
+        int destinationsFull) {
 }

@@ -252,6 +252,52 @@ public final class TabletGameTests {
         }
     }
 
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void forcedRebuildsAreLimitedPerPlayer(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        TabletMenu menu = openTablet(player, 78);
+        // Pedidos seguidos no mesmo tick: só as fichas do jogador remontam na hora.
+        int requests = TabletMenu.FORCED_PER_SECOND * 2;
+        int built = 0;
+        for (int i = 0; i < requests; i++) {
+            menu.setQuery(new Query("limite-" + i, RoleFilter.ALL, 0));
+            menu.pollSnapshot();
+            if (menu.snapshot().query().search().equals("limite-" + i)) {
+                built++;
+            }
+        }
+        helper.assertTrue(built > 0 && built <= TabletMenu.FORCED_PER_SECOND, "remontagens forçadas: " + built);
+        helper.assertTrue(menu.pollSnapshot() == null, "remontou sem ficha");
+
+        // Fechar e abrir de novo não devolve as fichas.
+        TabletMenu again = openTablet(player, 79);
+        again.setQuery(new Query("reaberto", RoleFilter.ALL, 0));
+        again.pollSnapshot();
+        helper.assertFalse(again.snapshot().query().search().equals("reaberto"), "reabrir zerou o limite");
+
+        helper.startSequence()
+                // o pedido não se perde: é atendido quando a ficha volta
+                .thenWaitUntil(() -> {
+                    again.pollSnapshot();
+                    helper.assertTrue(again.snapshot().query().search().equals("reaberto"), "pedido perdido");
+                })
+                .thenExecute(() -> {
+                    // cabeçalho e página vão à parte; o cliente junta os dois
+                    TabletSnapshot server = again.snapshot();
+                    RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
+                            helper.getLevel().registryAccess());
+                    TabletSnapshot.HEADER_CODEC.encode(buf, server);
+                    TabletSnapshot.Page.STREAM_CODEC.encode(buf, server.page());
+                    TabletMenu client = new TabletMenu(80, player.getInventory(), TabletSnapshot.HEADER_CODEC.decode(buf));
+                    helper.assertTrue(client.snapshot().nodes().isEmpty(), "cabeçalho trouxe nós");
+                    client.applyPage(TabletSnapshot.Page.STREAM_CODEC.decode(buf));
+                    client.applyHeader(server);
+                    helper.assertTrue(client.snapshot().equals(server), "cliente diferente do servidor");
+                    close(player);
+                    helper.succeed();
+                });
+    }
+
     // ------------------------------------------------------------------ mover nós
 
     @GameTest(template = "empty")

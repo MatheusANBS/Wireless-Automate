@@ -187,6 +187,7 @@ public final class NetworkManager {
             }
             int sourcesSleeping = 0;
             int destinationsSleeping = 0;
+            int destinationsFull = 0;
             for (Port port : network.sources) {
                 if (port.sourceBackoff.isSleeping(now)) {
                     sourcesSleeping++;
@@ -195,12 +196,15 @@ public final class NetworkManager {
             for (Port port : network.destinations) {
                 if (port.destinationBackoff.isSleeping(now)) {
                     destinationsSleeping++;
+                    if (NodeProbe.isFull(port, now)) {
+                        destinationsFull++;
+                    }
                 }
             }
             result.add(new NetworkStats(network.id, network.members.size(), network.averageNanos,
                     network.lastNanos, network.opsLastSecond,
                     network.sources.size() - sourcesSleeping, sourcesSleeping,
-                    network.destinations.size() - destinationsSleeping, destinationsSleeping));
+                    network.destinations.size() - destinationsSleeping, destinationsSleeping, destinationsFull));
         }
         return result;
     }

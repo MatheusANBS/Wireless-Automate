@@ -6,6 +6,8 @@ Mede o custo do motor nos cenários do "Plano de benchmark" da [especificação]
 
 Rodada base de 7 de outubro de 2026 (motor `48c7232`, seção "Resultados") e, no mesmo dia, as correções do motor medidas antes e depois (seção "Correções aplicadas: antes e depois").
 
+A rodada completa na máquina local (seção "Máquina local: antes e depois") confirmou as correções: remontagem de 3,3–4,0 ms para 0,29–0,56 ms, todas as origens movendo no "bigfull", 68,7 mil itens/s na vazão bruta vanilla e 66,5 mil no Sophisticated Storage, e picos do mod menores.
+
 - **A remontagem das rotas caiu de 7,4–8,6 ms para 0,5–1,0 ms** com 500 nós, e o pico do mod no cenário "rebuild" de 14 ms para 1,5 ms (p99 de 8,6 para 1,07 ms). O que sobra é código frio: a remontagem roda poucas vezes e o JIT não chega a compilá-la.
 - **Justiça entre origens resolvida:** no "bigfull" vanilla, 100% das origens movem (antes, de 50% a 60%).
 - **Ultimate e Elite sem o teto de 40.960 itens/s por face:** a vazão bruta vanilla foi para 68.651 itens/s, limitada pelo orçamento. No Sophisticated Storage uma visita de 32 entregas já custa 0,5 ms, então o Ultimate continua em 40.960/s ali.
@@ -146,31 +148,58 @@ Variação entre repetições: as médias do mod variam 1% a 4% (desvio padrão 
 - **Vazão bruta.** O Ultimate vanilla passou a ser limitado pelo orçamento (cerca de 1,7 visitas de 32 pilhas por tick, 68,7 mil itens/s). No Sophisticated Storage, uma visita leva cerca de 0,49 ms, então a volta extra não cabe e a vazão continua em 40.960/s, sem passar do teto.
 - **Justiça.** No "bigfull" vanilla as 10 origens passaram a mover; nos outros cenários já moviam todas.
 
-## A medir na máquina local
+## Máquina local: antes e depois (7 de outubro de 2026)
 
-O benchmark completo não coube no tempo do ambiente da nuvem (cada tarefa de 3 repetições leva cerca de 1 minuto, e a máquina era dividida). Os números acima são de uma máquina de 4 CPUs sem outra carga, mas vale repetir numa máquina local parada, antes e depois:
+Rodada completa numa máquina local parada, um servidor de cada vez (uma primeira tentativa foi descartada porque outro servidor rodou junto). Relatórios brutos, fora do git: `run/bench/reports/20261007-100308.md` (depois), `20261007-101823.md` (remontagem aquecida) e `20261007-102759-antes.md` (copiado do checkout do antes).
+
+- **Máquina:** Intel Core i7-14650HX (16 núcleos, 24 threads), 32 GB de RAM, Windows 11 Pro, Java Temurin 21.0.12, heap de 2 GB. O servidor vazio fica em 0,57 ms de MSPT (p99 1,15 ms).
+- **Antes:** `712a246` (só os contadores, sobre `e4b4056`). **Depois:** `f0f3914` (`main`, com as seis correções).
+- **Comandos:** os da lista abaixo, pelo Git Bash, com o `JAVA_HOME` apontando para o JDK 21 (o padrão da máquina é o 17). O `scripts/bench.sh` rodou sem mudanças; cada rodada completa leva cerca de 16 minutos.
 
 ```bash
-# depois (HEAD do branch, com as seis correções)
 ./scripts/bench.sh "many:500:3,many:500:3:soph,idle:500:3,full:500:3,rebuild:500:3,big:20:3,big:20:3:soph,bigfull:20:3,bigfull:20:3:soph,raw:2:3,raw:2:3:soph,types:20:3:soph,mixed:498:3"
-# antes: o mesmo comando num checkout de e4b4056 com só os contadores (commit 712a246 do branch do motor)
-# remontagem aquecida (100 remontagens por repetição, para ver o custo com o JIT já compilado):
-WA_BENCH_MEASURE=2000 ./scripts/bench.sh "rebuild:500:3"
+WA_BENCH_MEASURE=2000 ./scripts/bench.sh "rebuild:500:3"   # remontagem aquecida, só no depois
 ```
 
-O que comparar com a rodada base:
+Médias de 3 repetições. Mod em ms/tick (média, p99 e máximo); orçamento de 0,5 ms.
 
-- "rebuild": a coluna de remontagens (`ms cada`) deve ficar abaixo de 1 ms, contra 7–8,5 ms; o mod máx e o p99 devem ficar perto dos do "many".
-- "bigfull" vanilla: origens que moveram em 100%.
-- "raw" vanilla: unidades/s acima de 40.960 (aqui, cerca de 68.600) com o mod abaixo de 0,5 ms em média.
-- "idle" e "full": mod perto de 0 e p99 menor que o da base.
-- "many" e "mixed": mod média perto de 0,5 ms e as mesmas vazões; se o MSPT com rede subir mais que 1 ms, olhar o µs/visita.
+| Cenário | Mod média antes → depois | Mod p99 antes → depois | Mod máx antes → depois | Unidades/s antes → depois | Origens que moveram |
+|---|---|---|---|---|---|
+| many, vanilla, 500 | 0,534 → 0,515 | 0,632 → 0,575 | 2,23 → 1,53 | 124.398 → 129.337 | 100% → 100% |
+| many, Sophisticated, 500 | 0,571 → 0,533 | 0,886 → 0,716 | 3,56 → 0,88 | 65.007 → 94.276 | 100% → 100% |
+| idle, vanilla, 500 | 0,0122 → 0,0098 | 0,175 → 0,044 | 0,28 → 0,11 | 0 → 0 | — |
+| full, vanilla, 500 | 0,0114 → 0,0125 | 0,165 → 0,145 | 0,35 → 0,30 | 0 → 0 | — |
+| rebuild, vanilla, 500 | 0,681 → 0,508 | 3,898 → 0,586 | 5,47 → 0,69 | 126.091 → 127.755 | 100% → 100% |
+| big, vanilla, 20 | 0,063 → 0,067 | 0,157 → 0,162 | 0,17 → 0,21 | 5.120 → 5.120 | 100% → 100% |
+| big, Sophisticated, 20 | 0,348 → 0,345 | 0,535 → 0,553 | 1,27 → 0,64 | 5.117 → 5.128 | 100% → 100% |
+| bigfull, vanilla, 20 | 0,020 → 0,016 | 0,161 → 0,151 | 0,30 → 0,21 | 2.560 → 2.560 | **50% → 100%** |
+| bigfull, Sophisticated, 20 | 0,069 → 0,067 | 0,642 → 0,660 | 0,77 → 0,79 | 2.530 → 2.544 | 100% → 100% |
+| raw, vanilla, 2 | 0,100 → 0,139 | 0,279 → 0,276 | 0,31 → 0,39 | **40.960 → 68.745** | 100% → 100% |
+| raw, Sophisticated, 2 | 0,324 → 0,431 | 0,958 → 0,736 | 1,69 → 0,86 | **40.960 → 66.492** | 100% → 100% |
+| types, Sophisticated, 20 | 0,371 → 0,353 | 0,556 → 0,536 | 0,58 → 0,56 | 5.123 → 5.120 | 100% → 100% |
+| mixed, vanilla, 498 | 0,503 → 0,489 | 0,528 → 0,516 | 0,54 → 0,53 | 29,30 mi → 29,25 mi | 100% → 100% |
+
+Remontagens no "rebuild" (10 por repetição): **3,3–4,0 ms cada antes, 0,29–0,56 ms depois**; o tick logo depois da mudança, de 3,7–7,0 ms para 0,51–0,76 ms. Na rodada aquecida (100 remontagens por repetição), 0,14–0,48 ms cada, caindo a cada repetição conforme o JIT compila; o pior tick depois de uma mudança ficou entre 0,57 e 1,83 ms, e o mod máx em 1,96 ms.
+
+### Critérios
+
+- **"rebuild": passou.** Remontagem abaixo de 1 ms (0,29–0,56 ms, contra 3,3–4,0 ms antes nesta máquina e 7–8,5 ms na nuvem). O p99 (0,586 ms) e o máx (0,69 ms) ficaram perto dos do "many" (0,575 e 1,53 ms). Na rodada aquecida o máx sobe para 1,96 ms, porque são dez vezes mais remontagens.
+- **"bigfull" vanilla: passou.** Todas as origens movem (antes, 50%).
+- **"raw" vanilla: passou.** 68.745 itens/s, acima de 40.960, com o mod em 0,139 ms/tick em média.
+- **"idle" e "full": passou.** Mod perto de 0 (0,010 e 0,013 ms/tick). O p99 caiu de 0,175 para 0,044 ms no "idle"; no "full" caiu de 0,165 para 0,145 ms, dentro da variação entre repetições (± 0,08).
+- **"many" e "mixed": dentro do esperado.** Mod perto de 0,5 ms e as mesmas vazões no vanilla; o MSPT com rede ficou em 0,63–0,73 ms, longe de passar de 1 ms.
+
+### Leitura
+
+- **Sophisticated Storage mais rápido aqui do que na nuvem.** Com a CPU local mais rápida, uma visita no barril de netherita custa menos, e a volta extra do Ultimate passou a caber no orçamento: a vazão bruta foi de 40.960 para 66.492 itens/s (na nuvem tinha ficado em 40.960). No "many" Sophisticated, a entrega caiu de 11,3 para 7,5 µs e a vazão subiu de 65 mil para 94 mil itens/s.
+- **Picos menores.** O mod máx caiu nos cenários com trabalho constante ("many" Sophisticated de 3,56 para 0,88 ms, "rebuild" de 5,47 para 0,69 ms), que é o que o jogador sente como travada.
+- **"mixed".** O orçamento esgotou em 69% dos ticks depois, contra 99% antes, com a mesma vazão.
 
 ## Limitações e próximos passos
 
 - **Estouro pela última visita** (ainda não feito): levar o prazo do `TickBudget` para dentro do `ItemTransfer` e conferir entre as tentativas de slot, parando a visita com o cursor de slot salvo. Uma visita de 0,1–0,5 ms no Sophisticated Storage ainda passa do teto.
 - **Remontagem dividida entre ticks** (ainda não feito): montar as rotas novas à parte e trocar no fim, para redes de milhares de nós; hoje 500 nós custam menos de 1 ms.
-- A rodada base dividiu a máquina com outros agentes; a de antes e depois, não. Repita os números numa máquina parada e compare com outros mods de transporte do ATM10, como pede a especificação ("Comparação"), o que não foi feito.
+- A rodada base dividiu a máquina com outros agentes; a da máquina local (seção acima) rodou numa máquina parada. Falta comparar com outros mods de transporte do ATM10, como pede a especificação ("Comparação").
 - O MSPT medido aqui inclui o mod, mas o MSPT que o `TickBudget.adapt` lê (`getAverageTickTimeNanos`) não inclui, porque o `Post` roda depois da conta do vanilla. O orçamento adaptativo, portanto, não enxerga o próprio custo do mod. É aceitável com 0,5 ms, mas vale saber.
 - Não há ainda o GameTest de regressão de performance da especificação. O caminho natural é um cenário pequeno (por exemplo, `rebuild` com 100 nós) que falhe se a remontagem passar de um limite folgado.
 - Energia e fluido do cenário misto usam máquinas de teste sem custo próprio: medem só o mod. Caldeirões não servem, porque trocam de bloco a cada balde e, com isso, remontam a rede inteira (o `AbstractCauldronBlock` invalida a capability).

@@ -92,10 +92,10 @@ public final class RouterConfigGameTests {
         CompoundTag bad = new CompoundTag();
         bad.putString("mode", "nao_existe");
         bad.putString("redstone", "HIGH");
-        FaceConfig parsed = FaceConfig.load(bad);
+        FaceConfig parsed = FaceConfig.load(bad, registries);
         helper.assertValueEqual(parsed.mode(), PortMode.NONE, "enum inválido sem fallback");
         helper.assertValueEqual(parsed.redstone(), RedstoneMode.HIGH, "redstone válido perdido");
-        helper.assertTrue(new FaceConfig().save().isEmpty(), "padrão não é tag vazia");
+        helper.assertTrue(new FaceConfig().save(registries).isEmpty(), "padrão não é tag vazia");
         helper.succeed();
     }
 

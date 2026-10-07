@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.NativeImage;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
+import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
@@ -52,10 +54,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
@@ -93,6 +97,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>renomeia o nó e troca a rede da aba Itens pelo seletor na linha das abas; depois troca só a
  *       da aba Energia e confere que a de Itens e a de Fluidos não mudaram;</li>
  *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot);</li>
+ *   <li>põe o Upgrade de chunk loading no slot de upgrade pela tela e confere o ticket no servidor e
+ *       o estado na tela; tira com Shift + clique e confere que o ticket saiu;</li>
  *   <li>transporte por aba: pedras em A não vão para B enquanto os itens dos dois estão em redes
  *       diferentes, e chegam quando os itens de A entram na rede dos de B, com a energia de cada um
  *       em outra rede.</li>
@@ -473,6 +479,7 @@ public final class DevEndToEnd {
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         cardSteps(list);
+        chunkUpgradeSteps(list);
         list.add(close("fechar B"));
         typeNetworkTransferSteps(list);
         return list;
@@ -524,6 +531,78 @@ public final class DevEndToEnd {
                         + ", slot na tela " + routerScreen().getMenu().getSlot(0).getItem()
                         + ", na mão " + routerScreen().getMenu().getCarried()));
         list.add(capture("6-cartao-no-slot"));
+    }
+
+    /**
+     * Upgrade de chunk loading pela tela: o servidor dá o upgrade ao jogador, que o pega no inventário
+     * e solta no slot de upgrade; o roteador B fica com o upgrade, o jogador como dono e o ticket no
+     * chunk dele, e a tela mostra "ativo". Depois Shift + clique (o mesmo pacote do vanilla) tira o
+     * upgrade de volta para o inventário e o ticket sai.
+     */
+    private static void chunkUpgradeSteps(List<Step> list) {
+        list.add(new Step("upgrade no inventário", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).getInventory()
+                        .setItem(1, new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get()));
+                return null;
+            });
+        }, () -> inventoryUpgradeSlot() != null, () -> "upgrade no slot " + inventoryUpgradeSlot()));
+        list.add(new Step("upgrade no slot de upgrade", STEP_TIMEOUT_MS, () -> {
+            RouterScreen screen = routerScreen();
+            Slot from = inventoryUpgradeSlot();
+            if (from == null) {
+                throw new StepFailure("o upgrade sumiu do inventário");
+            }
+            click(screen, screen.getGuiLeft() + from.x + 8, screen.getGuiTop() + from.y + 8);
+            int[] to = screen.previewUpgradeSlotCenter();
+            click(screen, to[0], to[1]);
+        }, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            return onServer(server -> {
+                RouterBlockEntity router = router(server, routerB);
+                return router.hasChunkUpgrade() && playerId.equals(router.upgradeOwner())
+                        && router.chunkLoadState() == ChunkLoadState.ACTIVE
+                        && RouterChunkLoader.hasTicket(server.overworld(), routerB, ChunkPos.asLong(routerB));
+            }) && routerScreen().getMenu().getSlot(RouterMenu.UPGRADE_SLOT).hasItem()
+                    && routerScreen().getMenu().snapshot().chunkLoad() == ChunkLoadState.ACTIVE
+                    && routerScreen().getMenu().getCarried().isEmpty();
+        }, () -> "servidor " + onServer(server -> router(server, routerB).upgrade() + " "
+                + router(server, routerB).chunkLoadState()) + ", tela " + routerScreen().getMenu().snapshot().chunkLoad()
+                + ", na mão " + routerScreen().getMenu().getCarried()));
+        list.add(new Step("captura 7-upgrade-no-slot", STEP_TIMEOUT_MS, () -> {
+            int[] center = routerScreen().previewUpgradeSlotCenter();
+            moveMouse(center[0], center[1]);
+        }, () -> {
+            if (stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "7-upgrade-no-slot");
+            return true;
+        }, () -> "7-upgrade-no-slot.png"));
+        list.add(new Step("tirar o upgrade com Shift + clique", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.handleInventoryMouseClick(routerScreen().getMenu().containerId, RouterMenu.UPGRADE_SLOT,
+                    0, ClickType.QUICK_MOVE, minecraft.player);
+        }, () -> onServer(server -> {
+            RouterBlockEntity router = router(server, routerB);
+            return !router.hasChunkUpgrade() && router.chunkLoadState() == ChunkLoadState.NONE
+                    && !RouterChunkLoader.hasTicket(server.overworld(), routerB, ChunkPos.asLong(routerB));
+        }) && !routerScreen().getMenu().getSlot(RouterMenu.UPGRADE_SLOT).hasItem() && inventoryUpgradeSlot() != null
+                && routerScreen().getMenu().snapshot().chunkLoad() == ChunkLoadState.NONE,
+                () -> "servidor " + onServer(server -> router(server, routerB).upgrade().toString())
+                        + ", no inventário " + inventoryUpgradeSlot()));
+    }
+
+    /** O slot do inventário (na tela do roteador aberta) com o Upgrade de chunk loading, ou {@code null}. */
+    private static @Nullable Slot inventoryUpgradeSlot() throws StepFailure {
+        RouterMenu menu = routerScreen().getMenu();
+        for (int i = RouterMenu.CARD_SLOT_COUNT; i < RouterMenu.UPGRADE_SLOT; i++) {
+            if (menu.getSlot(i).getItem().is(ModItems.CHUNK_LOADER_UPGRADE.get())) {
+                return menu.getSlot(i);
+            }
+        }
+        return null;
     }
 
     /**

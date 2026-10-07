@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.FluidEntry;
@@ -149,7 +150,7 @@ public final class DevScreenshot {
             }, "6-renomear"));
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
-    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps())
+    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(), upgradeSteps())
             .flatMap(List::stream).toList();
 
     /**
@@ -341,6 +342,41 @@ public final class DevScreenshot {
                     screen.getMenu().getSlot(0).set(ItemStack.EMPTY);
                     screen.getMenu().getSlot(1).set(card(ResourceType.FLUID, fluidFilter(), 1));
                 }, "c4-fluidos"));
+    }
+
+    // ------------------------------------------------------------------ slot de upgrade
+
+    /**
+     * Slot do Upgrade de chunk loading, no fim da linha dos cartões: ativo com a dica, vazio com a
+     * dica, inativo pelo limite do dono e, na aba de energia, desligado na config.
+     */
+    private static List<Step> upgradeSteps() {
+        return List.of(
+                new Step(() -> {
+                    screen = cardScreen();
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.DOWN);
+                    upgradeState(ChunkLoadState.ACTIVE);
+                    int[] center = screen.previewUpgradeSlotCenter();
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "u1-upgrade-ativo"),
+                new Step(() -> upgradeState(ChunkLoadState.NONE), "u2-upgrade-vazio"),
+                new Step(() -> upgradeState(ChunkLoadState.LIMIT), "u3-upgrade-limite"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    screen.previewType(ResourceType.ENERGY);
+                    upgradeState(ChunkLoadState.DISABLED);
+                }, "u4-upgrade-desligado-energia"));
+    }
+
+    /** Põe (ou tira) o upgrade no slot e o estado no snapshot, como o servidor mandaria. */
+    private static void upgradeState(ChunkLoadState state) {
+        screen.getMenu().getSlot(RouterMenu.UPGRADE_SLOT).set(state == ChunkLoadState.NONE
+                ? ItemStack.EMPTY : new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get()));
+        RouterSnapshot s = screen.getMenu().snapshot();
+        screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(),
+                s.networks(), s.powered(), s.machine(), s.machineState(), s.faces(), state));
     }
 
     /** Tela do roteador com um cartão de itens no primeiro slot e o inventário de exemplo. */

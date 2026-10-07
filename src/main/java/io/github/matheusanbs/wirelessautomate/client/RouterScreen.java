@@ -7,8 +7,10 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.packet.SelectFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -35,8 +38,13 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, rede e
  * tier; abas por tipo com a vazão; o visor 3D da máquina com o roteador ({@link MachineView3D}) e
- * os botões das 6 faces logo abaixo; a face selecionada com modo e filtro; prioridade e redstone
- * recolhidos em "Mais".
+ * os botões das 6 faces logo abaixo; a face selecionada com modo, filtro e os slots de Cartão de
+ * Filtro; prioridade e redstone recolhidos em "Mais", embaixo das faces; e o inventário do jogador,
+ * embaixo da face selecionada, para pôr e tirar cartões.
+ *
+ * <p>Os slots de cartão mostram os da face e do tipo selecionados: ao mudar de aba ou de face a
+ * tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram, e a
+ * sincronização vanilla traz os cartões.
  *
  * <p>Tudo vem de {@link RouterMenu#snapshot()}. Os botões leem o estado a cada quadro e
  * {@link #refresh()} reposiciona o que depende de texto, então um snapshot novo
@@ -47,10 +55,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Químicos ficam ocultos até o motor movê-los (o servidor ainda recusa CHEMICAL). */
     private static final boolean CHEMICALS_READY = false;
 
-    private static final int W = 256;
-    /** Altura com "Mais" aberto; a posição da tela usa esta, e recolhido o painel só fica mais curto embaixo. */
-    private static final int H = 205;
-    private static final int H_COLLAPSED = 183;
+    // Larga e baixa o bastante para caber na menor escala automática (320×240).
+    private static final int W = 300;
+    private static final int H = 240;
     private static final int X0 = 9;
     private static final int X1 = W - 9;
     private static final int HEAD_Y = 8;
@@ -60,9 +67,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
     // visor 3D e, logo abaixo, os botões das faces em duas fileiras (cada coluna é um eixo)
-    private static final int VIEW_W = 100;
+    private static final int VIEW_W = 112;
     private static final int VIEW_H = 84;
-    private static final int FACE_W = 32;
+    private static final int FACE_W = 36;
     private static final int FACE_H = 18;
     private static final int FACE_GAP = 2;
     private static final int FACES_Y = BODY_Y + VIEW_H + 3;
@@ -72,11 +79,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int MODE_Y = 74;
     private static final int MODE_W = (RW - 2) / 2;
     private static final int MODE_H = 18;
-    private static final int FILTER_Y = 118;
-    private static final int ADV_SEP_Y = 146;
-    private static final int MORE_Y = 150;
-    private static final int PRIO_Y = 166;
-    private static final int REDSTONE_Y = 184;
+    private static final int FILTER_Y = 114;
+    /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_X}). */
+    private static final int CARD_BG_X = RouterMenu.CARD_X - 1;
+    private static final int CARD_BG_Y = RouterMenu.CARD_Y - 1;
+    // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone
+    private static final int LX1 = X0 + VIEW_W;
+    private static final int ADV_SEP_Y = 180;
+    private static final int MORE_Y = 184;
+    private static final int PRIO_Y = 199;
+    private static final int REDSTONE_Y = 217;
     private static final int ROW_H = 14;
     private static final int DROPDOWN_ROW = 12;
     private static final int DROPDOWN_MAX_ROWS = 8;
@@ -85,6 +97,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Ordem dos botões das faces: em cima Cima, Norte e Leste; embaixo as opostas. */
     private static final Direction[] FACE_ORDER = {Direction.UP, Direction.NORTH, Direction.EAST, Direction.DOWN,
             Direction.SOUTH, Direction.WEST};
+    /** Cartão desenhado apagado num slot de cartão vazio. */
+    private static final ItemStack GHOST_CARD = new ItemStack(ModItems.FILTER_CARD.get());
 
     private final boolean preview;
     private final List<ResourceType> types = new ArrayList<>();
@@ -292,21 +306,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             modeButtons.add(button);
         }
 
-        editFilterButton = add(new FlatButton(x + X1 - 40, y + FILTER_Y + 8, 40, ROW_H, tr("filter.edit"),
+        editFilterButton = add(new FlatButton(x + X1 - 40, y + FILTER_Y, 40, ROW_H, tr("filter.edit"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), this::openFilter)
                 .tooltip(() -> hasFilter() ? tr("filter.edit.tooltip") : tr("filter.energy")));
 
-        moreButton = add(new FlatButton(x + RX, y + MORE_Y, 60, 12, tr("more"), this::paintMore,
+        moreButton = add(new FlatButton(x + X0, y + MORE_Y, 60, 12, tr("more"), this::paintMore,
                 () -> expanded = !expanded).tooltip(() -> tr("more.tooltip")));
 
-        prioMinus = add(new FlatButton(x + X1 - 58, y + PRIO_Y, 14, ROW_H, tr("priority.decrease"),
+        prioMinus = add(new FlatButton(x + LX1 - 58, y + PRIO_Y, 14, ROW_H, tr("priority.decrease"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("-")),
                 () -> changePriority(-1)).tooltip(() -> tr("priority.tooltip")));
-        prioPlus = add(new FlatButton(x + X1 - 14, y + PRIO_Y, 14, ROW_H, tr("priority.increase"),
+        prioPlus = add(new FlatButton(x + LX1 - 14, y + PRIO_Y, 14, ROW_H, tr("priority.increase"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("+")),
                 () -> changePriority(1)).tooltip(() -> tr("priority.tooltip")));
-        redstoneButton = add(new FlatButton(x + X1 - 66, y + REDSTONE_Y, 66, ROW_H, tr("redstone"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, redstoneName(view().redstone())),
+        redstoneButton = add(new FlatButton(x + X0, y + REDSTONE_Y, VIEW_W, ROW_H, tr("redstone"),
+                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("redstone.narration", redstoneName(view().redstone()))),
                 this::cycleRedstone).tooltip(() -> tr("redstone.tooltip")));
 
         refresh();
@@ -350,6 +364,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         List<NetworkEntry> networks = s.networks();
         networkScroll = Math.max(0, Math.min(networkScroll, networks.size() + 1 - DROPDOWN_MAX_ROWS));
+        syncSelection();
+    }
+
+    /**
+     * Aba ou face mudou (por botão, visor ou teclado): os slots de cartão passam a mostrar os da
+     * face e do tipo novos. O menu local muda já, para a previsão dos cliques; o servidor, pelo pacote.
+     */
+    private void syncSelection() {
+        if (type == menu.selectedType() && face == menu.selectedFace()) {
+            return;
+        }
+        menu.select(type, face);
+        if (!preview) {
+            send(new SelectFacePayload(menu.containerId, type, face));
+        }
     }
 
     private int pillWidth(Component text) {
@@ -399,12 +428,37 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return tr(view.blacklist() ? "filter.black" : "filter.white");
     }
 
-    /** "Passa tudo", "1 entrada" ou "12 entradas". */
+    /** "Passa tudo", "12 entradas", "2 cartões" ou "12 entradas · 2 cartões". */
     private Component filterSummary(FaceView view) {
-        if (view.filterSize() == 0) {
-            return tr("filter.none");
+        int cards = cardCount();
+        Component entries = view.filterSize() == 1 ? tr("filter.count.one") : tr("filter.count", view.filterSize());
+        if (cards == 0) {
+            return view.filterSize() == 0 ? tr("filter.none") : entries;
         }
-        return view.filterSize() == 1 ? tr("filter.count.one") : tr("filter.count", view.filterSize());
+        Component cardText = cards == 1 ? tr("filter.cards.one") : tr("filter.cards", cards);
+        return view.filterSize() == 0 ? cardText : tr("filter.summary", entries, cardText);
+    }
+
+    /** Cartões nos slots da face selecionada (os slots já mostram a seleção da tela). */
+    private int cardCount() {
+        int count = 0;
+        for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
+            if (menu.getSlot(i).hasItem()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static boolean isCardSlot(@Nullable Slot slot) {
+        return slot != null && slot.index < RouterMenu.CARD_SLOT_COUNT;
+    }
+
+    /** Dica de um slot de cartão vazio: o tipo, a regra do conjunto e como pôr um cartão. */
+    private Component cardSlotTooltip() {
+        return tr("cards.tooltip", typeName(type)).copy()
+                .append("\n").append(tr("cards.tooltip.rule").copy().withColor(GuiPaint.MUTED))
+                .append("\n").append(tr("cards.tooltip.add").copy().withColor(GuiPaint.MUTED));
     }
 
     private void changePriority(int direction) {
@@ -568,6 +622,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 return;
             }
         }
+        if (isCardSlot(hoveredSlot) && !hoveredSlot.hasItem() && menu.getCarried().isEmpty()) {
+            setTooltipForNextRenderPass(cardSlotTooltip());
+            return;
+        }
+        renderTooltip(g, mouseX, mouseY);
         // sobre uma face o visor mostra o nome dela embaixo; a dica cobriria o modelo
         if (!machineView.isDragging() && machineView.contains(mouseX, mouseY) && machineView.hoveredFace() == null) {
             setTooltipForNextRenderPass(machineTooltip());
@@ -592,7 +651,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int x = leftPos;
         int y = topPos;
         int trim = tierColor();
-        GuiPaint.panel(g, x, y, W, expanded ? H : H_COLLAPSED, trim);
+        GuiPaint.panel(g, x, y, W, H, trim);
 
         // cabeçalho
         if (renaming) {
@@ -640,25 +699,60 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, detail, RW), x + RX, y + BODY_Y + 12, GuiPaint.MUTED);
 
-        // filtro resumido em uma linha, com Editar
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterLabel(v), RW), x + RX, y + FILTER_Y, GuiPaint.MUTED);
-        Component filterLine = hasFilter() ? filterSummary(v) : tr("filter.energy");
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterLine, RW - 44), x + RX, y + FILTER_Y + 11,
-                hasFilter() ? GuiPaint.FG : GuiPaint.MUTED);
+        // filtro: rótulo com Editar e, embaixo, os slots de cartão com o resumo do conjunto
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterLabel(v), RW - 44), x + RX, y + FILTER_Y + 3,
+                GuiPaint.MUTED);
+        if (hasFilter()) {
+            for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
+                int sx = x + CARD_BG_X + i * 18;
+                GuiPaint.slot(g, sx, y + CARD_BG_Y);
+                if (!menu.getSlot(i).hasItem()) {
+                    ghostCard(g, sx + 1, y + CARD_BG_Y + 1);
+                }
+            }
+            int textX = x + CARD_BG_X + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterSummary(v), x + X1 - textX), textX,
+                    y + CARD_BG_Y + 5, GuiPaint.FG);
+        } else {
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("filter.energy"), RW), x + RX, y + CARD_BG_Y + 5,
+                    GuiPaint.MUTED);
+        }
 
-        // recolhido: prioridade e redstone
-        g.fill(x + RX, y + ADV_SEP_Y, x + X1, y + ADV_SEP_Y + 1, GuiPaint.LINE);
+        // recolhido, embaixo das faces: prioridade e redstone
+        g.fill(x + X0, y + ADV_SEP_Y, x + LX1, y + ADV_SEP_Y + 1, GuiPaint.LINE);
         if (expanded) {
-            GuiPaint.text(g, font, tr("priority"), x + RX, y + PRIO_Y + 3, GuiPaint.MUTED);
-            int boxX = x + X1 - 43;
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("priority"), VIEW_W - 60), x + X0, y + PRIO_Y + 3,
+                    GuiPaint.MUTED);
+            int boxX = x + LX1 - 43;
             GuiPaint.box(g, boxX, y + PRIO_Y, 28, ROW_H, GuiPaint.INSET, GuiPaint.LINE);
             GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())), boxX + 14,
                     y + PRIO_Y + 3, v.available() ? GuiPaint.FG : GuiPaint.DISABLED);
-            GuiPaint.text(g, font, tr("redstone"), x + RX, y + REDSTONE_Y + 3, GuiPaint.MUTED);
         } else {
-            Component summary = tr("summary", v.priority(), redstoneName(v.redstone()));
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, summary, RW), x + RX, y + PRIO_Y + 1, GuiPaint.MUTED);
+            // em duas linhas: a coluna é estreita para "Prioridade 0 · Com sinal"
+            Component priority = tr("priority").copy().append(" " + v.priority());
+            Component redstone = tr("redstone.narration", redstoneName(v.redstone()));
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, priority, VIEW_W), x + X0, y + PRIO_Y + 1, GuiPaint.MUTED);
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, redstone, VIEW_W), x + X0, y + PRIO_Y + 12, GuiPaint.MUTED);
         }
+
+        // inventário do jogador
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                GuiPaint.slot(g, x + RouterMenu.INVENTORY_X - 1 + col * 18, y + RouterMenu.INVENTORY_Y - 1 + row * 18);
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            GuiPaint.slot(g, x + RouterMenu.INVENTORY_X - 1 + col * 18, y + RouterMenu.INVENTORY_Y + 57);
+        }
+    }
+
+    /** Cartão apagado no fundo de um slot de cartão vazio. */
+    private void ghostCard(GuiGraphics g, int x, int y) {
+        g.renderFakeItem(GHOST_CARD, x, y);
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 250);
+        g.fill(x, y, x + 16, y + 16, 0xD811151B);
+        g.pose().popPose();
     }
 
     private void paintTitle(GuiGraphics g, FlatButton b, boolean hovered) {
@@ -895,6 +989,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Ponto da tela no centro da face da máquina no visor, para simular o mouse em cima. */
     int[] previewViewFaceCenter(Direction direction) {
         return machineView.previewProject(direction, snapshot().facing(), snapshot().machineState());
+    }
+
+    int[] previewCardSlotCenter(int slot) {
+        return new int[] {leftPos + RouterMenu.CARD_X + slot * 18 + 8, topPos + RouterMenu.CARD_Y + 8};
     }
 
     int[] previewEditFilterCenter() {

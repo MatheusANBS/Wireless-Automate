@@ -137,6 +137,28 @@ public final class Filter {
         return matcher;
     }
 
+    private @Nullable FilterSet asSet;
+
+    /** Este filtro sozinho como conjunto (face sem cartões), criado uma vez e guardado aqui. */
+    public FilterSet asSet() {
+        FilterSet set = asSet;
+        if (set == null) {
+            set = FilterSet.single(this);
+            asSet = set;
+        }
+        return set;
+    }
+
+    /** Alguma entrada casa com o item (sem olhar o modo da lista). */
+    boolean matchesItem(ItemStack stack) {
+        return !entries.isEmpty() && items().index(stack) >= 0;
+    }
+
+    /** Alguma entrada casa com o fluido (sem olhar o modo da lista). */
+    boolean matchesFluid(FluidStack stack) {
+        return !entries.isEmpty() && fluids().index(stack) >= 0;
+    }
+
     /** O item passa pelo filtro? */
     public boolean testItem(ItemStack stack) {
         if (entries.isEmpty()) {

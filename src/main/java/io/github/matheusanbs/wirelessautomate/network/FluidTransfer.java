@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import java.util.List;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -14,7 +15,7 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
  * com exatamente o que saiu. A sobra de um destino que mentiu volta para a origem; o que nem a
  * origem aceitar se perde (fluido não tem como cair no mundo) e vai para o log.
  *
- * <p>Filtros e estoque como nos itens: o filtro da origem decide que tanques podem sair, o do
+ * <p>Filtros e estoque como nos itens (o conjunto da face, {@link FilterSet}): o filtro da origem decide que tanques podem sair, o do
  * destino o que pode entrar, e a recusa do filtro (ou o estoque atingido) pula o destino sem fazê-lo
  * dormir. O estoque soma os tanques do mesmo fluido (O(tanques), só para entradas com estoque):
  * a origem mantém N mB, o destino aceita até N mB.
@@ -40,7 +41,7 @@ final class FluidTransfer {
             return;
         }
         int tanks = Math.min(handler.getTanks(), MAX_TANKS_PER_VISIT);
-        Filter filter = source.filter;
+        FilterSet filter = source.filter;
         long moved = 0;
         for (int tank = 0; tank < tanks && tokens > 0; tank++) {
             FluidStack inTank = handler.getFluidInTank(tank);
@@ -48,9 +49,10 @@ final class FluidTransfer {
                 continue;
             }
             int max = (int) Math.min(tokens, Integer.MAX_VALUE);
-            long stock = filter.fluidStock(inTank);
+            Filter rule = filter.fluidStockFilter(inTank);
+            long stock = rule == null ? 0 : rule.fluidStock(inTank);
             if (stock > 0) {
-                max = (int) StockLimit.extractable(amountIn(handler, inTank, filter.matchComponents()), stock, max);
+                max = (int) StockLimit.extractable(amountIn(handler, inTank, rule.matchComponents()), stock, max);
                 if (max <= 0) {
                     continue;
                 }
@@ -89,15 +91,16 @@ final class FluidTransfer {
                 continue;
             }
             int want = remaining;
-            Filter accept = destination.filter;
+            FilterSet accept = destination.filter;
             if (!accept.isEmpty()) {
                 // Recusa do filtro ou estoque já atingido: pula sem dormir.
                 if (!accept.testFluid(offered)) {
                     continue;
                 }
-                long stock = accept.fluidStock(offered);
+                Filter rule = accept.fluidStockFilter(offered);
+                long stock = rule == null ? 0 : rule.fluidStock(offered);
                 if (stock > 0) {
-                    want = (int) StockLimit.acceptable(amountIn(target, offered, accept.matchComponents()), stock, want);
+                    want = (int) StockLimit.acceptable(amountIn(target, offered, rule.matchComponents()), stock, want);
                     if (want <= 0) {
                         continue;
                     }

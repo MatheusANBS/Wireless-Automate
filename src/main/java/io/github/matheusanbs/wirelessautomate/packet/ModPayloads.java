@@ -55,6 +55,8 @@ public final class ModPayloads {
                 (payload, context) -> handleOpenFilter(serverPlayer(context), payload));
         registrar.playToServer(EditFilterPayload.TYPE, EditFilterPayload.STREAM_CODEC,
                 (payload, context) -> handleEditFilter(serverPlayer(context), payload));
+        registrar.playToServer(SelectFacePayload.TYPE, SelectFacePayload.STREAM_CODEC,
+                (payload, context) -> handleSelectFace(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -132,6 +134,19 @@ public final class ModPayloads {
             return false;
         }
         router.setName(payload.name());
+        return true;
+    }
+
+    /**
+     * A tela mudou de aba ou de face: os slots de cartão do menu passam a mostrar os daquela face e
+     * tipo. Qualquer tipo é aceito (energia e químicos deixam os slots inativos).
+     */
+    public static boolean handleSelectFace(@Nullable ServerPlayer player, SelectFacePayload payload) {
+        RouterMenu menu = openMenu(player, payload.containerId());
+        if (router(player, payload.containerId()) == null || menu == null) {
+            return false;
+        }
+        menu.select(payload.resource(), payload.face());
         return true;
     }
 

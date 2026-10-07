@@ -2,27 +2,38 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RouterSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RouterThroughputPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Arrays;
+import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu da tela do roteador. Não tem slots: no cliente guarda o último {@link RouterSnapshot} e a
- * vazão atual; no servidor conhece o roteador e envia atualizações enquanto a tela estiver aberta.
+ * Menu da tela do roteador. No cliente guarda o último {@link RouterSnapshot} e a vazão atual; no
+ * servidor conhece o roteador e envia atualizações enquanto a tela estiver aberta.
+ *
+ * <p>Slots: os {@link RouterBlockEntity#CARD_SLOTS} de Cartão de Filtro da face e do tipo
+ * selecionados na tela, seguidos do inventário do jogador. A seleção é da tela: ela avisa o
+ * servidor ({@code SelectFacePayload} → {@link #select}) e os slots de cartão passam a mostrar os
+ * daquela face, por um {@link Container} que lê e grava direto no roteador. A sincronização vanilla
+ * de slots leva o resultado ao cliente. Energia e químicos não têm cartões: os slots ficam inativos.
  *
  * <p>Sincronização (servidor): o vanilla só chama {@link #broadcastChanges()} no menu aberto de
  * cada jogador, então nada roda para roteadores sem tela aberta. A cada chamada o menu compara a
@@ -40,11 +51,23 @@ public class RouterMenu extends AbstractContainerMenu {
     public static final double MAX_DISTANCE = 8.0;
     /** Janela da amostra de vazão, em ticks. */
     public static final int SAMPLE_TICKS = 20;
+    /** Posições na tela (canto do item): o primeiro slot de cartão e o primeiro da mochila. */
+    public static final int CARD_X = 130;
+    public static final int CARD_Y = 132;
+    public static final int INVENTORY_X = 130;
+    public static final int INVENTORY_Y = 157;
+    public static final int CARD_SLOT_COUNT = RouterBlockEntity.CARD_SLOTS;
+    private static final int INVENTORY_START = CARD_SLOT_COUNT;
+    private static final int HOTBAR_START = INVENTORY_START + 27;
+    private static final int SLOTS_END = HOTBAR_START + 9;
 
     private final @Nullable RouterBlockEntity router;
     private RouterSnapshot snapshot;
     private long[] throughput = new long[ResourceType.values().length];
     private int version;
+    /** Face (absoluta) e tipo cujos cartões os slots mostram. */
+    private ResourceType selectedType = ResourceType.ITEM;
+    private Direction selectedFace;
 
     // Só no servidor.
     private final @Nullable ServerPlayer viewer;
@@ -68,6 +91,8 @@ public class RouterMenu extends AbstractContainerMenu {
         for (ResourceType type : ResourceType.values()) {
             sampleTotals[type.ordinal()] = router.moved(type);
         }
+        this.selectedFace = router.facing();
+        addSlots(new RouterCards(), inventory);
     }
 
     /** Cliente: o snapshot inicial vem no buffer de abertura. */
@@ -81,6 +106,27 @@ public class RouterMenu extends AbstractContainerMenu {
         this.router = null;
         this.snapshot = snapshot;
         this.viewer = null;
+        this.selectedFace = snapshot.facing();
+        addSlots(new SimpleContainer(CARD_SLOT_COUNT) {
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        }, inventory);
+    }
+
+    private void addSlots(Container cards, Inventory inventory) {
+        for (int i = 0; i < CARD_SLOT_COUNT; i++) {
+            addSlot(new CardSlot(cards, i, CARD_X + i * 18, CARD_Y));
+        }
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                addSlot(new Slot(inventory, col + row * 9 + 9, INVENTORY_X + col * 18, INVENTORY_Y + row * 18));
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            addSlot(new Slot(inventory, col, INVENTORY_X + col * 18, INVENTORY_Y + 58));
+        }
     }
 
     /**
@@ -126,9 +172,196 @@ public class RouterMenu extends AbstractContainerMenu {
         version++;
     }
 
+    public ResourceType selectedType() {
+        return selectedType;
+    }
+
+    public Direction selectedFace() {
+        return selectedFace;
+    }
+
+    /**
+     * Troca a face (absoluta) e o tipo cujos cartões os slots mostram. No servidor vem do pacote
+     * da tela; no cliente a tela chama junto com o envio, para a previsão dos cliques bater.
+     */
+    public void select(ResourceType type, Direction face) {
+        this.selectedType = type;
+        this.selectedFace = face;
+    }
+
+    /** Os slots de cartão valem para o tipo selecionado (itens e fluidos). */
+    public boolean cardSlotsActive() {
+        return RouterBlockEntity.hasCardSlots(selectedType);
+    }
+
+    /**
+     * Shift + clique: um cartão do tipo da aba vai para o primeiro slot de cartão livre (um por
+     * clique); um slot de cartão devolve ao inventário; o resto troca entre mochila e barra.
+     */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
-        return ItemStack.EMPTY;
+        if (index < 0 || index >= slots.size()) {
+            return ItemStack.EMPTY;
+        }
+        Slot slot = slots.get(index);
+        if (!slot.hasItem()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = slot.getItem();
+        ItemStack original = stack.copy();
+        boolean toCards = false;
+        if (index < INVENTORY_START) {
+            if (!moveItemStackTo(stack, INVENTORY_START, SLOTS_END, true)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (cardSlotsActive() && RouterBlockEntity.acceptsCard(selectedType, stack)
+                && moveItemStackTo(stack, 0, CARD_SLOT_COUNT, false)) {
+            toCards = true;
+        } else if (index < HOTBAR_START) {
+            if (!moveItemStackTo(stack, HOTBAR_START, SLOTS_END, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (!moveItemStackTo(stack, INVENTORY_START, HOTBAR_START, false)) {
+            return ItemStack.EMPTY;
+        }
+        if (stack.isEmpty()) {
+            slot.setByPlayer(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+        if (stack.getCount() == original.getCount()) {
+            return ItemStack.EMPTY;
+        }
+        slot.onTake(player, stack);
+        // Um cartão por clique: o vanilla repete o Shift + clique enquanto devolvemos algo.
+        return toCards ? ItemStack.EMPTY : original;
+    }
+
+    /** Clique duplo num cartão do inventário junta os iguais, mas não tira os que estão nos slots de cartão. */
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return !(slot instanceof CardSlot) && super.canTakeItemForPickAll(stack, slot);
+    }
+
+    /** Slot de cartão: só Cartão de Filtro do tipo selecionado, um por slot, e só em itens e fluidos. */
+    private final class CardSlot extends Slot {
+        CardSlot(Container container, int slot, int x, int y) {
+            super(container, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return RouterBlockEntity.acceptsCard(selectedType, stack);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public int getMaxStackSize(ItemStack stack) {
+            return 1;
+        }
+
+        @Override
+        public boolean isActive() {
+            return cardSlotsActive();
+        }
+    }
+
+    /**
+     * Os cartões da face e do tipo selecionados, lidos e gravados direto no roteador (servidor).
+     * Cada mudança passa pelo roteador, que salva e avisa o motor para remontar as rotas.
+     */
+    private final class RouterCards implements Container {
+        private RelativeSide side() {
+            return RelativeSide.fromAbsolute(router.facing(), selectedFace);
+        }
+
+        private boolean usable() {
+            return router != null && !router.isRemoved() && cardSlotsActive();
+        }
+
+        @Override
+        public int getContainerSize() {
+            return CARD_SLOT_COUNT;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            for (int i = 0; i < CARD_SLOT_COUNT; i++) {
+                if (!getItem(i).isEmpty()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public ItemStack getItem(int slot) {
+            return usable() ? router.card(selectedType, side(), slot) : ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack removeItem(int slot, int amount) {
+            ItemStack stack = getItem(slot);
+            if (stack.isEmpty() || amount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack taken = stack.split(amount);
+            if (stack.isEmpty()) {
+                router.setCard(selectedType, side(), slot, ItemStack.EMPTY);
+            } else {
+                router.cardsChanged();
+            }
+            return taken;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int slot) {
+            ItemStack stack = getItem(slot);
+            if (!stack.isEmpty()) {
+                router.setCard(selectedType, side(), slot, ItemStack.EMPTY);
+            }
+            return stack;
+        }
+
+        @Override
+        public void setItem(int slot, ItemStack stack) {
+            if (usable()) {
+                router.setCard(selectedType, side(), slot, stack);
+            }
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return RouterBlockEntity.acceptsCard(selectedType, stack);
+        }
+
+        @Override
+        public void setChanged() {
+            if (usable()) {
+                router.cardsChanged();
+            }
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return RouterMenu.this.stillValid(player);
+        }
+
+        @Override
+        public void clearContent() {
+            for (int i = 0; i < CARD_SLOT_COUNT; i++) {
+                removeItemNoUpdate(i);
+            }
+        }
     }
 
     /** No servidor: o roteador continua no mundo, na mesma dimensão e a até {@link #MAX_DISTANCE} blocos. */

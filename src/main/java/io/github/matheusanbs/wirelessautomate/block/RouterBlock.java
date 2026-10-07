@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -151,6 +152,15 @@ public class RouterBlock extends BaseEntityBlock {
                 && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             NetworkManager.get().wake(router);
         }
+    }
+
+    /** Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro. */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+            Containers.dropContents(level, pos, router.removeAllCards());
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
     @Override

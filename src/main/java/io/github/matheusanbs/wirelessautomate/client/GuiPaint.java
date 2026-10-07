@@ -145,6 +145,21 @@ public final class GuiPaint {
         g.fill(x + 2, y + 2, x + 3, y + 3, color);
     }
 
+    /** Slot 18×18 afundado, como os do rascunho: escuro em cima e à esquerda, claro embaixo e à direita. */
+    public static void slot(GuiGraphics g, int x, int y) {
+        g.fill(x, y, x + 18, y + 18, BEVEL_LIGHT);
+        g.fill(x, y, x + 17, y + 17, BEVEL_DARK);
+        g.fill(x + 1, y + 1, x + 17, y + 17, INSET);
+    }
+
+    /** Caixa de marcar 9×9 px; marcada, com o miolo na cor dada. */
+    public static void checkbox(GuiGraphics g, int x, int y, boolean checked, int color) {
+        box(g, x, y, 9, 9, INSET, checked ? color : BUTTON_HOVER_BORDER);
+        if (checked) {
+            g.fill(x + 2, y + 2, x + 7, y + 7, color);
+        }
+    }
+
     /** Texto cortado com reticências para caber em {@code maxWidth}. */
     public static FormattedCharSequence ellipsize(Font font, Component text, int maxWidth) {
         if (font.width(text) <= maxWidth) {

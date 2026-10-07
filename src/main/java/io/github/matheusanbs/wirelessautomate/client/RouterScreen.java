@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
@@ -293,9 +294,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
 
         editFilterButton = add(new FlatButton(x + X1 - 40, y + FILTER_Y + 8, 40, ROW_H, tr("filter.edit"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), () -> { })
-                .tooltip(() -> tr("filter.soon")));
-        editFilterButton.active = false;
+                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), this::openFilter)
+                .tooltip(() -> hasFilter() ? tr("filter.edit.tooltip") : tr("filter.energy")));
 
         moreButton = add(new FlatButton(x + RX, y + MORE_Y, 60, 12, tr("more"), this::paintMore,
                 () -> expanded = !expanded).tooltip(() -> tr("more.tooltip")));
@@ -347,7 +347,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         prioMinus.visible = prioPlus.visible = redstoneButton.visible = expanded;
         prioMinus.active = prioPlus.active = redstoneButton.active = v.available();
         redstoneButton.setMessage(tr("redstone.narration", redstoneName(v.redstone())));
-        editFilterButton.visible = type != ResourceType.ENERGY;
+        editFilterButton.active = hasFilter();
 
         List<NetworkEntry> networks = s.networks();
         networkScroll = Math.max(0, Math.min(networkScroll, networks.size() + 1 - DROPDOWN_MAX_ROWS));
@@ -378,6 +378,34 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             return;
         }
         send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
+    }
+
+    /** Só itens e fluidos têm filtro. */
+    private boolean hasFilter() {
+        return type == ResourceType.ITEM || type == ResourceType.FLUID;
+    }
+
+    /** Editar: o servidor troca esta tela pela de filtro da face. */
+    private void openFilter() {
+        if (hasFilter() && !preview) {
+            send(new OpenFilterPayload(menu.containerId, type, face));
+        }
+    }
+
+    /** Rótulo da linha do filtro: "Filtro" ou, com entradas, "Filtro · lista branca". */
+    private Component filterLabel(FaceView view) {
+        if (!hasFilter() || view.filterSize() == 0) {
+            return tr("filter.label");
+        }
+        return tr(view.blacklist() ? "filter.black" : "filter.white");
+    }
+
+    /** "Passa tudo", "1 entrada" ou "12 entradas". */
+    private Component filterSummary(FaceView view) {
+        if (view.filterSize() == 0) {
+            return tr("filter.none");
+        }
+        return view.filterSize() == 1 ? tr("filter.count.one") : tr("filter.count", view.filterSize());
     }
 
     private void changePriority(int direction) {
@@ -576,15 +604,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, detail, RW), x + RX, y + BODY_Y + 12, GuiPaint.MUTED);
 
-        // filtro (ainda não existe: tudo passa)
-        GuiPaint.text(g, font, tr("filter.label"), x + RX, y + FILTER_Y, GuiPaint.MUTED);
-        if (type == ResourceType.ENERGY) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("filter.energy"), RW), x + RX, y + FILTER_Y + 11,
-                    GuiPaint.FG);
-        } else {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("filter.none"), RW - 44), x + RX, y + FILTER_Y + 11,
-                    GuiPaint.FG);
-        }
+        // filtro resumido em uma linha, com Editar
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterLabel(v), RW), x + RX, y + FILTER_Y, GuiPaint.MUTED);
+        Component filterLine = hasFilter() ? filterSummary(v) : tr("filter.energy");
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, filterLine, RW - 44), x + RX, y + FILTER_Y + 11,
+                hasFilter() ? GuiPaint.FG : GuiPaint.MUTED);
 
         // recolhido: prioridade e redstone
         g.fill(x + RX, y + ADV_SEP_Y, x + X1, y + ADV_SEP_Y + 1, GuiPaint.LINE);

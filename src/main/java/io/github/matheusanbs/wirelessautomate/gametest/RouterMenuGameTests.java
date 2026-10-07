@@ -92,7 +92,7 @@ public final class RouterMenuGameTests {
         helper.assertValueEqual(snapshot.name(), "Baú de minérios", "nome aparado");
         helper.assertValueEqual(snapshot.tier(), RouterTier.BASIC, "tier");
         helper.assertValueEqual(snapshot.facing(), Direction.UP, "facing");
-        helper.assertValueEqual(snapshot.network(), Optional.of(own.id()), "rede");
+        helper.assertValueEqual(snapshot.network(ResourceType.ITEM), Optional.of(own.id()), "rede");
         helper.assertTrue(snapshot.networks().contains(new RouterSnapshot.NetworkEntry(own.id(), own.name(),
                 own.color(), true)), "rede própria fora do seletor");
         helper.assertFalse(snapshot.networks().stream().anyMatch(e -> e.id().equals(foreign.id())),
@@ -115,7 +115,7 @@ public final class RouterMenuGameTests {
 
         // Rede removida: o snapshot fica sem rede.
         data.remove(foreign.id());
-        helper.assertValueEqual(RouterSnapshot.capture(router, player).network(), Optional.<UUID>empty(),
+        helper.assertValueEqual(RouterSnapshot.capture(router, player).network(ResourceType.ITEM), Optional.<UUID>empty(),
                 "rede removida");
 
         // Ida e volta pelo codec de rede.
@@ -177,15 +177,15 @@ public final class RouterMenuGameTests {
         try {
             helper.assertFalse(player.hasPermissions(2), "jogador falso é operador");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, Optional.of(own.id()))), "recusou a própria rede");
+                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(own.id()))), "recusou a própria rede");
             helper.assertValueEqual(router.networkId(), own.id(), "rede própria");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, Optional.of(foreign.id()))), "aceitou rede alheia");
+                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(foreign.id()))), "aceitou rede alheia");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, Optional.of(UUID.randomUUID()))), "aceitou rede inexistente");
+                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(UUID.randomUUID()))), "aceitou rede inexistente");
             helper.assertValueEqual(router.networkId(), own.id(), "rede mudou numa recusa");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, Optional.empty())), "recusou tirar da rede");
+                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.empty())), "recusou tirar da rede");
             helper.assertTrue(router.networkId() == null, "continuou na rede");
 
             helper.assertTrue(ModPayloads.handleRename(player, new RenameRouterPayload(menu.containerId, " Forno ")),

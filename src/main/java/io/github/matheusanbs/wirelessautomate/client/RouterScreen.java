@@ -177,7 +177,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private @Nullable NetworkEntry currentNetwork() {
-        Optional<UUID> id = snapshot().network();
+        Optional<UUID> id = snapshot().network(type);
         if (id.isEmpty()) {
             return null;
         }
@@ -194,7 +194,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (entry != null) {
             return Component.literal(entry.name());
         }
-        return snapshot().network().isPresent() ? tr("network.unknown") : tr("network.none");
+        return snapshot().network(type).isPresent() ? tr("network.unknown") : tr("network.none");
     }
 
     private int networkColor() {
@@ -401,7 +401,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots(),
                     current.filterSize(), current.blacklist()));
             RouterSnapshot s = snapshot();
-            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.network(), s.networks(),
+            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(), s.networks(),
                     s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
             return;
         }
@@ -476,16 +476,18 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private void chooseNetwork(Optional<UUID> network) {
         networkListOpen = false;
-        if (network.equals(snapshot().network())) {
+        if (network.equals(snapshot().network(type))) {
             return;
         }
         if (preview) {
             RouterSnapshot s = snapshot();
-            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), network, s.networks(),
+            List<Optional<UUID>> typeNetworks = new ArrayList<>(s.typeNetworks());
+            typeNetworks.set(type.ordinal(), network);
+            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), List.copyOf(typeNetworks), s.networks(),
                     s.powered(), s.machine(), s.machineState(), s.faces()));
             return;
         }
-        send(new SetNetworkPayload(menu.containerId, network));
+        send(new SetNetworkPayload(menu.containerId, type, network));
     }
 
     private void startRename() {
@@ -508,7 +510,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (commit && !name.equals(snapshot().name())) {
             if (preview) {
                 RouterSnapshot s = snapshot();
-                menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.network(), s.networks(),
+                menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.typeNetworks(), s.networks(),
                         s.powered(), s.machine(), s.machineState(), s.faces()));
             } else {
                 send(new RenameRouterPayload(menu.containerId, name));
@@ -910,7 +912,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int w = dropdownWidth();
         int rows = dropdownRows();
         int hoveredRow = dropdownRowAt(mouseX, mouseY);
-        Optional<UUID> current = snapshot().network();
+        Optional<UUID> current = snapshot().network(type);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
         GuiPaint.box(g, x, y, w, rows * DROPDOWN_ROW + 4, GuiPaint.INSET, GuiPaint.BUTTON_HOVER_BORDER);

@@ -109,8 +109,8 @@ public final class ModPayloads {
     }
 
     /**
-     * Muda a rede do roteador. Só aceita rede que existe e que o jogador pode usar (dono ou
-     * operador nível 2, a mesma regra do Configurador), ou vazio para tirar da rede.
+     * Muda a rede de uma aba (tipo) do roteador. Só aceita rede que existe e que o jogador pode
+     * usar (dono ou operador nível 2, a mesma regra do Configurador), ou vazio para tirar da rede.
      */
     public static boolean handleSetNetwork(@Nullable ServerPlayer player, SetNetworkPayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
@@ -119,14 +119,14 @@ public final class ModPayloads {
         }
         Optional<UUID> id = payload.network();
         if (id.isEmpty()) {
-            router.setNetworkId(null);
+            router.setNetworkId(payload.resource(), null);
             return true;
         }
         WaNetwork network = NetworkSavedData.get(player.server).network(id.get());
         if (network == null || !canUse(player, network)) {
             return false;
         }
-        router.setNetworkId(network.id());
+        router.setNetworkId(payload.resource(), network.id());
         return true;
     }
 

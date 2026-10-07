@@ -32,7 +32,8 @@ import net.neoforged.neoforge.items.IItemHandler;
  * aberta. As faces são absolutas (as da máquina), como a tela as mostra.
  *
  * @param name     nome do nó dado pelo jogador; vazio = sem nome (a tela mostra o da máquina)
- * @param network  rede do roteador, vazia se não tiver ou se ela não existir mais
+ * @param typeNetworks rede de cada aba, por {@link ResourceType#ordinal()}; vazia se não tiver ou se
+ *                 ela não existir mais
  * @param networks redes que o jogador pode escolher no seletor
  * @param machine  ícone da máquina conectada ({@link ItemStack#EMPTY} se não houver item)
  * @param machineState estado do bloco da máquina, para o visor 3D (ar se não houver)
@@ -43,7 +44,7 @@ public record RouterSnapshot(
         String name,
         RouterTier tier,
         Direction facing,
-        Optional<UUID> network,
+        List<Optional<UUID>> typeNetworks,
         List<NetworkEntry> networks,
         boolean powered,
         ItemStack machine,
@@ -69,6 +70,11 @@ public record RouterSnapshot(
         }
     }
 
+    /** Rede da aba {@code type}. */
+    public Optional<UUID> network(ResourceType type) {
+        return typeNetworks.get(type.ordinal());
+    }
+
     public static int index(ResourceType type, Direction face) {
         return type.ordinal() * 6 + face.get3DDataValue();
     }
@@ -87,15 +93,20 @@ public record RouterSnapshot(
      */
     public static RouterSnapshot capture(RouterBlockEntity router, ServerPlayer player) {
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        UUID networkId = router.networkId();
-        WaNetwork current = networkId == null ? null : data.network(networkId);
-
         List<NetworkEntry> networks = new ArrayList<>();
         for (WaNetwork network : data.networksOf(player.getUUID())) {
             networks.add(new NetworkEntry(network.id(), network.name(), network.color(), true));
         }
-        if (current != null && !current.owner().equals(player.getUUID())) {
-            networks.add(new NetworkEntry(current.id(), current.name(), current.color(), false));
+        List<Optional<UUID>> typeNetworks = new ArrayList<>();
+        for (ResourceType type : ResourceType.values()) {
+            UUID networkId = router.networkId(type);
+            WaNetwork current = networkId == null ? null : data.network(networkId);
+            typeNetworks.add(Optional.ofNullable(current).map(WaNetwork::id));
+            // Rede de outro dono aparece no seletor para o jogador ver onde o roteador está.
+            if (current != null && !current.owner().equals(player.getUUID())
+                    && networks.stream().noneMatch(e -> e.id().equals(current.id()))) {
+                networks.add(new NetworkEntry(current.id(), current.name(), current.color(), false));
+            }
         }
 
         Level level = router.getLevel();
@@ -116,7 +127,7 @@ public record RouterSnapshot(
         }
 
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
-                Optional.ofNullable(current).map(WaNetwork::id), List.copyOf(networks), router.powered(), machine,
+                List.copyOf(typeNetworks), List.copyOf(networks), router.powered(), machine,
                 machineState, List.of(faces));
     }
 
@@ -148,7 +159,10 @@ public record RouterSnapshot(
         buf.writeUtf(s.name, 64);
         buf.writeEnum(s.tier);
         buf.writeEnum(s.facing);
-        buf.writeOptional(s.network, (b, id) -> b.writeUUID(id));
+        buf.writeVarInt(s.typeNetworks.size());
+        for (Optional<UUID> network : s.typeNetworks) {
+            buf.writeOptional(network, (b, id) -> b.writeUUID(id));
+        }
         buf.writeVarInt(s.networks.size());
         for (NetworkEntry entry : s.networks) {
             buf.writeUUID(entry.id);
@@ -175,7 +189,11 @@ public record RouterSnapshot(
         String name = buf.readUtf(64);
         RouterTier tier = buf.readEnum(RouterTier.class);
         Direction facing = buf.readEnum(Direction.class);
-        Optional<UUID> network = buf.readOptional(b -> b.readUUID());
+        int typeCount = buf.readVarInt();
+        List<Optional<UUID>> typeNetworks = new ArrayList<>(typeCount);
+        for (int i = 0; i < typeCount; i++) {
+            typeNetworks.add(buf.readOptional(b -> b.readUUID()));
+        }
         int networkCount = buf.readVarInt();
         List<NetworkEntry> networks = new ArrayList<>(networkCount);
         for (int i = 0; i < networkCount; i++) {
@@ -190,7 +208,7 @@ public record RouterSnapshot(
             faces.add(new FaceView(buf.readEnum(PortMode.class), buf.readVarInt(),
                     buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
         }
-        return new RouterSnapshot(pos, name, tier, facing, network, List.copyOf(networks), powered, machine,
+        return new RouterSnapshot(pos, name, tier, facing, List.copyOf(typeNetworks), List.copyOf(networks), powered, machine,
                 machineState, List.copyOf(faces));
     }
 }

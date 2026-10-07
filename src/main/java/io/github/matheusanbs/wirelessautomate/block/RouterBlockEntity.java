@@ -59,7 +59,8 @@ public class RouterBlockEntity extends BlockEntity {
     private static final RelativeSide[] SIDES = RelativeSide.values();
     private static final int FACES = Direction.values().length;
 
-    private @Nullable UUID networkId;
+    /** Rede de cada aba (por {@link ResourceType#ordinal()}); {@code null} = sem rede nesse tipo. */
+    private final UUID[] networks = new UUID[ResourceType.values().length];
     /** Nome do nó dado pelo jogador; vazio = sem nome. */
     private String name = "";
     /** [tipo][lado relativo], tudo alocado de início: consultas não alocam. */
@@ -96,16 +97,51 @@ public class RouterBlockEntity extends BlockEntity {
         return getBlockState().getValue(RouterBlock.TIER);
     }
 
-    public @Nullable UUID networkId() {
-        return networkId;
+    /** Rede em que o recurso {@code type} deste roteador entra; {@code null} = sem rede. */
+    public @Nullable UUID networkId(ResourceType type) {
+        return networks[type.ordinal()];
     }
 
-    public void setNetworkId(@Nullable UUID networkId) {
-        if (Objects.equals(this.networkId, networkId)) {
+    /** Põe só o tipo {@code type} numa rede (a aba do roteador, ou o Vinculador com tipo). */
+    public void setNetworkId(ResourceType type, @Nullable UUID networkId) {
+        if (Objects.equals(networks[type.ordinal()], networkId)) {
             return;
         }
-        this.networkId = networkId;
+        networks[type.ordinal()] = networkId;
         changed();
+    }
+
+    /** Põe todos os tipos na mesma rede (colocar o roteador, Vinculador em "Todos"). */
+    public void setNetworkId(@Nullable UUID networkId) {
+        boolean changed = false;
+        for (int i = 0; i < networks.length; i++) {
+            if (!Objects.equals(networks[i], networkId)) {
+                networks[i] = networkId;
+                changed = true;
+            }
+        }
+        if (changed) {
+            changed();
+        }
+    }
+
+    /** Algum tipo está numa rede. */
+    public boolean hasNetwork() {
+        for (UUID network : networks) {
+            if (network != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Rede dos itens. Só para o código que ainda pensa em uma rede por roteador.
+     * TODO(contrato): trocar os usos por {@link #networkId(ResourceType)} e apagar.
+     */
+    @Deprecated
+    public @Nullable UUID networkId() {
+        return networks[ResourceType.ITEM.ordinal()];
     }
 
     /** Nome do nó; vazio se o jogador não deu um. */
@@ -470,8 +506,15 @@ public class RouterBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        if (networkId != null) {
-            tag.putUUID("network", networkId);
+        CompoundTag networksTag = new CompoundTag();
+        for (ResourceType type : ResourceType.values()) {
+            UUID network = networks[type.ordinal()];
+            if (network != null) {
+                networksTag.putUUID(type.name().toLowerCase(Locale.ROOT), network);
+            }
+        }
+        if (!networksTag.isEmpty()) {
+            tag.put("networks", networksTag);
         }
         if (!name.isEmpty()) {
             tag.putString("name", name);
@@ -524,7 +567,13 @@ public class RouterBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        networkId = tag.hasUUID("network") ? tag.getUUID("network") : null;
+        // Formato antigo: uma rede para o roteador inteiro vale para todos os tipos.
+        UUID legacy = tag.hasUUID("network") ? tag.getUUID("network") : null;
+        CompoundTag networksTag = tag.getCompound("networks");
+        for (ResourceType type : ResourceType.values()) {
+            String key = type.name().toLowerCase(Locale.ROOT);
+            networks[type.ordinal()] = networksTag.hasUUID(key) ? networksTag.getUUID(key) : legacy;
+        }
         name = sanitizeName(tag.getString("name"));
         powered = tag.getBoolean("powered");
         CompoundTag facesTag = tag.getCompound("faces");

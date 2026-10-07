@@ -3,11 +3,16 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Rotas pré-montadas de uma rede e o que o profiler mede dela. A montagem roda só quando a rede
@@ -28,6 +33,13 @@ import net.minecraft.core.Direction;
  *   <li>o filtro da face vai para a porta ({@link Port#filter}); o laço só o consulta, e o matcher
  *       compilado dele vive no próprio {@code Filter}, então remontar não recompila um filtro igual.
  * </ul>
+ *
+ * <p>Custo: a montagem é O(origens + destinos) no caso comum, em que a origem alcança todos os
+ * destinos do tipo (só extrai, nenhum destino na mesma máquina e face, e a caixa dos destinos
+ * inteira no alcance, ver {@link ReachBox}). Essas origens dividem uma única ordem de destinos
+ * ({@link RoundRobinOrder.Layout}) e entram uma vez só na lista {@link Port#sharedFeeders}, dividida
+ * entre os destinos. As outras conferem destino a destino (O(destinos) cada) e, se a lista der
+ * igual à de outra origem, dividem a ordem dela.
  */
 final class NetworkRoutes {
     static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
@@ -41,6 +53,10 @@ final class NetworkRoutes {
     /** Todas as origens ativas, de todos os tipos, inclusive as sem destino. */
     final List<Port> sources = new ArrayList<>();
     final List<Port> destinations = new ArrayList<>();
+    // Trabalho da montagem, reaproveitado.
+    private final ReachBox destinationBox = new ReachBox();
+    private final LongOpenHashSet destinationEndpoints = new LongOpenHashSet();
+    private final Map<List<Port>, RoundRobinOrder.Layout<Port>> layouts = new HashMap<>();
     /** A rede existe no {@link NetworkSavedData}; se não, o id é tratado como "sem rede". */
     boolean exists;
     boolean dirty = true;
@@ -76,14 +92,33 @@ final class NetworkRoutes {
             int firstSource = sources.size();
             int firstDestination = destinations.size();
             collectPorts(type);
+            int lastDestination = destinations.size();
+            Level destinationLevel = measureDestinations(firstDestination, lastDestination);
+            RoundRobinOrder.Layout<Port> everyDestination = null;
+            List<Port> broadcast = null;
             for (int i = firstSource; i < sources.size(); i++) {
                 Port source = sources.get(i);
                 Config.TierValues tier = Config.TIERS.get(source.tier);
                 source.limiter.setRatePerSecond(ratePerSecond(type, tier));
                 int range = tier.range().get();
                 boolean crossDimension = tier.crossDimension().get();
+                // Rotas novas podem destravar uma origem que dormia por falta de destino.
+                source.sourceBackoff.wake();
+                if (lastDestination == firstDestination) {
+                    continue;
+                }
+                if (reachesAll(source, destinationLevel, range, crossDimension)) {
+                    if (everyDestination == null) {
+                        everyDestination = new RoundRobinOrder.Layout<>(
+                                destinations.subList(firstDestination, lastDestination), port -> port.priority);
+                        broadcast = new ArrayList<>();
+                    }
+                    source.order = new RoundRobinOrder<>(everyDestination);
+                    broadcast.add(source);
+                    continue;
+                }
                 scratch.clear();
-                for (int j = firstDestination; j < destinations.size(); j++) {
+                for (int j = firstDestination; j < lastDestination; j++) {
                     Port destination = destinations.get(j);
                     if (!destination.sameEndpoint(source) && !bothToBoth(source, destination)
                             && reachable(source, destination, range, crossDimension)) {
@@ -91,12 +126,72 @@ final class NetworkRoutes {
                         destination.feeders.add(source);
                     }
                 }
-                source.order = scratch.isEmpty() ? null : new RoundRobinOrder<>(scratch, port -> port.priority);
-                // Rotas novas podem destravar uma origem que dormia por falta de destino.
-                source.sourceBackoff.wake();
+                if (!scratch.isEmpty()) {
+                    source.order = new RoundRobinOrder<>(layoutFor(scratch));
+                }
             }
+            if (broadcast != null) {
+                for (int j = firstDestination; j < lastDestination; j++) {
+                    destinations.get(j).sharedFeeders = broadcast;
+                }
+            }
+            layouts.clear();
         }
         scratch.clear();
+    }
+
+    /**
+     * Prepara o teste rápido de {@link #reachesAll}: a caixa e as faces das máquinas dos destinos
+     * {@code [first, last)}. Devolve o mundo deles, ou {@code null} se estão em mais de um.
+     */
+    private @Nullable Level measureDestinations(int first, int last) {
+        destinationBox.clear();
+        destinationEndpoints.clear();
+        Level level = null;
+        for (int j = first; j < last; j++) {
+            Port destination = destinations.get(j);
+            Level at = destination.node.getLevel();
+            if (j == first) {
+                level = at;
+            } else if (at != level) {
+                return null;
+            }
+            BlockPos pos = destination.node.getBlockPos();
+            destinationBox.include(pos.getX(), pos.getY(), pos.getZ());
+            destinationEndpoints.add(endpointKey(destination));
+        }
+        return level;
+    }
+
+    /**
+     * A origem entrega em todos os destinos do tipo: as regras da montagem não excluem nenhum.
+     * Só extrai (senão o Armazém exclui as faces Ambos), nenhum destino é a mesma máquina e face
+     * (a chave ignora o mundo: na dúvida, confere um a um) e todos estão ao alcance.
+     */
+    private boolean reachesAll(Port source, @Nullable Level destinationLevel, int range, boolean crossDimension) {
+        if (destinationLevel == null || source.destination || destinationEndpoints.contains(endpointKey(source))) {
+            return false;
+        }
+        if (source.node.getLevel() != destinationLevel) {
+            return crossDimension;
+        }
+        BlockPos pos = source.node.getBlockPos();
+        return destinationBox.allWithin(pos.getX(), pos.getY(), pos.getZ(), range);
+    }
+
+    private static long endpointKey(Port port) {
+        return port.machinePos.asLong() * 6 + port.face.ordinal();
+    }
+
+    /** A ordem de destinos da lista em {@code scratch}, dividida com as origens de lista igual. */
+    private RoundRobinOrder.Layout<Port> layoutFor(List<Port> scratch) {
+        RoundRobinOrder.Layout<Port> layout = layouts.get(scratch);
+        if (layout == null) {
+            List<Port> key = List.copyOf(scratch);
+            layout = new RoundRobinOrder.Layout<>(key, port -> port.priority);
+            layouts.put(key, layout);
+        }
+        return layout;
     }
 
     private void collectPorts(ResourceType type) {

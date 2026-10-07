@@ -47,8 +47,13 @@ final class Port {
     FilterSet filter = FilterSet.EMPTY;
     /** Destinos desta origem; {@code null} quando ela não tem para onde mandar. */
     @Nullable RoundRobinOrder<Port> order;
-    /** Origens que entregam neste destino, para acordá-las quando ele acordar. */
+    /**
+     * Origens que entregam neste destino, para acordá-las quando ele acordar: as que conferiram
+     * destino a destino aqui, e as que entregam em todos os destinos do tipo na rede numa lista
+     * só, dividida entre esses destinos (ver {@link NetworkRoutes}).
+     */
     final List<Port> feeders = new ArrayList<>(0);
+    List<Port> sharedFeeders = List.of();
 
     Port(RouterBlockEntity node, Direction face, ResourceType type) {
         this.node = node;
@@ -64,6 +69,7 @@ final class Port {
         filter = FilterSet.EMPTY;
         order = null;
         feeders.clear();
+        sharedFeeders = List.of();
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

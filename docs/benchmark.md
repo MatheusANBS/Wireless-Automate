@@ -4,15 +4,14 @@ Mede o custo do motor nos cenários do "Plano de benchmark" da [especificação]
 
 ## Resumo
 
-- **Rede ociosa e destinos cheios estão resolvidos.** 500 nós sem nada para mover custam 0,019 ms/tick, e 250 origens cheias contra 250 destinos cheios custam 0,022 ms/tick, depois que tudo dorme. O MSPT do servidor não muda (0,28 ms antes e depois).
-- **Muitos nós (500) fica no orçamento, com ressalvas.** Com 250 origens e 250 destinos movendo itens, o mod usa em média 0,55 ms/tick (baú vanilla) e 0,64 ms/tick (Sophisticated Storage), contra o teto de 0,5 ms, e o MSPT sobe de 0,3 para 0,9–1,0 ms. Isso acontece em 100% dos ticks: o resto continua no tick seguinte, e todas as 250 origens moveram itens em cada repetição. O excesso médio, de 10% a 30%, vem da última visita do tick, que não é interrompida. O p99 fica entre 1,1 e 2,3 ms.
-- **Gargalo 1, a remontagem das rotas fica fora do orçamento.** Com 500 nós, cada mudança na rede (configurar uma face, um vizinho que troca de bloco, redstone, um chunk que carrega) custa de 7 a 8,5 ms num tick só, ou 15 vezes o orçamento. No cenário em que um nó muda por segundo, o p99 do mod vai a 8 ms e o máximo a 20–27 ms. A correção proposta está no patch 02.
-- **Gargalo 2, a inserção em inventário grande.** Uma entrega custa cerca de 6 µs num barril vanilla, 17 µs num barril do Sophisticated Storage e cerca de 53 µs num barril de netherita do Sophisticated Storage (132 slots). O tempo vai quase todo para o `insertItemStacked`, que varre o destino duas vezes e é chamado duas vezes por entrega. A correção proposta está no patch 03.
-- **Gargalo 3, o tier Ultimate tem teto de 40.960 itens/s por face.** O teto vem de `MAX_ATTEMPTS_PER_VISIT` (32 pilhas por visita, uma visita por tick), e não do orçamento: a vazão bruta usa só 0,2 ms (vanilla) dos 0,5 ms.
-- **Justiça.** Quando a volta inteira cabe no orçamento, cada tick começa da mesma origem. As primeiras origens da lista ficam então com todo o espaço que abre nos destinos: no cenário "bigfull" vanilla, só 5 das 10 origens moveram alguma coisa. A correção proposta está no patch 04.
-- **Filtros grandes não pesam.** Com filtros de milhares de entradas (cenário "types"), o custo por entrega ficou igual ao do mesmo inventário sem filtro ("big"): cerca de 53 µs no Sophisticated Storage, dominado pela inserção.
+Rodada base de 7 de outubro de 2026 (motor `48c7232`, seção "Resultados") e, no mesmo dia, as correções do motor medidas antes e depois (seção "Correções aplicadas: antes e depois").
 
-Os patches estão em `bench-patches/` (ver "Patches propostos"). Ainda não foram aplicados nem medidos no jogo, porque o motor está sendo mudado em paralelo ("rede por aba", slots de cartão).
+- **A remontagem das rotas caiu de 7,4–8,6 ms para 0,5–1,0 ms** com 500 nós, e o pico do mod no cenário "rebuild" de 14 ms para 1,5 ms (p99 de 8,6 para 1,07 ms). O que sobra é código frio: a remontagem roda poucas vezes e o JIT não chega a compilá-la.
+- **Justiça entre origens resolvida:** no "bigfull" vanilla, 100% das origens movem (antes, de 50% a 60%).
+- **Ultimate e Elite sem o teto de 40.960 itens/s por face:** a vazão bruta vanilla foi para 68.651 itens/s, limitada pelo orçamento. No Sophisticated Storage uma visita de 32 entregas já custa 0,5 ms, então o Ultimate continua em 40.960/s ali.
+- **Rede ociosa:** 0,017 ms/tick, com p99 de 0,22 para 0,06 ms (o `pass()` não copia mais a lista de destinos).
+- **Muitos nós (500):** no orçamento, como na base (0,53 ms/tick vanilla, 0,57 Sophisticated); o MSPT do servidor vai de 0,3 para 0,9 ms com a rede movendo 127 mil itens/s.
+- **A inserção planejada não mudou o custo no Sophisticated Storage** (cerca de 50 µs por entrega no barril de netherita, antes e depois): a varredura do destino era barata, e o caro é o `extractItem`/`insertItem` de verdade do mod de armazenamento.
 
 ## Como rodar
 
@@ -48,7 +47,7 @@ Para a rede continuar ocupada, a cada 20 ticks o benchmark reenche as origens e 
 
 O código do motor começa interpretado. Por isso o modo automático roda antes uma tarefa de aquecimento do JIT ("many" com 200 nós e "mixed" com 60), que é descartada. Mesmo assim, a primeira montagem de cada tarefa varia muito (de 7 a 71 ms no "many" vanilla), por causa do JIT e do GC.
 
-**Contadores do motor (opcionais):** visitas por tick, µs por visita, ticks com o orçamento esgotado e tempo por remontagem vêm de quatro contadores no `NetworkManager` (`visitCount`, `exhaustedTicks`, `rebuildCount`, `rebuildNanos`; patch 01). O benchmark os lê por reflexão (`bench/EngineCounters.java`). Sem eles, essas colunas saem "—", o esgotamento é estimado pelos ticks em que o mod gastou o teto, e o cenário "rebuild" mostra o tempo do tick logo depois da mudança. A rodada abaixo foi feita com o patch 01 aplicado.
+**Contadores do motor:** visitas por tick, µs por visita, ticks com o orçamento esgotado e tempo por remontagem vêm de quatro contadores cumulativos e públicos do `NetworkManager` (`visitCount()`, `exhaustedTicks()`, `rebuildCount()` e `rebuildNanos()`), lidos direto pelo `bench/BenchRun`. As voltas extras do tick (ver "Correções aplicadas") contam como visitas, mas não como orçamento esgotado.
 
 ## Máquina
 
@@ -70,7 +69,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 
 Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots.
 
-## Resultados
+## Resultados (rodada base, motor 48c7232)
 
 Média ± desvio padrão entre 3 repetições. O "mod" é o tempo do `NetworkManager` por tick, com teto de 0,5 ms. "Unidades/s" são itens, mB e FE somados.
 
@@ -104,23 +103,74 @@ O servidor sem cena teve MSPT de 0,85 ms. É mais alto que a linha de base dos c
 - **Misto.** 249 origens de três tipos (83 de itens, 83 de fluido e 83 de energia) a 6,5 µs por visita, com 100% das origens ativas. As de itens moveram 42,5 mil itens/s, o teto do tier (83 × 512). Fluido e energia também ficaram nos tetos do tier: 83 × 32.000 mB/s e 83 × 16.000 FE/t.
 - **Remontagem.** Cada remontagem custa 7–8,5 ms com 500 nós (250 origens × 250 destinos), fora do orçamento. Acontece a cada mudança de configuração, de redstone ou de capability de qualquer nó da rede.
 
-## Gargalos e patches propostos
+## Correções aplicadas: antes e depois
 
-Os patches estão em `/tmp/claude-0/.../scratchpad/bench-patches/` (cópia entregue ao orquestrador), feitos sobre o `HEAD` `48c7232`. Não foram aplicados neste branch: o motor (`ItemTransfer`, `NetworkRoutes`, `NetworkManager`) está sendo mudado em paralelo. Eles também ainda não foram compilados nem medidos; o próximo passo é aplicá-los sobre o motor novo e rodar `./scripts/bench.sh many:500:3,many:500:3:soph,rebuild:500:3,big:20:3:soph,bigfull:20:3`.
+Os quatro gargalos da rodada base viraram correções no motor (`network/`), uma por commit, mais duas que a medição pediu:
 
-1. **`01-contadores-networkmanager.patch`**: quatro contadores cumulativos no `NetworkManager` (`visitCount`, `exhaustedTicks`, `rebuildCount` e `rebuildNanos`, mais o cronômetro em volta de `rebuild()`). O custo é desprezível, e eles dão ao benchmark as colunas por visita e por remontagem. Foram usados nesta rodada.
-2. **`02-ordem-compartilhada.patch`** (gargalo 1, mais o custo das visitas ociosas). Diagnóstico: `NetworkRoutes.rebuild` cria um `RoundRobinOrder` por origem, e cada construtor monta dois `HashMap` com a lista inteira de destinos e a ordena. Isso dá O(origens × destinos) em alocação e hashing a cada remontagem (cerca de 8 ms com 500 nós, 1,2 ms com 50). Correção: separar a parte imutável (`RoundRobinOrder.Layout`: destinos ordenados, grupos e índice), dividida entre as origens com a mesma lista de destinos (o caso comum: todas alcançam todas). Cada origem fica só com os cursores. O `pass()` deixa de copiar a lista toda (O(destinos) por visita) e passa a ler pela `Layout` com os cursores congelados no início da passada, com a mesma semântica. Inclui dois testes JUnit novos. Efeito esperado: a montagem cai para O(origens + destinos) em mapas e ordenação. A parte O(origens × destinos) que sobra é só alcance e `feeders`. As visitas ociosas também ficam mais baratas. Próximo passo, se ainda não bastar: remontar só a rede e o tipo que mudaram e pôr a remontagem dentro do orçamento.
-3. **`03-insercao-planejada.patch`** (gargalo 2). Diagnóstico: no perfil do JFR (`WA_BENCH_JFR=1`), o `ItemHandlerHelper.insertItemStacked` é cerca de 55% do tempo do `ItemTransfer`, e o `RoundRobinOrder.pass` cerca de 13%. Cada entrega chama o `insertItemStacked` na simulação e de novo na inserção real, e cada chamada varre o destino duas vezes (pilhas iguais, depois slots vazios). Correção: `ItemTransfer.InsertPlan`, que faz uma varredura só na simulação (anota os slots vazios enquanto procura pilhas iguais) e lembra os slots que aceitaram. A inserção real vai direto neles, e cai no `insertItemStacked` só se o destino mudou no meio. O resultado é o mesmo do `insertItemStacked`. Efeito esperado: de 4 varreduras do destino por entrega para 1, o que importa mais nos 132 slots do Sophisticated Storage. Depois disso vem a técnica 7 da especificação (índice de slots com espaço por destino).
-4. **`04-cursor-gira.patch`** (justiça). Quando a volta inteira cabe no orçamento, o próximo tick começa uma origem adiante, em vez de sempre na mesma.
+1. **Contadores no `NetworkManager`** (`visitCount`, `exhaustedTicks`, `rebuildCount`, `rebuildNanos`), públicos; o benchmark lê direto, sem reflexão.
+2. **Ordem compartilhada e remontagem O(origens + destinos).** `RoundRobinOrder.Layout` guarda os destinos agrupados por prioridade e é dividida entre as origens com a mesma lista; cada origem fica só com os cursores, e o `pass()` lê pela `Layout` sem copiar a lista. A origem que alcança todos os destinos do tipo (só extrai, nenhum destino na mesma máquina e face, e a caixa dos destinos inteira no alcance, `ReachBox`) usa a `Layout` de todos sem conferir um a um, e entra numa lista única de alimentadoras (`Port.sharedFeeders`) dividida entre os destinos. As outras (Armazém, alcance curto, outra dimensão) conferem destino a destino como antes, e dividem a `Layout` de quem tiver a mesma lista. A rede por aba e a regra do Armazém (`bothToBoth`) ficam iguais.
+3. **Inserção planejada** (`ItemTransfer.InsertPlan`): uma varredura do destino por entrega (pilhas iguais, depois vazios, como o `insertItemStacked`), lembrando os slots que aceitaram; a inserção real vai neles e só o que sobrar cai no `insertItemStacked`, e o que nem ele aceitar volta para a origem como antes. A contagem do estoque do destino sai da mesma varredura. Filtros (`FilterSet`) e estoque (`StockLimit`) seguem as mesmas regras.
+4. **Justiça entre origens** (`SourceCursor`): quando a volta inteira cabe no orçamento, a seguinte começa depois da última origem que moveu algo, como numa fila. A versão do patch 04 (girar uma origem por tick) não bastava: no "bigfull" o espaço abre a cada 20 ticks, múltiplo das 10 origens, e as mesmas 5 continuavam na frente.
+5. **Voltas extras para o Ultimate e o Elite.** A visita de itens para em 32 tentativas, e cada origem tinha uma visita por tick, então os dois tiers ficavam presos em 2.048 itens/tick (40.960/s) por face; o Elite (131.072/s) também. Agora a visita avisa se parou num teto com saldo no balde, e, depois da volta inteira, o laço visita de novo só essas origens, na mesma ordem, enquanto a visita seguinte (estimada pela anterior da origem) couber no que resta (`TickBudget.fits`). Ninguém ganha a segunda visita antes de todas terem a primeira, e o teto por visita continua o mesmo.
+6. **Leitura incremental das faces.** `NodePorts` guarda as portas ativas de cada tipo já preenchidas (rede, modo, prioridade, filtro, tier, máquina); o `nodeChanged` descarta a leitura do nó e a troca de rede descarta a do tipo. A montagem relê só esses nós. A config dos tiers é lida uma vez por tipo, e o `facing` uma vez por nó.
 
-Sem patch, só a proposta:
+Testes novos: JUnit para `Layout` dividida e passada estável, `ReachBox`, `SourceCursor` e `TickBudget.fits`; GameTests para a ordem do empilhamento com conservação de itens e para a remontagem que relê só os nós que mudaram.
 
-- **Estouro do orçamento pela última visita:** levar o prazo do `TickBudget` para dentro do `ItemTransfer` e conferir entre as tentativas de slot, parando a visita, com o cursor de slot já salvo. Assim, uma visita de 130–500 µs no Sophisticated Storage não estoura o teto.
-- **Teto do Ultimate:** com taxa ilimitada, deixar a mesma origem ser visitada de novo no mesmo tick enquanto houver orçamento, ou escalar `MAX_ATTEMPTS_PER_VISIT`, para a vazão bruta ser limitada pelo orçamento, como diz a especificação.
+### Números
+
+Mesma máquina, sem outra carga nas duas rodadas, 3 repetições (média ± desvio padrão está nos relatórios brutos; aqui, as médias). "Antes" é o `e4b4056` com só os contadores (relatório `20261007-103321`); "depois" é o motor com as seis correções, no `HEAD` do branch (relatório `20261007-115622`; a rodada foi interrompida antes do fim, então o "raw" do Sophisticated Storage tem 2 repetições e o "mixed" vem da rodada `20261007-104849`, com as correções 1 a 5).
+
+| Cenário | Armaz. | MSPT sem rede (ms) | MSPT com rede antes → depois (ms) | Mod média (ms/tick) | Mod p99 (ms) | Mod máx (ms) | µs/entrega | Unidades/s | Origens que moveram |
+|---|---|---|---|---|---|---|---|---|---|
+| many 500 | vanilla | 0,28 / 0,34 | 0,83 → 0,89 | 0,537 → 0,530 | 0,83 → 0,71 | 2,5 → 1,3 | 5,5 → 5,2 | 125.195 → 127.113 | 100% → 100% |
+| many 500 | soph | 0,25 / 0,34 | 0,88 → 0,93 | 0,589 → 0,567 | 1,03 → 1,18 | 7,5 → 2,9 | 18,5 → 14,5 | 41.523 → 50.534 | 100% → 100% |
+| idle 500 | vanilla | 0,24 / 0,30 | 0,26 → 0,30 | 0,017 → 0,017 | 0,22 → 0,06 | 0,30 → 0,15 | — | 0 | — |
+| rebuild 500 | vanilla | 0,20 / 0,28 | 1,15 → 0,85 | 0,920 → 0,550 | 8,63 → 1,07 | 14,2 → 1,5 | 10,6 → 5,9 | 111.073 → 116.588 | 100% → 100% |
+| big 20 | vanilla | 0,21 / 0,28 | 0,27 → 0,39 | 0,092 → 0,112 | 0,18 → 0,39 | 0,34 → 1,23 | 7,6 → 9,3 | 5.120 → 5.120 | 100% → 100% |
+| big 20 | soph | 0,21 / 0,24 | 0,75 → 0,81 | 0,531 → 0,533 | 1,22 → 0,91 | 2,8 → 1,6 | 52,3 → 51,5 | 5.125 → 5.114 | 100% → 100% |
+| bigfull 20 | vanilla | 0,19 / 0,24 | 0,24 → 0,26 | 0,033 → 0,026 | 0,26 → 0,20 | 0,90 → 0,31 | 16,3 → 13,2 | 2.560 → 2.560 | **60% → 100%** |
+| bigfull 20 | soph | 0,20 / 0,24 | 0,33 → 0,38 | 0,128 → 0,134 | 0,74 → 0,81 | 1,05 → 2,2 | 64,1 → 65,8 | 2.532 → 2.507 | 100% → 100% |
+| raw 2 (Ultimate) | vanilla | 0,19 / 0,24 | 0,36 → 0,47 | 0,140 → 0,206 | 0,40 → 0,54 | 0,83 → 2,9 | 4,4 → 3,8 | **40.960 → 68.651** | 100% → 100% |
+| raw 2 (Ultimate) | soph | 0,20 / 0,27 | 0,71 → 0,77 | 0,487 → 0,489 | 0,99 → 0,98 | 1,9 → 2,6 | 15,2 → 15,3 | 40.960 → 40.960 | 100% → 100% |
+| mixed 498 | vanilla | 0,23 / 0,26 | 0,77 → 0,78 | 0,523 → 0,520 | 0,79 → 0,91 | 1,5 → 1,8 | 0,23 → 0,18 | 29,3 M → 29,2 M | 100% → 100% |
+
+Remontagem com 500 nós (250 origens × 250 destinos, uma por segundo no cenário "rebuild"): **7,4–8,6 ms → 0,54–1,0 ms** por remontagem (média por repetição), e o tick seguinte à mudança de 12–17 ms para 1,0–1,5 ms no máximo. Primeira montagem do "many" vanilla: 16,7 ± 9,3 → 2,4 ± 0,6 ms.
+
+Variação entre repetições: as médias do mod variam 1% a 4% (desvio padrão sobre a média); os p99 e máximos variam muito mais (até 50% e 100%), porque um único GC ou um tick de disputa de CPU decide o máximo. A linha de base sem rede (MSPT sem rede) variou de 0,19–0,28 ms numa rodada para 0,24–0,34 ms na outra só pelo estado da máquina; compare diferenças pequenas com cuidado.
+
+### Leitura
+
+- **Orçamento.** Nos cenários que sempre têm trabalho ("many", "rebuild", "mixed", "big" Sophisticated), o mod fica em 0,52–0,57 ms por tick para um teto de 0,5 ms: o laço confere o relógio antes de cada visita, e a última passa um pouco. Nos outros, fica bem abaixo (0,017 ms ocioso, 0,03 ms no "bigfull"). O MSPT do servidor sobe de cerca de 0,3 ms para 0,8–0,9 ms com 500 nós movendo, e para 0,3 ms com a rede ociosa.
+- **Remontagem.** O custo que sobra (0,5–1,0 ms) é de código frio: a remontagem roda só quando algo muda, e o JIT não chega a compilá-la (numa rodada instrumentada, a leitura das faces caiu de cerca de 2 ms para 0,2 ms com a leitura incremental, e o resto se divide entre os laços de origens e destinos, cada um a cerca de 1 µs por item, típico do interpretador). Dividir a montagem de uma rede entre ticks exigiria montar as rotas novas à parte e trocar no fim, porque as portas são mudadas no lugar; não compensou agora. Fica como próximo passo se aparecer rede com milhares de nós.
+- **Inserção.** Numa rodada instrumentada no barril de netherita do Sophisticated Storage, por entrega: a simulação (a varredura do plano) custou cerca de 6–20 µs, a extração real 30–75 µs e a inserção real 10–50 µs. O caro é o próprio Sophisticated Storage ao mudar o inventário, então o plano não mexeu na média dele; no vanilla, a entrega ficou igual ou um pouco mais barata. A correção fica pela leitura de uma varredura em vez de quatro, que não piora nada; o relatório base atribuía 55% do tempo ao `insertItemStacked` contando o tempo das inserções dentro dele.
+- **Vazão bruta.** O Ultimate vanilla passou a ser limitado pelo orçamento (cerca de 1,7 visitas de 32 pilhas por tick, 68,7 mil itens/s). No Sophisticated Storage, uma visita leva cerca de 0,49 ms, então a volta extra não cabe e a vazão continua em 40.960/s, sem passar do teto.
+- **Justiça.** No "bigfull" vanilla as 10 origens passaram a mover; nos outros cenários já moviam todas.
+
+## A medir na máquina local
+
+O benchmark completo não coube no tempo do ambiente da nuvem (cada tarefa de 3 repetições leva cerca de 1 minuto, e a máquina era dividida). Os números acima são de uma máquina de 4 CPUs sem outra carga, mas vale repetir numa máquina local parada, antes e depois:
+
+```bash
+# depois (HEAD do branch, com as seis correções)
+./scripts/bench.sh "many:500:3,many:500:3:soph,idle:500:3,full:500:3,rebuild:500:3,big:20:3,big:20:3:soph,bigfull:20:3,bigfull:20:3:soph,raw:2:3,raw:2:3:soph,types:20:3:soph,mixed:498:3"
+# antes: o mesmo comando num checkout de e4b4056 com só os contadores (commit 712a246 do branch do motor)
+# remontagem aquecida (100 remontagens por repetição, para ver o custo com o JIT já compilado):
+WA_BENCH_MEASURE=2000 ./scripts/bench.sh "rebuild:500:3"
+```
+
+O que comparar com a rodada base:
+
+- "rebuild": a coluna de remontagens (`ms cada`) deve ficar abaixo de 1 ms, contra 7–8,5 ms; o mod máx e o p99 devem ficar perto dos do "many".
+- "bigfull" vanilla: origens que moveram em 100%.
+- "raw" vanilla: unidades/s acima de 40.960 (aqui, cerca de 68.600) com o mod abaixo de 0,5 ms em média.
+- "idle" e "full": mod perto de 0 e p99 menor que o da base.
+- "many" e "mixed": mod média perto de 0,5 ms e as mesmas vazões; se o MSPT com rede subir mais que 1 ms, olhar o µs/visita.
 
 ## Limitações e próximos passos
 
-- A máquina era compartilhada. Repita os números numa máquina parada e compare com outros mods de transporte do ATM10, como pede a especificação ("Comparação"), o que não foi feito.
+- **Estouro pela última visita** (ainda não feito): levar o prazo do `TickBudget` para dentro do `ItemTransfer` e conferir entre as tentativas de slot, parando a visita com o cursor de slot salvo. Uma visita de 0,1–0,5 ms no Sophisticated Storage ainda passa do teto.
+- **Remontagem dividida entre ticks** (ainda não feito): montar as rotas novas à parte e trocar no fim, para redes de milhares de nós; hoje 500 nós custam menos de 1 ms.
+- A rodada base dividiu a máquina com outros agentes; a de antes e depois, não. Repita os números numa máquina parada e compare com outros mods de transporte do ATM10, como pede a especificação ("Comparação"), o que não foi feito.
 - O MSPT medido aqui inclui o mod, mas o MSPT que o `TickBudget.adapt` lê (`getAverageTickTimeNanos`) não inclui, porque o `Post` roda depois da conta do vanilla. O orçamento adaptativo, portanto, não enxerga o próprio custo do mod. É aceitável com 0,5 ms, mas vale saber.
 - Não há ainda o GameTest de regressão de performance da especificação. O caminho natural é um cenário pequeno (por exemplo, `rebuild` com 100 nós) que falhe se a remontagem passar de um limite folgado.
 - Energia e fluido do cenário misto usam máquinas de teste sem custo próprio: medem só o mod. Caldeirões não servem, porque trocam de bloco a cada balde e, com isso, remontam a rede inteira (o `AbstractCauldronBlock` invalida a capability).

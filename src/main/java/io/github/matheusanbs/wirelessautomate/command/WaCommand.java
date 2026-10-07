@@ -12,6 +12,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
@@ -114,6 +115,28 @@ public final class WaCommand {
                 ms(budget.averageUsedNanos()),
                 ms(budget.lastUsedNanos()),
                 ms(budget.limitNanos())), false);
+        NetworkSavedData data = NetworkSavedData.get(source.getServer());
+        int shown = 0;
+        for (NetworkStats stats : manager.stats(source.getServer())) {
+            WaNetwork network = data.network(stats.id());
+            if (network == null) {
+                continue;
+            }
+            shown++;
+            source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.network",
+                    network.displayName(),
+                    stats.nodes(),
+                    ms(stats.averageNanos()),
+                    ms(stats.lastNanos()),
+                    stats.opsLastSecond(),
+                    stats.sourcesAwake(),
+                    stats.sourcesSleeping(),
+                    stats.destinationsAwake(),
+                    stats.destinationsSleeping()), false);
+        }
+        if (shown == 0) {
+            source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.no_networks"), false);
+        }
         return manager.nodeCount();
     }
 

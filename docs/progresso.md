@@ -28,6 +28,10 @@ O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre 
 
 Nada começado: químicos do Mekanism, Tablet, presets e código `WA1:`, Configurador e Vinculador por área, AE2 e RS2, upgrade de chunk loading, texturas finais e balanceamento das receitas. As dependências opcionais do `mekanism` e do `jei` já estão declaradas no `neoforge.mods.toml`.
 
+## Feedback do dono para retomar (pendente)
+
+- **Configurador está complexo demais (refazer).** Comentário do dono depois de ver a versão com biblioteca: "Sobre a varinha e os códigos importar etc. fica muito complexo para o usuário, não gostei. Poderia refazer?". A versão atual (commit `751eefa`: tela com abas Biblioteca e Área, presets nomeados por jogador, código `WA1:` com exportar/importar/colar, modos Pincel/Área, copiar e aplicar em área com mapa e "limitar a máquina") funciona e tem testes, mas precisa ser **simplificada**. Antes de codar, propor ao dono um desenho mais simples (ex.: só o pincel copiar/colar e um "colar em área" direto, sem biblioteca nem código de texto, ou com a biblioteca escondida) e confirmar. Código: `item/ConfiguratorItem.java`, `preset/`, `menu/Configurator*.java`, `client/Configurator*.java`.
+
 ## Próximo passo
 
 **Fechar o v1.**

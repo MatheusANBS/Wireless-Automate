@@ -30,13 +30,15 @@ CIANO = [(0x16, 0x62, 0x5e), (0x25, 0x9a, 0x93), (0x45, 0xd6, 0xcc), (0x9f, 0xf5
 OURO = (0xf7, 0xd6, 0x70)
 
 
-def fundo() -> Image.Image:
+def fundo(largura: int = BASE, altura: int = BASE, cx: float | None = None, cy: float | None = None) -> Image.Image:
     """Degradê radial azul-escuro, grade de pontos e vinheta (nunca uma cor sólida)."""
-    img = Image.new("RGBA", (BASE, BASE))
-    cx, cy = BASE * 0.5, BASE * 0.42
-    for y in range(BASE):
-        for x in range(BASE):
-            d = math.hypot(x - cx, y - cy) / (BASE * 0.72)
+    img = Image.new("RGBA", (largura, altura))
+    cx = largura * 0.5 if cx is None else cx
+    cy = altura * 0.42 if cy is None else cy
+    alcance = max(largura, altura) * 0.72
+    for y in range(altura):
+        for x in range(largura):
+            d = math.hypot(x - cx, y - cy) / alcance
             t = min(1.0, d)
             r = int(0x1c + (0x0b - 0x1c) * t)
             g = int(0x33 + (0x10 - 0x33) * t)
@@ -93,12 +95,12 @@ def acende_leds(img: Image.Image) -> Image.Image:
     return saida
 
 
-def capa() -> Image.Image:
+def capa(com_fundo: bool = True) -> Image.Image:
     sprites = tex.gerar()
     sprites["block/router_elite_front"] = acende_leds(sprites["block/router_elite_front"])
     roteador = tex.roteador_montado("elite", sprites, s=3)
     roteador = roteador.crop(roteador.getbbox())
-    img = fundo()
+    img = fundo() if com_fundo else Image.new("RGBA", (BASE, BASE), (0, 0, 0, 0))
     # Sombra elíptica no chão.
     sombra = Image.new("RGBA", (BASE, BASE), (0, 0, 0, 0))
     ImageDraw.Draw(sombra).ellipse([BASE / 2 - 28, 80, BASE / 2 + 34, 90], fill=(0, 0, 0, 110))

@@ -137,7 +137,9 @@ import org.lwjgl.glfw.GLFW;
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevEndToEnd {
-    private static final String OUTPUT = System.getenv("WA_E2E");
+    /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
+    private static final String SHOWCASE = System.getenv("WA_SHOWCASE");
+    private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : SHOWCASE;
     static final String WORLD = "wa-e2e";
     private static final String MAIN_NETWORK = "E2E Principal";
     private static final String OTHER_NETWORK = "E2E Outra";
@@ -245,7 +247,7 @@ public final class DevEndToEnd {
                 case SETTLING -> {
                     // deixa os chunks em volta chegarem ao cliente
                     if (elapsed() > 2_000) {
-                        steps = script();
+                        steps = SHOWCASE != null ? showcase() : script();
                         enter(Phase.RUNNING);
                     }
                 }
@@ -914,6 +916,229 @@ public final class DevEndToEnd {
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode() == PortMode.EXTRACT
                 && router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().isEmpty()),
                 () -> "B: " + onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).toString())));
+    }
+
+    // ------------------------------------------------------------------ Vitrine (WA_SHOWCASE)
+
+    private static BlockPos showBase;
+    private static final List<BlockPos> showRouters = new ArrayList<>();
+    private static BlockPos showInput;
+    private static BlockPos showFurnace;
+
+    /**
+     * Fotos da página do CurseForge: uma pequena fábrica (fornalhas acesas com roteadores dos quatro
+     * tiers e filtro de minérios, um baú de entrada cheio, um barril Armazém e um baú de saída), em
+     * redes com nomes de verdade. Fotografa a fábrica, a área do Vinculador, a tela do roteador com
+     * itens passando, o filtro, o Tablet e o guia. As imagens finais saem de
+     * scripts/curseforge/gerar_imagens.py.
+     */
+    private static List<Step> showcase() {
+        List<Step> list = new ArrayList<>();
+        list.add(new Step("montar a vitrine", STEP_TIMEOUT_MS, DevEndToEnd::showcaseWorld,
+                () -> onServer(server -> showRouters.stream().allMatch(p -> NetworkManager.get().contains(router(server, p))))
+                        && showRouters.stream().allMatch(DevEndToEnd::clientSees),
+                () -> showRouters.size() + " roteadores"));
+        // Vista de cima da fábrica, sem a interface.
+        list.add(showCamera("câmera na fábrica", 0, 3.4, -0.6, 180f, 40f));
+        list.add(wait("chunks e itens", 60));
+        list.add(capture("s1-fabrica"));
+        // Vinculador na mão, em modo Área, com a fileira de fornalhas marcada.
+        list.add(new Step("área do Vinculador", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                ItemStack linker = new ItemStack(ModItems.LINKER.get());
+                LinkerItem.setMode(linker, LinkerMode.AREA);
+                LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-5, 0, -5),
+                        java.util.Optional.of(showBase.offset(5, 1, -5))));
+                player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+                return null;
+            });
+        }, () -> LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null, () -> "Vinculador na mão"));
+        list.add(wait("contorno", 10));
+        list.add(capture("s2-vinculador-area"));
+        list.add(new Step("mão vazia e interface", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = false;
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getMainHandItem().isEmpty(), () -> "mão"));
+        // Tela do baú de entrada, com a vazão aparecendo (o jogador vai para perto dele).
+        list.add(showCamera("perto da entrada", -3, 0, -6, 180f, 35f));
+        list.add(new Step("interface de volta", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
+                () -> true, () -> "interface"));
+        list.add(new Step("repor os itens", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            refillShowcase(server.overworld());
+            return null;
+        }), () -> true, () -> "itens"));
+        list.add(open("abrir a entrada", () -> showInput.above()));
+        list.add(new Step("vazão na tela", 15_000, () -> {
+        }, () -> routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()] > 0,
+                () -> "vazão " + routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()]));
+        list.add(capture("s3-roteador"));
+        list.add(close("fechar a entrada"));
+        // Filtro da fornalha (face de cima, itens).
+        list.add(showCamera("perto da fornalha", 0, 0, -3, 180f, 35f));
+        list.add(new Step("interface de volta 2", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
+                () -> true, () -> "interface"));
+        list.add(open("abrir a fornalha", () -> showFurnace.above()));
+        list.add(new Step("filtro da fornalha", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(face(Direction.UP)), "face Cima"));
+        }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit"))) != null, () -> "Editar"));
+        list.add(capture("s4-roteador-fornalha"));
+        list.add(new Step("abrir o filtro", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar")),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("s5-filtro"));
+        list.add(close("fechar o filtro"));
+        // Tablet: lista e mapa.
+        list.add(new Step("Tablet na mão (vitrine)", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
+                        new ItemStack(ModItems.NETWORK_TABLET.get()));
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.NETWORK_TABLET.get()), () -> "tablet"));
+        list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen
+                && screen.getMenu().snapshot().nodes().size() >= showRouters.size(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("s6-tablet-lista"));
+        list.add(new Step("aba Mapa", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.map")), "aba Mapa")),
+                () -> true, () -> "mapa"));
+        list.add(wait("mapa desenhado", 10));
+        list.add(capture("s7-tablet-mapa"));
+        list.add(close("fechar o Tablet"));
+        if (ModList.get().isLoaded("guideme")) {
+            list.add(new Step("guia", STEP_TIMEOUT_MS,
+                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:router.md"),
+                    () -> Minecraft.getInstance().screen != null
+                            && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
+                    () -> "tela " + describe(Minecraft.getInstance().screen)));
+            list.add(capture("s8-guia"));
+        }
+        return list;
+    }
+
+    /** Teleporta o jogador para um ponto relativo à base, olhando na direção dada, sem interface. */
+    private static Step showCamera(String name, double dx, double dy, double dz, float yaw, float pitch) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = true;
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            // A rotação vai também para o cliente: o teleporte do servidor não a aplica na hora.
+            Minecraft.getInstance().player.setYRot(yaw);
+            Minecraft.getInstance().player.setXRot(pitch);
+            Minecraft.getInstance().player.yRotO = yaw;
+            Minecraft.getInstance().player.xRotO = pitch;
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.getAbilities().flying = true;
+                player.onUpdateAbilities();
+                player.teleportTo(player.serverLevel(), showBase.getX() + 0.5 + dx, showBase.getY() + dy,
+                        showBase.getZ() + 0.5 + dz, yaw, pitch);
+                return null;
+            });
+        }, () -> Math.abs(Minecraft.getInstance().player.getXRot() - pitch) < 0.5f
+                && Minecraft.getInstance().player.position().distanceToSqr(showBase.getX() + 0.5 + dx, showBase.getY() + dy,
+                        showBase.getZ() + 0.5 + dz) < 0.5, () -> "câmera em " + Minecraft.getInstance().player.position());
+    }
+
+    private static Step wait(String name, int waitTicks) {
+        return new Step("esperar " + name, STEP_TIMEOUT_MS, () -> {
+        }, () -> stepTicks >= waitTicks, () -> waitTicks + " ticks");
+    }
+
+    private static void showcaseWorld() throws Exception {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            showBase = player.blockPosition();
+            level.setDayTime(6000);
+            NetworkSavedData data = NetworkSavedData.get(server);
+            WaNetwork smelting = data.create(player.getUUID(), "Smelting Line");
+            WaNetwork storage = data.create(player.getUUID(), "Storage");
+            data.create(player.getUUID(), "Base Power");
+            data.setActiveNetwork(player.getUUID(), smelting.id());
+            // Piso de pedra lisa com borda e lanternas nos cantos, sob a fábrica.
+            for (int x = -7; x <= 7; x++) {
+                for (int z = -10; z <= -3; z++) {
+                    boolean edge = x == -7 || x == 7 || z == -10 || z == -3;
+                    level.setBlockAndUpdate(showBase.offset(x, -1, z),
+                            (edge ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_STONE).defaultBlockState());
+                }
+            }
+            for (int[] c : new int[][] {{-7, -10}, {7, -10}, {-7, -3}, {7, -3}}) {
+                level.setBlockAndUpdate(showBase.offset(c[0], 0, c[1]), Blocks.LANTERN.defaultBlockState());
+            }
+            // Fileira de fornalhas acesas, uma por tier (a do meio repete o Elite).
+            String[] tiers = {"basic", "advanced", "elite", "ultimate", "elite"};
+            Filter ores = new Filter(Filter.ListMode.WHITELIST, false, List.of(
+                    new FilterEntry.TagEntry(ResourceLocation.parse("c:ores"), 0),
+                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_IRON), 0),
+                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_GOLD), 0),
+                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_COPPER), 0),
+                    new FilterEntry.ItemEntry(new ItemStack(Items.ANCIENT_DEBRIS), 16)));
+            for (int i = 0; i < tiers.length; i++) {
+                BlockPos furnace = showBase.offset(-4 + 2 * i, 0, -5);
+                level.setBlockAndUpdate(furnace, Blocks.FURNACE.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.FurnaceBlock.FACING, Direction.SOUTH)
+                        .setValue(net.minecraft.world.level.block.FurnaceBlock.LIT, true));
+                placeShowRouter(server, level, furnace, tiers[i], "Furnace " + (i + 1), smelting.id());
+                RouterBlockEntity router = router(server, furnace.above());
+                router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                router.setFilter(ResourceType.ITEM, Direction.UP, ores);
+                router.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.EXTRACT);
+                if (i == 2) {
+                    showFurnace = furnace;
+                }
+            }
+            // Armazenamento: entrada cheia, buffer e saída.
+            showInput = showBase.offset(-3, 0, -8);
+            BlockPos buffer = showBase.offset(0, 0, -8);
+            BlockPos output = showBase.offset(3, 0, -8);
+            level.setBlockAndUpdate(showInput, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+            level.setBlockAndUpdate(buffer, Blocks.BARREL.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP));
+            level.setBlockAndUpdate(output, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+            placeShowRouter(server, level, showInput, "basic", "Ore Input", storage.id());
+            placeShowRouter(server, level, buffer, "elite", "Buffer", storage.id());
+            placeShowRouter(server, level, output, "advanced", "Output", storage.id());
+            router(server, showInput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+            router(server, buffer.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.BOTH);
+            router(server, output.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+            refillShowcase(level);
+            return null;
+        });
+    }
+
+    /** Entrada cheia e destinos vazios, para a tela mostrar itens passando. */
+    private static void refillShowcase(ServerLevel level) {
+        for (BlockPos pos : List.of(showBase.offset(0, 0, -8), showBase.offset(3, 0, -8))) {
+            ((Container) level.getBlockEntity(pos)).clearContent();
+        }
+        Container input = (Container) level.getBlockEntity(showInput);
+        for (int slot = 0; slot < input.getContainerSize(); slot++) {
+            input.setItem(slot, new ItemStack(slot % 3 == 0 ? Items.COBBLESTONE : slot % 3 == 1 ? Items.IRON_INGOT
+                    : Items.REDSTONE, 64));
+        }
+    }
+
+    private static void placeShowRouter(MinecraftServer server, ServerLevel level, BlockPos machine, String tier, String name,
+            UUID network) {
+        BlockPos pos = machine.above();
+        level.setBlockAndUpdate(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, io.github.matheusanbs.wirelessautomate.block.RouterTier.valueOf(tier.toUpperCase(java.util.Locale.ROOT))));
+        RouterBlockEntity router = router(server, pos);
+        router.setNetworkId(network);
+        router.setName(name);
+        showRouters.add(pos);
     }
 
     // ------------------------------------------------------------------ Guia (GuideME)

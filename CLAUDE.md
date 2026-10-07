@@ -49,6 +49,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros. `ChemicalGameTests` fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
 | `scripts/textures/gerar_texturas.py` | Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; edite as paletas ali, não os PNGs |
 | `scripts/guide/gerar_guia.py` | Gera as páginas do livro-guia (GuideME) em inglês e português, lado a lado; edite ali, não os `.md` |
+| `scripts/curseforge/` | Capa (`gerar_capa.py`, 400x400) e banner e imagens da descrição (`gerar_imagens.py`) do CurseForge, em `docs/curseforge/`. As fotos vêm da vitrine: `WA_SHOWCASE=run/showcase ./gradlew runClient` (modo do `DevEndToEnd`) |
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).

@@ -89,6 +89,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-07 | Página do CurseForge: capa 400x400, banner 1600x400 e sete imagens da descrição (fotos reais de uma vitrine montada pelo `DevEndToEnd` com `WA_SHOWCASE`, e os tiers desenhados com as texturas), tudo por script em `scripts/curseforge/`. |
 | 2026-10-07 | Ícone do roteador na cor do tier em todo lugar (inventário, mão, chão): propriedade de item `wirelessautomate:tier` no cliente e overrides em `models/item/router.json`; o guia mostra os quatro na página do roteador. |
 | 2026-10-07 | Guia só com o que o jogador precisa para operar (saiu a página de desempenho e config, a tabela da tela virou passo a passo de configurar uma face); livro-guia na aba criativa e entregue a cada jogador no primeiro login (`item/GuideBook`, config `guide.giveOnFirstJoin`). |
 | 2026-10-07 | Polimento do guia: 15 páginas reorganizadas em tabelas (ficha, comandos, modos com ícones, config), páginas novas Problemas comuns e Todas as receitas, sprite próprio do livro e a receita dele no guia; gerador `scripts/guide/gerar_guia.py`; e2e fotografa o guia em inglês e português, rolando as páginas (262 passos). Separador de milhar no tooltip dos cartões segue o idioma (ponto em português). |

@@ -370,10 +370,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         if (preview) {
             List<FaceView> faces = new ArrayList<>(snapshot().faces());
-            faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots()));
+            faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots(),
+                    current.filterSize(), current.blacklist()));
             RouterSnapshot s = snapshot();
             menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.network(), s.networks(),
-                    s.powered(), s.machine(), List.copyOf(faces)));
+                    s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
             return;
         }
         send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
@@ -400,7 +401,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (preview) {
             RouterSnapshot s = snapshot();
             menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), network, s.networks(),
-                    s.powered(), s.machine(), s.faces()));
+                    s.powered(), s.machine(), s.machineState(), s.faces()));
             return;
         }
         send(new SetNetworkPayload(menu.containerId, network));
@@ -427,7 +428,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             if (preview) {
                 RouterSnapshot s = snapshot();
                 menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.network(), s.networks(),
-                        s.powered(), s.machine(), s.faces()));
+                        s.powered(), s.machine(), s.machineState(), s.faces()));
             } else {
                 send(new RenameRouterPayload(menu.containerId, name));
             }

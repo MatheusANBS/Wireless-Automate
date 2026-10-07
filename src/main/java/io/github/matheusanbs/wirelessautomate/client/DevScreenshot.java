@@ -28,6 +28,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -84,7 +85,7 @@ public final class DevScreenshot {
                 screen.previewType(ResourceType.FLUID);
                 RouterSnapshot s = screen.getMenu().snapshot();
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                        s.network(), s.networks(), s.powered(), s.machine(), s.faces()));
+                        s.network(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
                 int[] center = screen.previewEditFilterCenter();
                 mouseX = center[0];
                 mouseY = center[1];
@@ -155,19 +156,19 @@ public final class DevScreenshot {
     /** Fornalha com o roteador Elite preso em cima, na rede "Base". */
     private static RouterSnapshot sample() {
         List<FaceView> faces = new ArrayList<>(Collections.nCopies(ResourceType.values().length * 6,
-                new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, -1)));
+                new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, -1, 0, false)));
         for (Direction direction : Direction.values()) {
             faces.set(RouterSnapshot.index(ResourceType.ITEM, direction),
-                    new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, 1));
+                    new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, 1, 0, false));
         }
         faces.set(RouterSnapshot.index(ResourceType.ITEM, Direction.UP),
-                new FaceView(PortMode.INSERT, 0, RedstoneMode.IGNORE, 1));
+                new FaceView(PortMode.INSERT, 0, RedstoneMode.IGNORE, 1, 0, false));
         faces.set(RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN),
-                new FaceView(PortMode.EXTRACT, 0, RedstoneMode.IGNORE, 1));
+                new FaceView(PortMode.EXTRACT, 0, RedstoneMode.IGNORE, 1, 0, false));
         faces.set(RouterSnapshot.index(ResourceType.ITEM, Direction.NORTH),
-                new FaceView(PortMode.INSERT, 5, RedstoneMode.HIGH, 1));
+                new FaceView(PortMode.INSERT, 5, RedstoneMode.HIGH, 1, 0, false));
         faces.set(RouterSnapshot.index(ResourceType.ITEM, Direction.EAST),
-                new FaceView(PortMode.BOTH, 0, RedstoneMode.IGNORE, 1));
+                new FaceView(PortMode.BOTH, 0, RedstoneMode.IGNORE, 1, 0, false));
         UUID base = UUID.nameUUIDFromBytes("base".getBytes());
         List<NetworkEntry> networks = List.of(
                 new NetworkEntry(base, "Base", 0x3D8BFF, true),
@@ -175,6 +176,6 @@ public final class DevScreenshot {
                 new NetworkEntry(UUID.nameUUIDFromBytes("energia".getBytes()), "Energia", 0xFFB020, false),
                 new NetworkEntry(UUID.nameUUIDFromBytes("minerio".getBytes()), "Minério", 0xD8875A, true));
         return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP, Optional.of(base),
-                networks, false, new ItemStack(Items.FURNACE), List.copyOf(faces));
+                networks, false, new ItemStack(Items.FURNACE), Blocks.FURNACE.defaultBlockState(), List.copyOf(faces));
     }
 }

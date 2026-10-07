@@ -100,7 +100,7 @@ public final class RouterMenuGameTests {
         helper.assertTrue(snapshot.machine().is(Items.CHEST), "ícone da máquina");
         helper.assertValueEqual(snapshot.faces().size(), ResourceType.values().length * 6, "faces");
         helper.assertValueEqual(snapshot.face(ResourceType.ITEM, Direction.UP),
-                new RouterSnapshot.FaceView(PortMode.EXTRACT, 5, RedstoneMode.HIGH, 27), "itens em cima");
+                new RouterSnapshot.FaceView(PortMode.EXTRACT, 5, RedstoneMode.HIGH, 27, 0, false), "itens em cima");
         helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.INSERT,
                 "fluido ao norte");
         helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).slots(), -1, "baú sem tanque");

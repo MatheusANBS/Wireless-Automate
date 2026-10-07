@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -14,6 +15,9 @@ public final class ModMenus {
 
     public static final Supplier<MenuType<RouterMenu>> ROUTER =
             MENU_TYPES.register("router", () -> IMenuTypeExtension.create(RouterMenu::new));
+
+    public static final Supplier<MenuType<FilterMenu>> FILTER =
+            MENU_TYPES.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
 
     private ModMenus() {
     }

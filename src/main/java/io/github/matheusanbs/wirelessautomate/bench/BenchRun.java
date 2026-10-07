@@ -33,9 +33,8 @@ final class BenchRun {
     }
 
     /**
-     * Resultado de uma repetição. Tempos em ns, vazões por segundo de jogo. Sem os contadores do
-     * motor ({@link EngineCounters}), visitas e remontagens ficam {@code NaN}/-1 e o orçamento
-     * esgotado é estimado pelos ticks em que o mod gastou o teto inteiro.
+     * Resultado de uma repetição. Tempos em ns, vazões por segundo de jogo. Visitas, orçamento
+     * esgotado e remontagens vêm dos contadores cumulativos do {@link NetworkManager}.
      */
     record Rep(int rep, double baseMsptMean, long baseMsptP99, double msptMean, long msptP50, long msptP99, long msptMax,
             double modMean, long modP50, long modP99, long modMax, long limitNanos, double exhaustedPct,
@@ -209,10 +208,11 @@ final class BenchRun {
     }
 
     private void beginMeasure() {
-        visitsStart = EngineCounters.visits();
-        exhaustedStart = EngineCounters.exhaustedTicks();
-        rebuildsStart = EngineCounters.rebuilds();
-        rebuildNanosStart = EngineCounters.rebuildNanos();
+        NetworkManager engine = NetworkManager.get();
+        visitsStart = engine.visitCount();
+        exhaustedStart = engine.exhaustedTicks();
+        rebuildsStart = engine.rebuildCount();
+        rebuildNanosStart = engine.rebuildNanos();
         itemsStart = scene.moved(ResourceType.ITEM);
         fluidStart = scene.moved(ResourceType.FLUID);
         energyStart = scene.moved(ResourceType.ENERGY);
@@ -234,14 +234,11 @@ final class BenchRun {
     private void finishRep(MinecraftServer server) {
         int ticks = Math.max(1, mspt.size());
         double seconds = ticks / 20.0;
-        boolean counters = EngineCounters.available();
-        long visits = counters ? EngineCounters.visits() - visitsStart : -1;
-        long rebuilds = counters ? EngineCounters.rebuilds() - rebuildsStart : -1;
-        long rebuildNanos = counters ? EngineCounters.rebuildNanos() - rebuildNanosStart : 0;
-        double exhausted = counters
-                ? 100.0 * (EngineCounters.exhaustedTicks() - exhaustedStart) / ticks
-                // Estimativa: o laço só para por orçamento depois de passar do teto.
-                : 100.0 * mod.countAbove(limitNanos - 1) / ticks;
+        NetworkManager engine = NetworkManager.get();
+        long visits = engine.visitCount() - visitsStart;
+        long rebuilds = engine.rebuildCount() - rebuildsStart;
+        long rebuildNanos = engine.rebuildNanos() - rebuildNanosStart;
+        double exhausted = 100.0 * (engine.exhaustedTicks() - exhaustedStart) / ticks;
         long[] movedEnd = scene.movedBySource();
         int sourcesMoved = 0;
         for (int i = 0; i < movedEnd.length; i++) {

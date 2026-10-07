@@ -50,6 +50,11 @@ public final class NetworkManager {
     private final TickBudget budget = new TickBudget(500_000L);
     private int cursor;
     private boolean dirty;
+    // Contadores cumulativos (benchmark e diagnóstico): só somam; quem lê faz a diferença entre leituras.
+    private long visitCount;
+    private long exhaustedTicks;
+    private long rebuildCount;
+    private long rebuildNanos;
 
     public static NetworkManager get() {
         if (instance == null) {
@@ -129,6 +134,26 @@ public final class NetworkManager {
         return budget;
     }
 
+    /** Visitas a origens desde que o gerenciador foi criado. */
+    public long visitCount() {
+        return visitCount;
+    }
+
+    /** Ticks em que o orçamento acabou antes da volta inteira (o resto ficou para o tick seguinte). */
+    public long exhaustedTicks() {
+        return exhaustedTicks;
+    }
+
+    /** Remontagens de rotas (ticks com alguma rede suja) desde que o gerenciador foi criado. */
+    public long rebuildCount() {
+        return rebuildCount;
+    }
+
+    /** Tempo somado das remontagens, em ns. */
+    public long rebuildNanos() {
+        return rebuildNanos;
+    }
+
     /**
      * Retrato das redes que existem e têm nós carregados, para o profiler. Os nós de uma rede são
      * os que têm algum tipo nela: um roteador com Itens na rede A e Energia na B conta nas duas.
@@ -174,7 +199,10 @@ public final class NetworkManager {
             checkNetworks(server);
         }
         if (dirty) {
+            long started = System.nanoTime();
             rebuild();
+            rebuildCount++;
+            rebuildNanos += System.nanoTime() - started;
         }
         long end = transfer(now);
 
@@ -201,6 +229,7 @@ public final class NetworkManager {
                 long time = System.nanoTime();
                 // Pelo menos uma visita por tick, mesmo que a montagem tenha gastado o orçamento.
                 if (visited > 0 && !budget.hasTime(time)) {
+                    exhaustedTicks++;
                     if (timed != null) {
                         timed.tickNanos += time - mark;
                     }
@@ -213,6 +242,7 @@ public final class NetworkManager {
                 timed = source.network;
                 mark = time;
                 visited++;
+                visitCount++;
                 visit(source, now);
             }
             index = index + 1 == count ? 0 : index + 1;

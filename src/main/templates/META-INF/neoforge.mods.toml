@@ -32,6 +32,14 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# GuideME mostra o livro-guia (data-driven, sem código: assets/wirelessautomate/guideme_guides e guides).
+[[dependencies.${mod_id}]]
+    modId="guideme"
+    type="optional"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
 # JEI 19 é a linha do 1.21.1. Arrastar funciona em toda ela; Shift + clique na lista pede 19.28+.
 [[dependencies.${mod_id}]]
     modId="jei"

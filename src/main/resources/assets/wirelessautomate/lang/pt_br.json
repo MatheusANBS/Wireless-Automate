@@ -6,6 +6,8 @@
   "item.wirelessautomate.linker": "Vinculador",
   "item.wirelessautomate.filter_card": "Cartão de Filtro",
   "item.wirelessautomate.chunk_loader_upgrade": "Upgrade de Chunk Loading",
+  "item.wirelessautomate.guide": "Guia do Wireless Automate",
+  "item.wirelessautomate.guide.tooltip": "Como usar cada item, redes, filtros e especificações",
   "item.wirelessautomate.tier_core_advanced": "Cartão de Upgrade Avançado",
   "item.wirelessautomate.tier_core_elite": "Cartão de Upgrade Elite",
   "item.wirelessautomate.tier_core_ultimate": "Cartão de Upgrade Ultimate",

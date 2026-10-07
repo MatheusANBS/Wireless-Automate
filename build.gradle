@@ -129,8 +129,8 @@ tasks.named('test', Test).configure {
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
-// dev (runClient, também o do e2e) carrega o Sophisticated Storage e o Observable, copiados para
-// run/mods, junto com o JEI; os GameTests não carregam nenhum mod do Modrinth.
+// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism e o
+// GuideME, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -164,6 +164,8 @@ dependencies {
     clientMods 'maven.modrinth:kotlin-for-forge:5.12.0'
     clientMods 'maven.modrinth:architectury-api:13.0.11+neoforge'
     clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    // GuideME: o livro-guia do mod (data-driven, em assets/wirelessautomate/guides); opcional.
+    clientMods 'maven.modrinth:guideme:21.1.19'
     chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
 }
 
@@ -182,7 +184,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     preserve {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
-                'Mekanism-*.jar'
+                'Mekanism-*.jar', 'guideme-*.jar'
     }
 }
 

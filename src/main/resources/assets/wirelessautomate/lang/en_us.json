@@ -6,6 +6,8 @@
   "item.wirelessautomate.linker": "Linker",
   "item.wirelessautomate.filter_card": "Filter Card",
   "item.wirelessautomate.chunk_loader_upgrade": "Chunk Loading Upgrade",
+  "item.wirelessautomate.guide": "Wireless Automate Guide",
+  "item.wirelessautomate.guide.tooltip": "How to use every item, networks, filters and specs",
   "item.wirelessautomate.tier_core_advanced": "Advanced Upgrade Card",
   "item.wirelessautomate.tier_core_elite": "Elite Upgrade Card",
   "item.wirelessautomate.tier_core_ultimate": "Ultimate Upgrade Card",

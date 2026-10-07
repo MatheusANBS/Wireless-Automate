@@ -80,6 +80,8 @@ import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.client.ClientCommandHandler;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -504,6 +506,9 @@ public final class DevEndToEnd {
         tabletSteps(list);
         configuratorSteps(list);
         linkerAreaSteps(list);
+        if (ModList.get().isLoaded("guideme")) {
+            guideSteps(list);
+        }
         return list;
     }
 
@@ -908,6 +913,30 @@ public final class DevEndToEnd {
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode() == PortMode.EXTRACT
                 && router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().isEmpty()),
                 () -> "B: " + onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).toString())));
+    }
+
+    // ------------------------------------------------------------------ Guia (GuideME)
+
+    /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
+    private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
+            "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
+            "chemicals", "performance");
+
+    /**
+     * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}
+     * e salva uma captura, para conferir as cenas 3D, as receitas e o texto.
+     */
+    private static void guideSteps(List<Step> list) {
+        for (String page : GUIDE_PAGES) {
+            list.add(new Step("guia: " + page, STEP_TIMEOUT_MS,
+                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:" + page + ".md"),
+                    () -> Minecraft.getInstance().screen != null
+                            && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
+                    () -> "tela " + describe(Minecraft.getInstance().screen)));
+            list.add(capture("guia-" + page));
+        }
+        list.add(new Step("fechar o guia", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
+                () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
     }
 
     /** Segura ou solta o Shift como o teclado; termina quando o servidor vê o jogador agachado ou não. */

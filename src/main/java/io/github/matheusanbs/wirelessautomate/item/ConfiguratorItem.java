@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.item;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
@@ -268,7 +269,7 @@ public class ConfiguratorItem extends Item {
             ResourceLocation machine = machine(stack);
             if (machine != null) {
                 tooltip.add(Component.translatable(KEY + "tooltip.machine",
-                        BuiltInRegistries.BLOCK.get(machine).getName()).withStyle(ChatFormatting.AQUA));
+                        RouterBlock.machineName(BuiltInRegistries.BLOCK.get(machine))).withStyle(ChatFormatting.AQUA));
             }
         }
         LinkerMode mode = mode(stack);

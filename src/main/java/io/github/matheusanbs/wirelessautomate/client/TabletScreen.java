@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -226,7 +227,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             return Component.literal(node.name());
         }
         Block block = machineBlock(node);
-        return block == Blocks.AIR ? Component.translatable("block.wirelessautomate.router") : block.getName();
+        return block == Blocks.AIR ? Component.translatable("block.wirelessautomate.router") : RouterBlock.machineName(block);
     }
 
     private boolean sameDimension(NodeView node) {
@@ -1091,7 +1092,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         text.append("\n").append(coords(node).copy().withColor(GuiPaint.MUTED));
         text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.MUTED))
                 .append(Component.literal(" · ").withColor(GuiPaint.MUTED))
-                .append(machineBlock(node).getName().copy().withColor(GuiPaint.MUTED));
+                .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.MUTED));
         for (ResourceType type : MOVE_TYPES) {
             text.append("\n").append(typeName(type).copy().withColor(GuiPaint.MUTED))
                     .append(Component.literal(": ").withColor(GuiPaint.MUTED)).append(networkName(node.network(type)));

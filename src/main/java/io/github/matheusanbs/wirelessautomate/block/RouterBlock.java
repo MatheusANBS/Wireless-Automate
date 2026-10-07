@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
@@ -206,6 +207,16 @@ public class RouterBlock extends BaseEntityBlock {
      * Sobe o roteador em {@code pos} para {@code target}, se for exatamente o tier seguinte.
      * O block entity é mantido, então a configuração não se perde.
      */
+    /**
+     * Nome de uma máquina para mostrar ao jogador: o do item dela, como no inventário. O nome do
+     * bloco pode ser um texto com argumentos que só o item preenche (os barris do Sophisticated
+     * Storage mostram "%s%sNetherite Barrel" pelo bloco). Sem item, o nome do bloco.
+     */
+    public static Component machineName(Block block) {
+        ItemStack stack = new ItemStack(block);
+        return stack.isEmpty() ? block.getName() : stack.getHoverName();
+    }
+
     /** Clique do meio (criativo): o roteador no tier do bloco, não o Básico padrão do item. */
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.FluidEntry;
@@ -11,14 +12,20 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ModEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorView;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
@@ -149,7 +156,8 @@ public final class DevScreenshot {
             }, "6-renomear"));
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
-    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps())
+    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
+                    upgradeSteps(), configuratorSteps(), tabletSteps())
             .flatMap(List::stream).toList();
 
     /**
@@ -343,6 +351,41 @@ public final class DevScreenshot {
                 }, "c4-fluidos"));
     }
 
+    // ------------------------------------------------------------------ slot de upgrade
+
+    /**
+     * Slot do Upgrade de chunk loading, no fim da linha dos cartões: ativo com a dica, vazio com a
+     * dica, inativo pelo limite do dono e, na aba de energia, desligado na config.
+     */
+    private static List<Step> upgradeSteps() {
+        return List.of(
+                new Step(() -> {
+                    screen = cardScreen();
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.DOWN);
+                    upgradeState(ChunkLoadState.ACTIVE);
+                    int[] center = screen.previewUpgradeSlotCenter();
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "u1-upgrade-ativo"),
+                new Step(() -> upgradeState(ChunkLoadState.NONE), "u2-upgrade-vazio"),
+                new Step(() -> upgradeState(ChunkLoadState.LIMIT), "u3-upgrade-limite"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    screen.previewType(ResourceType.ENERGY);
+                    upgradeState(ChunkLoadState.DISABLED);
+                }, "u4-upgrade-desligado-energia"));
+    }
+
+    /** Põe (ou tira) o upgrade no slot e o estado no snapshot, como o servidor mandaria. */
+    private static void upgradeState(ChunkLoadState state) {
+        screen.getMenu().getSlot(RouterMenu.UPGRADE_SLOT).set(state == ChunkLoadState.NONE
+                ? ItemStack.EMPTY : new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get()));
+        RouterSnapshot s = screen.getMenu().snapshot();
+        screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(),
+                s.networks(), s.powered(), s.machine(), s.machineState(), s.faces(), state));
+    }
+
     /** Tela do roteador com um cartão de itens no primeiro slot e o inventário de exemplo. */
     private static RouterScreen cardScreen() {
         RouterSnapshot s = sample();
@@ -379,6 +422,215 @@ public final class DevScreenshot {
         return card;
     }
 
+    // ------------------------------------------------------------------ Tablet de rede
+
+    /** Desenhada no lugar das outras a partir do primeiro passo do Tablet. */
+    private static TabletScreen tabletScreen;
+
+    /**
+     * Tablet de rede com um snapshot de exemplo (os nós do rascunho visual, em volta do jogador):
+     * cada aba, a seleção para mover, o nó escolhido no mapa, a dica de um nó e a nova rede aberta.
+     */
+    private static List<Step> tabletSteps() {
+        return List.of(
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet());
+                    tabletScreen = new TabletScreen(menu, new Inventory(null),
+                            Component.translatable("item.wirelessautomate.network_tablet"), true);
+                    Minecraft minecraft = Minecraft.getInstance();
+                    tabletScreen.init(minecraft, minecraft.getWindow().getGuiScaledWidth(),
+                            minecraft.getWindow().getGuiScaledHeight());
+                }, "t1-tablet-lista"),
+                new Step(() -> {
+                    int[] center = tabletScreen.nodeRowCenter(sampleTablet().nodes().get(3).key());
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "t2-tablet-lista-dica"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    tabletScreen.previewMulti(true, 3);
+                }, "t3-tablet-selecionar"),
+                new Step(() -> {
+                    tabletScreen.previewMulti(false, 0);
+                    tabletScreen.previewTab(TabletScreen.Tab.MAP);
+                    tabletScreen.previewMapSelect(3);
+                }, "t4-tablet-mapa"),
+                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.STATS), "t5-tablet-estatisticas"),
+                new Step(() -> {
+                    tabletScreen.previewTab(TabletScreen.Tab.NETWORKS);
+                    tabletScreen.previewNetwork(0);
+                }, "t6-tablet-redes"),
+                new Step(() -> {
+                    tabletScreen.previewNetwork(2);
+                    tabletScreen.previewNewOpen("Utilidades");
+                }, "t7-tablet-redes-alheia-nova"),
+                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
+    }
+
+    /** Nós do rascunho visual em volta do jogador em (0, 64, 0), com redes, um grupo e status variados. */
+    private static TabletSnapshot sampleTablet() {
+        UUID base = UUID.nameUUIDFromBytes("base".getBytes());
+        UUID fluids = UUID.nameUUIDFromBytes("fluidos".getBytes());
+        UUID energy = UUID.nameUUIDFromBytes("energia".getBytes());
+        UUID ore = UUID.nameUUIDFromBytes("minerio".getBytes());
+        UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
+        List<TabletSnapshot.NetworkView> networks = List.of(
+                new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1, 1, 2,
+                        42_000, 61, 1_240, 0, 0),
+                new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0, 0, 0,
+                        18_000, 20, 0, 48_000, 0),
+                new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0, 0,
+                        0, 9_000, 20, 0, 0, 120_000),
+                new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
+                        0, 0, 0, 0, 0),
+                new TabletSnapshot.NetworkView(line, "Linha 5x", 0xA46CFF, "Dev", true, true, false, true, 8, 0, 0, 0,
+                        0, 0, 0, 0, 0));
+        int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
+        int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
+        int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);
+        int extractEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.EXTRACT);
+        int insertEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.INSERT);
+        int storageItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.STORAGE);
+        List<TabletSnapshot.NodeView> nodes = List.of(
+                tabletNode(-5, 66, -2, "Fornalha Norte", "furnace", RouterTier.ELITE, base, base, energy,
+                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(-5, 66, 2, "Fornalha Sul", "furnace", RouterTier.ELITE, base, base, energy,
+                        extractItems | insertItems, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(5, 66, -2, "", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.IDLE),
+                tabletNode(5, 66, 2, "Baú de lingotes 2", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.FULL),
+                tabletNode(38, 64, 40, "Tanque de água", "cauldron", RouterTier.ADVANCED, null, fluids, null, insertFluids,
+                        TabletSnapshot.NodeStatus.IDLE),
+                tabletNode(44, 64, 46, "Separador eletrolítico", "blast_furnace", RouterTier.ELITE, ore, fluids, energy,
+                        insertFluids | insertEnergy, TabletSnapshot.NodeStatus.PAUSED),
+                tabletNode(-60, 40, -75, "Reator de fissão", "beacon", RouterTier.ULTIMATE, null, null, energy,
+                        extractEnergy, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(-70, 70, 47, "Fazenda de cana", "hopper", RouterTier.BASIC, base, null, null, extractItems,
+                        TabletSnapshot.NodeStatus.UNLOADED),
+                tabletNode(12, 64, -20, "Barril de sobras", "barrel", RouterTier.ADVANCED, base, null, null, storageItems,
+                        TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(0, 64, 9, "", "dropper", RouterTier.BASIC, null, null, null, 0,
+                        TabletSnapshot.NodeStatus.NO_NETWORK));
+        List<TabletSnapshot.GroupView> groups = List.of(
+                new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g1".getBytes()), "Linha 5x", "Dev", true, true,
+                        List.of(ore, line, fluids)),
+                new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g2".getBytes()), "Base principal", "Dev", true, false,
+                        List.of(base)));
+        return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
+                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, nodes,
+                Component.empty(), 0);
+    }
+
+    private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
+            @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status) {
+        List<Optional<UUID>> networks = List.of(Optional.ofNullable(items), Optional.ofNullable(fluids),
+                Optional.ofNullable(energy), Optional.empty());
+        return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
+                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status);
+    }
+
+    // ------------------------------------------------------------------ Configurador
+
+    /** Desenhada no lugar das outras a partir do primeiro passo do Configurador. */
+    private static ConfiguratorScreen configuratorScreen;
+
+    /**
+     * Tela do Configurador: a biblioteca com um preset selecionado e o código exportado, "Salvar ou
+     * importar" aberto, a biblioteca vazia, e a aba Área copiando, colando (origem escolhida) e
+     * aplicando só numa máquina, e com uma área grande demais.
+     */
+    private static List<Step> configuratorSteps() {
+        return List.of(
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    configuratorScreen = configuratorScreen(configuratorSample(true, false, false));
+                    configuratorScreen.previewSelect(1);
+                    int[] center = configuratorScreen.previewCenter(
+                            Component.translatable("gui.wirelessautomate.configurator.apply"));
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "k1-biblioteca"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    configuratorScreen.previewMore(true, "Fornalhas da linha 5x", "WA1:eNpjYGBgZGBgYGBg");
+                }, "k2-salvar-importar"),
+                new Step(() -> {
+                    configuratorScreen = configuratorScreen(new ConfiguratorView(new ConfiguratorView.Wand(false, -1, 0,
+                            Optional.empty(), Optional.empty(), Optional.empty(), 0, 0), List.of(),
+                            ConfiguratorView.Area.NONE, Optional.empty(), Optional.empty(), 0));
+                }, "k3-biblioteca-vazia"),
+                new Step(() -> {
+                    configuratorScreen = configuratorScreen(configuratorSample(false, false, false));
+                    configuratorScreen.previewTab(true);
+                }, "k4-area-copiar"),
+                new Step(() -> {
+                    configuratorScreen = configuratorScreen(configuratorSample(false, true, false));
+                    configuratorScreen.previewTab(true);
+                }, "k5-area-colar"),
+                new Step(() -> {
+                    configuratorScreen = configuratorScreen(configuratorSample(false, false, false));
+                    configuratorScreen.previewTab(true);
+                    configuratorScreen.previewApplyMode(true, 0, 0);
+                }, "k6-area-aplicar"),
+                new Step(() -> {
+                    configuratorScreen = configuratorScreen(configuratorSample(false, false, true));
+                    configuratorScreen.previewTab(true);
+                }, "k7-area-grande"));
+    }
+
+    private static ConfiguratorScreen configuratorScreen(ConfiguratorView view) {
+        ConfiguratorScreen created = new ConfiguratorScreen(new ConfiguratorMenu(0, view), new Inventory(null),
+                Component.translatable("gui.wirelessautomate.configurator.title"), true);
+        Minecraft minecraft = Minecraft.getInstance();
+        created.init(minecraft, minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());
+        return created;
+    }
+
+    /** Duas linhas de cinco máquinas (fornalhas e enriquecedores de mentira: fornalha e alto-forno). */
+    private static ConfiguratorView configuratorSample(boolean export, boolean clipboard, boolean tooLarge) {
+        List<ConfiguratorView.FaceLine> furnace = List.of(
+                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.FRONT, PortMode.INSERT, 0),
+                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.BACK, PortMode.EXTRACT, 3),
+                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.LEFT, PortMode.INSERT, 12),
+                new ConfiguratorView.FaceLine(ResourceType.ENERGY, RelativeSide.BACK, PortMode.INSERT, 0));
+        List<ConfiguratorView.LibraryEntry> library = List.of(
+                new ConfiguratorView.LibraryEntry("Fornalha simples", 2, 1, furnace.subList(0, 2)),
+                new ConfiguratorView.LibraryEntry("Fornalhas da linha 5x", 4, 2, furnace),
+                new ConfiguratorView.LibraryEntry("Enriquecedor", 3, 1, furnace.subList(1, 4)),
+                new ConfiguratorView.LibraryEntry("Armazém de minérios do lado norte", 1, 0, List.of(
+                        new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.FRONT, PortMode.BOTH, 40))),
+                new ConfiguratorView.LibraryEntry("Tanque de lava", 1, 1, List.of(
+                        new ConfiguratorView.FaceLine(ResourceType.FLUID, RelativeSide.TOP, PortMode.EXTRACT, 1))),
+                new ConfiguratorView.LibraryEntry("Gerador", 1, 1, List.of(
+                        new ConfiguratorView.FaceLine(ResourceType.ENERGY, RelativeSide.FRONT, PortMode.EXTRACT, 0))));
+        List<ConfiguratorView.Dot> dots = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            dots.add(new ConfiguratorView.Dot(i * 2, 1, 0, true, 0));
+            dots.add(new ConfiguratorView.Dot(i * 2, 1, 4, i < 2, 1));
+        }
+        BlockPos min = new BlockPos(100, 64, 200);
+        ConfiguratorView.Area area = tooLarge
+                ? new ConfiguratorView.Area(Optional.of("too_large"), min, new BlockPos(120, 40, 90), List.of(), List.of())
+                : new ConfiguratorView.Area(Optional.empty(), min, new BlockPos(9, 2, 5), List.copyOf(dots),
+                        List.of(ResourceLocation.withDefaultNamespace("furnace"),
+                                ResourceLocation.withDefaultNamespace("blast_furnace")));
+        ConfiguratorView.Wand wand = new ConfiguratorView.Wand(!export, 4, 2, Optional.of(min),
+                Optional.of(min.offset(tooLarge ? 119 : 8, 1, tooLarge ? 89 : 4)),
+                clipboard ? Optional.of(min.offset(0, 0, 8)) : Optional.empty(), clipboard ? 5 : 0, clipboard ? 4 : 0);
+        Optional<ConfiguratorView.Export> code = export
+                ? Optional.of(new ConfiguratorView.Export(1, "Fornalhas da linha 5x",
+                        "WA1:eNrjYmBgZGBgYmBgYGRgZmBkYGJgZgACAJ0AEQeNrjYmBgZGBgYmBgYGRgZmBkYGJgZgACAJ0AEQ"))
+                : Optional.empty();
+        Optional<Component> notice = export
+                ? Optional.of(Component.translatable("gui.wirelessautomate.configurator.exported", "Fornalhas da linha 5x", 84))
+                : clipboard
+                        ? Optional.of(Component.translatable("item.wirelessautomate.configurator.area.anchor", 4, 5))
+                        : Optional.empty();
+        return new ConfiguratorView(wand, library, area, code, notice, 1);
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -393,7 +645,9 @@ public final class DevScreenshot {
             screen = new RouterScreen(menu, new Inventory(null), Component.translatable("block.wirelessautomate.router"),
                     true);
         }
-        AbstractContainerScreen<?> active = filterScreen != null ? filterScreen : screen;
+        AbstractContainerScreen<?> active = tabletScreen != null ? tabletScreen
+                : configuratorScreen != null ? configuratorScreen
+                : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {
             active.init(minecraft, title.width, title.height);
         }

@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -100,6 +101,9 @@ public class RouterBlock extends BaseEntityBlock {
                 && !router.hasNetwork()) {
             router.setNetworkId(NetworkSavedData.get(player.server).activeOrCreate(player).id());
         }
+        if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+            NodeIndex.placedBy(router, player.getUUID());
+        }
     }
 
     @Override
@@ -154,11 +158,20 @@ public class RouterBlock extends BaseEntityBlock {
         }
     }
 
-    /** Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro. */
+    /**
+     * Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro e o
+     * Upgrade de chunk loading. O upgrade de tier troca só o estado e não passa por aqui.
+     */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             Containers.dropContents(level, pos, router.removeAllCards());
+            ItemStack upgrade = router.removeUpgrade();
+            if (!upgrade.isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgrade);
+            }
+            // Por último: tirar os cartões avisa o índice, que senão guardaria o nó de novo.
+            NodeIndex.forget(level, pos);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

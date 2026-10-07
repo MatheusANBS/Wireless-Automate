@@ -19,7 +19,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `WirelessAutomate.java` | Classe `@Mod`: registra os DeferredRegisters e a config, e escuta os eventos de tick, parada do servidor e comandos |
 | `Config.java` | Config do servidor: `TICK_BUDGET_MS`, `ADAPTIVE_BUDGET` e `TIERS` (vazão e alcance por tier) |
 | `block/RouterBlock.java` | Bloco: `FACING` (face da máquina onde foi preso), `TIER`, `canSurvive`, `tryUpgrade` |
-| `block/RouterBlockEntity.java` | Dados do nó: `networkId`, `FaceConfig` por tipo e lado relativo, `powered` e os `BlockCapabilityCache` da máquina. Não faz tick: se registra no `NetworkManager` em `onLoad` e avisa `nodeChanged` quando muda |
+| `block/RouterBlockEntity.java` | Dados do nó: rede por tipo (`networkId(type)`), cartões por face, `FaceConfig` por tipo e lado relativo, `powered` e os `BlockCapabilityCache` da máquina. Não faz tick: se registra no `NetworkManager` em `onLoad` e avisa `nodeChanged` quando muda |
 | `block/RouterShapes.java` | Formas de colisão rotacionadas pela mesma convenção do blockstate |
 | `block/RouterTier.java` | Enum com os valores padrão da tabela de tiers |
 | `network/NetworkManager.java` | Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento |
@@ -29,14 +29,17 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
 | `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java` | Lógica pura, testada por JUnit |
 | `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
-| `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
+| `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), `FilterSet` (embutido + cartões), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
 | `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem` (modo Único), `ConfiguratorItem` (pincel) e `FilterCardItem` funcionam; Tablet e Chunk loader são stubs |
-| `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus` |
-| `command/WaCommand.java` | `/wa profile`, `/wa network ...` e `/wa face ...` |
+| `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
+| `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) |
+| `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
+| `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
+| `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` e `/wa bench ...` |
 | `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
-| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, widgets, `ClientSetup` e `DevScreenshot` (capturas sem monitor com `WA_SCREENSHOT`) |
+| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
 | `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros |
 
 Recursos em `src/main/resources/`:
@@ -53,9 +56,11 @@ Recursos em `src/main/resources/`:
 ./gradlew runGameTestServer # GameTests headless; falha o build se algum teste falhar
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
+./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; ~1 min)
+./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ```
 
-Antes de commitar, rode `./gradlew build runGameTestServer`. O CI (`.github/workflows/build.yml`) roda os dois.
+Antes de commitar, rode `./gradlew build runGameTestServer` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os dois.
 
 ## Convenções e armadilhas
 
@@ -67,6 +72,7 @@ Antes de commitar, rode `./gradlew build runGameTestServer`. O CI (`.github/work
   - nada de busca de capability por tick, use `BlockCapabilityCache`;
   - nada de sincronizar o cliente com a tela fechada.
 - **Lado do cliente:** classes de tela só em `client/`, nunca referenciadas por código comum (o `runGameTestServer` é um servidor dedicado e quebra se carregar uma).
+- **Memória:** cada build/jogo usa ~3 GB; não rode vários clientes ou servidores ao mesmo tempo (um cliente do e2e morreu assim).
 - **Rotação:** o `facing` do roteador segue a convenção do para-raios (`up` sem rotação, `down` x=180, laterais x=90 + y). Configurações por face devem ser salvas em relação ao `facing`.
 - **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal.
 - **Wrapper:** `gradle-wrapper.properties` usa `validateDistributionUrl=false`, porque a validação falha atrás do proxy do ambiente na nuvem.

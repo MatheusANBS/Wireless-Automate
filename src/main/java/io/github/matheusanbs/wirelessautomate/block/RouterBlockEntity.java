@@ -1,10 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
+import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
+import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
@@ -53,6 +57,11 @@ import org.jetbrains.annotations.Nullable;
  * cartões num {@link FilterSet} na montagem das rotas ({@link #filterSet}). Os cartões são itens
  * físicos: saem do roteador quebrado e não vão no preset do Configurador (que só copia a
  * configuração; o cartão é duplicado por receita ou exportando o filtro).
+ *
+ * <p>Upgrade de chunk loading: um slot ({@link #upgrade()}), com o dono (quem pôs o upgrade). Quem
+ * força os chunks é o {@link RouterChunkLoader}, avisado quando o upgrade muda, quando o nó carrega,
+ * descarrega ou sai do mundo. Como os cartões, o upgrade sai do roteador quebrado e fica no upgrade
+ * de tier (o block entity é mantido).
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -76,6 +85,11 @@ public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] CARD_TYPES = {ResourceType.ITEM, ResourceType.FLUID};
     /** [tipo de {@link #CARD_TYPES}][lado relativo][slot], nunca nulos. */
     private final ItemStack[][][] cards = new ItemStack[CARD_TYPES.length][SIDES.length][CARD_SLOTS];
+    /** Upgrade de chunk loading no slot (ou vazio) e quem o pôs. */
+    private ItemStack upgrade = ItemStack.EMPTY;
+    private @Nullable UUID upgradeOwner;
+    /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
+    private boolean chunkUnloading;
 
     /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
@@ -152,6 +166,7 @@ public class RouterBlockEntity extends BlockEntity {
         this.name = clean;
         changeVersion++;
         setChanged();
+        NodeIndex.track(this);
     }
 
     private static String sanitizeName(String name) {
@@ -173,6 +188,7 @@ public class RouterBlockEntity extends BlockEntity {
     /** A máquina pode ter mudado (bloco trocado): a tela aberta remonta o snapshot. Não mexe nas rotas. */
     public void machineChanged() {
         changeVersion++;
+        NodeIndex.track(this);
     }
 
     /** Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. */
@@ -354,6 +370,64 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
+    // ------------------------------------------------------------------ upgrade de chunk loading
+
+    /** {@code stack} pode ir no slot de upgrade. */
+    public static boolean acceptsUpgrade(ItemStack stack) {
+        return stack.getItem() instanceof ChunkLoaderUpgradeItem;
+    }
+
+    /** O upgrade no slot; vazio se não houver. Não altere a pilha devolvida. */
+    public ItemStack upgrade() {
+        return upgrade;
+    }
+
+    /** Há um Upgrade de chunk loading no slot. */
+    public boolean hasChunkUpgrade() {
+        return acceptsUpgrade(upgrade);
+    }
+
+    /** Quem pôs o upgrade (o dono para o limite de chunks); {@code null} sem upgrade ou sem dono conhecido. */
+    public @Nullable UUID upgradeOwner() {
+        return upgradeOwner;
+    }
+
+    /**
+     * Põe {@code stack} (guardada como está) no slot de upgrade, com o dono, e reavalia os tickets.
+     * Não valida o item: quem chama (o slot do menu) já validou com {@link #acceptsUpgrade}.
+     */
+    public void setUpgrade(ItemStack stack, @Nullable UUID owner) {
+        upgrade = stack;
+        upgradeOwner = stack.isEmpty() ? null : owner;
+        changeVersion++;
+        setChanged();
+        if (level != null && !level.isClientSide && !isRemoved()) {
+            RouterChunkLoader.get().update(this);
+        }
+    }
+
+    /** Tira o upgrade (para soltar no mundo quando o roteador sai); vazio se não havia. */
+    public ItemStack removeUpgrade() {
+        ItemStack removed = upgrade;
+        if (!removed.isEmpty()) {
+            setUpgrade(ItemStack.EMPTY, null);
+        }
+        return removed;
+    }
+
+    /** Estado do upgrade para a tela. Só no servidor; no cliente, {@link ChunkLoadState#NONE}. */
+    public ChunkLoadState chunkLoadState() {
+        if (level == null || level.isClientSide) {
+            return ChunkLoadState.NONE;
+        }
+        return RouterChunkLoader.get().state(this);
+    }
+
+    /** O estado do upgrade mudou (ativo, limite, desligado): a tela aberta remonta o snapshot. */
+    public void chunkLoadStateChanged() {
+        changeVersion++;
+    }
+
     /** Copia a configuração de uma face inteira, pelo lado relativo (para presets e o Configurador). */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
         if (face(type, side).copyFrom(config)) {
@@ -441,6 +515,7 @@ public class RouterBlockEntity extends BlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
         }
     }
 
@@ -457,10 +532,15 @@ public class RouterBlockEntity extends BlockEntity {
         if (rotated) {
             // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
             clearCaches();
+            if (level != null && !level.isClientSide && hasChunkUpgrade()) {
+                // O chunk da máquina pode ser outro.
+                RouterChunkLoader.get().update(this);
+            }
         }
         // Upgrade de tier muda vazão e alcance das rotas.
         if ((rotated || tier() != oldTier) && level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
         }
     }
 
@@ -473,6 +553,9 @@ public class RouterBlockEntity extends BlockEntity {
                 powered = level.hasNeighborSignal(worldPosition);
             }
             NetworkManager.get().addNode(this);
+            NodeIndex.track(this);
+            chunkUnloading = false;
+            RouterChunkLoader.get().loaded(this);
         }
     }
 
@@ -480,17 +563,26 @@ public class RouterBlockEntity extends BlockEntity {
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
         removeFromManager();
+        if (level != null && !level.isClientSide) {
+            // Descarregar não tira os tickets: eles são salvos e voltam com o mundo.
+            chunkUnloading = true;
+            RouterChunkLoader.get().unloaded(this);
+        }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
         removeFromManager();
+        if (level != null && !level.isClientSide && !chunkUnloading) {
+            RouterChunkLoader.get().removed(this);
+        }
     }
 
     private void removeFromManager() {
         if (level != null && !level.isClientSide) {
             NetworkManager.get().removeNode(this);
+            NodeIndex.untrack(this);
         }
     }
 
@@ -553,6 +645,12 @@ public class RouterBlockEntity extends BlockEntity {
         if (!cardsTag.isEmpty()) {
             tag.put("cards", cardsTag);
         }
+        if (!upgrade.isEmpty()) {
+            tag.put("upgrade", upgrade.save(registries));
+            if (upgradeOwner != null) {
+                tag.putUUID("upgrade_owner", upgradeOwner);
+            }
+        }
     }
 
     @Override
@@ -596,10 +694,18 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
         }
+        upgrade = tag.contains("upgrade", Tag.TAG_COMPOUND)
+                ? ItemStack.parse(registries, tag.getCompound("upgrade")).orElse(ItemStack.EMPTY)
+                : ItemStack.EMPTY;
+        upgradeOwner = !upgrade.isEmpty() && tag.hasUUID("upgrade_owner") ? tag.getUUID("upgrade_owner") : null;
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
+            if (!isRemoved()) {
+                RouterChunkLoader.get().loaded(this);
+            }
         }
     }
 

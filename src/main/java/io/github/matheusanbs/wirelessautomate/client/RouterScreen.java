@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
@@ -41,7 +42,9 @@ import org.lwjgl.glfw.GLFW;
  * da rede da aba selecionada (cada tipo do roteador entra numa rede própria); o visor 3D da
  * máquina com o roteador ({@link MachineView3D}) e os botões das 6 faces logo abaixo; a face selecionada com modo, filtro e os slots de Cartão de
  * Filtro; prioridade e redstone recolhidos em "Mais", embaixo das faces; e o inventário do jogador,
- * embaixo da face selecionada, para pôr e tirar cartões.
+ * embaixo da face selecionada, para pôr e tirar cartões. No cabeçalho, à direita do tier, fica o
+ * slot do Upgrade de chunk loading (é do roteador, não da face), com uma luz do estado (ativo, no
+ * limite, desligado) e a dica.
  *
  * <p>Os slots de cartão mostram os da face e do tipo selecionados: ao mudar de aba ou de face a
  * tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram, e a
@@ -90,6 +93,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_X}). */
     private static final int CARD_BG_X = RouterMenu.CARD_X - 1;
     private static final int CARD_BG_Y = RouterMenu.CARD_Y - 1;
+    /** Slot do upgrade (o fundo), no canto direito do cabeçalho; o tier e a vazão ficam à esquerda dele. */
+    private static final int UPGRADE_BG_X = RouterMenu.UPGRADE_X - 1;
+    private static final int UPGRADE_BG_Y = RouterMenu.UPGRADE_Y - 1;
+    /** Onde termina a pílula do tier: antes do slot do upgrade, com folga. */
+    private static final int HEAD_END = UPGRADE_BG_X - 4;
     // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone
     private static final int LX1 = X0 + VIEW_W;
     private static final int ADV_SEP_Y = 180;
@@ -106,6 +114,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             Direction.SOUTH, Direction.WEST};
     /** Cartão desenhado apagado num slot de cartão vazio. */
     private static final ItemStack GHOST_CARD = new ItemStack(ModItems.FILTER_CARD.get());
+    /** Upgrade desenhado apagado no slot de upgrade vazio. */
+    private static final ItemStack GHOST_UPGRADE = new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get());
 
     private final boolean preview;
     private final List<ResourceType> types = new ArrayList<>();
@@ -360,7 +370,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         RouterSnapshot s = snapshot();
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
-        int rateX = leftPos + X1 - tierW - 6 - font.width(rate());
+        int rateX = leftPos + HEAD_END - tierW - 6 - font.width(rate());
 
         // pílula da rede à direita das abas, com o rótulo "Rede" antes; o nome encolhe se faltar espaço
         int tabsEnd = leftPos + X0;
@@ -434,7 +444,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                     current.filterSize(), current.blacklist()));
             RouterSnapshot s = snapshot();
             menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(), s.networks(),
-                    s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
+                    s.powered(), s.machine(), s.machineState(), List.copyOf(faces), s.chunkLoad()));
             return;
         }
         send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
@@ -486,6 +496,42 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return slot != null && slot.index < RouterMenu.CARD_SLOT_COUNT;
     }
 
+    private static boolean isUpgradeSlot(@Nullable Slot slot) {
+        return slot != null && slot.index == RouterMenu.UPGRADE_SLOT;
+    }
+
+    /** Estado do upgrade: o do snapshot, ou "sem upgrade" se o slot está vazio (a sincronização do slot chega antes). */
+    private ChunkLoadState chunkLoadState() {
+        return menu.getSlot(RouterMenu.UPGRADE_SLOT).hasItem() ? snapshot().chunkLoad() : ChunkLoadState.NONE;
+    }
+
+    private static int chunkLoadColor(ChunkLoadState state) {
+        return switch (state) {
+            case ACTIVE -> 0xFF41C96B;
+            case LIMIT -> 0xFFFFB020;
+            case DISABLED -> 0xFFFF6B5E;
+            case NONE -> GuiPaint.MUTED;
+        };
+    }
+
+    /**
+     * Dica do slot de upgrade: vazio, o que ele faz e como pôr; com o upgrade, o nome, o estado e
+     * como tirar.
+     */
+    private Component upgradeSlotTooltip() {
+        ChunkLoadState state = chunkLoadState();
+        if (state == ChunkLoadState.NONE) {
+            return tr("upgrade.tooltip").copy()
+                    .append("\n").append(tr("upgrade.tooltip.effect").copy().withColor(GuiPaint.MUTED))
+                    .append("\n").append(tr("upgrade.tooltip.add").copy().withColor(GuiPaint.MUTED));
+        }
+        String key = "upgrade.state." + state.name().toLowerCase(Locale.ROOT);
+        return GHOST_UPGRADE.getHoverName().copy()
+                .append("\n").append(tr(key).copy().withColor(chunkLoadColor(state)))
+                .append("\n").append(tr(key + ".detail").copy().withColor(GuiPaint.MUTED))
+                .append("\n").append(tr("upgrade.tooltip.remove").copy().withColor(GuiPaint.MUTED));
+    }
+
     /** Dica de um slot de cartão vazio: o tipo, a regra do conjunto e como pôr um cartão. */
     private Component cardSlotTooltip() {
         return tr("cards.tooltip", typeName(type)).copy()
@@ -516,7 +562,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             List<Optional<UUID>> typeNetworks = new ArrayList<>(s.typeNetworks());
             typeNetworks.set(type.ordinal(), network);
             menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), List.copyOf(typeNetworks), s.networks(),
-                    s.powered(), s.machine(), s.machineState(), s.faces()));
+                    s.powered(), s.machine(), s.machineState(), s.faces(), s.chunkLoad()));
             return;
         }
         send(new SetNetworkPayload(menu.containerId, type, network));
@@ -543,7 +589,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             if (preview) {
                 RouterSnapshot s = snapshot();
                 menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.typeNetworks(), s.networks(),
-                        s.powered(), s.machine(), s.machineState(), s.faces()));
+                        s.powered(), s.machine(), s.machineState(), s.faces(), s.chunkLoad()));
             } else {
                 send(new RenameRouterPayload(menu.containerId, name));
             }
@@ -666,6 +712,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             setTooltipForNextRenderPass(cardSlotTooltip());
             return;
         }
+        if (isUpgradeSlot(hoveredSlot) && menu.getCarried().isEmpty()) {
+            setTooltipForNextRenderPass(upgradeSlotTooltip());
+            return;
+        }
         renderTooltip(g, mouseX, mouseY);
         // sobre uma face o visor mostra o nome dela embaixo; a dica cobriria o modelo
         if (!machineView.isDragging() && machineView.contains(mouseX, mouseY) && machineView.hoveredFace() == null) {
@@ -699,13 +749,30 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
-        int tierX = x + X1 - tierW;
+        int tierX = x + HEAD_END - tierW;
         GuiPaint.pill(g, tierX, y + HEAD_Y, tierW, PILL_H, GuiPaint.PANEL, trim);
         GuiPaint.dot(g, tierX + 6, y + HEAD_Y + 4, trim);
         GuiPaint.text(g, font, tierText, tierX + 15, y + HEAD_Y + 3, GuiPaint.FG);
 
         // vazão da aba, ao lado do tier
         GuiPaint.textRight(g, font, rate(), tierX - 6, y + HEAD_Y + 3, GuiPaint.MUTED);
+
+        // slot do upgrade de chunk loading, no canto do cabeçalho, com a luz do estado (sobre o item)
+        int ux = x + UPGRADE_BG_X;
+        int uy = y + UPGRADE_BG_Y;
+        GuiPaint.slot(g, ux, uy);
+        ChunkLoadState chunkLoad = chunkLoadState();
+        if (chunkLoad == ChunkLoadState.NONE) {
+            ghostUpgrade(g, ux + 1, uy + 1);
+        } else {
+            int color = chunkLoadColor(chunkLoad);
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 300);
+            g.fill(ux + 11, uy + 1, ux + 17, uy + 7, GuiPaint.BEVEL_DARK);
+            g.fill(ux + 12, uy + 2, ux + 16, uy + 6, color);
+            g.fill(ux + 12, uy + 2, ux + 14, uy + 4, GuiPaint.mix(color, 0xFFFFFFFF, 0.5f));
+            g.pose().popPose();
+        }
 
         // abas e o rótulo do seletor da rede da aba
         g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
@@ -787,6 +854,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         for (int col = 0; col < 9; col++) {
             GuiPaint.slot(g, x + RouterMenu.INVENTORY_X - 1 + col * 18, y + RouterMenu.INVENTORY_Y + 57);
         }
+    }
+
+    /** Upgrade apagado no fundo do slot de upgrade vazio. */
+    private void ghostUpgrade(GuiGraphics g, int x, int y) {
+        g.renderFakeItem(GHOST_UPGRADE, x, y);
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 250);
+        g.fill(x, y, x + 16, y + 16, 0xD811151B);
+        g.pose().popPose();
     }
 
     /** Cartão apagado no fundo de um slot de cartão vazio. */
@@ -1079,6 +1155,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     int[] previewCardSlotCenter(int slot) {
         return new int[] {leftPos + RouterMenu.CARD_X + slot * 18 + 8, topPos + RouterMenu.CARD_Y + 8};
+    }
+
+    int[] previewUpgradeSlotCenter() {
+        return new int[] {leftPos + RouterMenu.UPGRADE_X + 8, topPos + RouterMenu.UPGRADE_Y + 8};
     }
 
     int[] previewEditFilterCenter() {

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate;
 
 import com.mojang.logging.LogUtils;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
@@ -42,6 +43,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
+        // Upgrade de chunk loading: controle de tickets, fila por tick e config.
+        ChunkLoaderEvents.register(modEventBus);
     }
 
     public static ResourceLocation id(String path) {

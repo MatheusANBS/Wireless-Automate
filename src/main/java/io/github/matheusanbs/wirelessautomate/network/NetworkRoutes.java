@@ -20,7 +20,9 @@ import net.minecraft.core.Direction;
  *   <li>alcance e dimensão vêm do tier da <b>origem</b>: mesma dimensão e distância euclidiana entre
  *       os roteadores até o alcance (0 = dimensão inteira); outra dimensão só com {@code crossDimension},
  *       e aí sem limite de distância;
- *   <li>a taxa do balde da origem é relida da config a cada montagem.
+ *   <li>a taxa do balde da origem é relida da config a cada montagem;
+ *   <li>o filtro da face vai para a porta ({@link Port#filter}); o laço só o consulta, e o matcher
+ *       compilado dele vive no próprio {@code Filter}, então remontar não recompila um filtro igual.
  * </ul>
  */
 final class NetworkRoutes {
@@ -103,6 +105,7 @@ final class NetworkRoutes {
                 Port port = member.port(type, face);
                 port.network = this;
                 port.priority = config.priority();
+                port.filter = config.filter();
                 port.tier = tier;
                 port.machinePos = machine;
                 if (config.mode().extracts()) {

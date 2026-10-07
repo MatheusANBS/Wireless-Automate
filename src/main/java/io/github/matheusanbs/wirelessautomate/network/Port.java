@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,8 @@ final class Port {
     int slotCursor;
     /** Slots varridos seguidos sem mover nada, somando visitas: uma volta inteira faz a origem dormir. */
     int idleSlots;
+    /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
+    @Nullable ItemTransfer.StockTally tally;
 
     // Campos de rota, refeitos pela montagem da rede.
     @Nullable NetworkRoutes network;
@@ -37,6 +40,8 @@ final class Port {
     int priority;
     RouterTier tier = RouterTier.BASIC;
     BlockPos machinePos = BlockPos.ZERO;
+    /** Filtro da face, pego da configuração na montagem (energia ignora). */
+    Filter filter = Filter.EMPTY;
     /** Destinos desta origem; {@code null} quando ela não tem para onde mandar. */
     @Nullable RoundRobinOrder<Port> order;
     /** Origens que entregam neste destino, para acordá-las quando ele acordar. */
@@ -53,6 +58,7 @@ final class Port {
         network = null;
         source = false;
         destination = false;
+        filter = Filter.EMPTY;
         order = null;
         feeders.clear();
     }

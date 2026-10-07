@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Locale;
@@ -14,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Nullable;
@@ -35,8 +34,12 @@ public final class RouterPreset {
     private static final Codec<ResourceType> TYPE_CODEC =
             keyCodec(TYPES, type -> type.name().toLowerCase(Locale.ROOT));
     private static final Codec<RelativeSide> SIDE_CODEC = keyCodec(SIDES, RelativeSide::key);
-    /** Pelo NBT da própria {@link FaceConfig}, para que campos novos (filtro) venham juntos. */
-    private static final Codec<FaceConfig> FACE_CODEC = CompoundTag.CODEC.xmap(FaceConfig::load, FaceConfig::save);
+    /**
+     * O codec da própria {@link FaceConfig}: mesmo formato do NBT da face (presets antigos continuam
+     * lendo) e, por ser um codec de registro, recebe as {@code RegistryOps} de quem salva o
+     * componente do item, que o filtro precisa para os componentes das entradas.
+     */
+    private static final Codec<FaceConfig> FACE_CODEC = FaceConfig.CODEC;
 
     public static final Codec<RouterPreset> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.unboundedMap(TYPE_CODEC, Codec.unboundedMap(SIDE_CODEC, FACE_CODEC))
@@ -44,7 +47,9 @@ public final class RouterPreset {
             UUIDUtil.CODEC.optionalFieldOf("network").forGetter(preset -> Optional.ofNullable(preset.network))
     ).apply(instance, RouterPreset::fromMaps));
 
-    public static final StreamCodec<ByteBuf, RouterPreset> STREAM_CODEC = ByteBufCodecs.fromCodec(CODEC);
+    /** Pelo {@link #CODEC} com registros (as entradas de filtro levam componentes). */
+    public static final StreamCodec<RegistryFriendlyByteBuf, RouterPreset> STREAM_CODEC =
+            ByteBufCodecs.fromCodecWithRegistries(CODEC);
 
     /** [tipo][lado relativo]; {@code null} é face padrão. Cópias próprias, nunca expostas. */
     private final FaceConfig[][] faces;

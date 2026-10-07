@@ -33,6 +33,8 @@
   "item.wirelessautomate.configurator.tooltip.paste": "Clique direito num roteador: colar",
   "item.wirelessautomate.configurator.tooltip.clear": "Shift + clique direito no ar: descartar a cópia",
   "command.wirelessautomate.profile": "Wireless Automate: %s nós · média %s ms/tick · último %s ms · teto %s ms",
+  "command.wirelessautomate.profile.network": "  %s: %s nós · média %s ms/tick · último %s ms · %s ops/s · origens %s acordadas, %s dormindo · destinos %s acordados, %s dormindo",
+  "command.wirelessautomate.profile.no_networks": "  Nenhuma rede ativa com roteadores carregados.",
   "command.wirelessautomate.invalid_value": "Valor inválido: %s",
   "command.wirelessautomate.network.list.empty": "Nenhuma rede ainda. Crie uma com /wa network create <nome>.",
   "command.wirelessautomate.network.list.header": "Redes (%s):",

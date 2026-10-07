@@ -33,6 +33,8 @@
   "item.wirelessautomate.configurator.tooltip.paste": "Right-click a router: paste",
   "item.wirelessautomate.configurator.tooltip.clear": "Shift + right-click the air: discard the copy",
   "command.wirelessautomate.profile": "Wireless Automate: %s nodes · avg %s ms/tick · last %s ms · budget %s ms",
+  "command.wirelessautomate.profile.network": "  %s: %s nodes · avg %s ms/tick · last %s ms · %s ops/s · sources %s awake, %s sleeping · destinations %s awake, %s sleeping",
+  "command.wirelessautomate.profile.no_networks": "  No active networks with loaded routers.",
   "command.wirelessautomate.invalid_value": "Invalid value: %s",
   "command.wirelessautomate.network.list.empty": "No networks yet. Create one with /wa network create <name>.",
   "command.wirelessautomate.network.list.header": "Networks (%s):",

@@ -42,8 +42,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>Pincel</b> (padrão): clique direito num roteador cola nele.</li>
  *   <li><b>Área</b>: clique direito em dois blocos marca os cantos; clique direito no ar cola em
  *       todos os roteadores da área presos ao mesmo tipo de máquina ({@link ConfiguratorArea});
- *       Shift + clique direito num bloco que não é roteador limpa a área.</li>
  * </ul>
+ * Shift + clique direito num bloco que não é roteador limpa a varinha (a cópia e a área).
  * A rede de cada aba só é colada se o jogador puder usá-la ({@link PresetApplier}).
  */
 public class ConfiguratorItem extends Item {
@@ -89,6 +89,15 @@ public class ConfiguratorItem extends Item {
         return stack.get(ModDataComponents.CONFIGURATOR_MACHINE.get());
     }
 
+    /** Apaga a cópia (e a máquina dela) e a área; o modo fica. Devolve se havia algo. */
+    public static boolean clear(ItemStack stack) {
+        boolean had = stack.has(ModDataComponents.PRESET.get()) || area(stack) != null;
+        stack.remove(ModDataComponents.PRESET.get());
+        stack.remove(ModDataComponents.CONFIGURATOR_MACHINE.get());
+        setArea(stack, null);
+        return had;
+    }
+
     // ------------------------------------------------------------------ cliques
 
     /**
@@ -114,16 +123,11 @@ public class ConfiguratorItem extends Item {
             if (!context.isSecondaryUseActive()) {
                 return InteractionResult.PASS;
             }
-            ItemStack stack = context.getItemInHand();
-            if (mode(stack) != LinkerMode.AREA) {
-                // Shift + clique noutro bloco não pode cair no use() e trocar o modo.
-                return InteractionResult.FAIL;
-            }
-            // Modo Área: Shift + clique num bloco que não é roteador limpa a área marcada.
+            // Shift + clique num bloco que não é roteador limpa a varinha, nos dois modos (e não cai
+            // no use(), que trocaria o modo).
             if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
-                boolean had = area(stack) != null;
-                setArea(stack, null);
-                player.displayClientMessage(Component.translatable(KEY + (had ? "area.cleared" : "area.nothing")), true);
+                player.displayClientMessage(Component.translatable(
+                        KEY + (clear(context.getItemInHand()) ? "cleared" : "nothing_to_clear")), true);
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
@@ -253,6 +257,7 @@ public class ConfiguratorItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
+        // Estado: o que está copiado, o modo e a área.
         RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
         if (preset == null) {
             tooltip.add(Component.translatable(KEY + "tooltip.empty").withStyle(ChatFormatting.GRAY));
@@ -267,19 +272,21 @@ public class ConfiguratorItem extends Item {
             }
         }
         LinkerMode mode = mode(stack);
-        tooltip.add(Component.translatable(KEY + "tooltip.mode", modeName(mode)).withStyle(ChatFormatting.GOLD));
+        String size = ConfiguratorArea.size(stack);
+        tooltip.add((mode == LinkerMode.AREA && size != null
+                ? Component.translatable(KEY + "tooltip.mode_area", modeName(mode), size)
+                : Component.translatable(KEY + "tooltip.mode", modeName(mode))).withStyle(ChatFormatting.GOLD));
+
+        // Comandos do modo atual, na ordem de uso: copiar, colar, limpar, trocar de modo.
         tooltip.add(Component.translatable(KEY + "tooltip.copy").withStyle(ChatFormatting.DARK_GRAY));
         if (mode == LinkerMode.AREA) {
-            String size = ConfiguratorArea.size(stack);
-            if (size != null) {
-                tooltip.add(Component.translatable(KEY + "tooltip.area", size).withStyle(ChatFormatting.GOLD));
-            }
             tooltip.add(Component.translatable(KEY + "tooltip.mark").withStyle(ChatFormatting.DARK_GRAY));
             tooltip.add(Component.translatable(KEY + "tooltip.paste_area").withStyle(ChatFormatting.DARK_GRAY));
-            tooltip.add(Component.translatable(KEY + "tooltip.clear_area").withStyle(ChatFormatting.DARK_GRAY));
         } else {
             tooltip.add(Component.translatable(KEY + "tooltip.paste").withStyle(ChatFormatting.DARK_GRAY));
         }
-        tooltip.add(Component.translatable(KEY + "tooltip.toggle").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable(KEY + "tooltip.clear").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable(KEY + (mode == LinkerMode.AREA ? "tooltip.to_brush" : "tooltip.to_area"))
+                .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

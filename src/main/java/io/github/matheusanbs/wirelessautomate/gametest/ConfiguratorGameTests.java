@@ -282,9 +282,13 @@ public final class ConfiguratorGameTests {
                             }
                         }
 
-                        // Shift + clique num bloco sem roteador limpa a área; num roteador, continua copiando.
+                        // Shift + clique num bloco sem roteador limpa a cópia e a área; o modo fica.
                         clickBlock(helper, player, new BlockPos(1, 0, 1), true);
                         helper.assertTrue(ConfiguratorItem.area(configurator) == null, "área não foi limpa");
+                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get())
+                                && ConfiguratorItem.machine(configurator) == null, "cópia não foi limpa");
+                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo mudou");
+                        // Num roteador, Shift + clique continua copiando.
                         clickBlock(helper, player, new BlockPos(0, 1, 2), true);
                         helper.assertValueEqual(ConfiguratorItem.machine(configurator),
                                 BuiltInRegistries.BLOCK.getKey(Blocks.CHEST), "Shift + clique no roteador não copiou");
@@ -292,6 +296,11 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, true);
                         helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
                                 "volta ao pincel");
+                        // No pincel também limpa.
+                        clickBlock(helper, player, new BlockPos(1, 0, 1), true);
+                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "pincel não limpou");
+                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
+                                "Shift + clique num bloco trocou o modo");
                     } finally {
                         player.setShiftKeyDown(false);
                         helper.getLevel().getServer().getPlayerList().remove(player);

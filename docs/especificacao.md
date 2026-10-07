@@ -83,7 +83,7 @@ São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes se
 
 ### Configurador
 
-Sem tela: tudo é feito com cliques, e o tooltip mostra o modo e os gestos dele.
+Sem tela: tudo é feito com cliques. O tooltip mostra o estado (cópia, máquina, modo e área) e os comandos do modo atual.
 
 | Gesto | Pincel (padrão) | Área |
 | --- | --- | --- |
@@ -91,7 +91,7 @@ Sem tela: tudo é feito com cliques, e o tooltip mostra o modo e os gestos dele.
 | Clique direito num roteador | Cola nele | Marca um canto |
 | Clique direito num bloco | — | Marca um canto (1º, 2º; o 3º recomeça) |
 | Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina |
-| Shift + clique direito num bloco sem roteador | — | Limpa a área |
+| Shift + clique direito num bloco sem roteador | Limpa a varinha (cópia e área) | Limpa a varinha (cópia e área) |
 | Shift + clique direito no ar | Troca para Área | Troca para Pincel |
 
 ## Filtros

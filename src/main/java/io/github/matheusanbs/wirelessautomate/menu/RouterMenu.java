@@ -4,10 +4,12 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.RouterNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RouterSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RouterThroughputPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -41,9 +43,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Sincronização (servidor): o vanilla só chama {@link #broadcastChanges()} no menu aberto de
  * cada jogador, então nada roda para roteadores sem tela aberta. A cada chamada o menu compara a
  * {@link RouterBlockEntity#changeVersion()} do roteador e a {@link NetworkSavedData#version()} das
- * redes com as que já enviou; se alguma mudou, remonta e envia o snapshot inteiro. A especificação
- * pede "só diferenças": o snapshot tem uns 100 bytes, então mandá-lo inteiro só quando algo muda
- * custa menos do que calcular diferenças. A vazão é amostrada a cada {@link #SAMPLE_TICKS} ticks
+ * redes com as que já enviou; se alguma mudou, remonta o snapshot e o compara com o último enviado.
+ * O corpo (uns 100 bytes) e as redes do seletor (que trazem as públicas de todos os donos e mudam
+ * com qualquer rede do servidor) vão em pacotes separados, cada um só se ficou diferente. A vazão é amostrada a cada {@link #SAMPLE_TICKS} ticks
  * pelos totais que o motor soma no roteador e só é enviada quando muda.
  */
 public class RouterMenu extends AbstractContainerMenu {
@@ -84,6 +86,9 @@ public class RouterMenu extends AbstractContainerMenu {
     private long sampleTick;
     private final long[] sampleTotals = new long[ResourceType.values().length];
     private final long[] sentThroughput = new long[ResourceType.values().length];
+    /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
+    private boolean bodyChanged;
+    private boolean networksChanged;
 
     /** Servidor. */
     public RouterMenu(int containerId, Inventory inventory, RouterBlockEntity router, RouterSnapshot snapshot) {
@@ -179,6 +184,16 @@ public class RouterMenu extends AbstractContainerMenu {
     public void applySnapshot(RouterSnapshot snapshot) {
         this.snapshot = snapshot;
         version++;
+    }
+
+    /** Cliente: corpo novo do servidor ({@code RouterSnapshotPayload}); as redes do seletor ficam. */
+    public void applySnapshotBody(RouterSnapshot body) {
+        applySnapshot(body.withNetworks(snapshot.networks()));
+    }
+
+    /** Cliente: redes novas do seletor ({@code RouterNetworksPayload}). */
+    public void applyNetworks(List<RouterSnapshot.NetworkEntry> networks) {
+        applySnapshot(snapshot.withNetworks(List.copyOf(networks)));
     }
 
     public void applyThroughput(long[] throughput) {
@@ -512,7 +527,13 @@ public class RouterMenu extends AbstractContainerMenu {
         }
         RouterSnapshot changed = pollSnapshot();
         if (changed != null) {
-            send(new RouterSnapshotPayload(containerId, changed));
+            // As redes antes do corpo: o corpo pode apontar para uma rede nova do seletor.
+            if (networksChanged) {
+                send(new RouterNetworksPayload(containerId, changed.networks()));
+            }
+            if (bodyChanged) {
+                send(new RouterSnapshotPayload(containerId, changed));
+            }
         }
         long[] rates = pollThroughput(viewer.server.getTickCount());
         if (rates != null) {
@@ -528,8 +549,8 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Snapshot novo se o roteador ou as redes mudaram desde o último enviado, ou {@code null}.
-     * Marca o novo como enviado. Só no servidor; público para os GameTests.
+     * Snapshot novo se a versão do roteador ou das redes mudou e ele ficou diferente do último
+     * enviado, ou {@code null}. Marca o novo como enviado. Só no servidor; público para os GameTests.
      */
     public @Nullable RouterSnapshot pollSnapshot() {
         if (router == null || viewer == null || router.isRemoved()) {
@@ -542,8 +563,14 @@ public class RouterMenu extends AbstractContainerMenu {
         }
         sentChangeVersion = changeVersion;
         sentDataVersion = dataVersion;
-        snapshot = RouterSnapshot.capture(router, viewer);
-        return snapshot;
+        RouterSnapshot captured = RouterSnapshot.capture(router, viewer);
+        bodyChanged = !captured.sameBody(snapshot);
+        networksChanged = !captured.networks().equals(snapshot.networks());
+        if (!bodyChanged && !networksChanged) {
+            return null;
+        }
+        snapshot = captured;
+        return captured;
     }
 
     /**

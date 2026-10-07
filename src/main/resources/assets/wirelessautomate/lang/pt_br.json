@@ -97,7 +97,6 @@
   "gui.wirelessautomate.router.filter.none": "Passa tudo",
   "gui.wirelessautomate.router.filter.energy": "Energia não usa filtro",
   "gui.wirelessautomate.router.filter.edit": "Editar",
-  "gui.wirelessautomate.router.filter.soon": "Os filtros chegam numa próxima versão",
   "gui.wirelessautomate.router.more": "Mais",
   "gui.wirelessautomate.router.less": "Menos",
   "gui.wirelessautomate.router.more.tooltip": "Prioridade e redstone desta face",

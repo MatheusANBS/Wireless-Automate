@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
@@ -14,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -60,6 +62,8 @@ public final class ModPayloads {
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
+        registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
+                (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -150,6 +154,24 @@ public final class ModPayloads {
             return false;
         }
         menu.select(payload.resource(), payload.face());
+        return true;
+    }
+
+    /**
+     * Shift + roda do mouse com o Vinculador na mão principal: avança ou volta o tipo dele e mostra
+     * o novo na action bar. Não depende de tela aberta; recusa direção 0 e outra coisa na mão.
+     */
+    public static boolean handleCycleLinkerType(@Nullable ServerPlayer player, CycleLinkerTypePayload payload) {
+        if (player == null || payload.direction() == 0) {
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof LinkerItem)) {
+            return false;
+        }
+        ResourceType type = LinkerItem.cycleType(stack, payload.direction());
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.type",
+                LinkerItem.typeName(type)), true);
         return true;
     }
 

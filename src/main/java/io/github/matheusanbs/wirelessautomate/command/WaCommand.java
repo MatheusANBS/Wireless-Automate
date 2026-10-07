@@ -106,6 +106,10 @@ public final class WaCommand {
                                                                         IntegerArgumentType.getInteger(context, "priority"))))))))));
     }
 
+    /**
+     * Total de nós e orçamento, depois uma linha por rede. Os nós de uma rede são os que têm algum
+     * tipo nela (ver {@link NetworkStats#nodes()}), então a soma das linhas pode passar do total.
+     */
     private static int profile(CommandSourceStack source) {
         NetworkManager manager = NetworkManager.get();
         TickBudget budget = manager.budget();

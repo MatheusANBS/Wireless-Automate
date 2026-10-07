@@ -90,14 +90,14 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * Entra na rede ativa de quem colocou. Se o item trouxe dados do block entity com uma rede,
-     * eles já foram aplicados antes desta chamada e a rede que veio é mantida.
+     * Todos os tipos entram na rede ativa de quem colocou. Se o item trouxe dados do block entity
+     * com alguma rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
      */
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router
-                && router.networkId() == null) {
+                && !router.hasNetwork()) {
             router.setNetworkId(NetworkSavedData.get(player.server).activeOrCreate(player).id());
         }
     }

@@ -4,11 +4,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -19,9 +20,13 @@ import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Configuração copiável de um roteador: as faces de cada tipo, por {@link RelativeSide}, e a rede.
- * Por ser relativa ao {@code facing}, colar num roteador virado para outro lado gira a configuração
- * junto. Imutável; vai no componente de item do Configurador e, mais tarde, na biblioteca.
+ * Configuração copiável de um roteador: as faces de cada tipo, por {@link RelativeSide}, e a rede
+ * de cada tipo (aba). Por ser relativa ao {@code facing}, colar num roteador virado para outro lado
+ * gira a configuração junto. Imutável; vai no componente de item do Configurador e, mais tarde, na
+ * biblioteca.
+ *
+ * <p>Formato: {@code networks} é um mapa tipo → rede. Presets antigos, com uma rede única em
+ * {@code network}, são lidos com essa rede em todos os tipos.
  */
 public final class RouterPreset {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -29,7 +34,8 @@ public final class RouterPreset {
     /** Só lida por {@link FaceConfig#copyFrom}; nunca mude. */
     private static final FaceConfig DEFAULT = new FaceConfig();
 
-    public static final RouterPreset EMPTY = new RouterPreset(new FaceConfig[TYPES.length][SIDES.length], null);
+    public static final RouterPreset EMPTY =
+            new RouterPreset(new FaceConfig[TYPES.length][SIDES.length], new UUID[TYPES.length]);
 
     private static final Codec<ResourceType> TYPE_CODEC =
             keyCodec(TYPES, type -> type.name().toLowerCase(Locale.ROOT));
@@ -44,7 +50,10 @@ public final class RouterPreset {
     public static final Codec<RouterPreset> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.unboundedMap(TYPE_CODEC, Codec.unboundedMap(SIDE_CODEC, FACE_CODEC))
                     .optionalFieldOf("faces", Map.of()).forGetter(RouterPreset::facesByType),
-            UUIDUtil.CODEC.optionalFieldOf("network").forGetter(preset -> Optional.ofNullable(preset.network))
+            Codec.unboundedMap(TYPE_CODEC, UUIDUtil.CODEC)
+                    .optionalFieldOf("networks", Map.of()).forGetter(RouterPreset::networksByType),
+            // Formato antigo, só lido.
+            UUIDUtil.CODEC.optionalFieldOf("network").forGetter(preset -> Optional.empty())
     ).apply(instance, RouterPreset::fromMaps));
 
     /** Pelo {@link #CODEC} com registros (as entradas de filtro levam componentes). */
@@ -53,14 +62,15 @@ public final class RouterPreset {
 
     /** [tipo][lado relativo]; {@code null} é face padrão. Cópias próprias, nunca expostas. */
     private final FaceConfig[][] faces;
-    private final @Nullable UUID network;
+    /** Rede de cada tipo (por {@link ResourceType#ordinal()}); {@code null} = o preset não mexe na rede desse tipo. */
+    private final @Nullable UUID[] networks;
 
-    private RouterPreset(FaceConfig[][] faces, @Nullable UUID network) {
+    private RouterPreset(FaceConfig[][] faces, @Nullable UUID[] networks) {
         this.faces = faces;
-        this.network = network;
+        this.networks = networks;
     }
 
-    /** Copia as faces e a rede do roteador. */
+    /** Copia as faces e a rede de cada tipo do roteador. */
     public static RouterPreset copyOf(RouterBlockEntity router) {
         FaceConfig[][] faces = new FaceConfig[TYPES.length][SIDES.length];
         for (ResourceType type : TYPES) {
@@ -71,12 +81,17 @@ public final class RouterPreset {
                 }
             }
         }
-        return new RouterPreset(faces, router.networkId());
+        UUID[] networks = new UUID[TYPES.length];
+        for (ResourceType type : TYPES) {
+            networks[type.ordinal()] = router.networkId(type);
+        }
+        return new RouterPreset(faces, networks);
     }
 
     /**
-     * Aplica todas as faces (as padrão no preset voltam ao padrão no roteador) e, se o preset
-     * levar rede, a rede. Quem chama decide se o jogador pode usar a rede: veja {@link #withoutNetwork()}.
+     * Aplica todas as faces (as padrão no preset voltam ao padrão no roteador) e a rede de cada
+     * tipo que o preset levar; um tipo sem rede no preset fica com a rede que o roteador já tem.
+     * Quem chama decide se o jogador pode usar cada rede: veja {@link #withoutNetwork(ResourceType)}.
      */
     public void applyTo(RouterBlockEntity router) {
         for (ResourceType type : TYPES) {
@@ -85,8 +100,11 @@ public final class RouterPreset {
                 router.setFace(type, side, config != null ? config : DEFAULT);
             }
         }
-        if (network != null) {
-            router.setNetworkId(network);
+        for (ResourceType type : TYPES) {
+            UUID network = networks[type.ordinal()];
+            if (network != null) {
+                router.setNetworkId(type, network);
+            }
         }
     }
 
@@ -96,12 +114,45 @@ public final class RouterPreset {
         return config != null ? copy(config) : new FaceConfig();
     }
 
-    public @Nullable UUID network() {
-        return network;
+    /** Rede do tipo no preset; {@code null} = colar não mexe na rede desse tipo. */
+    public @Nullable UUID network(ResourceType type) {
+        return networks[type.ordinal()];
     }
 
-    public RouterPreset withoutNetwork() {
-        return network == null ? this : new RouterPreset(faces, null);
+    /** Algum tipo leva rede. */
+    public boolean hasNetwork() {
+        for (UUID network : networks) {
+            if (network != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** As redes do preset, sem repetir, na ordem dos tipos. */
+    public List<UUID> distinctNetworks() {
+        List<UUID> result = new ArrayList<>(networks.length);
+        for (UUID network : networks) {
+            if (network != null && !result.contains(network)) {
+                result.add(network);
+            }
+        }
+        return result;
+    }
+
+    /** O mesmo preset sem a rede do tipo. */
+    public RouterPreset withoutNetwork(ResourceType type) {
+        if (networks[type.ordinal()] == null) {
+            return this;
+        }
+        UUID[] copy = networks.clone();
+        copy[type.ordinal()] = null;
+        return new RouterPreset(faces, copy);
+    }
+
+    /** O mesmo preset sem nenhuma rede (só as faces). */
+    public RouterPreset withoutNetworks() {
+        return hasNetwork() ? new RouterPreset(faces, new UUID[TYPES.length]) : this;
     }
 
     /** Quantas faces (tipo × lado) estão fora do padrão. */
@@ -134,15 +185,32 @@ public final class RouterPreset {
         return result;
     }
 
+    private Map<ResourceType, UUID> networksByType() {
+        Map<ResourceType, UUID> result = new EnumMap<>(ResourceType.class);
+        for (ResourceType type : TYPES) {
+            if (networks[type.ordinal()] != null) {
+                result.put(type, networks[type.ordinal()]);
+            }
+        }
+        return result;
+    }
+
     private static RouterPreset fromMaps(Map<ResourceType, Map<RelativeSide, FaceConfig>> byType,
-            Optional<UUID> network) {
+            Map<ResourceType, UUID> networksByType, Optional<UUID> legacyNetwork) {
         FaceConfig[][] faces = new FaceConfig[TYPES.length][SIDES.length];
         byType.forEach((type, sides) -> sides.forEach((side, config) -> {
             if (!config.isDefault()) {
                 faces[type.ordinal()][side.ordinal()] = copy(config);
             }
         }));
-        return new RouterPreset(faces, network.orElse(null));
+        UUID[] networks = new UUID[TYPES.length];
+        if (networksByType.isEmpty()) {
+            // Preset antigo: a rede única vale para todos os tipos.
+            Arrays.fill(networks, legacyNetwork.orElse(null));
+        } else {
+            networksByType.forEach((type, network) -> networks[type.ordinal()] = network);
+        }
+        return new RouterPreset(faces, networks);
     }
 
     private static FaceConfig copy(FaceConfig config) {
@@ -165,16 +233,16 @@ public final class RouterPreset {
     @Override
     public boolean equals(Object o) {
         return o instanceof RouterPreset other
-                && Objects.equals(network, other.network) && Arrays.deepEquals(faces, other.faces);
+                && Arrays.equals(networks, other.networks) && Arrays.deepEquals(faces, other.faces);
     }
 
     @Override
     public int hashCode() {
-        return 31 * Arrays.deepHashCode(faces) + Objects.hashCode(network);
+        return 31 * Arrays.deepHashCode(faces) + Arrays.hashCode(networks);
     }
 
     @Override
     public String toString() {
-        return "RouterPreset[" + facesByType() + ", network=" + network + "]";
+        return "RouterPreset[" + facesByType() + ", networks=" + networksByType() + "]";
     }
 }

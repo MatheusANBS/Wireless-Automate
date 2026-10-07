@@ -98,7 +98,7 @@ public final class ConfiguratorGameTests {
                         RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
                         helper.assertTrue(preset != null, "nada copiado para o item");
                         helper.assertValueEqual(preset.configuredFaces(), 4, "faces configuradas");
-                        helper.assertValueEqual(preset.network(), own.id(), "rede não copiada");
+                        helper.assertValueEqual(preset.network(ResourceType.ITEM), own.id(), "rede não copiada");
 
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         for (ResourceType type : TYPES) {
@@ -117,7 +117,7 @@ public final class ConfiguratorGameTests {
                         helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.EAST).priority(), 7, "LEFT");
                         helper.assertValueEqual(target.face(ResourceType.ENERGY, Direction.SOUTH).redstone(),
                                 RedstoneMode.HIGH, "BACK");
-                        helper.assertValueEqual(target.networkId(), own.id(), "rede própria não colada");
+                        helper.assertValueEqual(target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
 
                         // Rede de outro dono: só as faces vão.
                         source.setNetworkId(other.id());
@@ -125,7 +125,7 @@ public final class ConfiguratorGameTests {
                         use(player, foreign, false);
                         helper.assertValueEqual(foreign.face(ResourceType.ITEM, RelativeSide.TOP).mode(),
                                 PortMode.INSERT, "faces não coladas sem a rede");
-                        helper.assertTrue(foreign.networkId() == null, "colou rede de outro dono");
+                        helper.assertTrue(foreign.networkId(ResourceType.ITEM) == null, "colou rede de outro dono");
 
                         // Shift + clique direito no ar descarta a cópia.
                         player.setShiftKeyDown(true);
@@ -145,7 +145,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.WEST));
         source.setMode(ResourceType.ITEM, Direction.WEST, PortMode.INSERT);
         RouterPreset preset = RouterPreset.copyOf(source);
-        helper.assertTrue(preset.network() == null, "rede do nada");
+        helper.assertTrue(!preset.hasNetwork(), "rede do nada");
 
         RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.DOWN));
         UUID network = UUID.randomUUID();
@@ -165,8 +165,8 @@ public final class ConfiguratorGameTests {
             }
         }
         helper.assertValueEqual(configured, 1, "faces configuradas no destino não foram zeradas");
-        helper.assertValueEqual(target.networkId(), network, "preset sem rede mexeu na rede");
-        helper.assertValueEqual(RouterPreset.copyOf(target).withoutNetwork(), preset,
+        helper.assertValueEqual(target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
+        helper.assertValueEqual(RouterPreset.copyOf(target).withoutNetworks(), preset,
                 "copiar o colado não dá o mesmo preset");
         helper.succeed();
     }
@@ -181,7 +181,7 @@ public final class ConfiguratorGameTests {
 
         RegistryAccess registries = helper.getLevel().registryAccess();
         RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
-        for (RouterPreset original : new RouterPreset[] {preset, preset.withoutNetwork(), RouterPreset.EMPTY}) {
+        for (RouterPreset original : new RouterPreset[] {preset, preset.withoutNetworks(), RouterPreset.EMPTY}) {
             Tag tag = RouterPreset.CODEC.encodeStart(ops, original).getOrThrow();
             RouterPreset decoded = RouterPreset.CODEC.parse(ops, tag).getOrThrow();
             helper.assertValueEqual(decoded, original, "codec persistente");
@@ -195,7 +195,7 @@ public final class ConfiguratorGameTests {
                 buf.release();
             }
         }
-        helper.assertTrue(!preset.equals(preset.withoutNetwork()), "equals ignorou a rede");
+        helper.assertTrue(!preset.equals(preset.withoutNetworks()), "equals ignorou a rede");
         helper.assertValueEqual(preset.face(ResourceType.CHEMICAL, RelativeSide.RIGHT).priority(), -2, "RIGHT");
         helper.succeed();
     }

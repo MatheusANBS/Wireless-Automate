@@ -82,7 +82,7 @@ public final class RouterConfigGameTests {
 
         RouterBlockEntity copy = new RouterBlockEntity(node.getBlockPos(), node.getBlockState());
         copy.loadWithComponents(tag, registries);
-        helper.assertValueEqual(copy.networkId(), network, "rede");
+        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), network, "rede");
         for (ResourceType type : ResourceType.values()) {
             for (Direction face : Direction.values()) {
                 helper.assertValueEqual(copy.face(type, face), node.face(type, face), type + " " + face);

@@ -135,15 +135,6 @@ public class RouterBlockEntity extends BlockEntity {
         return false;
     }
 
-    /**
-     * Rede dos itens. Só para o código que ainda pensa em uma rede por roteador.
-     * TODO(contrato): trocar os usos por {@link #networkId(ResourceType)} e apagar.
-     */
-    @Deprecated
-    public @Nullable UUID networkId() {
-        return networks[ResourceType.ITEM.ordinal()];
-    }
-
     /** Nome do nó; vazio se o jogador não deu um. */
     public String name() {
         return name;

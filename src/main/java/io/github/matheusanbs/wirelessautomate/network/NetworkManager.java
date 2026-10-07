@@ -25,11 +25,16 @@ import org.jetbrains.annotations.Nullable;
  *       O relógio é lido uma vez por origem, e serve tanto ao orçamento quanto ao profiler.
  * </ol>
  *
+ * <p>Cada tipo de recurso (aba) de um nó entra numa rede própria ({@link RouterBlockEntity#networkId(ResourceType)});
+ * o nó é membro de toda rede em que algum tipo dele está, e a montagem de um tipo numa rede só
+ * considera os membros cujo tipo está nela.
+ *
  * <p>O tempo das portas (balde, sono) é o {@code getTickCount()} do servidor.
  */
 public final class NetworkManager {
     /** Teto do sono de origens e destinos, em ticks. */
     static final int MAX_SLEEP_TICKS = 100;
+    private static final ResourceType[] TYPES = ResourceType.values();
     private static final int TICKS_PER_SECOND = 20;
 
     private static NetworkManager instance;
@@ -70,13 +75,17 @@ public final class NetworkManager {
         }
         NodePorts ports = new NodePorts(node);
         nodes.put(node, ports);
-        join(ports, node.networkId());
+        for (ResourceType type : TYPES) {
+            move(ports, type, node.networkId(type));
+        }
     }
 
     public void removeNode(RouterBlockEntity node) {
         NodePorts ports = nodes.remove(node);
         if (ports != null) {
-            leave(ports);
+            for (ResourceType type : TYPES) {
+                move(ports, type, null);
+            }
         }
     }
 
@@ -84,18 +93,23 @@ public final class NetworkManager {
         return nodes.containsKey(node);
     }
 
-    /** A rede ou a configuração de faces do nó mudou: marca as redes afetadas para remontar no próximo tick. */
+    /**
+     * A rede de algum tipo ou a configuração de faces do nó mudou: marca as redes afetadas para
+     * remontar no próximo tick. Compara tipo a tipo: um tipo que trocou de rede sai da antiga e
+     * entra na nova (as duas sujam); os outros só sujam a rede em que já estão.
+     */
     public void nodeChanged(RouterBlockEntity node) {
         NodePorts ports = nodes.get(node);
         if (ports == null) {
             return;
         }
-        UUID network = node.networkId();
-        if (Objects.equals(network, ports.network)) {
-            markDirty(network);
-        } else {
-            leave(ports);
-            join(ports, network);
+        for (ResourceType type : TYPES) {
+            UUID network = node.networkId(type);
+            if (Objects.equals(network, ports.network(type))) {
+                markDirty(network);
+            } else {
+                move(ports, type, network);
+            }
         }
     }
 
@@ -115,7 +129,10 @@ public final class NetworkManager {
         return budget;
     }
 
-    /** Retrato das redes que existem e têm nós carregados, para o profiler. */
+    /**
+     * Retrato das redes que existem e têm nós carregados, para o profiler. Os nós de uma rede são
+     * os que têm algum tipo nela: um roteador com Itens na rede A e Energia na B conta nas duas.
+     */
     public List<NetworkStats> stats(MinecraftServer server) {
         long now = server.getTickCount();
         List<NetworkStats> result = new ArrayList<>();
@@ -263,8 +280,27 @@ public final class NetworkManager {
         }
     }
 
-    private void join(NodePorts ports, @Nullable UUID network) {
-        ports.network = network;
+    /**
+     * Passa o tipo {@code type} do nó para a rede {@code network} ({@code null} = nenhuma): limpa as
+     * rotas das portas desse tipo, suja a rede antiga e a nova e acerta os membros (o nó sai da
+     * antiga só se nenhum outro tipo dele continuar lá, e entra na nova só se ainda não estava).
+     */
+    private void move(NodePorts ports, ResourceType type, @Nullable UUID network) {
+        UUID before = ports.network(type);
+        if (Objects.equals(before, network)) {
+            return;
+        }
+        ports.clearRoutes(type);
+        boolean wasMember = network != null && ports.inNetwork(network);
+        ports.setNetwork(type, network);
+        NetworkRoutes old = before == null ? null : networks.get(before);
+        if (old != null) {
+            if (!ports.inNetwork(before)) {
+                old.members.remove(ports);
+            }
+            old.dirty = true;
+            dirty = true;
+        }
         if (network == null) {
             return;
         }
@@ -274,21 +310,11 @@ public final class NetworkManager {
             networks.put(network, routes);
             networkList.add(routes);
         }
-        routes.members.add(ports);
+        if (!wasMember) {
+            routes.members.add(ports);
+        }
         routes.dirty = true;
         dirty = true;
-    }
-
-    private void leave(NodePorts ports) {
-        ports.clearRoutes();
-        UUID network = ports.network;
-        ports.network = null;
-        NetworkRoutes routes = network == null ? null : networks.get(network);
-        if (routes != null) {
-            routes.members.remove(ports);
-            routes.dirty = true;
-            dirty = true;
-        }
     }
 
     private void markDirty(@Nullable UUID network) {

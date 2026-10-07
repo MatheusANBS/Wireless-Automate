@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -122,7 +123,9 @@ public final class NetworkGameTests {
             helper.assertTrue(ModItems.LINKER.get().useOn(context).consumesAction(), "vinculador não agiu");
             UUID active = data.activeNetwork(player.getUUID());
             helper.assertTrue(active != null, "vinculador não criou a rede ativa");
-            helper.assertTrue(Objects.equals(router.networkId(), active), "roteador fora da rede ativa");
+            for (ResourceType type : ResourceType.values()) {
+                helper.assertTrue(Objects.equals(router.networkId(type), active), type + " fora da rede ativa");
+            }
             data.remove(active);
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);

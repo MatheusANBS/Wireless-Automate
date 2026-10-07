@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -18,8 +21,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Ciclo de cada tick:
  * <ol>
- *   <li>remonta as redes sujas ({@link NetworkRoutes#rebuild}); {@link #nodeChanged}, {@link #addNode}
- *       e {@link #removeNode} só marcam, nunca remontam na hora;
+ *   <li>remonta os tipos sujos das redes ({@link NetworkRoutes#rebuild}); {@link #nodeChanged},
+ *       {@link #addNode} e {@link #removeNode} só marcam, nunca remontam na hora;
  *   <li>percorre a lista achatada de origens de todas as redes a partir do cursor salvo, uma visita
  *       por origem acordada, e para quando o orçamento acaba, guardando o cursor para o tick seguinte.
  *       Se a volta inteira coube, o tick seguinte começa depois da última origem que moveu algo
@@ -35,7 +38,16 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Cada tipo de recurso (aba) de um nó entra numa rede própria ({@link RouterBlockEntity#networkId(ResourceType)});
  * o nó é membro de toda rede em que algum tipo dele está, e a montagem de um tipo numa rede só
- * considera os membros cujo tipo está nela.
+ * considera os membros cujo tipo está nela. A sujeira também é por tipo: mudar a aba Itens remonta
+ * só os itens da rede.
+ *
+ * <p>Sono e despertar: em volta de cada visita o gerenciador anota a origem visitada. Assim, quando
+ * a máquina de um destino avisa mudança porque nós acabamos de inserir nela ({@link #wake}), só as
+ * portas do próprio nó acordam, e não as origens que entregam ali (ganhar recursos não abre espaço).
+ * Depois da visita, se a origem dormiu, fica anotado o motivo ({@link Port#waitsDestination}): ela
+ * ofereceu algo a um destino acordado (a leitura de capability de outra face durante a visita, ver
+ * {@link #capabilityRead}) ou todos os destinos dormiam, e então espera destino; senão estava vazia.
+ * Mudanças na máquina de um destino só acordam as que esperam destino.
  *
  * <p>O tempo das portas (balde, sono) é o {@code getTickCount()} do servidor.
  */
@@ -43,6 +55,8 @@ public final class NetworkManager {
     /** Teto do sono de origens e destinos, em ticks. */
     static final int MAX_SLEEP_TICKS = 100;
     private static final ResourceType[] TYPES = ResourceType.values();
+    /** Máscara com todos os tipos, para {@link #nodeChanged(RouterBlockEntity, int)}. */
+    public static final int ALL_TYPES = (1 << TYPES.length) - 1;
     private static final int TICKS_PER_SECOND = 20;
     /** Resultado de uma visita: a origem moveu algo. */
     static final int MOVED = 1;
@@ -51,6 +65,14 @@ public final class NetworkManager {
 
     private static NetworkManager instance;
     private static volatile boolean configChanged;
+
+    // Visita em andamento; o laço roda numa thread só (a do servidor). Fora de uma visita, visitNode é null.
+    private static @Nullable RouterBlockEntity visitNode;
+    private static @Nullable Direction visitFace;
+    private static @Nullable Level visitLevel;
+    private static BlockPos visitMachine = BlockPos.ZERO;
+    /** A visita leu a capability de outra face ou nó: ofereceu algo a um destino acordado. */
+    private static boolean visitTouched;
 
     private final Map<RouterBlockEntity, NodePorts> nodes = new Reference2ObjectOpenHashMap<>();
     private final Map<UUID, NetworkRoutes> networks = new HashMap<>();
@@ -64,6 +86,12 @@ public final class NetworkManager {
     private final TickBudget budget = new TickBudget(500_000L);
     private int cursor;
     private boolean dirty;
+    /** Redes salvas do servidor atual e a versão delas já conferida ({@link #checkNetworks}). */
+    private @Nullable MinecraftServer savedServer;
+    private @Nullable NetworkSavedData savedData;
+    private int savedVersion;
+    /** Entrou rede nova no gerenciador: a existência dela ainda não foi conferida. */
+    private boolean networksAdded = true;
     // Contadores cumulativos (benchmark e diagnóstico): só somam; quem lê faz a diferença entre leituras.
     private long visitCount;
     private long exhaustedTicks;
@@ -80,11 +108,19 @@ public final class NetworkManager {
     /** Descarta o estado ao parar o servidor, para o próximo mundo começar limpo. */
     public static void reset() {
         instance = null;
+        visitNode = null;
+        visitFace = null;
+        visitLevel = null;
     }
 
     /** A config dos tiers mudou: todas as redes serão remontadas no próximo tick. Seguro de qualquer thread. */
     public static void configChanged() {
         configChanged = true;
+    }
+
+    /** Bit do tipo nas máscaras de {@link #nodeChanged(RouterBlockEntity, int)}. */
+    public static int typeBit(ResourceType type) {
+        return 1 << type.ordinal();
     }
 
     public void addNode(RouterBlockEntity node) {
@@ -112,32 +148,76 @@ public final class NetworkManager {
         return nodes.containsKey(node);
     }
 
-    /**
-     * A rede de algum tipo ou a configuração de faces do nó mudou: marca as redes afetadas para
-     * remontar no próximo tick. Compara tipo a tipo: um tipo que trocou de rede sai da antiga e
-     * entra na nova (as duas sujam); os outros só sujam a rede em que já estão.
-     */
+    /** Como {@link #nodeChanged(RouterBlockEntity, int)} para todos os tipos. */
     public void nodeChanged(RouterBlockEntity node) {
+        nodeChanged(node, ALL_TYPES);
+    }
+
+    /**
+     * A rede ou a configuração de faces dos tipos de {@code types} (máscara de {@link #typeBit}) do nó
+     * mudou: marca esses tipos nas redes afetadas para remontar no próximo tick. Compara tipo a tipo:
+     * um tipo que trocou de rede sai da antiga e entra na nova (as duas sujam); os outros só sujam a
+     * rede em que já estão. Os tipos fora da máscara não são relidos nem remontados.
+     */
+    public void nodeChanged(RouterBlockEntity node, int types) {
         NodePorts ports = nodes.get(node);
-        if (ports == null) {
+        if (ports == null || types == 0) {
             return;
         }
-        ports.invalidate();
+        ports.invalidate(types);
         for (ResourceType type : TYPES) {
+            if ((types & typeBit(type)) == 0) {
+                continue;
+            }
             UUID network = node.networkId(type);
             if (Objects.equals(network, ports.network(type))) {
-                markDirty(network);
+                markDirty(network, type);
             } else {
                 move(ports, type, network);
             }
         }
     }
 
-    /** Um vizinho do nó avisou mudança: acorda as portas dele e as origens que entregam nos destinos dele. */
+    /**
+     * A máquina do nó avisou mudança: acorda as portas dele e as origens que esperam destino e
+     * entregam nos destinos dele. Se o aviso vem de uma entrega nossa (durante uma visita, numa
+     * máquina que não é a da origem visitada), só as portas do nó acordam.
+     */
     public void wake(RouterBlockEntity node) {
         NodePorts ports = nodes.get(node);
         if (ports != null) {
-            ports.wake();
+            ports.wake(!deliveringInto(node));
+        }
+    }
+
+    /** A visita em andamento está inserindo na máquina do nó (outra máquina que a da origem). */
+    private static boolean deliveringInto(RouterBlockEntity node) {
+        RouterBlockEntity source = visitNode;
+        if (source == null || node == source) {
+            return false;
+        }
+        return node.getLevel() != visitLevel || !node.machinePos().equals(visitMachine);
+    }
+
+    /**
+     * A capability de uma face da máquina do nó foi invalidada: acorda só a porta dessa face e tipo e
+     * as origens que esperam por ela. Não remonta: as rotas não dependem de capability.
+     */
+    public void capabilityChanged(RouterBlockEntity node, ResourceType type, Direction face) {
+        NodePorts ports = nodes.get(node);
+        if (ports != null) {
+            ports.capabilityChanged(type, face);
+        }
+    }
+
+    /**
+     * O nó leu a capability da face {@code face} da máquina. Durante uma visita, ler outra face ou
+     * outro nó que a origem visitada quer dizer que a origem ofereceu algo a um destino acordado:
+     * é como o gerenciador sabe o motivo do sono sem as transferências dizerem. Barato fora da visita.
+     */
+    public static void capabilityRead(RouterBlockEntity node, Direction face) {
+        if (visitNode != null && (node != visitNode || face != visitFace)) {
+            visitTouched = true;
         }
     }
 
@@ -174,6 +254,22 @@ public final class NetworkManager {
         return rebuildNanos;
     }
 
+    /** Para GameTests e diagnóstico: o tipo da rede está marcado para remontar no próximo tick. */
+    public boolean isDirty(UUID network, ResourceType type) {
+        NetworkRoutes routes = networks.get(network);
+        return routes != null && (routes.dirtyTypes & typeBit(type)) != 0;
+    }
+
+    /**
+     * Para GameTests e diagnóstico: o intervalo do próximo sono da origem na face (absoluta) da
+     * máquina, que dobra a cada sono e volta a 1 quando algo a acorda; -1 se a porta não existe.
+     */
+    public int sourceSleepInterval(RouterBlockEntity node, ResourceType type, Direction face) {
+        NodePorts ports = nodes.get(node);
+        Port port = ports == null ? null : ports.peek(type, face);
+        return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
+    }
+
     /**
      * Retrato das redes que existem e têm nós carregados, para o profiler. Os nós de uma rede são
      * os que têm algum tipo nela: um roteador com Itens na rede A e Energia na B conta nas duas.
@@ -185,22 +281,30 @@ public final class NetworkManager {
             if (!network.exists || network.members.isEmpty()) {
                 continue;
             }
+            int sourceCount = 0;
+            int destinationCount = 0;
             int sourcesSleeping = 0;
             int destinationsSleeping = 0;
-            for (Port port : network.sources) {
-                if (port.sourceBackoff.isSleeping(now)) {
-                    sourcesSleeping++;
+            for (ResourceType type : TYPES) {
+                List<Port> typeSources = network.sourcesOf[type.ordinal()];
+                List<Port> typeDestinations = network.destinationsOf[type.ordinal()];
+                sourceCount += typeSources.size();
+                destinationCount += typeDestinations.size();
+                for (Port port : typeSources) {
+                    if (port.sourceBackoff.isSleeping(now)) {
+                        sourcesSleeping++;
+                    }
                 }
-            }
-            for (Port port : network.destinations) {
-                if (port.destinationBackoff.isSleeping(now)) {
-                    destinationsSleeping++;
+                for (Port port : typeDestinations) {
+                    if (port.destinationBackoff.isSleeping(now)) {
+                        destinationsSleeping++;
+                    }
                 }
             }
             result.add(new NetworkStats(network.id, network.members.size(), network.averageNanos,
                     network.lastNanos, network.opsLastSecond,
-                    network.sources.size() - sourcesSleeping, sourcesSleeping,
-                    network.destinations.size() - destinationsSleeping, destinationsSleeping));
+                    sourceCount - sourcesSleeping, sourcesSleeping,
+                    destinationCount - destinationsSleeping, destinationsSleeping));
         }
         return result;
     }
@@ -309,28 +413,61 @@ public final class NetworkManager {
         return time;
     }
 
-    /** Uma visita; devolve {@link #MOVED} e {@link #MORE} combinados. */
+    /**
+     * Uma visita, com a origem anotada em volta (ver a classe); devolve {@link #MOVED} e
+     * {@link #MORE} combinados. Se a origem dormiu, anota o motivo.
+     */
     private int visit(Port source, long now) {
-        return switch (source.type) {
-            case ITEM -> ItemTransfer.move(source, now);
-            case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
-            case ENERGY -> EnergyTransfer.move(source, now) ? MOVED : 0;
-            case CHEMICAL -> Chemicals.move(source, now) ? MOVED : 0;
-        };
+        visitNode = source.node;
+        visitFace = source.face;
+        visitLevel = source.node.getLevel();
+        visitMachine = source.machinePos;
+        visitTouched = false;
+        int result;
+        try {
+            result = switch (source.type) {
+                case ITEM -> ItemTransfer.move(source, now);
+                case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
+                case ENERGY -> EnergyTransfer.move(source, now) ? MOVED : 0;
+                case CHEMICAL -> Chemicals.move(source, now) ? MOVED : 0;
+            };
+        } finally {
+            visitNode = null;
+            visitFace = null;
+            visitLevel = null;
+        }
+        if (source.sourceBackoff.isSleeping(now)) {
+            RoundRobinOrder<Port> order = source.order;
+            source.waitsDestination = visitTouched || order == null || !hasAwakeDestination(order.pass(), now);
+        }
+        return result;
     }
 
-    /** Redes criadas ou removidas no {@link NetworkSavedData} mudam a validade das rotas. */
+    /**
+     * Redes criadas, removidas, pausadas ou retomadas no {@link NetworkSavedData} mudam a validade das
+     * rotas. Só confere quando a versão dele mudou, entrou rede nova no gerenciador ou a config mudou.
+     */
     private void checkNetworks(MinecraftServer server) {
-        NetworkSavedData data = NetworkSavedData.get(server);
+        if (savedServer != server || savedData == null) {
+            savedServer = server;
+            savedData = NetworkSavedData.get(server);
+            networksAdded = true;
+        }
+        NetworkSavedData data = savedData;
         boolean all = configChanged;
+        if (!all && !networksAdded && data.version() == savedVersion) {
+            return;
+        }
         configChanged = false;
+        networksAdded = false;
+        savedVersion = data.version();
         for (int i = 0, n = networkList.size(); i < n; i++) {
             NetworkRoutes network = networkList.get(i);
             // Rede pausada (grupo pausado no Tablet) conta como inexistente: fica sem rotas até retomar.
             boolean exists = data.network(network.id) != null && !data.isPaused(network.id);
             if (all || exists != network.exists) {
                 network.exists = exists;
-                network.dirty = true;
+                network.dirtyTypes = NetworkRoutes.ALL_TYPES;
                 dirty = true;
             }
         }
@@ -340,11 +477,11 @@ public final class NetworkManager {
         dirty = false;
         for (int i = networkList.size() - 1; i >= 0; i--) {
             NetworkRoutes network = networkList.get(i);
-            if (!network.dirty) {
+            if (network.dirtyTypes == 0) {
                 continue;
             }
-            network.dirty = false;
             if (network.members.isEmpty()) {
+                network.dirtyTypes = 0;
                 networkList.remove(i);
                 networks.remove(network.id);
                 continue;
@@ -353,11 +490,14 @@ public final class NetworkManager {
         }
         sources.clear();
         for (int i = 0, n = networkList.size(); i < n; i++) {
-            List<Port> networkSources = networkList.get(i).sources;
-            for (int j = 0, m = networkSources.size(); j < m; j++) {
-                Port source = networkSources.get(j);
-                if (source.order != null) {
-                    sources.add(source);
+            NetworkRoutes network = networkList.get(i);
+            for (ResourceType type : TYPES) {
+                List<Port> networkSources = network.sourcesOf[type.ordinal()];
+                for (int j = 0, m = networkSources.size(); j < m; j++) {
+                    Port source = networkSources.get(j);
+                    if (source.order != null) {
+                        sources.add(source);
+                    }
                 }
             }
         }
@@ -368,8 +508,8 @@ public final class NetworkManager {
 
     /**
      * Passa o tipo {@code type} do nó para a rede {@code network} ({@code null} = nenhuma): limpa as
-     * rotas das portas desse tipo, suja a rede antiga e a nova e acerta os membros (o nó sai da
-     * antiga só se nenhum outro tipo dele continuar lá, e entra na nova só se ainda não estava).
+     * rotas das portas desse tipo, suja o tipo na rede antiga e na nova e acerta os membros (o nó sai
+     * da antiga só se nenhum outro tipo dele continuar lá, e entra na nova só se ainda não estava).
      */
     private void move(NodePorts ports, ResourceType type, @Nullable UUID network) {
         UUID before = ports.network(type);
@@ -384,7 +524,7 @@ public final class NetworkManager {
             if (!ports.inNetwork(before)) {
                 old.members.remove(ports);
             }
-            old.dirty = true;
+            old.dirtyTypes |= typeBit(type);
             dirty = true;
         }
         if (network == null) {
@@ -395,18 +535,19 @@ public final class NetworkManager {
             routes = new NetworkRoutes(network);
             networks.put(network, routes);
             networkList.add(routes);
+            networksAdded = true;
         }
         if (!wasMember) {
             routes.members.add(ports);
         }
-        routes.dirty = true;
+        routes.dirtyTypes |= typeBit(type);
         dirty = true;
     }
 
-    private void markDirty(@Nullable UUID network) {
+    private void markDirty(@Nullable UUID network, ResourceType type) {
         NetworkRoutes routes = network == null ? null : networks.get(network);
         if (routes != null) {
-            routes.dirty = true;
+            routes.dirtyTypes |= typeBit(type);
             dirty = true;
         }
     }

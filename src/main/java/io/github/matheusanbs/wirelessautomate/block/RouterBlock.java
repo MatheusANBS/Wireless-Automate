@@ -112,7 +112,8 @@ public class RouterBlock extends BaseEntityBlock {
             router.updatePowered();
             if (neighborPos.equals(attachedPos(state, pos))) {
                 // Máquina trocada ou removida: só a tela aberta, se houver, refaz o ícone e os slots.
-                router.machineChanged();
+                // Só o estado mudou (fornalha acesa)? O roteador confere o bloco e não faz nada.
+                router.machineNeighborChanged();
             }
         }
     }
@@ -144,7 +145,8 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * O conteúdo da máquina mudou: acorda os destinos do nó. Só chega quando a máquina chama
+     * O conteúdo da máquina mudou: acorda as portas do nó e as origens que esperam por elas (ver
+     * {@link NetworkManager#wake}; uma entrega nossa não acorda as alimentadoras). Só chega quando a máquina chama
      * {@code setChanged()} no block entity (o NeoForge propaga para as 6 faces); máquinas que
      * mudam o inventário sem isso ficam com o reserva, as checagens com backoff do gerenciador.
      */

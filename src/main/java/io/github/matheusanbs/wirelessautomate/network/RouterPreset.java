@@ -101,6 +101,11 @@ public final class RouterPreset {
      * tipo; as outras abas do roteador ficam como estavam (faces e rede). {@code null} = todas.
      */
     public void applyTo(RouterBlockEntity router, @Nullable ResourceType only) {
+        // Um aviso só ao motor, à tela e ao índice, em vez de um por face e por rede.
+        router.batchChanges(() -> apply(router, only));
+    }
+
+    private void apply(RouterBlockEntity router, @Nullable ResourceType only) {
         for (ResourceType type : TYPES) {
             if (only != null && type != only) {
                 continue;

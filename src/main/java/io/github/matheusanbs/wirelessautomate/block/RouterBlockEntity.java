@@ -33,6 +33,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -85,6 +86,8 @@ public class RouterBlockEntity extends BlockEntity {
     public static final int CARD_SLOTS = 2;
     /** Tipos com slots de cartão, na ordem de {@link #cards}. */
     private static final ResourceType[] CARD_TYPES = {ResourceType.ITEM, ResourceType.FLUID};
+    private static final int CARD_TYPES_MASK =
+            NetworkManager.typeBit(ResourceType.ITEM) | NetworkManager.typeBit(ResourceType.FLUID);
     /** [tipo de {@link #CARD_TYPES}][lado relativo][slot], nunca nulos. */
     private final ItemStack[][][] cards = new ItemStack[CARD_TYPES.length][SIDES.length][CARD_SLOTS];
     /** Upgrade de chunk loading no slot (ou vazio) e quem o pôs. */
@@ -100,6 +103,11 @@ public class RouterBlockEntity extends BlockEntity {
     /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
     private final BlockCapabilityCache<Object, @Nullable Direction>[] chemicalCaches = newCaches();
     private @Nullable Direction cacheFacing;
+    /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
+    private @Nullable Block machineBlock;
+    /** Profundidade de {@link #batchChanges} e os tipos que mudaram dentro dele. */
+    private int batchDepth;
+    private int batchTypes;
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ROUTER.get(), pos, state);
@@ -126,20 +134,20 @@ public class RouterBlockEntity extends BlockEntity {
             return;
         }
         networks[type.ordinal()] = networkId;
-        changed();
+        changed(NetworkManager.typeBit(type));
     }
 
     /** Põe todos os tipos na mesma rede (colocar o roteador, Vinculador em "Todos"). */
     public void setNetworkId(@Nullable UUID networkId) {
-        boolean changed = false;
+        int changed = 0;
         for (int i = 0; i < networks.length; i++) {
             if (!Objects.equals(networks[i], networkId)) {
                 networks[i] = networkId;
-                changed = true;
+                changed |= 1 << i;
             }
         }
-        if (changed) {
-            changed();
+        if (changed != 0) {
+            changed(changed);
         }
     }
 
@@ -148,15 +156,15 @@ public class RouterBlockEntity extends BlockEntity {
      * vez só (Vinculador com várias abas marcadas).
      */
     public void setNetworkId(Collection<ResourceType> types, @Nullable UUID networkId) {
-        boolean changed = false;
+        int changed = 0;
         for (ResourceType type : types) {
             if (!Objects.equals(networks[type.ordinal()], networkId)) {
                 networks[type.ordinal()] = networkId;
-                changed = true;
+                changed |= NetworkManager.typeBit(type);
             }
         }
-        if (changed) {
-            changed();
+        if (changed != 0) {
+            changed(changed);
         }
     }
 
@@ -206,10 +214,30 @@ public class RouterBlockEntity extends BlockEntity {
         return changeVersion;
     }
 
-    /** A máquina pode ter mudado (bloco trocado): a tela aberta remonta o snapshot. Não mexe nas rotas. */
+    /** A máquina mudou (bloco trocado ou removido): a tela aberta remonta o snapshot. Não mexe nas rotas. */
     public void machineChanged() {
         changeVersion++;
         NodeIndex.track(this);
+    }
+
+    /**
+     * O vizinho na posição da máquina avisou mudança: só conta como máquina mudada se o <b>bloco</b>
+     * dela mudou. Trocar só o estado (fornalha acesa, máquina "ativa") não refaz o índice nem a tela.
+     */
+    public void machineNeighborChanged() {
+        if (level == null) {
+            return;
+        }
+        Block block = level.getBlockState(machinePos()).getBlock();
+        if (block != machineBlock) {
+            machineBlock = block;
+            machineChanged();
+            if (!level.isClientSide) {
+                // Máquina nova: as portas dela (e quem espera por elas) tentam de novo, mesmo que a
+                // troca não invalide nenhuma capability já consultada.
+                NetworkManager.get().wake(this);
+            }
+        }
     }
 
     /** Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. */
@@ -243,19 +271,19 @@ public class RouterBlockEntity extends BlockEntity {
 
     public void setMode(ResourceType type, Direction machineFace, PortMode mode) {
         if (face(type, machineFace).setMode(mode)) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
     public void setPriority(ResourceType type, Direction machineFace, int priority) {
         if (face(type, machineFace).setPriority(priority)) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
     public void setRedstone(ResourceType type, Direction machineFace, RedstoneMode redstone) {
         if (face(type, machineFace).setRedstone(redstone)) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
@@ -267,14 +295,14 @@ public class RouterBlockEntity extends BlockEntity {
         changed |= config.setPriority(priority);
         changed |= config.setRedstone(redstone);
         if (changed) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
     /** Troca o filtro da face. Energia não usa filtro, mas guardar não faz mal. */
     public void setFilter(ResourceType type, Direction machineFace, Filter filter) {
         if (face(type, machineFace).setFilter(filter)) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
@@ -318,12 +346,12 @@ public class RouterBlockEntity extends BlockEntity {
             return;
         }
         cards[index][side.ordinal()][slot] = stack;
-        changed();
+        changed(NetworkManager.typeBit(type));
     }
 
     /** Um cartão foi mexido no lugar (pilha do slot alterada): salva e remonta as rotas. */
     public void cardsChanged() {
-        changed();
+        changed(CARD_TYPES_MASK);
     }
 
     /** Cartões nos slots da face (absoluta) para o tipo. */
@@ -378,7 +406,7 @@ public class RouterBlockEntity extends BlockEntity {
             }
         }
         if (!removed.isEmpty()) {
-            changed();
+            changed(CARD_TYPES_MASK);
         }
         return removed;
     }
@@ -452,7 +480,7 @@ public class RouterBlockEntity extends BlockEntity {
     /** Copia a configuração de uma face inteira, pelo lado relativo (para presets e o Configurador). */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
         if (face(type, side).copyFrom(config)) {
-            changed();
+            changed(NetworkManager.typeBit(type));
         }
     }
 
@@ -461,7 +489,11 @@ public class RouterBlockEntity extends BlockEntity {
         return powered;
     }
 
-    /** Relê o sinal de redstone. Chamado pelo bloco quando um vizinho muda. */
+    /**
+     * Relê o sinal de redstone. Chamado pelo bloco quando um vizinho muda. Só remonta os tipos com
+     * alguma face que usa redstone ({@link #redstoneTypes}): sem nenhuma, o sinal não muda rota (um
+     * relógio de redstone ao lado não remonta a rede a cada pulso).
+     */
     public void updatePowered() {
         if (level == null || level.isClientSide) {
             return;
@@ -471,21 +503,38 @@ public class RouterBlockEntity extends BlockEntity {
             powered = now;
             changeVersion++;
             setChanged();
-            NetworkManager.get().nodeChanged(this);
+            int types = redstoneTypes();
+            if (types != 0) {
+                NetworkManager.get().nodeChanged(this, types);
+            }
         }
+    }
+
+    /** Máscara ({@link NetworkManager#typeBit}) dos tipos com alguma face com modo e controle por redstone. */
+    public int redstoneTypes() {
+        int types = 0;
+        for (ResourceType type : TYPES) {
+            for (FaceConfig config : faces[type.ordinal()]) {
+                if (config.redstone() != RedstoneMode.IGNORE && config.mode() != PortMode.NONE) {
+                    types |= NetworkManager.typeBit(type);
+                    break;
+                }
+            }
+        }
+        return types;
     }
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
     public @Nullable IItemHandler items(Direction machineFace) {
-        return capability(itemCaches, Capabilities.ItemHandler.BLOCK, machineFace);
+        return capability(itemCaches, Capabilities.ItemHandler.BLOCK, ResourceType.ITEM, machineFace);
     }
 
     public @Nullable IFluidHandler fluids(Direction machineFace) {
-        return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, machineFace);
+        return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, ResourceType.FLUID, machineFace);
     }
 
     public @Nullable IEnergyStorage energy(Direction machineFace) {
-        return capability(energyCaches, Capabilities.EnergyStorage.BLOCK, machineFace);
+        return capability(energyCaches, Capabilities.EnergyStorage.BLOCK, ResourceType.ENERGY, machineFace);
     }
 
     /**
@@ -497,18 +546,21 @@ public class RouterBlockEntity extends BlockEntity {
     public @Nullable Object chemicals(Direction machineFace) {
         BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
         return capability == null ? null
-                : capability(chemicalCaches, (BlockCapability<Object, @Nullable Direction>) capability, machineFace);
+                : capability(chemicalCaches, (BlockCapability<Object, @Nullable Direction>) capability,
+                        ResourceType.CHEMICAL, machineFace);
     }
 
     /**
      * Devolve a capability pelo cache da face, criando o cache na primeira consulta. Se o roteador
-     * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor.
+     * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor. Cada cache avisa
+     * a própria invalidação com o tipo e a face ({@link #capabilityInvalidated}).
      */
     private <T> @Nullable T capability(BlockCapabilityCache<T, @Nullable Direction>[] caches,
-            BlockCapability<T, @Nullable Direction> capability, Direction machineFace) {
+            BlockCapability<T, @Nullable Direction> capability, ResourceType type, Direction machineFace) {
         if (!(level instanceof ServerLevel serverLevel) || isRemoved()) {
             return null;
         }
+        NetworkManager.capabilityRead(this, machineFace);
         Direction facing = facing();
         if (facing != cacheFacing) {
             clearCaches();
@@ -518,16 +570,22 @@ public class RouterBlockEntity extends BlockEntity {
         if (cache == null) {
             cache = BlockCapabilityCache.create(capability, serverLevel, machinePos(), machineFace,
                     () -> !isRemoved() && facing() == facing,
-                    this::capabilityInvalidated);
+                    () -> capabilityInvalidated(type, machineFace));
             caches[machineFace.ordinal()] = cache;
         }
         return cache.getCapability();
     }
 
-    /** A capability de uma face mudou: as rotas e o que a tela mostra (slots, máquina) também. */
-    private void capabilityInvalidated() {
+    /**
+     * A capability de uma face mudou: a tela (slots, máquina) refaz o snapshot e o motor acorda só a
+     * porta dessa face e tipo, e as origens que esperam por ela. As rotas não dependem de capability,
+     * então nada é remontado.
+     */
+    private void capabilityInvalidated(ResourceType type, Direction machineFace) {
         changeVersion++;
-        NetworkManager.get().nodeChanged(this);
+        if (level != null && !level.isClientSide) {
+            NetworkManager.get().capabilityChanged(this, type, machineFace);
+        }
     }
 
     private void clearCaches() {
@@ -543,12 +601,42 @@ public class RouterBlockEntity extends BlockEntity {
         return (BlockCapabilityCache<T, @Nullable Direction>[]) new BlockCapabilityCache[FACES];
     }
 
-    /** Salva e, no servidor, avisa o gerenciador que as rotas deste nó precisam ser refeitas. */
-    private void changed() {
+    /**
+     * Junta todas as mudanças de configuração feitas em {@code changes} num aviso só: salvar, a tela,
+     * o motor (com os tipos que mudaram somados) e o índice. Colar um preset mexe em até 24 faces e 4
+     * redes; sem isso seriam até 28 avisos. Pode ser aninhado: avisa ao sair do mais de fora.
+     */
+    public void batchChanges(Runnable changes) {
+        batchDepth++;
+        try {
+            changes.run();
+        } finally {
+            if (--batchDepth == 0 && batchTypes != 0) {
+                int types = batchTypes;
+                batchTypes = 0;
+                notifyChanged(types);
+            }
+        }
+    }
+
+    /**
+     * Salva e, no servidor, avisa o gerenciador que as rotas dos tipos {@code types} (máscara de
+     * {@link NetworkManager#typeBit}) deste nó precisam ser refeitas. Dentro de {@link #batchChanges}
+     * só acumula.
+     */
+    private void changed(int types) {
+        if (batchDepth > 0) {
+            batchTypes |= types;
+            return;
+        }
+        notifyChanged(types);
+    }
+
+    private void notifyChanged(int types) {
         changeVersion++;
         setChanged();
         if (level != null && !level.isClientSide) {
-            NetworkManager.get().nodeChanged(this);
+            NetworkManager.get().nodeChanged(this, types);
             NodeIndex.track(this);
         }
     }
@@ -566,6 +654,7 @@ public class RouterBlockEntity extends BlockEntity {
         if (rotated) {
             // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
             clearCaches();
+            machineBlock = null;
             if (level != null && !level.isClientSide && hasChunkUpgrade()) {
                 // O chunk da máquina pode ser outro.
                 RouterChunkLoader.get().update(this);
@@ -585,6 +674,7 @@ public class RouterBlockEntity extends BlockEntity {
             // Ao carregar o chunk os vizinhos podem não estar carregados; aí fica o valor salvo.
             if (level.isAreaLoaded(worldPosition, 1)) {
                 powered = level.hasNeighborSignal(worldPosition);
+                machineBlock = level.getBlockState(machinePos()).getBlock();
             }
             NetworkManager.get().addNode(this);
             NodeIndex.track(this);

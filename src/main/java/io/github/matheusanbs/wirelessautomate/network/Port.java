@@ -34,6 +34,13 @@ final class Port {
     long visitNanos;
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
     @Nullable ItemTransfer.StockTally tally;
+    /**
+     * Motivo do último sono da origem, anotado pelo {@link NetworkManager} depois da visita: {@code true}
+     * se ela tinha o que dar e os destinos recusaram ou dormiam (espera destino); {@code false} se não
+     * tinha o que dar (vazia, filtro ou estoque da própria origem). Uma mudança na máquina de um destino
+     * só acorda as que esperam destino; a origem vazia acorda pela própria máquina. Começa {@code true}.
+     */
+    boolean waitsDestination = true;
 
     // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
     // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
@@ -57,6 +64,17 @@ final class Port {
      */
     final List<Port> feeders = new ArrayList<>(0);
     List<Port> sharedFeeders = List.of();
+    /** Como {@link #sharedFeeders}, para as faces Ambos que entregam em todos os destinos que só inserem. */
+    List<Port> sharedBothFeeders = List.of();
+    /**
+     * Só durante a montagem: a ordem que a origem tinha antes, para continuar com os mesmos cursores
+     * se os destinos não mudaram.
+     */
+    @Nullable RoundRobinOrder<Port> previousOrder;
+    /** Só durante a montagem: a configuração da porta foi relida nesta montagem (nó novo ou mudado). */
+    boolean fresh;
+    /** Só durante a montagem: marca de "estava na ordem antiga" ({@link NetworkRoutes}). */
+    int stamp;
 
     Port(RouterBlockEntity node, Direction face, ResourceType type) {
         this.node = node;
@@ -81,6 +99,7 @@ final class Port {
         order = null;
         feeders.clear();
         sharedFeeders = List.of();
+        sharedBothFeeders = List.of();
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

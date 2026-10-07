@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,10 @@ public final class RouterChunkLoader {
     private final Map<UUID, Object2IntOpenHashMap<ForcedChunk>> owners = new HashMap<>();
     /** Roteadores a avaliar no próximo tick, na ordem em que chegaram. */
     private final ReferenceLinkedOpenHashSet<RouterBlockEntity> pending = new ReferenceLinkedOpenHashSet<>();
+    /** A seção chunkLoading da config com que os roteadores foram avaliados, lida no primeiro tick. */
+    private boolean appliedKnown;
+    private boolean appliedEnabled;
+    private int appliedMax;
 
     private record ForcedChunk(ResourceKey<Level> dimension, long chunk) {
     }
@@ -88,7 +93,10 @@ public final class RouterChunkLoader {
         instance = null;
     }
 
-    /** A config mudou: tudo é reavaliado no próximo tick. Seguro de qualquer thread. */
+    /**
+     * A config foi recarregada: no próximo tick, se a seção chunkLoading mudou, tudo é reavaliado.
+     * Seguro de qualquer thread.
+     */
     public static void configChanged() {
         configChanged = true;
     }
@@ -98,15 +106,20 @@ public final class RouterChunkLoader {
         return Config.SPEC.isLoaded() ? Config.CHUNK_LOADING_ENABLED.get() : Config.CHUNK_LOADING_ENABLED.getDefault();
     }
 
+    /** Limite da config, sem as trocas dos GameTests; 0 = sem limite. */
+    private static int configuredMax() {
+        return Config.SPEC.isLoaded()
+                ? Config.CHUNK_LOADING_MAX_PER_PLAYER.get()
+                : Config.CHUNK_LOADING_MAX_PER_PLAYER.getDefault();
+    }
+
     /** Limite de chunks forçados do dono; 0 = sem limite. */
     public static int limit(UUID owner) {
         Integer override = LIMIT_OVERRIDES.get(owner);
         if (override != null) {
             return override;
         }
-        return Config.SPEC.isLoaded()
-                ? Config.CHUNK_LOADING_MAX_PER_PLAYER.get()
-                : Config.CHUNK_LOADING_MAX_PER_PLAYER.getDefault();
+        return configuredMax();
     }
 
     /** Só para GameTests: troca o limite de um dono ({@code null} volta ao da config). */
@@ -182,12 +195,29 @@ public final class RouterChunkLoader {
 
     /** Processa a fila de avisos. Barato quando vazia. */
     public void tick() {
+        if (!appliedKnown) {
+            appliedKnown = true;
+            appliedEnabled = enabled();
+            appliedMax = configuredMax();
+        }
         if (configChanged) {
             configChanged = false;
-            // Limite ou chave mudou: solta tudo e reavalia na ordem de chegada (no mesmo tick, sem descarregar).
-            for (Map.Entry<RouterBlockEntity, Entry> e : routers.entrySet()) {
-                release(e.getValue());
-                pending.add(e.getKey());
+            boolean nowEnabled = enabled();
+            int nowMax = configuredMax();
+            // Só a seção chunkLoading importa: recarregar outra chave (vazão, orçamento) não mexe nos tickets.
+            if (nowEnabled != appliedEnabled || nowMax != appliedMax) {
+                appliedEnabled = nowEnabled;
+                appliedMax = nowMax;
+                // Limite ou chave mudou: solta tudo e reavalia (no mesmo tick, sem descarregar) numa
+                // ordem que não depende do hash: dimensão e posição. Com limite, quem entra primeiro
+                // fica com os chunks, então a ordem decide quem fica de fora.
+                List<RouterBlockEntity> all = new ArrayList<>(routers.keySet());
+                all.sort(Comparator.comparing((RouterBlockEntity r) -> routers.get(r).level.dimension().location())
+                        .thenComparingLong(r -> routers.get(r).pos.asLong()));
+                for (RouterBlockEntity router : all) {
+                    release(routers.get(router));
+                    pending.add(router);
+                }
             }
         }
         if (pending.isEmpty()) {

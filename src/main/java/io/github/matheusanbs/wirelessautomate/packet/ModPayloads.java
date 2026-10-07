@@ -64,6 +64,8 @@ public final class ModPayloads {
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
+        // Tablet de rede (packet/TabletPayloads).
+        TabletPayloads.register(registrar);
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

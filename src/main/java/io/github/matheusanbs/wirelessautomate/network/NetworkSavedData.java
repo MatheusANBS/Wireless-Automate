@@ -6,7 +6,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -23,6 +25,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Remover uma rede não mexe nos roteadores: os que apontavam para ela ficam com um id que não
  * existe mais, e o motor trata id inexistente como "sem rede". Assim não é preciso varrer o mundo
  * nem carregar chunks.
+ *
+ * <p>Também guarda os grupos de redes ({@link WaGroup}), só de organização: uma rede está pausada se
+ * algum grupo pausado a contém ({@link #isPaused}), e o motor trata rede pausada como sem rotas.
  */
 public final class NetworkSavedData extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_networks";
@@ -38,6 +43,10 @@ public final class NetworkSavedData extends SavedData {
     /** Em ordem de criação. */
     private final Map<UUID, WaNetwork> networks = new LinkedHashMap<>();
     private final Map<UUID, UUID> activeByPlayer = new HashMap<>();
+    /** Em ordem de criação. */
+    private final Map<UUID, WaGroup> groups = new LinkedHashMap<>();
+    /** Redes em algum grupo pausado; refeito quando um grupo muda. Não é salvo. */
+    private final Set<UUID> paused = new HashSet<>();
     /** Muda a cada alteração (rede criada, removida, rede ativa). Não é salvo. */
     private int version;
 
@@ -66,6 +75,11 @@ public final class NetworkSavedData extends SavedData {
 
     public static int colorFor(UUID id) {
         return PALETTE[Math.floorMod(id.hashCode(), PALETTE.length)];
+    }
+
+    /** As cores padrão, para o seletor de cor do Tablet. Cópia. */
+    public static int[] palette() {
+        return PALETTE.clone();
     }
 
     public WaNetwork create(UUID owner, String name) {
@@ -123,14 +137,89 @@ public final class NetworkSavedData extends SavedData {
         return null;
     }
 
-    /** Remove a rede e limpa a rede ativa de quem a usava. Os roteadores ficam órfãos (ver a classe). */
+    /** Remove a rede, limpa a rede ativa de quem a usava e a tira dos grupos. Os roteadores ficam órfãos (ver a classe). */
     public boolean remove(UUID id) {
         if (networks.remove(id) == null) {
             return false;
         }
         activeByPlayer.values().removeIf(id::equals);
+        groups.replaceAll((groupId, group) -> group.withoutNetwork(id));
+        refreshPaused();
         setDirty();
         return true;
+    }
+
+    /** Troca a rede de mesmo id (nome, cor, privacidade). Devolve se ela existia e mudou. */
+    public boolean update(WaNetwork network) {
+        WaNetwork old = networks.get(network.id());
+        if (old == null || old.equals(network)) {
+            return false;
+        }
+        networks.put(network.id(), network);
+        setDirty();
+        return true;
+    }
+
+    // ------------------------------------------------------------------ grupos
+
+    public WaGroup createGroup(UUID owner, String name) {
+        WaGroup group = new WaGroup(UUID.randomUUID(), name, owner, List.of(), false);
+        groups.put(group.id(), group);
+        setDirty();
+        return group;
+    }
+
+    public @Nullable WaGroup group(UUID id) {
+        return groups.get(id);
+    }
+
+    /** Todos os grupos, em ordem de criação. Visão só de leitura. */
+    public Collection<WaGroup> groups() {
+        return Collections.unmodifiableCollection(groups.values());
+    }
+
+    /** Troca o grupo de mesmo id; redes que não existem mais saem dele. Devolve se mudou. */
+    public boolean updateGroup(WaGroup group) {
+        WaGroup old = groups.get(group.id());
+        if (old == null) {
+            return false;
+        }
+        WaGroup clean = group;
+        for (UUID network : group.networks()) {
+            if (!networks.containsKey(network)) {
+                clean = clean.withoutNetwork(network);
+            }
+        }
+        if (old.equals(clean)) {
+            return false;
+        }
+        groups.put(clean.id(), clean);
+        refreshPaused();
+        setDirty();
+        return true;
+    }
+
+    public boolean removeGroup(UUID id) {
+        if (groups.remove(id) == null) {
+            return false;
+        }
+        refreshPaused();
+        setDirty();
+        return true;
+    }
+
+    /** A rede está num grupo pausado: o motor não monta as rotas dela. Consulta num conjunto, sem varrer. */
+    public boolean isPaused(UUID network) {
+        return !paused.isEmpty() && paused.contains(network);
+    }
+
+    private void refreshPaused() {
+        paused.clear();
+        for (WaGroup group : groups.values()) {
+            if (group.paused()) {
+                paused.addAll(group.networks());
+            }
+        }
     }
 
     public @Nullable UUID activeNetwork(UUID player) {
@@ -181,6 +270,12 @@ public final class NetworkSavedData extends SavedData {
             active.add(entry);
         });
         tag.put("active", active);
+
+        ListTag groupList = new ListTag();
+        for (WaGroup group : groups.values()) {
+            groupList.add(group.save());
+        }
+        tag.put("groups", groupList);
         return tag;
     }
 
@@ -199,6 +294,17 @@ public final class NetworkSavedData extends SavedData {
                 data.activeByPlayer.put(entry.getUUID("player"), network);
             }
         }
+        ListTag groupList = tag.getList("groups", Tag.TAG_COMPOUND);
+        for (int i = 0; i < groupList.size(); i++) {
+            WaGroup group = WaGroup.load(groupList.getCompound(i));
+            for (UUID network : group.networks()) {
+                if (!data.networks.containsKey(network)) {
+                    group = group.withoutNetwork(network);
+                }
+            }
+            data.groups.put(group.id(), group);
+        }
+        data.refreshPaused();
         return data;
     }
 }

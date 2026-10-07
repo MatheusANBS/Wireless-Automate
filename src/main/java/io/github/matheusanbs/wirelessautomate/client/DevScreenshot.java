@@ -17,6 +17,9 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -149,7 +152,8 @@ public final class DevScreenshot {
             }, "6-renomear"));
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
-    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps())
+    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
+                    tabletSteps())
             .flatMap(List::stream).toList();
 
     /**
@@ -379,6 +383,115 @@ public final class DevScreenshot {
         return card;
     }
 
+    // ------------------------------------------------------------------ Tablet de rede
+
+    /** Desenhada no lugar das outras a partir do primeiro passo do Tablet. */
+    private static TabletScreen tabletScreen;
+
+    /**
+     * Tablet de rede com um snapshot de exemplo (os nós do rascunho visual, em volta do jogador):
+     * cada aba, a seleção para mover, o nó escolhido no mapa, a dica de um nó e a nova rede aberta.
+     */
+    private static List<Step> tabletSteps() {
+        return List.of(
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet());
+                    tabletScreen = new TabletScreen(menu, new Inventory(null),
+                            Component.translatable("item.wirelessautomate.network_tablet"), true);
+                    Minecraft minecraft = Minecraft.getInstance();
+                    tabletScreen.init(minecraft, minecraft.getWindow().getGuiScaledWidth(),
+                            minecraft.getWindow().getGuiScaledHeight());
+                }, "t1-tablet-lista"),
+                new Step(() -> {
+                    int[] center = tabletScreen.nodeRowCenter(sampleTablet().nodes().get(3).key());
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "t2-tablet-lista-dica"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    tabletScreen.previewMulti(true, 3);
+                }, "t3-tablet-selecionar"),
+                new Step(() -> {
+                    tabletScreen.previewMulti(false, 0);
+                    tabletScreen.previewTab(TabletScreen.Tab.MAP);
+                    tabletScreen.previewMapSelect(3);
+                }, "t4-tablet-mapa"),
+                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.STATS), "t5-tablet-estatisticas"),
+                new Step(() -> {
+                    tabletScreen.previewTab(TabletScreen.Tab.NETWORKS);
+                    tabletScreen.previewNetwork(0);
+                }, "t6-tablet-redes"),
+                new Step(() -> {
+                    tabletScreen.previewNetwork(2);
+                    tabletScreen.previewNewOpen("Utilidades");
+                }, "t7-tablet-redes-alheia-nova"),
+                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
+    }
+
+    /** Nós do rascunho visual em volta do jogador em (0, 64, 0), com redes, um grupo e status variados. */
+    private static TabletSnapshot sampleTablet() {
+        UUID base = UUID.nameUUIDFromBytes("base".getBytes());
+        UUID fluids = UUID.nameUUIDFromBytes("fluidos".getBytes());
+        UUID energy = UUID.nameUUIDFromBytes("energia".getBytes());
+        UUID ore = UUID.nameUUIDFromBytes("minerio".getBytes());
+        UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
+        List<TabletSnapshot.NetworkView> networks = List.of(
+                new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1, 1, 2,
+                        42_000, 61, 1_240, 0, 0),
+                new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0, 0, 0,
+                        18_000, 20, 0, 48_000, 0),
+                new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0, 0,
+                        0, 9_000, 20, 0, 0, 120_000),
+                new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
+                        0, 0, 0, 0, 0),
+                new TabletSnapshot.NetworkView(line, "Linha 5x", 0xA46CFF, "Dev", true, true, false, true, 8, 0, 0, 0,
+                        0, 0, 0, 0, 0));
+        int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
+        int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
+        int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);
+        int extractEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.EXTRACT);
+        int insertEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.INSERT);
+        int storageItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.STORAGE);
+        List<TabletSnapshot.NodeView> nodes = List.of(
+                tabletNode(-5, 66, -2, "Fornalha Norte", "furnace", RouterTier.ELITE, base, base, energy,
+                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(-5, 66, 2, "Fornalha Sul", "furnace", RouterTier.ELITE, base, base, energy,
+                        extractItems | insertItems, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(5, 66, -2, "", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.IDLE),
+                tabletNode(5, 66, 2, "Baú de lingotes 2", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.FULL),
+                tabletNode(38, 64, 40, "Tanque de água", "cauldron", RouterTier.ADVANCED, null, fluids, null, insertFluids,
+                        TabletSnapshot.NodeStatus.IDLE),
+                tabletNode(44, 64, 46, "Separador eletrolítico", "blast_furnace", RouterTier.ELITE, ore, fluids, energy,
+                        insertFluids | insertEnergy, TabletSnapshot.NodeStatus.PAUSED),
+                tabletNode(-60, 40, -75, "Reator de fissão", "beacon", RouterTier.ULTIMATE, null, null, energy,
+                        extractEnergy, TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(-70, 70, 47, "Fazenda de cana", "hopper", RouterTier.BASIC, base, null, null, extractItems,
+                        TabletSnapshot.NodeStatus.UNLOADED),
+                tabletNode(12, 64, -20, "Barril de sobras", "barrel", RouterTier.ADVANCED, base, null, null, storageItems,
+                        TabletSnapshot.NodeStatus.ACTIVE),
+                tabletNode(0, 64, 9, "", "dropper", RouterTier.BASIC, null, null, null, 0,
+                        TabletSnapshot.NodeStatus.NO_NETWORK));
+        List<TabletSnapshot.GroupView> groups = List.of(
+                new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g1".getBytes()), "Linha 5x", "Dev", true, true,
+                        List.of(ore, line, fluids)),
+                new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g2".getBytes()), "Base principal", "Dev", true, false,
+                        List.of(base)));
+        return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
+                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, nodes,
+                Component.empty(), 0);
+    }
+
+    private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
+            @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status) {
+        List<Optional<UUID>> networks = List.of(Optional.ofNullable(items), Optional.ofNullable(fluids),
+                Optional.ofNullable(energy), Optional.empty());
+        return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
+                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status);
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -393,7 +506,8 @@ public final class DevScreenshot {
             screen = new RouterScreen(menu, new Inventory(null), Component.translatable("block.wirelessautomate.router"),
                     true);
         }
-        AbstractContainerScreen<?> active = filterScreen != null ? filterScreen : screen;
+        AbstractContainerScreen<?> active = tabletScreen != null ? tabletScreen
+                : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {
             active.init(minecraft, title.width, title.height);
         }

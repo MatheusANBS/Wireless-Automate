@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
@@ -152,6 +153,7 @@ public class RouterBlockEntity extends BlockEntity {
         this.name = clean;
         changeVersion++;
         setChanged();
+        NodeIndex.track(this);
     }
 
     private static String sanitizeName(String name) {
@@ -173,6 +175,7 @@ public class RouterBlockEntity extends BlockEntity {
     /** A máquina pode ter mudado (bloco trocado): a tela aberta remonta o snapshot. Não mexe nas rotas. */
     public void machineChanged() {
         changeVersion++;
+        NodeIndex.track(this);
     }
 
     /** Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. */
@@ -441,6 +444,7 @@ public class RouterBlockEntity extends BlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
         }
     }
 
@@ -461,6 +465,7 @@ public class RouterBlockEntity extends BlockEntity {
         // Upgrade de tier muda vazão e alcance das rotas.
         if ((rotated || tier() != oldTier) && level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
         }
     }
 
@@ -473,6 +478,7 @@ public class RouterBlockEntity extends BlockEntity {
                 powered = level.hasNeighborSignal(worldPosition);
             }
             NetworkManager.get().addNode(this);
+            NodeIndex.track(this);
         }
     }
 
@@ -491,6 +497,7 @@ public class RouterBlockEntity extends BlockEntity {
     private void removeFromManager() {
         if (level != null && !level.isClientSide) {
             NetworkManager.get().removeNode(this);
+            NodeIndex.untrack(this);
         }
     }
 
@@ -600,6 +607,7 @@ public class RouterBlockEntity extends BlockEntity {
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
+            NodeIndex.track(this);
         }
     }
 

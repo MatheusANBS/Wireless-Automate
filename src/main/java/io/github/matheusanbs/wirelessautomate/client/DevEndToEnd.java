@@ -10,6 +10,10 @@ import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -95,7 +99,10 @@ import org.lwjgl.glfw.GLFW;
  *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot);</li>
  *   <li>transporte por aba: pedras em A não vão para B enquanto os itens dos dois estão em redes
  *       diferentes, e chegam quando os itens de A entram na rede dos de B, com a energia de cada um
- *       em outra rede.</li>
+ *       em outra rede;</li>
+ *   <li>Tablet de rede: abre pelo item, acha o roteador B pela busca, cria um grupo com a rede dos
+ *       itens, pausa o grupo e confere que as pedras param, retoma e confere que chegam, e abre o
+ *       roteador B à distância pela lista (20 blocos, longe demais para a tela comum).</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
  * cada passo só termina quando o servidor aplicou (lido no block entity, na thread do servidor) e o
@@ -475,6 +482,7 @@ public final class DevEndToEnd {
         cardSteps(list);
         list.add(close("fechar B"));
         typeNetworkTransferSteps(list);
+        tabletSteps(list);
         return list;
     }
 
@@ -607,6 +615,142 @@ public final class DevEndToEnd {
                 && energyNetwork.equals(router(server, routerB).networkId(ResourceType.ENERGY))),
                 () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE)
                         + "; A: " + serverNetworksText(server, routerA) + "; B: " + serverNetworksText(server, routerB))));
+    }
+
+    // ------------------------------------------------------------------ Tablet de rede
+
+    private static final String GROUP_NAME = "E2E Grupo";
+
+    /**
+     * Tablet de rede: abre pelo item na mão, busca o nó B pelo nome, cria um grupo com a rede "E2E
+     * Outra" (a dos itens de A e B), pausa o grupo e confere que pedras postas em A ficam paradas,
+     * retoma e confere que chegam a B, e por fim abre B à distância clicando na linha dele.
+     */
+    private static void tabletSteps(List<Step> list) {
+        list.add(new Step("Tablet na mão", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
+                        new ItemStack(ModItems.NETWORK_TABLET.get()));
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.NETWORK_TABLET.get()),
+                () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("achar B pela busca", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.search")), "busca"));
+            type(NODE_NAME);
+        }, () -> {
+            TabletScreen screen = tabletScreen();
+            TabletSnapshot snapshot = screen.getMenu().snapshot();
+            return snapshot.query().search().equals(NODE_NAME) && snapshot.nodes().size() == 1
+                    && screen.nodeRowCenter(nodeB()) != null;
+        }, () -> "busca \"" + tabletScreen().getMenu().snapshot().query().search() + "\", nós "
+                + tabletScreen().getMenu().snapshot().nodes().stream().map(n -> n.key().pos().toShortString()).toList()));
+        list.add(capture("7-tablet-lista"));
+
+        // os widgets da aba só aparecem no quadro seguinte, como para o jogador
+        list.add(new Step("aba Grupos", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.groups")), "aba Grupos")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new"))) != null,
+                () -> "Novo grupo visível"));
+        list.add(new Step("novo grupo", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new")), "Novo grupo"));
+            type(GROUP_NAME);
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+        }, () -> group() != null && tabletScreen().getMenu().snapshot().groups().stream()
+                .anyMatch(g -> g.name().equals(GROUP_NAME)),
+                () -> "grupos na tela " + tabletScreen().getMenu().snapshot().groups()));
+        list.add(new Step("rede dos itens no grupo", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            int[] box = screen.groupNetworkCenter(otherNetwork);
+            if (box == null) {
+                throw new StepFailure("a rede " + OTHER_NETWORK + " não aparece na coluna do grupo");
+            }
+            click(screen, box[0], box[1]);
+        }, () -> {
+            WaGroup group = group();
+            return group != null && group.networks().contains(otherNetwork)
+                    && tabletScreen().getMenu().snapshot().groups().stream()
+                            .anyMatch(g -> g.name().equals(GROUP_NAME) && g.networks().contains(otherNetwork));
+        }, () -> "grupo no servidor " + group()));
+        list.add(new Step("pausar o grupo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Pausar o grupo")),
+                () -> onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))
+                        && tabletScreen().getMenu().snapshot().groups().stream()
+                                .anyMatch(g -> g.name().equals(GROUP_NAME) && g.paused()),
+                () -> "pausada no servidor: " + onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))));
+        list.add(capture("8-tablet-grupo-pausado"));
+        list.add(new Step("rede pausada: pedras param", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((Container) server.overworld().getBlockEntity(chestA)).setItem(0, new ItemStack(Items.STONE, 64));
+            return null;
+        }), () -> {
+            if (onServer(server -> count(server, chestB, Items.STONE)) != 192) {
+                throw new StepFailure("pedras chegaram a B com a rede pausada");
+            }
+            return stepTicks >= 40 && onServer(server -> count(server, chestA, Items.STONE) == 64);
+        }, () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+        list.add(new Step("retomar: pedras chegam", 30_000,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Retomar o grupo")),
+                () -> onServer(server -> !NetworkSavedData.get(server).isPaused(otherNetwork)
+                        && count(server, chestA, Items.STONE) == 0 && count(server, chestB, Items.STONE) == 256),
+                () -> onServer(server -> "pausada " + NetworkSavedData.get(server).isPaused(otherNetwork) + ", A="
+                        + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+
+        list.add(new Step("afastar 20 blocos", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.teleportTo(player.serverLevel(), routerB.getX() + 0.5, routerB.getY(), routerB.getZ() + 20.5,
+                        180f, 10f);
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB)) > 15,
+                () -> "distância " + Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB))));
+        list.add(new Step("abrir B à distância pela lista", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.list")), "aba Lista"));
+            TabletScreen screen = tabletScreen();
+            int[] row = screen.nodeRowCenter(nodeB());
+            if (row == null) {
+                throw new StepFailure("B não está na lista");
+            }
+            click(screen, row[0], row[1]);
+        }, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            // passa alguns ticks aberta: a tela comum fecharia a mais de 8 blocos
+            return stepTicks >= 20 && Minecraft.getInstance().screen instanceof RouterScreen screen
+                    && screen.getMenu().snapshot().pos().equals(routerB)
+                    && onServer(server -> server.getPlayerList().getPlayer(playerId).containerMenu
+                            instanceof RemoteRouterMenu);
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("9-roteador-a-distancia"));
+        list.add(close("fechar B à distância"));
+    }
+
+    private static TabletScreen tabletScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof TabletScreen screen) {
+            return screen;
+        }
+        throw new StepFailure("o Tablet não está aberto (tela: " + describe(Minecraft.getInstance().screen) + ")");
+    }
+
+    private static NodeIndex.NodeKey nodeB() {
+        return new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD, routerB);
+    }
+
+    /** O grupo do teste no servidor, ou {@code null}. */
+    private static @Nullable WaGroup group() throws Exception {
+        return onServer(server -> NetworkSavedData.get(server).groups().stream()
+                .filter(g -> g.name().equals(GROUP_NAME)).findFirst().orElse(null));
     }
 
     /** O slot do inventário (na tela do roteador aberta) com um Cartão de Filtro, ou {@code null}. */

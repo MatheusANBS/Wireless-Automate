@@ -20,6 +20,16 @@ class TickBudgetTest {
     }
 
     @Test
+    void fitsOnlyWorkThatEndsInsideTheLimit() {
+        TickBudget budget = new TickBudget(HALF_MS);
+        budget.begin(1_000L);
+        assertTrue(budget.fits(1_000L, HALF_MS));
+        assertTrue(budget.fits(1_000L + 100_000L, 400_000L));
+        assertFalse(budget.fits(1_000L + 100_000L, 400_001L));
+        assertFalse(budget.fits(1_000L + HALF_MS, 0));
+    }
+
+    @Test
     void keepsFullBudgetWhileServerIsHealthy() {
         TickBudget budget = new TickBudget(HALF_MS);
         budget.adapt(TickBudget.MSPT_RELAXED);

@@ -22,11 +22,13 @@ import org.jetbrains.annotations.Nullable;
  *       e {@link #removeNode} só marcam, nunca remontam na hora;
  *   <li>percorre a lista achatada de origens de todas as redes a partir do cursor salvo, uma visita
  *       por origem acordada, e para quando o orçamento acaba, guardando o cursor para o tick seguinte.
- *       Se a volta inteira coube, o tick seguinte começa uma origem adiante: sem isso, as primeiras
- *       origens da lista levariam sempre todo o espaço que abre nos destinos.
+ *       Se a volta inteira coube, o tick seguinte começa depois da última origem que moveu algo
+ *       ({@link SourceCursor}): sem isso, as primeiras origens da lista levariam sempre todo o espaço
+ *       que abre nos destinos.
  *       O relógio é lido uma vez por origem, e serve tanto ao orçamento quanto ao profiler;
  *   <li>com a volta inteira feita e orçamento sobrando, dá voltas extras só nas origens que pararam
- *       por um teto da visita com saldo no balde ({@link #visit} devolve {@code true}): assim o tier
+ *       por um teto da visita com saldo no balde ({@link #MORE}), enquanto a visita seguinte de cada
+ *       uma (estimada pela anterior) couber no que resta: assim o tier
  *       sem limite (e o Elite, acima de 32 pilhas por tick) é limitado pelo orçamento e não pelo teto
  *       de tentativas, sem passar na frente de quem ainda não teve a primeira visita do tick.
  * </ol>
@@ -42,6 +44,10 @@ public final class NetworkManager {
     static final int MAX_SLEEP_TICKS = 100;
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final int TICKS_PER_SECOND = 20;
+    /** Resultado de uma visita: a origem moveu algo. */
+    static final int MOVED = 1;
+    /** Resultado de uma visita: parou num teto da visita com saldo no balde e pode mover mais neste tick. */
+    static final int MORE = 2;
 
     private static NetworkManager instance;
     private static volatile boolean configChanged;
@@ -233,6 +239,7 @@ public final class NetworkManager {
         int visited = 0;
         int start = cursor < count ? cursor : 0;
         int index = start;
+        int lastMover = -1;
         hungry.clear();
         for (int step = 0; step < count; step++) {
             Port source = sources.get(index);
@@ -255,32 +262,36 @@ public final class NetworkManager {
                 mark = time;
                 visited++;
                 visitCount++;
-                if (visit(source, now)) {
+                int result = visit(source, now);
+                if ((result & MOVED) != 0) {
+                    lastMover = index;
+                }
+                if ((result & MORE) != 0) {
+                    source.visitNanos = System.nanoTime() - time;
                     hungry.add(source);
                 }
             }
             index = index + 1 == count ? 0 : index + 1;
         }
-        if (count > 0) {
-            cursor = start + 1 == count ? 0 : start + 1;
-        }
-        // Voltas extras, na mesma ordem, só com quem ainda tem o que mover e saldo para isso.
+        cursor = SourceCursor.next(start, lastMover, count);
+        // Voltas extras, na mesma ordem, só com quem ainda tem o que mover e saldo para isso, e só
+        // se a visita (estimada pela última da origem) couber no que resta do orçamento.
         while (!hungry.isEmpty()) {
             int kept = 0;
             for (int i = 0, n = hungry.size(); i < n; i++) {
                 Port source = hungry.get(i);
                 long time = System.nanoTime();
+                if (!budget.fits(time, source.visitNanos)) {
+                    continue;
+                }
                 if (timed != null) {
                     timed.tickNanos += time - mark;
-                }
-                if (!budget.hasTime(time)) {
-                    hungry.clear();
-                    return time;
                 }
                 timed = source.network;
                 mark = time;
                 visitCount++;
-                if (visit(source, now)) {
+                if ((visit(source, now) & MORE) != 0) {
+                    source.visitNanos = System.nanoTime() - time;
                     hungry.set(kept++, source);
                 }
             }
@@ -293,19 +304,13 @@ public final class NetworkManager {
         return time;
     }
 
-    /** Uma visita. Devolve {@code true} se a origem parou num teto da visita e ainda tem saldo para mais. */
-    private boolean visit(Port source, long now) {
+    /** Uma visita; devolve {@link #MOVED} e {@link #MORE} combinados. */
+    private int visit(Port source, long now) {
         return switch (source.type) {
             case ITEM -> ItemTransfer.move(source, now);
-            case FLUID -> {
-                FluidTransfer.move(source, now);
-                yield false;
-            }
-            case ENERGY -> {
-                EnergyTransfer.move(source, now);
-                yield false;
-            }
-            case CHEMICAL -> false;
+            case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
+            case ENERGY -> EnergyTransfer.move(source, now) ? MOVED : 0;
+            case CHEMICAL -> 0;
         };
     }
 

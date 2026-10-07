@@ -19,26 +19,27 @@ final class EnergyTransfer {
     private static int[] priorities = new int[16];
     private static IEnergyStorage[] targets = new IEnergyStorage[16];
 
-    static void move(Port source, long now) {
+    /** Uma visita. Devolve {@code true} se moveu algo. */
+    static boolean move(Port source, long now) {
         IEnergyStorage handler = source.node.energy(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null || !handler.canExtract()) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         long tokens = source.limiter.available(now);
         if (tokens <= 0) {
-            return;
+            return false;
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         int offered = handler.extractEnergy((int) Math.min(tokens, Integer.MAX_VALUE), true);
         if (offered <= 0) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         int count = pass.size();
         ensureCapacity(count);
@@ -92,9 +93,10 @@ final class EnergyTransfer {
             source.node.addMoved(source.type, delivered);
             source.limiter.consume(delivered);
             source.sourceBackoff.wake();
-        } else {
-            source.sourceBackoff.sleep(now);
+            return true;
         }
+        source.sourceBackoff.sleep(now);
+        return false;
     }
 
     private static void ensureCapacity(int count) {

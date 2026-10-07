@@ -30,6 +30,8 @@ final class Port {
     int slotCursor;
     /** Slots varridos seguidos sem mover nada, somando visitas: uma volta inteira faz a origem dormir. */
     int idleSlots;
+    /** Duração da última visita que parou num teto, para as voltas extras do tick caberem no orçamento. */
+    long visitNanos;
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
     @Nullable ItemTransfer.StockTally tally;
 

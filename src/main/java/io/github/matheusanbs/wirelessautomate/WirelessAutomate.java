@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModCreativeTabs;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -32,6 +33,7 @@ public final class WirelessAutomate {
         ModDataComponents.DATA_COMPONENTS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModMenus.MENU_TYPES.register(modEventBus);
+        ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(ModPayloads::register);
 

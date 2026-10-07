@@ -34,13 +34,14 @@ Nada começado: químicos do Mekanism, Tablet, presets e código `WA1:`, Configu
 
 1. Teste de ponta a ponta num mundo real: um cliente sob Xvfb que cria um mundo (ou entra num servidor dedicado de teste), coloca baús e roteadores, abre a tela, clica e confere que o servidor aplicou e a tela atualizou. Até hoje as telas só foram vistas com dados locais, e os handlers só por GameTest.
 2. Benchmark com Sophisticated Storage (cenários "Muitos nós" e "Rede ociosa" da especificação), com `/wa profile` e Spark.
-3. Receitas dos núcleos de tier e do Cartão de Filtro (materiais dos tiers altos ainda em aberto na especificação), e a duplicação de cartões.
-4. Slots de cartões e upgrades no rodapé da tela do roteador (a especificação não diz se são por face; decidir).
-5. Integração opcional com o JEI: aba JEI no filtro e arrastar ingredientes fantasmas.
+3. Receitas só vanilla dos núcleos de tier (Avançado: ouro + diamante; Elite: netherita + estrela do Nether; Ultimate: ovo do dragão) e do Cartão de Filtro, mais a receita de duplicar cartão (configurado + vazio = dois iguais).
+4. Slots de Cartão de Filtro por face e por tipo, na tela do roteador; o recurso passa se o filtro embutido ou algum cartão aceitar. O upgrade de chunk loading fica no rodapé.
+5. Integração opcional com o JEI: dependência só de compilação, aba JEI no filtro e arrastar ingredientes fantasmas.
+6. Modo Ambos: uma face Ambos não entrega para outra face Ambos (acaba o vai e volta).
 
 Para conferir telas sem monitor: `WA_SCREENSHOT=<dir> xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient` desenha a tela do roteador com um snapshot de exemplo, salva PNGs e fecha o jogo (`client/DevScreenshot.java`; ponha `lang:pt_br` em `run/options.txt` para as capturas em português). O mesmo modo desenha a tela de filtro e o visor 3D (passos em `DevScreenshot.SEQUENCE`).
 
-Limites conhecidos do motor, para depois: um fluido por tanque por visita, inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho, o round-robin recomeça a cada remontagem, e uma face Ambos em duas máquinas faz os itens irem e voltarem.
+Limites conhecidos do motor, para depois: um fluido por tanque por visita, inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho, o round-robin recomeça a cada remontagem, e uma face Ambos em duas máquinas faz os itens irem e voltarem (decidido: corrigir, item 6 acima).
 
 ## Decisões tomadas no código
 
@@ -60,11 +61,18 @@ Limites conhecidos do motor, para depois: um fluido por tanque por visita, inser
 - Tela do roteador: o servidor valida tudo (mesmo `containerId`, até 8 blocos, prioridade −999..999, rede só do dono ou de op). A tela não muda nada sozinha: espera o snapshot do servidor. Com Vinculador, Configurador ou núcleo de tier na mão, o clique vai para o item, não para a tela.
 - A receita do roteador é ferro + redstone + olho de ender (`data/wirelessautomate/recipe/router.json`). Os núcleos ainda não têm receita.
 
-## Decisões em aberto (da especificação)
+## Decisões do dono (7 de outubro de 2026)
 
-- Canais dentro de uma rede ou só redes + filtros (sugestão: só redes no v1).
-- Materiais das receitas dos tiers altos.
-- Orçamento padrão de 0,5 ms/tick.
+Respondidas e registradas também na especificação ("Decisões tomadas"):
+
+- Canais: só redes + filtros no v1.
+- Receitas dos núcleos: só vanilla (Avançado: ouro + diamante; Elite: netherita + estrela do Nether; Ultimate: ovo do dragão).
+- Orçamento padrão: 0,5 ms/tick (fica como está).
+- Cartões: slots por face e por tipo; passa se o filtro embutido ou algum cartão aceitar.
+- Duplicar cartão: receita cartão configurado + cartão vazio = dois iguais.
+- JEI: integração opcional agora (compileOnly + plugin).
+- Modo Ambos: face Ambos não entrega para outra face Ambos.
+- Visor 3D: fica como está (nome da face no canto, sem a dica flutuante nem a linha da máquina).
 
 ## Histórico
 

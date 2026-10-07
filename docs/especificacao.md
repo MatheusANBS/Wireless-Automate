@@ -227,8 +227,12 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [ ] Upgrade de chunk loading
 - [ ] Texturas finais no Blockbench e balanceamento das receitas
 
-### Decisões em aberto
+### Decisões tomadas (7 de outubro de 2026)
 
-- Canais dentro de uma rede, ou só redes mais filtros (sugestão: só redes no v1).
-- Materiais exatos das receitas dos tiers altos.
-- Orçamento padrão: 0,5 ms/tick ou outro valor.
+- **Canais:** só redes mais filtros no v1. Fluxos separados usam redes diferentes.
+- **Receitas dos tiers altos:** só itens vanilla. Avançado: ouro e diamante. Elite: netherita e estrela do Nether. Ultimate: ovo do dragão. O modpack ajusta por datapack ou KubeJS.
+- **Orçamento padrão:** 0,5 ms/tick.
+- **Cartões no roteador:** slots de cartão por face e por tipo, além do filtro embutido. O recurso passa se o filtro embutido ou algum cartão aceitar.
+- **Duplicar cartões:** receita sem forma, cartão configurado + cartão vazio = dois cartões iguais.
+- **JEI:** integração opcional já no v1 (dependência só de compilação, plugin carregado só com o JEI).
+- **Modo Ambos:** uma face Ambos não entrega para outra face Ambos; extrai para faces que só inserem e recebe de faces que só extraem.

@@ -38,12 +38,30 @@ public final class NetworkSavedData extends SavedData {
     /** Em ordem de criação. */
     private final Map<UUID, WaNetwork> networks = new LinkedHashMap<>();
     private final Map<UUID, UUID> activeByPlayer = new HashMap<>();
+    /** Muda a cada alteração (rede criada, removida, rede ativa). Não é salvo. */
+    private int version;
 
     public NetworkSavedData() {
     }
 
     public static NetworkSavedData get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+    }
+
+    /**
+     * Versão das redes: muda sempre que algo é marcado para salvar. As telas abertas comparam com a
+     * versão que já viram para saber se o seletor de redes precisa ser reenviado, sem varrer nada.
+     */
+    public int version() {
+        return version;
+    }
+
+    @Override
+    public void setDirty(boolean dirty) {
+        super.setDirty(dirty);
+        if (dirty) {
+            version++;
+        }
     }
 
     public static int colorFor(UUID id) {

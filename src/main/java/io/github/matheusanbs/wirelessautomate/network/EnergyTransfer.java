@@ -89,6 +89,7 @@ final class EnergyTransfer {
         }
         Arrays.fill(targets, 0, count, null);
         if (delivered > 0) {
+            source.node.addMoved(source.type, delivered);
             source.limiter.consume(delivered);
             source.sourceBackoff.wake();
         } else {

@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import java.util.Arrays;
 import java.util.Locale;
@@ -16,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.StringUtil;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -32,6 +34,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A configuração das faces é guardada por {@link RelativeSide}, então girar o bloco gira a
  * configuração junto. A API recebe e devolve faces absolutas da máquina.
+ *
+ * <p>Para a tela do roteador há duas coisas baratas: {@link #changeVersion()}, que muda a cada
+ * alteração do que a tela mostra (a tela aberta compara e reenvia; com ela fechada ninguém olha), e
+ * os totais movidos por tipo ({@link #moved}), somados pelo motor numa visita que moveu algo.
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -39,9 +45,15 @@ public class RouterBlockEntity extends BlockEntity {
     private static final int FACES = Direction.values().length;
 
     private @Nullable UUID networkId;
+    /** Nome do nó dado pelo jogador; vazio = sem nome. */
+    private String name = "";
     /** [tipo][lado relativo], tudo alocado de início: consultas não alocam. */
     private final FaceConfig[][] faces = new FaceConfig[TYPES.length][SIDES.length];
     private boolean powered;
+    /** Muda a cada alteração do que a tela mostra. Não é salvo. */
+    private int changeVersion;
+    /** Total movido como origem, por {@link ResourceType#ordinal()}, desde que o nó carregou. Não é salvo. */
+    private final long[] moved = new long[TYPES.length];
 
     /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
@@ -72,6 +84,56 @@ public class RouterBlockEntity extends BlockEntity {
         }
         this.networkId = networkId;
         changed();
+    }
+
+    /** Nome do nó; vazio se o jogador não deu um. */
+    public String name() {
+        return name;
+    }
+
+    /**
+     * Dá nome ao nó: tira caracteres inválidos e espaços das pontas e corta em
+     * {@link RenameRouterPayload#MAX_LENGTH}. Vazio tira o nome. Não muda rotas, então não avisa o motor.
+     */
+    public void setName(String name) {
+        String clean = sanitizeName(name);
+        if (clean.equals(this.name)) {
+            return;
+        }
+        this.name = clean;
+        changeVersion++;
+        setChanged();
+    }
+
+    private static String sanitizeName(String name) {
+        String clean = StringUtil.filterText(name).strip();
+        return clean.length() > RenameRouterPayload.MAX_LENGTH
+                ? clean.substring(0, RenameRouterPayload.MAX_LENGTH).strip()
+                : clean;
+    }
+
+    /**
+     * Versão do que a tela do roteador mostra: muda com faces, rede, nome, sinal de redstone,
+     * {@code facing}, tier e quando a máquina muda (cache de capability invalidado ou bloco
+     * trocado). Só serve para comparar com uma versão lida antes.
+     */
+    public int changeVersion() {
+        return changeVersion;
+    }
+
+    /** A máquina pode ter mudado (bloco trocado): a tela aberta remonta o snapshot. Não mexe nas rotas. */
+    public void machineChanged() {
+        changeVersion++;
+    }
+
+    /** Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. */
+    public void addMoved(ResourceType type, long amount) {
+        moved[type.ordinal()] += amount;
+    }
+
+    /** Total movido como origem desde que o nó carregou (itens, mB ou FE). */
+    public long moved(ResourceType type) {
+        return moved[type.ordinal()];
     }
 
     public Direction facing() {
@@ -111,6 +173,18 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
+    /** Configura modo, prioridade e redstone de uma face (absoluta) de uma vez, avisando o motor uma vez só. */
+    public void configureFace(ResourceType type, Direction machineFace, PortMode mode, int priority,
+            RedstoneMode redstone) {
+        FaceConfig config = face(type, machineFace);
+        boolean changed = config.setMode(mode);
+        changed |= config.setPriority(priority);
+        changed |= config.setRedstone(redstone);
+        if (changed) {
+            changed();
+        }
+    }
+
     /** Copia a configuração de uma face inteira, pelo lado relativo (para presets e o Configurador). */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
         if (face(type, side).copyFrom(config)) {
@@ -131,6 +205,7 @@ public class RouterBlockEntity extends BlockEntity {
         boolean now = level.hasNeighborSignal(worldPosition);
         if (now != powered) {
             powered = now;
+            changeVersion++;
             setChanged();
             NetworkManager.get().nodeChanged(this);
         }
@@ -167,10 +242,16 @@ public class RouterBlockEntity extends BlockEntity {
         if (cache == null) {
             cache = BlockCapabilityCache.create(capability, serverLevel, machinePos(), machineFace,
                     () -> !isRemoved() && facing() == facing,
-                    () -> NetworkManager.get().nodeChanged(this));
+                    this::capabilityInvalidated);
             caches[machineFace.ordinal()] = cache;
         }
         return cache.getCapability();
+    }
+
+    /** A capability de uma face mudou: as rotas e o que a tela mostra (slots, máquina) também. */
+    private void capabilityInvalidated() {
+        changeVersion++;
+        NetworkManager.get().nodeChanged(this);
     }
 
     private void clearCaches() {
@@ -187,6 +268,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Salva e, no servidor, avisa o gerenciador que as rotas deste nó precisam ser refeitas. */
     private void changed() {
+        changeVersion++;
         setChanged();
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
@@ -200,6 +282,9 @@ public class RouterBlockEntity extends BlockEntity {
         RouterTier oldTier = tier();
         super.setBlockState(state);
         boolean rotated = facing() != oldFacing;
+        if (rotated || tier() != oldTier) {
+            changeVersion++;
+        }
         if (rotated) {
             // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
             clearCaches();
@@ -246,6 +331,9 @@ public class RouterBlockEntity extends BlockEntity {
         if (networkId != null) {
             tag.putUUID("network", networkId);
         }
+        if (!name.isEmpty()) {
+            tag.putString("name", name);
+        }
         if (powered) {
             tag.putBoolean("powered", true);
         }
@@ -271,6 +359,7 @@ public class RouterBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         networkId = tag.hasUUID("network") ? tag.getUUID("network") : null;
+        name = sanitizeName(tag.getString("name"));
         powered = tag.getBoolean("powered");
         CompoundTag facesTag = tag.getCompound("faces");
         for (ResourceType type : TYPES) {
@@ -284,6 +373,7 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
         }
+        changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
@@ -22,6 +23,9 @@ public final class ModMenus {
 
     public static final Supplier<MenuType<TabletMenu>> NETWORK_TABLET =
             MENU_TYPES.register("network_tablet", () -> IMenuTypeExtension.create(TabletMenu::new));
+
+    public static final Supplier<MenuType<ConfiguratorMenu>> CONFIGURATOR =
+            MENU_TYPES.register("configurator", () -> IMenuTypeExtension.create(ConfiguratorMenu::new));
 
     private ModMenus() {
     }

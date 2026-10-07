@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
@@ -66,6 +67,18 @@ public final class ModPayloads {
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
+        // Configurador: biblioteca, código WA1 e área.
+        registrar.playToClient(ConfiguratorViewPayload.TYPE, ConfiguratorViewPayload.STREAM_CODEC,
+                ModPayloads::onConfiguratorView);
+        registrar.playToServer(ConfiguratorActionPayload.TYPE, ConfiguratorActionPayload.STREAM_CODEC,
+                (payload, context) -> ConfiguratorMenu.handle(serverPlayer(context), payload));
+    }
+
+    private static void onConfiguratorView(ConfiguratorViewPayload payload, IPayloadContext context) {
+        if (context.player() != null && context.player().containerMenu instanceof ConfiguratorMenu menu
+                && menu.containerId == payload.containerId()) {
+            menu.applyView(payload.view());
+        }
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -326,8 +339,9 @@ public final class ModPayloads {
         return index >= 0 && index < filter.entries().size();
     }
 
+    /** Dono, operador nível 2 ou rede pública ({@link WaNetwork#canUse}). */
     public static boolean canUse(ServerPlayer player, WaNetwork network) {
-        return network.owner().equals(player.getUUID()) || player.hasPermissions(2);
+        return network.canUse(player);
     }
 
     /** O roteador da tela aberta, se é ela que o pacote cita e ela ainda vale. */

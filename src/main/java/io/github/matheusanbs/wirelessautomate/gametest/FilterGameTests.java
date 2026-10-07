@@ -365,6 +365,70 @@ public final class FilterGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Destino com estoque e uma origem com muitas pilhas do item: na mesma visita, a contagem do
+     * destino é lembrada e soma o que entregamos, e ele para exatamente no estoque.
+     */
+    @GameTest(template = "empty")
+    public static void destinationStockHoldsAcrossManySourceSlots(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "filtro-estoque-muitas-pilhas");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT, Filter.EMPTY);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT,
+                whitelist(item(new ItemStack(Items.DIAMOND), 7)));
+        for (int slot = 0; slot < 20; slot++) {
+            chestAt(helper, A).setItem(slot, new ItemStack(Items.DIAMOND, 1));
+        }
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 7))
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    assertCount(helper, A, Items.DIAMOND, 13);
+                    assertCount(helper, B, Items.DIAMOND, 7);
+                    // Gastou 2: completa de novo, com a contagem refeita na visita seguinte.
+                    ChestBlockEntity chest = chestAt(helper, B);
+                    for (int i = 0; i < chest.getContainerSize(); i++) {
+                        chest.setItem(i, ItemStack.EMPTY);
+                    }
+                    chest.setItem(4, new ItemStack(Items.DIAMOND, 5));
+                })
+                .thenWaitUntil(() -> {
+                    assertCount(helper, B, Items.DIAMOND, 7);
+                    assertCount(helper, A, Items.DIAMOND, 11);
+                })
+                .thenIdle(10)
+                .thenExecute(() -> assertCount(helper, B, Items.DIAMOND, 7))
+                .thenSucceed();
+    }
+
+    /**
+     * Destino que já tem o estoque, espalhado em vários slots, e uma origem com muitas pilhas: a
+     * varredura para no estoque e nada é entregue, visita após visita.
+     */
+    @GameTest(template = "empty")
+    public static void destinationAtStockReceivesNothing(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "filtro-estoque-atingido");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT, Filter.EMPTY);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT,
+                whitelist(item(new ItemStack(Items.DIAMOND), 7)));
+        for (int slot = 0; slot < 27; slot++) {
+            chestAt(helper, A).setItem(slot, new ItemStack(Items.DIAMOND, 2));
+        }
+        for (int slot = 0; slot < 7; slot++) {
+            chestAt(helper, B).setItem(slot * 3, new ItemStack(Items.DIAMOND, 1));
+        }
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    assertCount(helper, A, Items.DIAMOND, 54);
+                    assertCount(helper, B, Items.DIAMOND, 7);
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty")
     public static void fluidFilterOnCauldrons(GameTestHelper helper) {
         UUID waterNetwork = newNetwork(helper, "filtro-agua");

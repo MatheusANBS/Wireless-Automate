@@ -126,6 +126,33 @@ public final class ChemicalGameTests {
                 .thenSucceed();
     }
 
+    /** Químico num tanque acima da janela de uma visita (16): o cursor de tanques chega nele. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chemicalBeyondSixteenTanksMoves(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-quimico-muitos-tanques");
+        BlockPos machine = helper.absolutePos(A);
+        ChemicalTestSupport.reset(machine);
+        helper.setBlock(A, ChemicalTestTanks.MANY_TANKS_BLOCK);
+        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity source = helper.getBlockEntity(A.above());
+        source.setNetworkId(network);
+        source.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        helper.assertValueEqual(ChemicalTestSupport.fillTank(machine, 18, HYDROGEN, 1_000), 0L, "sobra ao encher");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
+                        && NetworkManager.get().contains(target), "roteadores não registrados"))
+                .thenWaitUntil(() -> {
+                    helper.assertValueEqual(amount(helper, B, HYDROGEN), 1_000L, "hidrogênio no destino");
+                    helper.assertValueEqual(ChemicalTestSupport.tankAmount(machine, 18), 0L, "tanque 18");
+                })
+                .thenSucceed();
+    }
+
     /** A entrada de químico sobrevive aos dois codecs (salvo e rede) e o filtro casa por id e por mod. */
     @GameTest(template = "empty")
     public static void chemicalEntryCodecsAndMatching(GameTestHelper helper) {

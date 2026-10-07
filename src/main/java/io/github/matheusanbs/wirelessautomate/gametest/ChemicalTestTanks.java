@@ -19,6 +19,9 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 @EventBusSubscriber(modid = WirelessAutomate.MODID)
 public final class ChemicalTestTanks {
     public static final Block BLOCK = Blocks.LODESTONE;
+    /** Bloco com {@link #MANY_TANKS} tanques, mais que a janela de uma visita (16). */
+    public static final Block MANY_TANKS_BLOCK = Blocks.CRYING_OBSIDIAN;
+    static final int MANY_TANKS = 20;
     static final long CAPACITY = 64_000;
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.chemicalTests");
 
@@ -31,7 +34,7 @@ public final class ChemicalTestTanks {
         if (!enabled()) {
             return;
         }
-        WirelessAutomate.LOGGER.info("GameTests: tanques de químico de teste ligados em {}", BLOCK);
+        WirelessAutomate.LOGGER.info("GameTests: tanques de químico de teste ligados em {} e {}", BLOCK, MANY_TANKS_BLOCK);
         ChemicalTestSupport.register(event);
     }
 

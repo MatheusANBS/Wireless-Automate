@@ -20,7 +20,7 @@ O mod tem um bloco e sete itens. Todo o resto é configuração.
 | --- | --- | --- |
 | Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Corpo de 14×6×12 px, duas antenas e quatro LEDs: energia, rede, atividade e destino cheio. |
 | Núcleo de tier | Item | Clique no roteador para subir de tier no lugar, sem perder a configuração. |
-| Configurador | Item (varinha) | Copia e cola configurações, aplica presets e trabalha por área. |
+| Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área presos à mesma máquina. |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Escolhe a rede ativa e coloca roteadores nela, um a um ou por área. |
 | Cartão de filtro | Item | Guarda um filtro reutilizável entre roteadores. |
@@ -83,9 +83,15 @@ São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes se
 
 ### Configurador
 
-- **Abre com:** Shift + clique direito no ar.
-- **Biblioteca:** presets, Aplicar, Exportar código. Salvar e importar ficam recolhidos.
-- **Área:** Copiar área e Aplicar em área (ver Presets e replicação).
+Sem tela: tudo é feito com cliques, e o tooltip mostra o modo e os gestos dele.
+
+| Gesto | Pincel (padrão) | Área |
+| --- | --- | --- |
+| Shift + clique direito num roteador | Copia a configuração | Copia a configuração |
+| Clique direito num roteador | Cola nele | Marca um canto |
+| Clique direito num bloco | — | Marca um canto (1º, 2º; o 3º recomeça) |
+| Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina |
+| Shift + clique direito no ar | Troca para Área | Troca para Pincel |
 
 ## Filtros
 
@@ -131,18 +137,17 @@ Redes divididas por fluxo, não por máquina: cria-se uma rede nova quando o mes
 | Utilidades | Fluidos e químicos | Separadores, infusores, bomba | Água, O₂, HCl e ácido sulfúrico para os consumidores |
 | Energia | Energia | Geradores | Todas as máquinas |
 
-As cinco redes formam o grupo Linha 5x. Um preset por estágio, aplicado com o Configurador, configura cada cópia da linha.
+As cinco redes formam o grupo Linha 5x. Para replicar a linha, copie com o Configurador o roteador de cada estágio e cole numa área que cubra todas as cópias: só os roteadores presos ao mesmo tipo de máquina recebem a configuração.
 
 ## Presets e replicação
 
-Os presets ficam numa biblioteca por jogador; o Configurador aplica um a um ou por área.
+O Configurador guarda uma cópia só, no próprio item (decisão do dono: sem biblioteca, sem código de texto e sem tela, para ficar simples).
 
-- **Biblioteca por jogador:** salva no mundo; cada preset guarda faces, filtros, prioridades, redstone e rede.
-- **Pincel:** Shift + clique copia de um roteador, clique cola em outro.
-- **Aplicação relativa:** as faces são salvas em relação à orientação do roteador, então um preset funciona com o bloco virado para qualquer lado.
-- **Copiar área:** Shift + clique em dois blocos marca uma área; o Configurador copia todos os roteadores dela, cada um com a sua configuração e posição relativa. Clicar no início de uma linha clonada mostra quais posições têm roteador e cola em todas de uma vez.
-- **Aplicar em área:** um único preset vai para todos os roteadores da área, com a opção de limitar a um tipo de máquina.
-- **Código de texto:** exporta um preset (prefixo `WA1:`) para colar no chat ou em outro mundo. Itens de mods ausentes são ignorados na importação, com aviso.
+- **Cópia:** faces, filtros, prioridades, redstone e a rede de cada aba, mais o tipo de bloco da máquina do roteador copiado. Copiar de novo substitui a cópia.
+- **Pincel:** Shift + clique copia de um roteador, clique cola em outro (em qualquer máquina).
+- **Aplicação relativa:** as faces são salvas em relação à orientação do roteador, então a cópia funciona com o bloco virado para qualquer lado.
+- **Colar em área:** no modo Área, cliques em dois blocos marcam a área (contorno no mundo, como no Vinculador) e clique no ar cola em todos os roteadores carregados dela **presos ao mesmo tipo de máquina** do copiado; os outros ficam como estavam e a action bar conta quantos. A área segue os limites do Vinculador (`linker.maxAreaVolume` e `linker.maxDistance`).
+- **Redes:** cada aba só leva a rede se o jogador puder usá-la; senão fica com a de antes, com aviso.
 
 ## Integrações
 
@@ -226,8 +231,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 - [ ] Químicos do Mekanism
 - [ ] Tablet: lista, mapa, estatísticas, redes e grupos
-- [ ] Biblioteca de presets e código de texto
-- [ ] Configurador por área (copiar e aplicar) e Vinculador modo Área
+- [ ] Configurador colando em área (mesma máquina) e Vinculador modo Área
 - [ ] Atalhos para AE2 e Refined Storage 2
 - [ ] Upgrade de chunk loading
 - [ ] Texturas finais no Blockbench e balanceamento das receitas

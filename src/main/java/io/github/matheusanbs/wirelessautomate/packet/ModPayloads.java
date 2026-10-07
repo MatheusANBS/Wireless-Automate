@@ -6,7 +6,6 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
-import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -73,18 +72,6 @@ public final class ModPayloads {
                 (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
-        // Configurador: biblioteca, código WA1 e área.
-        registrar.playToClient(ConfiguratorViewPayload.TYPE, ConfiguratorViewPayload.STREAM_CODEC,
-                ModPayloads::onConfiguratorView);
-        registrar.playToServer(ConfiguratorActionPayload.TYPE, ConfiguratorActionPayload.STREAM_CODEC,
-                (payload, context) -> ConfiguratorMenu.handle(serverPlayer(context), payload));
-    }
-
-    private static void onConfiguratorView(ConfiguratorViewPayload payload, IPayloadContext context) {
-        if (context.player() != null && context.player().containerMenu instanceof ConfiguratorMenu menu
-                && menu.containerId == payload.containerId()) {
-            menu.applyView(payload.view());
-        }
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
@@ -32,7 +31,5 @@ public final class ClientSetup {
                 (LinkerMenu menu, Inventory inventory, Component title) -> new LinkerScreen(menu, inventory, title));
         event.register(ModMenus.NETWORK_TABLET.get(),
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
-        event.register(ModMenus.CONFIGURATOR.get(), (ConfiguratorMenu menu, Inventory inventory, Component title) ->
-                new ConfiguratorScreen(menu, inventory, title));
     }
 }

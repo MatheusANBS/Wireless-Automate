@@ -3,7 +3,8 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -12,7 +13,6 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorActionPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -21,6 +21,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
@@ -31,6 +32,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -38,7 +40,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** Configurador como pincel e o {@link RouterPreset} que ele copia e cola. */
+/** Configurador (pincel e colar em área na mesma máquina) e o {@link RouterPreset} que ele copia e cola. */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ConfiguratorGameTests {
@@ -51,8 +53,13 @@ public final class ConfiguratorGameTests {
 
     /** Roteador preso na face {@code facing} de um bloco de pedra em {@code machine}. */
     private static RouterBlockEntity place(GameTestHelper helper, BlockPos machine, Direction facing) {
+        return place(helper, machine, facing, Blocks.STONE);
+    }
+
+    /** Roteador preso na face {@code facing} de um bloco {@code block} em {@code machine}. */
+    private static RouterBlockEntity place(GameTestHelper helper, BlockPos machine, Direction facing, Block block) {
         BlockPos pos = machine.relative(facing);
-        helper.setBlock(machine, Blocks.STONE);
+        helper.setBlock(machine, block);
         helper.setBlock(pos, router(facing));
         return helper.getBlockEntity(pos);
     }
@@ -128,14 +135,6 @@ public final class ConfiguratorGameTests {
                         helper.assertValueEqual(foreign.face(ResourceType.ITEM, RelativeSide.TOP).mode(),
                                 PortMode.INSERT, "faces não coladas sem a rede");
                         helper.assertTrue(foreign.networkId(ResourceType.ITEM) == null, "colou rede de outro dono");
-
-                        // Descartar a cópia é um botão da tela (Shift + clique direito no ar abre a tela).
-                        player.containerMenu = new ConfiguratorMenu(77, player, InteractionHand.MAIN_HAND,
-                                ConfiguratorMenu.initialView(player, InteractionHand.MAIN_HAND));
-                        ConfiguratorMenu.handle(player,
-                                ConfiguratorActionPayload.of(77, ConfiguratorActionPayload.Op.CLEAR_WAND));
-                        player.containerMenu = player.inventoryMenu;
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "cópia não descartada");
                     } finally {
                         data.remove(own.id());
                         data.remove(other.id());
@@ -203,5 +202,126 @@ public final class ConfiguratorGameTests {
         helper.assertTrue(!preset.equals(preset.withoutNetworks()), "equals ignorou a rede");
         helper.assertValueEqual(preset.face(ResourceType.CHEMICAL, RelativeSide.RIGHT).priority(), -2, "RIGHT");
         helper.succeed();
+    }
+
+    /** Clique direito com o Configurador num bloco (posição relativa à estrutura), pelo caminho do jogo. */
+    private static void clickBlock(GameTestHelper helper, ServerPlayer player, BlockPos relative, boolean sneak) {
+        player.setShiftKeyDown(sneak);
+        BlockPos pos = helper.absolutePos(relative);
+        ItemStack stack = player.getMainHandItem();
+        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        if (!stack.onItemUseFirst(context).consumesAction()) {
+            stack.useOn(context);
+        }
+    }
+
+    /** Clique direito com o Configurador no ar. */
+    private static void clickAir(GameTestHelper helper, ServerPlayer player, boolean sneak) {
+        player.setShiftKeyDown(sneak);
+        ModItems.CONFIGURATOR.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+    }
+
+    /**
+     * Modo Área: Shift + clique no ar troca o modo; cliques em dois blocos marcam a área; clique no
+     * ar cola só nos roteadores presos à mesma máquina do copiado.
+     */
+    @GameTest(template = "empty")
+    public static void areaPastesOnlyOnSameMachine(GameTestHelper helper) {
+        // Roteadores em (0,1,0) copiado, (2,1,0) e (2,0,1) em fornalhas, (0,1,2) num baú.
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
+        RouterBlockEntity sameA = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
+        RouterBlockEntity sameB = place(helper, new BlockPos(2, 0, 2), Direction.NORTH, Blocks.FURNACE);
+        RouterBlockEntity chest = place(helper, new BlockPos(0, 0, 2), Direction.UP, Blocks.CHEST);
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        // O jogador falso nasce longe da estrutura; a área exige estar perto.
+        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(chest), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        configureUp(source);
+                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
+                        helper.assertTrue(configurator.has(ModDataComponents.PRESET.get()), "nada copiado");
+                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
+                                BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE), "máquina copiada");
+
+                        clickAir(helper, player, true);
+                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo Área");
+                        clickAir(helper, player, false);
+                        helper.assertTrue(sameA.face(ResourceType.ITEM, RelativeSide.FRONT).isDefault(),
+                                "colou sem área");
+
+                        // Área de (1,0,0) a (2,2,2): só os dois roteadores das fornalhas da direita.
+                        clickBlock(helper, player, new BlockPos(1, 0, 0), false);
+                        clickBlock(helper, player, new BlockPos(2, 2, 2), false);
+                        helper.assertTrue(ConfiguratorItem.area(configurator) != null
+                                && ConfiguratorItem.area(configurator).complete(), "área não marcada");
+                        clickAir(helper, player, false);
+                        for (ResourceType type : TYPES) {
+                            for (RelativeSide side : SIDES) {
+                                helper.assertValueEqual(sameA.face(type, side), source.face(type, side),
+                                        "mesma máquina, " + type + " " + side);
+                                helper.assertValueEqual(sameB.face(type, side), source.face(type, side),
+                                        "mesma máquina girada, " + type + " " + side);
+                            }
+                        }
+
+                        // Área de (0,0,0) a (0,2,2): o copiado e o do baú; o do baú fica como estava.
+                        clickBlock(helper, player, new BlockPos(0, 0, 0), false);
+                        clickBlock(helper, player, new BlockPos(0, 2, 2), false);
+                        clickAir(helper, player, false);
+                        for (ResourceType type : TYPES) {
+                            for (RelativeSide side : SIDES) {
+                                helper.assertTrue(chest.face(type, side).isDefault(),
+                                        "colou noutra máquina: " + type + " " + side);
+                            }
+                        }
+
+                        clickAir(helper, player, true);
+                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
+                                "volta ao pincel");
+                    } finally {
+                        player.setShiftKeyDown(false);
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Uma área acima do volume da config não é marcada, e colar sem a área completa não muda nada. */
+    @GameTest(template = "empty")
+    public static void areaTooBigIsRefused(GameTestHelper helper) {
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
+        RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        configureUp(source);
+                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
+                        ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
+                        clickBlock(helper, player, new BlockPos(2, 0, 0), false);
+                        // 300 × 1 × 1000 = 300.000 blocos, acima do padrão de 262.144.
+                        clickBlock(helper, player, new BlockPos(301, 0, 999), false);
+                        helper.assertTrue(!ConfiguratorItem.area(configurator).complete(), "área grande marcada");
+                        clickAir(helper, player, false);
+                        helper.assertTrue(target.face(ResourceType.ITEM, RelativeSide.FRONT).isDefault(),
+                                "colou numa área incompleta");
+                    } finally {
+                        player.setShiftKeyDown(false);
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
     }
 }

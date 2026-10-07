@@ -14,8 +14,6 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
-import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
-import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorView;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -163,7 +161,7 @@ public final class DevScreenshot {
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), configuratorSteps(), tabletSteps(), linkerSteps())
+                    upgradeSteps(), tabletSteps(), linkerSteps())
             .flatMap(List::stream).toList();
 
     /**
@@ -537,106 +535,6 @@ public final class DevScreenshot {
                 new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status);
     }
 
-    // ------------------------------------------------------------------ Configurador
-
-    /** Desenhada no lugar das outras a partir do primeiro passo do Configurador. */
-    private static ConfiguratorScreen configuratorScreen;
-
-    /**
-     * Tela do Configurador: a biblioteca com um preset selecionado e o código exportado, "Salvar ou
-     * importar" aberto, a biblioteca vazia, e a aba Área copiando, colando (origem escolhida) e
-     * aplicando só numa máquina, e com uma área grande demais.
-     */
-    private static List<Step> configuratorSteps() {
-        return List.of(
-                new Step(() -> {
-                    mouseX = mouseY = -1;
-                    configuratorScreen = configuratorScreen(configuratorSample(true, false, false));
-                    configuratorScreen.previewSelect(1);
-                    int[] center = configuratorScreen.previewCenter(
-                            Component.translatable("gui.wirelessautomate.configurator.apply"));
-                    mouseX = center[0];
-                    mouseY = center[1];
-                }, "k1-biblioteca"),
-                new Step(() -> {
-                    mouseX = mouseY = -1;
-                    configuratorScreen.previewMore(true, "Fornalhas da linha 5x", "WA1:eNpjYGBgZGBgYGBg");
-                }, "k2-salvar-importar"),
-                new Step(() -> {
-                    configuratorScreen = configuratorScreen(new ConfiguratorView(new ConfiguratorView.Wand(false, -1, 0,
-                            Optional.empty(), Optional.empty(), Optional.empty(), 0, 0), List.of(),
-                            ConfiguratorView.Area.NONE, Optional.empty(), Optional.empty(), 0));
-                }, "k3-biblioteca-vazia"),
-                new Step(() -> {
-                    configuratorScreen = configuratorScreen(configuratorSample(false, false, false));
-                    configuratorScreen.previewTab(true);
-                }, "k4-area-copiar"),
-                new Step(() -> {
-                    configuratorScreen = configuratorScreen(configuratorSample(false, true, false));
-                    configuratorScreen.previewTab(true);
-                }, "k5-area-colar"),
-                new Step(() -> {
-                    configuratorScreen = configuratorScreen(configuratorSample(false, false, false));
-                    configuratorScreen.previewTab(true);
-                    configuratorScreen.previewApplyMode(true, 0, 0);
-                }, "k6-area-aplicar"),
-                new Step(() -> {
-                    configuratorScreen = configuratorScreen(configuratorSample(false, false, true));
-                    configuratorScreen.previewTab(true);
-                }, "k7-area-grande"));
-    }
-
-    private static ConfiguratorScreen configuratorScreen(ConfiguratorView view) {
-        ConfiguratorScreen created = new ConfiguratorScreen(new ConfiguratorMenu(0, view), new Inventory(null),
-                Component.translatable("gui.wirelessautomate.configurator.title"), true);
-        Minecraft minecraft = Minecraft.getInstance();
-        created.init(minecraft, minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());
-        return created;
-    }
-
-    /** Duas linhas de cinco máquinas (fornalhas e enriquecedores de mentira: fornalha e alto-forno). */
-    private static ConfiguratorView configuratorSample(boolean export, boolean clipboard, boolean tooLarge) {
-        List<ConfiguratorView.FaceLine> furnace = List.of(
-                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.FRONT, PortMode.INSERT, 0),
-                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.BACK, PortMode.EXTRACT, 3),
-                new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.LEFT, PortMode.INSERT, 12),
-                new ConfiguratorView.FaceLine(ResourceType.ENERGY, RelativeSide.BACK, PortMode.INSERT, 0));
-        List<ConfiguratorView.LibraryEntry> library = List.of(
-                new ConfiguratorView.LibraryEntry("Fornalha simples", 2, 1, furnace.subList(0, 2)),
-                new ConfiguratorView.LibraryEntry("Fornalhas da linha 5x", 4, 2, furnace),
-                new ConfiguratorView.LibraryEntry("Enriquecedor", 3, 1, furnace.subList(1, 4)),
-                new ConfiguratorView.LibraryEntry("Armazém de minérios do lado norte", 1, 0, List.of(
-                        new ConfiguratorView.FaceLine(ResourceType.ITEM, RelativeSide.FRONT, PortMode.BOTH, 40))),
-                new ConfiguratorView.LibraryEntry("Tanque de lava", 1, 1, List.of(
-                        new ConfiguratorView.FaceLine(ResourceType.FLUID, RelativeSide.TOP, PortMode.EXTRACT, 1))),
-                new ConfiguratorView.LibraryEntry("Gerador", 1, 1, List.of(
-                        new ConfiguratorView.FaceLine(ResourceType.ENERGY, RelativeSide.FRONT, PortMode.EXTRACT, 0))));
-        List<ConfiguratorView.Dot> dots = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            dots.add(new ConfiguratorView.Dot(i * 2, 1, 0, true, 0));
-            dots.add(new ConfiguratorView.Dot(i * 2, 1, 4, i < 2, 1));
-        }
-        BlockPos min = new BlockPos(100, 64, 200);
-        ConfiguratorView.Area area = tooLarge
-                ? new ConfiguratorView.Area(Optional.of("too_large"), min, new BlockPos(120, 40, 90), List.of(), List.of())
-                : new ConfiguratorView.Area(Optional.empty(), min, new BlockPos(9, 2, 5), List.copyOf(dots),
-                        List.of(ResourceLocation.withDefaultNamespace("furnace"),
-                                ResourceLocation.withDefaultNamespace("blast_furnace")));
-        ConfiguratorView.Wand wand = new ConfiguratorView.Wand(!export, 4, 2, Optional.of(min),
-                Optional.of(min.offset(tooLarge ? 119 : 8, 1, tooLarge ? 89 : 4)),
-                clipboard ? Optional.of(min.offset(0, 0, 8)) : Optional.empty(), clipboard ? 5 : 0, clipboard ? 4 : 0);
-        Optional<ConfiguratorView.Export> code = export
-                ? Optional.of(new ConfiguratorView.Export(1, "Fornalhas da linha 5x",
-                        "WA1:eNrjYmBgZGBgYmBgYGRgZmBkYGJgZgACAJ0AEQeNrjYmBgZGBgYmBgYGRgZmBkYGJgZgACAJ0AEQ"))
-                : Optional.empty();
-        Optional<Component> notice = export
-                ? Optional.of(Component.translatable("gui.wirelessautomate.configurator.exported", "Fornalhas da linha 5x", 84))
-                : clipboard
-                        ? Optional.of(Component.translatable("item.wirelessautomate.configurator.area.anchor", 4, 5))
-                        : Optional.empty();
-        return new ConfiguratorView(wand, library, area, code, notice, 1);
-    }
-
     // ------------------------------------------------------------------ Vinculador
 
     /** Desenhada no lugar das outras a partir do primeiro passo do Vinculador. */
@@ -650,7 +548,6 @@ public final class DevScreenshot {
         return List.of(
                 new Step(() -> {
                     filterScreen = null;
-                    configuratorScreen = null;
                     tabletScreen = null;
                     linkerScreen = linkerScreen(linkerSample());
                     int[] center = linkerScreen.previewLinkCenter();
@@ -750,7 +647,6 @@ public final class DevScreenshot {
         }
         AbstractContainerScreen<?> active = linkerScreen != null ? linkerScreen
                 : tabletScreen != null ? tabletScreen
-                : configuratorScreen != null ? configuratorScreen
                 : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {
             active.init(minecraft, title.width, title.height);

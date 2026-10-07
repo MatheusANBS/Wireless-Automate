@@ -98,7 +98,22 @@ public final class LinkerActions {
 
     /** Por que a área do Vinculador não pode ser vinculada agora (na ordem em que a tela mostra). */
     public static LinkerProblem check(ServerPlayer player, ItemStack stack) {
-        LinkerArea area = LinkerItem.area(stack);
+        LinkerProblem problem = checkArea(player, LinkerItem.area(stack));
+        if (problem != LinkerProblem.NONE) {
+            return problem;
+        }
+        WaNetwork network = activeNetwork(player);
+        if (network != null && !network.canUse(player)) {
+            return LinkerProblem.FOREIGN_NETWORK;
+        }
+        return LinkerProblem.NONE;
+    }
+
+    /**
+     * As regras de uma área marcada, sem olhar a rede: completa, nesta dimensão, dentro do volume e
+     * da distância da config. Valem também para a área do Configurador.
+     */
+    public static LinkerProblem checkArea(ServerPlayer player, @Nullable LinkerArea area) {
         if (area == null) {
             return LinkerProblem.NO_AREA;
         }
@@ -116,10 +131,6 @@ public final class LinkerActions {
         if (distance > 0 && box.distanceSqTo(player.getX(), player.getY(), player.getZ())
                 > (double) distance * distance) {
             return LinkerProblem.TOO_FAR;
-        }
-        WaNetwork network = activeNetwork(player);
-        if (network != null && !network.canUse(player)) {
-            return LinkerProblem.FOREIGN_NETWORK;
         }
         return LinkerProblem.NONE;
     }

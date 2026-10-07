@@ -32,7 +32,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), `FilterSet` (embutido + cartões), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
 | `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem` e `ChunkLoaderUpgradeItem` |
 | `linker/` | Vinculador: modo Área (`LinkerArea`, `LinkerBox`, `LinkerScan`, `LinkerActions`) |
-| `preset/` | Configurador: biblioteca por jogador, código `WA1:`, cópia e aplicação em área (a simplificar) |
+| `preset/` | Configurador: regra das redes ao colar (`PresetApplier`) e colar em área na mesma máquina (`ConfiguratorArea`, usa a área do Vinculador) |
 | `chunk/` | Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`) |
 | `network/NodeIndex.java`, `NodeProbe.java` | Índice persistente dos nós (Tablet) e status de cada nó |
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
@@ -41,10 +41,10 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` e `/wa bench ...` |
 | `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
-| `menu/Tablet*`, `Linker*`, `Configurator*` | Menus e snapshots das telas do Tablet, do Vinculador e do Configurador |
+| `menu/Tablet*`, `Linker*` | Menus e snapshots das telas do Tablet e do Vinculador (o Configurador não tem tela) |
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
-| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `ConfiguratorScreen`, renderizadores de área, `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
+| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
 | `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros |
 
 Recursos em `src/main/resources/`:

@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.registry;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.preset.AreaClipboard;
@@ -33,6 +35,17 @@ public final class ModDataComponents {
                     .persistent(LinkerItem.TYPE_CODEC)
                     .networkSynchronized(LinkerItem.TYPE_STREAM_CODEC));
 
+    /** Modo do Vinculador; sem o componente, Único. */
+    public static final Supplier<DataComponentType<LinkerMode>> LINKER_MODE =
+            DATA_COMPONENTS.registerComponentType("linker_mode", builder -> builder
+                    .persistent(LinkerMode.CODEC)
+                    .networkSynchronized(LinkerMode.STREAM_CODEC));
+
+    /** Cantos da área marcados com o Vinculador em modo Área. */
+    public static final Supplier<DataComponentType<LinkerArea>> LINKER_AREA =
+            DATA_COMPONENTS.registerComponentType("linker_area", builder -> builder
+                    .persistent(LinkerArea.CODEC)
+                    .networkSynchronized(LinkerArea.STREAM_CODEC));
     /** Modo dos cliques, cantos e ponto de colagem do Configurador por área. */
     public static final Supplier<DataComponentType<AreaSelection>> CONFIGURATOR_AREA =
             DATA_COMPONENTS.registerComponentType("configurator_area", builder -> builder

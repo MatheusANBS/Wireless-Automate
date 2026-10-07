@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import java.util.function.Supplier;
@@ -21,6 +22,8 @@ public final class ModMenus {
     public static final Supplier<MenuType<FilterMenu>> FILTER =
             MENU_TYPES.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
 
+    public static final Supplier<MenuType<LinkerMenu>> LINKER =
+            MENU_TYPES.register("linker", () -> IMenuTypeExtension.create(LinkerMenu::new));
     public static final Supplier<MenuType<TabletMenu>> NETWORK_TABLET =
             MENU_TYPES.register("network_tablet", () -> IMenuTypeExtension.create(TabletMenu::new));
 

@@ -6,7 +6,9 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre as máquinas, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick. Redes e rede ativa existem e são salvas no mundo; o Vinculador (modo Único) e o Configurador (pincel) funcionam. O clique direito no roteador abre a tela dele, com nome, rede, tier, vazão atual, um visor 3D da máquina com as faces clicáveis e a configuração por face e por tipo (modo, prioridade, redstone e filtro). Os filtros funcionam no transporte (exato, tag, mod, lista branca/negra, componentes, estoque) e têm tela própria e Cartão de Filtro. Cada aba do roteador (Itens, Fluidos, Energia) escolhe a sua rede, então linhas de itens separadas podem dividir a mesma energia. Há receitas vanilla, slots de Cartão de Filtro por face, integração opcional com o JEI, um teste de ponta a ponta num mundo real (`scripts/e2e.sh`) e o benchmark (`scripts/bench.sh`, `docs/benchmark.md`). Em tamanho, isso é perto de 95% do v1: falta medir de novo depois das correções de performance e o upgrade de chunk loading.
+**Etapa atual (7/10/2026): v1 completo e boa parte do v2 feitos; mudando o desenvolvimento da nuvem para a máquina local do dono.** Tudo está commitado no branch `ccr-9c66f044-g29lli` (ainda sem PR para o `main`). Build com 83 testes JUnit e 92 GameTests passando, e o `./scripts/e2e.sh` OK nos 98 passos.
+
+O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área e Configurador com biblioteca (este **a simplificar**, ver "Feedback do dono"). Falta, do v1/v2: refazer o Configurador mais simples, medir o benchmark na máquina local, químicos do Mekanism, AE2/RS2, texturas finais.
 
 ## Roadmap v1, motor e essencial
 
@@ -21,12 +23,12 @@ O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre 
 | Tiers e núcleos de upgrade | ✅ | `block/RouterTier.java`, `item/TierCoreItem.java` e `Config.java`. Vazão e alcance/dimensão aplicados. Receitas vanilla em `data/wirelessautomate/recipe/` (Avançado: ouro + diamante; Elite: netherita + estrela do Nether; Ultimate: ovo do dragão + blocos de netherita + fragmentos de eco). O núcleo Básico não tem uso nem receita (o roteador já nasce Básico). |
 | Configurador como pincel e Vinculador modo Único | ✅ | `item/ConfiguratorItem.java`: Shift + clique copia, clique cola (`network/RouterPreset.java`, componente `wirelessautomate:preset`), relativo ao `facing`; a rede só é colada se o jogador puder usá-la. `item/LinkerItem.java`: clique no roteador põe na rede ativa, em todas as abas ou só no tipo escolhido (Shift + roda do mouse). O preset leva a rede de cada aba. |
 | Profiler embutido | ✅ | `/wa profile`: linha geral e uma linha por rede com nós, ms/tick, operações por segundo e origens/destinos acordados e dormindo. |
-| Benchmark com Sophisticated Storage | 🟡 | `bench/`, `/wa bench`, `scripts/bench.sh` (servidor dedicado com Sophisticated Storage e Spark, só no run `benchServer`), resultados em `docs/benchmark.md`. Com 500 nós ativos o mod fica no orçamento (o trabalho que sobra segue no tick seguinte); rede ociosa ~0,02 ms/tick. **Em andamento:** aplicar as quatro correções achadas (remontagem de 7–8 ms com 500 nós, varredura do destino, cursor que gira, contadores) e medir de novo. |
-| Telas (GUI) | 🟡 | Roteador (300×240, com inventário, slots de cartão e o seletor de rede na linha das abas): `client/RouterScreen.java` com o visor 3D (`client/MachineView3D.java`: arrastar gira, clique escolhe a face por raio, roda dá zoom) e os botões por face abaixo; `menu/RouterMenu.java`/`RouterSnapshot.java` e `packet/`. O servidor manda o snapshot só quando algo muda e só com a tela aberta. Filtro: `client/FilterScreen.java`. **Faltam** o slot do upgrade de chunk loading e as telas do Tablet, do Vinculador e do Configurador (v2/área). |
+| Benchmark com Sophisticated Storage | 🟡 | `bench/`, `/wa bench`, `scripts/bench.sh` (servidor dedicado com Sophisticated Storage e Spark, só no run `benchServer`), resultados em `docs/benchmark.md`. Com 500 nós ativos o mod fica no orçamento (o trabalho que sobra segue no tick seguinte); rede ociosa ~0,02 ms/tick. Correções aplicadas e medidas (remontagem com 500 nós de 7–8,6 ms para 0,5–1 ms, todas as origens movem com orçamento esgotado, Ultimate de 41 mil para 69 mil itens/s). **Falta** a rodada completa na máquina local (`docs/benchmark.md`, "A medir na máquina local"). |
+| Telas (GUI) | ✅ | Roteador (300×240, com inventário, slots de cartão e o seletor de rede na linha das abas): `client/RouterScreen.java` com o visor 3D (`client/MachineView3D.java`: arrastar gira, clique escolhe a face por raio, roda dá zoom) e os botões por face abaixo; `menu/RouterMenu.java`/`RouterSnapshot.java` e `packet/`. O servidor manda o snapshot só quando algo muda e só com a tela aberta. Filtro: `client/FilterScreen.java`. Tablet: `client/TabletScreen.java`. Vinculador: `client/LinkerScreen.java`. Configurador: `client/ConfiguratorScreen.java` (a simplificar). Upgrade de chunk loading no cabeçalho da tela do roteador. |
 
 ## Roadmap v2, escala e integrações
 
-Nada começado: químicos do Mekanism, Tablet, presets e código `WA1:`, Configurador e Vinculador por área, AE2 e RS2, upgrade de chunk loading, texturas finais e balanceamento das receitas. As dependências opcionais do `mekanism` e do `jei` já estão declaradas no `neoforge.mods.toml`.
+Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/TabletScreen.java`, tecla de atalho sem padrão), presets e código `WA1:` (`preset/`, a simplificar), Vinculador por área (`linker/`), Configurador por área, upgrade de chunk loading (`chunk/`, config `chunkLoading.enabled` e `maxChunksPerPlayer`). Não começados: químicos do Mekanism, AE2 e RS2, texturas finais e balanceamento das receitas. As dependências opcionais do `mekanism` e do `jei` já estão declaradas no `neoforge.mods.toml`.
 
 ## Feedback do dono para retomar (pendente)
 
@@ -34,16 +36,19 @@ Nada começado: químicos do Mekanism, Tablet, presets e código `WA1:`, Configu
 
 ## Próximo passo
 
-**Fechar o v1.**
+**Continuar na máquina local** (mais memória e CPU; a nuvem não aguentava benchmark nem vários jogos juntos).
 
-1. Terminar as correções de performance do benchmark e medir de novo (ver `docs/benchmark.md`).
-2. Upgrade de chunk loading (item já registrado como stub) e o slot dele no roteador.
-3. Teste manual num mundo com o JEI: arrastar item e balde do JEI para a grade do filtro (o e2e não cobre o JEI).
-4. Rodar o `./scripts/e2e.sh` a cada mudança de tela; ele cria um mundo, clica pela tela de verdade e confere no servidor.
+1. Preparar: `git checkout ccr-9c66f044-g29lli` e `./scripts/setup.sh --gametest`. No Windows sem WSL, o `e2e.sh` e o modo de captura dependem do `xvfb-run`; ali, rode o cliente normal com `WA_E2E=run/e2e` ou `WA_SCREENSHOT=run/shots` definidos (a janela aparece, mas o roteiro roda sozinho).
+2. **Refazer o Configurador mais simples** (feedback do dono acima): propor o desenho e confirmar antes de codar.
+3. **Medir o benchmark** na máquina local com o comando de `docs/benchmark.md` ("A medir na máquina local") e atualizar os números.
+4. Teste manual num mundo com o JEI: arrastar item e balde do JEI para a grade do filtro (o e2e não cobre o JEI).
+5. Depois: químicos do Mekanism, texturas finais, PR do branch para o `main`.
+
+Pendências pequenas anotadas pelos agentes: a tela de filtro aberta de longe (pelo Tablet) fecha sozinha porque `RouterFaceFilterTarget.stillValid` exige 8 blocos; o callback que limpa tickets de chunk ao recarregar o mundo não tem teste automático; os limites de área do Configurador são constantes em `preset/AreaOps` (o Vinculador já usa a config); a vazão na tela conta só o que o roteador moveu como origem.
 
 Para conferir telas sem monitor: `WA_SCREENSHOT=<dir> xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient` desenha a tela do roteador com um snapshot de exemplo, salva PNGs e fecha o jogo (`client/DevScreenshot.java`; ponha `lang:pt_br` em `run/options.txt` para as capturas em português). O mesmo modo desenha a tela de filtro e o visor 3D (passos em `DevScreenshot.SEQUENCE`).
 
-Teste de ponta a ponta: `./scripts/e2e.sh` (precisa de Xvfb; ~1 min). Benchmark: `./scripts/bench.sh <cenários>`.
+Teste de ponta a ponta: `./scripts/e2e.sh` (precisa de Xvfb; ~2 min, 98 passos). Os GameTests rodam em `run/gametest`, com o mundo apagado antes de cada rodada (um mundo velho reaproveitado fazia testes falharem). Benchmark: `./scripts/bench.sh <cenários>`.
 
 Limites conhecidos do motor, para depois: um fluido por tanque por visita, inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho. A vazão na tela conta só o que o roteador moveu como origem (um roteador que só recebe mostra 0/s).
 
@@ -85,6 +90,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 | Data | O que foi feito |
 | --- | --- |
 | 2026-10-07 | Esqueleto: projeto ModDevGradle, assets do pacote de design, roteador com tiers, itens registrados, gerenciador com orçamento, `/wa profile`, config, traduções, scripts de setup, CI, 6 testes JUnit e 3 GameTests passando. |
+| 2026-10-07 | Itens e telas do v2 (subagentes) e passagem para a máquina local: upgrade de chunk loading, Tablet de rede, Vinculador modo Área, Configurador com biblioteca/código/área (a simplificar, pedido do dono), correções de performance medidas, GameTests num mundo novo a cada rodada. 83 JUnit, 92 GameTests, e2e com 98 passos OK. |
 | 2026-10-07 | Fechamento do v1 (subagentes): receitas vanilla e duplicação de cartão, Armazém, slots de cartão por face, JEI opcional, teste de ponta a ponta num mundo real (achou e corrigiu dois bugs de foco), rede por aba com Vinculador por tipo, e o benchmark com Sophisticated Storage. 57 testes JUnit e 64 GameTests passando, e2e OK. |
 | 2026-10-07 | Filtros e visor 3D (quatro subagentes sobre contratos): correspondência compilada com cache e estoque no transporte, persistência com registries, tela de filtro, Cartão de Filtro, botão Editar e o visor 3D com picking por raio. 53 testes JUnit e 41 GameTests passando. |
 | 2026-10-07 | Tela do roteador (subagentes servidor e cliente sobre contratos): abrir pelo clique, snapshot só com a tela aberta, ações validadas, vazão atual por tipo, nome do nó, `RouterScreen` com cabeçalho, abas, faces, modos, prioridade e redstone, e modo de captura sob Xvfb. 49 testes JUnit e 27 GameTests passando. |

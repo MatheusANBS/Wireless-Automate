@@ -36,9 +36,10 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, rede e
- * tier; abas por tipo com a vazão; o visor 3D da máquina com o roteador ({@link MachineView3D}) e
- * os botões das 6 faces logo abaixo; a face selecionada com modo, filtro e os slots de Cartão de
+ * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, vazão da
+ * aba e tier; abas por tipo, cada uma com um ponto na cor da sua rede, e à direita delas o seletor
+ * da rede da aba selecionada (cada tipo do roteador entra numa rede própria); o visor 3D da
+ * máquina com o roteador ({@link MachineView3D}) e os botões das 6 faces logo abaixo; a face selecionada com modo, filtro e os slots de Cartão de
  * Filtro; prioridade e redstone recolhidos em "Mais", embaixo das faces; e o inventário do jogador,
  * embaixo da face selecionada, para pôr e tirar cartões.
  *
@@ -64,6 +65,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int PILL_H = 13;
     private static final int TAB_Y = 26;
     private static final int TAB_H = 15;
+    /** Espaço do ponto da rede na aba (ponto de 5 px e folga). */
+    private static final int TAB_DOT = 8;
+    /** Pílula da rede sem o nome: borda, ponto, folgas e a seta. */
+    private static final int NET_PILL_PAD = 6 + 5 + 4 + 4 + 5 + 5;
+    /** Largura máxima do nome da rede na pílula, se couber na linha das abas. */
+    private static final int NET_TEXT_MAX = 84;
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
     // visor 3D e, logo abaixo, os botões das faces em duas fileiras (cada coluna é um eixo)
@@ -116,6 +123,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private boolean expanded;
     private boolean networkListOpen;
     private int networkScroll;
+    /** Largura disponível para o nome da rede na pílula (o que sobra à direita das abas). */
+    private int netTextMax = NET_TEXT_MAX;
     private boolean renaming;
     private String renameDraft = "";
 
@@ -177,7 +186,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private @Nullable NetworkEntry currentNetwork() {
-        Optional<UUID> id = snapshot().network(type);
+        return network(type);
+    }
+
+    /** A rede da aba {@code t}, se ela estiver numa rede que o seletor conhece. */
+    private @Nullable NetworkEntry network(ResourceType t) {
+        Optional<UUID> id = snapshot().network(t);
         if (id.isEmpty()) {
             return null;
         }
@@ -190,15 +204,23 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private Component networkLabel() {
-        NetworkEntry entry = currentNetwork();
+        return networkLabel(type);
+    }
+
+    private Component networkLabel(ResourceType t) {
+        NetworkEntry entry = network(t);
         if (entry != null) {
             return Component.literal(entry.name());
         }
-        return snapshot().network(type).isPresent() ? tr("network.unknown") : tr("network.none");
+        return snapshot().network(t).isPresent() ? tr("network.unknown") : tr("network.none");
     }
 
     private int networkColor() {
-        NetworkEntry entry = currentNetwork();
+        return networkColor(type);
+    }
+
+    private int networkColor(ResourceType t) {
+        NetworkEntry entry = network(t);
         return entry != null ? 0xFF000000 | entry.color() : GuiPaint.MUTED;
     }
 
@@ -272,20 +294,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             setFocused(renameBox);
         }
 
-        networkButton = add(new FlatButton(x, y + HEAD_Y, 40, PILL_H, Component.empty(), this::paintNetwork,
-                () -> {
-                    networkListOpen = !networkListOpen;
-                    networkScroll = 0;
-                }).tooltip(() -> tr("network.tooltip")));
-
         int tabX = x + X0;
         for (ResourceType t : types) {
-            int width = font.width(typeName(t)) + 12;
+            int width = TAB_DOT + font.width(typeName(t)) + 12;
             FlatButton tab = add(new FlatButton(tabX, y + TAB_Y, width, TAB_H, typeName(t),
-                    (g, b, hovered) -> paintTab(g, b, hovered, t), () -> type = t));
+                    (g, b, hovered) -> paintTab(g, b, hovered, t), () -> type = t)
+                    .tooltip(() -> tr("tab.tooltip", typeName(t), networkLabel(t))));
             tabButtons.put(t, tab);
             tabX += width + 3;
         }
+
+        // a rede é da aba: o seletor fica na linha das abas, à direita delas
+        networkButton = add(new FlatButton(x, y + TAB_Y + 1, 40, PILL_H, Component.empty(), this::paintNetwork,
+                () -> {
+                    networkListOpen = !networkListOpen;
+                    networkScroll = 0;
+                }).tooltip(this::networkTooltip));
 
         machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, VIEW_W - 2, VIEW_H - 2);
         for (int i = 0; i < FACE_ORDER.length; i++) {
@@ -336,14 +360,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         RouterSnapshot s = snapshot();
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
-        Component netText = networkLabel();
-        int netW = 6 + 5 + 4 + Math.min(font.width(netText), 84) + 4 + 5 + 5;
-        int netX = leftPos + X1 - tierW - 4 - netW;
-        networkButton.setX(netX);
-        networkButton.setWidth(netW);
-        networkButton.setMessage(tr("network.narration", netText));
+        int rateX = leftPos + X1 - tierW - 6 - font.width(rate());
 
-        int titleW = netX - (leftPos + X0) - 6;
+        // pílula da rede à direita das abas, com o rótulo "Rede" antes; o nome encolhe se faltar espaço
+        int tabsEnd = leftPos + X0;
+        for (FlatButton tab : tabButtons.values()) {
+            tabsEnd = Math.max(tabsEnd, tab.getX() + tab.getWidth());
+        }
+        int labelW = font.width(tr("network.label"));
+        netTextMax = Math.max(24, Math.min(NET_TEXT_MAX, leftPos + X1 - tabsEnd - 6 - labelW - 4 - NET_PILL_PAD));
+        Component netText = networkLabel();
+        int netW = NET_PILL_PAD + Math.min(font.width(netText), netTextMax);
+        networkButton.setX(leftPos + X1 - netW);
+        networkButton.setWidth(netW);
+        networkButton.setMessage(tr("network.tab.narration", typeName(type), netText));
+
+        int titleW = rateX - (leftPos + X0) - 8;
         titleButton.setWidth(Math.min(titleW, font.width(displayName()) + 4));
         titleButton.setMessage(displayName());
         titleButton.visible = !renaming;
@@ -528,7 +560,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             if (row >= 0) {
                 List<NetworkEntry> networks = snapshot().networks();
                 chooseNetwork(row < networks.size() ? Optional.of(networks.get(row).id()) : Optional.empty());
-            } else {
+            } else if (!dropdownContains(mouseX, mouseY)) {
                 networkListOpen = false;
             }
             return true;
@@ -672,9 +704,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiPaint.dot(g, tierX + 6, y + HEAD_Y + 4, trim);
         GuiPaint.text(g, font, tierText, tierX + 15, y + HEAD_Y + 3, GuiPaint.FG);
 
-        // abas e vazão
+        // vazão da aba, ao lado do tier
+        GuiPaint.textRight(g, font, rate(), tierX - 6, y + HEAD_Y + 3, GuiPaint.MUTED);
+
+        // abas e o rótulo do seletor da rede da aba
         g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
-        GuiPaint.textRight(g, font, rate(), x + X1, y + TAB_Y + 4, GuiPaint.MUTED);
+        GuiPaint.textRight(g, font, tr("network.label"), networkButton.getX() - 4, y + TAB_Y + 4, GuiPaint.MUTED);
 
         // visor 3D: máquina e roteador; com a lista de redes aberta, nada de realce sob o mouse
         int vx = x + X0;
@@ -774,14 +809,28 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
     }
 
+    /** Dica da pílula: de qual aba é a rede e, se o nome não coube, o nome inteiro antes. */
+    private Component networkTooltip() {
+        Component hint = tr("network.tab.tooltip", typeName(type));
+        Component name = networkLabel();
+        if (font.width(name) <= netTextMax) {
+            return hint;
+        }
+        return name.copy().append("\n").append(hint.copy().withColor(GuiPaint.MUTED));
+    }
+
     private void paintNetwork(GuiGraphics g, FlatButton b, boolean hovered) {
         int color = networkColor();
         int fill = hovered || networkListOpen ? GuiPaint.BUTTON : GuiPaint.PANEL;
         GuiPaint.pill(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, color);
-        GuiPaint.dot(g, b.getX() + 6, b.getY() + 4, color);
+        if (currentNetwork() != null) {
+            GuiPaint.dot(g, b.getX() + 6, b.getY() + 4, color);
+        } else {
+            GuiPaint.outline(g, b.getX() + 6, b.getY() + 4, 5, 5, color);
+        }
         Component label = networkLabel();
         int textColor = currentNetwork() != null ? GuiPaint.FG : GuiPaint.MUTED;
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, label, 84), b.getX() + 15, b.getY() + 3, textColor);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, label, netTextMax), b.getX() + 15, b.getY() + 3, textColor);
         GuiPaint.arrowDown(g, b.getX() + b.getWidth() - 10, b.getY() + 5, hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
@@ -794,8 +843,24 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
                     hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         }
-        GuiPaint.textCentered(g, font, typeName(t), b.getX() + b.getWidth() / 2, b.getY() + 4,
+        networkDot(g, b.getX() + 5, b.getY() + 5, t);
+        GuiPaint.text(g, font, typeName(t), b.getX() + 6 + TAB_DOT, b.getY() + 4,
                 selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
+    }
+
+    /**
+     * Ponto na cor da rede da aba {@code t} (vazado sem rede), com contorno escuro para aparecer
+     * também na aba selecionada, que é preenchida na cor do tier.
+     */
+    private void networkDot(GuiGraphics g, int x, int y, ResourceType t) {
+        g.fill(x, y - 1, x + 5, y + 6, GuiPaint.BEVEL_DARK);
+        g.fill(x - 1, y, x + 6, y + 5, GuiPaint.BEVEL_DARK);
+        if (network(t) != null) {
+            GuiPaint.dot(g, x, y, networkColor(t));
+        } else {
+            g.fill(x, y, x + 5, y + 5, GuiPaint.BEVEL_DARK);
+            GuiPaint.outline(g, x, y, 5, 5, GuiPaint.MUTED);
+        }
     }
 
     private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
@@ -873,6 +938,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             width = Math.max(width, font.width(entry.name()) + 24);
         }
         width = Math.max(width, font.width(tr("network.none")) + 24);
+        width = Math.max(width, font.width(listTitle()) + 12);
         return Math.min(width, 140);
     }
 
@@ -888,17 +954,27 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return Math.min(DROPDOWN_MAX_ROWS, snapshot().networks().size() + 1);
     }
 
-    private boolean dropdownContains(double mouseX, double mouseY) {
-        return mouseX >= dropdownX() && mouseX < dropdownX() + dropdownWidth()
-                && mouseY >= dropdownY() && mouseY < dropdownY() + dropdownRows() * DROPDOWN_ROW + 4;
+    /** Título da lista: de qual aba é a rede que se escolhe. */
+    private Component listTitle() {
+        return tr("network.list.title", typeName(type));
     }
 
-    /** Índice na lista (redes e depois "Sem rede") sob o mouse, ou -1. */
+    /** Altura da lista: o título e as linhas visíveis. */
+    private int dropdownHeight() {
+        return (dropdownRows() + 1) * DROPDOWN_ROW + 4;
+    }
+
+    private boolean dropdownContains(double mouseX, double mouseY) {
+        return mouseX >= dropdownX() && mouseX < dropdownX() + dropdownWidth()
+                && mouseY >= dropdownY() && mouseY < dropdownY() + dropdownHeight();
+    }
+
+    /** Índice na lista (redes e depois "Sem rede") sob o mouse, ou -1 (fora dela ou no título). */
     private int dropdownRowAt(double mouseX, double mouseY) {
         if (!dropdownContains(mouseX, mouseY)) {
             return -1;
         }
-        int row = (int) ((mouseY - dropdownY() - 2) / DROPDOWN_ROW);
+        int row = (int) Math.floor((mouseY - dropdownY() - 2) / DROPDOWN_ROW) - 1;
         if (row < 0 || row >= dropdownRows()) {
             return -1;
         }
@@ -915,10 +991,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         Optional<UUID> current = snapshot().network(type);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
-        GuiPaint.box(g, x, y, w, rows * DROPDOWN_ROW + 4, GuiPaint.INSET, GuiPaint.BUTTON_HOVER_BORDER);
+        GuiPaint.box(g, x, y, w, dropdownHeight(), GuiPaint.INSET, GuiPaint.BUTTON_HOVER_BORDER);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, listTitle(), w - 10), x + 5, y + 4, GuiPaint.MUTED);
+        g.fill(x + 3, y + 2 + DROPDOWN_ROW, x + w - 3, y + 3 + DROPDOWN_ROW, GuiPaint.LINE);
         for (int i = 0; i < rows; i++) {
             int index = i + networkScroll;
-            int ry = y + 2 + i * DROPDOWN_ROW;
+            int ry = y + 2 + (i + 1) * DROPDOWN_ROW;
             boolean none = index >= networks.size();
             NetworkEntry entry = none ? null : networks.get(index);
             boolean selected = none ? current.isEmpty() : current.isPresent() && current.get().equals(entry.id());
@@ -939,10 +1017,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                     none ? GuiPaint.MUTED : GuiPaint.FG);
         }
         if (networkScroll > 0) {
-            GuiPaint.text(g, font, Component.literal("▲"), x + w - 9, y + 2, GuiPaint.MUTED);
+            GuiPaint.text(g, font, Component.literal("▲"), x + w - 9, y + 2 + DROPDOWN_ROW, GuiPaint.MUTED);
         }
         if (networkScroll + rows < networks.size() + 1) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + w - 9, y + rows * DROPDOWN_ROW - 8, GuiPaint.MUTED);
+            GuiPaint.text(g, font, Component.literal("▼"), x + w - 9, y + (rows + 1) * DROPDOWN_ROW - 8, GuiPaint.MUTED);
         }
         g.pose().popPose();
     }
@@ -1005,5 +1083,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     int[] previewEditFilterCenter() {
         return new int[] {editFilterButton.getX() + 20, editFilterButton.getY() + 7};
+    }
+
+    int[] previewModeCenter(PortMode mode) {
+        return center(modeButtons.get(List.of(MODES).indexOf(mode)));
+    }
+
+    int[] previewTabCenter(ResourceType t) {
+        return center(tabButtons.get(t));
+    }
+
+    int[] previewNetworkCenter() {
+        return center(networkButton);
+    }
+
+    private static int[] center(FlatButton button) {
+        return new int[] {button.getX() + button.getWidth() / 2, button.getY() + button.getHeight() / 2};
     }
 }

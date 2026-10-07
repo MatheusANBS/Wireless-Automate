@@ -61,8 +61,8 @@ import org.lwjgl.opengl.GL11;
  *
  * <pre>WA_SCREENSHOT=$PWD/run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient</pre>
  *
- * Na tela de título desenha uma {@link RouterScreen} com um snapshot de exemplo (fornalha, rede
- * "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com
+ * Na tela de título desenha uma {@link RouterScreen} com um snapshot de exemplo (fornalha com Itens
+ * na rede "Linha 5x", Fluidos sem rede e Energia na "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com
  * {@code setScreen} porque, sem mundo, o {@code tick} de uma tela de contêiner falha sem jogador.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
@@ -70,6 +70,8 @@ public final class DevScreenshot {
     private static final String OUTPUT = System.getenv("WA_SCREENSHOT");
     /** Tiques entre um estado e a captura dele (vários quadros desenhados no meio). */
     private static final int STEP_TICKS = 10;
+    /** Rede de nome comprido do exemplo. */
+    private static final UUID LONG = UUID.nameUUIDFromBytes("longa".getBytes());
 
     private static RouterScreen screen;
     private static int ticks;
@@ -99,12 +101,43 @@ public final class DevScreenshot {
                 screen.previewNetworkList(true);
             }, "4-redes"),
             new Step(() -> {
+                // a lista é da aba: na de energia, marca a "Base"
+                screen.previewNetworkList(false);
+                screen.previewType(ResourceType.ENERGY);
+                screen.previewNetworkList(true);
+                int[] center = screen.previewNetworkCenter();
+                mouseX = center[0];
+                mouseY = center[1] + 15 + 2 + 12 + 12 + 6;
+            }, "4b-redes-energia"),
+            new Step(() -> {
+                screen.previewNetworkList(false);
+                screen.previewType(ResourceType.ITEM);
+                int[] center = screen.previewTabCenter(ResourceType.FLUID);
+                mouseX = center[0];
+                mouseY = center[1];
+            }, "4c-aba-dica"),
+            new Step(() -> {
+                int[] center = screen.previewModeCenter(PortMode.BOTH);
+                mouseX = center[0];
+                mouseY = center[1];
+            }, "4d-armazem-dica"),
+            new Step(() -> {
+                // nome de rede comprido: a pílula encolhe o nome para caber à direita das abas
+                RouterSnapshot s = screen.getMenu().snapshot();
+                List<Optional<UUID>> networks = new ArrayList<>(s.typeNetworks());
+                networks.set(ResourceType.ITEM.ordinal(), Optional.of(LONG));
+                screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha da linha de processamento", s.tier(),
+                        s.facing(), List.copyOf(networks), s.networks(), s.powered(), s.machine(), s.machineState(),
+                        s.faces()));
+                mouseX = mouseY = -1;
+            }, "4e-nome-longo"),
+            new Step(() -> {
                 screen.previewNetworkList(false);
                 screen.previewExpanded(false);
                 screen.previewType(ResourceType.FLUID);
                 RouterSnapshot s = screen.getMenu().snapshot();
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                        s.typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
+                        sample().typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
                 int[] center = screen.previewEditFilterCenter();
                 mouseX = center[0];
                 mouseY = center[1];
@@ -419,7 +452,7 @@ public final class DevScreenshot {
         }
     }
 
-    /** Fornalha com o roteador Elite preso em cima, na rede "Base". */
+    /** Fornalha com o roteador Elite preso em cima: Itens na "Linha 5x", Fluidos sem rede, Energia na "Base". */
     private static RouterSnapshot sample() {
         List<FaceView> faces = new ArrayList<>(Collections.nCopies(ResourceType.values().length * 6,
                 new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, -1, 0, false)));
@@ -436,13 +469,19 @@ public final class DevScreenshot {
         faces.set(RouterSnapshot.index(ResourceType.ITEM, Direction.EAST),
                 new FaceView(PortMode.BOTH, 0, RedstoneMode.IGNORE, 1, 0, false));
         UUID base = UUID.nameUUIDFromBytes("base".getBytes());
+        UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
         List<NetworkEntry> networks = List.of(
                 new NetworkEntry(base, "Base", 0x3D8BFF, true),
+                new NetworkEntry(line, "Linha 5x", 0xBA68C8, true),
                 new NetworkEntry(UUID.nameUUIDFromBytes("fluidos".getBytes()), "Fluidos", 0x45D6CC, true),
                 new NetworkEntry(UUID.nameUUIDFromBytes("energia".getBytes()), "Energia", 0xFFB020, false),
-                new NetworkEntry(UUID.nameUUIDFromBytes("minerio".getBytes()), "Minério", 0xD8875A, true));
-        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP,
-                java.util.Collections.nCopies(ResourceType.values().length, Optional.of(base)),
+                new NetworkEntry(UUID.nameUUIDFromBytes("minerio".getBytes()), "Minério", 0xD8875A, true),
+                new NetworkEntry(LONG, "Processamento de minérios do lado norte", 0x81C784, true));
+        List<Optional<UUID>> typeNetworks = new ArrayList<>(Collections.nCopies(ResourceType.values().length,
+                Optional.of(base)));
+        typeNetworks.set(ResourceType.ITEM.ordinal(), Optional.of(line));
+        typeNetworks.set(ResourceType.FLUID.ordinal(), Optional.empty());
+        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP, List.copyOf(typeNetworks),
                 networks, false, new ItemStack(Items.FURNACE), Blocks.FURNACE.defaultBlockState(), List.copyOf(faces));
     }
 }

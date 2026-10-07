@@ -29,13 +29,15 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
 | `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java` | Lógica pura, testada por JUnit |
 | `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
-| `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem` (modo Único) e `ConfiguratorItem` (pincel) funcionam; Tablet, Cartão e Chunk loader são stubs |
+| `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
+| `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem` (modo Único), `ConfiguratorItem` (pincel) e `FilterCardItem` funcionam; Tablet e Chunk loader são stubs |
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...` e `/wa face ...` |
 | `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
+| `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
-| `client/` | Só cliente: `RouterScreen`, widgets, `ClientSetup` e `DevScreenshot` (capturas sem monitor com `WA_SCREENSHOT`) |
-| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador e transferência |
+| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, widgets, `ClientSetup` e `DevScreenshot` (capturas sem monitor com `WA_SCREENSHOT`) |
+| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros |
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
@@ -50,7 +52,7 @@ Recursos em `src/main/resources/`:
 ./gradlew test              # só JUnit
 ./gradlew runGameTestServer # GameTests headless; falha o build se algum teste falhar
 ./gradlew runData           # datagen para src/generated/resources/
-WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas da tela do roteador, sem monitor
+WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ```
 
 Antes de commitar, rode `./gradlew build runGameTestServer`. O CI (`.github/workflows/build.yml`) roda os dois.

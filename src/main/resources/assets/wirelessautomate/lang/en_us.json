@@ -97,7 +97,6 @@
   "gui.wirelessautomate.router.filter.none": "Passes all",
   "gui.wirelessautomate.router.filter.energy": "Energy has no filter",
   "gui.wirelessautomate.router.filter.edit": "Edit",
-  "gui.wirelessautomate.router.filter.soon": "Filters are coming in a future version",
   "gui.wirelessautomate.router.more": "More",
   "gui.wirelessautomate.router.less": "Less",
   "gui.wirelessautomate.router.more.tooltip": "Priority and redstone for this face",

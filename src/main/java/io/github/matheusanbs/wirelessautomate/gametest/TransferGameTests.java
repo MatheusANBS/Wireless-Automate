@@ -329,6 +329,38 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Baú vanilla de destino com pilhas cheias de pedregulho (64, abaixo do limite 99 do slot), uma
+     * pilha pela metade depois delas e slots vazios: as cheias são puladas sem simular, mas a ordem
+     * continua a do {@code insertItemStacked}, completando a pilha pela metade antes do vazio.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fullVanillaStacksKeepStackedOrder(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-pilhas-cheias");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        helper.setBlock(A.above(), helper.getBlockState(A.above()).setValue(RouterBlock.TIER, RouterTier.ELITE));
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        ChestBlockEntity destination = chestAt(helper, B);
+        for (int slot = 0; slot < 3; slot++) {
+            destination.setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
+        }
+        destination.setItem(3, new ItemStack(Items.COBBLESTONE, 10));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.COBBLESTONE, 4 * 64 + 10))
+                .thenExecute(() -> {
+                    for (int slot = 0; slot < 4; slot++) {
+                        helper.assertValueEqual(destination.getItem(slot).getCount(), 64, "slot " + slot);
+                    }
+                    helper.assertValueEqual(destination.getItem(4).getCount(), 10, "slot 4");
+                    helper.assertTrue(destination.getItem(5).isEmpty(), "slot 5 vazio");
+                    assertCount(helper, A, Items.COBBLESTONE, 0);
+                })
+                .thenSucceed();
+    }
+
     /** Fluido num tanque acima da janela de uma visita (16): o cursor de tanques chega nele. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fluidBeyondSixteenTanksMoves(GameTestHelper helper) {

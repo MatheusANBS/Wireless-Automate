@@ -328,6 +328,9 @@ final class ItemTransfer {
      * fim, depois dos vazios, e só são tentadas se ainda sobrar. Um destino que aceita numa pilha
      * cheia (um upgrade que anula o excesso) aceita já na primeira, e a ordem não muda. Em
      * inventários de pilhas grandes, as cheias são a maior parte das chamadas, e as mais caras.
+     * Cheia também é a pilha no tamanho máximo do item abaixo do limite do slot, se a primeira assim
+     * recusou: é o baú vanilla (limite 99, pedregulho 64), em que o {@code InvWrapper} limita pelo
+     * item. Aí as outras são reconhecidas só pela contagem, sem chamada nenhuma ao destino.
      *
      * <p>Memória da visita: a contagem de cada destino com estoque fica guardada até o fim da visita
      * da origem ({@link #recall}) e soma o que entregamos, então um destino que já atingiu o estoque
@@ -430,6 +433,8 @@ final class ItemTransfer {
             int emptyCount = 0;
             int fullCount = 0;
             boolean fullRefused = false;
+            // Tamanho máximo do item, se o destino limita pelo item (ver abaixo); 0 = não limita.
+            int itemFull = 0;
             ItemStack rest = stack;
             for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
                 boolean placing = !rest.isEmpty();
@@ -456,7 +461,9 @@ final class ItemTransfer {
                     }
                 }
                 if (same && placing) {
-                    if (fullRefused && inSlot.getCount() >= target.getSlotLimit(slot)) {
+                    int inCount = inSlot.getCount();
+                    if (fullRefused && (itemFull > 0 && inCount >= itemFull
+                            || inCount >= target.getSlotLimit(slot))) {
                         if (fullCount == fulls.length) {
                             fulls = Arrays.copyOf(fulls, fullCount * 2);
                         }
@@ -465,7 +472,20 @@ final class ItemTransfer {
                         int before = rest.getCount();
                         rest = offer(target, slot, rest);
                         if (rest.getCount() == before && !fullRefused) {
-                            fullRefused = inSlot.getCount() >= target.getSlotLimit(slot);
+                            if (inCount >= target.getSlotLimit(slot)) {
+                                fullRefused = true;
+                            } else {
+                                // Recusou no tamanho máximo do item, abaixo do limite do slot (baú
+                                // vanilla: limite 99, pedregulho 64): o destino limita pelo item. As
+                                // pilhas iguais têm o mesmo item e componentes, logo o mesmo máximo,
+                                // lido uma vez só (o getMaxStackSize consulta os componentes e é a
+                                // parte cara de cada recusa do InvWrapper).
+                                int max = inSlot.getMaxStackSize();
+                                if (inCount >= max) {
+                                    fullRefused = true;
+                                    itemFull = max;
+                                }
+                            }
                         }
                     }
                 }

@@ -38,6 +38,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
 | `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) |
 | `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
+| `compat/mekanism/`, `network/Chemicals.java`, `network/ChemicalTransfer.java` | Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism |
 | `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` e `/wa bench ...` |
 | `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
@@ -45,7 +46,8 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
 | `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
-| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros |
+| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros. `ChemicalGameTests` fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
+| `scripts/textures/gerar_texturas.py` | Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; edite as paletas ali, não os PNGs |
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
@@ -58,14 +60,15 @@ Recursos em `src/main/resources/`:
 ./scripts/setup.sh          # instala o JDK 21 etc. e compila (use --gametest / --no-build)
 ./gradlew build             # compila + JUnit; jar em build/libs/
 ./gradlew test              # só JUnit
-./gradlew runGameTestServer # GameTests headless; falha o build se algum teste falhar
+./gradlew runGameTestServer # GameTests headless (sem o Mekanism); falha o build se algum teste falhar
+./gradlew runGameTestServerChemicals # GameTests de químicos, num servidor com o Mekanism na pasta mods
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; ~1 min)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ```
 
-Antes de commitar, rode `./gradlew build runGameTestServer` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os dois.
+Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChemicals` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os GameTests.
 
 ## Convenções e armadilhas
 
@@ -76,6 +79,7 @@ Antes de commitar, rode `./gradlew build runGameTestServer` (e o `./scripts/e2e.
   - nada de tick por bloco;
   - nada de busca de capability por tick, use `BlockCapabilityCache`;
   - nada de sincronizar o cliente com a tela fechada.
+- **Mekanism é opcional:** tipos da API dele (`IChemicalHandler`, `ChemicalStack`...) só em `compat/mekanism`, `ChemicalTransfer` e `gametest/ChemicalTestSupport`, e **nunca na assinatura de um método** de classe `@EventBusSubscriber` ou `@GameTestHolder`: o NeoForge inspeciona essas classes por reflexão e o mod deixa de carregar sem o Mekanism. O `runGameTestServer` roda sem ele e pega isso.
 - **Lado do cliente:** classes de tela só em `client/`, nunca referenciadas por código comum (o `runGameTestServer` é um servidor dedicado e quebra se carregar uma).
 - **Memória:** cada build/jogo usa ~3 GB; não rode vários clientes ou servidores ao mesmo tempo (um cliente do e2e morreu assim).
 - **Rotação:** o `facing` do roteador segue a convenção do para-raios (`up` sem rotação, `down` x=180, laterais x=90 + y). Configurações por face devem ser salvas em relação ao `facing`.

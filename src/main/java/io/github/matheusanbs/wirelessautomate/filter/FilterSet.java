@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.filter;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
@@ -33,17 +34,21 @@ public final class FilterSet {
     private final Filter[] filters;
     private final boolean usesItemStock;
     private final boolean usesFluidStock;
+    private final boolean usesChemicalStock;
 
     private FilterSet(Filter[] filters) {
         this.filters = filters;
         boolean items = false;
         boolean fluids = false;
+        boolean chemicals = false;
         for (Filter filter : filters) {
             items |= filter.usesItemStock();
             fluids |= filter.usesFluidStock();
+            chemicals |= filter.usesChemicalStock();
         }
         this.usesItemStock = items;
         this.usesFluidStock = fluids;
+        this.usesChemicalStock = chemicals;
     }
 
     /** Conjunto de um filtro só (sem cartões). Prefira {@link Filter#asSet()}, que fica em cache. */
@@ -110,6 +115,19 @@ public final class FilterSet {
         return false;
     }
 
+    /** O químico (pelo id) passa pelo conjunto? */
+    public boolean testChemical(ResourceLocation chemical) {
+        if (filters.length == 0) {
+            return true;
+        }
+        for (Filter filter : filters) {
+            if (filter.testChemical(chemical)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Algum filtro do conjunto tem estoque para itens. Barato: calculado na criação. */
     public boolean usesItemStock() {
         return usesItemStock;
@@ -144,6 +162,19 @@ public final class FilterSet {
         for (Filter filter : filters) {
             if (filter.listMode() == Filter.ListMode.WHITELIST && filter.matchesFluid(stack)) {
                 return filter.fluidStock(stack) > 0 ? filter : null;
+            }
+        }
+        return null;
+    }
+
+    /** Como {@link #itemStockFilter}, para químicos (pelo id). */
+    public @Nullable Filter chemicalStockFilter(ResourceLocation chemical) {
+        if (!usesChemicalStock) {
+            return null;
+        }
+        for (Filter filter : filters) {
+            if (filter.listMode() == Filter.ListMode.WHITELIST && filter.matchesChemical(chemical)) {
+                return filter.chemicalStock(chemical) > 0 ? filter : null;
             }
         }
         return null;

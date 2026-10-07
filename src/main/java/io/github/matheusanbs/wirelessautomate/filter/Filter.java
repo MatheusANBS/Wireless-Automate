@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
@@ -118,6 +119,7 @@ public final class Filter {
 
     private @Nullable ItemMatcher itemMatcher;
     private @Nullable FluidMatcher fluidMatcher;
+    private @Nullable ChemicalMatcher chemicalMatcher;
 
     private ItemMatcher items() {
         ItemMatcher matcher = itemMatcher;
@@ -133,6 +135,15 @@ public final class Filter {
         if (matcher == null) {
             matcher = new FluidMatcher(entries, matchComponents);
             fluidMatcher = matcher;
+        }
+        return matcher;
+    }
+
+    private ChemicalMatcher chemicals() {
+        ChemicalMatcher matcher = chemicalMatcher;
+        if (matcher == null) {
+            matcher = new ChemicalMatcher(entries);
+            chemicalMatcher = matcher;
         }
         return matcher;
     }
@@ -159,6 +170,11 @@ public final class Filter {
         return !entries.isEmpty() && fluids().index(stack) >= 0;
     }
 
+    /** Alguma entrada casa com o químico de id {@code chemical} (sem olhar o modo da lista). */
+    boolean matchesChemical(ResourceLocation chemical) {
+        return !entries.isEmpty() && chemicals().index(chemical) >= 0;
+    }
+
     /** O item passa pelo filtro? */
     public boolean testItem(ItemStack stack) {
         if (entries.isEmpty()) {
@@ -173,6 +189,14 @@ public final class Filter {
             return true;
         }
         return (fluids().index(stack) >= 0) == (listMode == ListMode.WHITELIST);
+    }
+
+    /** O químico (pelo id) passa pelo filtro? */
+    public boolean testChemical(ResourceLocation chemical) {
+        if (entries.isEmpty()) {
+            return true;
+        }
+        return (chemicals().index(chemical) >= 0) == (listMode == ListMode.WHITELIST);
     }
 
     /** Estoque da primeira entrada que casa com o item (lista branca), ou 0 se não houver. */
@@ -193,6 +217,15 @@ public final class Filter {
         return index >= 0 ? entries.get(index).stock() : 0;
     }
 
+    /** Estoque da primeira entrada que casa com o químico (lista branca), ou 0 se não houver. */
+    public long chemicalStock(ResourceLocation chemical) {
+        if (!usesChemicalStock()) {
+            return 0;
+        }
+        int index = chemicals().index(chemical);
+        return index >= 0 ? entries.get(index).stock() : 0;
+    }
+
     /** Lista branca com alguma entrada de item (exata, tag ou mod) com estoque. Barato depois da primeira vez. */
     public boolean usesItemStock() {
         return listMode == ListMode.WHITELIST && !entries.isEmpty() && items().usesStock;
@@ -201,6 +234,11 @@ public final class Filter {
     /** Lista branca com alguma entrada de fluido (exata, tag ou mod) com estoque. */
     public boolean usesFluidStock() {
         return listMode == ListMode.WHITELIST && !entries.isEmpty() && fluids().usesStock;
+    }
+
+    /** Lista branca com alguma entrada de químico (exata ou mod) com estoque. */
+    public boolean usesChemicalStock() {
+        return listMode == ListMode.WHITELIST && !entries.isEmpty() && chemicals().usesStock;
     }
 
     public static final Codec<Filter> CODEC = RecordCodecBuilder.create(i -> i.group(

@@ -23,6 +23,9 @@ jobs:
       - name: GameTests
         run: ./gradlew runGameTestServer
 
+      - name: GameTests de químicos (com o Mekanism)
+        run: ./gradlew runGameTestServerChemicals
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

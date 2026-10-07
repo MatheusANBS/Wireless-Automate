@@ -315,7 +315,7 @@ public final class NetworkManager {
             case ITEM -> ItemTransfer.move(source, now);
             case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
             case ENERGY -> EnergyTransfer.move(source, now) ? MOVED : 0;
-            case CHEMICAL -> 0;
+            case CHEMICAL -> Chemicals.move(source, now) ? MOVED : 0;
         };
     }
 

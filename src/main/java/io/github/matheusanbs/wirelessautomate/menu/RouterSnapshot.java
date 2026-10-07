@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -148,7 +149,7 @@ public record RouterSnapshot(
                 machineState, List.of(faces), router.chunkLoadState());
     }
 
-    /** Slots (itens), tanques (fluidos) ou 1 (energia) da face; {@code -1} sem a capability. */
+    /** Slots (itens), tanques (fluidos e químicos) ou 1 (energia) da face; {@code -1} sem a capability. */
     private static int slots(RouterBlockEntity router, ResourceType type, Direction face) {
         return switch (type) {
             case ITEM -> {
@@ -163,8 +164,10 @@ public record RouterSnapshot(
                 IEnergyStorage energy = router.energy(face);
                 yield energy == null ? -1 : 1;
             }
-            // Químicos só com o Mekanism, que ainda não está integrado.
-            case CHEMICAL -> -1;
+            case CHEMICAL -> {
+                Object chemicals = router.chemicals(face);
+                yield chemicals == null ? -1 : Chemicals.tanks(chemicals);
+            }
         };
     }
 

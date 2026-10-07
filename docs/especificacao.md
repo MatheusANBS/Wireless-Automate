@@ -230,7 +230,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 **v2, escala e integrações**
 
-- [ ] Químicos do Mekanism
+- [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
 - [ ] Tablet: lista, mapa, estatísticas, redes e grupos
 - [ ] Configurador colando em área (mesma máquina) e Vinculador modo Área
 - [ ] Atalhos para AE2 e Refined Storage 2

@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.Optional;
 import net.minecraft.core.Direction;
@@ -19,9 +20,15 @@ import net.minecraft.world.phys.Vec3;
 public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face)
         implements FilterTarget {
     public RouterFaceFilterTarget {
-        if (type != ResourceType.ITEM && type != ResourceType.FLUID) {
+        if (!hasFilter(type)) {
             throw new IllegalArgumentException("Filtro de " + type);
         }
+    }
+
+    /** O tipo tem filtro: itens, fluidos e, com o Mekanism, químicos (energia não). */
+    public static boolean hasFilter(ResourceType type) {
+        return type == ResourceType.ITEM || type == ResourceType.FLUID
+                || type == ResourceType.CHEMICAL && Chemicals.LOADED;
     }
 
     /** Abre a tela de filtro desta face para o jogador. */

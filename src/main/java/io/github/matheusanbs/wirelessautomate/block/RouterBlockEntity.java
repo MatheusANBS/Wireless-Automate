@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -95,6 +96,8 @@ public class RouterBlockEntity extends BlockEntity {
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
     private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
     private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
+    /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
+    private final BlockCapabilityCache<Object, @Nullable Direction>[] chemicalCaches = newCaches();
     private @Nullable Direction cacheFacing;
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
@@ -468,6 +471,18 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * Handler de químicos do Mekanism ({@code IChemicalHandler}) pela face, ou {@code null} sem a
+     * capability ou sem o Mekanism. Devolvido como {@code Object}: só o código de
+     * {@code compat/mekanism} e o {@code ChemicalTransfer} sabem o tipo.
+     */
+    @SuppressWarnings("unchecked")
+    public @Nullable Object chemicals(Direction machineFace) {
+        BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
+        return capability == null ? null
+                : capability(chemicalCaches, (BlockCapability<Object, @Nullable Direction>) capability, machineFace);
+    }
+
+    /**
      * Devolve a capability pelo cache da face, criando o cache na primeira consulta. Se o roteador
      * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor.
      */
@@ -501,6 +516,7 @@ public class RouterBlockEntity extends BlockEntity {
         Arrays.fill(itemCaches, null);
         Arrays.fill(fluidCaches, null);
         Arrays.fill(energyCaches, null);
+        Arrays.fill(chemicalCaches, null);
         cacheFacing = null;
     }
 

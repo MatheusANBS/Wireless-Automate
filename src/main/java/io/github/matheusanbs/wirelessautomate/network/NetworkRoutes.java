@@ -44,7 +44,10 @@ import org.jetbrains.annotations.Nullable;
  * a última montagem ({@link NodePorts#collected}); os outros entram com as portas já lidas.
  */
 final class NetworkRoutes {
-    static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    /** Tipos com rotas; químicos só com o Mekanism instalado. */
+    static final ResourceType[] TRANSFER_TYPES = Chemicals.LOADED
+            ? new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, ResourceType.CHEMICAL}
+            : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final RouterTier[] TIERS = RouterTier.values();

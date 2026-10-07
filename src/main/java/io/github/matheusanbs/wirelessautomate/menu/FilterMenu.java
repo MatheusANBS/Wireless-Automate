@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
@@ -121,6 +122,7 @@ public class FilterMenu extends AbstractContainerMenu {
             case FLUID -> FluidUtil.getFluidContained(stack)
                     .filter(fluid -> !fluid.isEmpty())
                     .map(fluid -> new FilterEntry.FluidEntry(fluid, 0));
+            case CHEMICAL -> Chemicals.chemicalIn(stack).map(id -> new FilterEntry.ChemicalEntry(id, 0));
             default -> Optional.empty();
         };
     }

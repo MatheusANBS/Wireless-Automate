@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -109,10 +110,10 @@ public final class ModPayloads {
 
     // Servidor. Públicos para os GameTests; devolvem se aplicaram.
 
-    /** Configura uma face. Recusa químicos (sem Mekanism) e limita a prioridade. */
+    /** Configura uma face. Recusa químicos sem o Mekanism e limita a prioridade. */
     public static boolean handleSetFace(@Nullable ServerPlayer player, SetFacePayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || payload.resource() == ResourceType.CHEMICAL) {
+        if (router == null || (payload.resource() == ResourceType.CHEMICAL && !Chemicals.LOADED)) {
             return false;
         }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);
@@ -186,12 +187,12 @@ public final class ModPayloads {
     // Tela de filtro.
 
     /**
-     * Botão Editar da tela do roteador: abre o filtro da face no lugar dela. Só itens e fluidos
-     * (energia não usa filtro; químicos ainda não).
+     * Botão Editar da tela do roteador: abre o filtro da face no lugar dela. Itens, fluidos e, com o
+     * Mekanism, químicos (energia não usa filtro).
      */
     public static boolean handleOpenFilter(@Nullable ServerPlayer player, OpenFilterPayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || (payload.resource() != ResourceType.ITEM && payload.resource() != ResourceType.FLUID)) {
+        if (router == null || !RouterFaceFilterTarget.hasFilter(payload.resource())) {
             return false;
         }
         new RouterFaceFilterTarget(router, payload.resource(), payload.face()).open(player);
@@ -213,7 +214,15 @@ public final class ModPayloads {
                 if (tag == null) {
                     return false;
                 }
-                target.setFilter(filter.withEntry(new FilterEntry.TagEntry(tag, 0)));
+                if (target.type() == ResourceType.CHEMICAL) {
+                    // Químicos não têm tags no filtro: o texto é o id de um químico.
+                    if (!Chemicals.exists(tag)) {
+                        return false;
+                    }
+                    target.setFilter(filter.withEntry(new FilterEntry.ChemicalEntry(tag, 0)));
+                } else {
+                    target.setFilter(filter.withEntry(new FilterEntry.TagEntry(tag, 0)));
+                }
             }
             case ADD_MOD -> {
                 String mod = parseMod(payload.text());
@@ -280,8 +289,8 @@ public final class ModPayloads {
     }
 
     /**
-     * Ingrediente fantasma (JEI): acrescenta um item exato a um filtro de itens ou um fluido exato a
-     * um de fluidos, sem o jogador ter o recurso. Normaliza para quantidade 1 e sem estoque; o
+     * Ingrediente fantasma (JEI): acrescenta um item exato a um filtro de itens, um fluido exato a
+     * um de fluidos ou um químico (que exista) a um de químicos, sem o jogador ter o recurso. Normaliza para quantidade 1 e sem estoque; o
      * {@link Filter#withEntry} ignora duplicados e o teto. Devolve se a entrada foi aceita.
      */
     public static boolean handleAddFilterEntry(@Nullable ServerPlayer player, AddFilterEntryPayload payload) {
@@ -296,6 +305,8 @@ public final class ModPayloads {
                     new FilterEntry.ItemEntry(e.stack(), 0);
             case FilterEntry.FluidEntry e when target.type() == ResourceType.FLUID && !e.stack().isEmpty() ->
                     new FilterEntry.FluidEntry(e.stack(), 0);
+            case FilterEntry.ChemicalEntry e when target.type() == ResourceType.CHEMICAL && Chemicals.exists(e.chemical()) ->
+                    new FilterEntry.ChemicalEntry(e.chemical(), 0);
             default -> null;
         };
         if (entry == null) {

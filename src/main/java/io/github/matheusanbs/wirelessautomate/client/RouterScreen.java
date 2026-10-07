@@ -1,5 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
@@ -56,8 +58,6 @@ import org.lwjgl.glfw.GLFW;
  * está aberto.
  */
 public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
-    /** Químicos ficam ocultos até o motor movê-los (o servidor ainda recusa CHEMICAL). */
-    private static final boolean CHEMICALS_READY = false;
 
     // Larga e baixa o bastante para caber na menor escala automática (320×240).
     private static final int W = 300;
@@ -164,7 +164,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         types.add(ResourceType.ITEM);
         types.add(ResourceType.FLUID);
         types.add(ResourceType.ENERGY);
-        if (CHEMICALS_READY && ModList.get().isLoaded("mekanism")) {
+        if (Chemicals.LOADED) {
             types.add(ResourceType.CHEMICAL);
         }
     }
@@ -450,9 +450,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
     }
 
-    /** Só itens e fluidos têm filtro. */
+    /** Itens, fluidos e químicos têm filtro; energia não. */
     private boolean hasFilter() {
-        return type == ResourceType.ITEM || type == ResourceType.FLUID;
+        return RouterFaceFilterTarget.hasFilter(type);
     }
 
     /** Editar: o servidor troca esta tela pela de filtro da face. */

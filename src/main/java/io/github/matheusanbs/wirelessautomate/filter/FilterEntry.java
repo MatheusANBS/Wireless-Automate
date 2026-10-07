@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
- * Uma entrada de filtro: exata (item ou fluido, com componentes), tag ou mod. {@code stock} é o
+ * Uma entrada de filtro: exata (item ou fluido, com componentes; químico do Mekanism pelo id), tag ou mod. {@code stock} é o
  * estoque da especificação (0 = sem estoque): ao inserir, aceitar só até N no destino; ao extrair,
  * manter sempre N na origem. Imutável. Duas entradas são duplicadas se {@link #sameTarget} for verdadeiro.
  */
@@ -90,6 +90,31 @@ public sealed interface FilterEntry {
         }
     }
 
+    /**
+     * Químico do Mekanism exato, pelo id ({@code mekanism:hydrogen}). Guarda só o id, sem classes do
+     * Mekanism: o filtro é salvo e lido mesmo com ele ausente (e então não casa com nada).
+     */
+    record ChemicalEntry(ResourceLocation chemical, long stock) implements FilterEntry {
+        public ChemicalEntry {
+            stock = Math.max(0, stock);
+        }
+
+        @Override
+        public FilterEntry withStock(long stock) {
+            return new ChemicalEntry(chemical, stock);
+        }
+
+        @Override
+        public boolean sameTarget(FilterEntry other) {
+            return other instanceof ChemicalEntry o && chemical.equals(o.chemical);
+        }
+
+        @Override
+        public String kind() {
+            return "chemical";
+        }
+    }
+
     /** Tag ({@code #c:ingots}); vale como tag de item ou de fluido conforme o tipo da face. */
     record TagEntry(ResourceLocation tag, long stock) implements FilterEntry {
         public TagEntry {
@@ -142,6 +167,9 @@ public sealed interface FilterEntry {
     MapCodec<FluidEntry> FLUID_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             FluidStack.CODEC.fieldOf("fluid").forGetter(FluidEntry::stack),
             STOCK.optionalFieldOf("stock", 0L).forGetter(FluidEntry::stock)).apply(i, FluidEntry::new));
+    MapCodec<ChemicalEntry> CHEMICAL_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            ResourceLocation.CODEC.fieldOf("chemical").forGetter(ChemicalEntry::chemical),
+            STOCK.optionalFieldOf("stock", 0L).forGetter(ChemicalEntry::stock)).apply(i, ChemicalEntry::new));
     MapCodec<TagEntry> TAG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ResourceLocation.CODEC.fieldOf("tag").forGetter(TagEntry::tag),
             STOCK.optionalFieldOf("stock", 0L).forGetter(TagEntry::stock)).apply(i, TagEntry::new));
@@ -154,6 +182,7 @@ public sealed interface FilterEntry {
         case "fluid" -> FLUID_CODEC;
         case "tag" -> TAG_CODEC;
         case "mod" -> MOD_CODEC;
+        case "chemical" -> CHEMICAL_CODEC;
         default -> throw new IllegalArgumentException("Tipo de entrada de filtro desconhecido: " + kind);
     });
 
@@ -177,6 +206,10 @@ public sealed interface FilterEntry {
                 buf.writeByte(3);
                 buf.writeUtf(e.modId(), 64);
             }
+            case ChemicalEntry e -> {
+                buf.writeByte(4);
+                buf.writeResourceLocation(e.chemical());
+            }
         }
         buf.writeVarLong(entry.stock());
     }
@@ -188,6 +221,7 @@ public sealed interface FilterEntry {
             case 1 -> new FluidEntry(FluidStack.STREAM_CODEC.decode(buf), 0).withStock(buf.readVarLong());
             case 2 -> new TagEntry(buf.readResourceLocation(), buf.readVarLong());
             case 3 -> new ModEntry(buf.readUtf(64), buf.readVarLong());
+            case 4 -> new ChemicalEntry(buf.readResourceLocation(), buf.readVarLong());
             default -> throw new IllegalArgumentException("Tipo de entrada de filtro desconhecido: " + kind);
         };
     }

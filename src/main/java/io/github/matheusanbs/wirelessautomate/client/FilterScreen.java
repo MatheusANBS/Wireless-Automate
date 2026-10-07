@@ -1,9 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ChemicalEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.FluidEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ModEntry;
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
@@ -175,6 +178,20 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         return view().type() == ResourceType.FLUID;
     }
 
+    private boolean isChemical() {
+        return view().type() == ResourceType.CHEMICAL;
+    }
+
+    /** Fluidos e químicos contam em mB (estoque, passos, unidade); itens em unidades. */
+    private boolean inMb() {
+        return isFluid() || isChemical();
+    }
+
+    /** Prefixo das chaves da caixa de regra: "rule." ou, nos químicos, "rule.chemical.". */
+    private String ruleKey(String key) {
+        return isChemical() ? "rule.chemical" + (key.isEmpty() ? "" : "." + key) : "rule" + (key.isEmpty() ? "" : "." + key);
+    }
+
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.filter." + key, args);
     }
@@ -302,17 +319,17 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 .tooltip(() -> tr("remove.tooltip")));
 
         // recolhido: regra por tag ou mod e o cartão
-        ruleBox = new EditBox(font, x + IX + 4, y + RULE_Y + 3, IW - 8, 9, tr("rule"));
+        ruleBox = new EditBox(font, x + IX + 4, y + RULE_Y + 3, IW - 8, 9, tr(ruleKey("")));
         ruleBox.setBordered(false);
         ruleBox.setMaxLength(EditFilterPayload.MAX_TEXT);
         ruleBox.setTextColor(GuiPaint.FG);
-        ruleBox.setHint(tr("rule.hint").copy().withColor(GuiPaint.DISABLED));
+        ruleBox.setHint(tr(ruleKey("hint")).copy().withColor(GuiPaint.DISABLED));
         ruleBox.setValue(ruleDraft);
         ruleBox.setResponder(value -> ruleDraft = value);
         addRenderableWidget(ruleBox);
         addRuleButton = add(new FlatButton(x + IX, y + ADD_Y, IW, ROW_H, tr("rule.add"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("rule.add")), this::addRule)
-                .tooltip(() -> parseRule(ruleDraft) == null && !ruleDraft.isBlank() ? tr("rule.invalid") : tr("rule.add.tooltip")));
+                .tooltip(() -> parseRule(ruleDraft) == null && !ruleDraft.isBlank() ? tr(ruleKey("invalid")) : tr(ruleKey("add.tooltip"))));
         int half = (IW - 2) / 2;
         importButton = add(new FlatButton(x + IX, y + CARD_Y, half, ROW_H, tr("card.import"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, tr("card.import"), false), () -> send(Op.IMPORT_CARD, 0, 0, ""))
@@ -348,13 +365,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         backButton.setX(leftPos + X1 - backW);
         backButton.setMessage(back);
 
-        boolean items = !isFluid();
-        componentsButton.visible = items;
+        componentsButton.visible = view().type() == ResourceType.ITEM;
 
         boolean showSelection = !moreOpen && selected != null;
         minusButton.visible = plusButton.visible = removeButton.visible = stockBox.visible = showSelection;
         minusButton.active = showSelection && selected.stock() > 0;
-        if (isFluid()) {
+        if (inMb()) {
             stockBox.setWidth(IW - 40 - font.width(tr("unit.mb")) - 2);
         }
 
@@ -441,11 +457,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private long stockStep() {
-        return isFluid() ? (hasShiftDown() ? 10_000 : 1_000) : (hasShiftDown() ? 64 : 1);
+        return inMb() ? (hasShiftDown() ? 10_000 : 1_000) : (hasShiftDown() ? 64 : 1);
     }
 
     private Component stepTooltip(String key) {
-        return isFluid()
+        return inMb()
                 ? tr(key, tr("unit.buckets", 1), tr("unit.buckets", 10))
                 : tr(key, 1, 64);
     }
@@ -529,6 +545,14 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private @Nullable EditFilterPayload parseRule(String raw) {
+        if (isChemical()) {
+            // Químicos: @mod ou o id do químico (sem tags); o servidor confere se o químico existe.
+            String text = raw.strip();
+            if (text.startsWith("#") || (!text.startsWith("@") && !Chemicals.exists(
+                    Objects.requireNonNullElse(ResourceLocation.tryParse(text), Chemicals.EMPTY_ID)))) {
+                return null;
+            }
+        }
         return rule(menu.containerId, raw);
     }
 
@@ -706,7 +730,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
         if (JEI && mouseX >= leftPos + FilterMenu.INVENTORY_X - 1 && mouseX < leftPos + X1
                 && mouseY >= topPos + HINT_Y - 1 && mouseY < topPos + HINT_Y + 9) {
-            setTooltipForNextRenderPass(font.split(isFluid() ? tr("jei.tooltip.fluid") : tr("jei.tooltip.item"), 200));
+            setTooltipForNextRenderPass(font.split(tr("jei.tooltip." + (isChemical() ? "chemical" : isFluid() ? "fluid" : "item")), 200));
             return;
         }
         renderTooltip(g, mouseX, mouseY);
@@ -825,7 +849,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int fx = x + IX + 16;
         int fw = IW - 32;
         GuiPaint.box(g, fx, y + STOCK_Y, fw, ROW_H, GuiPaint.INSET, stockBox.isFocused() ? trim : GuiPaint.LINE);
-        if (isFluid()) {
+        if (inMb()) {
             GuiPaint.textRight(g, font, tr("unit.mb"), fx + fw - 4, y + STOCK_Y + 3, GuiPaint.MUTED);
         }
     }
@@ -834,7 +858,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int x = leftPos;
         int y = topPos;
         GuiPaint.box(g, x + RX, y + BOX_Y, RW, BOX_H, SEL_BOX, GuiPaint.LINE);
-        GuiPaint.text(g, font, tr("rule"), x + IX, y + RULE_Y - 10, GuiPaint.MUTED);
+        GuiPaint.text(g, font, tr(ruleKey("")), x + IX, y + RULE_Y - 10, GuiPaint.MUTED);
         boolean invalid = !ruleDraft.isBlank() && parseRule(ruleDraft) == null;
         int border = invalid ? DANGER : ruleBox.isFocused() ? trim : GuiPaint.LINE;
         GuiPaint.box(g, x + IX, y + RULE_Y, IW, ROW_H, GuiPaint.INSET, border);
@@ -851,6 +875,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case FluidEntry e -> renderFluid(g, e.stack(), x, y);
             case TagEntry e -> renderRule(g, e, "#", x, y);
             case ModEntry e -> renderRule(g, e, "@", x, y);
+            case ChemicalEntry e -> renderChemical(g, e.chemical(), x, y);
         }
         if (entry.stock() > 0) {
             String text = stockShort(entry.stock());
@@ -868,7 +893,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private void renderRule(GuiGraphics g, FilterEntry entry, String mark, int x, int y) {
         int count;
         int pick;
-        if (isFluid()) {
+        if (isChemical()) {
+            // Mod nos químicos: só a marca (não há ícone de membro para mostrar).
+            count = 0;
+            pick = -1;
+        } else if (isFluid()) {
             List<FluidStack> members = fluidMembers(entry);
             count = members.size();
             pick = count == 0 ? -1 : (int) (Util.getMillis() / 1000 % count);
@@ -905,6 +934,21 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         RenderSystem.enableBlend();
         g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f,
                 ((tint >>> 24) & 0xFF) / 255f);
+        RenderSystem.disableBlend();
+    }
+
+    /** Químico do Mekanism: a textura dele tingida, como os fluidos; "?" se ele não existe mais. */
+    private void renderChemical(GuiGraphics g, ResourceLocation id, int x, int y) {
+        ResourceLocation icon = Chemicals.icon(id);
+        if (icon == null) {
+            g.fill(x, y, x + 16, y + 16, GuiPaint.mix(GuiPaint.INSET, trim, 0.18f));
+            GuiPaint.textCentered(g, font, Component.literal("?"), x + 8, y + 4, trim);
+            return;
+        }
+        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(icon);
+        int tint = Chemicals.tint(id);
+        RenderSystem.enableBlend();
+        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f, 1f);
         RenderSystem.disableBlend();
     }
 
@@ -965,6 +1009,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                     : TagKey.create(Registries.ITEM, e.tag())), "#" + e.tag());
             case ModEntry e -> Component.literal(ModList.get().getModContainerById(e.modId())
                     .map(c -> c.getModInfo().getDisplayName()).orElse("@" + e.modId()));
+            case ChemicalEntry e -> Chemicals.name(e.chemical());
         };
     }
 
@@ -974,6 +1019,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case FluidEntry e -> BuiltInRegistries.FLUID.getKey(e.stack().getFluid()).toString();
             case TagEntry e -> "#" + e.tag();
             case ModEntry e -> "@" + e.modId();
+            case ChemicalEntry e -> e.chemical().toString();
         };
     }
 
@@ -987,16 +1033,16 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             lines.add(tr("entry.mod").copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());
         }
         if (entry.stock() > 0) {
-            Component amount = isFluid() ? Component.literal(entry.stock() + " ").append(tr("unit.mb"))
+            Component amount = inMb() ? Component.literal(entry.stock() + " ").append(tr("unit.mb"))
                     : Component.literal(Long.toString(entry.stock()));
             lines.add(tr("stock.line", amount).copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());
         }
         return lines;
     }
 
-    /** Estoque no canto da célula: itens como estão; fluidos em baldes a partir de 1.000 mB. */
+    /** Estoque no canto da célula: itens como estão; fluidos e químicos em milhares de mB a partir de 1.000. */
     private String stockShort(long stock) {
-        if (!isFluid()) {
+        if (!inMb()) {
             return RateFormat.abbreviate(stock);
         }
         return stock < 1000 ? stock + "m" : RateFormat.abbreviate(stock / 1000) + "B";
@@ -1004,10 +1050,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     /** A linha acima do inventário: como adicionar; com o JEI, cita ele também. */
     private Component inventoryHint() {
-        if (JEI) {
-            return isFluid() ? tr("hint.fluid.jei") : tr("hint.item.jei");
-        }
-        return isFluid() ? tr("hint.fluid") : tr("hint.item");
+        String type = isChemical() ? "chemical" : isFluid() ? "fluid" : "item";
+        return tr("hint." + type + (JEI ? ".jei" : ""));
     }
 
     // ------------------------------------------------------------------ ingredientes fantasmas (JEI)
@@ -1021,7 +1065,9 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         return switch (ingredient) {
             case ItemStack stack -> FilterMenu.entryFor(view().type(), stack);
             case FluidStack stack when isFluid() && !stack.isEmpty() -> Optional.of(new FluidEntry(stack, 0));
-            default -> Optional.empty();
+            default -> isChemical()
+                    ? Chemicals.ingredientId(ingredient).map(id -> new ChemicalEntry(id, 0))
+                    : Optional.empty();
         };
     }
 

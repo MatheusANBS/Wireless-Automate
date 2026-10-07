@@ -37,6 +37,14 @@ repositories {
             includeGroup 'net.mezzdev.config' // biblioteca de config que o JEI 19.56+ usa
         }
     }
+    // Mekanism (químicos, ver compat/mekanism).
+    maven {
+        name = 'ModMaven'
+        url = 'https://modmaven.dev/'
+        content {
+            includeGroup 'mekanism'
+        }
+    }
 }
 
 neoForge {
@@ -102,6 +110,12 @@ dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
+    // Mekanism: só a API na compilação (IChemicalHandler, ChemicalStack). O mod completo vai para a
+    // pasta mods do runClient e da run gameTestServerChemicals (abaixo), não para o classpath: com
+    // ele, os GameTests de jogador falso quebram (o Mekanism manda pacotes ao "entrar" o jogador).
+    // Tudo que toca na API fica em compat/mekanism e só carrega com o Mekanism presente.
+    compileOnly "mekanism:Mekanism:${minecraft_version}-${mekanism_version}:api"
+
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -133,6 +147,10 @@ configurations {
         canBeConsumed = false
         transitive = false
     }
+    chemicalTestMods {
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 dependencies {
@@ -145,6 +163,8 @@ dependencies {
     clientMods 'maven.modrinth:observable:5.4.4+neoforge'
     clientMods 'maven.modrinth:kotlin-for-forge:5.12.0'
     clientMods 'maven.modrinth:architectury-api:13.0.11+neoforge'
+    clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -161,7 +181,8 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     into layout.projectDirectory.dir('run/mods')
     preserve {
         include '**'
-        exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar'
+        exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
+                'Mekanism-*.jar'
     }
 }
 
@@ -179,6 +200,24 @@ var prepareObservableConfig = tasks.register('prepareObservableConfig') {
 }
 
 neoForge.runs.client.taskBefore prepareClientMods
+
+// GameTests de químicos: um servidor de testes próprio, com o Mekanism na pasta mods, que roda só o
+// namespace wirelessautomate_chemicals (gametest/ChemicalGameTests). ./gradlew runGameTestServerChemicals
+var prepareChemicalTestMods = tasks.register('prepareChemicalTestMods', Sync) {
+    from configurations.chemicalTestMods
+    into layout.projectDirectory.dir('run/gametest-chemicals/mods')
+}
+
+neoForge.runs {
+    gameTestServerChemicals {
+        type = 'gameTestServer'
+        gameDirectory = project.file('run/gametest-chemicals')
+        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_chemicals'
+        // Liga os tanques de químico de teste (gametest/ChemicalTestTanks).
+        systemProperty 'wirelessautomate.chemicalTests', 'true'
+        taskBefore prepareChemicalTestMods
+    }
+}
 neoForge.runs.client.taskBefore prepareObservableConfig
 
 neoForge.runs {
@@ -239,5 +278,27 @@ def gameTestWorld = layout.projectDirectory.dir('run/gametest/world').asFile
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
     doFirst {
         gameTestWorld.deleteDir()
+    }
+}
+def chemicalTestWorld = layout.projectDirectory.dir('run/gametest-chemicals/world').asFile
+tasks.matching { it.name == 'runGameTestServerChemicals' }.configureEach {
+    doFirst {
+        chemicalTestWorld.deleteDir()
+    }
+}
+
+// O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
+// Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.
+[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals'].each { name, dir ->
+    def log = layout.projectDirectory.file("${dir}/logs/latest.log").asFile
+    tasks.matching { it.name == name }.configureEach {
+        doFirst {
+            log.delete()
+        }
+        doLast {
+            if (!log.exists() || !log.getText('UTF-8').contains('required tests passed')) {
+                throw new GradleException("${name}: os GameTests não chegaram ao fim com sucesso; veja ${log}")
+            }
+        }
     }
 }

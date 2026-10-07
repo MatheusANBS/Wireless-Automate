@@ -165,7 +165,21 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     }
 }
 
+// O Observable publica cada perfil em observable.tas.sh por padrão; com uploadURL vazio ele não
+// envia nada. Só cria o arquivo se ele não existir (não sobrescreve o que o dono mudar).
+var prepareObservableConfig = tasks.register('prepareObservableConfig') {
+    var file = layout.projectDirectory.file('run/config/observable.json').asFile
+    outputs.upToDateWhen { file.exists() }
+    doLast {
+        if (!file.exists()) {
+            file.parentFile.mkdirs()
+            file.text = '{\n    "uploadURL": ""\n}\n'
+        }
+    }
+}
+
 neoForge.runs.client.taskBefore prepareClientMods
+neoForge.runs.client.taskBefore prepareObservableConfig
 
 neoForge.runs {
     // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado

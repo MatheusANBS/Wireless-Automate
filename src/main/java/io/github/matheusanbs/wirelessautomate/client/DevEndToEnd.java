@@ -44,6 +44,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -89,7 +90,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>fecha, abre o roteador B, Insere; espera as pedras chegarem ao baú B;</li>
  *   <li>reabre A (a vazão é contada na origem), põe mais 64 pedras e espera a vazão aparecer na tela;</li>
  *   <li>Editar abre o filtro; uma regra por tag pelo campo de texto; Voltar;</li>
- *   <li>renomeia o nó e troca de rede pelo seletor;</li>
+ *   <li>renomeia o nó e troca a rede da aba Itens pelo seletor na linha das abas; depois troca só a
+ *       da aba Energia e confere que a de Itens e a de Fluidos não mudaram;</li>
  *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot).</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
@@ -99,7 +101,8 @@ import org.lwjgl.glfw.GLFW;
  * depois sai do mundo e fecha o jogo.
  *
  * <p>Os widgets são achados pela mensagem ou pela dica (as chaves de tradução); só a linha da lista
- * de redes usa a geometria da {@link RouterScreen} (altura da linha, {@link #DROPDOWN_ROW}).
+ * de redes usa a geometria da {@link RouterScreen} (altura da linha, {@link #DROPDOWN_ROW}, e o
+ * título da lista na primeira linha).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevEndToEnd {
@@ -107,6 +110,7 @@ public final class DevEndToEnd {
     static final String WORLD = "wa-e2e";
     private static final String MAIN_NETWORK = "E2E Principal";
     private static final String OTHER_NETWORK = "E2E Outra";
+    private static final String ENERGY_NETWORK = "E2E Energia";
     private static final String NODE_NAME = "Baú B E2E";
     private static final String TAG_RULE = "#c:stones";
     /** Altura de uma linha da lista de redes da {@link RouterScreen}. */
@@ -167,6 +171,7 @@ public final class DevEndToEnd {
     private static BlockPos routerB;
     private static UUID mainNetwork;
     private static UUID otherNetwork;
+    private static UUID energyNetwork;
     private static int versionBefore;
     /** Maior vazão de itens que a tela aberta já mostrou. */
     private static long maxItemRate;
@@ -435,30 +440,35 @@ public final class DevEndToEnd {
                 && NODE_NAME.equals(routerScreen().getMenu().snapshot().name()),
                 () -> "servidor \"" + onServer(server -> router(server, routerB).name()) + "\", tela \""
                         + routerScreen().getMenu().snapshot().name() + "\""));
-        list.add(new Step("trocar de rede", STEP_TIMEOUT_MS, () -> {
-            RouterScreen screen = routerScreen();
-            AbstractWidget pill = widget(byTooltip(Component.translatable("gui.wirelessautomate.router.network.tooltip")),
-                    "seletor de rede");
-            click(pill);
-            List<NetworkEntry> networks = screen.getMenu().snapshot().networks();
-            int row = -1;
-            for (int i = 0; i < networks.size(); i++) {
-                if (networks.get(i).id().equals(otherNetwork)) {
-                    row = i;
-                }
-            }
-            if (row < 0) {
-                throw new StepFailure("a rede " + OTHER_NETWORK + " não está na lista da tela: " + networks);
-            }
-            // a lista abre logo abaixo da pílula: 2 px de folga, 2 px de borda e uma linha por rede
-            int x = pill.getX() + pill.getWidth() / 2;
-            int y = pill.getY() + pill.getHeight() + 2 + 2 + row * DROPDOWN_ROW + DROPDOWN_ROW / 2;
-            click(screen, x, y);
-        }, () -> otherNetwork.equals(onServer(server -> router(server, routerB).networkId(ResourceType.ITEM)))
-                && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
-                () -> "servidor " + onServer(server -> String.valueOf(router(server, routerB).networkId(ResourceType.ITEM)))
-                        + ", tela " + routerScreen().getMenu().snapshot().network(ResourceType.ITEM)));
-        list.add(capture("5-roteador-b-final"));
+        list.add(new Step("trocar a rede da aba Itens", STEP_TIMEOUT_MS,
+                () -> chooseNetwork(otherNetwork, OTHER_NETWORK),
+                () -> otherNetwork.equals(onServer(server -> router(server, routerB).networkId(ResourceType.ITEM)))
+                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
+                () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks()));
+        list.add(capture("5-roteador-b-rede-itens"));
+        list.add(new Step("aba Energia", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.energy")), "aba Energia")),
+                () -> {
+                    UUID playerId = Minecraft.getInstance().player.getUUID();
+                    return routerScreen().getMenu().selectedType() == ResourceType.ENERGY && onServer(server ->
+                            server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
+                                    && menu.selectedType() == ResourceType.ENERGY);
+                }, () -> "aba na tela " + routerScreen().getMenu().selectedType()));
+        list.add(new Step("trocar só a rede da aba Energia", STEP_TIMEOUT_MS,
+                () -> chooseNetwork(energyNetwork, ENERGY_NETWORK),
+                () -> onServer(server -> {
+                    RouterBlockEntity router = router(server, routerB);
+                    return energyNetwork.equals(router.networkId(ResourceType.ENERGY))
+                            && otherNetwork.equals(router.networkId(ResourceType.ITEM))
+                            && mainNetwork.equals(router.networkId(ResourceType.FLUID));
+                }) && routerScreen().getMenu().snapshot().network(ResourceType.ENERGY).equals(Optional.of(energyNetwork))
+                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
+                () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks()));
+        list.add(capture("5b-roteador-b-rede-energia"));
+        list.add(new Step("de volta à aba Itens", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
+                () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
+                () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         cardSteps(list);
         list.add(close("fechar B"));
         return list;
@@ -512,6 +522,59 @@ public final class DevEndToEnd {
         list.add(capture("6-cartao-no-slot"));
     }
 
+    /**
+     * Abre o seletor de rede da aba atual (na linha das abas) e clica na linha da rede: a lista abre
+     * logo abaixo da pílula, com 2 px de folga, 2 px de borda, o título e uma linha por rede.
+     */
+    private static void chooseNetwork(UUID network, String name) throws StepFailure {
+        RouterScreen screen = routerScreen();
+        AbstractWidget pill = widget(byMessageKey("gui.wirelessautomate.router.network.tab.narration"),
+                "seletor de rede da aba");
+        if (pill.getY() - screen.getGuiTop() > 45) {
+            throw new StepFailure("o seletor de rede não está na linha das abas (y " + (pill.getY() - screen.getGuiTop()) + ")");
+        }
+        click(pill);
+        List<NetworkEntry> networks = screen.getMenu().snapshot().networks();
+        int row = -1;
+        for (int i = 0; i < networks.size(); i++) {
+            if (networks.get(i).id().equals(network)) {
+                row = i;
+            }
+        }
+        if (row < 0) {
+            throw new StepFailure("a rede " + name + " não está na lista da tela: " + networks);
+        }
+        int x = pill.getX() + pill.getWidth() / 2;
+        int y = pill.getY() + pill.getHeight() + 2 + 2 + (row + 1) * DROPDOWN_ROW + DROPDOWN_ROW / 2;
+        click(screen, x, y);
+    }
+
+    /** Rede de cada aba no servidor, para o log. */
+    private static String serverNetworks(BlockPos pos) throws Exception {
+        return onServer(server -> {
+            RouterBlockEntity router = router(server, pos);
+            return "itens " + networkName(router.networkId(ResourceType.ITEM)) + ", fluidos "
+                    + networkName(router.networkId(ResourceType.FLUID)) + ", energia "
+                    + networkName(router.networkId(ResourceType.ENERGY));
+        });
+    }
+
+    /** Rede de cada aba no snapshot da tela, para o log. */
+    private static String clientNetworks() throws StepFailure {
+        RouterSnapshot s = routerScreen().getMenu().snapshot();
+        return "itens " + networkName(s.network(ResourceType.ITEM).orElse(null)) + ", fluidos "
+                + networkName(s.network(ResourceType.FLUID).orElse(null)) + ", energia "
+                + networkName(s.network(ResourceType.ENERGY).orElse(null));
+    }
+
+    private static String networkName(@Nullable UUID id) {
+        if (id == null) {
+            return "nenhuma";
+        }
+        return id.equals(mainNetwork) ? MAIN_NETWORK : id.equals(otherNetwork) ? OTHER_NETWORK
+                : id.equals(energyNetwork) ? ENERGY_NETWORK : id.toString();
+    }
+
     /** O slot do inventário (na tela do roteador aberta) com um Cartão de Filtro, ou {@code null}. */
     private static @Nullable Slot inventoryCardSlot() throws StepFailure {
         RouterMenu menu = routerScreen().getMenu();
@@ -535,9 +598,11 @@ public final class DevEndToEnd {
             NetworkSavedData data = NetworkSavedData.get(server);
             WaNetwork main = data.create(player.getUUID(), MAIN_NETWORK);
             WaNetwork other = data.create(player.getUUID(), OTHER_NETWORK);
+            WaNetwork energy = data.create(player.getUUID(), ENERGY_NETWORK);
             data.setActiveNetwork(player.getUUID(), main.id());
             mainNetwork = main.id();
             otherNetwork = other.id();
+            energyNetwork = energy.id();
             chestA = base.offset(-1, 0, -3);
             chestB = base.offset(1, 0, -3);
             routerA = chestA.above();
@@ -640,6 +705,11 @@ public final class DevEndToEnd {
 
     private static Predicate<AbstractWidget> byMessage(Component message) {
         return widget -> widget.getMessage().equals(message);
+    }
+
+    private static Predicate<AbstractWidget> byMessageKey(String key) {
+        return widget -> widget.getMessage().getContents() instanceof TranslatableContents contents
+                && contents.getKey().equals(key);
     }
 
     private static Predicate<AbstractWidget> byTooltip(Component tooltip) {

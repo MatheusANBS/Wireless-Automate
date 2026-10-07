@@ -2,7 +2,7 @@ package io.github.matheusanbs.wirelessautomate.linker;
 
 import java.util.Locale;
 
-/** Por que o Vinculador não pode vincular a área agora; {@link #NONE} se pode. */
+/** Por que o Vinculador não pode vincular (ou desvincular) a área agora; {@link #NONE} se pode. */
 public enum LinkerProblem {
     NONE,
     /** Nenhum canto marcado. */
@@ -15,6 +15,8 @@ public enum LinkerProblem {
     TOO_BIG,
     /** Jogador longe da área (acima do {@code maxDistance} da config). */
     TOO_FAR,
+    /** Nenhuma aba marcada que valha aqui (por exemplo só Químicos, sem o Mekanism). */
+    NO_TABS,
     /** A rede ativa é de outro dono e o jogador não é operador. */
     FOREIGN_NETWORK;
 

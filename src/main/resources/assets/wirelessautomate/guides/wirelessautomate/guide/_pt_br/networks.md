@@ -64,8 +64,9 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | Jeito | Quantos de uma vez |
 | --- | --- |
 | Seletor de rede da aba, na tela do roteador | Uma aba de um roteador |
-| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (todas as abas ou só um tipo) |
+| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (as abas marcadas) |
 | <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
+| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as abas marcadas da rede, num roteador ou numa área |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
 | <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
 

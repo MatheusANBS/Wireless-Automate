@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -134,6 +135,23 @@ public class RouterBlockEntity extends BlockEntity {
         for (int i = 0; i < networks.length; i++) {
             if (!Objects.equals(networks[i], networkId)) {
                 networks[i] = networkId;
+                changed = true;
+            }
+        }
+        if (changed) {
+            changed();
+        }
+    }
+
+    /**
+     * Põe os tipos {@code types} na mesma rede ({@code null} tira da rede), avisando a mudança uma
+     * vez só (Vinculador com várias abas marcadas).
+     */
+    public void setNetworkId(Collection<ResourceType> types, @Nullable UUID networkId) {
+        boolean changed = false;
+        for (ResourceType type : types) {
+            if (!Objects.equals(networks[type.ordinal()], networkId)) {
+                networks[type.ordinal()] = networkId;
                 changed = true;
             }
         }

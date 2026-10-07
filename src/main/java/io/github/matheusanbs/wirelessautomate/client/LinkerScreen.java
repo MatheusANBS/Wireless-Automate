@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot.Outcome;
@@ -30,9 +31,10 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Tela do Vinculador (especificação, "Telas da interface › Vinculador"): à esquerda a rede ativa
- * (lista das redes do jogador e Nova rede) e o tipo (Todos, Itens, Fluidos, Energia); no cabeçalho o
- * modo (Único ou Área). Em Único, só a explicação do clique; em Área, a prévia de cima da caixa
- * marcada com os roteadores dentro dela, os cantos, a contagem e o botão Vincular.
+ * (a linha "Nenhuma (desvincular)", a lista das redes do jogador e Nova rede) e as caixas das abas
+ * (Itens, Fluidos, Energia e, com o Mekanism, Químicos); no cabeçalho o modo (Único ou Área). Em
+ * Único, só a explicação do clique; em Área, a prévia de cima da caixa marcada com os roteadores
+ * dentro dela, os cantos, a contagem e o botão Vincular (ou Desvincular).
  *
  * <p>Tudo vem de {@link LinkerMenu#snapshot()}; os botões leem o estado a cada quadro, então um
  * estado novo aparece sem recriar widgets. A tela não muda nada sozinha: manda a ação e espera o
@@ -50,6 +52,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     static final int ACCENT = 0xFF4FC3F7;
     private static final int WARN = 0xFFFFB020;
     private static final int GOOD = 0xFF41C96B;
+    /** Cor do modo desvincular. */
+    private static final int UNLINK = 0xFFE5534B;
 
     // coluna da esquerda: redes e tipo
     private static final int LW = 104;
@@ -69,12 +73,13 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int STATUS_Y = CORNER_Y + 21;
     private static final int ACTION_Y = H - 9 - 16;
 
-    /** Tipos do seletor, na ordem dos botões; {@code null} é Todos. */
-    private static final ResourceType[] TYPES = {null, ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    /** Caixas das abas, na ordem dos botões (Químicos só aparece com o Mekanism). */
+    private static final ResourceType[] TABS = ResourceType.values();
 
     private final boolean preview;
     private final List<FlatButton> buttons = new ArrayList<>();
     private final List<FlatButton> rowButtons = new ArrayList<>();
+    private final List<FlatButton> tabButtons = new ArrayList<>();
     private int scroll;
     private boolean creating;
     private String draft = "";
@@ -114,18 +119,59 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return tr("mode." + mode.getSerializedName());
     }
 
-    private @Nullable ResourceType type() {
-        return snapshot().type().orElse(null);
+    private boolean unlink() {
+        return snapshot().unlink();
+    }
+
+    /** Todas as abas que existem estão marcadas. */
+    private boolean allTabs() {
+        return snapshot().tabs().isAll(snapshot().chemicals());
+    }
+
+    /** "Todos" ou "Itens + Fluidos", pelas abas que valem. */
+    private Component tabsName() {
+        return tabsName(snapshot().tabs(), snapshot().chemicals());
+    }
+
+    private static Component tabsName(LinkerTabs tabs, boolean chemicals) {
+        if (tabs.isAll(chemicals)) {
+            return tr("type.all");
+        }
+        MutableComponent text = Component.empty();
+        List<ResourceType> effective = tabs.effective(chemicals);
+        for (int i = 0; i < effective.size(); i++) {
+            if (i > 0) {
+                text.append(" + ");
+            }
+            text.append(typeName(effective.get(i)));
+        }
+        return text;
     }
 
     private Component activeName() {
+        if (unlink()) {
+            return tr("network.unlink");
+        }
         NetworkEntry entry = snapshot().activeEntry();
         return entry == null ? tr("network.none") : Component.literal(entry.name());
     }
 
     private int activeColor() {
+        if (unlink()) {
+            return UNLINK;
+        }
         NetworkEntry entry = snapshot().activeEntry();
         return entry == null ? GuiPaint.MUTED : 0xFF000000 | entry.color();
+    }
+
+    /** Linhas da lista: "Nenhuma (desvincular)" e as redes. */
+    private int rowCount() {
+        return snapshot().networks().size() + 1;
+    }
+
+    /** A rede da linha {@code index} da lista; {@code null} na linha 0, "Nenhuma (desvincular)". */
+    private @Nullable NetworkEntry entryAt(int index) {
+        return index == 0 ? null : snapshot().networks().get(index - 1);
     }
 
     /** Roteadores que o Vincular mudaria. */
@@ -140,6 +186,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         super.init();
         buttons.clear();
         rowButtons.clear();
+        tabButtons.clear();
         int x = leftPos;
         int y = topPos;
 
@@ -177,11 +224,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         }
 
         int typeW = (LW - 2) / 2;
-        for (int i = 0; i < TYPES.length; i++) {
-            ResourceType t = TYPES[i];
-            add(new FlatButton(x + X0 + (i % 2) * (typeW + 2), y + TYPE_Y + (i / 2) * (TYPE_H + 2), typeW, TYPE_H,
-                    typeName(t), (g, b, hovered) -> paintChoice(g, b, hovered, typeName(t), type() == t),
-                    () -> setType(t)).tooltip(() -> t == null ? tr("type.all.tooltip") : tr("type.one.tooltip", typeName(t))));
+        for (int i = 0; i < TABS.length; i++) {
+            ResourceType t = TABS[i];
+            tabButtons.add(add(new FlatButton(x + X0 + (i % 2) * (typeW + 2), y + TYPE_Y + (i / 2) * (TYPE_H + 2), typeW,
+                    TYPE_H, typeName(t), (g, b, hovered) -> paintCheck(g, b, hovered, t), () -> toggleTab(t))
+                    .tooltip(() -> tabTooltip(t))));
         }
 
         linkButton = add(new FlatButton(x + RX, y + ACTION_Y, RW - 58, 16, tr("link.count", 0), this::paintLink,
@@ -200,13 +247,18 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Visibilidade e mensagens que dependem do estado. */
     private void refresh() {
         LinkerSnapshot s = snapshot();
-        List<NetworkEntry> networks = s.networks();
-        scroll = Math.max(0, Math.min(scroll, networks.size() - ROWS));
+        int rows = rowCount();
+        scroll = Math.max(0, Math.min(scroll, rows - ROWS));
         for (int i = 0; i < ROWS; i++) {
             FlatButton row = rowButtons.get(i);
             int index = i + scroll;
-            row.visible = index < networks.size();
-            row.setMessage(row.visible ? Component.literal(networks.get(index).name()) : Component.empty());
+            row.visible = index < rows;
+            NetworkEntry entry = row.visible ? entryAt(index) : null;
+            row.setMessage(!row.visible ? Component.empty()
+                    : entry == null ? tr("network.unlink") : Component.literal(entry.name()));
+        }
+        for (int i = 0; i < TABS.length; i++) {
+            tabButtons.get(i).visible = TABS[i] != ResourceType.CHEMICAL || s.chemicals();
         }
         newButton.visible = !creating;
         createButton.visible = creating;
@@ -215,7 +267,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         boolean area = s.mode() == LinkerMode.AREA;
         linkButton.visible = clearButton.visible = area;
         linkButton.active = s.problem() == LinkerProblem.NONE && toLink() > 0;
-        linkButton.setMessage(tr("link.count", toLink()));
+        linkButton.setMessage(linkLabel());
         clearButton.active = s.first().isPresent() || s.otherDimension();
     }
 
@@ -225,43 +277,60 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         PacketDistributor.sendToServer(new LinkerActionPayload(menu.containerId, op, network, text, value));
     }
 
+    /** Cópia do estado com rede, desvincular, abas e modo trocados (só na captura de desenvolvimento). */
+    private static LinkerSnapshot with(LinkerSnapshot s, Optional<UUID> active, boolean unlink, LinkerTabs tabs,
+            LinkerMode mode) {
+        return new LinkerSnapshot(s.networks(), active, unlink, tabs, s.chemicals(), mode, s.first(), s.second(),
+                s.otherDimension(), s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(),
+                s.maxVolume(), s.maxDistance(), Optional.empty());
+    }
+
     private void setMode(LinkerMode mode) {
         if (preview) {
             LinkerSnapshot s = snapshot();
-            apply(new LinkerSnapshot(s.networks(), s.active(), s.type(), mode, s.first(), s.second(), s.otherDimension(),
-                    s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(), s.maxVolume(), s.maxDistance(),
-                    Optional.empty()));
+            apply(with(s, s.active(), s.unlink(), s.tabs(), mode));
             return;
         }
         send(Op.SET_MODE, Optional.empty(), "", mode.ordinal());
     }
 
-    private void setType(@Nullable ResourceType t) {
+    /** Marca ou desmarca a aba; o servidor recusa desmarcar a última. */
+    private void toggleTab(ResourceType t) {
         if (preview) {
             LinkerSnapshot s = snapshot();
-            apply(new LinkerSnapshot(s.networks(), s.active(), Optional.ofNullable(t), s.mode(), s.first(), s.second(),
-                    s.otherDimension(), s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(),
-                    s.maxVolume(), s.maxDistance(), Optional.empty()));
+            LinkerTabs next = s.tabs().toggle(t);
+            if (!next.isEmpty(s.chemicals())) {
+                apply(with(s, s.active(), s.unlink(), next, s.mode()));
+            }
             return;
         }
-        send(Op.SET_TYPE, Optional.empty(), "", t == null ? -1 : t.ordinal());
+        send(Op.TOGGLE_TAB, Optional.empty(), "", t.ordinal());
     }
 
     private void chooseRow(int row) {
         int index = row + scroll;
-        List<NetworkEntry> networks = snapshot().networks();
-        if (index >= networks.size()) {
+        if (index >= rowCount()) {
             return;
         }
-        NetworkEntry entry = networks.get(index);
-        if (!entry.owned() || Optional.of(entry.id()).equals(snapshot().active())) {
+        LinkerSnapshot s = snapshot();
+        NetworkEntry entry = entryAt(index);
+        if (entry == null) {
+            // "Nenhuma (desvincular)"
+            if (s.unlink()) {
+                return;
+            }
+            if (preview) {
+                apply(with(s, s.active(), true, s.tabs(), s.mode()));
+                return;
+            }
+            send(Op.SET_UNLINK, Optional.empty(), "", 1);
+            return;
+        }
+        if (!entry.owned() || (!s.unlink() && Optional.of(entry.id()).equals(s.active()))) {
             return;
         }
         if (preview) {
-            LinkerSnapshot s = snapshot();
-            apply(new LinkerSnapshot(s.networks(), Optional.of(entry.id()), s.type(), s.mode(), s.first(), s.second(),
-                    s.otherDimension(), s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(),
-                    s.maxVolume(), s.maxDistance(), Optional.empty()));
+            apply(with(s, Optional.of(entry.id()), false, s.tabs(), s.mode()));
             return;
         }
         send(Op.SET_ACTIVE, Optional.of(entry.id()), "", 0);
@@ -276,8 +345,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void clear() {
         if (preview) {
             LinkerSnapshot s = snapshot();
-            apply(new LinkerSnapshot(s.networks(), s.active(), s.type(), s.mode(), Optional.empty(), Optional.empty(),
-                    false, 0, 0, 0, List.of(), LinkerProblem.NO_AREA, s.maxVolume(), s.maxDistance(), Optional.empty()));
+            apply(new LinkerSnapshot(s.networks(), s.active(), s.unlink(), s.tabs(), s.chemicals(), s.mode(),
+                    Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(), LinkerProblem.NO_AREA, s.maxVolume(),
+                    s.maxDistance(), Optional.empty()));
             return;
         }
         send(Op.CLEAR_AREA, Optional.empty(), "", 0);
@@ -393,21 +463,26 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         GuiPaint.panel(g, x, y, W, H, ACCENT);
 
         GuiPaint.text(g, font, title, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
-        Component typeText = tr("head.type", typeName(type()));
-        GuiPaint.text(g, font, typeText, x + X0 + font.width(title) + 8, y + HEAD_Y + 3, GuiPaint.MUTED);
+        Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
+        int headX = X0 + font.width(title) + 8;
+        // até os botões de modo, à direita
+        int headW = X1 - LinkerMode.values().length * 46 - 4 - headX;
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, typeText, headW), x + headX, y + HEAD_Y + 3,
+                unlink() ? UNLINK : GuiPaint.MUTED);
         g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
 
         // rede ativa
         GuiPaint.text(g, font, tr("network.label"), x + X0, y + BODY_Y, GuiPaint.MUTED);
         GuiPaint.box(g, x + X0, y + LIST_Y, LW, LIST_H, GuiPaint.INSET, GuiPaint.LINE);
-        if (s.networks().isEmpty()) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.empty"), LW - 10), x + X0 + 5, y + LIST_Y + 4,
-                    GuiPaint.MUTED);
+        if (s.networks().isEmpty() && scroll == 0) {
+            // embaixo da linha "Nenhuma (desvincular)"
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.empty"), LW - 10), x + X0 + 5,
+                    y + LIST_Y + 4 + ROW, GuiPaint.MUTED);
         }
         if (scroll > 0) {
             GuiPaint.text(g, font, Component.literal("▲"), x + X0 + LW - 9, y + LIST_Y + 2, GuiPaint.MUTED);
         }
-        if (scroll + ROWS < s.networks().size()) {
+        if (scroll + ROWS < rowCount()) {
             GuiPaint.text(g, font, Component.literal("▼"), x + X0 + LW - 9, y + LIST_Y + LIST_H - 10, GuiPaint.MUTED);
         }
         if (creating) {
@@ -427,13 +502,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     private void renderSingle(GuiGraphics g, int x, int y) {
         int lineY = y;
-        Component main = tr("single.body", Component.literal(activeName().getString()).withColor(activeColor()));
+        Component main = unlink() ? tr("single.unlink.body")
+                : tr("single.body", Component.literal(activeName().getString()).withColor(activeColor()));
         for (FormattedCharSequence line : font.split(main, RW)) {
             GuiPaint.text(g, font, line, x, lineY, GuiPaint.FG);
             lineY += 10;
         }
         lineY += 6;
-        Component typeHint = type() == null ? tr("single.all") : tr("single.type", typeName(type()));
+        Component typeHint = unlink()
+                ? (allTabs() ? tr("single.unlink.all") : tr("single.unlink.tabs", tabsName()))
+                : (allTabs() ? tr("single.all") : tr("single.tabs", tabsName()));
         for (Component hint : List.of(typeHint, tr("single.toggle"), tr("single.open"))) {
             for (FormattedCharSequence line : font.split(hint, RW)) {
                 GuiPaint.text(g, font, line, x, lineY, GuiPaint.MUTED);
@@ -607,7 +685,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** "N roteadores na área" (ou "N roteadores · M já na rede"), ou o que impede. */
     private Component status(LinkerSnapshot s) {
         return switch (s.problem()) {
-            case NONE -> s.already() > 0 ? tr("count.with_already", s.inside(), s.already())
+            case NONE -> s.already() > 0
+                    ? tr(s.unlink() ? "count.with_unlinked" : "count.with_already", s.inside(), s.already())
                     : s.inside() == 1 ? tr("count.one") : tr("count", s.inside());
             case TOO_BIG -> tr("problem.too_big", s.maxVolume());
             case TOO_FAR -> tr("problem.too_far", s.maxDistance());
@@ -632,19 +711,28 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     private Component outcomeText(Outcome o) {
+        if (o.unlink()) {
+            return tr("outcome.unlinked", o.linked(), tabsName(o.tabs(), snapshot().chemicals()));
+        }
         Component network = Component.literal(o.network()).withColor(0xFF000000 | o.color());
         return tr("outcome", o.linked(), network);
     }
 
     /**
-     * Embaixo do resultado: os chunks descarregados que ficaram de fora ou, sem eles, os que já
-     * estavam na rede (os dois não cabem numa linha).
+     * Embaixo do resultado: os chunks descarregados que ficaram de fora ou, sem eles, os protegidos
+     * ou os que já estavam (não cabem todos numa linha).
      */
     private @Nullable Component outcomeDetail(Outcome o) {
         if (o.unloadedChunks() > 0) {
             return o.unloadedChunks() == 1 ? tr("outcome.unloaded.one") : tr("outcome.unloaded", o.unloadedChunks());
         }
-        return o.already() > 0 ? tr("outcome.already", o.already()) : null;
+        if (o.protectedCount() > 0) {
+            return tr("outcome.protected", o.protectedCount());
+        }
+        if (o.already() > 0) {
+            return tr(o.unlink() ? "outcome.already_unlinked" : "outcome.already", o.already());
+        }
+        return null;
     }
 
     private Component linkTooltip() {
@@ -653,22 +741,53 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             return status(s);
         }
         if (toLink() == 0) {
-            return s.inside() == 0 ? tr("link.none") : tr("link.all_in");
+            return s.inside() == 0 ? tr("link.none") : tr(s.unlink() ? "unlink.all_out" : "link.all_in");
         }
-        return type() == null ? tr("link.tooltip", toLink(), activeName())
-                : tr("link.tooltip.type", toLink(), typeName(type()), activeName());
+        if (s.unlink()) {
+            return allTabs() ? tr("unlink.tooltip", toLink()) : tr("unlink.tooltip.tabs", toLink(), tabsName());
+        }
+        return allTabs() ? tr("link.tooltip", toLink(), activeName())
+                : tr("link.tooltip.tabs", toLink(), tabsName(), activeName());
+    }
+
+    /** "Vincular 9" ou "Desvincular 9". */
+    private Component linkLabel() {
+        return tr(unlink() ? "unlink.count" : "link.count", toLink());
+    }
+
+    private Component tabTooltip(ResourceType t) {
+        LinkerSnapshot s = snapshot();
+        boolean checked = s.tabs().contains(t);
+        if (checked && s.tabs().toggle(t).isEmpty(s.chemicals())) {
+            return tr("tab.last", typeName(t));
+        }
+        return tr(checked ? "tab.on" : "tab.off", typeName(t));
     }
 
     // ------------------------------------------------------------------ botões
 
     private void paintRow(GuiGraphics g, FlatButton b, boolean hovered, int row) {
         int index = row + scroll;
-        List<NetworkEntry> networks = snapshot().networks();
-        if (index >= networks.size()) {
+        if (index >= rowCount()) {
             return;
         }
-        NetworkEntry entry = networks.get(index);
-        boolean selected = Optional.of(entry.id()).equals(snapshot().active());
+        int scrollSpace = rowCount() > ROWS ? 10 : 0;
+        NetworkEntry entry = entryAt(index);
+        if (entry == null) {
+            // "Nenhuma (desvincular)": anel vazio na cor do modo
+            boolean selected = unlink();
+            if (selected || hovered) {
+                g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
+            }
+            if (selected) {
+                g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), UNLINK);
+            }
+            GuiPaint.outline(g, b.getX() + 5, b.getY() + 3, 6, 6, UNLINK);
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.unlink"), b.getWidth() - 18 - scrollSpace),
+                    b.getX() + 14, b.getY() + 2, selected ? GuiPaint.FG : GuiPaint.MUTED);
+            return;
+        }
+        boolean selected = !unlink() && Optional.of(entry.id()).equals(snapshot().active());
         if (selected) {
             g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
             g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), ACCENT);
@@ -676,23 +795,25 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
         }
         GuiPaint.dot(g, b.getX() + 5, b.getY() + 3, 0xFF000000 | entry.color());
-        int scrollSpace = networks.size() > ROWS ? 10 : 0;
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(entry.name()), b.getWidth() - 18 - scrollSpace),
                 b.getX() + 14, b.getY() + 2, entry.owned() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
     }
 
     private @Nullable Component rowTooltip(int row) {
         int index = row + scroll;
-        List<NetworkEntry> networks = snapshot().networks();
-        if (index >= networks.size()) {
+        if (index >= rowCount()) {
             return null;
         }
-        NetworkEntry entry = networks.get(index);
+        NetworkEntry entry = entryAt(index);
+        if (entry == null) {
+            return tr("network.unlink").copy().append("\n")
+                    .append(tr("network.unlink.tooltip").copy().withColor(GuiPaint.MUTED));
+        }
         Component name = Component.literal(entry.name());
         if (!entry.owned()) {
             return name.copy().append("\n").append(tr("network.foreign").copy().withColor(GuiPaint.MUTED));
         }
-        if (Optional.of(entry.id()).equals(snapshot().active())) {
+        if (!unlink() && Optional.of(entry.id()).equals(snapshot().active())) {
             return name.copy().append("\n").append(tr("network.active").copy().withColor(GuiPaint.MUTED));
         }
         return name.copy().append("\n").append(tr("network.choose").copy().withColor(GuiPaint.MUTED));
@@ -707,6 +828,22 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         }
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
                 selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
+    }
+
+    /** Caixa de uma aba: quadrado marcado na cor do Vinculador e o nome. */
+    private void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
+        boolean checked = snapshot().tabs().contains(t);
+        if (hovered) {
+            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
+        }
+        int bx = b.getX() + 3;
+        int by = b.getY() + (b.getHeight() - 9) / 2;
+        GuiPaint.box(g, bx, by, 9, 9, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        if (checked) {
+            g.fill(bx + 2, by + 2, bx + 7, by + 7, unlink() ? UNLINK : ACCENT);
+        }
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, typeName(t), b.getWidth() - 17), bx + 13,
+                b.getY() + (b.getHeight() - 8) / 2, checked ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     private void paintText(GuiGraphics g, FlatButton b, boolean hovered, Component text, int color) {
@@ -726,7 +863,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         } else {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.INSET, GuiPaint.LINE);
         }
-        Component text = tr("link.count", toLink());
+        Component text = linkLabel();
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 4,
                 b.active ? GuiPaint.DARK_TEXT : GuiPaint.DISABLED);
     }

@@ -77,9 +77,11 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 - **Abre com:** clique direito no ar. Shift + clique direito no ar alterna entre Único e Área.
 - Rede ativa: é nela que o Vinculador põe os roteadores (o primeiro vínculo cria uma, se o jogador não tiver). Roteador colocado não entra em rede nenhuma.
-- **Tipo:** Todos, Itens, Fluidos ou Energia, trocado com Shift + roda do mouse com o Vinculador na mão (a action bar mostra o tipo). Em Todos, vincula todas as abas do roteador; num tipo, só a aba daquele tipo.
-- **Único:** clique direito num roteador o coloca na rede ativa.
-- **Área:** Shift + clique em dois blocos marca os cantos; a tela mostra uma prévia de cima, quantos roteadores ficam dentro e o botão Vincular.
+- **Abas:** uma caixa por aba na tela (Itens, Fluidos, Energia e, com o Mekanism, Químicos); só as abas marcadas mudam. Pelo menos uma fica marcada (o servidor recusa desmarcar a última). Shift + roda do mouse com o Vinculador na mão percorre os atalhos Todos → Itens → Fluidos → Energia → Químicos (este só com o Mekanism) → Todos; uma combinação marcada na tela vai para Todos nos dois sentidos. A action bar e o tooltip mostram a seleção ("Todos" ou "Itens + Fluidos + Químicos"). Sem o Mekanism, a aba Químicos guardada no item é ignorada (o item continua com ela ao voltar para uma instância com o Mekanism). Itens antigos com o componente `linker_type` valem como aquela aba sozinha; a primeira troca grava `linker_tabs`.
+- **Desvincular:** a primeira linha da lista de redes é "Nenhuma (desvincular)" (componente `linker_unlink` no item, sem mexer na rede ativa do jogador). Com ela, os mesmos gestos tiram as abas marcadas da rede em vez de pôr ("Desvinculado: Itens + Fluidos"; na área, "12 roteadores desvinculados (Itens + Fluidos)") e nunca criam rede. Escolher ou criar uma rede sai do modo.
+- **Único:** clique direito num roteador põe as abas marcadas na rede ativa (ou as tira, desvinculando).
+- **Área:** Shift + clique em dois blocos marca os cantos; a tela mostra uma prévia de cima, quantos roteadores ficam dentro e o botão Vincular (Desvincular no modo desvincular).
+- **Proteção:** o clique num roteador passa pela checagem do jogo (proteção do spawn, borda do mundo); na área, cada roteador passa pela mesma checagem e os protegidos ficam de fora (a action bar conta). Vincular exige uma rede ativa que o jogador pode usar; desvincular não usa rede, como o "sem rede" da tela do roteador.
 
 ### Configurador
 
@@ -122,7 +124,7 @@ Não se liga um roteador a outro: cada aba (tipo de recurso) de um roteador entr
 - **Rede por aba:** os itens, fluidos e energia de um roteador podem ir para redes diferentes. Exemplo: a fornalha da Linha 5x com Itens na rede "Linha 5x" e Energia na "Base", e o gerador com Energia na "Base". Ao colocar, nenhuma aba entra em rede: o jogador configura o primeiro roteador e replica com o Configurador; quem não quer separar nada vincula todas as abas de uma vez (Vinculador em Todos).
 - **Faces da máquina:** o roteador acessa a máquina por qualquer face, não só pela que está encostado, porque o NeoForge consulta inventários informando a face. Cada face, por tipo, fica em Extrai, Insere, Armazém ou Nenhum.
 - **Armazém:** a face recebe de quem extrai e entrega para quem insere, mas não troca com outra face Armazém (assim os recursos não vão e voltam entre dois baús). Serve para buffers e baús de armazenamento.
-- **Entrar numa rede:** o roteador nasce sem rede (o item que traz dados do block entity, como um roteador quebrado e pego de volta, mantém as redes que trouxe). Entra pelo seletor de cada aba na tela do roteador, pelo Vinculador (todas as abas ou só a do tipo escolhido com Shift + roda do mouse) ou colando com o Configurador.
+- **Entrar numa rede:** o roteador nasce sem rede (o item que traz dados do block entity, como um roteador quebrado e pego de volta, mantém as redes que trouxe). Entra pelo seletor de cada aba na tela do roteador, pelo Vinculador (as abas marcadas na tela dele) ou colando com o Configurador. Sai pelo mesmo seletor ("sem rede") ou pelo Vinculador em "Nenhuma (desvincular)".
 - **Em massa:** Vinculador em modo Área, seleção múltipla no Tablet, ou o Configurador copiando a rede junto com o preset.
 - **Grupos:** juntam várias redes de um mesmo sistema para ver, pausar e retomar tudo de uma vez.
 - **Redstone:** por face e por tipo: ignorar, ativo com sinal ou ativo sem sinal.

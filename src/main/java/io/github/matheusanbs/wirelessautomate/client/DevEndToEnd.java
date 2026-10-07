@@ -1371,13 +1371,21 @@ public final class DevEndToEnd {
                     return areaNetwork.equals(onServer(server -> NetworkSavedData.get(server).activeNetwork(playerId)))
                             && linkerScreen().getMenu().snapshot().active().equals(Optional.of(areaNetwork));
                 }, () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
-        list.add(new Step("tipo Fluidos", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.fluid")),
-                        "tipo Fluidos")),
-                () -> serverLinker(stack -> LinkerItem.type(stack) == ResourceType.FLUID)
-                        && linkerScreen().getMenu().snapshot().type().equals(Optional.of(ResourceType.FLUID))
+        list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
+                () -> {
+                    // de Todos, desmarca as outras caixas (Químicos só aparece com o Mekanism)
+                    for (ResourceType type : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
+                            ResourceType.CHEMICAL}) {
+                        if (type != ResourceType.CHEMICAL || linkerScreen().getMenu().snapshot().chemicals()) {
+                            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
+                                    + type.name().toLowerCase(java.util.Locale.ROOT))), "aba " + type));
+                        }
+                    }
+                },
+                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).equals(List.of(ResourceType.FLUID)))
+                        && linkerScreen().getMenu().snapshot().effectiveTabs().equals(List.of(ResourceType.FLUID))
                         && linkerScreen().getMenu().snapshot().already() == 0,
-                () -> "tipo na tela " + linkerScreen().getMenu().snapshot().type()));
+                () -> "abas na tela " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(new Step("Vincular", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count"), "Vincular")),
                 () -> onServer(server -> {

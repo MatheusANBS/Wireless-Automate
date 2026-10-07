@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -170,8 +171,9 @@ public final class ModPayloads {
     }
 
     /**
-     * Shift + roda do mouse com o Vinculador na mão principal: avança ou volta o tipo dele e mostra
-     * o novo na action bar. Não depende de tela aberta; recusa direção 0 e outra coisa na mão.
+     * Shift + roda do mouse com o Vinculador na mão principal: avança ou volta o atalho de abas dele
+     * (Todos, Itens, Fluidos, Energia, Químicos com o Mekanism; uma combinação vai para Todos) e mostra
+     * as abas novas na action bar. Não depende de tela aberta; recusa direção 0 e outra coisa na mão.
      */
     public static boolean handleCycleLinkerType(@Nullable ServerPlayer player, CycleLinkerTypePayload payload) {
         if (player == null || payload.direction() == 0) {
@@ -181,9 +183,9 @@ public final class ModPayloads {
         if (!(stack.getItem() instanceof LinkerItem)) {
             return false;
         }
-        ResourceType type = LinkerItem.cycleType(stack, payload.direction());
+        LinkerTabs tabs = LinkerItem.cycleTabs(stack, payload.direction());
         player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.type",
-                LinkerItem.typeName(type)), true);
+                LinkerItem.tabsName(tabs)), true);
         return true;
     }
 

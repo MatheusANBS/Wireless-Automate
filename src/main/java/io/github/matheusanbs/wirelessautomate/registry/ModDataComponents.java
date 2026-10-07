@@ -1,16 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
+import com.mojang.serialization.Codec;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -29,11 +32,27 @@ public final class ModDataComponents {
                     .networkSynchronized(FilterCardItem.Contents.STREAM_CODEC)
                     .cacheEncoding());
 
-    /** Tipo que o Vinculador vincula; sem o componente, todos os tipos. */
+    /**
+     * Formato antigo (até a 0.1.0): um tipo só que o Vinculador vinculava. Continua registrado para
+     * os itens antigos carregarem; {@link LinkerItem#tabs} o lê como aquela aba sozinha, e qualquer
+     * troca de abas grava {@link #LINKER_TABS} e apaga este.
+     */
     public static final Supplier<DataComponentType<ResourceType>> LINKER_TYPE =
             DATA_COMPONENTS.registerComponentType("linker_type", builder -> builder
                     .persistent(LinkerItem.TYPE_CODEC)
                     .networkSynchronized(LinkerItem.TYPE_STREAM_CODEC));
+
+    /** Abas que o Vinculador vincula ou desvincula; sem o componente (nem o antigo), Todos. */
+    public static final Supplier<DataComponentType<LinkerTabs>> LINKER_TABS =
+            DATA_COMPONENTS.registerComponentType("linker_tabs", builder -> builder
+                    .persistent(LinkerItem.TABS_CODEC)
+                    .networkSynchronized(LinkerItem.TABS_STREAM_CODEC));
+
+    /** Vinculador no modo desvincular ("Nenhuma" na escolha da rede); sem o componente, vincula. */
+    public static final Supplier<DataComponentType<Boolean>> LINKER_UNLINK =
+            DATA_COMPONENTS.registerComponentType("linker_unlink", builder -> builder
+                    .persistent(Codec.BOOL)
+                    .networkSynchronized(ByteBufCodecs.BOOL));
 
     /** Modo do Vinculador; sem o componente, Único. */
     public static final Supplier<DataComponentType<LinkerMode>> LINKER_MODE =

@@ -15,8 +15,9 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  *
  * @param network a rede ({@link Op#SET_ACTIVE})
  * @param text    o nome da rede nova ({@link Op#CREATE_NETWORK})
- * @param value   o tipo ({@link Op#SET_TYPE}: −1 = Todos, senão o {@code ordinal}) ou o modo
- *                ({@link Op#SET_MODE}: o {@code ordinal})
+ * @param value   a aba ({@link Op#TOGGLE_TAB}: o {@code ordinal} do tipo), o modo
+ *                ({@link Op#SET_MODE}: o {@code ordinal}) ou o desvincular ({@link Op#SET_UNLINK}: 1 liga,
+ *                0 desliga)
  */
 public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network, String text, int value)
         implements CustomPacketPayload {
@@ -24,9 +25,14 @@ public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network
     public static final int MAX_NAME_LENGTH = 32;
 
     public enum Op {
+        /** Escolhe a rede ativa (e sai do modo desvincular). */
         SET_ACTIVE,
+        /** Cria uma rede e a torna ativa (e sai do modo desvincular). */
         CREATE_NETWORK,
-        SET_TYPE,
+        /** "Nenhuma (desvincular)" na escolha da rede. */
+        SET_UNLINK,
+        /** Marca ou desmarca uma aba. */
+        TOGGLE_TAB,
         SET_MODE,
         CLEAR_AREA,
         LINK

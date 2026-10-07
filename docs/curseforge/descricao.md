@@ -42,7 +42,7 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2023/187/feature-5-area-png.png)
 
-- **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, for every tab or a single resource type.
+- **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs you check (Items, Fluids, Energy and, with Mekanism, Chemicals). Pick **None (unlink)** to take those tabs out of their network instead.
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks. Paste every tab or just one type (Shift + mouse wheel), leaving the other tabs alone.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 

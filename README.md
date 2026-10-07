@@ -11,7 +11,7 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 - **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
 - **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada).
 - **Quatro tiers**, subidos com os Cartões de Upgrade Avançado, Elite e Ultimate (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada.
-- **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, em todas as abas ou num tipo só.
+- **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, nas abas marcadas (Itens, Fluidos, Energia e, com o Mekanism, Químicos); em "Nenhuma (desvincular)", tira essas abas da rede.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo (Shift + roda do mouse).
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
 - **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.

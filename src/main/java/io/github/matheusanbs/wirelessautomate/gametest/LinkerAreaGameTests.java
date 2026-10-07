@@ -9,15 +9,19 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerActions.LinkResult;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -36,8 +40,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Vinculador em modo Área: marcar cantos com Shift + clique, contar e vincular os roteadores da
- * caixa no tipo escolhido, o limite de volume e de distância, rede de outro dono recusada e as
- * ações da tela. Pedras em y=1 com o roteador em cima; os cantos pegam A e B, e C fica de fora.
+ * caixa nas abas marcadas, o limite de volume e de distância, rede de outro dono recusada e as
+ * ações da tela. Também o modo desvincular ("Nenhuma") no clique e na área, as abas combinadas e o
+ * componente antigo {@code linker_type}. Pedras em y=1 com o roteador em cima; os cantos pegam A e
+ * B, e C fica de fora.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -67,11 +73,25 @@ public final class LinkerAreaGameTests {
         return player;
     }
 
-    private static ItemStack areaLinker(@org.jetbrains.annotations.Nullable ResourceType type) {
+    private static ItemStack areaLinker(LinkerTabs tabs) {
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
         LinkerItem.setMode(linker, LinkerMode.AREA);
-        LinkerItem.setType(linker, type);
+        LinkerItem.setTabs(linker, tabs);
         return linker;
+    }
+
+    /** Clique direito (sem Shift) com o item da mão principal num bloco (posição absoluta). */
+    private static boolean click(ServerPlayer player, BlockPos absolute) {
+        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(absolute), Direction.UP, absolute, false));
+        return player.getMainHandItem().getItem().useOn(context).consumesAction();
+    }
+
+    /** O jogador continua sem rede ativa e sem rede própria (o modo desvincular não cria rede). */
+    private static void assertNoNetworkCreated(GameTestHelper helper, ServerPlayer player) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        helper.assertTrue(data.activeNetwork(player.getUUID()) == null, "desvincular deixou uma rede ativa");
+        helper.assertTrue(data.networksOf(player.getUUID()).isEmpty(), "desvincular criou uma rede");
     }
 
     /** Shift + clique direito com o item da mão principal num bloco (posição absoluta). */
@@ -109,7 +129,7 @@ public final class LinkerAreaGameTests {
         RouterBlockEntity a = router(helper, A, before);
         RouterBlockEntity b = router(helper, B, before);
         RouterBlockEntity c = router(helper, C, before);
-        ItemStack linker = areaLinker(ResourceType.FLUID);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.FLUID));
         ServerPlayer player = player(helper, linker);
         WaNetwork active = data.create(player.getUUID(), "teste-area-ativa");
         data.setActiveNetwork(player.getUUID(), active.id());
@@ -150,13 +170,13 @@ public final class LinkerAreaGameTests {
         helper.succeed();
     }
 
-    /** Em Todos, todas as abas (inclusive químicos) entram na rede. */
+    /** Em Todos, todas as abas que existem (Químicos só com o Mekanism) entram na rede. */
     @GameTest(template = "empty")
     public static void linkAllTypes(GameTestHelper helper) {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         UUID before = data.create(UUID.randomUUID(), "teste-area-todos-antes").id();
         RouterBlockEntity a = router(helper, A, before);
-        ItemStack linker = areaLinker(null);
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
         ServerPlayer player = player(helper, linker);
         WaNetwork active = data.create(player.getUUID(), "teste-area-todos");
         data.setActiveNetwork(player.getUUID(), active.id());
@@ -164,7 +184,7 @@ public final class LinkerAreaGameTests {
             markArea(helper, player);
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
-            for (ResourceType type : ResourceType.values()) {
+            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
                 helper.assertValueEqual(a.networkId(type), active.id(), "aba " + type);
             }
         } finally {
@@ -179,7 +199,7 @@ public final class LinkerAreaGameTests {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         UUID before = data.create(UUID.randomUUID(), "teste-area-volume").id();
         RouterBlockEntity a = router(helper, A, before);
-        ItemStack linker = areaLinker(null);
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
         ServerPlayer player = player(helper, linker);
         try {
             long max = LinkerActions.maxVolume();
@@ -218,7 +238,7 @@ public final class LinkerAreaGameTests {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         UUID before = data.create(UUID.randomUUID(), "teste-area-longe").id();
         RouterBlockEntity a = router(helper, A, before);
-        ItemStack linker = areaLinker(null);
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
         ServerPlayer player = player(helper, linker);
         try {
             markArea(helper, player);
@@ -242,7 +262,7 @@ public final class LinkerAreaGameTests {
         UUID before = data.create(UUID.randomUUID(), "teste-area-alheia-antes").id();
         WaNetwork foreign = data.create(UUID.randomUUID(), "teste-area-alheia");
         RouterBlockEntity a = router(helper, A, before);
-        ItemStack linker = areaLinker(ResourceType.ITEM);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM));
         ServerPlayer player = player(helper, linker);
         WaNetwork own = data.create(player.getUUID(), "teste-area-propria");
         data.setActiveNetwork(player.getUUID(), foreign.id());
@@ -280,7 +300,7 @@ public final class LinkerAreaGameTests {
     }
 
     /**
-     * Ações da tela: tipo, modo, criar rede (nome vazio recusado, repetido só ativa) e limpar os
+     * Ações da tela: abas, modo, criar rede (nome vazio recusado, repetido só ativa) e limpar os
      * cantos; o menu manda um estado novo depois de cada uma. Sem o Vinculador na mão, nada vale.
      */
     @GameTest(template = "empty")
@@ -289,7 +309,7 @@ public final class LinkerAreaGameTests {
         UUID before = data.create(UUID.randomUUID(), "teste-area-tela-antes").id();
         router(helper, A, before);
         router(helper, B, before);
-        ItemStack linker = areaLinker(null);
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
         ServerPlayer player = player(helper, linker);
         UUID created = null;
         try {
@@ -301,16 +321,34 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(menu.snapshot().routers().size(), 2, "pontos na prévia");
             helper.assertTrue(menu.poll() == null, "estado sem mudança foi reenviado");
 
-            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TYPE,
-                    Optional.empty(), "", ResourceType.ENERGY.ordinal())), "recusou Energia");
-            helper.assertValueEqual(LinkerItem.type(linker), ResourceType.ENERGY, "tipo");
-            helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TYPE,
-                    Optional.empty(), "", ResourceType.CHEMICAL.ordinal())), "aceitou químicos");
-            helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TYPE,
-                    Optional.empty(), "", 99)), "aceitou tipo inválido");
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
+                    Optional.empty(), "", ResourceType.ENERGY.ordinal())), "recusou desmarcar Energia");
+            LinkerTabs expected = LinkerTabs.ALL.toggle(ResourceType.ENERGY);
+            helper.assertValueEqual(LinkerItem.tabs(linker), expected, "abas");
+            helper.assertValueEqual(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
+                    Optional.empty(), "", ResourceType.CHEMICAL.ordinal())), Chemicals.LOADED,
+                    "Químicos com o Mekanism " + Chemicals.LOADED);
+            if (Chemicals.LOADED) {
+                expected = expected.toggle(ResourceType.CHEMICAL);
+            }
+            helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
+                    Optional.empty(), "", 99)), "aceitou aba inválida");
+            helper.assertValueEqual(LinkerItem.tabs(linker), expected, "abas depois das recusas");
             LinkerSnapshot afterType = menu.poll();
-            helper.assertTrue(afterType != null && afterType.type().equals(Optional.of(ResourceType.ENERGY)),
-                    "a tela não recebeu o tipo");
+            helper.assertTrue(afterType != null && afterType.tabs().equals(expected),
+                    "a tela não recebeu as abas");
+
+            // desmarcar até sobrar uma: a última é recusada
+            for (ResourceType type : new ResourceType[] {ResourceType.ITEM, ResourceType.CHEMICAL}) {
+                if (LinkerItem.tabs(linker).contains(type)
+                        && (type != ResourceType.CHEMICAL || Chemicals.LOADED)) {
+                    helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID,
+                            Op.TOGGLE_TAB, Optional.empty(), "", type.ordinal())), "recusou desmarcar " + type);
+                }
+            }
+            helper.assertValueEqual(LinkerItem.effectiveTabs(linker), List.of(ResourceType.FLUID), "sobrou");
+            helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
+                    Optional.empty(), "", ResourceType.FLUID.ordinal())), "aceitou desmarcar a última aba");
 
             helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.CREATE_NETWORK,
                     Optional.empty(), "   ", 0)), "aceitou nome vazio");
@@ -382,6 +420,246 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(a.networkId(ResourceType.ITEM), active.id(), "Único não vinculou");
         } finally {
             cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Modo desvincular no clique: tira só as abas marcadas (Itens + Fluidos) da rede, sem mexer nas
+     * outras; um segundo clique não muda nada. O jogador sem rede ativa continua sem rede.
+     */
+    @GameTest(template = "empty")
+    public static void unlinkSingleClearsOnlySelectedTabs(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-desvincular-unico").id();
+        RouterBlockEntity a = router(helper, A, before);
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID));
+        LinkerItem.setUnlink(linker, true);
+        ServerPlayer player = player(helper, linker);
+        try {
+            helper.assertTrue(click(player, a.getBlockPos()), "clique no roteador não agiu");
+            helper.assertTrue(a.networkId(ResourceType.ITEM) == null, "itens ficaram na rede");
+            helper.assertTrue(a.networkId(ResourceType.FLUID) == null, "fluidos ficaram na rede");
+            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
+            helper.assertValueEqual(a.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
+            assertNoNetworkCreated(helper, player);
+
+            helper.assertTrue(click(player, a.getBlockPos()), "segundo clique não agiu");
+            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou no segundo clique");
+            assertNoNetworkCreated(helper, player);
+        } finally {
+            cleanup(helper, player, before);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Modo desvincular na área: Itens + Fluidos + Químicos saem da rede em A e B (Químicos só com o
+     * Mekanism), a Energia fica; C, fora da área, não muda. De novo, os dois contam como já sem rede.
+     */
+    @GameTest(template = "empty")
+    public static void unlinkAreaClearsSelectedTabs(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-desvincular-area").id();
+        RouterBlockEntity a = router(helper, A, before);
+        RouterBlockEntity b = router(helper, B, before);
+        RouterBlockEntity c = router(helper, C, before);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.CHEMICAL));
+        LinkerItem.setUnlink(linker, true);
+        ServerPlayer player = player(helper, linker);
+        try {
+            markArea(helper, player);
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE, "problema");
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.unlink(), "desvincular recusou: " + result);
+            helper.assertValueEqual(result.linked(), 2, "desvinculados");
+            helper.assertTrue(result.network() == null, "desvincular usou uma rede");
+            for (RouterBlockEntity inside : new RouterBlockEntity[] {a, b}) {
+                helper.assertTrue(inside.networkId(ResourceType.ITEM) == null, "itens de dentro");
+                helper.assertTrue(inside.networkId(ResourceType.FLUID) == null, "fluidos de dentro");
+                helper.assertValueEqual(inside.networkId(ResourceType.ENERGY), before, "energia de dentro mudou");
+                if (Chemicals.LOADED) {
+                    helper.assertTrue(inside.networkId(ResourceType.CHEMICAL) == null, "químicos de dentro");
+                } else {
+                    helper.assertValueEqual(inside.networkId(ResourceType.CHEMICAL), before,
+                            "químicos mudaram sem o Mekanism");
+                }
+            }
+            for (ResourceType type : ResourceType.values()) {
+                helper.assertValueEqual(c.networkId(type), before, "C fora da área mudou: " + type);
+            }
+            assertNoNetworkCreated(helper, player);
+
+            LinkResult again = LinkerActions.link(player, linker);
+            helper.assertValueEqual(again.linked(), 0, "desvinculou de novo");
+            helper.assertValueEqual(again.already(), 2, "já sem rede na segunda vez");
+            assertNoNetworkCreated(helper, player);
+        } finally {
+            cleanup(helper, player, before);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Abas combinadas: Itens + Químicos põe os itens na rede ativa e os químicos só com o Mekanism
+     * (sem ele, a aba é ignorada, sem erro); Fluidos e Energia ficam. Vale no clique e na área.
+     */
+    @GameTest(template = "empty")
+    public static void linkMultipleTabs(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-abas-antes").id();
+        RouterBlockEntity a = router(helper, A, before);
+        RouterBlockEntity b = router(helper, B, before);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM, ResourceType.CHEMICAL));
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-abas-ativa");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        try {
+            // Único: clique no roteador A
+            LinkerItem.setMode(linker, LinkerMode.SINGLE);
+            helper.assertTrue(click(player, a.getBlockPos()), "clique não agiu");
+            // Área: A e B
+            LinkerItem.setMode(linker, LinkerMode.AREA);
+            markArea(helper, player);
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok(), "vincular recusou: " + result.problem());
+            helper.assertValueEqual(result.linked(), 1, "vinculados (B)");
+            helper.assertValueEqual(result.already(), 1, "já estavam (A)");
+            for (RouterBlockEntity router : new RouterBlockEntity[] {a, b}) {
+                helper.assertValueEqual(router.networkId(ResourceType.ITEM), active.id(), "itens");
+                helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+                helper.assertValueEqual(router.networkId(ResourceType.ENERGY), before, "energia mudou");
+                helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL),
+                        Chemicals.LOADED ? active.id() : before, "químicos");
+            }
+        } finally {
+            cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /** Um Vinculador com o componente antigo {@code linker_type} vincula a área só naquela aba. */
+    @GameTest(template = "empty")
+    public static void legacyTypeComponentIsHonored(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-tipo-antigo").id();
+        RouterBlockEntity a = router(helper, A, before);
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setMode(linker, LinkerMode.AREA);
+        linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.FLUID);
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-tipo-antigo-ativa");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        try {
+            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.FLUID), "abas do tipo antigo");
+            markArea(helper, player);
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
+            helper.assertValueEqual(a.networkId(ResourceType.FLUID), active.id(), "fluidos");
+            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
+        } finally {
+            cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Regras ao desvincular: a área precisa valer (longe demais é recusado e nada muda); sem aba que
+     * valha (só Químicos, sem o Mekanism) nada muda; a rede ativa de outro dono não importa, porque
+     * desvincular não usa rede, e ela fica como estava.
+     */
+    @GameTest(template = "empty")
+    public static void unlinkFollowsTheRules(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-desvincular-regras").id();
+        WaNetwork foreign = data.create(UUID.randomUUID(), "teste-desvincular-alheia");
+        RouterBlockEntity a = router(helper, A, before);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM));
+        LinkerItem.setUnlink(linker, true);
+        ServerPlayer player = player(helper, linker);
+        data.setActiveNetwork(player.getUUID(), foreign.id());
+        try {
+            markArea(helper, player);
+            int distance = LinkerActions.maxDistance();
+            if (distance > 0) {
+                player.moveTo(helper.absoluteVec(new Vec3(1.5, 3 + distance + 20, 1.5)));
+                helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR,
+                        "desvinculou de longe");
+                helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou de longe");
+                player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
+            }
+
+            if (!Chemicals.LOADED) {
+                LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.CHEMICAL));
+                helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_TABS, "sem abas");
+                helper.assertFalse(LinkerActions.single(player, linker, a), "clique sem abas mudou o roteador");
+                for (ResourceType type : ResourceType.values()) {
+                    helper.assertValueEqual(a.networkId(type), before, "sem abas mudou " + type);
+                }
+                LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+            }
+
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE,
+                    "rede alheia barrou o desvincular");
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.linked() == 1, "desvinculou " + result);
+            helper.assertTrue(a.networkId(ResourceType.ITEM) == null, "itens ficaram");
+            helper.assertValueEqual(data.activeNetwork(player.getUUID()), foreign.id(), "a rede ativa mudou");
+            helper.assertTrue(data.networksOf(player.getUUID()).isEmpty(), "desvincular criou uma rede");
+
+            // de volta a vincular, a rede alheia volta a barrar
+            LinkerItem.setUnlink(linker, false);
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK,
+                    "vincular à rede alheia");
+        } finally {
+            cleanup(helper, player, before, foreign.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Pela tela: "Nenhuma (desvincular)" liga o modo, Desvincular tira da rede e a tela mostra o
+     * resultado; escolher uma rede (ou criar uma) sai do modo. Valor inválido é recusado.
+     */
+    @GameTest(template = "empty")
+    public static void menuUnlinkActions(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-desvincular-tela").id();
+        RouterBlockEntity a = router(helper, A, before);
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ENERGY));
+        ServerPlayer player = player(helper, linker);
+        WaNetwork own = data.create(player.getUUID(), "teste-desvincular-tela-propria");
+        try {
+            markArea(helper, player);
+            LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
+                    LinkerSnapshot.capture(player, linker, null));
+            player.containerMenu = menu;
+            helper.assertFalse(menu.snapshot().unlink(), "começou desvinculando");
+            helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_UNLINK,
+                    Optional.empty(), "", 2)), "aceitou valor inválido");
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_UNLINK,
+                    Optional.empty(), "", 1)), "recusou desvincular");
+            helper.assertTrue(LinkerItem.unlink(linker), "o item não ficou desvinculando");
+            LinkerSnapshot afterUnlink = menu.poll();
+            helper.assertTrue(afterUnlink != null && afterUnlink.unlink(), "a tela não recebeu o desvincular");
+
+            helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
+                    "Desvincular pela tela recusou");
+            helper.assertTrue(a.networkId(ResourceType.ENERGY) == null, "energia ficou");
+            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            LinkerSnapshot afterLink = menu.poll();
+            helper.assertTrue(afterLink != null && afterLink.outcome().isPresent()
+                    && afterLink.outcome().get().unlink() && afterLink.outcome().get().linked() == 1,
+                    "a tela não mostra o resultado: " + afterLink);
+            helper.assertTrue(data.activeNetwork(player.getUUID()) == null, "desvincular deixou uma rede ativa");
+
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_ACTIVE,
+                    Optional.of(own.id()), "", 0)), "recusou a própria rede");
+            helper.assertFalse(LinkerItem.unlink(linker), "escolher uma rede não saiu do desvincular");
+        } finally {
+            cleanup(helper, player, before, own.id());
         }
         helper.succeed();
     }

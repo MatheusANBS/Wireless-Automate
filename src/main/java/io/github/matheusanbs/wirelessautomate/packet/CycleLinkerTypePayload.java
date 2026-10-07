@@ -7,8 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
- * Cliente → servidor: Shift + roda do mouse com o Vinculador na mão principal troca o tipo que ele
- * vincula (Todos → Itens → Fluidos → Energia; {@code direction} +1 ou −1).
+ * Cliente → servidor: Shift + roda do mouse com o Vinculador na mão principal troca as abas que ele
+ * vincula pelos atalhos (Todos → Itens → Fluidos → Energia → Químicos, este só com o Mekanism; uma
+ * combinação marcada na tela vai para Todos; {@code direction} +1 ou −1).
  */
 public record CycleLinkerTypePayload(int direction) implements CustomPacketPayload {
     public static final Type<CycleLinkerTypePayload> TYPE = new Type<>(WirelessAutomate.id("cycle_linker_type"));

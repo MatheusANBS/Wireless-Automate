@@ -15,9 +15,9 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Shift + roda do mouse com o Vinculador na mão principal troca o tipo que ele vincula (Todos,
- * Itens, Fluidos, Energia); com o Configurador, o tipo que ele cola (os mesmos e, com o Mekanism,
- * Químicos). Só no jogo, sem tela aberta; o evento é cancelado para a roda não trocar o slot da
+ * Shift + roda do mouse com o Vinculador na mão principal troca as abas que ele vincula pelos
+ * atalhos (Todos, Itens, Fluidos, Energia e, com o Mekanism, Químicos; uma combinação marcada na tela
+ * vai para Todos); com o Configurador, o tipo que ele cola (os mesmos atalhos). Só no jogo, sem tela aberta; o evento é cancelado para a roda não trocar o slot da
  * hotbar. Como na hotbar, rolar para baixo vai para o próximo. O servidor troca o tipo e mostra o
  * novo na action bar.
  */

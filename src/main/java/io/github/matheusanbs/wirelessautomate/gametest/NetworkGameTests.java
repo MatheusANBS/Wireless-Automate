@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -123,8 +125,12 @@ public final class NetworkGameTests {
             helper.assertTrue(ModItems.LINKER.get().useOn(context).consumesAction(), "vinculador não agiu");
             UUID active = data.activeNetwork(player.getUUID());
             helper.assertTrue(active != null, "vinculador não criou a rede ativa");
-            for (ResourceType type : ResourceType.values()) {
+            // Todos: as abas que existem (Químicos só com o Mekanism; sem ele, a aba fica como estava)
+            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
                 helper.assertTrue(Objects.equals(router.networkId(type), active), type + " fora da rede ativa");
+            }
+            if (!Chemicals.LOADED) {
+                helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos entraram sem o Mekanism");
             }
             data.remove(active);
         } finally {

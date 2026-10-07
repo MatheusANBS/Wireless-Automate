@@ -64,8 +64,9 @@ the same type on the same network trades. Who sends and who receives comes from 
 | Way | How many at once |
 | --- | --- |
 | The tab's network selector, on the router screen | One tab of one router |
-| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (every tab or one type) |
+| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (the checked tabs) |
 | <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
+| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked tabs out of their network, on one router or an area |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
 | <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
 

@@ -4,6 +4,8 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -17,6 +19,8 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -229,7 +233,11 @@ public final class TypeNetworkGameTests {
         helper.succeed();
     }
 
-    /** Vinculador em Energia põe só a energia na rede ativa; em Todos, todos os tipos. */
+    /**
+     * Vinculador com o componente antigo {@code linker_type} em Energia (item da 0.1.0) põe só a
+     * energia na rede ativa; sem componente (Todos), todas as abas que existem (Químicos só com o
+     * Mekanism).
+     */
     @GameTest(template = "empty")
     public static void linkerWithTypeLinksOnlyThatType(GameTestHelper helper) {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
@@ -251,9 +259,9 @@ public final class TypeNetworkGameTests {
             helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
 
             linker.remove(ModDataComponents.LINKER_TYPE.get());
-            helper.assertTrue(LinkerItem.type(linker) == null, "sem componente não é Todos");
+            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
             use(player, ModItems.LINKER.get(), router, false);
-            for (ResourceType type : ResourceType.values()) {
+            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
                 helper.assertValueEqual(router.networkId(type), active.id(), "Todos não vinculou " + type);
             }
         } finally {
@@ -264,7 +272,10 @@ public final class TypeNetworkGameTests {
         helper.succeed();
     }
 
-    /** Shift + roda: Todos → Itens → Fluidos → Energia → Todos, e para trás; só com o Vinculador na mão. */
+    /**
+     * Shift + roda: Todos → Itens → Fluidos → Energia (→ Químicos com o Mekanism) → Todos, e para
+     * trás; uma combinação vai para Todos; só com o Vinculador na mão.
+     */
     @GameTest(template = "empty")
     public static void cycleLinkerTypePayloadCycles(GameTestHelper helper) {
         @SuppressWarnings("removal")
@@ -272,16 +283,32 @@ public final class TypeNetworkGameTests {
         try {
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-            ResourceType[] forward = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, null};
-            for (ResourceType expected : forward) {
+            List<LinkerTabs> forward = new ArrayList<>();
+            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
+                forward.add(LinkerTabs.of(type));
+            }
+            forward.add(LinkerTabs.ALL);
+            for (LinkerTabs expected : forward) {
                 helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                         "recusou avançar");
-                helper.assertTrue(LinkerItem.type(linker) == expected, "avançar: " + LinkerItem.type(linker));
+                helper.assertValueEqual(LinkerItem.tabs(linker), expected, "avançar");
             }
-            helper.assertFalse(linker.has(ModDataComponents.LINKER_TYPE.get()), "Todos deixou o componente");
+            helper.assertFalse(linker.has(ModDataComponents.LINKER_TABS.get()), "Todos deixou o componente");
             helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(-1)),
                     "recusou voltar");
-            helper.assertValueEqual(LinkerItem.type(linker), ResourceType.ENERGY, "voltar de Todos");
+            helper.assertValueEqual(LinkerItem.tabs(linker),
+                    LinkerTabs.of(Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY), "voltar de Todos");
+            // uma combinação marcada na tela vai para Todos
+            LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID));
+            helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
+                    "recusou avançar da combinação");
+            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "combinação não foi para Todos");
+            // o componente antigo vale como a aba dele e some na primeira troca
+            linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.FLUID);
+            helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
+                    "recusou avançar do tipo antigo");
+            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.ENERGY), "depois de Fluidos");
+            helper.assertFalse(linker.has(ModDataComponents.LINKER_TYPE.get()), "o componente antigo ficou");
             helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(0)),
                     "aceitou direção 0");
 
@@ -289,7 +316,7 @@ public final class TypeNetworkGameTests {
             player.setItemInHand(InteractionHand.MAIN_HAND, other);
             helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                     "aceitou sem o Vinculador na mão");
-            helper.assertFalse(other.has(ModDataComponents.LINKER_TYPE.get()), "mexeu noutro item");
+            helper.assertFalse(other.has(ModDataComponents.LINKER_TABS.get()), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }

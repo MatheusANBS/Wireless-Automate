@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -557,41 +558,57 @@ public final class DevScreenshot {
                 new Step(() -> {
                     mouseX = mouseY = -1;
                     LinkerSnapshot s = linkerSample();
-                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), s.type(), s.mode(),
-                            s.first(), s.second(), false, s.inside(), s.inside(), s.unloadedChunks(),
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
+                            s.chemicals(), s.mode(), s.first(), s.second(), false, s.inside(), s.inside(),
+                            s.unloadedChunks(),
                             s.routers().stream().map(d -> new RouterDot(d.x(), d.z(), 0xBA68C8, true)).toList(),
                             LinkerProblem.NONE, s.maxVolume(), s.maxDistance(),
-                            Optional.of(new LinkerSnapshot.Outcome(s.inside() - s.already(), s.already(), 1,
-                                    Optional.of(ResourceType.ITEM), "Linha 5x", 0xBA68C8))));
+                            Optional.of(new LinkerSnapshot.Outcome(s.inside() - s.already(), s.already(), 0, 1,
+                                    s.tabs(), false, "Linha 5x", 0xBA68C8))));
                 }, "l2-vinculador-resultado"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
-                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), Optional.empty(),
-                            LinkerMode.SINGLE, s.first(), s.second(), false, s.inside(), s.already(), s.unloadedChunks(),
-                            s.routers(), s.problem(), s.maxVolume(), s.maxDistance(), Optional.empty()));
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false,
+                            LinkerTabs.ALL, s.chemicals(), LinkerMode.SINGLE, s.first(), s.second(), false, s.inside(),
+                            s.already(), s.unloadedChunks(), s.routers(), s.problem(), s.maxVolume(), s.maxDistance(),
+                            Optional.empty()));
                 }, "l3-vinculador-unico"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
-                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), s.type(), s.mode(),
-                            Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(), LinkerProblem.NO_AREA,
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
+                            s.chemicals(), s.mode(), Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(),
+                            LinkerProblem.NO_AREA,
                             s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l4-vinculador-sem-area"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
-                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), s.type(), s.mode(),
-                            s.first(), Optional.empty(), false, 0, 0, 0, List.of(), LinkerProblem.INCOMPLETE,
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
+                            s.chemicals(), s.mode(), s.first(), Optional.empty(), false, 0, 0, 0, List.of(),
+                            LinkerProblem.INCOMPLETE,
                             s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l5-vinculador-canto1"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
-                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), s.type(), s.mode(),
-                            s.first(), Optional.of(new BlockPos(300, 70, 200)), false, 0, 0, 0, List.of(),
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
+                            s.chemicals(), s.mode(), s.first(), Optional.of(new BlockPos(300, 70, 200)), false, 0, 0, 0,
+                            List.of(),
                             LinkerProblem.TOO_BIG, s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l6-vinculador-grande"),
                 new Step(() -> {
                     linkerScreen.getMenu().applySnapshot(linkerSample());
                     linkerScreen.previewCreate("Linha de fundição");
-                }, "l7-vinculador-nova-rede"));
+                }, "l7-vinculador-nova-rede"),
+                new Step(() -> {
+                    // Nenhuma (desvincular) com Itens + Fluidos + Químicos: a Energia fica
+                    linkerScreen.previewCancelCreate();
+                    LinkerSnapshot s = linkerSample();
+                    linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), true,
+                            LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.CHEMICAL), true,
+                            s.mode(), s.first(), s.second(), false, s.inside(), 2, s.unloadedChunks(),
+                            s.routers().stream().map(d -> new RouterDot(d.x(), d.z(), d.color(), d.color() < 0))
+                                    .toList(),
+                            LinkerProblem.NONE, s.maxVolume(), s.maxDistance(), Optional.empty()));
+                }, "l8-vinculador-desvincular"));
     }
 
     private static LinkerScreen linkerScreen(LinkerSnapshot snapshot) {
@@ -626,7 +643,8 @@ public final class DevScreenshot {
         dots.add(new RouterDot(16, 9, 0x3D8BFF, false));
         dots.add(new RouterDot(19, 11, 0x45D6CC, false));
         dots.add(new RouterDot(-7, 10, -1, false));
-        return new LinkerSnapshot(networks, Optional.of(line), Optional.of(ResourceType.ITEM), LinkerMode.AREA,
+        return new LinkerSnapshot(networks, Optional.of(line), false, LinkerTabs.of(ResourceType.ITEM), true,
+                LinkerMode.AREA,
                 Optional.of(new BlockPos(-8, 64, -6)), Optional.of(new BlockPos(21, 66, 13)), false, dots.size(), 5, 1,
                 List.copyOf(dots), LinkerProblem.NONE, 262_144, 64, Optional.empty());
     }

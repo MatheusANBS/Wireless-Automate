@@ -4,8 +4,8 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Objects;
@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
  * aberto; as ações chegam pelo {@code LinkerActionPayload} e mexem nos componentes do item.
  *
  * <p>Sincronização (servidor): como no {@link RouterMenu}, só o menu aberto recebe
- * {@link #broadcastChanges()}. O estado é remontado quando o item (modo, tipo, cantos) ou as redes
+ * {@link #broadcastChanges()}. O estado é remontado quando o item (modo, abas, desvincular, cantos) ou as redes
  * mudam e, com uma área marcada, a cada {@link #RESCAN_TICKS} ticks (roteadores colocados ou
  * removidos, chunks que carregam); só vai ao cliente se ficou diferente do último enviado.
  */
@@ -49,9 +49,9 @@ public class LinkerMenu extends AbstractContainerMenu {
     private boolean dirty;
 
     /** O que do item muda o estado da tela. */
-    private record StackKey(LinkerMode mode, Optional<ResourceType> type, Optional<LinkerArea> area) {
+    private record StackKey(LinkerMode mode, LinkerTabs tabs, boolean unlink, Optional<LinkerArea> area) {
         static StackKey of(ItemStack stack) {
-            return new StackKey(LinkerItem.mode(stack), Optional.ofNullable(LinkerItem.type(stack)),
+            return new StackKey(LinkerItem.mode(stack), LinkerItem.tabs(stack), LinkerItem.unlink(stack),
                     Optional.ofNullable(LinkerItem.area(stack)));
         }
     }
@@ -130,14 +130,16 @@ public class LinkerMenu extends AbstractContainerMenu {
 
     // ------------------------------------------------------------------ servidor
 
-    /** Guarda o resultado do último Vincular para a tela mostrar ({@code null} limpa). */
-    public void setOutcome(LinkerActions.@Nullable LinkResult result, @Nullable ResourceType type) {
-        if (result == null || result.network() == null) {
+    /** Guarda o resultado do último Vincular (ou Desvincular) para a tela mostrar ({@code null} limpa). */
+    public void setOutcome(LinkerActions.@Nullable LinkResult result, @Nullable LinkerTabs tabs) {
+        if (result == null || tabs == null || (!result.unlink() && result.network() == null)) {
             outcome = null;
             return;
         }
-        outcome = new LinkerSnapshot.Outcome(result.linked(), result.already(), result.unloadedChunks(),
-                Optional.ofNullable(type), result.network().name(), result.network().color());
+        outcome = new LinkerSnapshot.Outcome(result.linked(), result.already(), result.protectedCount(),
+                result.unloadedChunks(), tabs, result.unlink(),
+                result.network() == null ? "" : result.network().name(),
+                result.network() == null ? 0 : result.network().color());
     }
 
     /** Pede um estado novo no próximo {@link #broadcastChanges()} (depois de uma ação). */

@@ -639,8 +639,9 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | Jeito | Quantos de uma vez |
 | --- | --- |
 | Seletor de rede da aba, na tela do roteador | Uma aba de um roteador |
-| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (todas as abas ou só um tipo) |
+| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (as abas marcadas) |
 | <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
+| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as abas marcadas da rede, num roteador ou numa área |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
 | <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
 
@@ -678,8 +679,9 @@ the same type on the same network trades. Who sends and who receives comes from 
 | Way | How many at once |
 | --- | --- |
 | The tab's network selector, on the router screen | One tab of one router |
-| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (every tab or one type) |
+| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (the checked tabs) |
 | <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
+| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked tabs out of their network, on one router or an area |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
 | <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
 
@@ -854,6 +856,7 @@ page('linker.md', front('Vinculador', 'wirelessautomate:linker', 7, item_ids=['w
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />
 
 Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inteira de uma vez.
+Também tira roteadores da rede.
 
 <br clear="all" />
 
@@ -862,23 +865,41 @@ Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inte
 | | |
 | --- | --- |
 | **Modos** | Único e Área. |
-| **Tipo** | Todos, Itens, Fluidos ou Energia. |
+| **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. Marque quantas quiser. |
+| **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 
 ## Comandos
 
 | Gesto | O que faz |
 | --- | --- |
-| Clique num roteador | Põe o roteador na rede ativa (cria uma, se você não tiver). |
-| Clique no ar | Abre a tela: rede ativa, tipo, modo e, em Área, a prévia e o botão **Vincular**. |
+| Clique num roteador | Põe as abas marcadas do roteador na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas abas da rede. |
+| Clique no ar | Abre a tela: rede, abas, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
 | Shift + clique no ar | Alterna entre **Único** e **Área**. |
-| Shift + roda do mouse | Troca o tipo. Em **Todos**, todas as abas entram na rede; num tipo, só aquela aba. |
+| Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism). Uma combinação marcada na tela volta para **Todos**. |
 | Shift + clique em dois blocos (Área) | Marca os cantos da área. |
+
+## Na tela
+
+| Parte | Como usar |
+| --- | --- |
+| **Rede** | Clique numa rede para torná-la a ativa, ou em **+ Nova rede** para criar uma. |
+| **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
+| **Abas** | Uma caixa por aba. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
 
 ''' + fill(SCENE_AREA, BOX='Área marcada: todos os roteadores carregados dentro dela entram na rede',
            OTHER='Também entra: para o Vinculador, a máquina não importa', OTHER_COLOR='#3fc36b') + '''
 
 A área pode ter até 262.144 blocos (por exemplo 64 × 64 × 64), e você precisa estar a até 64
 blocos dela.
+
+## Exemplo: tirar uma área da rede, menos a energia
+
+| Passo | O que fazer |
+| --- | --- |
+| **1** | Clique no ar para abrir a tela e escolha **Nenhuma (desvincular)**. |
+| **2** | Deixe marcadas **Itens**, **Fluidos** e **Químicos** e desmarque **Energia**. |
+| **3** | Shift + clique no ar para o modo **Área** e marque os dois cantos com Shift + clique. |
+| **4** | Abra a tela de novo e clique em **Desvincular**: as abas de itens, fluidos e químicos saem da rede e a energia continua ligada. |
 
 ## Receita
 
@@ -888,7 +909,8 @@ blocos dela.
 
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />
 
-Picks your **active network** and puts routers in it, one at a time or a whole area at once.
+Picks your **active network** and puts routers in it, one at a time or a whole area at once. It
+also takes routers out of their network.
 
 <br clear="all" />
 
@@ -897,23 +919,41 @@ Picks your **active network** and puts routers in it, one at a time or a whole a
 | | |
 | --- | --- |
 | **Modes** | Single and Area. |
-| **Type** | All, Items, Fluids or Energy. |
+| **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals. Check as many as you like. |
+| **Network** | One of your networks, or **None (unlink)**. |
 
 ## Actions
 
 | Action | What it does |
 | --- | --- |
-| Click a router | Puts the router in the active network (creates one if you have none). |
-| Click the air | Opens the screen: active network, type, mode and, in Area, the preview and the **Link** button. |
+| Click a router | Puts the router's checked tabs in the active network (creates one if you have none). On **None (unlink)**, takes those tabs out of their network. |
+| Click the air | Opens the screen: network, tabs, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
 | Shift + click the air | Switches between **Single** and **Area**. |
-| Shift + mouse wheel | Changes the type. On **All**, every tab joins the network; with a type, only that tab. |
+| Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism). A combination checked on the screen goes back to **All**. |
 | Shift + click two blocks (Area) | Marks the area corners. |
+
+## On the screen
+
+| Part | How to use it |
+| --- | --- |
+| **Network** | Click a network to make it active, or **+ New network** to create one. |
+| **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
+| **Tabs** | One checkbox per tab. Only the checked tabs change; the others stay as they are. At least one stays checked. |
 
 ''' + fill(SCENE_AREA, BOX='Marked area: every loaded router inside joins the network',
            OTHER='Joins too: for the Linker, the machine does not matter', OTHER_COLOR='#3fc36b') + '''
 
 The area can be up to 262,144 blocks (for example 64 × 64 × 64), and you need to be within 64
 blocks of it.
+
+## Example: unlink an area, keep the energy
+
+| Step | What to do |
+| --- | --- |
+| **1** | Click the air to open the screen and pick **None (unlink)**. |
+| **2** | Keep **Items**, **Fluids** and **Chemicals** checked and uncheck **Energy**. |
+| **3** | Shift + click the air for **Area** mode and mark both corners with Shift + click. |
+| **4** | Open the screen again and click **Unlink**: the items, fluids and chemicals tabs leave their network and the energy stays connected. |
 
 ## Recipe
 
@@ -1158,6 +1198,7 @@ pigmentos e slurries. Sem o Mekanism, a aba não aparece e o resto do mod funcio
 | --- | --- |
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
 | Rede própria na aba | Sim. |
+| Vinculador | Sim: marque a caixa **Químicos** na tela dele. |
 | Vazão | O limite de fluido do tier (veja [Roteador](router.md)). |
 | Filtro exato e por mod (`@mod`) | Sim, com estoque. |
 | Filtro por tag | Não. |
@@ -1189,6 +1230,7 @@ and slurries. Without Mekanism the tab doesn't show and the rest of the mod work
 | --- | --- |
 | Mode, priority and redstone per face | Yes, like the other tabs. |
 | Its own network on the tab | Yes. |
+| Linker | Yes: check the **Chemicals** box on its screen. |
 | Throughput | The tier's fluid limit (see [Router](router.md)). |
 | Exact and mod (`@mod`) filter | Yes, with stock. |
 | Tag filter | No. |

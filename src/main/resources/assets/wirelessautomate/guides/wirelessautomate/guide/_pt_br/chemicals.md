@@ -18,6 +18,7 @@ pigmentos e slurries. Sem o Mekanism, a aba não aparece e o resto do mod funcio
 | --- | --- |
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
 | Rede própria na aba | Sim. |
+| Vinculador | Sim: marque a caixa **Químicos** na tela dele. |
 | Vazão | O limite de fluido do tier (veja [Roteador](router.md)). |
 | Filtro exato e por mod (`@mod`) | Sim, com estoque. |
 | Filtro por tag | Não. |

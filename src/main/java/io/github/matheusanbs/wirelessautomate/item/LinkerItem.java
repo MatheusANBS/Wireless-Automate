@@ -6,20 +6,20 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
-import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import io.netty.buffer.ByteBuf;
 import java.util.List;
-import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -35,70 +35,125 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Vinculador (controle): escolhe a rede ativa e coloca roteadores nela. Clique num roteador o põe
  * na rede ativa (criando uma se o jogador não tiver), nos dois modos. Clique no ar abre a tela
- * ({@link LinkerMenu}: rede ativa, tipo, modo e, em Área, a prévia e o Vincular); Shift + clique no
+ * ({@link LinkerMenu}: rede ativa, abas, modo e, em Área, a prévia e o Vincular); Shift + clique no
  * ar alterna entre Único e Área ({@link ModDataComponents#LINKER_MODE}). Em Área, Shift + clique
  * em dois blocos marca os cantos ({@link ModDataComponents#LINKER_AREA}, ver {@link LinkerActions}).
  *
- * <p>O seletor de tipo ({@link ModDataComponents#LINKER_TYPE}, trocado com Shift + roda do mouse)
- * escolhe o que o clique vincula: sem tipo (Todos) põe todas as abas do roteador na rede; com um
- * tipo, só a aba daquele tipo.
+ * <p>As abas ({@link ModDataComponents#LINKER_TABS}, caixas na tela; Shift + roda do mouse percorre
+ * os atalhos de {@link LinkerTabs#next}) escolhem o que o clique muda: só as abas marcadas do
+ * roteador entram na rede. Químicos contam só com o Mekanism.
+ *
+ * <p>Com "Nenhuma (desvincular)" escolhida na tela ({@link ModDataComponents#LINKER_UNLINK}), os
+ * mesmos gestos tiram as abas marcadas da rede em vez de pôr; nesse modo nenhuma rede é criada.
  */
 public class LinkerItem extends Item {
     private static final String KEY = "item.wirelessautomate.linker.";
-    /**
-     * Ordem do seletor; {@code null} é Todos. Químicos não têm posição própria: entram com Todos
-     * (que põe todas as abas na rede) ou pela aba Químicos da tela do roteador.
-     */
-    private static final ResourceType[] CYCLE = {null, ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
 
-    /** Codec do componente: o nome do tipo em minúsculas, só os tipos do seletor. */
+    /**
+     * Codec do componente antigo {@code linker_type}: o nome do tipo em minúsculas. Aceita qualquer
+     * tipo (o seletor antigo não tinha Químicos, mas não custa ler).
+     */
     public static final Codec<ResourceType> TYPE_CODEC = Codec.STRING.comapFlatMap(name -> {
-        for (ResourceType type : CYCLE) {
-            if (type != null && key(type).equals(name)) {
+        for (ResourceType type : ResourceType.values()) {
+            if (LinkerTabs.key(type).equals(name)) {
                 return DataResult.success(type);
             }
         }
         return DataResult.error(() -> "tipo de Vinculador desconhecido: " + name);
-    }, LinkerItem::key);
+    }, LinkerTabs::key);
     public static final StreamCodec<RegistryFriendlyByteBuf, ResourceType> TYPE_STREAM_CODEC =
             NeoForgeStreamCodecs.enumCodec(ResourceType.class);
+
+    /** Codec das abas: lista de nomes em minúsculas; nomes desconhecidos são ignorados. */
+    public static final Codec<LinkerTabs> TABS_CODEC =
+            Codec.STRING.listOf().xmap(LinkerTabs::fromNames, LinkerTabs::names);
+    public static final StreamCodec<ByteBuf, LinkerTabs> TABS_STREAM_CODEC =
+            ByteBufCodecs.VAR_INT.map(LinkerTabs::new, LinkerTabs::mask);
 
     public LinkerItem(Properties properties) {
         super(properties);
     }
 
-    /** Tipo que o Vinculador vincula; {@code null} = todos. */
-    public static @Nullable ResourceType type(ItemStack stack) {
-        return stack.get(ModDataComponents.LINKER_TYPE.get());
+    // ------------------------------------------------------------------ abas
+
+    /**
+     * Abas guardadas no Vinculador. Sem {@code linker_tabs}, um {@code linker_type} antigo vale como
+     * aquela aba sozinha; sem nenhum dos dois, Todos.
+     */
+    public static LinkerTabs tabs(ItemStack stack) {
+        LinkerTabs tabs = stack.get(ModDataComponents.LINKER_TABS.get());
+        if (tabs != null) {
+            return tabs;
+        }
+        ResourceType legacy = stack.get(ModDataComponents.LINKER_TYPE.get());
+        return legacy == null ? LinkerTabs.ALL : LinkerTabs.of(legacy);
+    }
+
+    /** Grava as abas (Todos apaga o componente) e apaga o formato antigo. */
+    public static void setTabs(ItemStack stack, LinkerTabs tabs) {
+        stack.remove(ModDataComponents.LINKER_TYPE.get());
+        if (tabs.equals(LinkerTabs.ALL)) {
+            stack.remove(ModDataComponents.LINKER_TABS.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_TABS.get(), tabs);
+        }
+    }
+
+    /** As abas que valem agora (Químicos só com o Mekanism), na ordem das abas. */
+    public static List<ResourceType> effectiveTabs(ItemStack stack) {
+        return tabs(stack).effective(Chemicals.LOADED);
     }
 
     /**
-     * Avança ({@code direction > 0}) ou volta o seletor: Todos → Itens → Fluidos → Energia → Todos.
-     * Devolve o tipo novo ({@code null} = todos).
+     * Shift + roda: avança ({@code direction > 0}) ou volta um atalho (Todos, Itens, Fluidos,
+     * Energia, Químicos com o Mekanism); uma combinação que não é atalho vai para Todos. Devolve as
+     * abas novas.
      */
-    public static @Nullable ResourceType cycleType(ItemStack stack, int direction) {
-        ResourceType current = type(stack);
-        int index = 0;
-        for (int i = 0; i < CYCLE.length; i++) {
-            if (CYCLE[i] == current) {
-                index = i;
-                break;
-            }
-        }
-        ResourceType next = CYCLE[Math.floorMod(index + Integer.signum(direction), CYCLE.length)];
-        if (next == null) {
-            stack.remove(ModDataComponents.LINKER_TYPE.get());
-        } else {
-            stack.set(ModDataComponents.LINKER_TYPE.get(), next);
-        }
+    public static LinkerTabs cycleTabs(ItemStack stack, int direction) {
+        LinkerTabs next = tabs(stack).next(direction, Chemicals.LOADED);
+        setTabs(stack, next);
         return next;
     }
 
-    /** Nome do tipo do seletor ("Todos" para {@code null}). */
+    /** Nome de um tipo ("Todos" para {@code null}); o Configurador usa o mesmo. */
     public static Component typeName(@Nullable ResourceType type) {
         return type == null
                 ? Component.translatable(KEY + "type.all")
-                : Component.translatable("gui.wirelessautomate.router.type." + key(type));
+                : Component.translatable("gui.wirelessautomate.router.type." + LinkerTabs.key(type));
+    }
+
+    /** "Todos", "Itens + Fluidos + Químicos" ou "nenhuma aba", pelas abas que valem agora. */
+    public static Component tabsName(LinkerTabs tabs) {
+        if (tabs.isAll(Chemicals.LOADED)) {
+            return typeName(null);
+        }
+        List<ResourceType> effective = tabs.effective(Chemicals.LOADED);
+        if (effective.isEmpty()) {
+            return Component.translatable(KEY + "tabs.none");
+        }
+        MutableComponent text = Component.empty();
+        for (int i = 0; i < effective.size(); i++) {
+            if (i > 0) {
+                text.append(" + ");
+            }
+            text.append(typeName(effective.get(i)));
+        }
+        return text;
+    }
+
+    // ------------------------------------------------------------------ desvincular
+
+    /** O Vinculador está no modo desvincular ("Nenhuma" na escolha da rede). */
+    public static boolean unlink(ItemStack stack) {
+        return stack.getOrDefault(ModDataComponents.LINKER_UNLINK.get(), false);
+    }
+
+    public static void setUnlink(ItemStack stack, boolean unlink) {
+        if (unlink) {
+            stack.set(ModDataComponents.LINKER_UNLINK.get(), true);
+        } else {
+            stack.remove(ModDataComponents.LINKER_UNLINK.get());
+        }
     }
 
     @Override
@@ -126,22 +181,7 @@ public class LinkerItem extends Item {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide && user instanceof ServerPlayer player) {
-            WaNetwork network = NetworkSavedData.get(player.server).activeOrCreate(player);
-            ResourceType type = type(stack);
-            if (!network.canUse(player)) {
-                player.displayClientMessage(Component.translatable(KEY + "foreign", network.displayName()), true);
-            } else if (LinkerActions.inNetwork(router, type, network.id())) {
-                player.displayClientMessage(type == null
-                        ? Component.translatable(KEY + "already", network.displayName())
-                        : Component.translatable(KEY + "already_type", typeName(type), network.displayName()), true);
-            } else {
-                LinkerActions.apply(router, type, network.id());
-                player.displayClientMessage(type == null
-                        ? Component.translatable(KEY + "linked", network.displayName())
-                        : Component.translatable(KEY + "linked_type", typeName(type), network.displayName()), true);
-                level.playSound(null, context.getClickedPos(), SoundEvents.EXPERIENCE_ORB_PICKUP,
-                        SoundSource.BLOCKS, 0.5F, 1.4F);
-            }
+            LinkerActions.single(player, stack, router);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -195,30 +235,14 @@ public class LinkerItem extends Item {
         }
     }
 
-    /** {@code null} = Todos. */
-    public static void setType(ItemStack stack, @Nullable ResourceType type) {
-        if (type == null) {
-            stack.remove(ModDataComponents.LINKER_TYPE.get());
-        } else {
-            stack.set(ModDataComponents.LINKER_TYPE.get(), type);
-        }
-    }
-
-    /** O tipo está no seletor (químicos ficam de fora até o Mekanism entrar). */
-    public static boolean selectable(ResourceType type) {
-        for (ResourceType each : CYCLE) {
-            if (each == type) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable(KEY + "tooltip.mode", modeName(mode(stack))).withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable(KEY + "tooltip.type", typeName(type(stack))).withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable(KEY + "tooltip.tabs", tabsName(tabs(stack))).withStyle(ChatFormatting.AQUA));
+        if (unlink(stack)) {
+            tooltip.add(Component.translatable(KEY + "tooltip.unlink").withStyle(ChatFormatting.GOLD));
+        }
         LinkerArea area = area(stack);
         if (area != null) {
             tooltip.add(Component.translatable(KEY + "tooltip.corner1", LinkerActions.position(area.first()))
@@ -229,9 +253,5 @@ public class LinkerItem extends Item {
         tooltip.add(Component.translatable(KEY + "tooltip.open").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(KEY + "tooltip.toggle").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(KEY + "tooltip.cycle").withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    private static String key(ResourceType type) {
-        return type.name().toLowerCase(Locale.ROOT);
     }
 }

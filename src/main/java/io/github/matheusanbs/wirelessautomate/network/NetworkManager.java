@@ -40,6 +40,16 @@ public final class NetworkManager {
         return nodes.contains(node);
     }
 
+    /** A rede ou a configuração de faces do nó mudou: as rotas da rede precisam ser refeitas. */
+    public void nodeChanged(RouterBlockEntity node) {
+        // TODO(contrato): marcar as rotas das redes afetadas para reconstrução.
+    }
+
+    /** Um vizinho do nó avisou mudança: acorda os destinos dele que estavam dormindo. */
+    public void wake(RouterBlockEntity node) {
+        // TODO(contrato): acordar os destinos do nó.
+    }
+
     public int nodeCount() {
         return nodes.size();
     }

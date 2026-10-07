@@ -14,15 +14,17 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -177,13 +179,15 @@ public final class ConfiguratorGameTests {
         up.setNetworkId(UUID.randomUUID());
         RouterPreset preset = RouterPreset.copyOf(up);
 
+        RegistryAccess registries = helper.getLevel().registryAccess();
+        RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
         for (RouterPreset original : new RouterPreset[] {preset, preset.withoutNetwork(), RouterPreset.EMPTY}) {
-            Tag tag = RouterPreset.CODEC.encodeStart(NbtOps.INSTANCE, original).getOrThrow();
-            RouterPreset decoded = RouterPreset.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow();
+            Tag tag = RouterPreset.CODEC.encodeStart(ops, original).getOrThrow();
+            RouterPreset decoded = RouterPreset.CODEC.parse(ops, tag).getOrThrow();
             helper.assertValueEqual(decoded, original, "codec persistente");
             helper.assertValueEqual(decoded.hashCode(), original.hashCode(), "hashCode");
 
-            ByteBuf buf = Unpooled.buffer();
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
             try {
                 RouterPreset.STREAM_CODEC.encode(buf, original);
                 helper.assertValueEqual(RouterPreset.STREAM_CODEC.decode(buf), original, "stream codec");

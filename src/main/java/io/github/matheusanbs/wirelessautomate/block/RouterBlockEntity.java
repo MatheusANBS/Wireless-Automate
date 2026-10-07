@@ -351,7 +351,7 @@ public class RouterBlockEntity extends BlockEntity {
             for (RelativeSide side : SIDES) {
                 FaceConfig config = face(type, side);
                 if (!config.isDefault()) {
-                    typeTag.put(side.key(), config.save());
+                    typeTag.put(side.key(), config.save(registries));
                 }
             }
             if (!typeTag.isEmpty()) {
@@ -375,7 +375,7 @@ public class RouterBlockEntity extends BlockEntity {
             for (RelativeSide side : SIDES) {
                 FaceConfig config = face(type, side);
                 if (typeTag.contains(side.key(), CompoundTag.TAG_COMPOUND)) {
-                    config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key())));
+                    config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key()), registries));
                 } else {
                     config.reset();
                 }

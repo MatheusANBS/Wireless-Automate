@@ -169,5 +169,20 @@
   "gui.wirelessautomate.filter.card.export.tooltip": "Grava o filtro desta face no Cartão de Filtro da mão principal",
   "gui.wirelessautomate.filter.card.missing": "Segure um Cartão de Filtro na mão principal para importar ou exportar",
   "gui.wirelessautomate.filter.hint.item": "Shift + clique num item para adicionar",
-  "gui.wirelessautomate.filter.hint.fluid": "Shift + clique num balde ou tanque cheio"
+  "gui.wirelessautomate.filter.hint.fluid": "Shift + clique num balde ou tanque cheio",
+  "container.wirelessautomate.filter.face": "Filtro: %s · %s",
+  "item.wirelessautomate.filter_card.type_changed": "Cartão de filtro: %s",
+  "item.wirelessautomate.filter_card.not_empty": "Esvazie o cartão para trocar entre itens e fluidos",
+  "item.wirelessautomate.filter_card.tooltip.summary": "%s · %s",
+  "item.wirelessautomate.filter_card.tooltip.whitelist": "Lista branca",
+  "item.wirelessautomate.filter_card.tooltip.blacklist": "Lista negra",
+  "item.wirelessautomate.filter_card.tooltip.empty": "Vazio: passa tudo",
+  "item.wirelessautomate.filter_card.tooltip.entries": "Entradas: %s",
+  "item.wirelessautomate.filter_card.tooltip.more": "  … e mais %s",
+  "item.wirelessautomate.filter_card.tooltip.stock": "%s (estoque %s)",
+  "item.wirelessautomate.filter_card.tooltip.components": "Exige componentes iguais",
+  "item.wirelessautomate.filter_card.tooltip.open": "Clique direito no ar: editar o filtro",
+  "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + clique direito no ar: alternar entre itens e fluidos (vazio)",
+  "item.wirelessautomate.filter_card.tooltip.router": "Na mão principal, na tela de filtro de um roteador: importar e exportar",
+  "gui.wirelessautomate.router.view.hint": "Arraste para girar; clique numa face para escolher"
 }

@@ -33,6 +33,7 @@ O CI (`.github/workflows/build.yml`) roda `build` e `runGameTestServer` a cada p
 ├── scripts/setup.sh, setup.ps1                        setup do ambiente
 ├── docs/
 │   ├── especificacao.md                               especificação do mod
+│   ├── progresso.md                                   o que está pronto, o que falta e o próximo passo
 │   ├── pacote-de-design.md                            notas do pacote de design (sprites e modelos)
 │   └── preview/                                       rascunho visual (HTML) e folha de sprites
 └── src/
@@ -60,4 +61,4 @@ O CI (`.github/workflows/build.yml`) roda `build` e `runGameTestServer` a cada p
 - Gerenciador central com orçamento de tempo adaptativo ao MSPT (o loop de rotas ainda é `TODO`) e `/wa profile`.
 - Config do servidor com os números da tabela de tiers.
 
-O próximo passo é o roadmap v1 da especificação.
+O estado detalhado de cada item do roadmap e o próximo passo ficam em [`docs/progresso.md`](docs/progresso.md). Agentes de IA começam por [`CLAUDE.md`](CLAUDE.md).

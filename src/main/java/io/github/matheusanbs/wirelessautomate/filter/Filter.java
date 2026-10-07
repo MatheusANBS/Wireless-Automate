@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A pergunta "este recurso passa?" é respondida por um matcher compilado em conjuntos de hash
  * e guardado no próprio filtro ({@link CompiledMatcher}); como o filtro é imutável, o matcher só
- * é refeito quando o filtro é trocado, e o cache dele quando as tags recarregam.
+ * é refeito quando o filtro é trocado, e o mapa das tags quando elas recarregam.
  */
 public final class Filter {
     public static final int MAX_ENTRIES = 4096;
@@ -163,6 +163,11 @@ public final class Filter {
     /** Alguma entrada casa com o item (sem olhar o modo da lista). */
     boolean matchesItem(ItemStack stack) {
         return !entries.isEmpty() && items().index(stack) >= 0;
+    }
+
+    /** Índice da primeira entrada que casa com o item (sem olhar o modo da lista), ou −1. */
+    int itemIndex(ItemStack stack) {
+        return entries.isEmpty() ? CompiledMatcher.NONE : items().index(stack);
     }
 
     /** Alguma entrada casa com o fluido (sem olhar o modo da lista). */

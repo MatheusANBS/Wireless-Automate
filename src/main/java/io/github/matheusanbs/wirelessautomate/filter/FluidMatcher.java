@@ -3,10 +3,7 @@ package io.github.matheusanbs.wirelessautomate.filter;
 import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import java.util.List;
-import java.util.stream.Stream;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
@@ -36,7 +33,7 @@ final class FluidMatcher extends CompiledMatcher<Fluid> {
         } else {
             exactWithComponents = null;
         }
-        compile(Registries.FLUID, !matchComponents);
+        compile(BuiltInRegistries.FLUID, !matchComponents);
     }
 
     /** Índice da primeira entrada que casa com o fluido, ou {@link #NONE}. */
@@ -60,12 +57,8 @@ final class FluidMatcher extends CompiledMatcher<Fluid> {
 
     @Override
     @SuppressWarnings("deprecation")
-    Stream<TagKey<Fluid>> tagsOf(Fluid fluid) {
-        return fluid.builtInRegistryHolder().tags();
-    }
-
-    @Override
     String namespaceOf(Fluid fluid) {
-        return BuiltInRegistries.FLUID.getKey(fluid).getNamespace();
+        // O id pelo holder do registro: sem busca no mapa do registro.
+        return fluid.builtInRegistryHolder().key().location().getNamespace();
     }
 }

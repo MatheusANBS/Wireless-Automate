@@ -63,6 +63,9 @@ neoForge {
         // Sai com erro se algum teste falhar, então serve como teste de integração no CI.
         gameTestServer {
             type = 'gameTestServer'
+            // Pasta própria, com o mundo apagado antes de cada rodada (tarefa abaixo): dados salvos de
+            // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
+            gameDirectory = project.file('run/gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -190,5 +193,13 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+// GameTests sempre num mundo novo (ver a run gameTestServer).
+def gameTestWorld = layout.projectDirectory.dir('run/gametest/world').asFile
+tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    doFirst {
+        gameTestWorld.deleteDir()
     }
 }

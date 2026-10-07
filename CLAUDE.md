@@ -30,16 +30,21 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java` | Lógica pura, testada por JUnit |
 | `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
 | `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), `FilterSet` (embutido + cartões), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
-| `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem` (modo Único), `ConfiguratorItem` (pincel) e `FilterCardItem` funcionam; Tablet e Chunk loader são stubs |
+| `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem` e `ChunkLoaderUpgradeItem` |
+| `linker/` | Vinculador: modo Área (`LinkerArea`, `LinkerBox`, `LinkerScan`, `LinkerActions`) |
+| `preset/` | Configurador: biblioteca por jogador, código `WA1:`, cópia e aplicação em área (a simplificar) |
+| `chunk/` | Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`) |
+| `network/NodeIndex.java`, `NodeProbe.java` | Índice persistente dos nós (Tablet) e status de cada nó |
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
 | `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) |
 | `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
 | `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` e `/wa bench ...` |
 | `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
+| `menu/Tablet*`, `Linker*`, `Configurator*` | Menus e snapshots das telas do Tablet, do Vinculador e do Configurador |
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
-| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
+| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `ConfiguratorScreen`, renderizadores de área, `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
 | `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros |
 
 Recursos em `src/main/resources/`:
@@ -74,6 +79,6 @@ Antes de commitar, rode `./gradlew build runGameTestServer` (e o `./scripts/e2e.
 - **Lado do cliente:** classes de tela só em `client/`, nunca referenciadas por código comum (o `runGameTestServer` é um servidor dedicado e quebra se carregar uma).
 - **Memória:** cada build/jogo usa ~3 GB; não rode vários clientes ou servidores ao mesmo tempo (um cliente do e2e morreu assim).
 - **Rotação:** o `facing` do roteador segue a convenção do para-raios (`up` sem rotação, `down` x=180, laterais x=90 + y). Configurações por face devem ser salvas em relação ao `facing`.
-- **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal.
+- **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal. Os GameTests rodam em `run/gametest`, com o mundo apagado a cada rodada.
 - **Wrapper:** `gradle-wrapper.properties` usa `validateDistributionUrl=false`, porque a validação falha atrás do proxy do ambiente na nuvem.
 - **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O plugin ModDevGradle fica no `build.gradle`.

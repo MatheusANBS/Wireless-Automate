@@ -100,7 +100,6 @@
   "gui.wirelessautomate.router.more": "Mais",
   "gui.wirelessautomate.router.less": "Menos",
   "gui.wirelessautomate.router.more.tooltip": "Prioridade e redstone desta face",
-  "gui.wirelessautomate.router.summary": "Prioridade %s · %s",
   "gui.wirelessautomate.router.priority": "Prioridade",
   "gui.wirelessautomate.router.priority.decrease": "Diminuir prioridade",
   "gui.wirelessautomate.router.priority.increase": "Aumentar prioridade",

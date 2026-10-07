@@ -22,6 +22,8 @@ import org.jetbrains.annotations.Nullable;
  *       e {@link #removeNode} só marcam, nunca remontam na hora;
  *   <li>percorre a lista achatada de origens de todas as redes a partir do cursor salvo, uma visita
  *       por origem acordada, e para quando o orçamento acaba, guardando o cursor para o tick seguinte.
+ *       Se a volta inteira coube, o tick seguinte começa uma origem adiante: sem isso, as primeiras
+ *       origens da lista levariam sempre todo o espaço que abre nos destinos.
  *       O relógio é lido uma vez por origem, e serve tanto ao orçamento quanto ao profiler.
  * </ol>
  *
@@ -222,7 +224,8 @@ public final class NetworkManager {
         NetworkRoutes timed = null;
         long mark = 0;
         int visited = 0;
-        int index = cursor < count ? cursor : 0;
+        int start = cursor < count ? cursor : 0;
+        int index = start;
         for (int step = 0; step < count; step++) {
             Port source = sources.get(index);
             if (source.order != null && source.sourceBackoff.isAwake(now)) {
@@ -246,6 +249,9 @@ public final class NetworkManager {
                 visit(source, now);
             }
             index = index + 1 == count ? 0 : index + 1;
+        }
+        if (count > 0) {
+            cursor = start + 1 == count ? 0 : start + 1;
         }
         long time = System.nanoTime();
         if (timed != null) {

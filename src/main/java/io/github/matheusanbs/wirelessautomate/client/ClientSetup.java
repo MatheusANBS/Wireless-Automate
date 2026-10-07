@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -25,5 +26,7 @@ public final class ClientSetup {
                 (RouterMenu menu, Inventory inventory, Component title) -> new RouterScreen(menu, inventory, title));
         event.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
+        event.register(ModMenus.NETWORK_TABLET.get(),
+                (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
     }
 }

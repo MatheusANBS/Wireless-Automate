@@ -13,16 +13,27 @@ item_ids:
 
 <ItemImage id="wirelessautomate:network_tablet" scale="2" float="left" />
 
-Uma visão de todas as suas redes, de qualquer lugar. Abra com clique direito, ou com a tecla
-**Abrir o Tablet de Rede** (sem tecla padrão; escolha em Controles) com o tablet no inventário.
+Uma visão de todas as suas redes, de qualquer lugar.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:network_tablet" />
+## Ficha
 
-- **Lista:** busca, filtro por papel (extrai, insere...) e **Selecionar** para mover vários nós de
-  rede de uma vez. Clique num nó para abrir a tela dele à distância.
-- **Mapa:** vista de cima com cores por status; clique num ponto para abrir o nó.
-- **Estatísticas:** vazão por tipo, tempo do mod por tick, destinos cheios e chunks descarregados.
-- **Redes:** criar, cor, membros e privacidade.
-- **Grupos:** juntam várias redes de um sistema para pausar e retomar tudo de uma vez.
+| | |
+| --- | --- |
+| **Abre com** | Clique direito, ou a tecla **Abrir o Tablet de Rede** com o tablet no inventário (sem tecla padrão: escolha em Opções › Controles). |
+| **Empilha** | 1 |
+
+## Abas
+
+| Aba | O que mostra e faz |
+| --- | --- |
+| **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez. Clique num nó para abrir a tela dele à distância. |
+| **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
+| **Estatísticas** | Vazão por tipo, tempo do mod por tick, destinos cheios e chunks descarregados. |
+| **Redes** | Criar redes, cor, membros e privacidade. |
+| **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
+
+## Receita
+
+<RecipeFor id="wirelessautomate:network_tablet" />

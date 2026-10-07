@@ -13,15 +13,22 @@ item_ids:
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Copia a configuração de um roteador (faces, filtros, prioridades, redstone e a rede de cada aba) e
-cola em outros. Guarda uma cópia só, no próprio item; o tooltip mostra o que está copiado e os
-comandos do modo atual.
+Copia a configuração de um roteador e cola em outros, um a um ou numa área inteira.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:configurator" />
+## Ficha
 
-| Gesto | Pincel (padrão) | Área |
+| | |
+| --- | --- |
+| **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
+| **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
+| **Modos** | Pincel (padrão) e Área. |
+| **Empilha** | 1 |
+
+## Comandos
+
+| Gesto | Pincel | Área |
 | --- | --- | --- |
 | Shift + clique num roteador | Copia | Copia |
 | Clique num roteador | Cola nele | Marca um canto |
@@ -48,8 +55,14 @@ comandos do modo atual.
   <IsometricCamera yaw="200" pitch="35" />
 </GameScene>
 
-A cópia é relativa à orientação do roteador: funciona com ele preso em qualquer face. A rede de uma
-aba só é colada se você puder usá-la.
+## Bom saber
 
-**Dica:** para replicar uma linha de máquinas, copie o roteador de cada tipo de máquina e cole numa
-área que cubra a linha inteira.
+| | |
+| --- | --- |
+| **Orientação** | A cópia é relativa ao roteador: funciona com ele preso em qualquer face. |
+| **Redes** | A rede de uma aba só é colada se você puder usá-la; senão, a aba fica com a de antes. |
+| **Replicar uma linha** | Copie o roteador de cada tipo de máquina e cole numa área que cubra a linha inteira. |
+
+## Receita
+
+<RecipeFor id="wirelessautomate:configurator" />

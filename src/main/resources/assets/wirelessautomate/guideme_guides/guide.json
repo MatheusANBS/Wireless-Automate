@@ -10,7 +10,8 @@
         "translate": "item.wirelessautomate.guide.tooltip",
         "color": "dark_gray"
       }
-    ]
+    ],
+    "model": "wirelessautomate:item/guide"
   },
   "default_language": "en_us"
 }

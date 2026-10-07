@@ -12,14 +12,6 @@ navigation:
 Routers don't link to each other: each **tab** of a router joins a **network**, and everything of
 the same type on the same network trades. Who sends and who receives comes from the face modes.
 
-- **Active network:** every player has an active network (the first one is named after them). A
-  placed router joins it, on every tab.
-- **Network per tab:** a furnace's items can go to the "Ore line" network and its energy to the
-  "Base" network. If you don't need to split anything, you won't notice.
-- **Delivery order:** higher priority first; ties take turns (round-robin).
-- **Storage:** receives from extractors and delivers to inserters, without bouncing between two
-  Storage faces.
-
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
   <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="advanced" />
@@ -56,17 +48,31 @@ the same type on the same network trades. Who sends and who receives comes from 
   <IsometricCamera yaw="210" pitch="35" />
 </GameScene>
 
+## How it works
+
+| Rule | Explanation |
+| --- | --- |
+| **Active network** | Every player has an active network (the first one is named after them). A placed router joins it, on every tab. |
+| **Network per tab** | A furnace's items can go to the "Ore line" network and its energy to the "Base" network. |
+| **Delivery order** | Higher priority first; ties take turns (round-robin). |
+| **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
+| **Owner** | Only the network's owner (or an operator) can put routers in it. |
+
 ## Changing the network
 
-- With each tab's network selector, on the router screen.
-- With the <ItemLink id="wirelessautomate:linker" />, one router or one area at a time.
-- From the <ItemLink id="wirelessautomate:network_tablet" />, many nodes at once.
-- By pasting a configuration with the <ItemLink id="wirelessautomate:configurator" /> (it carries the network).
+| Way | How many at once |
+| --- | --- |
+| The tab's network selector, on the router screen | One tab of one router |
+| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (every tab or one type) |
+| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
+| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
+| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
 
 ## Range and chunks
 
-The maximum distance depends on the source's tier (see [Router](router.md)). A source or destination
-in an unloaded chunk just pauses that route, at no cost. To keep a router working far away, use the
-[Chunk Loading Upgrade](chunk-loading.md).
-
-Networks belong to whoever created them: only the owner (or an operator) can put routers in them.
+| Situation | What happens |
+| --- | --- |
+| Destination too far | Left out for that source. Range depends on the sender's tier ([Router](router.md)). |
+| Another dimension | Only from an **Ultimate** source. |
+| Unloaded chunk | The route pauses, at no cost, and resumes when the chunk loads. |
+| Keep it working far away | Use the [Chunk Loading Upgrade](chunk-loading.md). |

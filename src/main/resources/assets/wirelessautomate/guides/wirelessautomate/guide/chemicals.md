@@ -9,15 +9,31 @@ navigation:
 
 # Mekanism chemicals
 
-With **Mekanism** installed, the router gets a **Chemicals** tab: gases, infuse types, pigments and
-slurries, with mode, priority, redstone and a network per tab, like the other tabs. Throughput
-follows the tier's fluid limit (see [Router](router.md)).
+With **Mekanism** installed, the router gets a **Chemicals** tab: gases, infuse types, pigments
+and slurries. Without Mekanism the tab doesn't show and the rest of the mod works the same.
 
-- **Filter:** exact chemical or `@mod`, with stock. Add one by Shift + clicking a tank holding the
-  chemical, dragging from JEI or typing its id (for example `mekanism:hydrogen`). Tags don't apply
-  to chemicals, and there is no chemical filter card.
-- **Mekanism machine faces:** they come with their faces disabled in Mekanism's own side
-  configuration. Enable the face the router will use with Mekanism's configurator tool, just like
-  you would for a tube; otherwise the router can't see the chemical.
+## What works
 
-Without Mekanism the tab doesn't show, and the rest of the mod works the same.
+| Feature | Chemicals |
+| --- | --- |
+| Mode, priority and redstone per face | Yes, like the other tabs. |
+| Its own network on the tab | Yes. |
+| Throughput | The tier's fluid limit (see [Router](router.md)). |
+| Exact and mod (`@mod`) filter | Yes, with stock. |
+| Tag filter | No. |
+| Filter Card | No: use the face's built-in filter. |
+
+## Adding chemicals to the filter
+
+| Way | How |
+| --- | --- |
+| **Inventory** | Shift + click a tank holding the chemical. |
+| **JEI** | Drag the chemical from the list onto the grid. |
+| **Typing** | Under **More**, the id: `mekanism:hydrogen`, `mekanism:oxygen`... |
+
+## Important: Mekanism machine faces
+
+Mekanism machines and tanks come with their faces **disabled** in Mekanism's own side
+configuration. Enable the face the router will use with Mekanism's configurator tool, just like
+you would for a tube; otherwise the router can't see the chemical and the face mode shows as
+unavailable.

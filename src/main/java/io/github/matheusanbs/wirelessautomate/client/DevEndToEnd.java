@@ -920,23 +920,54 @@ public final class DevEndToEnd {
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "chemicals", "performance");
+            "chemicals", "performance", "troubleshooting", "recipes");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}
      * e salva uma captura, para conferir as cenas 3D, as receitas e o texto.
      */
     private static void guideSteps(List<Step> list) {
+        guidePages(list, "");
+        // De novo em português (as páginas de _pt_br/), e de volta ao idioma de antes.
+        list.add(language("pt_br"));
+        guidePages(list, "-pt");
+        list.add(language("en_us"));
+    }
+
+    private static void guidePages(List<Step> list, String suffix) {
         for (String page : GUIDE_PAGES) {
-            list.add(new Step("guia: " + page, STEP_TIMEOUT_MS,
+            list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
                     () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:" + page + ".md"),
                     () -> Minecraft.getInstance().screen != null
                             && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
-            list.add(capture("guia-" + page));
+            list.add(capture("guia-" + page + suffix));
+            // O resto da página: rola e captura de novo (as páginas longas passam de uma tela).
+            for (int part = 2; part <= 3; part++) {
+                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> {
+                    Minecraft minecraft = Minecraft.getInstance();
+                    Screen screen = minecraft.screen;
+                    if (screen != null) {
+                        screen.mouseScrolled(screen.width / 2.0, screen.height / 2.0, 0, -20);
+                    }
+                }, () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
+                list.add(capture("guia-" + page + suffix + "-" + part));
+            }
         }
-        list.add(new Step("fechar o guia", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
+        list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
                 () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
+    }
+
+    /** Troca o idioma do jogo e espera a recarga dos recursos. */
+    private static Step language(String code) {
+        java.util.concurrent.CompletableFuture<?>[] reload = new java.util.concurrent.CompletableFuture<?>[1];
+        return new Step("idioma " + code, 120_000, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.options.languageCode = code;
+            minecraft.getLanguageManager().setSelected(code);
+            reload[0] = minecraft.reloadResourcePacks();
+        }, () -> reload[0] != null && reload[0].isDone() && Minecraft.getInstance().getOverlay() == null,
+                () -> "recarregando os recursos");
     }
 
     /** Segura ou solta o Shift como o teclado; termina quando o servidor vê o jogador agachado ou não. */

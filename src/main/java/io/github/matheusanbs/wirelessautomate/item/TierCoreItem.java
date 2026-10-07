@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -82,7 +83,16 @@ public class TierCoreItem extends Item {
             case FLUID -> loaded ? values.fluidPerSecond().get() : tier.defaultFluidPerSecond;
             case ENERGY -> loaded ? values.energyPerTick().get() : tier.defaultEnergyPerTick;
         };
-        return value <= 0 ? Component.translatable(KEY + "unlimited") : Component.literal(String.format(Locale.ROOT, "%,d", value));
+        return value <= 0 ? Component.translatable(KEY + "unlimited") : Component.literal(grouped(value));
+    }
+
+    /**
+     * Número com separador de milhar do idioma: a chave {@code wirelessautomate.number.group} é
+     * "." em português e "," em inglês ({@link Language} existe no cliente e no servidor).
+     */
+    static String grouped(long value) {
+        String separator = Language.getInstance().getOrDefault("wirelessautomate.number.group", ",");
+        return String.format(Locale.ROOT, "%,d", value).replace(",", separator);
     }
 
     private static Component range(RouterTier tier) {
@@ -94,6 +104,6 @@ public class TierCoreItem extends Item {
             return Component.translatable(KEY + "range.all_dimensions");
         }
         return range <= 0 ? Component.translatable(KEY + "range.dimension")
-                : Component.translatable(KEY + "range.blocks", String.format(Locale.ROOT, "%,d", range));
+                : Component.translatable(KEY + "range.blocks", grouped(range));
     }
 }

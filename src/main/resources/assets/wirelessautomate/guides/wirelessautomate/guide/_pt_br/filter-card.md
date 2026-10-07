@@ -13,17 +13,29 @@ item_ids:
 
 <ItemImage id="wirelessautomate:filter_card" scale="2" float="left" />
 
-Um filtro completo num item, para reaproveitar em várias faces. Cada face tem dois slots de cartão
-por tipo (itens e fluidos), na tela do roteador.
+Um filtro completo num item, para reaproveitar em várias faces. Vale para itens ou para fluidos.
 
 <br clear="all" />
 
-- **Editar:** clique direito no ar com o cartão.
-- **Tipo:** com o cartão vazio, Shift + clique direito no ar alterna entre itens e fluidos.
-- **Copiar de/para uma face:** na tela de filtro da face, em **Mais**, exporte o filtro para o
-  cartão ou importe do cartão.
-- **Duplicar:** um cartão configurado + cartões vazios na bancada dão cópias iguais (o original volta).
+## Ficha
+
+| | |
+| --- | --- |
+| **Vai em** | Os dois slots de cartão da face, na tela do roteador (por tipo: itens ou fluidos). |
+| **Empilha** | 16 |
+| **Receita** | Rende 2 cartões. |
+
+## Comandos
+
+| Gesto | O que faz |
+| --- | --- |
+| Clique direito no ar | Edita o filtro do cartão. |
+| Shift + clique direito no ar (cartão vazio) | Alterna entre itens e fluidos. |
+| Tela de filtro da face, em **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
+| Bancada: cartão configurado + cartões vazios | Cópias iguais (o original volta). |
+
+## Receita
 
 <RecipeFor id="wirelessautomate:filter_card" />
 
-Químicos usam só o filtro embutido da face (não há cartão de químicos).
+Químicos usam só o filtro embutido da face: não há cartão de químicos.

@@ -14,13 +14,32 @@ item_ids:
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />
 
 Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabalhando com você longe.
-Vai no slot do cabeçalho da tela do roteador.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
+## Ficha
 
-- O cabeçalho mostra o estado: **Ativo**, **Inativo: limite de chunks do dono** ou **Inativo:
-  desligado no servidor**.
-- Cada jogador força até **16 chunks** por padrão; vários roteadores no mesmo chunk contam uma vez.
-- O servidor pode desligar o upgrade ou mudar o limite (`chunkLoading` na config).
+| | |
+| --- | --- |
+| **Vai em** | O slot do cabeçalho da tela do roteador. |
+| **Limite** | 16 chunks por jogador (padrão); vários roteadores no mesmo chunk contam uma vez. |
+| **Empilha** | 1 |
+
+## Estados
+
+| Estado no cabeçalho | Significa |
+| --- | --- |
+| **Ativo: chunks carregados** | O roteador e a máquina continuam trabalhando longe dos jogadores. |
+| **Inativo: limite de chunks do dono** | Quem pôs o upgrade já força o máximo de chunks permitido. |
+| **Inativo: desligado no servidor** | A config do servidor desligou o upgrade. |
+
+## Config do servidor
+
+| Chave | Padrão | O que faz |
+| --- | --- | --- |
+| `chunkLoading.enabled` | `true` | Liga ou desliga o upgrade. |
+| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forçados por jogador (0 = sem limite). |
+
+## Receita
+
+<RecipeFor id="wirelessautomate:chunk_loader_upgrade" />

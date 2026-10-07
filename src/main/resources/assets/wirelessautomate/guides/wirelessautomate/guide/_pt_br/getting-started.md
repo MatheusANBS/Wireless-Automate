@@ -9,7 +9,7 @@ navigation:
 
 # Primeiros passos
 
-Vamos levar itens de um baú para outro, sem canos.
+Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 
 <GameScene zoom="4" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />
@@ -28,18 +28,24 @@ Vamos levar itens de um baú para outro, sem canos.
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
-1. Faça dois roteadores (receita abaixo).
-2. Clique com o roteador numa face de um baú: ele fica **preso** àquela máquina e já entra na sua
-   rede ativa, em todas as abas.
-3. Clique no roteador A para abrir a tela. Na aba **Itens**, escolha a face **Cima** e o modo
-   **Extrai**.
-4. No roteador B, mesma face, modo **Insere**. Pronto: o que entrar no baú A vai para o baú B.
+| Passo | O que fazer |
+| --- | --- |
+| **1** | Faça dois roteadores (receita abaixo). |
+| **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú e já entra na sua rede ativa. Faça o mesmo no baú B. |
+| **3** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
+| **4** | No roteador B, mesma face, modo **Insere**. |
+| **5** | Coloque itens no baú A: eles aparecem no baú B. |
+
+## Receita
 
 <RecipeFor id="wirelessautomate:router" />
 
-## O que mais dá para fazer
+## Próximos passos
 
-- Cada face da máquina, para cada tipo (itens, fluidos, energia, químicos), tem modo, prioridade,
-  redstone e [filtro](filters.md) próprios. Veja [Roteador](router.md).
-- Roteadores longe uns dos outros funcionam: o alcance depende do [tier](upgrade-cards.md).
-- Para separar fábricas, crie [redes](networks.md) diferentes.
+| Quero... | Leia |
+| --- | --- |
+| Entender cada parte da tela do roteador | [Roteador Wireless](router.md) |
+| Mandar só alguns itens | [Filtros](filters.md) |
+| Separar fábricas diferentes | [Redes](networks.md) |
+| Mais vazão ou mais alcance | [Cartões de Upgrade](upgrade-cards.md) |
+| Saber por que não funcionou | [Problemas comuns](troubleshooting.md) |

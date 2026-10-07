@@ -13,21 +13,27 @@ item_ids:
 
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />
 
-Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou por área.
+Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inteira de uma vez.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:linker" />
+## Ficha
+
+| | |
+| --- | --- |
+| **Modos** | Único e Área. |
+| **Tipo** | Todos, Itens, Fluidos ou Energia. |
+| **Empilha** | 1 |
+
+## Comandos
 
 | Gesto | O que faz |
 | --- | --- |
-| Clique num roteador | Põe o roteador na rede ativa (cria uma, se você não tiver) |
-| Clique no ar | Abre a tela: rede ativa, tipo, modo e, em Área, a prévia e o botão Vincular |
-| Shift + clique no ar | Alterna entre **Único** e **Área** |
-| Shift + roda do mouse | Troca o tipo: Todos, Itens, Fluidos ou Energia |
-| Shift + clique em dois blocos (modo Área) | Marca os cantos da área |
-
-Com o tipo em **Todos**, o roteador entra na rede em todas as abas; com um tipo, só naquela aba.
+| Clique num roteador | Põe o roteador na rede ativa (cria uma, se você não tiver). |
+| Clique no ar | Abre a tela: rede ativa, tipo, modo e, em Área, a prévia e o botão **Vincular**. |
+| Shift + clique no ar | Alterna entre **Único** e **Área**. |
+| Shift + roda do mouse | Troca o tipo. Em **Todos**, todas as abas entram na rede; num tipo, só aquela aba. |
+| Shift + clique em dois blocos (Área) | Marca os cantos da área. |
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
@@ -41,10 +47,21 @@ Com o tipo em **Todos**, o roteador entra na rede em todas as abas; com um tipo,
   <BoxAnnotation min="0 0 0" max="5 2 3" color="#45d6cc" thickness="0.05">
     Área marcada: todos os roteadores carregados dentro dela entram na rede
   </BoxAnnotation>
-  <BlockAnnotation x="2" y="1" z="2" color="#ff6b5e">
-    Também entra (no Vinculador, a máquina não importa)
+  <BlockAnnotation x="2" y="1" z="2" color="#3fc36b">
+    Também entra: para o Vinculador, a máquina não importa
   </BlockAnnotation>
   <IsometricCamera yaw="200" pitch="35" />
 </GameScene>
 
-A área vale até 262.144 blocos e a até 64 blocos de você (configurável no servidor).
+## Limites da área
+
+| Limite | Padrão |
+| --- | --- |
+| Tamanho máximo | 262.144 blocos |
+| Distância máxima até você | 64 blocos |
+
+O servidor pode mudar os dois na config (`linker`).
+
+## Receita
+
+<RecipeFor id="wirelessautomate:linker" />

@@ -12,14 +12,6 @@ navigation:
 Roteadores não se ligam uns aos outros: cada **aba** de um roteador entra numa **rede**, e tudo do
 mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo das faces.
 
-- **Rede ativa:** cada jogador tem uma rede ativa (a primeira leva o nome dele). Roteador colocado
-  entra nela, em todas as abas.
-- **Rede por aba:** os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia
-  dela para a rede "Base". Quem não quer separar nada não vê diferença.
-- **Ordem de entrega:** prioridade maior primeiro; empates se revezam (round-robin).
-- **Armazém:** recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro
-  Armazém.
-
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
   <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="advanced" />
@@ -56,17 +48,31 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
   <IsometricCamera yaw="210" pitch="35" />
 </GameScene>
 
-## Mudar a rede
+## Como funciona
 
-- Pelo seletor de rede de cada aba, na tela do roteador.
-- Com o <ItemLink id="wirelessautomate:linker" />, um roteador ou uma área de cada vez.
-- Pelo <ItemLink id="wirelessautomate:network_tablet" />, vários nós de uma vez.
-- Colando a configuração com o <ItemLink id="wirelessautomate:configurator" /> (leva a rede junto).
+| Regra | Explicação |
+| --- | --- |
+| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). Roteador colocado entra nela, em todas as abas. |
+| **Rede por aba** | Os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia dela para a rede "Base". |
+| **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
+| **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
+| **Dono** | Só o dono da rede (ou um operador) pode pôr roteadores nela. |
+
+## Como mudar a rede
+
+| Jeito | Quantos de uma vez |
+| --- | --- |
+| Seletor de rede da aba, na tela do roteador | Uma aba de um roteador |
+| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (todas as abas ou só um tipo) |
+| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
+| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
 
 ## Alcance e chunks
 
-A distância máxima depende do tier da origem (veja [Roteador](router.md)). Origem ou destino num
-chunk descarregado só pausam a rota, sem custo. Para manter um roteador trabalhando longe, use o
-[Upgrade de Chunk Loading](chunk-loading.md).
-
-Redes são de quem as criou: só o dono (ou um operador) pode pôr roteadores nelas.
+| Situação | O que acontece |
+| --- | --- |
+| Destino longe demais | Fica de fora daquela origem. O alcance depende do tier de quem envia ([Roteador](router.md)). |
+| Outra dimensão | Só com origem **Ultimate**. |
+| Chunk descarregado | A rota pausa, sem custo, e volta quando o chunk carrega. |
+| Quer manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |

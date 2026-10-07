@@ -10,24 +10,41 @@ navigation:
 # Filters
 
 Each machine face, for each type, has a **built-in filter** with no entry limit, plus two
-[Filter Card](filter-card.md) slots. A resource passes if the built-in filter **or** any card
-accepts it. An empty filter lets everything through.
+[Filter Card](filter-card.md) slots. Open it with the **Edit** button on the router screen.
 
-Open it with the **Edit** button on the router screen.
+## Golden rule
 
-## Entries
+| Situation | Result |
+| --- | --- |
+| No filter has entries | **Everything passes.** |
+| The built-in filter or any card accepts | It passes. |
+| Whitelist | Only what matches an entry passes. |
+| Blacklist | Everything passes except what matches. |
 
-| Rule | Example | Applies to |
-| --- | --- | --- |
-| Exact | Iron ingot, water, hydrogen | Items, fluids, chemicals |
-| Tag | `#c:ingots`, `#c:ores` | Items, fluids |
-| Mod | `@mekanism` | Items, fluids, chemicals |
+At the source, the filter decides what **leaves**; at the destination, what **enters**.
 
-- **Add:** Shift + click an item in your inventory (a bucket or tank, for fluids and chemicals),
-  drag from JEI or Shift + click in the JEI list (you don't need the item), or type the rule in
-  the **More** box (`#tag`, `@mod` or, for chemicals, the id).
-- **Whitelist or blacklist**, per filter.
-- **Components** (items): ignore (enchanted pickaxe = pickaxe) or require them to match.
-- **Stock:** at a destination, accept only up to N; at a source, always keep N.
+## Entry types
+
+| Rule | Example | Items | Fluids | Chemicals |
+| --- | --- | --- | --- | --- |
+| **Exact** | Iron ingot, water, hydrogen | Yes | Yes | Yes |
+| **Tag** | `#c:ingots`, `#c:ores` | Yes | Yes | No |
+| **Mod** | `@mekanism` | Yes | Yes | Yes |
+
+## How to add
+
+| Way | How |
+| --- | --- |
+| **Inventory** | Shift + click the item (for fluids and chemicals, a full bucket or tank). |
+| **JEI** | Drag from the list onto the grid, or Shift + click in the list. You don't need the item. |
+| **Typing** | Under **More**: `#tag`, `@mod` or, for chemicals, the id (`mekanism:hydrogen`). |
+
+## Options
+
+| Option | What it does |
+| --- | --- |
+| **Whitelist / blacklist** | Inverts the filter. |
+| **Components** (items) | Ignore: enchanted pickaxe = pickaxe. Require: only identical. |
+| **Stock** | At a destination, accept only up to N. At a source, always keep N. Click an entry to set it. |
 
 Checking an item costs the same with 9 or thousands of entries: the filter is compiled.

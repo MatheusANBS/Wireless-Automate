@@ -9,7 +9,7 @@ navigation:
 
 # Getting started
 
-Let's move items from one chest to another, without pipes.
+Let's move items from one chest to another, without pipes. It takes a minute.
 
 <GameScene zoom="4" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />
@@ -28,18 +28,24 @@ Let's move items from one chest to another, without pipes.
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
-1. Craft two routers (recipe below).
-2. Use a router on a face of a chest: it **attaches** to that machine and joins your active
-   network, on every tab.
-3. Right-click router A to open its screen. On the **Items** tab, pick the **Up** face and the
-   **Extract** mode.
-4. On router B, same face, **Insert** mode. Done: whatever goes into chest A moves to chest B.
+| Step | What to do |
+| --- | --- |
+| **1** | Craft two routers (recipe below). |
+| **2** | Use a router on any face of chest A. It **attaches** to the chest and joins your active network. Do the same on chest B. |
+| **3** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
+| **4** | On router B, same face, **Insert** mode. |
+| **5** | Put items in chest A: they show up in chest B. |
+
+## Recipe
 
 <RecipeFor id="wirelessautomate:router" />
 
-## What else
+## Next steps
 
-- Each machine face, for each type (items, fluids, energy, chemicals), has its own mode, priority,
-  redstone and [filter](filters.md). See [Router](router.md).
-- Routers far apart still work: the range depends on the [tier](upgrade-cards.md).
-- To keep factories apart, create different [networks](networks.md).
+| I want to... | Read |
+| --- | --- |
+| Understand every part of the router screen | [Wireless Router](router.md) |
+| Send only some items | [Filters](filters.md) |
+| Keep different factories apart | [Networks](networks.md) |
+| More throughput or more range | [Upgrade Cards](upgrade-cards.md) |
+| Find out why it didn't work | [Troubleshooting](troubleshooting.md) |

@@ -13,14 +13,33 @@ item_ids:
 
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />
 
-Keeps the router's chunk (and its machine) loaded, so it keeps working while you're away. It goes
-in the slot in the router screen's header.
+Keeps the router's chunk (and its machine) loaded, so it keeps working while you're away.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
+## Spec sheet
 
-- The header shows its state: **Active**, **Inactive: owner's chunk limit** or **Inactive: disabled
-  on the server**.
-- Each player forces up to **16 chunks** by default; several routers in one chunk count once.
-- The server can disable the upgrade or change the limit (`chunkLoading` in the config).
+| | |
+| --- | --- |
+| **Goes in** | The slot in the router screen's header. |
+| **Limit** | 16 chunks per player (default); several routers in one chunk count once. |
+| **Stacks to** | 1 |
+
+## States
+
+| State in the header | Meaning |
+| --- | --- |
+| **Active: chunks loaded** | The router and the machine keep working away from players. |
+| **Inactive: owner's chunk limit** | Whoever placed the upgrade already forces as many chunks as allowed. |
+| **Inactive: disabled on the server** | The server config turned the upgrade off. |
+
+## Server config
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `chunkLoading.enabled` | `true` | Turns the upgrade on or off. |
+| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forced per player (0 = unlimited). |
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:chunk_loader_upgrade" />

@@ -48,10 +48,11 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
 | `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros. `ChemicalGameTests` fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
 | `scripts/textures/gerar_texturas.py` | Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; edite as paletas ali, não os PNGs |
+| `scripts/guide/gerar_guia.py` | Gera as páginas do livro-guia (GuideME) em inglês e português, lado a lado; edite ali, não os `.md` |
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
-- `assets/wirelessautomate/guideme_guides/guide.json` e `guides/wirelessautomate/guide/`: o livro-guia do GuideME (opcional, sem código), páginas em inglês na pasta e em português em `_pt_br/`. Mantenha os dois idiomas e as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página e salva `guia-<página>.png` quando o GuideME está presente.
+- `assets/wirelessautomate/guideme_guides/guide.json` e `guides/wirelessautomate/guide/`: o livro-guia do GuideME (opcional, sem código), páginas em inglês na pasta e em português em `_pt_br/`, geradas por `scripts/guide/gerar_guia.py`. Mantenha as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página nos dois idiomas, rola e salva `guia-<página>[-pt][-2|-3].png` quando o GuideME está presente.
 - `data/`: loot table, receita, tags e `wirelessautomate/structure/empty.nbt` (estrutura 3×3×3 vazia dos GameTests).
 - `src/main/templates/META-INF/neoforge.mods.toml`: preenchido pelo Gradle a partir do `gradle.properties`.
 

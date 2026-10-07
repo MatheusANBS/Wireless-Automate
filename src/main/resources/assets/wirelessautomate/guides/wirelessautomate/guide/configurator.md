@@ -13,15 +13,22 @@ item_ids:
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Copies a router's configuration (faces, filters, priorities, redstone and each tab's network) and
-pastes it on others. It holds a single copy, in the item itself; the tooltip shows what is copied
-and the current mode's actions.
+Copies a router's configuration and pastes it on others, one at a time or over a whole area.
 
 <br clear="all" />
 
-<RecipeFor id="wirelessautomate:configurator" />
+## Spec sheet
 
-| Action | Brush (default) | Area |
+| | |
+| --- | --- |
+| **Copies** | Faces, filters, priorities, redstone and each tab's network. |
+| **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
+| **Modes** | Brush (default) and Area. |
+| **Stacks to** | 1 |
+
+## Actions
+
+| Action | Brush | Area |
 | --- | --- | --- |
 | Shift + click a router | Copy | Copy |
 | Click a router | Paste on it | Mark a corner |
@@ -48,8 +55,14 @@ and the current mode's actions.
   <IsometricCamera yaw="200" pitch="35" />
 </GameScene>
 
-The copy is relative to the router's orientation: it works with the router on any face. A tab's
-network is only pasted if you're allowed to use it.
+## Good to know
 
-**Tip:** to replicate a line of machines, copy the router of each machine type and paste over an
-area covering the whole line.
+| | |
+| --- | --- |
+| **Orientation** | The copy is relative to the router: it works with the router on any face. |
+| **Networks** | A tab's network is only pasted if you can use it; otherwise the tab keeps its own. |
+| **Replicating a line** | Copy the router of each machine type and paste over an area covering the whole line. |
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:configurator" />

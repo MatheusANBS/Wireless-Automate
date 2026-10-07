@@ -10,24 +10,41 @@ navigation:
 # Filtros
 
 Cada face da máquina, para cada tipo, tem um **filtro embutido** sem limite de entradas, mais dois
-slots de [Cartão de Filtro](filter-card.md). O recurso passa se o filtro embutido **ou** algum
-cartão aceitar. Filtro vazio passa tudo.
+slots de [Cartão de Filtro](filter-card.md). Abra pelo botão **Editar**, na tela do roteador.
 
-Abra pelo botão **Editar**, na tela do roteador.
+## Regra de ouro
 
-## Entradas
+| Situação | Resultado |
+| --- | --- |
+| Nenhum filtro com entradas | **Passa tudo.** |
+| Filtro embutido ou algum cartão aceita | Passa. |
+| Lista branca | Só passa o que casa com uma entrada. |
+| Lista negra | Passa tudo, menos o que casa. |
 
-| Regra | Exemplo | Vale para |
-| --- | --- | --- |
-| Exato | Lingote de ferro, água, hidrogênio | Itens, fluidos, químicos |
-| Tag | `#c:ingots`, `#c:ores` | Itens, fluidos |
-| Mod | `@mekanism` | Itens, fluidos, químicos |
+Na origem, o filtro decide o que **sai**; no destino, o que **entra**.
 
-- **Adicionar:** Shift + clique num item do inventário (num balde ou tanque, para fluidos e
-  químicos), arrastar do JEI ou Shift + clique na lista do JEI (sem precisar ter o item), ou
-  digitar a regra na caixa de **Mais** (`#tag`, `@mod` ou, nos químicos, o id).
-- **Lista branca ou negra**, por filtro.
-- **Componentes** (itens): ignorar (picareta encantada = picareta) ou exigir iguais.
-- **Estoque:** num destino, aceitar só até N; numa origem, manter sempre N.
+## Tipos de entrada
+
+| Regra | Exemplo | Itens | Fluidos | Químicos |
+| --- | --- | --- | --- | --- |
+| **Exato** | Lingote de ferro, água, hidrogênio | Sim | Sim | Sim |
+| **Tag** | `#c:ingots`, `#c:ores` | Sim | Sim | Não |
+| **Mod** | `@mekanism` | Sim | Sim | Sim |
+
+## Como adicionar
+
+| Jeito | Como |
+| --- | --- |
+| **Inventário** | Shift + clique no item (para fluidos e químicos, num balde ou tanque cheio). |
+| **JEI** | Arraste da lista para a grade, ou Shift + clique na lista. Não precisa ter o item. |
+| **Digitando** | Em **Mais**: `#tag`, `@mod` ou, nos químicos, o id (`mekanism:hydrogen`). |
+
+## Opções
+
+| Opção | O que faz |
+| --- | --- |
+| **Lista branca / negra** | Inverte o filtro. |
+| **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. |
+| **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Clique numa entrada para definir. |
 
 Conferir um item custa o mesmo com 9 ou com milhares de entradas: o filtro é compilado.

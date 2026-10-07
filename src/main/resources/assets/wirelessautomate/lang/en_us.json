@@ -21,6 +21,7 @@
   "item.wirelessautomate.tier_core.range.dimension": "the whole dimension",
   "item.wirelessautomate.tier_core.range.all_dimensions": "every dimension",
   "item.wirelessautomate.tier_core.use": "Use on a placed router, or combine both in a crafting table",
+  "wirelessautomate.number.group": ",",
   "tier.wirelessautomate.basic": "Basic",
   "tier.wirelessautomate.advanced": "Advanced",
   "tier.wirelessautomate.elite": "Elite",

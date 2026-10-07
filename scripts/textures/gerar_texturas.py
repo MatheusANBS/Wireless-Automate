@@ -81,6 +81,10 @@ PALETAS: dict[str, dict[str, str]] = {
     # Vinculador (controle laranja).
     "laranja": {"4": "#ffc890", "3": "#f7a35c", "2": "#e07a2f", "1": "#ad5320", "0": "#6e3110"},
 
+    # Livro-guia: capa azul-ardósia, lombada escura e páginas creme.
+    "livro": {"4": "#4a6b8c", "3": "#36536f", "2": "#2b4560", "1": "#20354b",
+              "S": "#141f2b", "s": "#1d2c3c", "p": "#f1e8d0", "q": "#cbbf9f"},
+
     # Portas da tela.
     "porta_extract": {"4": "#a8cbff", "3": "#6ea6ff", "2": "#3d8bff", "1": "#2b61b3", "w": "#12284a",
                       "s": "#0a1830", "a": "#cfe0ff"},
@@ -415,6 +419,35 @@ def tablet() -> Image.Image:
     return img
 
 
+# Livro-guia: capa com o símbolo de wireless (arcos em ciano sobre um ponto e uma antena dourados),
+# cantos dourados, lombada à esquerda e a borda das páginas à direita.
+LIVRO = [
+    "................",
+    "..OOOOOOOOOOOO..",
+    ".OSs444444444pO.",
+    ".OSsg3333333gqO.",
+    ".OSs33CCCCC33pO.",
+    ".OSs3C33333C3qO.",
+    ".OSsC33ccc33CpO.",
+    ".OSs33c333c33qO.",
+    ".OSs333333333pO.",
+    ".OSs3333d3333qO.",
+    ".OSs333ddd333pO.",
+    ".OSs222222222qO.",
+    ".OSsg2222222gpO.",
+    ".OSs111111111qO.",
+    "..OOOOOOOOOOOO..",
+    "................",
+]
+
+
+def livro() -> Image.Image:
+    leg = legenda(O="contorno.O", S="livro.S", s="livro.s", p="livro.p", q="livro.q",
+                  g="ouro.3", d="ouro.2", C="cristal.3", c="cristal.2",
+                  **{"4": "livro.4", "3": "livro.3", "2": "livro.2", "1": "livro.1"})
+    return pinta(LIVRO, leg)
+
+
 LINKER = [
     "..........O.....",
     ".........OYO....",
@@ -554,6 +587,7 @@ def gerar() -> dict[str, Image.Image]:
     sprites["item/filter_card"] = cartao(CARTAO_FILTRO, "cartao_filtro", placa="placa_filtro")
     sprites["item/linker"] = vinculador()
     sprites["item/chunk_loader_upgrade"] = cartao(CARTAO_CHUNK, "cartao_chunk")
+    sprites["item/guide"] = livro()
     for n, tier in enumerate(TIERS_CARTAO, start=1):
         sprites[f"item/tier_core_{tier}"] = cartao(CARTAO_UPGRADE, f"cartao_{tier}", pips=n)
     for tier in TIERS_ROTEADOR:
@@ -653,7 +687,7 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
 
     linhas: list[tuple[str, list[tuple[str, Image.Image]]]] = []
     itens = ["configurator", "network_tablet", "linker", "filter_card", "chunk_loader_upgrade",
-             "tier_core_advanced", "tier_core_elite", "tier_core_ultimate"]
+             "tier_core_advanced", "tier_core_elite", "tier_core_ultimate", "guide"]
     linhas.append(("Itens", [(n, tile(sprites[f"item/{n}"])) for n in itens]))
     # Itens em tamanho real (1× e 2×), como no inventário.
     linhas.append(("Portas da tela", [(n, tile(sprites[f"gui/{n}"]))
@@ -664,7 +698,7 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         linhas.append((f"Roteador {tier}", faces))
 
     margem, gap = 16, 12
-    colunas = 8
+    colunas = 9
     largura = margem * 2 + colunas * celula + (colunas - 1) * gap
     montados = [roteador_montado(t, sprites) for t in TIERS_ROTEADOR]
     alt_montado = max(m.height for m in montados)

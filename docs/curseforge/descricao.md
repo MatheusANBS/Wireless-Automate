@@ -1,11 +1,4 @@
-<!--
-Descrição da página do CurseForge (Markdown; no editor, escolha o formato Markdown).
-Antes de publicar: envie as imagens de docs/curseforge/ para a galeria do projeto ("Images") e
-troque cada URL_* pelo link da imagem enviada. O repositório é privado, então links do GitHub
-não funcionam. Este comentário não aparece na página, mas pode apagá-lo.
--->
-
-![Wireless Automate](URL_BANNER)
+![Wireless Automate](https://media.forgecdn.net/attachments/2023/182/banner-png.png)
 
 **Wireless Automate** moves items, fluids, energy and Mekanism chemicals between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far.
 
@@ -15,26 +8,26 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ## Features
 
-![Connect machines without pipes](URL_FEATURE_1)
+![Connect machines without pipes](https://media.forgecdn.net/attachments/2023/183/feature-1-network-png.png)
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on.
 - **Networks, not cables.** Routers on the same network trade resources of the same type. Each resource tab of a router can join a different network, so a furnace's items can go to your ore line while its energy comes from your base grid.
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
 
-![Configure every face](URL_FEATURE_2)
+![Configure every face](https://media.forgecdn.net/attachments/2023/184/feature-2-router-png.png)
 
 ### Filters with no entry limit
 
 Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or blacklist, with **stock limits** ("keep 64 in the source", "accept up to 16 in the destination"). Add entries by Shift + clicking your inventory or by dragging from **JEI**. Filter Cards carry a whole filter to reuse on other faces.
 
-![Unlimited filters](URL_FEATURE_3)
+![Unlimited filters](https://media.forgecdn.net/attachments/2023/185/feature-3-filters-png.png)
 
 ### Four tiers
 
 Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
 
-![Four tiers](URL_FEATURE_4)
+![Four tiers](https://media.forgecdn.net/attachments/2023/186/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
 | --- | --- | --- | --- | --- |
@@ -47,7 +40,7 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 ### Tools for big builds
 
-![Link whole areas at once](URL_FEATURE_5)
+![Link whole areas at once](https://media.forgecdn.net/attachments/2023/187/feature-5-area-png.png)
 
 - **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, for every tab or a single resource type.
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks.
@@ -55,13 +48,13 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 ### Network Tablet
 
-![Network Tablet](URL_FEATURE_6)
+![Network Tablet](https://media.forgecdn.net/attachments/2023/188/feature-6-tablet-png.png)
 
 Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 
 ### Built-in guide book
 
-![Built-in guide book](URL_FEATURE_7)
+![Built-in guide book](https://media.forgecdn.net/attachments/2023/189/feature-7-guide-png.png)
 
 Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
 

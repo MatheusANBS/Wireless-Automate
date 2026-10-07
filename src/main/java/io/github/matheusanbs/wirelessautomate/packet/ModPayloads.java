@@ -5,8 +5,10 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -64,6 +66,10 @@ public final class ModPayloads {
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
+        // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
+        registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
+        registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
+                (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

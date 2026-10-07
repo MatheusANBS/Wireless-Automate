@@ -112,5 +112,19 @@
   "gui.wirelessautomate.router.redstone.low": "No signal",
   "gui.wirelessautomate.router.redstone.tooltip": "Click to cycle: Ignore, With signal, No signal",
   "gui.wirelessautomate.router.redstone.narration": "Redstone: %s",
-  "gui.wirelessautomate.router.machine.none": "No machine"
+  "gui.wirelessautomate.router.machine.none": "No machine",
+  "container.wirelessautomate.filter.face": "Filter: %s · %s",
+  "item.wirelessautomate.filter_card.type_changed": "Filter card: %s",
+  "item.wirelessautomate.filter_card.not_empty": "Empty the card to switch between items and fluids",
+  "item.wirelessautomate.filter_card.tooltip.summary": "%s · %s",
+  "item.wirelessautomate.filter_card.tooltip.whitelist": "Whitelist",
+  "item.wirelessautomate.filter_card.tooltip.blacklist": "Blacklist",
+  "item.wirelessautomate.filter_card.tooltip.empty": "Empty: lets everything through",
+  "item.wirelessautomate.filter_card.tooltip.entries": "Entries: %s",
+  "item.wirelessautomate.filter_card.tooltip.more": "  … and %s more",
+  "item.wirelessautomate.filter_card.tooltip.stock": "%s (stock %s)",
+  "item.wirelessautomate.filter_card.tooltip.components": "Requires matching components",
+  "item.wirelessautomate.filter_card.tooltip.open": "Right-click in the air: edit the filter",
+  "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + right-click in the air: switch between items and fluids (empty)",
+  "item.wirelessautomate.filter_card.tooltip.router": "In the main hand, on a router's filter screen: import and export"
 }

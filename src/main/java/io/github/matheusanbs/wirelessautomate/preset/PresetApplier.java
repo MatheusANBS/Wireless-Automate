@@ -34,6 +34,15 @@ public final class PresetApplier {
     }
 
     public static Checked check(ServerPlayer player, RouterPreset preset) {
+        return check(player, preset, null);
+    }
+
+    /**
+     * Como {@link #check(ServerPlayer, RouterPreset)}, mas olhando só a rede da aba {@code only}
+     * (as outras redes saem do preset e não entram nos avisos); {@code null} = todas as abas.
+     */
+    public static Checked check(ServerPlayer player, RouterPreset preset, @Nullable ResourceType only) {
+        preset = preset.onlyNetworkOf(only);
         NetworkSavedData data = NetworkSavedData.get(player.server);
         List<UUID> applied = new ArrayList<>();
         List<ResourceType> keptTypes = new ArrayList<>();

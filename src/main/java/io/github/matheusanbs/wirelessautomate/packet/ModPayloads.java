@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.packet;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
@@ -67,6 +68,8 @@ public final class ModPayloads {
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
+        registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
+                (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
         // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
@@ -181,6 +184,25 @@ public final class ModPayloads {
         ResourceType type = LinkerItem.cycleType(stack, payload.direction());
         player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.type",
                 LinkerItem.typeName(type)), true);
+        return true;
+    }
+
+    /**
+     * Shift + roda do mouse com o Configurador na mão principal: avança ou volta o tipo que ele cola
+     * e mostra o novo na action bar. Recusa direção 0 e outra coisa na mão.
+     */
+    public static boolean handleCycleConfiguratorType(@Nullable ServerPlayer player,
+            CycleConfiguratorTypePayload payload) {
+        if (player == null || payload.direction() == 0) {
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof ConfiguratorItem)) {
+            return false;
+        }
+        ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
+                ConfiguratorItem.typeName(type)), true);
         return true;
     }
 

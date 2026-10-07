@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
@@ -63,6 +64,12 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("configurator_area", builder -> builder
                     .persistent(LinkerArea.CODEC)
                     .networkSynchronized(LinkerArea.STREAM_CODEC));
+
+    /** Tipo (aba) que o Configurador cola; sem o componente, todos. */
+    public static final Supplier<DataComponentType<ResourceType>> CONFIGURATOR_TYPE =
+            DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder
+                    .persistent(ConfiguratorItem.TYPE_CODEC)
+                    .networkSynchronized(ConfiguratorItem.TYPE_STREAM_CODEC));
 
     private ModDataComponents() {
     }

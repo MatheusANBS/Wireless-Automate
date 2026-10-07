@@ -93,7 +93,18 @@ public final class RouterPreset {
      * Quem chama decide se o jogador pode usar cada rede: veja {@link #withoutNetwork(ResourceType)}.
      */
     public void applyTo(RouterBlockEntity router) {
+        applyTo(router, null);
+    }
+
+    /**
+     * Como {@link #applyTo(RouterBlockEntity)}, mas só a aba {@code only}: as faces e a rede desse
+     * tipo; as outras abas do roteador ficam como estavam (faces e rede). {@code null} = todas.
+     */
+    public void applyTo(RouterBlockEntity router, @Nullable ResourceType only) {
         for (ResourceType type : TYPES) {
+            if (only != null && type != only) {
+                continue;
+            }
             for (RelativeSide side : SIDES) {
                 FaceConfig config = faces[type.ordinal()][side.ordinal()];
                 router.setFace(type, side, config != null ? config : DEFAULT);
@@ -101,7 +112,7 @@ public final class RouterPreset {
         }
         for (ResourceType type : TYPES) {
             UUID network = networks[type.ordinal()];
-            if (network != null) {
+            if (network != null && (only == null || type == only)) {
                 router.setNetworkId(type, network);
             }
         }
@@ -147,6 +158,19 @@ public final class RouterPreset {
         UUID[] copy = networks.clone();
         copy[type.ordinal()] = null;
         return new RouterPreset(faces, copy);
+    }
+
+    /**
+     * O mesmo preset só com a rede do tipo {@code only} (as faces ficam todas); {@code null} = o
+     * próprio preset. Serve para a regra das redes ({@code PresetApplier}) olhar só a aba colada.
+     */
+    public RouterPreset onlyNetworkOf(@Nullable ResourceType only) {
+        if (only == null) {
+            return this;
+        }
+        UUID[] copy = new UUID[TYPES.length];
+        copy[only.ordinal()] = networks[only.ordinal()];
+        return Arrays.equals(copy, networks) ? this : new RouterPreset(faces, copy);
     }
 
     /** O mesmo preset sem nenhuma rede (só as faces). */

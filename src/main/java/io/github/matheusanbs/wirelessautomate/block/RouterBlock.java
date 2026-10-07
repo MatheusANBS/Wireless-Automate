@@ -7,7 +7,6 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
-import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -93,16 +92,13 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * Todos os tipos entram na rede ativa de quem colocou. Se o item trouxe dados do block entity
-     * com alguma rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
+     * O roteador nasce sem rede em todas as abas: o jogador configura o primeiro (tela do roteador ou
+     * Vinculador) e replica com o Configurador. Se o item trouxe dados do block entity com alguma
+     * rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
      */
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router
-                && !router.hasNetwork()) {
-            router.setNetworkId(NetworkSavedData.get(player.server).activeOrCreate(player).id());
-        }
         if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             NodeIndex.placedBy(router, player.getUUID());
         }

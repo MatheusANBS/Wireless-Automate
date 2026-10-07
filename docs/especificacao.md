@@ -76,14 +76,14 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 ### Vinculador
 
 - **Abre com:** clique direito no ar. Shift + clique direito no ar alterna entre Único e Área.
-- Rede ativa: todo roteador colocado já entra nela, com todas as abas.
+- Rede ativa: é nela que o Vinculador põe os roteadores (o primeiro vínculo cria uma, se o jogador não tiver). Roteador colocado não entra em rede nenhuma.
 - **Tipo:** Todos, Itens, Fluidos ou Energia, trocado com Shift + roda do mouse com o Vinculador na mão (a action bar mostra o tipo). Em Todos, vincula todas as abas do roteador; num tipo, só a aba daquele tipo.
 - **Único:** clique direito num roteador o coloca na rede ativa.
 - **Área:** Shift + clique em dois blocos marca os cantos; a tela mostra uma prévia de cima, quantos roteadores ficam dentro e o botão Vincular.
 
 ### Configurador
 
-Sem tela: tudo é feito com cliques. O tooltip mostra o estado (cópia, máquina, modo e área) e os comandos do modo atual.
+Sem tela: tudo é feito com cliques. O tooltip mostra o estado (cópia, máquina, modo e área, tipo colado) e os comandos do modo atual.
 
 | Gesto | Pincel (padrão) | Área |
 | --- | --- | --- |
@@ -93,6 +93,9 @@ Sem tela: tudo é feito com cliques. O tooltip mostra o estado (cópia, máquina
 | Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina |
 | Shift + clique direito num bloco sem roteador | Limpa a varinha (cópia e área) | Limpa a varinha (cópia e área) |
 | Shift + clique direito no ar | Troca para Área | Troca para Pincel |
+| Shift + roda do mouse | Troca o tipo colado | Troca o tipo colado |
+
+- **Tipo colado:** Todos (padrão, sem componente), Itens, Fluidos, Energia e, só com o Mekanism, Químicos (componente `configurator_type`; a action bar mostra o tipo). Copiar sempre copia tudo; o tipo vale ao colar, no pincel e na área. Em Todos, todas as abas (faces e redes). Num tipo, só as faces e a rede daquela aba, ainda sob a regra das redes; as outras abas do roteador ficam como estavam. Exemplo: copiar um roteador configurado só para fluidos e colar em Fluidos sem mexer nos itens e na energia dos outros.
 
 ## Filtros
 
@@ -116,10 +119,10 @@ Cada face da máquina, para cada tipo, tem um filtro embutido sem limite de entr
 
 Não se liga um roteador a outro: cada aba (tipo de recurso) de um roteador entra numa rede, e tudo do mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem da configuração das faces da máquina; a ordem de entrega é por prioridade e, empatando, por round-robin.
 
-- **Rede por aba:** os itens, fluidos e energia de um roteador podem ir para redes diferentes. Exemplo: a fornalha da Linha 5x com Itens na rede "Linha 5x" e Energia na "Base", e o gerador com Energia na "Base". Ao colocar, todas as abas entram na rede ativa do jogador; quem não quer separar nada não vê diferença.
+- **Rede por aba:** os itens, fluidos e energia de um roteador podem ir para redes diferentes. Exemplo: a fornalha da Linha 5x com Itens na rede "Linha 5x" e Energia na "Base", e o gerador com Energia na "Base". Ao colocar, nenhuma aba entra em rede: o jogador configura o primeiro roteador e replica com o Configurador; quem não quer separar nada vincula todas as abas de uma vez (Vinculador em Todos).
 - **Faces da máquina:** o roteador acessa a máquina por qualquer face, não só pela que está encostado, porque o NeoForge consulta inventários informando a face. Cada face, por tipo, fica em Extrai, Insere, Armazém ou Nenhum.
 - **Armazém:** a face recebe de quem extrai e entrega para quem insere, mas não troca com outra face Armazém (assim os recursos não vão e voltam entre dois baús). Serve para buffers e baús de armazenamento.
-- **Entrar numa rede:** automático ao colocar (todas as abas na rede ativa), pelo seletor de cada aba na tela do roteador ou pelo Vinculador (todas as abas ou só a do tipo escolhido com Shift + roda do mouse).
+- **Entrar numa rede:** o roteador nasce sem rede (o item que traz dados do block entity, como um roteador quebrado e pego de volta, mantém as redes que trouxe). Entra pelo seletor de cada aba na tela do roteador, pelo Vinculador (todas as abas ou só a do tipo escolhido com Shift + roda do mouse) ou colando com o Configurador.
 - **Em massa:** Vinculador em modo Área, seleção múltipla no Tablet, ou o Configurador copiando a rede junto com o preset.
 - **Grupos:** juntam várias redes de um mesmo sistema para ver, pausar e retomar tudo de uma vez.
 - **Redstone:** por face e por tipo: ignorar, ativo com sinal ou ativo sem sinal.
@@ -145,6 +148,7 @@ As cinco redes formam o grupo Linha 5x. Para replicar a linha, copie com o Confi
 O Configurador guarda uma cópia só, no próprio item (decisão do dono: sem biblioteca, sem código de texto e sem tela, para ficar simples).
 
 - **Cópia:** faces, filtros, prioridades, redstone e a rede de cada aba, mais o tipo de bloco da máquina do roteador copiado. Copiar de novo substitui a cópia.
+- **Tipo colado:** Shift + roda do mouse escolhe Todos ou uma aba só (Itens, Fluidos, Energia, Químicos com o Mekanism); colar num tipo só não toca nas outras abas do destino (faces e rede).
 - **Pincel:** Shift + clique copia de um roteador, clique cola em outro (em qualquer máquina).
 - **Aplicação relativa:** as faces são salvas em relação à orientação do roteador, então a cópia funciona com o bloco virado para qualquer lado.
 - **Colar em área:** no modo Área, cliques em dois blocos marcam a área (contorno no mundo, como no Vinculador) e clique no ar cola em todos os roteadores carregados dela **presos ao mesmo tipo de máquina** do copiado; os outros ficam como estavam e a action bar conta quantos. A área segue os limites do Vinculador (`linker.maxAreaVolume` e `linker.maxDistance`).

@@ -24,6 +24,7 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | **Copies** | Faces, filters, priorities, redstone and each tab's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default) and Area. |
+| **Pasted type** | All (default), Items, Fluids, Energy or Chemicals (with Mekanism). |
 
 ## Actions
 
@@ -35,6 +36,12 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | Click the air | — | Paste into the area's routers attached to the **same machine** as the copy |
 | Shift + click a block without a router | Clear the wand | Clear the wand |
 | Shift + click the air | Switch to Area | Switch to Brush |
+| Shift + mouse wheel | Change the pasted type | Change the pasted type |
+
+Copying always copies everything; the **pasted type** picks what goes to the router. On **All**,
+every tab. On a single type, only that tab's faces and network: the router's other tabs stay as they
+were. For example, copy a router set up only for fluids, switch to **Fluids** and paste on the others
+without touching their items or energy.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />

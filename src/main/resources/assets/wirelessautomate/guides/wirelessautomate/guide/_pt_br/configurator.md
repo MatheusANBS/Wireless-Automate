@@ -24,6 +24,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
+| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia ou Químicos (com o Mekanism). |
 
 ## Comandos
 
@@ -35,6 +36,12 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | Clique no ar | — | Cola nos roteadores da área presos à **mesma máquina** da cópia |
 | Shift + clique num bloco sem roteador | Limpa a varinha | Limpa a varinha |
 | Shift + clique no ar | Vai para Área | Vai para Pincel |
+| Shift + roda do mouse | Troca o tipo colado | Troca o tipo colado |
+
+Copiar sempre copia tudo; o **tipo colado** escolhe o que vai para o roteador. Em **Todos**, todas as
+abas. Num tipo só, apenas as faces e a rede daquela aba: as outras abas do roteador ficam como
+estavam. Por exemplo, copie um roteador configurado só para fluidos, passe para **Fluidos** e cole
+nos outros sem mexer nos itens nem na energia deles.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />

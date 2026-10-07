@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerScan;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import net.minecraft.core.BlockPos;
@@ -42,11 +43,12 @@ public final class ConfiguratorArea {
      * @param protectedCount  roteadores em área protegida para o jogador
      * @param unloadedChunks  chunks da área descarregados (os roteadores deles ficaram de fora)
      * @param droppedNetworks alguma aba ficou com a rede de antes (de outro dono ou removida)
+     * @param type            a aba colada (o seletor da varinha); {@code null} = todas
      */
     public record Outcome(LinkerProblem problem, int applied, int otherMachine, int protectedCount,
-            int unloadedChunks, boolean droppedNetworks) {
+            int unloadedChunks, boolean droppedNetworks, @Nullable ResourceType type) {
         static Outcome refused(LinkerProblem problem) {
-            return new Outcome(problem, 0, 0, 0, 0, false);
+            return new Outcome(problem, 0, 0, 0, 0, false, null);
         }
 
         public boolean ok() {
@@ -96,7 +98,8 @@ public final class ConfiguratorArea {
 
     /**
      * Cola a cópia da varinha em todos os roteadores carregados da área presos à mesma máquina do
-     * roteador copiado (sem máquina gravada, em todos). As redes seguem {@link PresetApplier}.
+     * roteador copiado (sem máquina gravada, em todos). As redes seguem {@link PresetApplier}. Com um
+     * tipo no seletor da varinha, só aquela aba é colada.
      * Quem chama já conferiu que a varinha tem uma cópia.
      */
     public static Outcome paste(ServerPlayer player, ItemStack stack, RouterPreset preset) {
@@ -105,7 +108,8 @@ public final class ConfiguratorArea {
         if (problem != LinkerProblem.NONE) {
             return Outcome.refused(problem);
         }
-        PresetApplier.Checked checked = PresetApplier.check(player, preset);
+        ResourceType type = ConfiguratorItem.type(stack);
+        PresetApplier.Checked checked = PresetApplier.check(player, preset, type);
         ResourceLocation machine = ConfiguratorItem.machine(stack);
         ServerLevel level = player.serverLevel();
         LinkerScan scan = LinkerScan.of(level, area.box());
@@ -118,7 +122,7 @@ public final class ConfiguratorArea {
             } else if (!level.mayInteract(player, router.getBlockPos())) {
                 protectedCount++;
             } else {
-                checked.preset().applyTo(router);
+                checked.preset().applyTo(router, type);
                 applied++;
             }
         }
@@ -127,15 +131,19 @@ public final class ConfiguratorArea {
                     0.5F, 1.4F);
         }
         return new Outcome(LinkerProblem.NONE, applied, otherMachine, protectedCount, scan.unloadedChunks(),
-                checked.droppedAny());
+                checked.droppedAny(), type);
     }
 
-    /** "12 roteadores configurados · 3 em outra máquina ficaram como estavam · ...", ou o problema da área. */
+    /** "Colado em 12 roteadores · só a aba Fluidos · 3 em outra máquina ficaram como estavam · ...", ou o problema da área. */
     public static Component message(Outcome outcome) {
         if (!outcome.ok()) {
             return problem(outcome.problem());
         }
         MutableComponent text = Component.translatable(KEY + "pasted", outcome.applied());
+        Component only = ConfiguratorItem.onlyTab(outcome.type());
+        if (only != null) {
+            text.append(" · ").append(only);
+        }
         if (outcome.otherMachine() > 0) {
             text.append(" · ").append(Component.translatable(KEY + "other_machine", outcome.otherMachine()));
         }

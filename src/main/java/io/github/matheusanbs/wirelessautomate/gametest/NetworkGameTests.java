@@ -132,4 +132,36 @@ public final class NetworkGameTests {
         }
         helper.succeed();
     }
+
+    /**
+     * Colocar um roteador pelo caminho do jogo (item na mão, clique no baú) não põe nenhuma aba em
+     * rede, nem com rede ativa: o jogador configura o primeiro e replica com o Configurador.
+     */
+    @GameTest(template = "empty")
+    public static void placedRouterJoinsNoNetwork(GameTestHelper helper) {
+        helper.setBlock(MACHINE, Blocks.CHEST);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        WaNetwork active = data.create(player.getUUID(), "Ativa " + player.getUUID());
+        data.setActiveNetwork(player.getUUID(), active.id());
+        try {
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.ROUTER.get()));
+            BlockPos machine = helper.absolutePos(MACHINE);
+            UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(machine).add(0, 0.5, 0), Direction.UP, machine, false));
+            helper.assertTrue(player.getMainHandItem().useOn(context).consumesAction(), "não colocou o roteador");
+            helper.assertBlockPresent(ModBlocks.ROUTER.get(), ROUTER);
+            RouterBlockEntity router = helper.getBlockEntity(ROUTER);
+            for (ResourceType type : ResourceType.values()) {
+                helper.assertTrue(router.networkId(type) == null, type + " entrou numa rede ao colocar");
+            }
+            helper.assertTrue(!router.hasNetwork(), "hasNetwork depois de colocar");
+            helper.assertValueEqual(data.activeNetwork(player.getUUID()), active.id(), "rede ativa mudou");
+        } finally {
+            data.remove(active.id());
+            helper.getLevel().getServer().getPlayerList().remove(player);
+        }
+        helper.succeed();
+    }
 }

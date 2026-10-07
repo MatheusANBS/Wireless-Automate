@@ -1,24 +1,31 @@
 package io.github.matheusanbs.wirelessautomate.item;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
+import io.github.matheusanbs.wirelessautomate.preset.PasteTypes;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -32,6 +39,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,12 +54,72 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  * Shift + clique direito num bloco que não é roteador limpa a varinha (a cópia e a área).
  * A rede de cada aba só é colada se o jogador puder usá-la ({@link PresetApplier}).
+ *
+ * <p>O seletor de tipo ({@link ModDataComponents#CONFIGURATOR_TYPE}, trocado com Shift + roda do
+ * mouse, como no Vinculador) escolhe o que o colar aplica: sem tipo (Todos), todas as abas; com um
+ * tipo, só as faces e a rede daquela aba, e as outras abas do roteador ficam como estavam. Copiar
+ * sempre copia tudo.
  */
 public class ConfiguratorItem extends Item {
     private static final String KEY = "item.wirelessautomate.configurator.";
 
+    /**
+     * Codec do componente: o nome do tipo em minúsculas. Aceita todos os tipos, inclusive Químicos
+     * sem o Mekanism (o item não se perde ao trocar de instância; o seletor só pula o tipo).
+     */
+    public static final Codec<ResourceType> TYPE_CODEC = Codec.STRING.comapFlatMap(name -> {
+        for (ResourceType type : ResourceType.values()) {
+            if (key(type).equals(name)) {
+                return DataResult.success(type);
+            }
+        }
+        return DataResult.error(() -> "tipo de Configurador desconhecido: " + name);
+    }, ConfiguratorItem::key);
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResourceType> TYPE_STREAM_CODEC =
+            NeoForgeStreamCodecs.enumCodec(ResourceType.class);
+
     public ConfiguratorItem(Properties properties) {
         super(properties);
+    }
+
+    // ------------------------------------------------------------------ seletor de tipo
+
+    /** Tipo (aba) que o Configurador cola; {@code null} = todos. */
+    public static @Nullable ResourceType type(ItemStack stack) {
+        return stack.get(ModDataComponents.CONFIGURATOR_TYPE.get());
+    }
+
+    /** {@code null} = Todos (sem o componente). */
+    public static void setType(ItemStack stack, @Nullable ResourceType type) {
+        if (type == null) {
+            stack.remove(ModDataComponents.CONFIGURATOR_TYPE.get());
+        } else {
+            stack.set(ModDataComponents.CONFIGURATOR_TYPE.get(), type);
+        }
+    }
+
+    /**
+     * Avança ({@code direction > 0}) ou volta o seletor: Todos → Itens → Fluidos → Energia →
+     * Químicos (só com o Mekanism) → Todos. Devolve o tipo novo ({@code null} = todos).
+     */
+    public static @Nullable ResourceType cycleType(ItemStack stack, int direction) {
+        ResourceType next = PasteTypes.next(type(stack), direction, Chemicals.LOADED);
+        setType(stack, next);
+        return next;
+    }
+
+    /** Nome do tipo do seletor ("Todos" para {@code null}), o mesmo do Vinculador. */
+    public static Component typeName(@Nullable ResourceType type) {
+        return LinkerItem.typeName(type);
+    }
+
+    /** "só a aba Fluidos", para juntar às mensagens de colar; {@code null} com Todos. */
+    public static @Nullable Component onlyTab(@Nullable ResourceType type) {
+        return type == null ? null : Component.translatable(KEY + "only_tab", typeName(type));
+    }
+
+    private static String key(ResourceType type) {
+        return type.name().toLowerCase(Locale.ROOT);
     }
 
     // ------------------------------------------------------------------ estado no item
@@ -194,7 +262,8 @@ public class ConfiguratorItem extends Item {
     /**
      * Cola as faces e a rede de cada tipo que o jogador pode usar (dono ou operador nível 2). A rede
      * de um tipo que não pode (de outro dono ou removida) fica como estava no roteador, com aviso.
-     * No pincel, a máquina não importa: colar num roteador é sempre escolha do jogador.
+     * No pincel, a máquina não importa: colar num roteador é sempre escolha do jogador. Com um tipo
+     * no seletor, só aquela aba é colada (e só a rede dela entra na regra).
      */
     private static void paste(ServerPlayer player, ItemStack stack, RouterBlockEntity router, BlockPos pos) {
         RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
@@ -202,11 +271,15 @@ public class ConfiguratorItem extends Item {
             player.displayClientMessage(Component.translatable(KEY + "empty"), true);
             return;
         }
-        PresetApplier.Checked checked = PresetApplier.check(player, preset);
+        ResourceType type = type(stack);
+        PresetApplier.Checked checked = PresetApplier.check(player, preset, type);
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        checked.preset().applyTo(router);
-        player.displayClientMessage(pasteMessage(data, checked.applied(), checked.keptTypes(), checked.kept(),
-                checked.denied()), true);
+        checked.preset().applyTo(router, type);
+        Component message = pasteMessage(data, checked.applied(), checked.keptTypes(), checked.kept(),
+                checked.denied());
+        Component only = onlyTab(type);
+        player.displayClientMessage(only == null ? message
+                : Component.empty().append(message).append(" · ").append(only), true);
         player.level().playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
     }
 
@@ -258,7 +331,7 @@ public class ConfiguratorItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        // Estado: o que está copiado, o modo e a área.
+        // Estado: o que está copiado, o modo e a área, e o tipo colado.
         RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
         if (preset == null) {
             tooltip.add(Component.translatable(KEY + "tooltip.empty").withStyle(ChatFormatting.GRAY));
@@ -277,8 +350,9 @@ public class ConfiguratorItem extends Item {
         tooltip.add((mode == LinkerMode.AREA && size != null
                 ? Component.translatable(KEY + "tooltip.mode_area", modeName(mode), size)
                 : Component.translatable(KEY + "tooltip.mode", modeName(mode))).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable(KEY + "tooltip.type", typeName(type(stack))).withStyle(ChatFormatting.GOLD));
 
-        // Comandos do modo atual, na ordem de uso: copiar, colar, limpar, trocar de modo.
+        // Comandos do modo atual, na ordem de uso: copiar, colar, limpar, trocar de modo e de tipo.
         tooltip.add(Component.translatable(KEY + "tooltip.copy").withStyle(ChatFormatting.DARK_GRAY));
         if (mode == LinkerMode.AREA) {
             tooltip.add(Component.translatable(KEY + "tooltip.mark").withStyle(ChatFormatting.DARK_GRAY));
@@ -289,5 +363,6 @@ public class ConfiguratorItem extends Item {
         tooltip.add(Component.translatable(KEY + "tooltip.clear").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(KEY + (mode == LinkerMode.AREA ? "tooltip.to_brush" : "tooltip.to_area"))
                 .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable(KEY + "tooltip.cycle").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

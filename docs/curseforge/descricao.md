@@ -43,7 +43,7 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2023/187/feature-5-area-png.png)
 
 - **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, for every tab or a single resource type.
-- **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks.
+- **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks. Paste every tab or just one type (Shift + mouse wheel), leaving the other tabs alone.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 
 ### Network Tablet
@@ -62,10 +62,13 @@ Every player gets the guide book on their first join (it's also in the creative 
 
 ## Getting started
 
-1. Craft two routers (iron, redstone and an eye of ender).
-2. Use one on a chest and one on another chest. Both join your network automatically.
-3. Open the first router, pick the **Up** face on the **Items** tab and set it to **Extract**.
-4. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
+1. Craft two routers (iron, redstone and an eye of ender) and a Linker.
+2. Use one on a chest and one on another chest. New routers start with no network.
+3. Holding the Linker, click both routers: they join your active network (the first click creates one).
+4. Open the first router, pick the **Up** face on the **Items** tab and set it to **Extract**.
+5. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
+
+Once the first router of a line is set up, copy it with the Configurator and paste on the rest.
 
 All recipes use vanilla items.
 

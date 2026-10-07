@@ -302,15 +302,21 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 
 | Passo | O que fazer |
 | --- | --- |
-| **1** | Faça dois roteadores (receita abaixo). |
-| **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú e já entra na sua rede ativa. Faça o mesmo no baú B. |
-| **3** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
-| **4** | No roteador B, mesma face, modo **Insere**. |
-| **5** | Coloque itens no baú A: eles aparecem no baú B. |
+| **1** | Faça dois roteadores e um [Vinculador](linker.md) (receitas abaixo). |
+| **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú, ainda **sem rede**. Faça o mesmo no baú B. |
+| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: os dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
+| **4** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
+| **5** | No roteador B, mesma face, modo **Insere**. |
+| **6** | Coloque itens no baú A: eles aparecem no baú B. |
 
-## Receita
+Depois de configurar o primeiro roteador de uma linha, use o [Configurador](configurator.md) para
+copiar a configuração (e as redes) para os outros.
+
+## Receitas
 
 <RecipeFor id="wirelessautomate:router" />
+
+<RecipeFor id="wirelessautomate:linker" />
 
 ## Próximos passos
 
@@ -331,15 +337,21 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 
 | Step | What to do |
 | --- | --- |
-| **1** | Craft two routers (recipe below). |
-| **2** | Use a router on any face of chest A. It **attaches** to the chest and joins your active network. Do the same on chest B. |
-| **3** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
-| **4** | On router B, same face, **Insert** mode. |
-| **5** | Put items in chest A: they show up in chest B. |
+| **1** | Craft two routers and a [Linker](linker.md) (recipes below). |
+| **2** | Use a router on any face of chest A. It **attaches** to the chest, with **no network** yet. Do the same on chest B. |
+| **3** | Holding the Linker, click router A and then router B: both join your active network (the first click creates one if you have none). |
+| **4** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
+| **5** | On router B, same face, **Insert** mode. |
+| **6** | Put items in chest A: they show up in chest B. |
 
-## Recipe
+Once the first router of a line is set up, use the [Configurator](configurator.md) to copy its
+configuration (and networks) to the others.
+
+## Recipes
 
 <RecipeFor id="wirelessautomate:router" />
+
+<RecipeFor id="wirelessautomate:linker" />
 
 ## Next steps
 
@@ -615,7 +627,8 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Regra | Explicação |
 | --- | --- |
-| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). Roteador colocado entra nela, em todas as abas. |
+| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha-o numa rede (abaixo) para ele trabalhar. |
+| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). É nela que o Vinculador põe os roteadores. |
 | **Rede por aba** | Os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia dela para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
@@ -629,7 +642,7 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (todas as abas ou só um tipo) |
 | <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
 
 ## Alcance e chunks
 
@@ -653,7 +666,8 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Rule | Explanation |
 | --- | --- |
-| **Active network** | Every player has an active network (the first one is named after them). A placed router joins it, on every tab. |
+| **No network when placed** | A new router isn't in any network: put it in one (below) so it starts working. |
+| **Active network** | Every player has an active network (the first one is named after them). It's where the Linker puts routers. |
 | **Network per tab** | A furnace's items can go to the "Ore line" network and its energy to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
@@ -667,7 +681,7 @@ the same type on the same network trades. Who sends and who receives comes from 
 | <ItemLink id="wirelessautomate:linker" />, Single mode | One router (every tab or one type) |
 | <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
+| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
 
 ## Range and chunks
 
@@ -925,6 +939,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
+| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia ou Químicos (com o Mekanism). |
 
 ## Comandos
 
@@ -936,6 +951,12 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | Clique no ar | — | Cola nos roteadores da área presos à **mesma máquina** da cópia |
 | Shift + clique num bloco sem roteador | Limpa a varinha | Limpa a varinha |
 | Shift + clique no ar | Vai para Área | Vai para Pincel |
+| Shift + roda do mouse | Troca o tipo colado | Troca o tipo colado |
+
+Copiar sempre copia tudo; o **tipo colado** escolhe o que vai para o roteador. Em **Todos**, todas as
+abas. Num tipo só, apenas as faces e a rede daquela aba: as outras abas do roteador ficam como
+estavam. Por exemplo, copie um roteador configurado só para fluidos, passe para **Fluidos** e cole
+nos outros sem mexer nos itens nem na energia deles.
 
 ''' + fill(SCENE_AREA, BOX='Área marcada com o Configurador',
            OTHER='Fica como estava: está num baú, e a cópia veio de uma fornalha', OTHER_COLOR='#ff6b5e') + '''
@@ -967,6 +988,7 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | **Copies** | Faces, filters, priorities, redstone and each tab's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default) and Area. |
+| **Pasted type** | All (default), Items, Fluids, Energy or Chemicals (with Mekanism). |
 
 ## Actions
 
@@ -978,6 +1000,12 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | Click the air | — | Paste into the area's routers attached to the **same machine** as the copy |
 | Shift + click a block without a router | Clear the wand | Clear the wand |
 | Shift + click the air | Switch to Area | Switch to Brush |
+| Shift + mouse wheel | Change the pasted type | Change the pasted type |
+
+Copying always copies everything; the **pasted type** picks what goes to the router. On **All**,
+every tab. On a single type, only that tab's faces and network: the router's other tabs stay as they
+were. For example, copy a router set up only for fluids, switch to **Fluids** and paste on the others
+without touching their items or energy.
 
 ''' + fill(SCENE_AREA, BOX='Area marked with the Configurator',
            OTHER='Left unchanged: it sits on a chest, and the copy came from a furnace', OTHER_COLOR='#ff6b5e') + '''

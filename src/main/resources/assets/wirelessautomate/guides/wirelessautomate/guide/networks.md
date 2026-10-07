@@ -52,7 +52,8 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Rule | Explanation |
 | --- | --- |
-| **Active network** | Every player has an active network (the first one is named after them). A placed router joins it, on every tab. |
+| **No network when placed** | A new router isn't in any network: put it in one (below) so it starts working. |
+| **Active network** | Every player has an active network (the first one is named after them). It's where the Linker puts routers. |
 | **Network per tab** | A furnace's items can go to the "Ore line" network and its energy to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
@@ -66,7 +67,7 @@ the same type on the same network trades. Who sends and who receives comes from 
 | <ItemLink id="wirelessautomate:linker" />, Single mode | One router (every tab or one type) |
 | <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
+| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
 
 ## Range and chunks
 

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -13,10 +14,15 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,7 +46,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** Configurador (pincel e colar em área na mesma máquina) e o {@link RouterPreset} que ele copia e cola. */
+/**
+ * Configurador (pincel e colar em área na mesma máquina, o seletor de tipo) e o {@link RouterPreset}
+ * que ele copia e cola.
+ */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ConfiguratorGameTests {
@@ -339,5 +348,198 @@ public final class ConfiguratorGameTests {
                     }
                 })
                 .thenSucceed();
+    }
+
+    /** Destino com faces e rede próprias em todas as abas, para ver o que o colar por tipo não toca. */
+    private static void configureTarget(RouterBlockEntity target, UUID network) {
+        target.setNetworkId(network);
+        target.setMode(ResourceType.ITEM, target.getBlockState().getValue(RouterBlock.FACING).getOpposite(),
+                PortMode.INSERT);
+        target.setPriority(ResourceType.ENERGY, Direction.EAST, -4);
+        target.setPriority(ResourceType.FLUID, Direction.WEST, 9);
+    }
+
+    /** Confere que as faces do tipo no roteador são as do preset {@code expected}. */
+    private static void assertFaces(GameTestHelper helper, RouterBlockEntity router, ResourceType type,
+            RouterPreset expected, String message) {
+        for (RelativeSide side : SIDES) {
+            helper.assertValueEqual(router.face(type, side), expected.face(type, side), message + " " + type + " " + side);
+        }
+    }
+
+    /**
+     * Seletor em Fluidos: colar muda só as faces e a rede dos fluidos; itens e energia do destino
+     * ficam como estavam (faces e rede). Em Todos, tudo é colado, como antes.
+     */
+    @GameTest(template = "empty")
+    public static void pasteWithTypeTouchesOnlyThatTab(GameTestHelper helper) {
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
+        RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        WaNetwork items = data.create(player.getUUID(), "Itens " + player.getUUID());
+        WaNetwork fluids = data.create(player.getUUID(), "Fluidos " + player.getUUID());
+        WaNetwork energy = data.create(player.getUUID(), "Energia " + player.getUUID());
+        WaNetwork before = data.create(player.getUUID(), "Antes " + player.getUUID());
+        // Rede de outro dono na aba de itens: colar só Fluidos não pode avisar dela.
+        WaNetwork foreign = data.create(UUID.randomUUID(), "Alheia " + player.getUUID());
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        configureUp(source);
+                        source.setNetworkId(ResourceType.ITEM, items.id());
+                        source.setNetworkId(ResourceType.FLUID, fluids.id());
+                        source.setNetworkId(ResourceType.ENERGY, energy.id());
+                        source.setNetworkId(ResourceType.CHEMICAL, energy.id());
+                        configureTarget(target, before.id());
+                        RouterPreset targetBefore = RouterPreset.copyOf(target);
+                        helper.assertTrue(use(player, source, true), "copiar não agiu");
+                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+
+                        ConfiguratorItem.setType(configurator, ResourceType.FLUID);
+                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
+                        helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
+                        for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
+                                ResourceType.CHEMICAL}) {
+                            assertFaces(helper, target, other, targetBefore, "aba mexida:");
+                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                        }
+
+                        source.setNetworkId(ResourceType.ITEM, foreign.id());
+                        RouterPreset withForeign = RouterPreset.copyOf(source);
+                        PresetApplier.Checked onlyFluids = PresetApplier.check(player, withForeign, ResourceType.FLUID);
+                        helper.assertTrue(!onlyFluids.droppedAny(), "avisou da rede de outra aba");
+                        helper.assertValueEqual(onlyFluids.applied(), List.of(fluids.id()), "redes da aba colada");
+                        helper.assertTrue(PresetApplier.check(player, withForeign).droppedAny(),
+                                "Todos não recusou a rede alheia");
+                        source.setNetworkId(ResourceType.ITEM, items.id());
+
+                        // Todos: o comportamento de sempre, tudo colado.
+                        ConfiguratorItem.setType(configurator, null);
+                        helper.assertTrue(!configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()),
+                                "Todos deixou o componente");
+                        use(player, target, false);
+                        for (ResourceType type : TYPES) {
+                            assertFaces(helper, target, type, copied, "Todos:");
+                            helper.assertValueEqual(target.networkId(type), copied.network(type), "Todos, rede " + type);
+                        }
+                    } finally {
+                        for (WaNetwork network : new WaNetwork[] {items, fluids, energy, before, foreign}) {
+                            data.remove(network.id());
+                        }
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Colar em área com o seletor em Energia: só a aba de energia dos roteadores da mesma máquina muda. */
+    @GameTest(template = "empty")
+    public static void areaPasteWithType(GameTestHelper helper) {
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
+        RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        WaNetwork power = data.create(player.getUUID(), "Energia área " + player.getUUID());
+        WaNetwork before = data.create(player.getUUID(), "Antes área " + player.getUUID());
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        configureUp(source);
+                        source.setNetworkId(power.id());
+                        configureTarget(target, before.id());
+                        RouterPreset targetBefore = RouterPreset.copyOf(target);
+                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
+                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+                        helper.assertTrue(copied != null, "nada copiado");
+
+                        ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
+                        ConfiguratorItem.setType(configurator, ResourceType.ENERGY);
+                        clickBlock(helper, player, new BlockPos(1, 0, 0), false);
+                        clickBlock(helper, player, new BlockPos(2, 2, 0), false);
+                        clickAir(helper, player, false);
+
+                        assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
+                        helper.assertValueEqual(target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
+                        for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
+                                ResourceType.CHEMICAL}) {
+                            assertFaces(helper, target, other, targetBefore, "aba mexida:");
+                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                        }
+                    } finally {
+                        player.setShiftKeyDown(false);
+                        data.remove(power.id());
+                        data.remove(before.id());
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Shift + roda com o Configurador: Todos → Itens → Fluidos → Energia (→ Químicos, só com o
+     * Mekanism) → Todos, e para trás; só com o Configurador na mão.
+     */
+    @GameTest(template = "empty")
+    public static void cycleConfiguratorTypeSkipsChemicalsWithoutMekanism(GameTestHelper helper) {
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+            List<ResourceType> forward = new ArrayList<>(List.of(ResourceType.ITEM, ResourceType.FLUID,
+                    ResourceType.ENERGY));
+            if (Chemicals.LOADED) {
+                forward.add(ResourceType.CHEMICAL);
+            }
+            forward.add(null);
+            for (ResourceType expected : forward) {
+                helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
+                        "recusou avançar");
+                helper.assertTrue(ConfiguratorItem.type(configurator) == expected,
+                        "avançar: " + ConfiguratorItem.type(configurator));
+            }
+            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o componente");
+            helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(-1)),
+                    "recusou voltar");
+            helper.assertValueEqual(ConfiguratorItem.type(configurator),
+                    Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY, "voltar de Todos");
+            helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(0)),
+                    "aceitou direção 0");
+
+            ItemStack linker = new ItemStack(ModItems.LINKER.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+            helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
+                    "aceitou sem o Configurador na mão");
+            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
+        } finally {
+            helper.getLevel().getServer().getPlayerList().remove(player);
+        }
+        helper.succeed();
+    }
+
+    /** O componente do seletor passa pelos codecs; Químicos é lido mesmo sem o Mekanism. */
+    @GameTest(template = "empty")
+    public static void configuratorTypeRoundTripsThroughCodec(GameTestHelper helper) {
+        for (ResourceType type : TYPES) {
+            Tag tag = ConfiguratorItem.TYPE_CODEC.encodeStart(NbtOps.INSTANCE, type).getOrThrow();
+            helper.assertValueEqual(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow(), type,
+                    "codec " + type);
+        }
+        helper.assertTrue(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, NbtOps.INSTANCE.createString("lava"))
+                .isError(), "aceitou um tipo desconhecido");
+        helper.succeed();
     }
 }

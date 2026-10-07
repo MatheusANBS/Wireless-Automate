@@ -52,7 +52,8 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Regra | Explicação |
 | --- | --- |
-| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). Roteador colocado entra nela, em todas as abas. |
+| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha-o numa rede (abaixo) para ele trabalhar. |
+| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). É nela que o Vinculador põe os roteadores. |
 | **Rede por aba** | Os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia dela para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
@@ -66,7 +67,7 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (todas as abas ou só um tipo) |
 | <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
 
 ## Alcance e chunks
 

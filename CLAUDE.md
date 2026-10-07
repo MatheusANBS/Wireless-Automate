@@ -27,12 +27,12 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `network/ItemTransfer.java`, `FluidTransfer.java`, `EnergyTransfer.java` | Uma visita de uma origem, por tipo de recurso |
 | `network/NetworkSavedData.java`, `WaNetwork.java`, `WaGroup.java` | Redes, rede ativa por jogador e grupos de redes (só para organizar no Tablet, com pausar e retomar), salvos no overworld |
 | `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
-| `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java`, `ReachBox.java`, `SourceCursor.java` | Lógica pura, testada por JUnit (também `client/RateFormat.java`, `linker/LinkerBox.java` e `filter/StockLimit.java`) |
+| `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java`, `ReachBox.java`, `SourceCursor.java` | Lógica pura, testada por JUnit (também `client/RateFormat.java`, `linker/LinkerBox.java`, `filter/StockLimit.java` e `preset/PasteTypes.java`) |
 | `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
 | `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), `FilterSet` (embutido + cartões), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
 | `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem`, `ChunkLoaderUpgradeItem` e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros) |
 | `linker/` | Vinculador: modo (`LinkerMode`, Único ou Área) e a área (`LinkerArea`, `LinkerBox`, `LinkerScan`, `LinkerActions`) |
-| `preset/` | Configurador: regra das redes ao colar (`PresetApplier`) e colar em área na mesma máquina (`ConfiguratorArea`, usa a área do Vinculador) |
+| `preset/` | Configurador: regra das redes ao colar (`PresetApplier`), colar em área na mesma máquina (`ConfiguratorArea`, usa a área do Vinculador) e o seletor do tipo colado (`PasteTypes`, lógica pura com JUnit) |
 | `chunk/` | Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`), eventos de tick, config e parada (`ChunkLoaderEvents`) e o estado mostrado na tela (`ChunkLoadState`) |
 | `network/NodeIndex.java`, `NodeProbe.java` | Índice persistente dos nós (Tablet) e status de cada nó |
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
@@ -45,8 +45,8 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `menu/Tablet*`, `Linker*` | Menus e snapshots das telas do Tablet e do Vinculador (o Configurador não tem tela) |
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
-| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
-| `gametest/` | GameTests (template `empty`), 89 na run comum: roteador, configuração, redes por tipo, Armazém, transferência, filtros, slots de cartão, menus, payloads do JEI, Configurador, área do Vinculador, Tablet, chunk loading e receitas. `ChemicalGameTests` (3 testes) fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
+| `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler` (Shift + roda do Vinculador e do Configurador), widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
+| `gametest/` | GameTests (template `empty`), 94 na run comum: roteador, configuração, redes por tipo, Armazém, transferência, filtros, slots de cartão, menus, payloads do JEI, Configurador, área do Vinculador, Tablet, chunk loading e receitas. `ChemicalGameTests` (3 testes) fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
 | `scripts/textures/gerar_texturas.py` | Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; edite as paletas ali, não os PNGs |
 | `scripts/guide/gerar_guia.py` | Gera as páginas do livro-guia (GuideME) em inglês e português, lado a lado; edite ali, não os `.md` |
 | `scripts/curseforge/` | Capa (`gerar_capa.py`, 400x400) e banner e imagens da descrição (`gerar_imagens.py`) do CurseForge, em `docs/curseforge/`. As fotos vêm da vitrine: `WA_SHOWCASE=run/showcase ./gradlew runClient` (modo do `DevEndToEnd`) |

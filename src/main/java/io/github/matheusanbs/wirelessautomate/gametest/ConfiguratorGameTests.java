@@ -282,6 +282,13 @@ public final class ConfiguratorGameTests {
                             }
                         }
 
+                        // Shift + clique num bloco sem roteador limpa a área; num roteador, continua copiando.
+                        clickBlock(helper, player, new BlockPos(1, 0, 1), true);
+                        helper.assertTrue(ConfiguratorItem.area(configurator) == null, "área não foi limpa");
+                        clickBlock(helper, player, new BlockPos(0, 1, 2), true);
+                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
+                                BuiltInRegistries.BLOCK.getKey(Blocks.CHEST), "Shift + clique no roteador não copiou");
+
                         clickAir(helper, player, true);
                         helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
                                 "volta ao pincel");

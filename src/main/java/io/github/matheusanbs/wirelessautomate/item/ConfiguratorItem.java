@@ -41,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li><b>Pincel</b> (padrão): clique direito num roteador cola nele.</li>
  *   <li><b>Área</b>: clique direito em dois blocos marca os cantos; clique direito no ar cola em
- *       todos os roteadores da área presos ao mesmo tipo de máquina ({@link ConfiguratorArea}).</li>
+ *       todos os roteadores da área presos ao mesmo tipo de máquina ({@link ConfiguratorArea});
+ *       Shift + clique direito num bloco que não é roteador limpa a área.</li>
  * </ul>
  * A rede de cada aba só é colada se o jogador puder usá-la ({@link PresetApplier}).
  */
@@ -110,8 +111,21 @@ public class ConfiguratorItem extends Item {
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
         if (!(level.getBlockEntity(context.getClickedPos()) instanceof RouterBlockEntity router)) {
-            // Shift + clique noutro bloco não pode cair no use() e trocar o modo.
-            return context.isSecondaryUseActive() ? InteractionResult.FAIL : InteractionResult.PASS;
+            if (!context.isSecondaryUseActive()) {
+                return InteractionResult.PASS;
+            }
+            ItemStack stack = context.getItemInHand();
+            if (mode(stack) != LinkerMode.AREA) {
+                // Shift + clique noutro bloco não pode cair no use() e trocar o modo.
+                return InteractionResult.FAIL;
+            }
+            // Modo Área: Shift + clique num bloco que não é roteador limpa a área marcada.
+            if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
+                boolean had = area(stack) != null;
+                setArea(stack, null);
+                player.displayClientMessage(Component.translatable(KEY + (had ? "area.cleared" : "area.nothing")), true);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
         if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
             ItemStack stack = context.getItemInHand();
@@ -262,6 +276,7 @@ public class ConfiguratorItem extends Item {
             }
             tooltip.add(Component.translatable(KEY + "tooltip.mark").withStyle(ChatFormatting.DARK_GRAY));
             tooltip.add(Component.translatable(KEY + "tooltip.paste_area").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable(KEY + "tooltip.clear_area").withStyle(ChatFormatting.DARK_GRAY));
         } else {
             tooltip.add(Component.translatable(KEY + "tooltip.paste").withStyle(ChatFormatting.DARK_GRAY));
         }

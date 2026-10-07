@@ -91,6 +91,7 @@ Sem tela: tudo é feito com cliques, e o tooltip mostra o modo e os gestos dele.
 | Clique direito num roteador | Cola nele | Marca um canto |
 | Clique direito num bloco | — | Marca um canto (1º, 2º; o 3º recomeça) |
 | Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina |
+| Shift + clique direito num bloco sem roteador | — | Limpa a área |
 | Shift + clique direito no ar | Troca para Área | Troca para Pincel |
 
 ## Filtros

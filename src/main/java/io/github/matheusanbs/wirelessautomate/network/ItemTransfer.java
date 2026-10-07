@@ -79,6 +79,7 @@ final class ItemTransfer {
         }
         source.slotCursor = slot;
         if (moved > 0) {
+            source.node.addMoved(source.type, moved);
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();

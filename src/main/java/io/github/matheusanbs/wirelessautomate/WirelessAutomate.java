@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate;
 import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModCreativeTabs;
@@ -32,6 +33,7 @@ public final class WirelessAutomate {
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModMenus.MENU_TYPES.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        modEventBus.addListener(ModPayloads::register);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
 

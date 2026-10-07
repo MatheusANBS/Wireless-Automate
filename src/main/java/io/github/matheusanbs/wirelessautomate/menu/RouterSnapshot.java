@@ -2,9 +2,12 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +18,10 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Tudo que a tela do roteador mostra, montado no servidor e enviado ao cliente só com a tela
@@ -61,10 +68,65 @@ public record RouterSnapshot(
         return faces.get(index(type, face));
     }
 
-    /** Monta o snapshot do roteador para o jogador (as redes do seletor dependem dele). Só no servidor. */
+    /**
+     * Monta o snapshot do roteador para o jogador (as redes do seletor dependem dele). Só no servidor.
+     *
+     * <p>O seletor traz as redes do jogador e, se for de outro dono, a rede atual do roteador
+     * ({@code owned = false}). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
+     * roteador, sem consulta direta de capability. O ícone da máquina é só o item do bloco, sem os
+     * dados do block entity, para o pacote continuar pequeno.
+     */
     public static RouterSnapshot capture(RouterBlockEntity router, ServerPlayer player) {
-        // TODO(contrato): implementar (agente do servidor).
-        throw new UnsupportedOperationException("TODO");
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        UUID networkId = router.networkId();
+        WaNetwork current = networkId == null ? null : data.network(networkId);
+
+        List<NetworkEntry> networks = new ArrayList<>();
+        for (WaNetwork network : data.networksOf(player.getUUID())) {
+            networks.add(new NetworkEntry(network.id(), network.name(), network.color(), true));
+        }
+        if (current != null && !current.owner().equals(player.getUUID())) {
+            networks.add(new NetworkEntry(current.id(), current.name(), current.color(), false));
+        }
+
+        Level level = router.getLevel();
+        ItemStack machine = level == null
+                ? ItemStack.EMPTY
+                : new ItemStack(level.getBlockState(router.machinePos()).getBlock().asItem());
+
+        ResourceType[] types = ResourceType.values();
+        FaceView[] faces = new FaceView[types.length * 6];
+        for (ResourceType type : types) {
+            for (Direction face : Direction.values()) {
+                FaceConfig config = router.face(type, face);
+                faces[index(type, face)] = new FaceView(config.mode(), config.priority(), config.redstone(),
+                        slots(router, type, face));
+            }
+        }
+
+        return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
+                Optional.ofNullable(current).map(WaNetwork::id), List.copyOf(networks), router.powered(), machine,
+                List.of(faces));
+    }
+
+    /** Slots (itens), tanques (fluidos) ou 1 (energia) da face; {@code -1} sem a capability. */
+    private static int slots(RouterBlockEntity router, ResourceType type, Direction face) {
+        return switch (type) {
+            case ITEM -> {
+                IItemHandler items = router.items(face);
+                yield items == null ? -1 : items.getSlots();
+            }
+            case FLUID -> {
+                IFluidHandler fluids = router.fluids(face);
+                yield fluids == null ? -1 : fluids.getTanks();
+            }
+            case ENERGY -> {
+                IEnergyStorage energy = router.energy(face);
+                yield energy == null ? -1 : 1;
+            }
+            // Químicos só com o Mekanism, que ainda não está integrado.
+            case CHEMICAL -> -1;
+        };
     }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, RouterSnapshot> STREAM_CODEC =

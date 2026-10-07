@@ -47,6 +47,7 @@ final class FluidTransfer {
             }
         }
         if (moved > 0) {
+            source.node.addMoved(source.type, moved);
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
         } else {

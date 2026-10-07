@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import java.util.function.Supplier;
@@ -18,6 +19,9 @@ public final class ModMenus {
 
     public static final Supplier<MenuType<FilterMenu>> FILTER =
             MENU_TYPES.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
+
+    public static final Supplier<MenuType<ConfiguratorMenu>> CONFIGURATOR =
+            MENU_TYPES.register("configurator", () -> IMenuTypeExtension.create(ConfiguratorMenu::new));
 
     private ModMenus() {
     }

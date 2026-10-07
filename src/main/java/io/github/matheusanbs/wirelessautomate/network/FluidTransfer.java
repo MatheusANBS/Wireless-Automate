@@ -24,21 +24,22 @@ final class FluidTransfer {
     /** Tanques examinados por visita. */
     static final int MAX_TANKS_PER_VISIT = 16;
 
-    static void move(Port source, long now) {
+    /** Uma visita. Devolve {@code true} se moveu algo. */
+    static boolean move(Port source, long now) {
         IFluidHandler handler = source.node.fluids(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         long tokens = source.limiter.available(now);
         if (tokens <= 0) {
-            return;
+            return false;
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         int tanks = Math.min(handler.getTanks(), MAX_TANKS_PER_VISIT);
         FilterSet filter = source.filter;
@@ -68,9 +69,10 @@ final class FluidTransfer {
             source.node.addMoved(source.type, moved);
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
-        } else {
-            source.sourceBackoff.sleep(now);
+            return true;
         }
+        source.sourceBackoff.sleep(now);
+        return false;
     }
 
     private static int moveFluid(Port source, IFluidHandler handler, FluidStack inTank, int max,

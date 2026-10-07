@@ -602,7 +602,13 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (clearArmed() && !clearButton.isMouseOver(mouseX, mouseY)) {
             clearArmedUntil = 0;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        boolean wasOpen = moreOpen;
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (moreOpen && !wasOpen) {
+            // a tela dá o foco ao botão clicado depois do onPress, tirando-o do campo de regra
+            setFocused(ruleBox);
+        }
+        return handled;
     }
 
     @Override

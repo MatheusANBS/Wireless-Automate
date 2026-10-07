@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -37,14 +38,19 @@ import org.jetbrains.annotations.Nullable;
  * <p>Estoque: na origem, mantém N do item (mesmo item; com {@code matchComponents}, mesmos
  * componentes) contando o inventário inteiro uma vez por visita, só quando a visita encontra um
  * slot com estoque ({@link StockTally}): O(slots) por visita, e a conta é descontada conforme os
- * itens saem. No destino, aceita até N contando os slots do destino a cada tentativa daquele item
- * (O(slots do destino)), só para entradas com estoque. Sem estoque no filtro, nada é contado.
+ * itens saem. No destino, aceita até N contando os slots do destino na mesma varredura que simula
+ * a inserção ({@link InsertPlan}), só para entradas com estoque. Sem estoque no filtro, nada é contado.
+ *
+ * <p>Custo de uma entrega: uma varredura do destino ({@link InsertPlan}), em vez das quatro de
+ * chamar o {@link ItemHandlerHelper#insertItemStacked} na simulação e de novo na inserção.
  */
 final class ItemTransfer {
     /** Slots examinados por visita: inventário grande continua do cursor no tick seguinte. */
     static final int MAX_SLOTS_PER_VISIT = 128;
     /** Slots com item que tentam entregar por visita, para uma origem não comer o orçamento sozinha. */
     static final int MAX_ATTEMPTS_PER_VISIT = 32;
+    /** Plano da última simulação de inserção; o laço roda numa thread só (a do servidor). */
+    private static final InsertPlan PLAN = new InsertPlan();
 
     static void move(Port source, long now) {
         IItemHandler handler = source.node.items(source.face);
@@ -165,24 +171,29 @@ final class ItemTransfer {
             if (target == null) {
                 continue;
             }
-            int want = remaining;
             FilterSet accept = destination.filter;
+            long stock = 0;
+            int count = InsertPlan.COUNT_NONE;
             if (!accept.isEmpty()) {
                 // Recusa do filtro ou estoque já atingido: pula sem dormir (ver o javadoc da classe).
                 if (!accept.testItem(offered)) {
                     continue;
                 }
                 Filter rule = accept.itemStockFilter(offered);
-                long stock = rule == null ? 0 : rule.itemStock(offered);
+                stock = rule == null ? 0 : rule.itemStock(offered);
                 if (stock > 0) {
-                    want = (int) StockLimit.acceptable(countIn(target, offered, rule.matchComponents()), stock, want);
-                    if (want <= 0) {
-                        continue;
-                    }
+                    count = rule.matchComponents() ? InsertPlan.COUNT_COMPONENTS : InsertPlan.COUNT_ITEM;
                 }
             }
-            ItemStack probe = want == offered.getCount() ? offered : offered.copyWithCount(want);
-            int accepts = want - ItemHandlerHelper.insertItemStacked(target, probe, true).getCount();
+            ItemStack probe = remaining == offered.getCount() ? offered : offered.copyWithCount(remaining);
+            int accepts = PLAN.simulate(target, probe, count);
+            if (stock > 0) {
+                int want = (int) StockLimit.acceptable(PLAN.counted(), stock, remaining);
+                if (want <= 0) {
+                    continue;
+                }
+                accepts = Math.min(accepts, want);
+            }
             if (accepts <= 0) {
                 destination.destinationBackoff.sleep(now);
                 continue;
@@ -192,7 +203,7 @@ final class ItemTransfer {
                 break;
             }
             int takenCount = taken.getCount();
-            ItemStack leftover = ItemHandlerHelper.insertItemStacked(target, taken, false);
+            ItemStack leftover = PLAN.execute(target, taken);
             int delivered = takenCount - leftover.getCount();
             if (!leftover.isEmpty()) {
                 giveBack(source, handler, slot, leftover);
@@ -215,18 +226,6 @@ final class ItemTransfer {
         return moved;
     }
 
-    /** Quanto do item de {@code stack} há no inventário (mesmos componentes, se pedido). */
-    private static long countIn(IItemHandler handler, ItemStack stack, boolean components) {
-        long total = 0;
-        for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
-            ItemStack inSlot = handler.getStackInSlot(slot);
-            if (components ? ItemStack.isSameItemSameComponents(inSlot, stack) : ItemStack.isSameItem(inSlot, stack)) {
-                total += inSlot.getCount();
-            }
-        }
-        return total;
-    }
-
     private static void giveBack(Port source, IItemHandler handler, int slot, ItemStack leftover) {
         ItemStack rest = handler.insertItem(slot, leftover, false);
         if (!rest.isEmpty()) {
@@ -239,6 +238,91 @@ final class ItemTransfer {
             if (level != null) {
                 Block.popResource(level, source.node.getBlockPos(), rest);
             }
+        }
+    }
+
+    /**
+     * Inserção num destino com uma varredura só por entrega. A simulação dá o mesmo resultado do
+     * {@link ItemHandlerHelper#insertItemStacked} (primeiro as pilhas do mesmo item, depois os slots
+     * vazios, na ordem dos slots), mas numa passada: anota os vazios enquanto procura as pilhas
+     * iguais e lembra os slots que aceitaram. A inserção real vai direto neles; o que sobrar (destino
+     * que mudou ou mentiu na simulação) cai no {@code insertItemStacked}, e o que nem ele aceitar
+     * volta para quem chamou, como antes. Se o destino tem estoque, a mesma passada conta o item
+     * (e então vai até o fim do inventário).
+     */
+    static final class InsertPlan {
+        static final int COUNT_NONE = 0;
+        /** Conta pelo item, como {@link ItemStack#isSameItem}. */
+        static final int COUNT_ITEM = 1;
+        /** Conta pelo item e componentes, como {@link ItemStack#isSameItemSameComponents}. */
+        static final int COUNT_COMPONENTS = 2;
+
+        private int[] slots = new int[8];
+        private int size;
+        private int[] empties = new int[64];
+        private long counted;
+
+        /**
+         * Simula a inserção de {@code stack} e guarda o plano; com {@code count}, conta também o
+         * item no destino ({@link #counted}). Devolve quanto entraria.
+         */
+        int simulate(IItemHandler target, ItemStack stack, int count) {
+            size = 0;
+            counted = 0;
+            int emptyCount = 0;
+            ItemStack rest = stack;
+            for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
+                boolean placing = !rest.isEmpty();
+                if (!placing && count == COUNT_NONE) {
+                    break;
+                }
+                ItemStack inSlot = target.getStackInSlot(slot);
+                if (inSlot.isEmpty()) {
+                    if (placing) {
+                        if (emptyCount == empties.length) {
+                            empties = Arrays.copyOf(empties, emptyCount * 2);
+                        }
+                        empties[emptyCount++] = slot;
+                    }
+                    continue;
+                }
+                boolean same = ItemStack.isSameItemSameComponents(inSlot, stack);
+                if (count == COUNT_COMPONENTS ? same : count == COUNT_ITEM && ItemStack.isSameItem(inSlot, stack)) {
+                    counted += inSlot.getCount();
+                }
+                if (same && placing) {
+                    rest = offer(target, slot, rest);
+                }
+            }
+            for (int i = 0; i < emptyCount && !rest.isEmpty(); i++) {
+                rest = offer(target, empties[i], rest);
+            }
+            return stack.getCount() - rest.getCount();
+        }
+
+        /** Quanto do item a última {@link #simulate} contou no destino. */
+        long counted() {
+            return counted;
+        }
+
+        private ItemStack offer(IItemHandler target, int slot, ItemStack stack) {
+            ItemStack rest = target.insertItem(slot, stack, true);
+            if (rest.getCount() < stack.getCount()) {
+                if (size == slots.length) {
+                    slots = Arrays.copyOf(slots, size * 2);
+                }
+                slots[size++] = slot;
+            }
+            return rest;
+        }
+
+        /** Insere de verdade nos slots do plano; o que sobrar vai pelo empilhado. Devolve a sobra. */
+        ItemStack execute(IItemHandler target, ItemStack stack) {
+            ItemStack rest = stack;
+            for (int i = 0; i < size && !rest.isEmpty(); i++) {
+                rest = target.insertItem(slots[i], rest, false);
+            }
+            return rest.isEmpty() ? rest : ItemHandlerHelper.insertItemStacked(target, rest, false);
         }
     }
 

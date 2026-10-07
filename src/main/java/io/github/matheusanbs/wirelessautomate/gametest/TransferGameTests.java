@@ -171,6 +171,31 @@ public final class TransferGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void itemsStackOntoExistingPilesFirst(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-empilhar");
+        chest(helper, A, network, PortMode.EXTRACT);
+        chest(helper, B, network, PortMode.INSERT);
+        // Como o insertItemStacked: completa as pilhas iguais (slots 3 e 7), depois o primeiro vazio (slot 1).
+        ChestBlockEntity target = chestAt(helper, B);
+        target.setItem(0, new ItemStack(Items.DIRT, 64));
+        target.setItem(3, new ItemStack(Items.COBBLESTONE, 60));
+        target.setItem(7, new ItemStack(Items.COBBLESTONE, 62));
+        chestAt(helper, A).setItem(0, new ItemStack(Items.COBBLESTONE, 30));
+
+        helper.onEachTick(() -> helper.assertValueEqual(
+                count(helper, A, Items.COBBLESTONE) + count(helper, B, Items.COBBLESTONE), 152, "pedregulho"));
+        helper.succeedWhen(() -> {
+            assertCount(helper, A, Items.COBBLESTONE, 0);
+            helper.assertValueEqual(target.getItem(3).getCount(), 64, "slot 3");
+            helper.assertValueEqual(target.getItem(7).getCount(), 64, "slot 7");
+            helper.assertTrue(target.getItem(1).is(Items.COBBLESTONE), "slot 1 sem pedregulho");
+            helper.assertValueEqual(target.getItem(1).getCount(), 24, "slot 1");
+            helper.assertTrue(target.getItem(2).isEmpty(), "slot 2 deveria estar vazio");
+            helper.assertValueEqual(target.getItem(0).getCount(), 64, "terra");
+        });
+    }
+
+    @GameTest(template = "empty")
     public static void redstoneHighWaitsForSignal(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-redstone");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);

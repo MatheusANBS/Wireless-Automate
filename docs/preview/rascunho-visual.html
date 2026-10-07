@@ -1,0 +1,1684 @@
+<title>Texturas do Wireless Automate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Figtree:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: uma bancada de modder — cena 3D com barra de itens no topo, folha de texturas abaixo */
+:root {
+  --bg: #0f1318;
+  --panel: #161c23;
+  --panel-2: #1c242d;
+  --line: #2a3542;
+  --fg: #e8edf2;
+  --muted: #93a0ae;
+  --accent: #45d6cc;
+  --display: "Pixelify Sans", "Courier New", monospace;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.page { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 56px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+header { display: grid; gap: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 6vw, 48px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lead { margin: 0; max-width: 62ch; color: var(--muted); }
+h2 { font-family: var(--display); font-weight: 500; font-size: 24px; margin: 0; text-wrap: balance; }
+.section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.section > p { margin: 0; color: var(--muted); max-width: 64ch; }
+
+.stage { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #8fbdeb; min-height: 280px; }
+.stage canvas { display: block; width: 100%; touch-action: pan-y; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.hud { position: absolute; top: 12px; left: 12px; display: grid; gap: 6px; pointer-events: none; }
+.chip { font-family: var(--mono); font-size: 12px; background: rgba(12, 16, 22, 0.78); color: #e8edf2; padding: 5px 9px; border-radius: 6px; width: max-content; max-width: calc(100vw - 72px); font-variant-numeric: tabular-nums; }
+.chip.warn { background: rgba(70, 48, 8, 0.88); color: #ffd27a; }
+.hint { position: absolute; right: 12px; bottom: 12px; font-family: var(--mono); font-size: 11.5px; color: #e8edf2; background: rgba(12, 16, 22, 0.6); padding: 4px 8px; border-radius: 6px; pointer-events: none; }
+.fallback { padding: 40px 20px; text-align: center; color: #11151b; font-weight: 600; }
+
+.hotbar-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+.hotbar-label { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.hotbar-wrap { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+.hotbar-label b { color: var(--fg); font-weight: 600; }
+.hotbar { display: flex; gap: 4px; overflow-x: auto; padding: 6px; background: #0b0e12; border: 1px solid var(--line); border-radius: 8px; width: max-content; max-width: 100%; }
+.slot { width: 52px; height: 52px; flex: none; padding: 0; justify-content: center; background: #1a2028; border: 2px solid #2c3642; border-radius: 4px; }
+.slot canvas { width: 40px; height: 40px; image-rendering: pixelated; image-rendering: crisp-edges; }
+.slot[aria-pressed="true"] { background: #1a2028; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+.tiers, .actions, .views { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+button:hover { border-color: var(--muted); }
+button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.readout div { background: var(--panel); padding: 10px 14px; display: grid; gap: 2px; min-width: 0; }
+.readout dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.readout dd { margin: 0; font-family: var(--mono); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.icon { width: 96px; height: 96px; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 4px; background: conic-gradient(#1d252e 25%, #232c36 0 50%, #1d252e 0 75%, #232c36 0) 0 0 / 12px 12px; }
+.card .name { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.card .role { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.card .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); max-width: 70ch; margin: 0; }
+@media (max-width: 480px) { .hint { display: none; } }
+
+/* ---------- navegação e hierarquia ---------- */
+.masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.masthead h1 { font-size: clamp(28px, 5vw, 40px); }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; padding-block: 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.pages { display: flex; gap: 2px; }
+.pages button { background: transparent; border: 0; border-radius: 0; padding: 8px 12px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
+.pages button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.topbar .tiers { flex-wrap: nowrap; gap: 4px; }
+.topbar .tiers button { padding: 5px 8px; font-size: 12.5px; gap: 6px; }
+.topbar .tiers .sw { width: 10px; height: 10px; }
+.spec { margin: -8px 0 0; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seg-quiet button { font-size: 13px; padding: 6px 10px; }
+.primary { background: var(--trim, var(--accent)) !important; color: #0d1116 !important; border-color: var(--trim, var(--accent)) !important; font-weight: 600; }
+.sim { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; max-width: 680px; }
+.sim select, .sim button { font: inherit; font-size: 13px; }
+.sim select { background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.how { margin: 0; font-size: 12.5px; color: var(--muted); max-width: 680px; }
+
+/* ---------- interfaces ---------- */
+.screens { display: flex; flex-wrap: wrap; gap: 6px; }
+.how { font-size: 13.5px; color: var(--muted); }
+.how b { color: var(--fg); font-weight: 600; }
+.gui { --trim: var(--accent); background: #1b2129; border: 2px solid; border-color: #3a4452 #0c0f13 #0c0f13 #3a4452; border-radius: 6px; padding: 14px; display: grid; gap: 14px; max-width: 680px; width: 100%; box-shadow: inset 0 0 0 1px var(--trim), 0 10px 30px rgba(0,0,0,0.35); min-width: 0; }
+.gui-toast { font-family: var(--mono); font-size: 12.5px; color: var(--accent); min-height: 1.4em; }
+.gui-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; align-items: center; }
+.gui-title { font-family: var(--display); font-size: 19px; line-height: 1.2; }
+.gui-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pill { font-family: var(--mono); font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--c, var(--line)); display: inline-flex; align-items: center; gap: 6px; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--muted)); }
+.mono { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.gui-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid #2a3340; padding-bottom: 10px; }
+.gui-tabs button { padding: 6px 11px; font-size: 13.5px; }
+.gui-tabs button[aria-selected="true"] { background: var(--trim); color: #0d1116; border-color: var(--trim); }
+.gui-tabs { flex-wrap: nowrap; overflow-x: auto; align-items: center; }
+.gui-tabs button { flex: none; }
+.gui-tabs .rate { margin-left: auto; padding-left: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.small-tabs { border-bottom: 0; padding-bottom: 0; }
+.small-tabs button { padding: 4px 10px; font-size: 12.5px; }
+.viewer-col { display: grid; gap: 8px; align-content: start; }
+.face-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.facebtn { padding: 5px 6px; font-size: 12.5px; justify-content: flex-start; gap: 6px; }
+.face-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.face-title .nm { font-family: var(--display); font-size: 17px; }
+.filter-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.filter-strip > button:last-child { margin-left: 6px; }
+.more { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 0 6px; }
+details.adv { border-top: 1px solid #2a3340; padding-top: 10px; }
+details.adv > summary { cursor: pointer; font-size: 13px; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "▸"; font-size: 11px; transition: transform 0.15s; }
+details.adv[open] > summary::before { transform: rotate(90deg); }
+details.adv[open] > summary { margin-bottom: 10px; color: var(--fg); }
+details.adv > :not(summary) + * { margin-top: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.toolbar input { flex: 1 1 160px; }
+.row-between { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.status-line { font-family: var(--mono); font-size: 12.5px; color: var(--fg); }
+@media (prefers-reduced-motion: reduce) { details.adv > summary::before { transition: none; } }
+.gui-body { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 560px) { .gui-body { grid-template-columns: minmax(0, 1fr); } }
+.label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.field { display: grid; gap: 6px; min-width: 0; }
+.fields { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.row2 { display: flex; flex-wrap: wrap; gap: 14px 22px; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { padding: 6px 10px; font-size: 13px; }
+.cube-col { display: grid; gap: 10px; align-content: start; }
+.mount-view { height: 230px; border-radius: 6px; background: radial-gradient(circle at 50% 40%, #232b36, #0f1318 75%); border: 1px solid #2a3340; overflow: hidden; touch-action: none; }
+.mount-canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.mount-seg button { padding: 4px 8px; font-size: 12px; }
+.face-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.face-list button { padding: 5px 6px; font-size: 12px; justify-content: center; gap: 5px; }
+.face-info { font-size: 12.5px; color: var(--muted); text-align: center; }
+.face-info b { color: var(--fg); }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper button { padding: 4px 11px; }
+.num { font-family: var(--mono); min-width: 3ch; text-align: center; font-variant-numeric: tabular-nums; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, 38px); gap: 3px; max-height: 172px; overflow-y: auto; padding: 2px; }
+.mslot { width: 38px; height: 38px; padding: 0; justify-content: center; position: relative; background: #11151b; border: 2px solid; border-color: #0a0d10 #3a4452 #3a4452 #0a0d10; border-radius: 2px; }
+.mslot img { width: 28px; height: 28px; image-rendering: pixelated; image-rendering: crisp-edges; }
+.mslot.sel { box-shadow: 0 0 0 2px var(--trim); }
+.mslot:hover { border-color: #0a0d10 #56606f #56606f #0a0d10; }
+.qty { position: absolute; right: 2px; bottom: 0; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: #fff; text-shadow: 1px 1px 0 #000; }
+.side-slots { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; border-top: 1px solid #2a3340; padding-top: 12px; }
+.side-slots .grp { display: flex; align-items: center; gap: 6px; }
+.gui input[type="text"], .gui input[type="number"], .gui input[type="search"], .gui textarea { font: inherit; font-size: 14px; background: #11151b; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; min-width: 0; }
+.gui textarea { font-family: var(--mono); font-size: 12px; min-height: 76px; resize: vertical; }
+.gui input:focus-visible, .gui textarea:focus-visible { outline: 2px solid var(--trim); outline-offset: 1px; }
+.gui input[type="range"] { width: 100%; accent-color: var(--trim); }
+.inline { display: flex; gap: 6px; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips button { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); gap: 16px; }
+@media (max-width: 560px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.jei { background: #11151b; border: 1px solid #2a3340; border-radius: 6px; padding: 10px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.jei .slots { max-height: 210px; }
+.slots.tall { max-height: 214px; }
+.sel-box { background: #151a21; border: 1px solid #2a3340; border-radius: 6px; padding: 10px; display: grid; gap: 8px; }
+.sel-box .nm { font-weight: 600; }
+.list { display: grid; gap: 4px; }
+.list button { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; text-align: left; padding: 9px 11px; gap: 4px 10px; }
+.list .nm { font-weight: 600; font-size: 14px; }
+.list .sub { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.list .l { display: grid; gap: 1px; min-width: 0; }
+.list button[aria-pressed="true"] .sub { color: #3d4652; }
+.status { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 20%, transparent); color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); white-space: nowrap; }
+.mapbox { background: #11151b; border: 1px solid #2a3340; border-radius: 6px; overflow: hidden; }
+.mapbox svg { display: block; width: 100%; height: auto; }
+.stat { display: grid; gap: 4px; }
+.stat .top { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.bar { height: 8px; background: #11151b; border-radius: 4px; overflow: hidden; border: 1px solid #222a34; }
+.bar i { display: block; height: 100%; background: var(--c); }
+.cards2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.ncard { background: #151a21; border: 1px solid #2a3340; border-radius: 6px; padding: 10px; display: grid; gap: 8px; }
+.ncard .top { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.small { font-size: 12.5px; color: var(--muted); }
+.port { width: 16px; height: 16px; image-rendering: pixelated; image-rendering: crisp-edges; flex: none; }
+.port-legend { font-size: 12px; gap: 4px 10px; }
+.roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.role { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--c); }
+.role .port { width: 12px; height: 12px; }
+.list .check { width: 18px; height: 18px; flex: none; border: 2px solid var(--muted); border-radius: 4px; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; }
+.list.multi-true button { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; column-gap: 10px; }
+.list.multi-true button .check { margin-top: 2px; }
+.list.multi-true button .status { grid-column: 2; justify-self: start; }
+.list button[aria-pressed="true"] .check { border-color: var(--bg); }
+.actionbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #151a21; border: 1px solid #2a3340; border-radius: 6px; padding: 8px 10px; }
+.gui select { font: inherit; font-size: 13px; background: #11151b; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.netsel { display: inline-flex; align-items: center; border: 1px solid var(--c); border-radius: 999px; padding-left: 10px; gap: 6px; }
+.netsel::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.netsel select { border: 0; border-radius: 999px; padding: 3px 8px 3px 2px; font-family: var(--mono); font-size: 11.5px; background: transparent; }
+.lineb { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px 12px; font-size: 12.5px; color: var(--muted); }
+.lineb b { font-family: var(--mono); font-size: 11px; color: var(--fg); margin-right: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <h1>Wireless <span>Automate</span></h1>
+    <span class="eyebrow">NeoForge 1.21.1 · rascunho visual</span>
+  </header>
+
+  <nav class="topbar" aria-label="Seções">
+    <div class="pages" role="tablist" aria-label="Seção">
+      <button type="button" role="tab" data-page="scene" aria-selected="true">Cena</button>
+      <button type="button" role="tab" data-page="gui" aria-selected="false">Interfaces</button>
+      <button type="button" role="tab" data-page="tex" aria-selected="false">Texturas</button>
+    </div>
+    <div class="tiers" role="group" aria-label="Tier" id="tiers"></div>
+  </nav>
+  <p class="spec" id="readout"></p>
+
+  <section class="section" id="page-scene" aria-label="Cena">
+    <div class="stage" id="stage">
+      <canvas id="scene" aria-label="Cena 3D estilo Minecraft com roteadores wireless, fornalhas, baús e um personagem segurando um item"></canvas>
+      <div class="hud">
+        <div class="chip" id="count">Lotes transferidos: 0</div>
+        <div class="chip warn" id="sleep" hidden>Baú 2 cheio · destino dormindo</div>
+      </div>
+      <div class="hint">Arraste para girar · pinça para zoom</div>
+    </div>
+    <div class="hotbar-wrap">
+      <div class="hotbar" id="hotbar" role="group" aria-label="Item na mão do personagem"></div>
+      <div class="hotbar-label"><b id="heldName">Configurador</b></div>
+    </div>
+    <div class="controls">
+      <div class="views seg-quiet" role="group" aria-label="Câmera">
+        <button id="view-overview" type="button" aria-pressed="true">Visão geral</button>
+        <button id="view-char" type="button" aria-pressed="false">Personagem</button>
+      </div>
+      <div class="actions seg-quiet">
+        <button id="fill" type="button" aria-pressed="false">Encher o baú 2</button>
+        <button id="links" type="button" aria-pressed="true">Conexões visíveis</button>
+        <button id="pause" type="button">Pausar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="page-gui" aria-label="Interfaces" hidden>
+    <div class="screens" role="group" aria-label="Tela" id="screens">
+      <button type="button" data-screen="router" aria-pressed="true">Roteador</button>
+      <button type="button" data-screen="filter" aria-pressed="false">Filtro</button>
+      <button type="button" data-screen="tablet" aria-pressed="false">Tablet</button>
+      <button type="button" data-screen="linker" aria-pressed="false">Vinculador</button>
+      <button type="button" data-screen="presets" aria-pressed="false">Configurador</button>
+    </div>
+    <div class="gui" id="gui"></div>
+    <div class="gui-toast" id="guiToast" aria-live="polite"></div>
+    <div class="sim" id="guiSim" hidden></div>
+    <p class="how" id="guiHow"></p>
+  </section>
+
+  <section class="section" id="page-tex" aria-label="Texturas" hidden>
+    <h2>Nó Wireless</h2>
+    <div class="grid" id="nodeGrid"></div>
+    <div class="legend" id="legend" aria-label="LEDs do roteador"></div>
+    <h2>Itens</h2>
+    <div class="grid" id="itemGrid"></div>
+    <p class="note">Desenhado pixel a pixel em código. As texturas finais serão refinadas no Blockbench.</p>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  // ---------- dados ----------
+  const TIERS = {
+    basic:    { name: "Básico",   metal: "#8f99a4", accent: "#e1e8ee", core: "#c9d2db", interval: 1.1,  spec: ["512", "32.000 mB", "16.000 FE/t", "128 blocos"] },
+    advanced: { name: "Avançado", metal: "#b88a2c", accent: "#ffe27d", core: "#f2c04a", interval: 0.45, spec: ["8.192", "512.000 mB", "256.000 FE/t", "1.024 blocos"] },
+    elite:    { name: "Elite",    metal: "#2f9e98", accent: "#a5f6ef", core: "#45d6cc", interval: 0.16, spec: ["131.072", "8.000.000 mB", "4.000.000 FE/t", "Dimensão inteira"] },
+    ultimate: { name: "Ultimate", metal: "#6e44b8", accent: "#dcc3ff", core: "#a46cff", interval: 0.05, spec: ["Sem limite", "Sem limite", "Sem limite", "Entre dimensões"] }
+  };
+  const LEDS = [
+    { name: "Energia (cor do tier)", color: null },
+    { name: "Rede conectada", color: "#3d8bff" },
+    { name: "Atividade", color: "#41c96b" },
+    { name: "Destino cheio", color: "#ffb020" }
+  ];
+  TIERS.basic.slots = 9; TIERS.advanced.slots = 18; TIERS.elite.slots = 27; TIERS.ultimate.slots = 54;
+  let tierKey = "elite";
+  let gui = null;
+
+  // ---------- pixel helpers ----------
+  function mix(hex, t) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const tg = t > 0 ? 255 : 0, a = Math.abs(t);
+    r = Math.round(r + (tg - r) * a); g = Math.round(g + (tg - g) * a); b = Math.round(b + (tg - b) * a);
+    return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  }
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const G = (w = 16, h = 16) => ({ w, h, p: new Array(w * h).fill(null) });
+  function S(g, x, y, c) { if (x >= 0 && x < g.w && y >= 0 && y < g.h) g.p[y * g.w + x] = c; }
+  function Gp(g, x, y) { return (x >= 0 && x < g.w && y >= 0 && y < g.h) ? g.p[y * g.w + x] : null; }
+  function R(g, x, y, w, h, c) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) S(g, x + i, y + j, c); }
+  function L(g, x0, y0, x1, y1, c) {
+    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) { S(g, x0, y0, c); if (x0 === x1 && y0 === y1) break; const e2 = 2 * err; if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; } }
+  }
+  function noise(g, pal, seed) { const r = rng(seed); for (let i = 0; i < g.p.length; i++) g.p[i] = pal[Math.floor(r() * pal.length)]; }
+  function outline(g, c) {
+    const add = [];
+    for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+      if (Gp(g, x, y)) continue;
+      if ([[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => Gp(g, x + dx, y + dy))) add.push([x, y]);
+    }
+    add.forEach(([x, y]) => S(g, x, y, c));
+  }
+  function toCanvas(g) {
+    const c = document.createElement("canvas"); c.width = g.w; c.height = g.h;
+    const ctx = c.getContext("2d");
+    g.p.forEach((col, i) => { if (col) { ctx.fillStyle = col; ctx.fillRect(i % g.w, Math.floor(i / g.w), 1, 1); } });
+    return c;
+  }
+  function trim(g, m) {
+    for (let x = 0; x < g.w; x++) { S(g, x, 0, mix(m, 0.25)); S(g, x, g.h - 1, mix(m, -0.3)); }
+    for (let y = 1; y < g.h - 1; y++) { S(g, 0, y, m); S(g, g.w - 1, y, mix(m, -0.15)); }
+  }
+
+  // ---------- roteador (Nó Wireless) ----------
+  const BODY = "#1c222b";
+  function routerFront(tier) {
+    const g = G(14, 6); R(g, 0, 0, 14, 6, BODY); trim(g, tier.metal);
+    [2, 4, 6, 8].forEach(x => S(g, x, 3, "#0b0e12"));
+    [10, 12].forEach(x => { S(g, x, 2, "#0d1116"); S(g, x, 3, "#0d1116"); });
+    S(g, 11, 2, "#2a323d"); S(g, 11, 3, "#2a323d");
+    return toCanvas(g);
+  }
+  function routerSide(tier, w) {
+    const g = G(w, 6); R(g, 0, 0, w, 6, BODY); trim(g, tier.metal);
+    for (let x = 3; x < w - 2; x += 2) { S(g, x, 2, "#0d1116"); S(g, x, 3, "#0d1116"); }
+    return toCanvas(g);
+  }
+  function routerBack(tier) {
+    const g = G(14, 6); R(g, 0, 0, 14, 6, BODY); trim(g, tier.metal);
+    [[2,2],[5,2],[8,2]].forEach(([x, y]) => { R(g, x, y, 2, 2, "#0b0e12"); S(g, x, y, "#3a434f"); });
+    S(g, 11, 3, tier.accent);
+    return toCanvas(g);
+  }
+  function routerTop(tier) {
+    const g = G(14, 12), m = tier.metal; R(g, 0, 0, 14, 12, "#232a34");
+    for (let x = 0; x < 14; x++) { S(g, x, 0, mix(m, 0.25)); S(g, x, 11, mix(m, -0.3)); }
+    for (let y = 0; y < 12; y++) { S(g, 0, y, mix(m, 0.1)); S(g, 13, y, mix(m, -0.2)); }
+    [3, 5, 7, 9].forEach(y => { for (let x = 2; x < 7; x++) S(g, x, y, "#151a21"); });
+    const a = tier.accent;
+    [[8,5],[9,4],[10,4],[11,4],[12,5]].forEach(([x, y]) => S(g, x, y, mix(a, -0.25)));
+    [[9,7],[10,6],[11,6],[12,7]].forEach(([x, y]) => S(g, x, y, a));
+    R(g, 10, 8, 2, 1, mix(a, 0.3));
+    [[1,10],[12,10]].forEach(([x, y]) => S(g, x, y, "#3a434f"));
+    return toCanvas(g);
+  }
+  function routerBottom(tier) {
+    const g = G(14, 12); R(g, 0, 0, 14, 12, "#141920");
+    for (let x = 0; x < 14; x++) { S(g, x, 0, tier.metal); S(g, x, 11, tier.metal); }
+    [[2,2],[11,2],[2,9],[11,9]].forEach(([x, y]) => S(g, x, y, "#2a323d"));
+    return toCanvas(g);
+  }
+
+  // ---------- blocos de cenário ----------
+  const DIRT = ["#7a5233","#86603d","#6b4529","#946b44","#5e3c24"];
+  const GRASS = ["#5d9c3a","#6aae42","#4f8a31","#78bd4c","#62a43e"];
+  const STONE = ["#8a8a8a","#7d7d7d","#959595","#6f6f6f","#848484"];
+  function grassTop() { const g = G(); noise(g, GRASS, 11); return toCanvas(g); }
+  function dirt() { const g = G(); noise(g, DIRT, 23); return toCanvas(g); }
+  function grassSide() {
+    const g = G(); noise(g, DIRT, 37); const r = rng(5);
+    for (let x = 0; x < 16; x++) {
+      const h = 3 + (r() < 0.4 ? 1 : 0) + (r() < 0.15 ? 1 : 0);
+      for (let y = 0; y < h; y++) S(g, x, y, y === h - 1 ? "#4a8330" : GRASS[Math.floor(r() * GRASS.length)]);
+    }
+    return toCanvas(g);
+  }
+  function stone() { const g = G(); noise(g, STONE, 41); return toCanvas(g); }
+  function planks() {
+    const g = G(); noise(g, ["#a57a46","#9c7140","#b08550"], 53);
+    [3, 7, 11, 15].forEach(y => { for (let x = 0; x < 16; x++) S(g, x, y, "#6e4c2a"); });
+    [4, 11, 7, 13].forEach((sx, k) => { for (let y = k * 4; y < k * 4 + 3; y++) S(g, sx, y, "#7a5531"); });
+    return toCanvas(g);
+  }
+  function chest(kind) {
+    const g = G(); noise(g, ["#6f4b2d","#7a5434","#664427"], 61);
+    for (let i = 0; i < 16; i++) { S(g, i, 0, "#3b2817"); S(g, i, 15, "#3b2817"); S(g, 0, i, "#3b2817"); S(g, 15, i, "#3b2817"); }
+    if (kind !== "top") { R(g, 1, 5, 14, 1, "#9aa1a9"); R(g, 1, 6, 14, 1, "#6b727a"); }
+    [[1,1],[13,1],[1,13],[13,13]].forEach(([x, y]) => { R(g, x, y, 2, 2, "#a7aeb6"); S(g, x + 1, y + 1, "#7d848c"); });
+    if (kind === "front") { R(g, 6, 4, 4, 5, "#4b5159"); R(g, 7, 5, 2, 3, "#d5dade"); }
+    return toCanvas(g);
+  }
+  function furnace(kind) {
+    const g = G(); noise(g, STONE, kind === "front" ? 71 : 73);
+    for (let i = 0; i < 16; i++) { S(g, i, 0, "#5d5d5d"); S(g, i, 15, "#5d5d5d"); S(g, 0, i, "#5d5d5d"); S(g, 15, i, "#5d5d5d"); }
+    if (kind === "front") {
+      R(g, 3, 2, 10, 3, "#5e5e5e");
+      for (let x = 4; x < 12; x += 2) S(g, x, 3, "#3a3a3a");
+      R(g, 4, 8, 8, 5, "#262626");
+      R(g, 5, 10, 6, 2, "#ff8a2a"); R(g, 5, 12, 6, 1, "#d2481e");
+      [[6,9],[8,9],[9,10],[7,10]].forEach(([x, y]) => S(g, x, y, "#ffd24a"));
+    }
+    return toCanvas(g);
+  }
+
+  // ---------- itens (v2) ----------
+  function coreItem(tier) {
+    const g = G(), c = tier.core;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x - 7.5, dy = y - 7.5, d = Math.hypot(dx, dy);
+      const l = -(dx + dy) / (Math.max(d, 0.01) * Math.SQRT2);
+      if (d >= 5.1 && d <= 7.0) S(g, x, y, l > 0.45 ? "#b6bfca" : l > -0.15 ? "#7d8794" : l > -0.6 ? "#58626e" : "#3c444f");
+      else if (d >= 4.4 && d < 5.1) S(g, x, y, "#20262e");
+      else if (d < 4.4) S(g, x, y, "#171b22");
+      if (Math.abs(dx) + Math.abs(dy) <= 3.6) {
+        let col;
+        if (dx <= 0 && dy <= 0) col = mix(c, 0.35);
+        else if (dx > 0 && dy <= 0) col = mix(c, 0.1);
+        else if (dx <= 0 && dy > 0) col = mix(c, -0.12);
+        else col = mix(c, -0.35);
+        S(g, x, y, col);
+      }
+    }
+    R(g, 7, 7, 2, 2, mix(c, 0.65));
+    S(g, 6, 5, "#ffffff");
+    [[3,3],[12,3],[3,12],[12,12]].forEach(([x, y]) => S(g, x, y, "#e3e8ed"));
+    outline(g, "#111418");
+    return toCanvas(g);
+  }
+  function configurator() {
+    const g = G();
+    for (let i = 0; i < 7; i++) {
+      const x = 2 + i, y = 13 - i;
+      let a, b;
+      if (i < 3) { a = i === 1 ? "#a06a3e" : "#6b4429"; b = i === 1 ? "#7a4e2d" : "#4e301c"; }
+      else if (i === 3) { a = "#f0c45a"; b = "#a87d27"; }
+      else { a = "#c3cbd3"; b = "#6b737c"; }
+      S(g, x, y, a); S(g, x + 1, y, b);
+      if (i < 3) S(g, x, y - 1, mix(a, 0.15));
+    }
+    S(g, 1, 14, "#d6a53a"); S(g, 2, 14, "#a87d27");
+    [[9,6],[9,5],[9,4],[10,6],[11,6]].forEach(([x, y]) => S(g, x, y, "#e0b04a"));
+    S(g, 8, 4, "#a87d27"); S(g, 11, 7, "#a87d27");
+    for (let y = 0; y < 8; y++) for (let x = 8; x < 16; x++) {
+      const dx = x - 11.5, dy = y - 3.5;
+      if (Math.abs(dx) + Math.abs(dy) <= 2.6 && x !== 9 && y !== 6) {
+        S(g, x, y, dx + dy < -0.5 ? "#a5f6ef" : dx + dy > 0.5 ? "#2a9e97" : "#45d6cc");
+      }
+    }
+    S(g, 11, 2, "#ffffff");
+    outline(g, "#1a1d22");
+    S(g, 14, 0, "#d8fffb"); S(g, 15, 1, "#7fe9e0"); S(g, 13, 7, "#7fe9e0");
+    return toCanvas(g);
+  }
+  function tablet() {
+    const g = G();
+    R(g, 2, 1, 12, 14, "#2b3038");
+    for (let i = 2; i < 14; i++) { S(g, i, 1, "#4a525e"); S(g, i, 14, "#1d2127"); }
+    for (let i = 1; i < 15; i++) { S(g, 2, i, "#4a525e"); S(g, 13, i, "#1d2127"); }
+    for (let y = 2; y < 12; y++) R(g, 3, y, 10, 1, y < 7 ? "#0e2630" : "#123240");
+    R(g, 3, 2, 10, 1, "#1f4a55"); S(g, 11, 2, "#9ef06a"); S(g, 4, 2, "#5ff0e0");
+    const ln = "#2a8f8a";
+    L(g, 5, 5, 10, 4, ln); L(g, 10, 4, 8, 8, ln); L(g, 8, 8, 5, 5, ln); L(g, 8, 8, 4, 10, ln); L(g, 8, 8, 11, 10, ln);
+    [[5,5],[10,4],[8,8],[4,10]].forEach(([x, y]) => S(g, x, y, "#5ff0e0"));
+    S(g, 11, 10, "#ffb020");
+    R(g, 7, 13, 2, 1, "#6b7480"); S(g, 7, 13, "#8a94a3");
+    S(g, 12, 0, "#6b7480");
+    outline(g, "#111418");
+    return toCanvas(g);
+  }
+  function filterCard() {
+    const g = G(), base = "#2f8f6f";
+    for (let y = 3; y < 13; y++) R(g, 1, y, 14, 1, y === 3 ? mix(base, 0.32) : y === 4 ? mix(base, 0.12) : y >= 11 ? mix(base, -0.3) : y >= 9 ? mix(base, -0.12) : base);
+    for (let y = 4; y < 12; y++) S(g, 1, y, mix(base, 0.18));
+    S(g, 14, 3, null); S(g, 13, 3, mix(base, 0.32)); S(g, 14, 4, mix(base, 0.12));
+    R(g, 3, 5, 4, 3, "#e3b341"); S(g, 3, 5, "#f7d886"); R(g, 4, 6, 2, 1, "#9c7a1f"); S(g, 6, 7, "#b8902c");
+    const w = "#f2fbf6", ws = "#b9ddcd";
+    R(g, 9, 5, 5, 1, w); S(g, 13, 5, ws);
+    R(g, 10, 6, 3, 1, w); S(g, 12, 6, ws);
+    S(g, 11, 7, w); S(g, 11, 8, ws);
+    R(g, 3, 9, 4, 1, "#1f6550"); R(g, 3, 10, 2, 1, "#1f6550");
+    [9, 11, 13].forEach(x => S(g, x, 11, "#e3b341"));
+    outline(g, "#0f3326");
+    return toCanvas(g);
+  }
+  function chunkUpgrade() {
+    const g = G(), base = "#38404d";
+    R(g, 2, 3, 12, 10, base);
+    for (let i = 2; i < 14; i++) { S(g, i, 3, "#56606f"); S(g, i, 12, "#262c35"); }
+    for (let i = 3; i < 13; i++) { S(g, 2, i, "#4d5768"); S(g, 13, i, "#262c35"); }
+    [4, 7, 10].forEach(a => [4, 7, 10].forEach(b => {
+      const lit = a === 7 && b === 7;
+      R(g, a, b - 0, 2, 2, lit ? "#9ef06a" : "#566278");
+      S(g, a, b, lit ? "#e2ffc8" : "#6f7d95");
+    }));
+    [[6,7],[9,7],[7,6],[7,9]].forEach(([x, y]) => { if (!Gp(g, x, y) || Gp(g, x, y) === base) S(g, x, y, "#4f7a3a"); });
+    for (let x = 3; x <= 12; x += 3) S(g, x, 13, "#d1ab42");
+    outline(g, "#111418");
+    return toCanvas(g);
+  }
+  function linker() {
+    const g = G(), body = "#e07a2f", hi = "#f4a261", lo = "#a8501c";
+    R(g, 4, 3, 8, 12, body);
+    for (let y = 3; y < 15; y++) { S(g, 4, y, hi); S(g, 11, y, lo); }
+    for (let x = 4; x < 12; x++) { S(g, x, 3, hi); S(g, x, 14, lo); }
+    S(g, 10, 0, "#ffd27a"); S(g, 10, 1, "#9aa3ad"); S(g, 10, 2, "#7f8892");
+    R(g, 5, 4, 6, 4, "#0f2a33");
+    S(g, 6, 6, "#5ff0e0"); S(g, 9, 5, "#5ff0e0"); S(g, 7, 6, "#2a8f8a"); S(g, 8, 5, "#2a8f8a"); S(g, 9, 7, "#ffb020");
+    R(g, 6, 9, 4, 3, "#2b313a"); R(g, 7, 10, 2, 1, "#45d6cc"); S(g, 6, 9, "#3d4652");
+    S(g, 6, 13, "#2b313a"); S(g, 9, 13, "#2b313a");
+    outline(g, "#1a1d22");
+    return toCanvas(g);
+  }
+
+  const ITEMS = [
+    { name: "Configurador",    role: "Varinha: copia, cola e aplica presets.", draw: configurator },
+    { name: "Tablet de rede",  role: "Gerencia nós e redes à distância.", draw: tablet },
+    { name: "Cartão de filtro", role: "Filtro reutilizável entre nós.", draw: filterCard },
+    { name: "Vinculador",      role: "Coloca roteadores na rede ativa, um a um ou por área.", draw: linker },
+    { name: "Upgrade de chunk loading", role: "Mantém o chunk do nó carregado.", draw: chunkUpgrade },
+    { name: "Núcleo Básico",   role: "Sobe o nó para o tier Básico.",   draw: () => coreItem(TIERS.basic) },
+    { name: "Núcleo Avançado", role: "Sobe o nó para o tier Avançado.", draw: () => coreItem(TIERS.advanced) },
+    { name: "Núcleo Elite",    role: "Sobe o nó para o tier Elite.",    draw: () => coreItem(TIERS.elite) },
+    { name: "Núcleo Ultimate", role: "Sobe o nó para o tier Ultimate.", draw: () => coreItem(TIERS.ultimate) }
+  ];
+  ITEMS.forEach(it => { it.canvas = it.draw(); });
+
+  // ---------- técnico (personagem original) ----------
+  const SK = "#c08a62", SKS = "#a8744f", HAIR = "#3a2619", HAIRH = "#523726", STRAP = "#2b313a";
+  const JK = "#2f3540", JKH = "#3b4350", JKL = "#252a33", TEAL = "#2bb3c0";
+  const PANTS = "#4a5235", PANTSL = "#3c432b", BOOT = "#3a2a1e", SOLE = "#1e1612";
+  const P = {
+    headFront() {
+      const g = G(8, 8); R(g, 0, 0, 8, 8, SK);
+      R(g, 0, 0, 8, 1, HAIR); R(g, 0, 1, 8, 1, STRAP);
+      S(g, 1, 1, "#a5f6ef"); S(g, 2, 1, "#45d6cc"); S(g, 5, 1, "#a5f6ef"); S(g, 6, 1, "#45d6cc");
+      S(g, 0, 2, HAIR); S(g, 7, 2, HAIR); S(g, 0, 3, HAIR); S(g, 7, 3, HAIR);
+      S(g, 1, 4, "#f4f1ec"); S(g, 2, 4, "#3b2a1c"); S(g, 5, 4, "#3b2a1c"); S(g, 6, 4, "#f4f1ec");
+      S(g, 3, 5, SKS); S(g, 4, 5, SKS);
+      S(g, 3, 6, "#7a4a35"); S(g, 4, 6, "#7a4a35");
+      R(g, 1, 7, 6, 1, SKS);
+      return toCanvas(g);
+    },
+    headSide() {
+      const g = G(8, 8); R(g, 0, 0, 8, 8, SK);
+      R(g, 0, 0, 8, 1, HAIR); R(g, 0, 1, 8, 1, STRAP); R(g, 0, 2, 8, 1, HAIR);
+      R(g, 4, 3, 4, 4, HAIR); S(g, 2, 4, SKS);
+      R(g, 0, 7, 8, 1, SKS);
+      return toCanvas(g);
+    },
+    headBack() { const g = G(8, 8); R(g, 0, 0, 8, 7, HAIR); R(g, 0, 1, 8, 1, STRAP); S(g, 3, 1, "#9aa3ad"); S(g, 4, 1, "#9aa3ad"); R(g, 0, 7, 8, 1, SKS); S(g, 2, 4, HAIRH); S(g, 5, 3, HAIRH); return toCanvas(g); },
+    headTop() { const g = G(8, 8); R(g, 0, 0, 8, 8, HAIR); [[1,2],[4,1],[6,5],[2,6]].forEach(([x, y]) => S(g, x, y, HAIRH)); return toCanvas(g); },
+    headBottom() { const g = G(8, 8); R(g, 0, 0, 8, 8, SKS); return toCanvas(g); },
+    bodyFront() {
+      const g = G(8, 12); R(g, 0, 0, 8, 12, JK);
+      R(g, 1, 0, 6, 1, TEAL);
+      for (let y = 1; y < 9; y++) { S(g, 0, y, JKH); S(g, 3, y, JKL); S(g, 4, y, "#9aa3ad"); }
+      R(g, 1, 3, 2, 2, TEAL); S(g, 1, 3, "#a5f6ef");
+      R(g, 5, 6, 2, 1, JKL);
+      R(g, 0, 9, 8, 1, "#5a3a24"); S(g, 3, 9, "#e0b04a"); S(g, 4, 9, "#e0b04a");
+      R(g, 0, 10, 8, 2, JKL);
+      return toCanvas(g);
+    },
+    bodyBack() {
+      const g = G(8, 12); R(g, 0, 0, 8, 12, JK);
+      [[2,4],[3,3],[4,3],[5,4]].forEach(([x, y]) => S(g, x, y, TEAL));
+      S(g, 3, 5, "#a5f6ef"); S(g, 4, 5, "#a5f6ef");
+      R(g, 0, 9, 8, 1, "#5a3a24"); R(g, 0, 10, 8, 2, JKL);
+      return toCanvas(g);
+    },
+    bodySide() { const g = G(4, 12); R(g, 0, 0, 4, 12, JK); for (let y = 0; y < 9; y++) S(g, 0, y, JKH); R(g, 0, 9, 4, 1, "#5a3a24"); R(g, 0, 10, 4, 2, JKL); return toCanvas(g); },
+    bodyTop() { const g = G(8, 4); R(g, 0, 0, 8, 4, JKH); R(g, 2, 1, 4, 2, TEAL); return toCanvas(g); },
+    bodyBottom() { const g = G(8, 4); R(g, 0, 0, 8, 4, JKL); return toCanvas(g); },
+    arm() { const g = G(4, 12); R(g, 0, 0, 4, 9, JK); for (let y = 0; y < 9; y++) S(g, 0, y, JKH); R(g, 0, 9, 4, 1, TEAL); R(g, 0, 10, 4, 2, SK); S(g, 3, 11, SKS); return toCanvas(g); },
+    armTop() { const g = G(4, 4); R(g, 0, 0, 4, 4, JKH); return toCanvas(g); },
+    armBottom() { const g = G(4, 4); R(g, 0, 0, 4, 4, SKS); return toCanvas(g); },
+    leg(front) {
+      const g = G(4, 12); R(g, 0, 0, 4, 9, PANTS); S(g, 0, 0, PANTSL);
+      if (front) { R(g, 1, 5, 2, 2, PANTSL); }
+      R(g, 0, 9, 4, 2, BOOT); R(g, 0, 11, 4, 1, SOLE);
+      if (front) { S(g, 1, 9, "#c9a77a"); S(g, 2, 9, "#c9a77a"); }
+      return toCanvas(g);
+    },
+    legTop() { const g = G(4, 4); R(g, 0, 0, 4, 4, PANTS); return toCanvas(g); },
+    legBottom() { const g = G(4, 4); R(g, 0, 0, 4, 4, SOLE); return toCanvas(g); }
+  };
+
+  // ---------- folha de texturas ----------
+  function iconFrom(src, size) {
+    size = size || 96;
+    const c = document.createElement("canvas"); c.width = c.height = size;
+    const ctx = c.getContext("2d"); ctx.imageSmoothingEnabled = false;
+    const k = Math.max(1, Math.floor(size / Math.max(src.width, src.height))), w = src.width * k, h = src.height * k;
+    ctx.drawImage(src, Math.floor((size - w) / 2), Math.floor((size - h) / 2), w, h);
+    return c;
+  }
+  function card(src, name, role, tag) {
+    const d = document.createElement("div"); d.className = "card";
+    const ic = iconFrom(src); ic.className = "icon"; d.appendChild(ic);
+    const n = document.createElement("div"); n.className = "name"; n.textContent = name;
+    const r = document.createElement("div"); r.className = "role"; r.textContent = role;
+    const t = document.createElement("div"); t.className = "tag"; t.textContent = tag;
+    d.append(n, r, t);
+    return d;
+  }
+  const itemGrid = document.getElementById("itemGrid");
+  ITEMS.forEach(it => itemGrid.appendChild(card(it.canvas, it.name, it.role, "item · 16×16")));
+
+  function renderNodeGrid() {
+    const tier = TIERS[tierKey], grid = document.getElementById("nodeGrid");
+    grid.textContent = "";
+    grid.appendChild(card(routerFront(tier), "Frente", "Quatro LEDs de estado e saída de ar.", "14×6 · " + tier.name));
+    grid.appendChild(card(routerTop(tier), "Topo", "Grade de ventilação e símbolo wireless.", "14×12 · " + tier.name));
+    grid.appendChild(card(routerSide(tier, 12), "Lateral", "Fendas de ventilação.", "12×6 · " + tier.name));
+    grid.appendChild(card(routerBack(tier), "Traseira", "Portas e base das antenas.", "14×6 · " + tier.name));
+    grid.appendChild(card(routerBottom(tier), "Base", "Pés de borracha.", "14×12 · " + tier.name));
+  }
+
+  // ---------- controles ----------
+  const tiersEl = document.getElementById("tiers");
+  Object.entries(TIERS).forEach(([k, t]) => {
+    const b = document.createElement("button"); b.type = "button"; b.id = "tier-" + k;
+    b.setAttribute("aria-pressed", String(k === tierKey));
+    const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = t.core;
+    b.append(sw, document.createTextNode(t.name));
+    b.addEventListener("click", () => setTier(k));
+    tiersEl.appendChild(b);
+  });
+  function renderLegend() {
+    const legend = document.getElementById("legend"); legend.textContent = "";
+    LEDS.forEach(l => {
+      const s = document.createElement("span"); const sw = document.createElement("i"); sw.className = "sw";
+      sw.style.background = l.color || TIERS[tierKey].accent;
+      s.append(sw, document.createTextNode(l.name)); legend.appendChild(s);
+    });
+  }
+  function renderReadout() {
+    const t = TIERS[tierKey];
+    document.getElementById("readout").textContent = `${t.spec[0]} itens/s · ${t.spec[1]}/s · ${t.spec[2]} · alcance ${t.spec[3].toLowerCase()}`;
+  }
+  let heldIdx = 0;
+  const hotbar = document.getElementById("hotbar");
+  ITEMS.forEach((it, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "slot"; b.id = "slot-" + i;
+    b.setAttribute("aria-label", it.name); b.title = it.name;
+    b.setAttribute("aria-pressed", String(i === heldIdx));
+    b.appendChild(iconFrom(it.canvas, 40));
+    b.addEventListener("click", () => { setHeld(i); setView("char"); });
+    hotbar.appendChild(b);
+  });
+
+  // ---------- cena 3D ----------
+  const stage = document.getElementById("stage");
+  const canvas = document.getElementById("scene");
+  let scene3d = null;
+  try {
+    if (typeof THREE === "undefined") throw new Error("three");
+    scene3d = buildScene();
+  } catch (e) {
+    stage.innerHTML = '<div class="fallback">Não foi possível iniciar a cena 3D neste navegador. As texturas abaixo continuam disponíveis.</div>';
+  }
+
+  function buildScene() {
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    const scene = new THREE.Scene();
+    const sky = new THREE.Color("#8fbdeb");
+    scene.background = sky; scene.fog = new THREE.Fog(sky, 26, 54);
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 200);
+    scene.add(new THREE.HemisphereLight(0xdff0ff, 0x5a4632, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(6, 12, 4); scene.add(sun);
+
+    function tex(c) { const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.encoding = THREE.sRGBEncoding; return t; }
+    const lam = c => new THREE.MeshLambertMaterial({ map: tex(c) });
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    function block(mats, x, y, z) { const m = new THREE.Mesh(box, mats); m.position.set(x, y, z); scene.add(m); return m; }
+    const px = v => v / 16;
+
+    const gs = lam(grassSide()), gt = lam(grassTop()), dt = lam(dirt());
+    const groundMats = [gs, gs, gt, dt, gs, gs];
+    for (let x = -8; x <= 8; x++) for (let z = -8; z <= 8; z++) block(groundMats, x, 0, z);
+    const st = lam(stone()), stoneMats = [st, st, st, st, st, st];
+    [[-8,1,-8],[-7,1,-8],[-8,1,-7],[-8,2,-8],[7,1,7],[8,1,7],[8,1,6]].forEach(p => block(stoneMats, ...p));
+    const pl = lam(planks()), plankMats = [pl, pl, pl, pl, pl, pl];
+    [[0,1,6],[1,1,6],[0,2,6],[-1,1,-7]].forEach(p => block(plankMats, ...p));
+
+    const fFront = lam(furnace("front")), fSide = lam(furnace("side")), fTop = lam(furnace("top"));
+    const furnaceMats = [fFront, fSide, fTop, fTop, fSide, fSide];
+    const cFront = lam(chest("front")), cSide = lam(chest("side")), cTop = lam(chest("top"));
+    const chestMats = [cSide, cFront, cTop, cTop, cSide, cSide];
+    block(furnaceMats, -5, 1, -2); block(furnaceMats, -5, 1, 2);
+    block(chestMats, 5, 1, -2); block(chestMats, 5, 1, 2);
+
+    // roteadores
+    const routers = [];
+    const dim = c => new THREE.Color(c).multiplyScalar(0.22);
+    // rot = [x, y, z] em radianos: a base do roteador (−y local) encosta na máquina
+    function makeRouter(x, y, z, rot) {
+      const group = new THREE.Group(); group.position.set(x, y, z); group.rotation.set(rot[0], rot[1], rot[2]); scene.add(group);
+      const mats = Array.from({ length: 6 }, () => new THREE.MeshLambertMaterial());
+      const body = new THREE.Mesh(new THREE.BoxGeometry(px(14), px(6), px(12)), mats);
+      body.position.y = -0.5 + px(3); group.add(body);
+      const rodMat = new THREE.MeshLambertMaterial({ color: 0x2b313a });
+      const tips = [-1, 1].map(sx => {
+        const rod = new THREE.Mesh(new THREE.BoxGeometry(px(1), px(8), px(1)), rodMat);
+        rod.position.set(sx * px(5.5), -0.5 + px(10), -px(4.5)); group.add(rod);
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(px(2), px(2), px(2)), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        tip.position.set(sx * px(5.5), -0.5 + px(15), -px(4.5)); group.add(tip);
+        return tip;
+      });
+      const leds = [2, 4, 6, 8].map(p => {
+        const led = new THREE.Mesh(new THREE.BoxGeometry(px(1), px(1), 0.02), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+        led.position.set(-px(7) + px(p + 0.5), -0.5 + px(2.5), px(6) + 0.01); group.add(led);
+        return led;
+      });
+      const anchor = new THREE.Vector3(); tips[0].getWorldPosition(anchor);
+      const r = { group, mats, tips, leds, act: 0, full: false, anchor: anchor.clone() };
+      routers.push(r); return r;
+    }
+    const sources = [makeRouter(-5, 2, -2, [0, Math.PI / 2, 0]), makeRouter(-5, 2, 2, [0, Math.PI / 2, 0])];
+    // o segundo baú tem o roteador preso na face oeste, deitado de lado
+    const dests = [makeRouter(5, 2, -2, [0, -Math.PI / 2, 0]), makeRouter(4, 1, 2, [0, 0, Math.PI / 2])];
+
+    const routes = [];
+    sources.forEach(s => dests.forEach(d => {
+      const a = s.anchor, b = d.anchor, mid = a.clone().add(b).multiplyScalar(0.5);
+      mid.y += 2.2 + a.distanceTo(b) * 0.1;
+      const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(48)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+      scene.add(line);
+      routes.push({ s, d, line, flash: 0 });
+    }));
+
+    function applyTier() {
+      const t = TIERS[tierKey];
+      routers.forEach(r => {
+        r.mats.forEach(m => { if (m.map) m.map.dispose(); });
+        const side = tex(routerSide(t, 12));
+        r.mats[0].map = side; r.mats[1].map = side;
+        r.mats[2].map = tex(routerTop(t));
+        r.mats[3].map = tex(routerBottom(t));
+        r.mats[4].map = tex(routerFront(t));
+        r.mats[5].map = tex(routerBack(t));
+        r.mats.forEach(m => { m.needsUpdate = true; });
+      });
+      routes.forEach(r => r.line.material.color.set(t.core));
+    }
+
+    // técnico: proporções de jogador (32 px de altura), frente em +z local
+    const charPos = new THREE.Vector3(0, 0.5, 0.5);
+    const person = new THREE.Group(); person.position.copy(charPos); person.rotation.y = 2.0; scene.add(person);
+    function part(w, h, d, faces) {
+      const mats = faces.map(c => lam(c));
+      return new THREE.Mesh(new THREE.BoxGeometry(px(w), px(h), px(d)), mats);
+    }
+    // ordem: +x, -x, +y, -y, +z (frente), -z (costas)
+    const hs = P.headSide();
+    const head = part(8, 8, 8, [hs, hs, P.headTop(), P.headBottom(), P.headFront(), P.headBack()]);
+    head.position.y = px(28); person.add(head);
+    const bsd = P.bodySide();
+    const torso = part(8, 12, 4, [bsd, bsd, P.bodyTop(), P.bodyBottom(), P.bodyFront(), P.bodyBack()]);
+    torso.position.y = px(18); person.add(torso);
+    const armTex = P.arm(), armTop = P.armTop(), armBot = P.armBottom();
+    function makeArm(sx) {
+      const pivot = new THREE.Group(); pivot.position.set(sx * px(6), px(22), 0); person.add(pivot);
+      const m = part(4, 12, 4, [armTex, armTex, armTop, armBot, armTex, armTex]);
+      m.position.y = -px(4); pivot.add(m);
+      return pivot;
+    }
+    const rightArm = makeArm(-1), leftArm = makeArm(1);
+    const legF = P.leg(true), legS = P.leg(false), legT = P.legTop(), legB = P.legBottom();
+    [-1, 1].forEach(sx => { const l = part(4, 12, 4, [legS, legS, legT, legB, legF, legS]); l.position.set(sx * px(2), px(6), 0); person.add(l); });
+
+    // itens extrudados: um cubinho por pixel, como o jogo faz com itens na mão
+    const itemRoot = new THREE.Group(); itemRoot.position.set(0, -px(9), px(1)); rightArm.add(itemRoot);
+    const itemTilt = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.18, 0, 0));
+    const itemMid = new THREE.Group(); itemMid.rotation.y = Math.PI / 2; itemRoot.add(itemMid);
+    const itemInner = new THREE.Group(); itemInner.rotation.z = Math.PI / 4; itemInner.position.set(0, px(5), 0); itemMid.add(itemInner);
+    const cube = new THREE.BoxGeometry(1, 1, 1);
+    const ps = 0.6 / 16;
+    const heldMeshes = ITEMS.map(it => {
+      const ctx = it.canvas.getContext("2d"), data = ctx.getImageData(0, 0, 16, 16).data;
+      const cells = [];
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const i = (y * 16 + x) * 4; if (data[i + 3] > 127) cells.push([x, y, data[i], data[i + 1], data[i + 2]]); }
+      const mesh = new THREE.InstancedMesh(cube, new THREE.MeshLambertMaterial(), cells.length);
+      const mtx = new THREE.Matrix4(), col = new THREE.Color();
+      cells.forEach(([x, y, r, g, b], k) => {
+        mtx.makeScale(ps, ps, ps).setPosition((x - 7.5) * ps, (7.5 - y) * ps, 0);
+        mesh.setMatrixAt(k, mtx);
+        mesh.setColorAt(k, col.setRGB(r / 255, g / 255, b / 255).convertSRGBToLinear());
+      });
+      mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.frustumCulled = false; mesh.visible = false; itemInner.add(mesh);
+      return mesh;
+    });
+    function setHeldMesh(i) { heldMeshes.forEach((m, k) => { m.visible = k === i; }); }
+
+    // órbita
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const VIEWS = {
+      overview: { az: 0.9, el: 0.5, r: 15, target: new THREE.Vector3(0, 1.5, 0) },
+      char: { az: 1.15, el: 0.22, r: 3.6, target: charPos.clone().add(new THREE.Vector3(0, 1.25, 0)) }
+    };
+    let view = "overview";
+    const orbit = { az: 0.9, el: 0.5, r: 15 }, target = VIEWS.overview.target.clone();
+    let goal = null;
+    let lastInteract = -1e9;
+    const ptrs = new Map(); let pinch = 0;
+    canvas.addEventListener("pointerdown", e => { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); canvas.setPointerCapture(e.pointerId); lastInteract = performance.now(); goal = null; });
+    canvas.addEventListener("pointermove", e => {
+      if (!ptrs.has(e.pointerId)) return;
+      const prev = ptrs.get(e.pointerId);
+      if (ptrs.size === 1) {
+        orbit.az -= (e.clientX - prev.x) * 0.008;
+        orbit.el = Math.min(1.35, Math.max(0.05, orbit.el + (e.clientY - prev.y) * 0.006));
+      }
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 2) {
+        const [p1, p2] = [...ptrs.values()], dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (pinch) orbit.r = Math.min(30, Math.max(2, orbit.r * pinch / dist));
+        pinch = dist;
+      }
+      lastInteract = performance.now();
+    });
+    const up = e => { ptrs.delete(e.pointerId); pinch = 0; };
+    canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    canvas.addEventListener("wheel", e => { e.preventDefault(); goal = null; orbit.r = Math.min(30, Math.max(2, orbit.r * (1 + e.deltaY * 0.001))); lastInteract = performance.now(); }, { passive: false });
+
+    function resize() {
+      const w = stage.clientWidth || 600;
+      const h = Math.round(Math.min(560, Math.max(300, w * 0.6)));
+      renderer.setSize(w, h, false);
+      canvas.style.height = h + "px";
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    resize();
+    if ("ResizeObserver" in window) new ResizeObserver(resize).observe(stage); else window.addEventListener("resize", resize);
+
+    let paused = false, acc = 0, srcIdx = 0, dstIdx = 0, batches = 0, time = 0;
+    const countEl = document.getElementById("count");
+    const clock = new THREE.Clock();
+    const cAct = new THREE.Color("#6dff94"), cActOff = dim("#41c96b");
+    const cNet = new THREE.Color("#3d8bff");
+    const cAlert = new THREE.Color("#ffb020"), cAlertOff = dim("#ffb020");
+    const tmp = new THREE.Color(), white = new THREE.Color("#ffffff");
+
+    function transfer() {
+      const awake = dests.filter(d => !d.full);
+      if (!awake.length) return;
+      const s = sources[srcIdx++ % sources.length];
+      const d = awake[dstIdx++ % awake.length];
+      s.act = 1; d.act = 1;
+      const route = routes.find(r => r.s === s && r.d === d); if (route) route.flash = 1;
+      batches++;
+    }
+    const lerpAngle = (a, b, k) => a + (b - a) * k;
+    function frame() {
+      const dt = Math.min(clock.getDelta(), 0.05), t = TIERS[tierKey];
+      time += dt;
+      if (!paused) {
+        acc += dt;
+        let n = 0;
+        while (acc > t.interval && n < 8) { acc -= t.interval; transfer(); n++; }
+        if (acc > t.interval) acc = 0;
+        countEl.textContent = "Lotes transferidos: " + batches.toLocaleString("pt-BR");
+      }
+      const accent = new THREE.Color(t.accent);
+      routers.forEach(r => {
+        r.act = Math.max(0, r.act - dt * 6);
+        r.leds[0].material.color.copy(accent);
+        r.leds[1].material.color.copy(cNet);
+        r.leds[2].material.color.copy(tmp.copy(cActOff).lerp(cAct, Math.min(1, r.act * 1.4)));
+        r.leds[3].material.color.copy(r.full ? cAlert : cAlertOff);
+        const s = 1 + r.act * 0.35;
+        r.tips.forEach(tip => { tip.scale.set(s, s, s); tip.material.color.copy(accent).lerp(white, r.act * 0.6); });
+      });
+      routes.forEach(r => { r.flash = Math.max(0, r.flash - dt * 3); r.line.material.opacity = 0.25 + r.flash * 0.6; });
+
+      const sway = reduce ? 0 : Math.sin(time * 1.6);
+      rightArm.rotation.x = -0.7 + sway * 0.04;
+      // o item fica em pé no mundo (levemente inclinado para frente), seja qual for o ângulo do braço
+      itemRoot.quaternion.copy(rightArm.quaternion).invert().multiply(itemTilt);
+      leftArm.rotation.x = sway * 0.06; leftArm.rotation.z = 0.06;
+      head.rotation.y = reduce ? 0 : Math.sin(time * 0.5) * 0.12;
+
+      if (goal) {
+        const k = Math.min(1, dt * 4);
+        orbit.az = lerpAngle(orbit.az, goal.az, k); orbit.el = lerpAngle(orbit.el, goal.el, k); orbit.r = lerpAngle(orbit.r, goal.r, k);
+        target.lerp(goal.target, k);
+        if (Math.abs(orbit.r - goal.r) < 0.01 && target.distanceTo(goal.target) < 0.01) goal = null;
+      } else if (!reduce && view === "overview" && performance.now() - lastInteract > 6000) orbit.az += dt * 0.08;
+      camera.position.set(
+        target.x + orbit.r * Math.cos(orbit.el) * Math.sin(orbit.az),
+        target.y + orbit.r * Math.sin(orbit.el),
+        target.z + orbit.r * Math.cos(orbit.el) * Math.cos(orbit.az));
+      camera.lookAt(target);
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    applyTier();
+    requestAnimationFrame(frame);
+    return {
+      applyTier,
+      setHeld: setHeldMesh,
+      setView: v => {
+        view = v; const g = VIEWS[v];
+        let az = g.az; while (az - orbit.az > Math.PI) az -= 2 * Math.PI; while (orbit.az - az > Math.PI) az += 2 * Math.PI;
+        goal = { az, el: g.el, r: g.r, target: g.target };
+        if (reduce) { orbit.az = az; orbit.el = g.el; orbit.r = g.r; target.copy(g.target); goal = null; }
+      },
+      setPaused: v => { paused = v; },
+      setFull: v => { dests[1].full = v; },
+      setLinks: v => routes.forEach(r => { r.line.visible = v; })
+    };
+  }
+
+  // ---------- estado ----------
+  let paused = false, full = false, links = true, viewKey = "overview";
+  function setHeld(i) {
+    heldIdx = i;
+    hotbar.querySelectorAll(".slot").forEach((b, k) => b.setAttribute("aria-pressed", String(k === i)));
+    document.getElementById("heldName").textContent = ITEMS[i].name;
+    if (scene3d) scene3d.setHeld(i);
+  }
+  function setView(v) {
+    if (v === viewKey && v === "char") return;
+    viewKey = v;
+    document.getElementById("view-overview").setAttribute("aria-pressed", String(v === "overview"));
+    document.getElementById("view-char").setAttribute("aria-pressed", String(v === "char"));
+    if (scene3d) scene3d.setView(v);
+  }
+  document.getElementById("view-overview").addEventListener("click", () => setView("overview"));
+  document.getElementById("view-char").addEventListener("click", () => { viewKey = ""; setView("char"); });
+  const pauseBtn = document.getElementById("pause");
+  pauseBtn.addEventListener("click", () => {
+    paused = !paused; pauseBtn.textContent = paused ? "Continuar" : "Pausar";
+    if (scene3d) scene3d.setPaused(paused);
+  });
+  const fillBtn = document.getElementById("fill");
+  fillBtn.addEventListener("click", () => {
+    full = !full; fillBtn.setAttribute("aria-pressed", String(full));
+    fillBtn.textContent = full ? "Liberar o baú 2" : "Encher o baú 2";
+    const chip = document.getElementById("sleep"); if (chip) chip.hidden = !full;
+    if (scene3d) scene3d.setFull(full);
+  });
+  const linksBtn = document.getElementById("links");
+  linksBtn.addEventListener("click", () => {
+    links = !links; linksBtn.setAttribute("aria-pressed", String(links));
+    linksBtn.textContent = links ? "Conexões visíveis" : "Conexões ocultas";
+    if (scene3d) scene3d.setLinks(links);
+  });
+  function setTier(k) {
+    tierKey = k;
+    tiersEl.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.id === "tier-" + k)));
+    renderReadout(); renderNodeGrid(); renderLegend();
+    if (scene3d) scene3d.applyTier();
+    if (gui) gui.render();
+  }
+  // ---------- interfaces (mockups) ----------
+  gui = (function () {
+    const root = document.getElementById("gui");
+    const howEl = document.getElementById("guiHow");
+    const toastEl = document.getElementById("guiToast");
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const url = c => c.toDataURL();
+    let toastT = 0;
+    function toast(msg) { toastEl.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.textContent = ""; }, 2800); }
+
+    // ícones de recursos (desenhos próprios)
+    function ingotIcon(c) { const g = G(), lite = mix(c, 0.4), dark = mix(c, -0.3); R(g, 6, 6, 7, 1, lite); R(g, 5, 7, 8, 1, c); S(g, 12, 7, dark); R(g, 4, 8, 8, 1, c); R(g, 3, 9, 9, 1, c); R(g, 3, 10, 8, 1, dark); R(g, 6, 7, 3, 1, lite); outline(g, mix(c, -0.65)); return toCanvas(g); }
+    function gemIcon(c) {
+      const g = G(), rows = [[4,5,10],[5,4,11],[6,3,12],[7,3,12],[8,4,11],[9,5,10],[10,6,9],[11,7,8]];
+      rows.forEach(([y, a, b]) => { for (let x = a; x <= b; x++) S(g, x, y, y < 6 ? mix(c, 0.35) : x > 8 ? mix(c, -0.25) : c); });
+      S(g, 6, 5, "#ffffff"); outline(g, mix(c, -0.7)); return toCanvas(g);
+    }
+    function lumpIcon() { const g = G(), r = rng(9); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x - 7.5, y - 8) < 4.8) S(g, x, y, r() < 0.2 ? "#5a5a5a" : r() < 0.5 ? "#3d3d3d" : "#2c2c2c"); outline(g, "#111111"); return toCanvas(g); }
+    function dustIcon(c) { const g = G(), r = rng(13); [[9,7,8],[10,5,10],[11,4,11],[12,3,12]].forEach(([y, a, b]) => { for (let x = a; x <= b; x++) S(g, x, y, r() < 0.3 ? mix(c, 0.35) : r() < 0.5 ? mix(c, -0.2) : c); }); outline(g, mix(c, -0.7)); return toCanvas(g); }
+    function fluidIcon(c) { const g = G(); R(g, 1, 1, 14, 14, c); for (let y = 2; y < 15; y += 4) for (let x = 1; x < 15; x++) if ((x + y) % 5 < 2) S(g, x, y, mix(c, 0.25)); for (let i = 1; i < 15; i++) { S(g, i, 1, mix(c, 0.35)); } outline(g, mix(c, -0.55)); return toCanvas(g); }
+    function gasIcon(c) { const g = G(); R(g, 1, 1, 14, 14, mix(c, -0.55)); [[5,5,2.4],[10,8,3],[5,11,1.8],[11,3,1.4]].forEach(([cx, cy, rr]) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - cx, y - cy); if (d <= rr) S(g, x, y, d > rr - 1 ? c : mix(c, -0.25)); } }); outline(g, mix(c, -0.75)); return toCanvas(g); }
+
+    const RES = [
+      { id: "iron", name: "Lingote de ferro", kind: "item", mod: "minecraft", tags: ["#c:ingots", "#c:ingots/iron"], c: ingotIcon("#c7cdd3") },
+      { id: "gold", name: "Lingote de ouro", kind: "item", mod: "minecraft", tags: ["#c:ingots", "#c:ingots/gold"], c: ingotIcon("#f2c94c") },
+      { id: "copper", name: "Lingote de cobre", kind: "item", mod: "minecraft", tags: ["#c:ingots", "#c:ingots/copper"], c: ingotIcon("#d8875a") },
+      { id: "osmium", name: "Lingote de ósmio", kind: "item", mod: "mekanism", tags: ["#c:ingots", "#c:ingots/osmium"], c: ingotIcon("#9fb8cf") },
+      { id: "steel", name: "Lingote de aço", kind: "item", mod: "mekanism", tags: ["#c:ingots", "#c:ingots/steel"], c: ingotIcon("#7f8790") },
+      { id: "diamond", name: "Diamante", kind: "item", mod: "minecraft", tags: ["#c:gems", "#c:gems/diamond"], c: gemIcon("#4fd6e0") },
+      { id: "coal", name: "Carvão", kind: "item", mod: "minecraft", tags: ["#minecraft:coals"], c: lumpIcon() },
+      { id: "redstone", name: "Pó de redstone", kind: "item", mod: "minecraft", tags: ["#c:dusts", "#c:dusts/redstone"], c: dustIcon("#d22a1e") },
+      { id: "glow", name: "Pó de pedra luminosa", kind: "item", mod: "minecraft", tags: ["#c:dusts"], c: dustIcon("#f5d36b") },
+      { id: "water", name: "Água", kind: "fluid", mod: "minecraft", tags: ["#c:water"], c: fluidIcon("#3f76e4") },
+      { id: "lava", name: "Lava", kind: "fluid", mod: "minecraft", tags: ["#c:lava"], c: fluidIcon("#e8641e") },
+      { id: "brine", name: "Salmoura", kind: "fluid", mod: "mekanism", tags: ["#c:brine"], c: fluidIcon("#d9cfa8") },
+      { id: "hydrogen", name: "Hidrogênio", kind: "chem", mod: "mekanism", tags: [], c: gasIcon("#e8f4ff") },
+      { id: "oxygen", name: "Oxigênio", kind: "chem", mod: "mekanism", tags: [], c: gasIcon("#6ec6ff") },
+      { id: "chlorine", name: "Cloro", kind: "chem", mod: "mekanism", tags: [], c: gasIcon("#cfe86a") },
+      { id: "steam", name: "Vapor", kind: "chem", mod: "mekanism", tags: [], c: gasIcon("#cfd4da") }
+    ];
+    RES.forEach(r => { r.src = url(r.c); });
+    const resById = id => RES.find(r => r.id === id);
+    const INV = [["iron", 64], ["gold", 12], ["copper", 48], ["coal", 30], ["diamond", 5], ["redstone", 64], ["osmium", 20], ["steel", 8], ["glow", 16], ["water", 1], ["lava", 1]];
+    const itemSrc = name => url(ITEMS.find(i => i.name === name).canvas);
+    const CARD_SRC = itemSrc("Cartão de filtro"), CHUNK_SRC = itemSrc("Upgrade de chunk loading");
+
+    const TYPES = [
+      { k: "item", name: "Itens", kind: "item" }, { k: "fluid", name: "Fluidos", kind: "fluid" },
+      { k: "energy", name: "Energia", kind: null }, { k: "chem", name: "Químicos", kind: "chem" }
+    ];
+    // modos de cada face da MÁQUINA conectada: extrair dela para a rede, inserir nela vindo da rede
+    const MODES = { send: { name: "Extrai", color: "#3d8bff" }, recv: { name: "Insere", color: "#ff9a3c" }, both: { name: "Ambos", color: "#41c96b" }, off: { name: "Nenhum", color: "#5a6270" } };
+    function portSprite(mode) {
+      const g = G(), c = MODES[mode].color;
+      if (mode === "off") { for (let i = 1; i < 15; i += 2) { S(g, i, 1, "#aab3bd"); S(g, i, 14, "#aab3bd"); S(g, 1, i, "#aab3bd"); S(g, 14, i, "#aab3bd"); } return toCanvas(g); }
+      for (let i = 0; i < 16; i++) { S(g, i, 0, "#0b0e12"); S(g, i, 15, "#0b0e12"); S(g, 0, i, "#0b0e12"); S(g, 15, i, "#0b0e12"); }
+      for (let i = 1; i < 15; i++) { S(g, i, 1, mix(c, 0.3)); S(g, 1, i, mix(c, 0.3)); S(g, i, 14, mix(c, -0.3)); S(g, 14, i, mix(c, -0.3)); }
+      for (let i = 2; i < 14; i++) { S(g, i, 2, c); S(g, 2, i, c); S(g, i, 13, c); S(g, 13, i, c); }
+      for (let i = 3; i < 13; i++) { S(g, i, 3, "#0b0e12"); S(g, 3, i, "#0b0e12"); S(g, i, 12, "#0b0e12"); S(g, 12, i, "#0b0e12"); }
+      R(g, 4, 4, 8, 8, mix(c, -0.72));
+      const hr = (y, a, b) => { for (let x = a; x <= b; x++) S(g, x, y, "#ffffff"); };
+      if (mode === "send") { hr(5, 7, 8); hr(6, 6, 9); hr(7, 5, 10); hr(8, 7, 8); hr(9, 7, 8); hr(10, 7, 8); }
+      else if (mode === "recv") { hr(5, 7, 8); hr(6, 7, 8); hr(7, 7, 8); hr(8, 5, 10); hr(9, 6, 9); hr(10, 7, 8); }
+      else { hr(4, 7, 8); hr(5, 6, 9); hr(6, 7, 8); hr(7, 7, 8); hr(8, 7, 8); hr(9, 7, 8); hr(10, 6, 9); hr(11, 7, 8); }
+      [[1,1],[14,1],[1,14],[14,14]].forEach(([x, y]) => S(g, x, y, mix(c, 0.55)));
+      return toCanvas(g);
+    }
+    const PORT = Object.fromEntries(Object.keys(MODES).map(k => [k, portSprite(k)]));
+    const PORT_SRC = Object.fromEntries(Object.entries(PORT).map(([k, c]) => [k, url(c)]));
+    const portImg = k => `<img class="port" src="${PORT_SRC[k]}" alt="">`;
+    const MOUNT_ROT = { up: [0, 0, 0], down: [Math.PI, 0, 0], north: [-Math.PI / 2, 0, 0], south: [Math.PI / 2, 0, 0], east: [0, 0, -Math.PI / 2], west: [0, 0, Math.PI / 2] };
+    const DIR = { up: [0, 1, 0], down: [0, -1, 0], north: [0, 0, -1], south: [0, 0, 1], east: [1, 0, 0], west: [-1, 0, 0] };
+    const ROLE = { furnace: { up: "entrada", down: "saída", other: "combustível" }, chest: { other: "todos os slots" }, machine: { other: "definidos pela máquina" } };
+    const roleOf = (kind, face) => (ROLE[kind][face] || ROLE[kind].other);
+    const KIND_NAME = { furnace: "da fornalha", chest: "do baú", machine: "da máquina" };
+    const FACES = [
+      { k: "up", name: "Cima", css: "top" }, { k: "north", name: "Norte", css: "front" }, { k: "east", name: "Leste", css: "right" },
+      { k: "down", name: "Baixo", css: "bottom" }, { k: "south", name: "Sul", css: "back" }, { k: "west", name: "Oeste", css: "left" }
+    ];
+    const RS = { ignore: "Ignorar", on: "Com sinal", off: "Sem sinal" };
+    const STATUS = { "Ativo": "#41c96b", "Ocioso": "#8d99a8", "Destino cheio": "#ffb020", "Chunk descarregado": "#ff6b5e" };
+    const NODES = [
+      { name: "Fornalha Norte", roles: [["send", "itens"], ["recv", "combustível"]], x: -5, y: 66, z: -2, net: "Base", status: "Ativo", tier: "Elite", nb: "Fornalha", kind: "furnace", mount: "up" },
+      { name: "Fornalha Sul", roles: [["send", "itens"], ["recv", "combustível"]], x: -5, y: 66, z: 2, net: "Base", status: "Ativo", tier: "Elite", nb: "Fornalha", kind: "furnace", mount: "up" },
+      { name: "Baú de lingotes 1", roles: [["recv", "itens"]], x: 5, y: 66, z: -2, net: "Base", status: "Ativo", tier: "Elite", nb: "Baú", kind: "chest", mount: "up" },
+      { name: "Baú de lingotes 2", roles: [["recv", "itens"]], x: 5, y: 66, z: 2, net: "Base", status: "Destino cheio", tier: "Elite", nb: "Baú", kind: "chest", mount: "west" },
+      { name: "Tanque de água", roles: [["recv", "fluidos"]], x: 38, y: 64, z: 40, net: "Fluidos", status: "Ocioso", tier: "Avançado", nb: "Tanque", kind: "machine", mount: "up" },
+      { name: "Separador eletrolítico", roles: [["recv", "fluidos"], ["send", "químicos"]], x: 44, y: 64, z: 46, net: "Fluidos", status: "Ativo", tier: "Elite", nb: "Separador", kind: "machine", mount: "north" },
+      { name: "Reator de fissão", roles: [["send", "energia"]], x: 120, y: 40, z: -150, net: "Energia", status: "Ativo", tier: "Ultimate", nb: "Porta do reator", kind: "machine", mount: "east" },
+      { name: "Fazenda de cana", roles: [["send", "itens"]], x: -140, y: 70, z: 95, net: "Base", status: "Chunk descarregado", tier: "Básico", nb: "Coletor", kind: "machine", mount: "down" }
+    ];
+    const nets = [
+      { name: "Base", color: "#45d6cc", pub: false, members: ["Você"] },
+      { name: "Fluidos", color: "#3d8bff", pub: false, members: ["Você"] },
+      { name: "Energia", color: "#ffb020", pub: true, members: ["Você", "Convidado"] },
+      { name: "Minério", color: "#d8875a", pub: false, members: ["Você"] },
+      { name: "Slurries", color: "#cfe86a", pub: false, members: ["Você"] },
+      { name: "Intermediários", color: "#a46cff", pub: false, members: ["Você"] },
+      { name: "Utilidades", color: "#6ec6ff", pub: false, members: ["Você"] }
+    ];
+    const STAGES = [["Dissolução", "Dis"], ["Lavadora", "Lav"], ["Cristalizador", "Cri"], ["Injeção", "Inj"], ["Purificação", "Pur"], ["Triturador", "Tri"], ["Enriquecimento", "Enr"], ["Fundidora", "Fun"]];
+    const LINE = [];
+    [["A", 0], ["B", 5]].forEach(([line, z]) => STAGES.forEach(([nm, ab], i) => LINE.push({ line, x: i * 2, z, stage: nm, ab, cfg: line === "A" ? "5x · " + nm : null })));
+    const STAGE_PRESETS = STAGES.map(([nm]) => "5x · " + nm);
+    const netColor = n => (nets.find(x => x.name === n) || { color: "#8d99a8" }).color;
+
+    const st = { open: { adv: false, rules: false }, src: "inv", cf: { tab: "lib", mode: "copy", c1: null, c2: null, clip: null, anchor: null, preset: "5x · Lavadora", kind: "all" },
+      groups: [{ name: "Linha 5x", nets: ["Minério", "Slurries", "Intermediários", "Utilidades", "Energia"], paused: false, nodes: 40, ms: "0,03", neck: "Injeção esperando HCl" }],
+      newGroup: new Set(), roleF: "all", multi: false, picked: new Set(), moveTo: "Base", lk: { active: "Base", mode: "area", c1: null, c2: null }, screen: "router", node: "Fornalha Norte", type: "item", face: "down", rx: 26, ry: 38, fsel: 0, ttab: "list", mapSel: null, psel: 0, pcode: "", data: {} };
+    function fdOf(data, type, face) {
+      const key = type + ":" + face;
+      if (!data[key]) data[key] = { mode: "off", prio: 0, rs: "ignore", slots: [], white: true, comps: "ignore", rules: [], limit: 100 };
+      return data[key];
+    }
+    const fd = (type, face) => fdOf(st.data, type || st.type, face || st.face);
+    // configuração de exemplo: o roteador está em cima da fornalha, mas extrai pela face de baixo (slot de saída)
+    Object.assign(fd("item", "down"), { mode: "send", prio: 0, slots: [{ id: "iron", qty: 64 }, { id: "gold", qty: null }, { id: "copper", qty: null }], rules: ["#c:ingots"] });
+    Object.assign(fd("item", "north"), { mode: "recv", prio: 0, slots: [{ id: "coal", qty: 16 }] });
+
+    const clone = o => JSON.parse(JSON.stringify(o));
+    const presets = [
+      { name: "Fornalha automática", desc: "Extrai lingotes pela face de baixo (saída) e insere carvão pela lateral (combustível).", data: clone(st.data) },
+      { name: "Baú de minérios", desc: "Insere tudo com a tag #c:ores pela face de cima, prioridade 5.", data: { "item:up": { mode: "recv", prio: 5, rs: "ignore", slots: [], white: true, comps: "ignore", rules: ["#c:ores"], limit: 100 } } },
+      { name: "Saída de reator", desc: "Extrai energia por todas as faces, ativo com sinal de redstone.", data: Object.fromEntries(FACES.map(f => ["energy:" + f.k, { mode: "send", prio: 0, rs: "on", slots: [], white: true, comps: "ignore", rules: [], limit: 100 }])) }
+    ];
+
+    const HOW = {
+      router: "Abre com clique direito no roteador, ou à distância pelo Tablet.",
+      filter: "Abre pelo botão Editar no roteador, ou com clique direito no ar segurando um Cartão de filtro.",
+      tablet: "Abre com clique direito no ar segurando o Tablet, ou pela tecla de atalho.",
+      presets: "Abre com Shift + clique direito no ar segurando o Configurador.",
+      linker: "Abre com clique direito no ar. Shift + clique direito no ar alterna entre Único e Área."
+    };
+
+    const node = () => NODES.find(n => n.name === st.node) || NODES[0];
+    const typeName = k => TYPES.find(t => t.k === k).name;
+    const faceName = k => FACES.find(f => f.k === k).name;
+    const btn = (act, v, label, pressed, extra) => `<button type="button" data-act="${act}" data-v="${esc(v)}"${pressed !== undefined ? ` aria-pressed="${pressed}"` : ""}${extra || ""}>${label}</button>`;
+    const slotHtml = (s, i, sel, act) => {
+      const r = s && resById(s.id);
+      return `<button type="button" class="mslot${sel ? " sel" : ""}" data-act="${act}" data-v="${i}" aria-label="${r ? esc(r.name) : "Slot vazio"}">${r ? `<img src="${r.src}" alt="">` : ""}${s && s.qty ? `<span class="qty">${s.qty}</span>` : ""}</button>`;
+    };
+
+    const RATE = { item: "1.240 itens/s", fluid: "0 mB/s", energy: "0 FE/t", chem: "0 mB/s" };
+    const primary = ' class="primary"';
+    function routerHtml() {
+      const t = TIERS[tierKey], f = fd(), n = node();
+      const typeTabs = TYPES.map(ty => `<button type="button" role="tab" data-act="type" data-v="${ty.k}" aria-selected="${ty.k === st.type}">${ty.name}</button>`).join("");
+      const faceRow = FACES.map(fc => `<button type="button" class="facebtn" data-act="face" data-v="${fc.k}" aria-pressed="${fc.k === st.face}">${portImg(fd(st.type, fc.k).mode)}<span>${fc.name}</span></button>`).join("");
+      const modeSeg = Object.entries(MODES).map(([k, m]) => btn("mode", k, `${portImg(k)}${m.name}`, f.mode === k)).join("");
+      const rsSeg = Object.entries(RS).map(([k, l]) => btn("rs", k, l, f.rs === k)).join("");
+      let lower = "";
+      if (st.type === "energy") {
+        lower = `<div class="field"><label class="label" for="elimit">Limite da face · <span id="elimitV">${f.limit}%</span></label><input type="range" id="elimit" min="5" max="100" step="5" value="${f.limit}" data-input="limit"></div>`;
+      } else {
+        f.slots = f.slots.filter(Boolean);
+        const max = 5, strip = f.slots.slice(0, max).map((x, i) => slotHtml(x, i, false, "rslot")).join("");
+        const extra = f.slots.length > max ? `<span class="more">+${f.slots.length - max}</span>` : "";
+        const rules = f.rules.length ? ` · ${f.rules.length} ${f.rules.length === 1 ? "regra" : "regras"}` : "";
+        lower = `<div class="field"><div class="label">Filtro · lista ${f.white ? "branca" : "negra"}${rules}</div>
+          <div class="filter-strip">${strip || `<span class="small">Sem filtro: passa tudo</span>`}${extra}${btn("editfilter", "", "Editar")}</div></div>`;
+      }
+      return `
+        <div class="gui-head"><div class="gui-title">${esc(n.name)}</div>
+          <div class="gui-meta"><label class="netsel" style="--c:${netColor(n.net)}"><span class="sr">Rede</span><select data-input="net" aria-label="Rede do roteador">${nets.map(x => `<option${x.name === n.net ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label><span class="pill" style="--c:${t.core}">${t.name}</span></div></div>
+        <div class="gui-tabs" role="tablist" aria-label="Tipo">${typeTabs}<span class="rate">${RATE[st.type]}</span></div>
+        <div class="gui-body">
+          <div class="viewer-col">
+            <div class="mount-view" id="mountView" aria-label="Máquina conectada e roteador. Toque numa face para escolher."></div>
+            <div class="face-row" role="group" aria-label="Face da máquina">${faceRow}</div>
+          </div>
+          <div class="fields">
+            <div class="face-title"><span class="nm">${faceName(st.face)} ${KIND_NAME[n.kind]}</span><span class="small">slots: ${roleOf(n.kind, st.face)}</span></div>
+            <div class="seg">${modeSeg}</div>
+            ${lower}
+            <details class="adv" data-key="adv"${st.open.adv ? " open" : ""}><summary>Prioridade ${f.prio} · Redstone: ${RS[f.rs].toLowerCase()}</summary>
+              <div class="row2"><div class="field"><div class="label">Prioridade</div><div class="stepper">${btn("prio", "-1", "−")}<span class="num">${f.prio}</span>${btn("prio", "1", "+")}</div></div>
+              <div class="field"><div class="label">Redstone</div><div class="seg">${rsSeg}</div></div></div></details>
+          </div>
+        </div>
+        <div class="side-slots">
+          <div class="grp"><span class="label">Cartões</span><button type="button" class="mslot" data-act="card" aria-label="Cartão de filtro"><img src="${CARD_SRC}" alt=""></button><button type="button" class="mslot" data-act="card" aria-label="Slot de cartão vazio"></button></div>
+          <div class="grp"><span class="label">Upgrade</span><button type="button" class="mslot" data-act="upgrade" aria-label="Upgrade de chunk loading"><img src="${CHUNK_SRC}" alt=""></button></div>
+        </div>`;
+    }
+
+    function filterHtml() {
+      if (st.type === "energy") return `<div class="gui-head"><div class="gui-title">Filtro</div></div><div class="small">Energia não usa filtro.</div><div>${btn("goto", "router", "Voltar", undefined, primary)}</div>`;
+      const f = fd(), kind = TYPES.find(x => x.k === st.type).kind;
+      f.slots = f.slots.filter(Boolean);
+      if (st.fsel > f.slots.length) st.fsel = f.slots.length;
+      const s = f.slots[st.fsel], r = s && resById(s.id);
+      const slots = f.slots.map((x, i) => slotHtml(x, i, i === st.fsel, "fslot")).join("") + slotHtml(null, f.slots.length, st.fsel === f.slots.length, "fslot");
+      const inv = INV.filter(([id]) => resById(id).kind === kind).map(([id, n]) => { const x = resById(id); return `<button type="button" class="mslot" data-act="inv" data-v="${id}" aria-label="${esc(x.name)}, ${n}" title="${esc(x.name)}"><img src="${x.src}" alt=""><span class="qty">${n}</span></button>`; }).join("");
+      const jei = RES.filter(x => x.kind === kind).map(x => `<button type="button" class="mslot" data-act="jei" data-v="${x.id}" data-name="${esc(x.name.toLowerCase())} ${x.mod}" aria-label="${esc(x.name)}" title="${esc(x.name)}"><img src="${x.src}" alt=""></button>`).join("");
+      const stockHint = f.mode === "send" ? "Manter na origem" : "Aceitar até";
+      const srcTabs = [["inv", "Inventário"], ["jei", "JEI"]].map(([k, l]) => `<button type="button" role="tab" data-act="src" data-v="${k}" aria-selected="${st.src === k}">${l}</button>`).join("");
+      const source = st.src === "inv"
+        ? (inv ? `<div class="slots">${inv}</div>` : `<div class="small">Nada deste tipo no inventário.</div>`)
+        : `<input type="search" id="jeiIn" placeholder="Buscar item ou @mod" autocomplete="off" data-input="jei"><div class="slots">${jei}</div>`;
+      return `
+        <div class="gui-head"><div class="gui-title">Filtro</div><div class="gui-meta"><span class="mono">${faceName(st.face)} · ${typeName(st.type)}</span>${btn("goto", "router", "Voltar")}</div></div>
+        <div class="row2">
+          <div class="seg" role="group" aria-label="Lista">${btn("white", "1", "Lista branca", f.white)}${btn("white", "0", "Lista negra", !f.white)}</div>
+          ${kind === "item" ? `<div class="seg" role="group" aria-label="Componentes">${btn("comps", "ignore", "Ignorar componentes", f.comps === "ignore")}${btn("comps", "exact", "Exigir iguais", f.comps === "exact")}</div>` : ""}
+        </div>
+        <div class="split">
+          <div class="fields">
+            <div class="field"><div class="label">Entradas · ${f.slots.length}</div><div class="slots tall">${slots}</div></div>
+            ${r ? `<div class="sel-box"><div class="nm">${esc(r.name)}</div><label class="label" for="qtyIn">${stockHint}</label><div class="inline"><input type="number" id="qtyIn" min="0" step="1" inputmode="numeric" value="${s.qty || ""}" placeholder="sem limite" data-input="qty">${btn("clearslot", "", "Remover")}</div></div>` : ""}
+            <details class="adv" data-key="rules"${st.open.rules ? " open" : ""}><summary>Regras por tag ou mod${f.rules.length ? " (" + f.rules.length + ")" : ""}</summary>
+              <div class="inline"><input type="text" id="ruleIn" placeholder="#c:ores ou @mekanism" autocomplete="off">${btn("addrule", "", "Adicionar")}</div>
+              <div class="chips">${f.rules.map((ru, i) => btn("rmrule", i, esc(ru) + " ×")).join("")}</div></details>
+          </div>
+          <div class="jei"><div class="gui-tabs small-tabs" role="tablist" aria-label="Origem">${srcTabs}</div>${source}</div>
+        </div>`;
+    }
+
+    function tabletHtml() {
+      const tabs = [["list", "Lista"], ["map", "Mapa"], ["stats", "Estatísticas"], ["nets", "Redes"], ["groups", "Grupos"]].map(([k, l]) => `<button type="button" role="tab" data-act="ttab" data-v="${k}" aria-selected="${st.ttab === k}">${l}</button>`).join("");
+      let body = "";
+      if (st.ttab === "list") {
+        const shown = NODES.filter(n => st.roleF === "all" || n.roles.some(r => r[0] === st.roleF));
+        const roleSeg = [["all", "Todos"], ["send", "Extraem"], ["recv", "Inserem"]].map(([k, l]) => btn("rolef", k, k === "all" ? l : portImg(k) + l, st.roleF === k)).join("");
+        const badges = n => n.roles.map(([m, ty]) => `<span class="role" style="--c:${MODES[m].color}">${portImg(m)}${MODES[m].name} ${ty}</span>`).join("");
+        const row = n => {
+          const inner = `<span class="l"><span class="nm">${esc(n.name)}</span><span class="sub">${n.x}, ${n.y}, ${n.z} · rede ${esc(n.net)} · ${n.tier}</span><span class="roles">${badges(n)}</span></span><span class="status" style="--c:${STATUS[n.status]}">${n.status}</span>`;
+          return st.multi
+            ? `<button type="button" data-act="pick" data-v="${esc(n.name)}" aria-pressed="${st.picked.has(n.name)}" data-q="${esc((n.name + " " + n.net + " " + n.nb).toLowerCase())}"><span class="check" aria-hidden="true">${st.picked.has(n.name) ? "✓" : ""}</span>${inner}</button>`
+            : `<button type="button" data-act="opennode" data-v="${esc(n.name)}" data-q="${esc((n.name + " " + n.x + " " + n.y + " " + n.z + " " + n.nb + " " + n.net).toLowerCase())}">${inner}</button>`;
+        };
+        const picked = [...st.picked].filter(nm => shown.some(n => n.name === nm)).length;
+        const roleSel = `<select data-input="rolef" aria-label="Papel">${[["all", "Todos os papéis"], ["send", "Só os que extraem"], ["recv", "Só os que inserem"]].map(([k, l]) => `<option value="${k}"${st.roleF === k ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+        body = `<div class="toolbar"><input type="search" id="nodeIn" placeholder="Buscar nó" autocomplete="off" data-input="nodes">${roleSel}${btn("multi", "", st.multi ? "Concluir" : "Selecionar", st.multi)}</div>
+          <div class="list multi-${st.multi}" id="nodeList">${shown.map(row).join("") || `<div class="small">Nenhum nó com esse papel.</div>`}</div>
+          ${st.multi ? `<div class="actionbar"><span class="mono">${st.picked.size} selecionados</span>${btn("pickall", "", "Todos")}<select data-input="moveto" aria-label="Rede de destino">${nets.map(x => `<option${x.name === st.moveTo ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>${btn("movesel", "", "Mover", undefined, st.picked.size ? primary : " disabled")}</div>` : ""}`;
+      } else if (st.ttab === "map") {
+        const xs = NODES.map(n => n.x), zs = NODES.map(n => n.z);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+        const X = x => 24 + (x - minX) / (maxX - minX) * 292, Y = z => 24 + (z - minZ) / (maxZ - minZ) * 172;
+        const grid = Array.from({ length: 9 }, (_, i) => `<line x1="${20 + i * 37.5}" y1="10" x2="${20 + i * 37.5}" y2="210" stroke="#1f2731"/>`).join("") + Array.from({ length: 6 }, (_, i) => `<line x1="10" y1="${10 + i * 40}" x2="330" y2="${10 + i * 40}" stroke="#1f2731"/>`).join("");
+        const sel = NODES.find(n => n.name === st.mapSel);
+        // nós muito próximos se espalham em volta do ponto real para continuarem tocáveis
+        const pts = [];
+        NODES.forEach(n => {
+          const bx = X(n.x), by = Y(n.z);
+          const near = pts.filter(p => Math.hypot(p.bx - bx, p.by - by) < 16).length;
+          const a = near * 1.75;
+          pts.push({ n, bx, by, x: near ? bx + Math.cos(a) * 15 : bx, y: near ? by + Math.sin(a) * 15 : by });
+        });
+        const P = n => pts.find(p => p.n === n);
+        body = `<div class="mapbox"><svg viewBox="0 0 340 220" role="img" aria-label="Mapa de cima com os nós">${grid}${NODES.map(n => `<g data-act="mapnode" data-v="${esc(n.name)}" style="cursor:pointer"><circle cx="${P(n).x.toFixed(1)}" cy="${P(n).y.toFixed(1)}" r="${n.name === st.mapSel ? 8 : 6}" fill="${STATUS[n.status]}" stroke="${n.name === st.mapSel ? "#ffffff" : "#0b0e12"}" stroke-width="2"/></g>`).join("")}<text x="330" y="214" text-anchor="end" font-size="9" fill="#5b6675" font-family="monospace">norte ↑</text></svg></div>
+          ${sel ? `<div class="sel-box row-between"><span><b>${esc(sel.name)}</b> <span class="small">${sel.x}, ${sel.z} · ${sel.status}</span></span>${btn("opennode", sel.name, "Editar", undefined, primary)}</div>` : ""}
+          <div class="legend">${Object.entries(STATUS).map(([k, c]) => `<span><i class="sw" style="background:${c}"></i>${k}</span>`).join("")}</div>`;
+      } else if (st.ttab === "stats") {
+        const rows = [["Itens", "1.240 itens/s", 0.62, "#45d6cc"], ["Fluidos", "48.000 mB/s", 0.35, "#3d8bff"], ["Energia", "120.000 FE/t", 0.8, "#ffb020"], ["Químicos", "6.000 mB/s", 0.15, "#cfe86a"]];
+        body = `<div class="fields">${rows.map(([n, v, p, c]) => `<div class="stat"><div class="top"><span>${n}</span><span class="mono">${v}</span></div><div class="bar"><i style="width:${p * 100}%;--c:${c}"></i></div></div>`).join("")}
+          <div class="stat"><div class="top"><span>Tempo do mod por tick</span><span class="mono">0,08 de 0,50 ms</span></div><div class="bar"><i style="width:16%;--c:#41c96b"></i></div></div>
+          <div class="row2"><span class="status" style="--c:#ffb020">1 destino cheio, dormindo</span><span class="status" style="--c:#ff6b5e">1 chunk descarregado</span></div></div>`;
+      } else if (st.ttab === "groups") {
+        const card = (g, i) => `<div class="ncard"><div class="top" style="justify-content:space-between"><span>${esc(g.name)}</span><span class="status" style="--c:${g.paused ? "#8d99a8" : "#41c96b"}">${g.paused ? "Pausado" : "Ativo"}</span></div>
+            <div class="chips">${g.nets.map(n => `<span class="pill" style="--c:${netColor(n)}">${esc(n)}</span>`).join("")}</div>
+            <div class="small">${g.nets.length} redes · ${g.nodes} nós · ${g.ms} ms/tick</div>
+            ${g.neck ? `<div><span class="status" style="--c:#ffb020">Gargalo: ${esc(g.neck)}</span></div>` : ""}
+            <div class="seg">${btn("gpause", i, g.paused ? "Retomar" : "Pausar", undefined, primary)}${btn("gdel", i, "Desfazer")}</div></div>`;
+        body = `<div class="cards2">${st.groups.map(card).join("") || `<div class="small">Nenhum grupo ainda.</div>`}</div>
+          <details class="adv" data-key="newgroup"${st.open.newgroup ? " open" : ""}><summary>Novo grupo</summary><input type="text" id="groupIn" placeholder="Nome do grupo" autocomplete="off">
+            <div class="seg">${nets.map(n => btn("gnet", n.name, `<i class="sw" style="background:${n.color}"></i>${esc(n.name)}`, st.newGroup.has(n.name))).join("")}</div>
+            <div>${btn("gadd", "", `Criar grupo com ${st.newGroup.size} ${st.newGroup.size === 1 ? "rede" : "redes"}`, undefined, st.newGroup.size ? primary : " disabled")}</div></details>`;
+      } else {
+        body = `<div class="cards2">${nets.map((n, i) => `<div class="ncard"><div class="top"><i class="sw" style="background:${n.color}"></i>${esc(n.name)}</div><div class="small">${NODES.filter(x => x.net === n.name).length} nós · ${n.members.map(esc).join(", ")}</div><div class="seg">${btn("netpub", i + ":0", "Privada", !n.pub)}${btn("netpub", i + ":1", "Pública", n.pub)}</div></div>`).join("")}</div>
+          <details class="adv" data-key="newnet"${st.open.newnet ? " open" : ""}><summary>Nova rede</summary><div class="inline"><input type="text" id="netIn" placeholder="Nome da rede" autocomplete="off">${btn("addnet", "", "Criar", undefined, primary)}</div></details>`;
+      }
+      return `<div class="gui-head"><div class="gui-title">Tablet de rede</div><div class="gui-meta"><span class="mono">${NODES.length} nós · ${nets.length} redes</span></div></div><div class="gui-tabs" role="tablist" aria-label="Seção">${tabs}</div>${body}`;
+    }
+
+    // região do mapa do Vinculador, em blocos
+    const LK = { x0: -20, x1: 60, z0: -20, z1: 60, w: 320, h: 240, pad: 20 };
+    const lkX = x => LK.pad + (x - LK.x0) / (LK.x1 - LK.x0) * (LK.w - 2 * LK.pad);
+    const lkY = z => LK.pad + (z - LK.z0) / (LK.z1 - LK.z0) * (LK.h - 2 * LK.pad);
+    const inRegion = n => n.x >= LK.x0 && n.x <= LK.x1 && n.z >= LK.z0 && n.z <= LK.z1;
+    function inArea(n) {
+      const { c1, c2 } = st.lk; if (!c1 || !c2) return false;
+      return n.x >= Math.min(c1.x, c2.x) && n.x <= Math.max(c1.x, c2.x) && n.z >= Math.min(c1.z, c2.z) && n.z <= Math.max(c1.z, c2.z);
+    }
+    function linkerHtml() {
+      const lk = st.lk, act = nets.find(x => x.name === lk.active) || nets[0];
+      const netSeg = nets.map(x => btn("lknet", x.name, `<i class="sw" style="background:${x.color}"></i>${esc(x.name)}`, x.name === act.name)).join("");
+      const local = NODES.filter(inRegion);
+      let body;
+      if (lk.mode === "single") {
+        body = `<div class="small">Clique com o botão direito num roteador para colocá-lo na rede ${esc(act.name)}.</div>`;
+      } else {
+        const grid = Array.from({ length: 9 }, (_, i) => { const x = LK.x0 + i * 10; return `<line x1="${lkX(x)}" y1="${LK.pad}" x2="${lkX(x)}" y2="${LK.h - LK.pad}" stroke="#1f2731"/>`; }).join("") + Array.from({ length: 9 }, (_, i) => { const z = LK.z0 + i * 10; return `<line x1="${LK.pad}" y1="${lkY(z)}" x2="${LK.w - LK.pad}" y2="${lkY(z)}" stroke="#1f2731"/>`; }).join("");
+        const rect = lk.c1 && lk.c2 ? `<rect x="${lkX(Math.min(lk.c1.x, lk.c2.x))}" y="${lkY(Math.min(lk.c1.z, lk.c2.z))}" width="${Math.abs(lkX(lk.c2.x) - lkX(lk.c1.x))}" height="${Math.abs(lkY(lk.c2.z) - lkY(lk.c1.z))}" fill="${act.color}" fill-opacity="0.15" stroke="${act.color}" stroke-width="1.5" stroke-dasharray="5 3"/>` : "";
+        const corner = (c, l) => c ? `<g><rect x="${lkX(c.x) - 4}" y="${lkY(c.z) - 4}" width="8" height="8" fill="#ffffff" stroke="#0b0e12"/><text x="${lkX(c.x) + 7}" y="${lkY(c.z) - 6}" font-size="10" fill="#e8edf2" font-family="monospace">${l}</text></g>` : "";
+        const dots = local.map(n => { const on = inArea(n); return `<circle cx="${lkX(n.x)}" cy="${lkY(n.z)}" r="${on ? 6 : 4.5}" fill="${netColor(n.net)}" stroke="${on ? "#ffffff" : "#0b0e12"}" stroke-width="${on ? 2 : 1.5}"/>`; }).join("");
+        const inside = local.filter(inArea), already = inside.filter(n => n.net === act.name).length;
+        const cdesc = c => c ? `${c.x}, ${c.z}` : "—";
+        body = `<div class="mapbox"><svg id="lkmap" data-act="lkmap" viewBox="0 0 ${LK.w} ${LK.h}" role="img" aria-label="Mapa de cima: toque duas vezes para marcar os cantos da área" style="cursor:crosshair">${grid}${rect}${dots}${corner(lk.c1, "1")}${corner(lk.c2, "2")}<text x="${LK.w - LK.pad}" y="${LK.h - 6}" text-anchor="end" font-size="9" fill="#5b6675" font-family="monospace">1 quadrado = 10 blocos</text></svg></div>
+          <div class="row2"><span class="mono">Canto 1: ${cdesc(lk.c1)}</span><span class="mono">Canto 2: ${cdesc(lk.c2)}</span></div>
+          <div class="status-line">${!lk.c1 ? "Marque o canto 1: Shift + clique num bloco" : !lk.c2 ? "Marque o canto 2" : `${inside.length} roteadores na área${already ? ` · ${already} já na rede` : ""}`}</div>
+          <div class="seg">${btn("lkapply", "", `Vincular ${inside.length - already} à rede ${esc(act.name)}`, undefined, inside.length - already > 0 ? primary : " disabled")}${btn("lkclear", "", "Limpar cantos")}</div>`;
+      }
+      return `<div class="gui-head"><div class="gui-title">Vinculador</div></div>
+        <div class="field"><div class="label">Rede ativa</div><div class="seg">${netSeg}</div></div>
+        <div class="field"><div class="label">Modo</div><div class="seg">${btn("lkmode", "single", "Único", lk.mode === "single")}${btn("lkmode", "area", "Área", lk.mode === "area")}</div></div>
+        ${body}`;
+    }
+
+    const CF = { x0: -2, x1: 16, z0: -2, z1: 8, w: 320, h: 200, pad: 16 };
+    const cfX = x => CF.pad + (x - CF.x0) / (CF.x1 - CF.x0) * (CF.w - 2 * CF.pad);
+    const cfY = z => CF.pad + (z - CF.z0) / (CF.z1 - CF.z0) * (CF.h - 2 * CF.pad);
+    const inBox = (r, a, b) => a && b && r.x >= Math.min(a.x, b.x) && r.x <= Math.max(a.x, b.x) && r.z >= Math.min(a.z, b.z) && r.z <= Math.max(a.z, b.z);
+    const at = (x, z) => LINE.find(r => r.x === x && r.z === z);
+    function areaHtml() {
+      const cf = st.cf, tc = TIERS[tierKey].core;
+      const sel = LINE.filter(r => inBox(r, cf.c1, cf.c2) && (cf.mode !== "apply" || cf.kind === "all" || r.stage === cf.kind));
+      const grid = Array.from({ length: CF.x1 - CF.x0 + 1 }, (_, i) => `<line x1="${cfX(CF.x0 + i)}" y1="${CF.pad}" x2="${cfX(CF.x0 + i)}" y2="${CF.h - CF.pad}" stroke="#1a212a"/>`).join("") + Array.from({ length: CF.z1 - CF.z0 + 1 }, (_, i) => `<line x1="${CF.pad}" y1="${cfY(CF.z0 + i)}" x2="${CF.w - CF.pad}" y2="${cfY(CF.z0 + i)}" stroke="#1a212a"/>`).join("");
+      const rect = cf.c1 && cf.c2 ? `<rect x="${cfX(Math.min(cf.c1.x, cf.c2.x)) - 8}" y="${cfY(Math.min(cf.c1.z, cf.c2.z)) - 8}" width="${Math.abs(cfX(cf.c2.x) - cfX(cf.c1.x)) + 16}" height="${Math.abs(cfY(cf.c2.z) - cfY(cf.c1.z)) + 16}" fill="${tc}" fill-opacity="0.12" stroke="${tc}" stroke-width="1.5" stroke-dasharray="5 3"/>` : "";
+      const corner = c => c ? `<rect x="${cfX(c.x) - 3}" y="${cfY(c.z) - 3}" width="6" height="6" fill="#ffffff" stroke="#0b0e12"/>` : "";
+      const ghosts = cf.clip && cf.anchor ? cf.clip.map(c => { const x = cf.anchor.x + c.dx, z = cf.anchor.z + c.dz, hit = at(x, z); return `<rect x="${cfX(x) - 9}" y="${cfY(z) - 9}" width="18" height="18" fill="none" stroke="${hit ? "#41c96b" : "#ff6b5e"}" stroke-width="1.5" stroke-dasharray="3 2"/>`; }).join("") : "";
+      const machines = LINE.map(r => { const on = sel.includes(r); return `<g><rect x="${cfX(r.x) - 7}" y="${cfY(r.z) - 7}" width="14" height="14" rx="2" fill="#3a4452" stroke="${on ? "#ffffff" : "#0b0e12"}" stroke-width="${on ? 2 : 1}"/><circle cx="${cfX(r.x)}" cy="${cfY(r.z)}" r="3.5" fill="${r.cfg ? "#41c96b" : "#5a6270"}"/>${r.line === "A" ? `<text x="${cfX(r.x)}" y="${cfY(r.z) - 11}" text-anchor="middle" font-size="8" fill="#93a0ae" font-family="monospace">${r.ab}</text>` : ""}</g>`; }).join("");
+      const lineLabel = (l, z) => `<text x="${CF.pad + 2}" y="${cfY(z) + 3}" font-size="9" fill="#5b6675" font-family="monospace">${l}</text>`;
+      const map = `<div class="mapbox"><svg id="cfmap" data-act="cfmap" viewBox="0 0 ${CF.w} ${CF.h}" role="img" aria-label="Mapa de cima das duas linhas 5x: toque para marcar cantos ou o ponto de colagem" style="cursor:crosshair">${grid}${lineLabel("A", 0)}${lineLabel("B", 5)}${rect}${machines}${ghosts}${corner(cf.c1)}${corner(cf.c2)}</svg></div>
+        <div class="legend"><span><i class="sw" style="background:#41c96b"></i>Configurado</span><span><i class="sw" style="background:#5a6270"></i>Sem configuração</span></div>`;
+      const modeSeg = btn("cfmode", "copy", "Copiar área", cf.mode === "copy") + btn("cfmode", "apply", "Aplicar em área", cf.mode === "apply");
+      let steps;
+      if (cf.mode === "copy") {
+        if (!cf.clip) {
+          steps = `<div class="status-line">${!cf.c1 ? "Marque o canto 1: Shift + clique num bloco" : !cf.c2 ? "Marque o canto 2" : `${sel.length} roteadores na área`}</div>
+            <div class="seg">${btn("cfcopy", "", `Copiar ${sel.length} roteadores`, undefined, sel.length ? primary : " disabled")}${btn("cfclear", "", "Limpar")}</div>`;
+        } else {
+          const hits = cf.anchor ? cf.clip.filter(c => at(cf.anchor.x + c.dx, cf.anchor.z + c.dz)).length : 0;
+          steps = `<div class="status-line">${cf.clip.length} roteadores copiados${cf.anchor ? ` · ${hits} de ${cf.clip.length} posições com roteador` : " · clique onde colar"}</div>
+            <div class="seg">${btn("cfpaste", "", `Colar em ${hits} roteadores`, undefined, hits ? primary : " disabled")}${btn("cfcancel", "", "Cancelar cópia")}</div>`;
+        }
+      } else {
+        const opts = [...STAGE_PRESETS, ...presets.map(x => x.name)].map(nm => `<option${nm === cf.preset ? " selected" : ""}>${esc(nm)}</option>`).join("");
+        const kinds = [["all", "Todas as máquinas"], ...STAGES.map(([nm]) => [nm, "Só " + nm])].map(([k, l]) => `<option value="${esc(k)}"${k === cf.kind ? " selected" : ""}>${esc(l)}</option>`).join("");
+        steps = `<div class="row2"><div class="field"><label class="label" for="cfPreset">Preset</label><select id="cfPreset" data-input="cfpreset">${opts}</select></div>
+            <div class="field"><label class="label" for="cfKind">Limitar a</label><select id="cfKind" data-input="cfkind">${kinds}</select></div></div>
+          <div class="status-line">${!cf.c1 ? "Marque o canto 1: Shift + clique num bloco" : !cf.c2 ? "Marque o canto 2" : `${sel.length} roteadores na área`}</div>
+          <div class="seg">${btn("cfapply", "", `Aplicar em ${sel.length} roteadores`, undefined, sel.length ? primary : " disabled")}${btn("cfclear", "", "Limpar")}</div>`;
+      }
+      const lineB = LINE.filter(r => r.line === "B"), doneB = lineB.filter(r => r.cfg).length;
+      return `${map}
+        <div class="seg" role="group" aria-label="Modo">${modeSeg}</div>
+        ${steps}`;
+    }
+
+    function presetsHtml() {
+      const tabs = `<div class="gui-tabs" role="tablist" aria-label="Seção">${[["lib", "Biblioteca"], ["area", "Área"]].map(([k, l]) => `<button type="button" role="tab" data-act="cftab" data-v="${k}" aria-selected="${st.cf.tab === k}">${l}</button>`).join("")}</div>`;
+      if (st.cf.tab === "area") return `<div class="gui-head"><div class="gui-title">Configurador</div></div>${tabs}${areaHtml()}`;
+      if (st.psel >= presets.length) st.psel = 0;
+      const p = presets[st.psel];
+      const faces = Object.entries(p.data).filter(([, v]) => v.mode !== "off");
+      return `<div class="gui-head"><div class="gui-title">Configurador</div></div>${tabs}
+        <div class="split">
+          <div class="list">${presets.map((x, i) => `<button type="button" data-act="psel" data-v="${i}" aria-pressed="${i === st.psel}"><span class="l"><span class="nm">${esc(x.name)}</span><span class="sub">${(c => c + (c === 1 ? " face configurada" : " faces configuradas"))(Object.values(x.data).filter(v => v.mode !== "off").length)}</span></span></button>`).join("")}</div>
+          <div class="sel-box"><div class="nm">${esc(p.name)}</div><div class="small">${esc(p.desc)}</div>
+            <div class="small">${faces.map(([k, v]) => { const [ty, fc] = k.split(":"); return `${typeName(ty)} · ${faceName(fc)}: ${MODES[v.mode].name}`; }).map(esc).join("<br>") || "Nenhuma face ativa."}</div>
+            <div class="seg">${btn("papply", "", "Aplicar em " + esc(st.node), undefined, primary)}${btn("pexport", "", "Exportar código")}</div></div>
+        </div>
+        ${st.pcode ? `<div class="field"><label class="label" for="pcodeOut">Código de ${esc(p.name)}</label><textarea id="pcodeOut" readonly>${esc(st.pcode)}</textarea><div>${btn("pcopy", "", "Copiar código")}</div></div>` : ""}
+        <details class="adv" data-key="psave"${st.open.psave ? " open" : ""}><summary>Salvar ou importar</summary>
+          <div class="field"><label class="label" for="pname">Salvar a configuração atual</label><div class="inline"><input type="text" id="pname" placeholder="Nome do preset" autocomplete="off">${btn("psave", "", "Salvar")}</div></div>
+          <div class="field"><label class="label" for="pimport">Importar código</label><textarea id="pimport" placeholder="WA1:…"></textarea><div>${btn("pimport", "", "Importar")}</div></div></details>`;
+    }
+
+    function encode(p) { return "WA1:" + btoa(unescape(encodeURIComponent(JSON.stringify({ n: p.name, d: p.desc, c: p.data })))); }
+    function decode(s) {
+      s = s.trim(); if (!s.startsWith("WA1:")) throw new Error("prefix");
+      const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));
+      if (!o || typeof o.n !== "string" || typeof o.c !== "object") throw new Error("shape");
+      return { name: o.n.slice(0, 40), desc: String(o.d || "Importado.").slice(0, 120), data: o.c };
+    }
+
+    function render() {
+      const t = TIERS[tierKey];
+      root.style.setProperty("--trim", t.core);
+      document.querySelectorAll("#screens button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.screen === st.screen)));
+      howEl.innerHTML = HOW[st.screen];
+      const sim = document.getElementById("guiSim");
+      if (st.screen === "router") {
+        const n = node();
+        sim.hidden = false;
+        sim.innerHTML = `<span class="label">Simulação</span><label for="simMount">Roteador preso em</label><select id="simMount">${FACES.map(fc => `<option value="${fc.k}"${n.mount === fc.k ? " selected" : ""}>${fc.name}</option>`).join("")}</select>`;
+      } else if (st.screen === "presets" && st.cf.tab === "area") {
+        sim.hidden = false;
+        sim.innerHTML = `<span class="label">Simulação</span><span>Linha B: ${LINE.filter(r => r.line === "B" && r.cfg).length} de 8 configurados</span><button type="button" id="simReset">Zerar linha B</button>`;
+      } else { sim.hidden = true; sim.innerHTML = ""; }
+      root.innerHTML = st.screen === "router" ? routerHtml() : st.screen === "filter" ? filterHtml() : st.screen === "tablet" ? tabletHtml() : st.screen === "linker" ? linkerHtml() : presetsHtml();
+      if (st.screen === "router") {
+        const host = document.getElementById("mountView"), n = node();
+        if (viewer && host) {
+          viewer.attach(host, k => { st.face = k; st.fsel = 0; render(); });
+          viewer.update({ kind: n.kind, mount: n.mount, tier: TIERS[tierKey], modes: Object.fromEntries(FACES.map(fc => [fc.k, fd(st.type, fc.k).mode])), sel: st.face });
+        } else if (host) host.innerHTML = '<div class="small" style="padding:12px">Visor 3D indisponível neste navegador.</div>';
+      }
+    }
+
+    // visor 3D da montagem: máquina e roteador translúcidos, faces da máquina tocáveis
+    const viewer = (function () {
+      if (typeof THREE === "undefined") return null;
+      const canvas = document.createElement("canvas"); canvas.className = "mount-canvas";
+      let renderer;
+      try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); } catch (_) { return null; }
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      const scene = new THREE.Scene();
+      const cam = new THREE.PerspectiveCamera(38, 1, 0.05, 50);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x40352a, 1.0));
+      const dl = new THREE.DirectionalLight(0xffffff, 0.45); dl.position.set(3, 5, 2); scene.add(dl);
+      const tex = c => { const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.encoding = THREE.sRGBEncoding; return t; };
+      const ghost = (c, o) => new THREE.MeshLambertMaterial({ map: tex(c), transparent: true, opacity: o, depthWrite: false });
+      const px = v => v / 16;
+      function machineTex() {
+        const g = G(); noise(g, ["#6d747c", "#646b73", "#737a83"], 91);
+        for (let i = 0; i < 16; i++) { S(g, i, 0, "#8a929b"); S(g, 0, i, "#8a929b"); S(g, i, 15, "#3f454c"); S(g, 15, i, "#3f454c"); }
+        R(g, 4, 4, 8, 8, "#2a3038"); R(g, 5, 5, 6, 6, "#1d232a"); S(g, 6, 6, "#45d6cc"); S(g, 9, 9, "#ffb020");
+        return toCanvas(g);
+      }
+      const MACHINE = {
+        furnace: () => { const fr = furnace("front"), sd = furnace("side"), tp = furnace("top"); return [sd, sd, tp, tp, fr, sd]; },
+        chest: () => { const fr = chest("front"), sd = chest("side"), tp = chest("top"); return [sd, sd, tp, tp, fr, sd]; },
+        machine: () => { const m = machineTex(); return [m, m, m, m, m, m]; }
+      };
+      const box = new THREE.BoxGeometry(0.998, 0.998, 0.998);
+      let machineMesh = null, machineKind = null;
+      function setMachine(kind) {
+        if (kind === machineKind) return;
+        if (machineMesh) { scene.remove(machineMesh); machineMesh.material.forEach(m => { m.map.dispose(); m.dispose(); }); }
+        machineMesh = new THREE.Mesh(box, MACHINE[kind]().map(c => ghost(c, 0.85)));
+        machineMesh.renderOrder = 1; scene.add(machineMesh); machineKind = kind;
+      }
+      const overlays = {};
+      const plane = new THREE.PlaneGeometry(0.92, 0.92);
+      const portMat = Object.fromEntries(Object.entries(PORT).map(([k, c]) => [k, new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide })]));
+      const edge = new THREE.EdgesGeometry(plane);
+      Object.entries(DIR).forEach(([k, d]) => {
+        const m = new THREE.Mesh(plane, portMat.off);
+        m.position.set(d[0] * 0.51, d[1] * 0.51, d[2] * 0.51);
+        m.lookAt(d[0] * 2, d[1] * 2, d[2] * 2);
+        m.userData.face = k; m.renderOrder = 4;
+        const ln = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: 0xffffff }));
+        ln.visible = false; m.add(ln); m.userData.line = ln;
+        scene.add(m); overlays[k] = m;
+      });
+      const router = new THREE.Group(); scene.add(router);
+      const rMats = Array.from({ length: 6 }, () => new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.55, depthWrite: false }));
+      const body = new THREE.Mesh(new THREE.BoxGeometry(px(14), px(6), px(12)), rMats); body.position.y = -0.5 + px(3); body.renderOrder = 3; router.add(body);
+      const rodMat = new THREE.MeshLambertMaterial({ color: 0x2b313a, transparent: true, opacity: 0.6, depthWrite: false });
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
+      [-1, 1].forEach(sx => {
+        const rod = new THREE.Mesh(new THREE.BoxGeometry(px(1), px(8), px(1)), rodMat); rod.position.set(sx * px(5.5), -0.5 + px(10), -px(4.5)); rod.renderOrder = 3; router.add(rod);
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(px(2), px(2), px(2)), tipMat); tip.position.set(sx * px(5.5), -0.5 + px(15), -px(4.5)); tip.renderOrder = 3; router.add(tip);
+      });
+      let tierShown = null;
+      function setTierTex(t) {
+        if (t === tierShown) return; tierShown = t;
+        rMats.forEach(m => { if (m.map) m.map.dispose(); });
+        const sd = tex(routerSide(t, 12));
+        rMats[0].map = sd; rMats[1].map = sd; rMats[2].map = tex(routerTop(t)); rMats[3].map = tex(routerBottom(t)); rMats[4].map = tex(routerFront(t)); rMats[5].map = tex(routerBack(t));
+        rMats.forEach(m => { m.needsUpdate = true; });
+        tipMat.color.set(t.accent);
+      }
+      const orbit = { az: 0.75, el: 0.42, r: 4.6 }, target = new THREE.Vector3();
+      let mountKey = null;
+      function place() {
+        const d = DIR[mountKey], r = MOUNT_ROT[mountKey];
+        router.position.set(d[0], d[1], d[2]); router.rotation.set(r[0], r[1], r[2]);
+        target.set(d[0] * 0.45, d[1] * 0.45, d[2] * 0.45);
+      }
+      let onPick = () => {};
+      const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+      let down = null;
+      canvas.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY, moved: false }; try { canvas.setPointerCapture(e.pointerId); } catch (_) {} });
+      canvas.addEventListener("pointermove", e => {
+        if (!down) return;
+        const dx = e.clientX - down.x, dy = e.clientY - down.y;
+        if (!down.moved && Math.hypot(dx, dy) > 5) down.moved = true;
+        if (!down.moved) return;
+        orbit.az -= (e.clientX - (down.lx ?? down.x)) * 0.012;
+        orbit.el = Math.max(-1.3, Math.min(1.3, orbit.el + (e.clientY - (down.ly ?? down.y)) * 0.01));
+        down.lx = e.clientX; down.ly = e.clientY;
+      });
+      canvas.addEventListener("pointerup", e => {
+        if (down && !down.moved) {
+          const b = canvas.getBoundingClientRect();
+          ndc.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
+          ray.setFromCamera(ndc, cam);
+          const hit = ray.intersectObjects(Object.values(overlays), false)[0];
+          if (hit) onPick(hit.object.userData.face);
+        }
+        down = null;
+      });
+      canvas.addEventListener("pointercancel", () => { down = null; });
+      let host = null;
+      function size() {
+        if (!host) return;
+        const w = host.clientWidth || 190, h = host.clientHeight || 220;
+        renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+      }
+      if ("ResizeObserver" in window) new ResizeObserver(size).observe(canvas);
+      function loop() {
+        if (canvas.isConnected) {
+          cam.position.set(target.x + orbit.r * Math.cos(orbit.el) * Math.sin(orbit.az), target.y + orbit.r * Math.sin(orbit.el), target.z + orbit.r * Math.cos(orbit.el) * Math.cos(orbit.az));
+          cam.lookAt(target);
+          renderer.render(scene, cam);
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+      return {
+        attach(el, pick) { host = el; onPick = pick; el.appendChild(canvas); size(); },
+        update({ kind, mount, tier, modes, sel }) {
+          setMachine(kind); setTierTex(tier);
+          if (mount !== mountKey) {
+            mountKey = mount; place();
+            // gira a câmera para o lado onde o roteador está, sem perder o ângulo do usuário quando ele está em cima ou embaixo
+            const d = DIR[mount];
+            if (d[1] === 0) orbit.az = Math.atan2(d[0], d[2]) + 0.75;
+            orbit.el = d[1] < 0 ? -0.5 : 0.42;
+          }
+          Object.entries(overlays).forEach(([k, m]) => {
+            const mode = modes[k], isSel = k === sel;
+            m.material = portMat[mode];
+            m.userData.line.visible = isSel;
+          });
+        }
+      };
+    })();
+
+    const FILTER_CAP = 4096;
+    function addToFilter(f, id, how) {
+      const i = f.slots.findIndex(x => x && x.id === id), nm = resById(id).name;
+      if (i >= 0) { st.fsel = i; toast(nm + " já está no filtro."); return; }
+      if (f.slots.length >= FILTER_CAP) { toast("Limite de segurança de " + FILTER_CAP + " entradas atingido."); return; }
+      f.slots.push({ id, qty: null }); st.fsel = f.slots.length; toast(nm + " adicionado " + how + ".");
+    }
+
+    root.addEventListener("click", e => {
+      const el = e.target.closest("[data-act]"); if (!el || !root.contains(el)) return;
+      const act = el.dataset.act, v = el.dataset.v, f = fd();
+      switch (act) {
+        case "type": st.type = v; st.fsel = 0; break;
+        case "face": st.face = v; st.fsel = 0; break;
+        case "mount": node().mount = v; break;
+        case "mode": f.mode = v; break;
+        case "prio": f.prio = Math.max(-99, Math.min(99, f.prio + Number(v))); break;
+        case "rs": f.rs = v; break;
+        case "rslot": st.fsel = Number(v); st.screen = "filter"; break;
+        case "editfilter": st.screen = "filter"; break;
+        case "card": toast("Cartões de filtro valem para todas as faces deste tipo."); return;
+        case "upgrade": toast("Upgrade de chunk loading instalado: o chunk deste roteador fica carregado."); return;
+        case "goto": st.screen = v; break;
+        case "white": f.white = v === "1"; break;
+        case "comps": f.comps = v; break;
+        case "addrule": {
+          const inp = document.getElementById("ruleIn"), val = inp.value.trim();
+          if (!val) { toast("Digite uma tag como #c:ores ou um mod como @mekanism."); return; }
+          if (!/^[#@][a-z0-9_.:\/-]+$/i.test(val)) { toast("Use # para tag (#c:ores) ou @ para mod (@mekanism), sem espaços."); return; }
+          if (!f.rules.includes(val)) f.rules.push(val); break;
+        }
+        case "rmrule": f.rules.splice(Number(v), 1); break;
+        case "fslot": st.fsel = Number(v); break;
+        case "jei": addToFilter(f, v, "pelo JEI"); break;
+        case "inv": addToFilter(f, v, "do inventário"); break;
+        case "clearslot": f.slots.splice(st.fsel, 1); st.fsel = f.slots.length; break;
+        case "ttab": st.ttab = v; break;
+        case "opennode": st.node = v; st.screen = "router"; toast("Editando " + v + " à distância."); break;
+        case "rolef": st.roleF = v; break;
+        case "multi": st.multi = !st.multi; if (!st.multi) st.picked.clear(); break;
+        case "pick": if (st.picked.has(v)) st.picked.delete(v); else st.picked.add(v); break;
+        case "pickall": NODES.filter(n => st.roleF === "all" || n.roles.some(r => r[0] === st.roleF)).forEach(n => st.picked.add(n.name)); break;
+        case "movesel": { const k = st.picked.size; NODES.forEach(n => { if (st.picked.has(n.name)) n.net = st.moveTo; }); st.picked.clear(); toast(k + (k === 1 ? " nó movido" : " nós movidos") + " para a rede " + st.moveTo + "."); break; }
+        case "lknet": st.lk.active = v; break;
+        case "lkmode": st.lk.mode = v; break;
+        case "lkone": { const n = NODES.find(x => x.name === v); if (n.net === st.lk.active) { toast(v + " já está na rede " + st.lk.active + "."); return; } n.net = st.lk.active; toast(v + " entrou na rede " + st.lk.active + "."); break; }
+        case "lkclear": st.lk.c1 = null; st.lk.c2 = null; break;
+        case "lkapply": { const ins = NODES.filter(n => inRegion(n) && inArea(n) && n.net !== st.lk.active); ins.forEach(n => { n.net = st.lk.active; }); toast(ins.length + (ins.length === 1 ? " roteador vinculado" : " roteadores vinculados") + " à rede " + st.lk.active + "."); break; }
+        case "lkmap": {
+          const svg = el.closest("svg"), b = svg.getBoundingClientRect();
+          const vx = (e.clientX - b.left) / b.width * LK.w, vy = (e.clientY - b.top) / b.height * LK.h;
+          const wx = Math.round(LK.x0 + (vx - LK.pad) / (LK.w - 2 * LK.pad) * (LK.x1 - LK.x0)), wz = Math.round(LK.z0 + (vy - LK.pad) / (LK.h - 2 * LK.pad) * (LK.z1 - LK.z0));
+          const c = { x: Math.max(LK.x0, Math.min(LK.x1, wx)), z: Math.max(LK.z0, Math.min(LK.z1, wz)) };
+          if (!st.lk.c1 || st.lk.c2) { st.lk.c1 = c; st.lk.c2 = null; } else st.lk.c2 = c;
+          break;
+        }
+        case "mapnode": st.mapSel = v; break;
+        case "netpub": { const [i, p] = v.split(":"); nets[Number(i)].pub = p === "1"; break; }
+        case "addnet": {
+          const inp = document.getElementById("netIn"), val = inp.value.trim();
+          if (!val) { toast("Digite um nome para a rede."); return; }
+          const pal = ["#a46cff", "#ff6b9a", "#9ef06a", "#f2c04a"];
+          nets.push({ name: val.slice(0, 30), color: pal[nets.length % pal.length], pub: false, members: ["Você"] }); toast("Rede " + val.slice(0, 30) + " criada."); break;
+        }
+        case "psel": st.psel = Number(v); st.pcode = ""; break;
+        case "cftab": st.cf.tab = v; break;
+        case "src": st.src = v; break;
+        case "cfmode": Object.assign(st.cf, { mode: v, c1: null, c2: null, clip: null, anchor: null }); break;
+        case "cfclear": st.cf.c1 = null; st.cf.c2 = null; break;
+        case "cfcancel": st.cf.clip = null; st.cf.anchor = null; break;
+        case "cfreset": LINE.forEach(r => { if (r.line === "B") r.cfg = null; }); toast("Linha B sem configuração de novo."); break;
+        case "cfmap": {
+          const svg = el.closest("svg"), b = svg.getBoundingClientRect();
+          const vx = (e.clientX - b.left) / b.width * CF.w, vy = (e.clientY - b.top) / b.height * CF.h;
+          const c = { x: Math.max(CF.x0, Math.min(CF.x1, Math.round(CF.x0 + (vx - CF.pad) / (CF.w - 2 * CF.pad) * (CF.x1 - CF.x0)))), z: Math.max(CF.z0, Math.min(CF.z1, Math.round(CF.z0 + (vy - CF.pad) / (CF.h - 2 * CF.pad) * (CF.z1 - CF.z0)))) };
+          if (st.cf.mode === "copy" && st.cf.clip) st.cf.anchor = c;
+          else if (!st.cf.c1 || st.cf.c2) { st.cf.c1 = c; st.cf.c2 = null; } else st.cf.c2 = c;
+          break;
+        }
+        case "cfcopy": {
+          const sel = LINE.filter(r => inBox(r, st.cf.c1, st.cf.c2));
+          const mx = Math.min(...sel.map(r => r.x)), mz = Math.min(...sel.map(r => r.z));
+          st.cf.clip = sel.map(r => ({ dx: r.x - mx, dz: r.z - mz, cfg: r.cfg }));
+          st.cf.c1 = null; st.cf.c2 = null; st.cf.anchor = null;
+          toast(sel.length + " roteadores copiados."); break;
+        }
+        case "cfpaste": {
+          let n = 0; st.cf.clip.forEach(c => { const r = at(st.cf.anchor.x + c.dx, st.cf.anchor.z + c.dz); if (r) { r.cfg = c.cfg; n++; } });
+          const miss = st.cf.clip.length - n; st.cf.anchor = null;
+          toast(n + " roteadores configurados" + (miss ? ", " + miss + " posições sem roteador." : ".")); break;
+        }
+        case "cfapply": {
+          const sel = LINE.filter(r => inBox(r, st.cf.c1, st.cf.c2) && (st.cf.kind === "all" || r.stage === st.cf.kind));
+          sel.forEach(r => { r.cfg = st.cf.preset; });
+          toast(st.cf.preset + " aplicado em " + sel.length + (sel.length === 1 ? " roteador." : " roteadores.")); break;
+        }
+        case "gpause": { const g = st.groups[Number(v)]; g.paused = !g.paused; toast((g.paused ? "Pausadas" : "Retomadas") + " as " + g.nets.length + " redes de " + g.name + "."); break; }
+        case "gdel": { const g = st.groups.splice(Number(v), 1)[0]; toast("Grupo " + g.name + " desfeito. As redes continuam existindo."); break; }
+        case "gnet": if (st.newGroup.has(v)) st.newGroup.delete(v); else st.newGroup.add(v); break;
+        case "gadd": {
+          const inp = document.getElementById("groupIn"), name = (inp.value.trim() || "Grupo " + (st.groups.length + 1)).slice(0, 30), ns = [...st.newGroup];
+          st.groups.push({ name, nets: ns, paused: false, nodes: NODES.filter(n => ns.includes(n.net)).length, ms: "0,01", neck: "" });
+          st.newGroup.clear(); toast("Grupo " + name + " criado."); break;
+        }
+        case "papply": st.data = clone(presets[st.psel].data); toast("Preset aplicado em " + st.node + "."); break;
+        case "pexport": st.pcode = encode(presets[st.psel]); break;
+        case "pcopy": {
+          const ta = document.getElementById("pcodeOut");
+          const fallback = () => { ta.focus(); ta.select(); toast("Código selecionado. Copie com o menu do sistema."); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(st.pcode).then(() => toast("Código copiado."), fallback); else fallback();
+          return;
+        }
+        case "psave": {
+          const inp = document.getElementById("pname"), val = inp.value.trim() || ("Preset " + (presets.length + 1));
+          presets.push({ name: val.slice(0, 40), desc: "Salvo a partir de " + st.node + ".", data: clone(st.data) });
+          st.psel = presets.length - 1; st.pcode = ""; toast("Preset " + val.slice(0, 40) + " salvo."); break;
+        }
+        case "pimport": {
+          const raw = document.getElementById("pimport").value;
+          if (!raw.trim()) { toast("Cole um código antes de importar."); return; }
+          try { const p = decode(raw); presets.push(p); st.psel = presets.length - 1; st.pcode = ""; toast("Preset " + p.name + " importado."); }
+          catch (_) { toast("Código inválido. Ele precisa começar com WA1: e vir de uma exportação."); return; }
+          break;
+        }
+        default: return;
+      }
+      render();
+    });
+    root.addEventListener("input", e => {
+      const k = e.target.dataset && e.target.dataset.input; if (!k) return;
+      const f = fd();
+      if (k === "limit") { f.limit = Number(e.target.value); const l = document.getElementById("elimitV"); if (l) l.textContent = f.limit + "%"; }
+      else if (k === "qty") { const s = f.slots[st.fsel]; if (s) { const n = parseInt(e.target.value, 10); s.qty = n > 0 ? n : null; const b = root.querySelector(`.mslot[data-act="fslot"][data-v="${st.fsel}"]`); if (b) { let q = b.querySelector(".qty"); if (s.qty) { if (!q) { q = document.createElement("span"); q.className = "qty"; b.appendChild(q); } q.textContent = s.qty; } else if (q) q.remove(); } } }
+      else if (k === "jei") { const q = e.target.value.trim().toLowerCase().replace(/^@/, ""); root.querySelectorAll('.jei .mslot').forEach(b => { b.hidden = q && !b.dataset.name.includes(q); }); }
+      else if (k === "net") { node().net = e.target.value; toast(st.node + " agora está na rede " + e.target.value + "."); render(); }
+      else if (k === "moveto") { st.moveTo = e.target.value; }
+      else if (k === "rolef") { st.roleF = e.target.value; render(); }
+      else if (k === "cfpreset") { st.cf.preset = e.target.value; }
+      else if (k === "cfkind") { st.cf.kind = e.target.value; render(); }
+      else if (k === "nodes") { const q = e.target.value.trim().toLowerCase(); root.querySelectorAll("#nodeList button").forEach(b => { b.hidden = q && !b.dataset.q.includes(q); }); }
+    });
+    root.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      const map = { ruleIn: "addrule", netIn: "addnet", pname: "psave" };
+      const act = map[e.target.id]; if (!act) return;
+      e.preventDefault(); root.querySelector(`[data-act="${act}"]`).click();
+    });
+    const simEl = document.getElementById("guiSim");
+    simEl.addEventListener("change", e => { if (e.target.id === "simMount") { node().mount = e.target.value; render(); } });
+    simEl.addEventListener("click", e => { if (e.target.id === "simReset") { LINE.forEach(r => { if (r.line === "B") r.cfg = null; }); toast("Linha B zerada."); render(); } });
+    root.addEventListener("toggle", e => { const d = e.target; if (d.matches && d.matches("details[data-key]")) st.open[d.dataset.key] = d.open; }, true);
+    document.getElementById("screens").addEventListener("click", e => {
+      const b = e.target.closest("button[data-screen]"); if (!b) return;
+      st.screen = b.dataset.screen; render();
+    });
+    return { render };
+  })();
+
+  const PAGES = { scene: "page-scene", gui: "page-gui", tex: "page-tex" };
+  function showPage(k) {
+    document.querySelectorAll(".pages button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.page === k)));
+    Object.entries(PAGES).forEach(([key, id]) => { document.getElementById(id).hidden = key !== k; });
+    try { localStorage.setItem("wa-page", k); } catch (_) {}
+  }
+  document.querySelector(".pages").addEventListener("click", e => { const b = e.target.closest("button[data-page]"); if (b) showPage(b.dataset.page); });
+  let startPage = "scene";
+  try { const v = localStorage.getItem("wa-page"); if (PAGES[v]) startPage = v; } catch (_) {}
+  showPage(startPage);
+
+  setTier(tierKey);
+  setHeld(heldIdx);
+})();
+</script>

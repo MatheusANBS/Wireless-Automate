@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
@@ -22,6 +24,12 @@ public final class ModDataComponents {
                     .persistent(FilterCardItem.Contents.CODEC)
                     .networkSynchronized(FilterCardItem.Contents.STREAM_CODEC)
                     .cacheEncoding());
+
+    /** Tipo que o Vinculador vincula; sem o componente, todos os tipos. */
+    public static final Supplier<DataComponentType<ResourceType>> LINKER_TYPE =
+            DATA_COMPONENTS.registerComponentType("linker_type", builder -> builder
+                    .persistent(LinkerItem.TYPE_CODEC)
+                    .networkSynchronized(LinkerItem.TYPE_STREAM_CODEC));
 
     private ModDataComponents() {
     }

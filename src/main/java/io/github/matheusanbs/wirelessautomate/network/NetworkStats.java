@@ -5,6 +5,8 @@ import java.util.UUID;
 /**
  * Retrato de uma rede para o {@code /wa profile}, montado na hora do comando.
  *
+ * @param nodes nós carregados com algum tipo (aba) nesta rede; um roteador com tipos em duas redes
+ *     conta nas duas, então a soma das redes pode passar do total de nós
  * @param averageNanos tempo médio por tick gasto movendo recursos da rede (média móvel)
  * @param lastNanos tempo do último tick
  * @param opsLastSecond entregas que moveram algo no último segundo completo

@@ -178,15 +178,15 @@ public final class RouterMenuGameTests {
             helper.assertFalse(player.hasPermissions(2), "jogador falso é operador");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(own.id()))), "recusou a própria rede");
-            helper.assertValueEqual(router.networkId(), own.id(), "rede própria");
+            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede própria");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(foreign.id()))), "aceitou rede alheia");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(UUID.randomUUID()))), "aceitou rede inexistente");
-            helper.assertValueEqual(router.networkId(), own.id(), "rede mudou numa recusa");
+            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede mudou numa recusa");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.empty())), "recusou tirar da rede");
-            helper.assertTrue(router.networkId() == null, "continuou na rede");
+            helper.assertTrue(router.networkId(ResourceType.ITEM) == null, "continuou na rede");
 
             helper.assertTrue(ModPayloads.handleRename(player, new RenameRouterPayload(menu.containerId, " Forno ")),
                     "recusou o nome");

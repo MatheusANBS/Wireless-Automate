@@ -15,6 +15,8 @@ import net.minecraft.core.Direction;
  *
  * <p>Regras da montagem, por tipo de recurso:
  * <ul>
+ *   <li>só entram os membros cujo tipo está nesta rede: um nó com Itens aqui e Fluidos noutra rede
+ *       só dá portas de itens a esta;
  *   <li>origem = face ativa (modo e redstone) que extrai; destino = face ativa que insere;
  *   <li>uma origem não entrega na mesma máquina e mesma face de onde tira;
  *   <li>uma face Ambos não entrega para outra face Ambos (senão os recursos iriam e voltariam entre
@@ -29,10 +31,12 @@ import net.minecraft.core.Direction;
  */
 final class NetworkRoutes {
     static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    private static final ResourceType[] TYPES = ResourceType.values();
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final double AVERAGE_WEIGHT = 0.05;
 
     final UUID id;
+    /** Nós com algum tipo nesta rede, cada um uma vez. */
     final List<NodePorts> members = new ArrayList<>();
     /** Todas as origens ativas, de todos os tipos, inclusive as sem destino. */
     final List<Port> sources = new ArrayList<>();
@@ -54,8 +58,14 @@ final class NetworkRoutes {
 
     /** Remonta origens, destinos e a ordem de entrega. {@code scratch} é uma lista reaproveitada. */
     void rebuild(List<Port> scratch) {
+        // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
         for (int i = 0, n = members.size(); i < n; i++) {
-            members.get(i).clearRoutes();
+            NodePorts member = members.get(i);
+            for (ResourceType type : TYPES) {
+                if (id.equals(member.network(type))) {
+                    member.clearRoutes(type);
+                }
+            }
         }
         sources.clear();
         destinations.clear();
@@ -92,6 +102,9 @@ final class NetworkRoutes {
     private void collectPorts(ResourceType type) {
         for (int m = 0, n = members.size(); m < n; m++) {
             NodePorts member = members.get(m);
+            if (!id.equals(member.network(type))) {
+                continue;
+            }
             RouterBlockEntity node = member.node;
             boolean powered = node.powered();
             RouterTier tier = null;

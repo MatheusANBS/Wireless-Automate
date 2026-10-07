@@ -71,4 +71,43 @@ class BackoffTest {
         }
         assertEquals(Integer.MAX_VALUE, backoff.nextIntervalTicks());
     }
+
+    @Test
+    void sleepUntilWakesAtTheGivenTickAndKeepsTheInterval() {
+        Backoff backoff = new Backoff(40);
+        backoff.sleep(0L);
+        backoff.sleep(1L);
+        assertEquals(4, backoff.nextIntervalTicks());
+        backoff.sleepUntil(10L, 25L);
+        assertTrue(backoff.isSleeping(24L));
+        assertTrue(backoff.isAwake(25L));
+        assertEquals(25L, backoff.wakeAt());
+        assertEquals(4, backoff.nextIntervalTicks());
+    }
+
+    @Test
+    void sleepUntilInThePastStillSleepsOneTick() {
+        Backoff backoff = new Backoff(40);
+        backoff.sleepUntil(10L, 3L);
+        assertTrue(backoff.isSleeping(10L));
+        assertTrue(backoff.isAwake(11L));
+    }
+
+    @Test
+    void earliestWakeOfSeveralDestinations() {
+        Backoff a = new Backoff(40);
+        Backoff b = new Backoff(40);
+        Backoff c = new Backoff(40);
+        a.sleepUntil(0L, 30L);
+        b.sleepUntil(0L, 12L);
+        c.sleepUntil(0L, 20L);
+        long wake = Long.MAX_VALUE;
+        for (Backoff backoff : new Backoff[] {a, b, c}) {
+            wake = backoff.earliestWake(wake);
+        }
+        assertEquals(12L, wake);
+        // Um acordado puxa para o passado: a origem não tem por que esperar.
+        c.wake();
+        assertEquals(Long.MIN_VALUE, c.earliestWake(wake));
+    }
 }

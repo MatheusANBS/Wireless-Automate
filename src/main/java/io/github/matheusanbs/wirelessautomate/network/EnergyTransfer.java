@@ -33,7 +33,7 @@ final class EnergyTransfer {
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.untilDestinations(source, pass, now);
             return false;
         }
         int offered = handler.extractEnergy((int) Math.min(tokens, Integer.MAX_VALUE), true);
@@ -95,7 +95,8 @@ final class EnergyTransfer {
             source.sourceBackoff.wake();
             return true;
         }
-        source.sourceBackoff.sleep(now);
+        // Destinos que recusaram dormiram: se foram todos, a origem dorme até o primeiro acordar.
+        SourceSleep.idle(source, pass, now);
         return false;
     }
 

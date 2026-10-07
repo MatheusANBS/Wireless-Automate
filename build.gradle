@@ -75,6 +75,8 @@ neoForge {
             // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
             gameDirectory = project.file('run/gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // Liga as máquinas de teste (gametest/TestMachines): slot de pilha enorme e muitos tanques.
+            systemProperty 'wirelessautomate.gameTests', 'true'
         }
 
         data {

@@ -22,10 +22,15 @@ import net.minecraft.resources.ResourceLocation;
  * <p>Usa a API do Mekanism: só é carregada com ele presente (o motor chama por {@link Chemicals}).
  */
 final class ChemicalTransfer {
-    /** Tanques examinados por visita. */
+    /** Tanques examinados por visita: máquina com mais tanques continua do cursor na visita seguinte. */
     static final int MAX_TANKS_PER_VISIT = 16;
+    /** O último {@link #moveChemical} pôs algum destino para dormir. */
+    private static boolean destinationSlept;
 
-    /** Uma visita. Devolve {@code true} se moveu algo. */
+    /**
+     * Uma visita. Devolve {@code true} se moveu algo. Tanques a partir do cursor da porta, como os
+     * fluidos ({@link FluidTransfer#move}).
+     */
     static boolean move(Port source, long now) {
         IChemicalHandler handler = (IChemicalHandler) source.node.chemicals(source.face);
         RoundRobinOrder<Port> order = source.order;
@@ -39,14 +44,25 @@ final class ChemicalTransfer {
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
+            SourceSleep.untilDestinations(source, pass, now);
+            return false;
+        }
+        int tanks = handler.getChemicalTanks();
+        if (tanks <= 0) {
             source.sourceBackoff.sleep(now);
             return false;
         }
-        int tanks = Math.min(handler.getChemicalTanks(), MAX_TANKS_PER_VISIT);
+        int limit = Math.min(tanks, MAX_TANKS_PER_VISIT);
+        int tank = source.slotCursor < tanks ? source.slotCursor : 0;
+        int scanned = 0;
         FilterSet filter = source.filter;
         long moved = 0;
-        for (int tank = 0; tank < tanks && tokens > 0; tank++) {
-            ChemicalStack inTank = handler.getChemicalInTank(tank);
+        boolean destinationsAsleep = false;
+        while (scanned < limit) {
+            int current = tank;
+            scanned++;
+            tank = tank + 1 == tanks ? 0 : tank + 1;
+            ChemicalStack inTank = handler.getChemicalInTank(current);
             if (inTank.isEmpty()) {
                 continue;
             }
@@ -63,25 +79,41 @@ final class ChemicalTransfer {
                     continue;
                 }
             }
-            long amount = moveChemical(source, handler, tank, inTank, id, max, order, pass, now);
+            long amount = moveChemical(source, handler, current, inTank, id, max, order, pass, now);
             tokens -= amount;
             moved += amount;
-            if (!NetworkManager.hasAwakeDestination(pass, now)) {
+            if (tokens <= 0) {
+                // Sem saldo: o tanque pode ter mais, continua dele na próxima visita.
+                tank = current;
+                break;
+            }
+            if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
+                destinationsAsleep = true;
                 break;
             }
         }
+        source.slotCursor = tank;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
+            source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
             return true;
         }
-        source.sourceBackoff.sleep(now);
+        source.idleSlots += scanned;
+        if (destinationsAsleep) {
+            source.idleSlots = 0;
+            SourceSleep.untilDestinations(source, pass, now);
+        } else if (source.idleSlots >= tanks) {
+            source.idleSlots = 0;
+            source.sourceBackoff.sleep(now);
+        }
         return false;
     }
 
     private static long moveChemical(Port source, IChemicalHandler handler, int tank, ChemicalStack inTank,
             ResourceLocation id, long max, RoundRobinOrder<Port> order, List<Port> pass, long now) {
+        destinationSlept = false;
         ChemicalStack offered = handler.extractChemical(tank, max, Action.SIMULATE);
         if (offered.isEmpty() || !ChemicalStack.isSameChemical(offered, inTank)) {
             return 0;
@@ -93,30 +125,33 @@ final class ChemicalTransfer {
             if (destination.destinationBackoff.isSleeping(now)) {
                 continue;
             }
+            long want = remaining;
+            FilterSet accept = destination.filter;
+            Filter rule = null;
+            if (!accept.isEmpty()) {
+                // Recusa do filtro: pula sem dormir, e sem buscar a máquina.
+                if (!accept.testChemical(id)) {
+                    continue;
+                }
+                rule = accept.chemicalStockFilter(id);
+            }
             IChemicalHandler target = (IChemicalHandler) destination.node.chemicals(destination.face);
             if (target == null) {
                 continue;
             }
-            long want = remaining;
-            FilterSet accept = destination.filter;
-            if (!accept.isEmpty()) {
-                // Recusa do filtro ou estoque já atingido: pula sem dormir.
-                if (!accept.testChemical(id)) {
+            long stock = rule == null ? 0 : rule.chemicalStock(id);
+            if (stock > 0) {
+                // Estoque já atingido: pula sem dormir.
+                want = StockLimit.acceptable(amountIn(target, offered), stock, want);
+                if (want <= 0) {
                     continue;
-                }
-                Filter rule = accept.chemicalStockFilter(id);
-                long stock = rule == null ? 0 : rule.chemicalStock(id);
-                if (stock > 0) {
-                    want = StockLimit.acceptable(amountIn(target, offered), stock, want);
-                    if (want <= 0) {
-                        continue;
-                    }
                 }
             }
             // insertChemical devolve a sobra: aceito = oferecido − sobra.
             long accepts = want - target.insertChemical(offered.copyWithAmount(want), Action.SIMULATE).getAmount();
             if (accepts <= 0) {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
                 continue;
             }
             ChemicalStack taken = handler.extractChemical(tank, Math.min(accepts, remaining), Action.EXECUTE);
@@ -139,6 +174,7 @@ final class ChemicalTransfer {
                 remaining -= filled;
             } else {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
             }
             if (takenAmount < accepts) {
                 break;

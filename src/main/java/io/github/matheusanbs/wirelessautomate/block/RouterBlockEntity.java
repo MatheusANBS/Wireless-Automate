@@ -509,13 +509,14 @@ public class RouterBlockEntity extends BlockEntity {
         if (!(level instanceof ServerLevel serverLevel) || isRemoved()) {
             return null;
         }
-        Direction facing = facing();
-        if (facing != cacheFacing) {
-            clearCaches();
-            cacheFacing = facing;
-        }
+        // Girar passa pelo setBlockState, que limpa os caches: o facing só é lido ao criar um.
         BlockCapabilityCache<T, @Nullable Direction> cache = caches[machineFace.ordinal()];
         if (cache == null) {
+            Direction facing = facing();
+            if (facing != cacheFacing) {
+                clearCaches();
+                cacheFacing = facing;
+            }
             cache = BlockCapabilityCache.create(capability, serverLevel, machinePos(), machineFace,
                     () -> !isRemoved() && facing() == facing,
                     this::capabilityInvalidated);

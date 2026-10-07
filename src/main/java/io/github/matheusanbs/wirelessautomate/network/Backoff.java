@@ -25,6 +25,28 @@ public final class Backoff {
         nextInterval = (int) Math.min((long) nextInterval * 2, maxTicks);
     }
 
+    /**
+     * Dorme até o tick {@code wakeAt} (pelo menos até o seguinte a {@code gameTime}), sem mexer no
+     * intervalo. Para uma origem cujos destinos estão todos dormindo: acorda junto com o primeiro
+     * deles, em vez de pelo próprio intervalo (ver {@link #earliestWake}).
+     */
+    public void sleepUntil(long gameTime, long wakeAt) {
+        this.wakeAt = Math.max(wakeAt, gameTime + 1);
+    }
+
+    /** Tick em que acorda ({@link Long#MIN_VALUE} se acordado desde sempre). */
+    public long wakeAt() {
+        return wakeAt;
+    }
+
+    /**
+     * O menor {@code wakeAt} entre {@code current} e o deste: quando o primeiro de vários acorda.
+     * Comece com {@link Long#MAX_VALUE}.
+     */
+    public long earliestWake(long current) {
+        return Math.min(current, wakeAt);
+    }
+
     /** O destino aceitou ou o vizinho mudou: acorda e volta ao intervalo mínimo. */
     public void wake() {
         wakeAt = Long.MIN_VALUE;

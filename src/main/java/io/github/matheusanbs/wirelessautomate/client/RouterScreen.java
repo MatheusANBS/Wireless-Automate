@@ -43,9 +43,6 @@ import org.lwjgl.glfw.GLFW;
  * <p>TODO: visor 3D da máquina com o roteador, com as faces tocáveis (a planificação fica abaixo dele).
  */
 public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
-    // TODO(merge): trocar por RouterMenu.MIN_PRIORITY / MAX_PRIORITY quando o lado do servidor entrar.
-    static final int MIN_PRIORITY = -999;
-    static final int MAX_PRIORITY = 999;
     /** Químicos ficam ocultos até o motor movê-los (o servidor ainda recusa CHEMICAL). */
     private static final boolean CHEMICALS_READY = false;
 
@@ -384,7 +381,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private void changePriority(int direction) {
         int step = hasShiftDown() ? 10 : 1;
-        int value = Math.max(MIN_PRIORITY, Math.min(MAX_PRIORITY, view().priority() + direction * step));
+        int value = Math.max(RouterMenu.MIN_PRIORITY, Math.min(RouterMenu.MAX_PRIORITY, view().priority() + direction * step));
         if (value != view().priority()) {
             sendFace(view().mode(), value, view().redstone());
         }

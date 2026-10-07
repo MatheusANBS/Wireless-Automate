@@ -174,7 +174,7 @@ Ciclo do gerenciador a cada tick: pega a próxima rota acordada (em ordem de pri
 ### Técnicas
 
 1. **Gerenciador central:** os nós não fazem tick. Um único gerenciador por servidor processa todas as redes, com rotas pré-ordenadas por prioridade e reconstruídas só quando a rede muda.
-2. **Orçamento de tempo:** o mod tem um teto de tempo por tick (padrão 0,5 ms, configurável). Se o trabalho não couber, continua no tick seguinte a partir de cursores salvos. O teto se reduz sozinho quando o MSPT do servidor sobe.
+2. **Orçamento de tempo:** o mod tem um teto de tempo por tick (padrão 1 ms, configurável em `config/wirelessautomate-server.toml`). Se o trabalho não couber, continua no tick seguinte a partir de cursores salvos. O teto se reduz sozinho quando o MSPT do servidor sobe.
 3. **Destinos dormindo:** um destino que recusa um recurso entra numa lista negativa por tipo de recurso e é pulado. Ele acorda quando o inventário vizinho avisa uma mudança ao nó, com custo zero enquanto nada muda. Como reserva, há checagens com intervalo crescente, de 1 tick até alguns segundos.
 4. **Lotes:** em vez de mover pouco a cada tick, move a quantia de vários ticks numa operação só. A vazão é a mesma e o custo fixo cai. A energia é distribuída num único passe, com contas em `long`.
 5. **Filtros compilados:** ao salvar, o filtro vira conjuntos de hash. A resposta "este recurso passa?" fica em cache por tipo e só é refeita quando o filtro muda ou as tags recarregam.
@@ -241,7 +241,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 - **Canais:** só redes mais filtros no v1. Fluxos separados usam redes diferentes.
 - **Receitas dos tiers altos:** só itens vanilla. Avançado: ouro e diamante. Elite: netherita e estrela do Nether. Ultimate: ovo do dragão. O modpack ajusta por datapack ou KubeJS.
-- **Orçamento padrão:** 0,5 ms/tick.
+- **Orçamento padrão:** 1 ms/tick (era 0,5 ms; o dono trocou por mais vazão em 7/10/2026, depois do benchmark).
 - **Cartões no roteador:** slots de cartão por face e por tipo, além do filtro embutido. O recurso passa se o filtro embutido ou algum cartão aceitar.
 - **Duplicar cartões:** receita sem forma, cartão configurado + cartão vazio = dois cartões iguais.
 - **JEI:** integração opcional já no v1 (dependência só de compilação, plugin carregado só com o JEI).

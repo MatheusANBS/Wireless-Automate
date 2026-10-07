@@ -150,6 +150,8 @@ Variação entre repetições: as médias do mod variam 1% a 4% (desvio padrão 
 
 ## Máquina local: antes e depois (7 de outubro de 2026)
 
+Medida com o orçamento de 0,5 ms, o padrão da época; depois o padrão passou a 1 ms (`tickBudgetMs`), e os cenários limitados pelo orçamento ganham vazão na mesma proporção, com o custo do mod subindo junto.
+
 Rodada completa numa máquina local parada, um servidor de cada vez (uma primeira tentativa foi descartada porque outro servidor rodou junto). Relatórios brutos, fora do git: `run/bench/reports/20261007-100308.md` (depois), `20261007-101823.md` (remontagem aquecida) e `20261007-102759-antes.md` (copiado do checkout do antes).
 
 - **Máquina:** Intel Core i7-14650HX (16 núcleos, 24 threads), 32 GB de RAM, Windows 11 Pro, Java Temurin 21.0.12, heap de 2 GB. O servidor vazio fica em 0,57 ms de MSPT (p99 1,15 ms).

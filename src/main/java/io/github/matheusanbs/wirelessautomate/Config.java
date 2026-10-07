@@ -6,7 +6,7 @@ import java.util.Map;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Config do servidor ({@code serverconfig/wirelessautomate-server.toml}), para o modpack ajustar.
+ * Config do servidor ({@code config/wirelessautomate-server.toml}), para o modpack ajustar.
  * Nos limites de vazão, 0 significa sem limite.
  */
 public final class Config {
@@ -34,7 +34,7 @@ public final class Config {
         builder.push("performance");
         TICK_BUDGET_MS = builder
                 .comment("Teto de tempo do mod por tick, em ms. O trabalho que não couber continua no tick seguinte.")
-                .defineInRange("tickBudgetMs", 0.5, 0.05, 50.0);
+                .defineInRange("tickBudgetMs", 1.0, 0.05, 50.0);
         ADAPTIVE_BUDGET = builder
                 .comment("Reduz o teto sozinho quando o MSPT do servidor passa de 40 ms.")
                 .define("adaptiveBudget", true);

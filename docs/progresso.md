@@ -74,7 +74,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 - Canais: só redes + filtros no v1.
 - Receitas dos núcleos: só vanilla (Avançado: ouro + diamante; Elite: netherita + estrela do Nether; Ultimate: ovo do dragão).
-- Orçamento padrão: 0,5 ms/tick (fica como está).
+- Orçamento padrão: 1 ms/tick (era 0,5 ms; trocado pelo dono depois do benchmark, por mais vazão).
 - Cartões: slots por face e por tipo; passa se o filtro embutido ou algum cartão aceitar.
 - Duplicar cartão: receita cartão configurado + cartão vazio = dois iguais.
 - JEI: integração opcional agora (compileOnly + plugin).
@@ -87,6 +87,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-07 | Orçamento padrão do mod de 0,5 para 1 ms/tick (pedido do dono, por mais vazão; o benchmark de `docs/benchmark.md` foi medido com 0,5 ms). |
 | 2026-10-07 | Configurador mais fácil: Shift + clique num bloco sem roteador limpa a varinha toda (cópia e área) nos dois modos, e o tooltip mostra o estado e só os comandos do modo atual. |
 | 2026-10-07 | Upgrade do roteador na bancada (roteador + núcleo do tier seguinte, também no JEI), sem o item núcleo Básico, clique do meio no criativo pegando o tier certo e Sophisticated Storage carregado no `runClient` junto com o JEI. 89 GameTests. |
 | 2026-10-07 | Configurador: Shift + clique num bloco sem roteador, no modo Área, limpa a área marcada (o dono não achou como limpar). |

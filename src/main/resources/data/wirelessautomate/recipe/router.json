@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    " E ",
+    "IRI",
+    "III"
+  ],
+  "key": {
+    "E": { "item": "minecraft:ender_eye" },
+    "R": { "item": "minecraft:redstone" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "id": "wirelessautomate:router",
+    "count": 1
+  }
+}

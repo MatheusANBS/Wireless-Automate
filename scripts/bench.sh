@@ -22,7 +22,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT/run/bench"
-DEFAULT_SPEC="many:500:3:vanilla;many:500:3:soph;idle:500:3:vanilla;idle:500:3:soph;full:100:3:vanilla;full:500:3:vanilla;raw:2:3:vanilla;raw:2:3:soph;big:20:3:vanilla;big:20:3:soph;bigfull:20:3:vanilla;bigfull:20:3:soph;types:20:3:soph;mixed:498:3:vanilla;rebuild:500:3:vanilla"
+DEFAULT_SPEC="many:500:3:vanilla;many:500:3:soph;idle:500:3:vanilla;idle:500:3:soph;full:100:3:vanilla;full:500:3:vanilla;raw:2:3:vanilla;raw:2:3:soph;big:20:3:vanilla;big:20:3:soph;bigfull:20:3:vanilla;bigfull:20:3:soph;types:20:3:soph;mixed:498:3:vanilla;rebuild:500:3:vanilla;sparse:500:3:vanilla;sparse:500:3:soph;stock:20:3:soph;bigstack:2:3:vanilla;redstone:100:3:vanilla;tablet:1000:3:vanilla"
 SPEC="${1:-$DEFAULT_SPEC}"
 
 case "${SPEC}" in

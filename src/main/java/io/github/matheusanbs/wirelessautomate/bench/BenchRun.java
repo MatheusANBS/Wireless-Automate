@@ -41,7 +41,8 @@ final class BenchRun {
             double visitsPerTick, double nanosPerVisit, double nanosPerDelivery, double itemsPerSecond,
             double fluidPerSecond, double energyPerSecond, double opsPerSecond, int sourcesMoved, int sources,
             int sourcesSleeping, int sourcesTotal, int destinationsSleeping, int destinationsTotal,
-            long attachModNanos, long rebuilds, double rebuildMeanNanos, long afterTouchMaxNanos, int slots) {
+            long attachModNanos, long rebuilds, double rebuildMeanNanos, long afterTouchMaxNanos, int slots,
+            double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos) {
     }
 
     private enum Phase { SETTLE, BASELINE, ATTACHED, WARMUP, MEASURE, PAUSE }
@@ -67,6 +68,9 @@ final class BenchRun {
     private final Samples mod = new Samples();
     /** Tempo do mod no tick logo depois de {@link BenchScene#touch} (cenário de remontagem). */
     private final Samples afterTouch = new Samples();
+    /** Sincronização do Tablet aberto em cada tick medido ({@link BenchScenario#TABLET}), fora do laço do mod. */
+    private final Samples tablet = new Samples();
+    private long tabletNanos;
     private long limitNanos;
     private long attachModNanos;
     private long visitsStart;
@@ -111,6 +115,8 @@ final class BenchRun {
         mspt.clear();
         mod.clear();
         afterTouch.clear();
+        tablet.clear();
+        tabletNanos = 0;
         settled = 0;
         enter(Phase.SETTLE);
     }
@@ -118,6 +124,14 @@ final class BenchRun {
     private void enter(Phase next) {
         phase = next;
         phaseTick = 0;
+    }
+
+    /**
+     * Começo de um tick, dentro do tempo medido: o que roda no tick do jogo e não é do laço do mod.
+     * Hoje, só o Tablet aberto, que o {@code ServerPlayer} sincroniza a cada tick.
+     */
+    void preTick(MinecraftServer server) {
+        tabletNanos = !done && (phase == Phase.WARMUP || phase == Phase.MEASURE) ? scene.syncTablet() : 0;
     }
 
     /** Fim de um tick: registra as amostras da fase em que o tick rodou e prepara o próximo. */
@@ -149,7 +163,11 @@ final class BenchRun {
             case ATTACHED -> {
                 // O tick logo depois de pôr a rede: a primeira montagem das rotas.
                 attachModNanos = modNanos;
+                if (job.scenario() == BenchScenario.TABLET) {
+                    scene.openTablet();
+                }
                 enter(Phase.WARMUP);
+                scene.toggleClocks();
                 maybeRecycle();
             }
             case WARMUP -> {
@@ -157,11 +175,13 @@ final class BenchRun {
                     beginMeasure();
                     enter(Phase.MEASURE);
                 }
+                scene.toggleClocks();
                 maybeRecycle();
             }
             case MEASURE -> {
                 mspt.add(tickNanos);
                 mod.add(modNanos);
+                tablet.add(tabletNanos);
                 limitNanos = manager.budget().limitNanos();
                 if (server.getTickCount() % 20 == 0) {
                     // O gerenciador fecha a janela de operações neste mesmo tick.
@@ -183,6 +203,7 @@ final class BenchRun {
                     scene.teardown();
                     enter(Phase.PAUSE);
                 } else {
+                    scene.toggleClocks();
                     maybeRecycle();
                 }
             }
@@ -266,7 +287,8 @@ final class BenchRun {
                 stats == null ? 0 : stats.destinationsSleeping(),
                 stats == null ? 0 : stats.destinationsSleeping() + stats.destinationsAwake(),
                 attachModNanos, rebuilds, rebuilds <= 0 ? Double.NaN : (double) rebuildNanos / rebuilds,
-                afterTouch.max(), scene.slotsPerMachine());
+                afterTouch.max(), scene.slotsPerMachine(), rebuilds / seconds,
+                job.scenario() == BenchScenario.TABLET ? tablet.mean() : Double.NaN, tablet.max());
         reps.add(result);
         out.accept(repLine(job, result));
         if (ModList.get().isLoaded("spark")) {
@@ -282,15 +304,18 @@ final class BenchRun {
                         + " | %s visitas/tick, %s µs/visita, %s µs/entrega, %.1f entregas/s"
                         + " | %.0f itens/s, %.0f mB/s, %.0f FE/s | origens que moveram %d/%d"
                         + " | dormindo: origens %d/%d, destinos %d/%d"
-                        + " | 1ª montagem %.3f ms, %s remontagens (%s ms cada; tick depois da mudança: máx %.3f ms) | %d slots",
+                        + " | 1ª montagem %.3f ms, %s remontagens (%.1f/s, %s ms cada; tick depois da mudança: máx %.3f ms)"
+                        + " | %d slots%s",
                 r.rep(), ms(r.baseMsptMean()), ms(r.baseMsptP99()), ms(r.msptMean()), ms(r.msptP50()), ms(r.msptP99()),
                 ms(r.msptMax()), ms(r.modMean()), ms(r.modP50()), ms(r.modP99()), ms(r.modMax()), ms(r.limitNanos()),
                 r.exhaustedPct(), num(r.visitsPerTick(), 1), num(r.nanosPerVisit() / 1000.0, 2), num(r.nanosPerDelivery() / 1000.0, 2),
                 r.opsPerSecond(),
                 r.itemsPerSecond(), r.fluidPerSecond(), r.energyPerSecond(), r.sourcesMoved(), r.sources(),
                 r.sourcesSleeping(), r.sourcesTotal(), r.destinationsSleeping(), r.destinationsTotal(),
-                ms(r.attachModNanos()), r.rebuilds() < 0 ? "—" : Long.toString(r.rebuilds()), num(ms(r.rebuildMeanNanos()), 3),
-                ms(r.afterTouchMaxNanos()), r.slots());
+                ms(r.attachModNanos()), r.rebuilds() < 0 ? "—" : Long.toString(r.rebuilds()), r.rebuildsPerSecond(),
+                num(ms(r.rebuildMeanNanos()), 3), ms(r.afterTouchMaxNanos()), r.slots(),
+                Double.isNaN(r.tabletMeanNanos()) ? "" : String.format(Locale.ROOT, " | Tablet aberto %.4f ms/tick (máx %.3f)",
+                        ms(r.tabletMeanNanos()), ms(r.tabletMaxNanos())));
     }
 
     private void summarize() {
@@ -299,7 +324,7 @@ final class BenchRun {
 
     /** Linha da tabela de resumo (Markdown): média ± desvio padrão entre as repetições. */
     static String summaryLine(Job job, List<Rep> reps) {
-        return String.format(Locale.ROOT, "| %s | %s | %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |",
+        return String.format(Locale.ROOT, "| %s | %s | %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |",
                 job.scenario().id, job.storage().id, job.nodes(), reps.size(),
                 pm(reps, r -> ms(r.baseMsptMean()), 3),
                 pm(reps, r -> ms(r.msptMean()), 3),
@@ -311,12 +336,16 @@ final class BenchRun {
                 pm(reps, r -> r.nanosPerDelivery() / 1000.0, 2),
                 pm(reps, r -> r.itemsPerSecond() + r.fluidPerSecond() + r.energyPerSecond(), 0),
                 pm(reps, r -> 100.0 * r.sourcesMoved() / Math.max(1, r.sources()), 0),
-                pm(reps, r -> ms(r.attachModNanos()), 2));
+                pm(reps, r -> ms(r.attachModNanos()), 2),
+                pm(reps, Rep::visitsPerTick, 1),
+                pm(reps, Rep::rebuildsPerSecond, 1),
+                pm(reps, r -> ms(r.tabletMeanNanos()), 4));
     }
 
     static final String SUMMARY_HEADER = "| cenário | armaz. | n | reps | MSPT base (ms) | MSPT com rede (ms) | mod média (ms/tick)"
             + " | mod p99 | mod máx | ticks c/ orçamento esgotado (%) | µs/visita | µs/entrega | unidades/s"
-            + " | origens que moveram (%) | 1ª montagem (ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|";
+            + " | origens que moveram (%) | 1ª montagem (ms) | visitas/tick | remontagens/s | Tablet (ms/tick) |"
+            + "\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|";
 
     private static String pm(List<Rep> reps, java.util.function.ToDoubleFunction<Rep> field, int decimals) {
         double[] values = reps.stream().mapToDouble(field).toArray();

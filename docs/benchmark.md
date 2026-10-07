@@ -18,7 +18,7 @@ A rodada completa na máquina local (seção "Máquina local: antes e depois") c
 ## Como rodar
 
 ```bash
-./scripts/bench.sh                                # todos os cenários, 3 repetições (cerca de 25 min)
+./scripts/bench.sh                                # todos os cenários, 3 repetições (cerca de 30 min)
 ./scripts/bench.sh many:500:3:soph,idle:500:3     # tarefas escolhidas: cenário[:n[:reps[:vanilla|soph]]]
 WA_BENCH_MEASURE=400 ./scripts/bench.sh rebuild   # mais ticks de medição
 WA_BENCH_JFR=1 WA_BENCH_SPRINT=1 ./scripts/bench.sh many:500:1:soph   # perfil do Java Flight Recorder
@@ -68,8 +68,23 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `types` | Como `big`, com lista negra de centenas de itens na origem e lista branca de mais de mil entradas (itens e tags) no destino | Custo de filtro e varredura ("Muitos tipos") | Abaixo do orçamento |
 | `mixed` | Um terço de pares de itens (barris), um terço de fluidos e um terço de energia (máquinas de teste: fonte infinita e ralo, `bench/BenchCapabilities.java`) | Comportamento realista ("Misto") | Abaixo do orçamento |
 | `rebuild` | Como `many`, e a cada segundo um nó muda de prioridade | Custo de remontar as rotas | Abaixo do orçamento |
+| `sparse` | n nós (padrão 500): só a primeira origem tem pedregulho, as outras 249 estão vazias; destinos vazios | Quantas origens vazias cada entrega acorda (visitas por tick com uma única origem ativa) | Visitas por tick perto das de uma origem só |
+| `stock` | Pares de inventários grandes (padrão 20): origem cheia de pedregulho; destino com lista branca de pedregulho com estoque de 1.000 e já com 1.000 dentro | Custo de tentar inserir num destino que já atingiu o estoque | Perto de 0 (nada se move) |
+| `bigstack` | 1 par (máquinas de teste): origem de 1 slot com uma pilha de 1.000.000 de pedregulhos (como gaveta ou bin, extrai até 64 por vez) para um ralo, tier Elite | Vazão de uma pilha enorme num slot só | Perto da vazão do Elite (131.072 itens/s) |
+| `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
+| `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
 
 Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots.
+
+Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack`, `redstone` e `tablet`):
+
+- **`sparse`:** a cada 20 ticks o benchmark reenche só a primeira origem e esvazia os destinos. As colunas que importam são "visitas/tick" (do `visitCount()` do `NetworkManager`, que conta cada visita de origem, inclusive as voltas extras) e "origens que moveram" (deve ser 1 de 250).
+- **`stock`:** nada é reenchido nem esvaziado: o destino fica sempre no estoque. Mede o custo de cada visita que tenta e falha por estoque, e se a origem chega a dormir ("dormindo" na linha da repetição).
+- **`bigstack`:** usa as máquinas de teste de `bench/BenchCapabilities.java` (bloco de ouro: a pilha enorme, sem estado; bloco de ferro: o ralo), então só roda no `benchServer` e com `vanilla`.
+- **`redstone`:** o benchmark troca os blocos de redstone no fim do tick, fora do tempo medido (como o reenchimento); a remontagem que isso provoca cai no tick seguinte, dentro do tempo do mod. A coluna "remontagens/s" vem de `rebuildCount()`; com o relógio, chega a 20 por segundo.
+- **`tablet`:** o menu é criado direto (`new TabletMenu`) para um `FakePlayer` com o UUID do dono da rede da cena, e o benchmark chama `pollSnapshot()` (o que o `broadcastChanges()` do menu faz no servidor, menos o envio) no começo de cada tick, dentro do MSPT medido, como o `ServerPlayer` faz com a tela aberta. O tempo dessa chamada sai na coluna "Tablet (ms/tick)" e na linha da repetição (média e máximo), à parte do "mod", porque roda fora do orçamento. O pacote não é enviado (o jogador falso não tem canal de rede), então o custo medido é o de montar e comparar o snapshot, sem a serialização.
+
+As colunas "visitas/tick", "remontagens/s" e "Tablet (ms/tick)" valem para todos os cenários; "Tablet" mostra "—" fora do `tablet`.
 
 ## Resultados (rodada base, motor 48c7232)
 

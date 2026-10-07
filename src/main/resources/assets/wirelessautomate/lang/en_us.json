@@ -126,5 +126,6 @@
   "item.wirelessautomate.filter_card.tooltip.components": "Requires matching components",
   "item.wirelessautomate.filter_card.tooltip.open": "Right-click in the air: edit the filter",
   "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + right-click in the air: switch between items and fluids (empty)",
-  "item.wirelessautomate.filter_card.tooltip.router": "In the main hand, on a router's filter screen: import and export"
+  "item.wirelessautomate.filter_card.tooltip.router": "In the main hand, on a router's filter screen: import and export",
+  "gui.wirelessautomate.router.view.hint": "Drag to rotate; click a face to select it"
 }

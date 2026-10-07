@@ -126,5 +126,6 @@
   "item.wirelessautomate.filter_card.tooltip.components": "Exige componentes iguais",
   "item.wirelessautomate.filter_card.tooltip.open": "Clique direito no ar: editar o filtro",
   "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + clique direito no ar: alternar entre itens e fluidos (vazio)",
-  "item.wirelessautomate.filter_card.tooltip.router": "Na mão principal, na tela de filtro de um roteador: importar e exportar"
+  "item.wirelessautomate.filter_card.tooltip.router": "Na mão principal, na tela de filtro de um roteador: importar e exportar",
+  "gui.wirelessautomate.router.view.hint": "Arraste para girar; clique numa face para escolher"
 }

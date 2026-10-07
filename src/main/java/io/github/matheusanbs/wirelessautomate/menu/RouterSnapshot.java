@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -38,6 +39,7 @@ import net.neoforged.neoforge.items.IItemHandler;
  * @param machine  ícone da máquina conectada ({@link ItemStack#EMPTY} se não houver item)
  * @param machineState estado do bloco da máquina, para o visor 3D (ar se não houver)
  * @param faces    {@code ResourceType.values().length × 6}, no índice de {@link #index}
+ * @param chunkLoad estado do Upgrade de chunk loading ({@link ChunkLoadState#NONE} sem upgrade)
  */
 public record RouterSnapshot(
         BlockPos pos,
@@ -49,7 +51,16 @@ public record RouterSnapshot(
         boolean powered,
         ItemStack machine,
         BlockState machineState,
-        List<FaceView> faces) {
+        List<FaceView> faces,
+        ChunkLoadState chunkLoad) {
+
+    /** Sem o estado do upgrade de chunk loading (capturas e prévias que não o mostram). */
+    public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
+            List<Optional<UUID>> typeNetworks, List<NetworkEntry> networks, boolean powered, ItemStack machine,
+            BlockState machineState, List<FaceView> faces) {
+        this(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState, faces,
+                ChunkLoadState.NONE);
+    }
 
     /** Uma rede no seletor. {@code owned}: o jogador é o dono. */
     public record NetworkEntry(UUID id, String name, int color, boolean owned) {
@@ -128,7 +139,7 @@ public record RouterSnapshot(
 
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
                 List.copyOf(typeNetworks), List.copyOf(networks), router.powered(), machine,
-                machineState, List.of(faces));
+                machineState, List.of(faces), router.chunkLoadState());
     }
 
     /** Slots (itens), tanques (fluidos) ou 1 (energia) da face; {@code -1} sem a capability. */
@@ -182,6 +193,7 @@ public record RouterSnapshot(
             buf.writeVarInt(face.filterSize);
             buf.writeBoolean(face.blacklist);
         }
+        buf.writeEnum(s.chunkLoad);
     }
 
     private static RouterSnapshot decode(RegistryFriendlyByteBuf buf) {
@@ -208,7 +220,8 @@ public record RouterSnapshot(
             faces.add(new FaceView(buf.readEnum(PortMode.class), buf.readVarInt(),
                     buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
         }
+        ChunkLoadState chunkLoad = buf.readEnum(ChunkLoadState.class);
         return new RouterSnapshot(pos, name, tier, facing, List.copyOf(typeNetworks), List.copyOf(networks), powered, machine,
-                machineState, List.copyOf(faces));
+                machineState, List.copyOf(faces), chunkLoad);
     }
 }

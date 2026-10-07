@@ -154,11 +154,18 @@ public class RouterBlock extends BaseEntityBlock {
         }
     }
 
-    /** Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro. */
+    /**
+     * Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro e o
+     * Upgrade de chunk loading. O upgrade de tier troca só o estado e não passa por aqui.
+     */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             Containers.dropContents(level, pos, router.removeAllCards());
+            ItemStack upgrade = router.removeUpgrade();
+            if (!upgrade.isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgrade);
+            }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

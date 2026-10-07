@@ -206,5 +206,17 @@
   "item.wirelessautomate.filter_card.tooltip.open": "Right-click in the air: edit the filter",
   "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + right-click in the air: switch between items and fluids (empty)",
   "item.wirelessautomate.filter_card.tooltip.router": "In the main hand, on a router's filter screen: import and export",
-  "gui.wirelessautomate.router.view.hint": "Drag to rotate; click a face to select it"
+  "gui.wirelessautomate.router.view.hint": "Drag to rotate; click a face to select it",
+  "item.wirelessautomate.chunk_loader_upgrade.tooltip": "Keeps the router's chunk and the machine's chunk loaded",
+  "item.wirelessautomate.chunk_loader_upgrade.tooltip.slot": "Goes in the upgrade slot of the router screen",
+  "gui.wirelessautomate.router.upgrade.tooltip": "Upgrade slot",
+  "gui.wirelessautomate.router.upgrade.tooltip.effect": "Chunk Loading Upgrade: keeps the router's chunk and the machine's chunk loaded",
+  "gui.wirelessautomate.router.upgrade.tooltip.add": "Place the upgrade here or Shift + click it in the inventory",
+  "gui.wirelessautomate.router.upgrade.tooltip.remove": "Shift + click: remove",
+  "gui.wirelessautomate.router.upgrade.state.active": "Active: chunks loaded",
+  "gui.wirelessautomate.router.upgrade.state.active.detail": "The router and the machine keep working away from players",
+  "gui.wirelessautomate.router.upgrade.state.limit": "Inactive: owner's chunk limit",
+  "gui.wirelessautomate.router.upgrade.state.limit.detail": "Whoever placed the upgrade already forces as many chunks as the server allows",
+  "gui.wirelessautomate.router.upgrade.state.disabled": "Inactive: disabled on the server",
+  "gui.wirelessautomate.router.upgrade.state.disabled.detail": "The server config disabled the Chunk Loading Upgrade"
 }

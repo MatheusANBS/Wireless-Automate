@@ -82,6 +82,13 @@ behind it drops the router.
 
 ## Specs per tier
 
+<Row gap="12">
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
+</Row>
+
 Throughput is **per face and per type**, counted at the sender. Chemicals use the fluid limit.
 Your server may use different values: the upgrade card's tooltip shows yours.
 

@@ -1,3 +1,23 @@
 {
-  "parent": "wirelessautomate:block/router_basic"
+  "parent": "wirelessautomate:block/router_basic",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/router_advanced"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/router_elite"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/router_ultimate"
+    }
+  ]
 }

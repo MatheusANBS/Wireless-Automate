@@ -948,7 +948,7 @@ public final class DevEndToEnd {
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
             list.add(capture("guia-" + page + suffix));
             // O resto da página: rola e captura de novo (as páginas longas passam de uma tela).
-            for (int part = 2; part <= 3; part++) {
+            for (int part = 2; part <= 4; part++) {
                 list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     Screen screen = minecraft.screen;

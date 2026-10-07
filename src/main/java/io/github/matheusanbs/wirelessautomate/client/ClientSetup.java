@@ -1,15 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
@@ -19,6 +23,16 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 @EventBusSubscriber(modid = WirelessAutomate.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
     private ClientSetup() {
+    }
+
+    /**
+     * Propriedade {@code wirelessautomate:tier} do item do roteador (0 = Básico ... 3 = Ultimate):
+     * os overrides de {@code models/item/router.json} trocam o ícone pelo modelo do tier.
+     */
+    @SubscribeEvent
+    static void clientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
+                (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal()));
     }
 
     @SubscribeEvent

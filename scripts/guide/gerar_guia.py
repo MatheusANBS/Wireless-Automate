@@ -418,6 +418,13 @@ o roteador.
 
 ## Especificações por tier
 
+<Row gap="12">
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
+</Row>
+
 A vazão vale **por face e por tipo**, contada em quem envia. Químicos usam o limite de fluido.
 O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra os do seu.
 
@@ -488,6 +495,13 @@ behind it drops the router.
 | **Redstone: No signal** | | The face only works without a signal. |
 
 ## Specs per tier
+
+<Row gap="12">
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
+</Row>
 
 Throughput is **per face and per type**, counted at the sender. Chemicals use the fluid limit.
 Your server may use different values: the upgrade card's tooltip shows yours.

@@ -144,6 +144,15 @@ public final class RecipeGameTests {
         BlockState elitePlaced = ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.ELITE);
         ItemStack picked = ModBlocks.ROUTER.get().getCloneItemStack(helper.getLevel(), BlockPos.ZERO, elitePlaced);
         helper.assertValueEqual(RouterBlockItem.tierOf(picked), RouterTier.ELITE, "clique do meio");
+
+        // O tooltip do cartão diz o que ele aumenta, com os números da config.
+        List<Component> lines = new java.util.ArrayList<>();
+        ItemStack advancedCard = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get());
+        advancedCard.getItem().appendHoverText(advancedCard, Item.TooltipContext.EMPTY, lines,
+                net.minecraft.world.item.TooltipFlag.NORMAL);
+        String text = lines.toString();
+        helper.assertTrue(text.contains("8,192") && text.contains("512") && text.contains("1,024"),
+                "tooltip sem os números do tier: " + text);
         helper.succeed();
     }
 

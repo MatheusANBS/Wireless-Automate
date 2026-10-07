@@ -89,6 +89,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-07 | O que cada cartão de upgrade aumenta: tooltip do cartão (antes → depois, com os valores da config) e tabela na página Cartões de Upgrade do guia. |
 | 2026-10-07 | Livro-guia no GuideME (13 páginas em inglês e português, cenas 3D com anotações, receitas, tabela de tiers e gestos de cada item) e receitas que faltavam: Vinculador, Configurador, Tablet de Rede e o próprio guia. e2e com 105 passos. |
 | 2026-10-07 | Químicos do Mekanism (motor, filtro, telas, JEI; GameTests numa run com o Mekanism), Mekanism no `runClient`, texturas polidas por script (subagente) com os upgrades virando cartões, e o build passando a falhar se o servidor de GameTests não chega ao fim (antes, um mod que não carregava passava). 89 + 3 GameTests. |
 | 2026-10-07 | Orçamento padrão do mod de 0,5 para 1 ms/tick (pedido do dono, por mais vazão; o benchmark de `docs/benchmark.md` foi medido com 0,5 ms). |

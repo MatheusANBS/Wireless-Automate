@@ -22,6 +22,20 @@ item_ids:
 Todo roteador nasce **Básico**. Os cartões sobem um tier de cada vez: Básico → Avançado → Elite →
 Ultimate. A configuração do roteador (faces, filtros, redes) não se perde.
 
+## O que cada cartão aumenta
+
+Valores padrão, **por face e por tipo** (o servidor pode mudar na config; o tooltip do cartão
+mostra os valores do seu servidor). Químicos usam o limite de fluido.
+
+| Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
+| --- | --- | --- | --- | --- |
+| <ItemImage id="wirelessautomate:tier_core_advanced" /> Avançado (Básico → Avançado) | 512 → **8.192** (16×) | 32.000 → **512.000** (16×) | 16.000 → **256.000** (16×) | 128 → **1.024** blocos |
+| <ItemImage id="wirelessautomate:tier_core_elite" /> Elite (Avançado → Elite) | 8.192 → **131.072** (16×) | 512.000 → **8.000.000** (16×) | 256.000 → **4.000.000** (16×) | 1.024 blocos → **a dimensão inteira** |
+| <ItemImage id="wirelessautomate:tier_core_ultimate" /> Ultimate (Elite → Ultimate) | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | a dimensão → **todas as dimensões** |
+
+"Sem limite" quer dizer que só o orçamento de tempo do mod segura a vazão (veja
+[Desempenho e config](performance.md)). O alcance e as dimensões contam pelo tier da **origem**.
+
 ## Como usar
 
 - **No mundo:** clique com o cartão do tier seguinte num roteador já colocado.

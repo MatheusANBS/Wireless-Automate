@@ -11,7 +11,7 @@ navigation:
 
 **Wireless** transport of items, fluids, energy and Mekanism chemicals. Attach a router to each
 machine, say what each of its faces does and you're done: every router on the same network trades
-resources with the others, with no pipes and no lag.
+resources with the others, with no pipes.
 
 <br clear="all" />
 
@@ -44,8 +44,9 @@ resources with the others, with no pipes and no lag.
 
 ## This guide
 
-Make one for a friend: book + redstone, in a crafting table. With the mouse over one of the mod's
-items, in your inventory or in JEI, hold **G** to open its page.
+You get this book the first time you join the world, and it's also in the mod's creative tab. To
+make another: book + redstone, in a crafting table. With the mouse over one of the mod's items, in
+your inventory or in JEI, hold **G** to open its page.
 
 <Recipe id="wirelessautomate:guide" />
 

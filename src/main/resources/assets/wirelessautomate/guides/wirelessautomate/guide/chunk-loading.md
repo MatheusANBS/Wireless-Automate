@@ -22,8 +22,7 @@ Keeps the router's chunk (and its machine) loaded, so it keeps working while you
 | | |
 | --- | --- |
 | **Goes in** | The slot in the router screen's header. |
-| **Limit** | 16 chunks per player (default); several routers in one chunk count once. |
-| **Stacks to** | 1 |
+| **Limit** | Each player keeps up to 16 chunks; several routers in one chunk count once. |
 
 ## States
 
@@ -31,14 +30,7 @@ Keeps the router's chunk (and its machine) loaded, so it keeps working while you
 | --- | --- |
 | **Active: chunks loaded** | The router and the machine keep working away from players. |
 | **Inactive: owner's chunk limit** | Whoever placed the upgrade already forces as many chunks as allowed. |
-| **Inactive: disabled on the server** | The server config turned the upgrade off. |
-
-## Server config
-
-| Key | Default | What it does |
-| --- | --- | --- |
-| `chunkLoading.enabled` | `true` | Turns the upgrade on or off. |
-| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forced per player (0 = unlimited). |
+| **Inactive: disabled on the server** | The server has turned this upgrade off. |
 
 ## Recipe
 

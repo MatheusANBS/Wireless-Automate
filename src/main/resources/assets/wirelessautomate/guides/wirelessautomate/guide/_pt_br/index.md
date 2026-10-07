@@ -11,7 +11,7 @@ navigation:
 
 Transporte **sem fios** de itens, fluidos, energia e químicos do Mekanism. Prenda um roteador em
 cada máquina, diga o que cada face dela faz e pronto: todos os roteadores da mesma rede trocam
-recursos entre si, sem canos e sem lag.
+recursos entre si, sem canos.
 
 <br clear="all" />
 
@@ -44,7 +44,8 @@ recursos entre si, sem canos e sem lag.
 
 ## Este guia
 
-Faça outro para um amigo: livro + redstone, na bancada. Com o mouse sobre um item do mod, no
+Você recebe este livro ao entrar no mundo pela primeira vez, e ele também está na aba criativa do
+mod. Para fazer outro: livro + redstone, na bancada. Com o mouse sobre um item do mod, no
 inventário ou no JEI, segure **G** para abrir a página dele.
 
 <Recipe id="wirelessautomate:guide" />

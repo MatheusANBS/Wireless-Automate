@@ -74,5 +74,5 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | --- | --- |
 | Destino longe demais | Fica de fora daquela origem. O alcance depende do tier de quem envia ([Roteador](router.md)). |
 | Outra dimensão | Só com origem **Ultimate**. |
-| Chunk descarregado | A rota pausa, sem custo, e volta quando o chunk carrega. |
+| Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
 | Quer manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |

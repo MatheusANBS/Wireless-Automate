@@ -3,7 +3,7 @@ navigation:
   title: Troubleshooting
   icon: minecraft:barrier
   parent: index.md
-  position: 13
+  position: 12
 ---
 
 
@@ -23,7 +23,7 @@ Something not moving? Check in order: it's almost always one of these.
 | The mode shows as unavailable | The machine gives no access to that type through that face. | Pick another face in the 3D viewer, or configure the machine. |
 | Chemicals don't move | The Mekanism machine's face is disabled in its side config. | Enable the face with Mekanism's configurator tool. |
 | Can't put it in a network | The network belongs to another player. | Ask the owner, or use one of yours. |
-| Less throughput than the tier | The mod's budget is at its limit. | Normal with many machines; see [Performance and config](performance.md). |
+| Less throughput than the tier | Many machines moving at once. | Normal: throughput is shared between them, without freezing the game. |
 
-Still stuck? `/wa profile` shows, per network, how many sources and destinations are awake or
-sleeping.
+Still stuck? Open the [Network Tablet](network-tablet.md): the **Statistics** tab shows what each
+network is moving and which destinations are full.

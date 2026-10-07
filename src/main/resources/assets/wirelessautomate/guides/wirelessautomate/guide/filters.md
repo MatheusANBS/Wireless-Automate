@@ -46,5 +46,3 @@ At the source, the filter decides what **leaves**; at the destination, what **en
 | **Whitelist / blacklist** | Inverts the filter. |
 | **Components** (items) | Ignore: enchanted pickaxe = pickaxe. Require: only identical. |
 | **Stock** | At a destination, accept only up to N. At a source, always keep N. Click an entry to set it. |
-
-Checking an item costs the same with 9 or thousands of entries: the filter is compiled.

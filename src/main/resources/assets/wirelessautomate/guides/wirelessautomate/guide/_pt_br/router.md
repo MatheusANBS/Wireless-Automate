@@ -27,8 +27,8 @@ máquina faz.
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
+| **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
-| **Empilha** | 64 (o tier vai junto com o item ao quebrar). |
 
 ## Receita
 
@@ -52,17 +52,15 @@ máquina faz.
 Tanto faz em qual face ele fica: pela tela, ele acessa todas as seis. Quebrar o bloco de trás solta
 o roteador.
 
-## A tela
+## Configurar uma face
 
-| Parte | O que faz |
+| Passo | Como |
 | --- | --- |
-| **Abas** | Itens, Fluidos, Energia e Químicos. Cada aba tem a própria [rede](networks.md), escolhida no seletor ao lado das abas. |
-| **Visor 3D** | Arraste para girar, use a roda para zoom e clique numa face da máquina para escolhê-la. |
-| **Botões C N L B S O** | Escolhem a face: Cima, Norte, Leste, Baixo, Sul e Oeste. |
-| **Modo** | O que a face escolhida faz (tabela abaixo). |
-| **Mais** | Prioridade e redstone da face. |
-| **Filtro** | O botão **Editar** abre o [filtro](filters.md) da face; ao lado, dois slots de [Cartão de Filtro](filter-card.md). |
-| **Cabeçalho** | Nome, vazão atual, tier e o slot do [Upgrade de Chunk Loading](chunk-loading.md). |
+| **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia ou Químicos. |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões C N L B S O (Cima, Norte, Leste, Baixo, Sul, Oeste). |
+| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
+| **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
+| **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
 
 ## Modos da face
 
@@ -85,6 +83,7 @@ o roteador.
 ## Especificações por tier
 
 A vazão vale **por face e por tipo**, contada em quem envia. Químicos usam o limite de fluido.
+O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra os do seu.
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
 | --- | --- | --- | --- | --- |

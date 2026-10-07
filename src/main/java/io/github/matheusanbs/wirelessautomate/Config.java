@@ -19,6 +19,7 @@ public final class Config {
     public static final ModConfigSpec.IntValue CHUNK_LOADING_MAX_PER_PLAYER;
     public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
+    public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
 
     public record TierValues(
             ModConfigSpec.LongValue itemsPerSecond,
@@ -75,6 +76,12 @@ public final class Config {
         LINKER_MAX_DISTANCE = builder
                 .comment("Distância máxima, em blocos, do jogador até a área para vincular ou colar por área (0 = sem limite).")
                 .defineInRange("maxDistance", 64, 0, 4096);
+        builder.pop();
+
+        builder.push("guide");
+        GIVE_GUIDE_ON_FIRST_JOIN = builder
+                .comment("Entrega o livro-guia (precisa do GuideME) a cada jogador no primeiro login.")
+                .define("giveOnFirstJoin", true);
         builder.pop();
 
         SPEC = builder.build();

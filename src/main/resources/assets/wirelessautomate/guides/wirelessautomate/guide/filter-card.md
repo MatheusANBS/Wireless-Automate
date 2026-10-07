@@ -22,7 +22,6 @@ A full filter in an item, to reuse on many faces. Works for items or for fluids.
 | | |
 | --- | --- |
 | **Goes in** | The face's two card slots, on the router screen (per type: items or fluids). |
-| **Stacks to** | 16 |
 | **Recipe** | Makes 2 cards. |
 
 ## Actions

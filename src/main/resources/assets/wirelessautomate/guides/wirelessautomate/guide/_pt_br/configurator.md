@@ -24,7 +24,6 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
-| **Empilha** | 1 |
 
 ## Comandos
 

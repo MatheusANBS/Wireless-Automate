@@ -24,8 +24,8 @@ Ultimate. The router's configuration (faces, filters, networks) is kept.
 
 ## What each card raises
 
-Default values, **per face and per type**. The server can change them in the config; the card's
-tooltip shows your server's values. Chemicals use the fluid limit.
+Per face and per type. The card's tooltip shows your server's values. Chemicals use the fluid
+limit.
 
 | Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
 | --- | --- | --- | --- | --- |
@@ -33,9 +33,7 @@ tooltip shows your server's values. Chemicals use the fluid limit.
 | <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 1,024 → **the whole dimension** |
 | <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | **every dimension** |
 
-Each step multiplies throughput by 16. "Unlimited" means only the mod's time budget limits
-throughput (see [Performance and config](performance.md)). Range and dimensions follow the
-**sender's** tier.
+Each step multiplies throughput by 16. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 

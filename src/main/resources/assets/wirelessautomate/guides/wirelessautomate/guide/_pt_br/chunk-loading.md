@@ -22,8 +22,7 @@ Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabal
 | | |
 | --- | --- |
 | **Vai em** | O slot do cabeçalho da tela do roteador. |
-| **Limite** | 16 chunks por jogador (padrão); vários roteadores no mesmo chunk contam uma vez. |
-| **Empilha** | 1 |
+| **Limite** | Cada jogador mantém até 16 chunks; vários roteadores no mesmo chunk contam uma vez. |
 
 ## Estados
 
@@ -31,14 +30,7 @@ Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabal
 | --- | --- |
 | **Ativo: chunks carregados** | O roteador e a máquina continuam trabalhando longe dos jogadores. |
 | **Inativo: limite de chunks do dono** | Quem pôs o upgrade já força o máximo de chunks permitido. |
-| **Inativo: desligado no servidor** | A config do servidor desligou o upgrade. |
-
-## Config do servidor
-
-| Chave | Padrão | O que faz |
-| --- | --- | --- |
-| `chunkLoading.enabled` | `true` | Liga ou desliga o upgrade. |
-| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forçados por jogador (0 = sem limite). |
+| **Inativo: desligado no servidor** | O servidor desativou este upgrade. |
 
 ## Receita
 

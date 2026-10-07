@@ -196,7 +196,7 @@ page('index.md', front('Wireless Automate', 'wirelessautomate:router', parent=No
 
 Transporte **sem fios** de itens, fluidos, energia e químicos do Mekanism. Prenda um roteador em
 cada máquina, diga o que cada face dela faz e pronto: todos os roteadores da mesma rede trocam
-recursos entre si, sem canos e sem lag.
+recursos entre si, sem canos.
 
 <br clear="all" />
 
@@ -229,7 +229,8 @@ recursos entre si, sem canos e sem lag.
 
 ## Este guia
 
-Faça outro para um amigo: livro + redstone, na bancada. Com o mouse sobre um item do mod, no
+Você recebe este livro ao entrar no mundo pela primeira vez, e ele também está na aba criativa do
+mod. Para fazer outro: livro + redstone, na bancada. Com o mouse sobre um item do mod, no
 inventário ou no JEI, segure **G** para abrir a página dele.
 
 <Recipe id="wirelessautomate:guide" />
@@ -244,7 +245,7 @@ inventário ou no JEI, segure **G** para abrir a página dele.
 
 **Wireless** transport of items, fluids, energy and Mekanism chemicals. Attach a router to each
 machine, say what each of its faces does and you're done: every router on the same network trades
-resources with the others, with no pipes and no lag.
+resources with the others, with no pipes.
 
 <br clear="all" />
 
@@ -277,8 +278,9 @@ resources with the others, with no pipes and no lag.
 
 ## This guide
 
-Make one for a friend: book + redstone, in a crafting table. With the mouse over one of the mod's
-items, in your inventory or in JEI, hold **G** to open its page.
+You get this book the first time you join the world, and it's also in the mod's creative tab. To
+make another: book + redstone, in a crafting table. With the mouse over one of the mod's items, in
+your inventory or in JEI, hold **G** to open its page.
 
 <Recipe id="wirelessautomate:guide" />
 
@@ -372,8 +374,8 @@ máquina faz.
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
+| **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
-| **Empilha** | 64 (o tier vai junto com o item ao quebrar). |
 
 ## Receita
 
@@ -386,17 +388,15 @@ máquina faz.
 Tanto faz em qual face ele fica: pela tela, ele acessa todas as seis. Quebrar o bloco de trás solta
 o roteador.
 
-## A tela
+## Configurar uma face
 
-| Parte | O que faz |
+| Passo | Como |
 | --- | --- |
-| **Abas** | Itens, Fluidos, Energia e Químicos. Cada aba tem a própria [rede](networks.md), escolhida no seletor ao lado das abas. |
-| **Visor 3D** | Arraste para girar, use a roda para zoom e clique numa face da máquina para escolhê-la. |
-| **Botões C N L B S O** | Escolhem a face: Cima, Norte, Leste, Baixo, Sul e Oeste. |
-| **Modo** | O que a face escolhida faz (tabela abaixo). |
-| **Mais** | Prioridade e redstone da face. |
-| **Filtro** | O botão **Editar** abre o [filtro](filters.md) da face; ao lado, dois slots de [Cartão de Filtro](filter-card.md). |
-| **Cabeçalho** | Nome, vazão atual, tier e o slot do [Upgrade de Chunk Loading](chunk-loading.md). |
+| **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia ou Químicos. |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões C N L B S O (Cima, Norte, Leste, Baixo, Sul, Oeste). |
+| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
+| **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
+| **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
 
 ## Modos da face
 
@@ -419,6 +419,7 @@ o roteador.
 ## Especificações por tier
 
 A vazão vale **por face e por tipo**, contada em quem envia. Químicos usam o limite de fluido.
+O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra os do seu.
 
 ''' + TIER_TABLE['pt'] + '''
 
@@ -444,8 +445,8 @@ machine face does.
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
+| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
-| **Stacks to** | 64 (the tier stays on the item when broken). |
 
 ## Recipe
 
@@ -458,17 +459,15 @@ machine face does.
 It doesn't matter which face it sits on: from its screen it reaches all six. Breaking the block
 behind it drops the router.
 
-## The screen
+## Setting up a face
 
-| Part | What it does |
+| Step | How |
 | --- | --- |
-| **Tabs** | Items, Fluids, Energy and Chemicals. Each tab has its own [network](networks.md), picked in the selector next to the tabs. |
-| **3D viewer** | Drag to rotate, scroll to zoom and click a machine face to select it. |
-| **U N E D S W buttons** | Pick the face: Up, North, East, Down, South and West. |
-| **Mode** | What the selected face does (table below). |
-| **More** | The face's priority and redstone. |
-| **Filter** | The **Edit** button opens the face's [filter](filters.md); next to it are two [Filter Card](filter-card.md) slots. |
-| **Header** | Name, current throughput, tier and the [Chunk Loading Upgrade](chunk-loading.md) slot. |
+| **1. Pick the type** | Click the tab: Items, Fluids, Energy or Chemicals. |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
+| **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
+| **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
+| **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
 
 ## Face modes
 
@@ -491,6 +490,7 @@ behind it drops the router.
 ## Specs per tier
 
 Throughput is **per face and per type**, counted at the sender. Chemicals use the fluid limit.
+Your server may use different values: the upgrade card's tooltip shows yours.
 
 ''' + TIER_TABLE['en'] + '''
 
@@ -517,8 +517,8 @@ A configuração do roteador (faces, filtros, redes) não se perde.
 
 ## O que cada cartão aumenta
 
-Valores padrão, **por face e por tipo**. O servidor pode mudá-los na config; o tooltip do cartão
-mostra os valores do seu servidor. Químicos usam o limite de fluido.
+Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor. Químicos usam o
+limite de fluido.
 
 | Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
 | --- | --- | --- | --- | --- |
@@ -526,9 +526,7 @@ mostra os valores do seu servidor. Químicos usam o limite de fluido.
 | ''' + item('tier_core_elite') + ''' **Elite** | 8.192 → **131.072** | 512.000 → **8.000.000** | 256.000 → **4.000.000** | 1.024 → **a dimensão inteira** |
 | ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | **todas as dimensões** |
 
-Cada passo multiplica a vazão por 16. "Sem limite" quer dizer que só o orçamento de tempo do mod
-segura a vazão (veja [Desempenho e config](performance.md)). Alcance e dimensões contam pelo tier
-de quem **envia**.
+Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Como usar
 
@@ -559,8 +557,8 @@ Ultimate. The router's configuration (faces, filters, networks) is kept.
 
 ## What each card raises
 
-Default values, **per face and per type**. The server can change them in the config; the card's
-tooltip shows your server's values. Chemicals use the fluid limit.
+Per face and per type. The card's tooltip shows your server's values. Chemicals use the fluid
+limit.
 
 | Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
 | --- | --- | --- | --- | --- |
@@ -568,9 +566,7 @@ tooltip shows your server's values. Chemicals use the fluid limit.
 | ''' + item('tier_core_elite') + ''' **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 1,024 → **the whole dimension** |
 | ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | **every dimension** |
 
-Each step multiplies throughput by 16. "Unlimited" means only the mod's time budget limits
-throughput (see [Performance and config](performance.md)). Range and dimensions follow the
-**sender's** tier.
+Each step multiplies throughput by 16. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 
@@ -627,7 +623,7 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | --- | --- |
 | Destino longe demais | Fica de fora daquela origem. O alcance depende do tier de quem envia ([Roteador](router.md)). |
 | Outra dimensão | Só com origem **Ultimate**. |
-| Chunk descarregado | A rota pausa, sem custo, e volta quando o chunk carrega. |
+| Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
 | Quer manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
 ''', front('Networks', 'wirelessautomate:linker', 4) + '''
 # Networks
@@ -665,7 +661,7 @@ the same type on the same network trades. Who sends and who receives comes from 
 | --- | --- |
 | Destination too far | Left out for that source. Range depends on the sender's tier ([Router](router.md)). |
 | Another dimension | Only from an **Ultimate** source. |
-| Unloaded chunk | The route pauses, at no cost, and resumes when the chunk loads. |
+| Unloaded chunk | The route pauses and resumes on its own when the chunk loads. |
 | Keep it working far away | Use the [Chunk Loading Upgrade](chunk-loading.md). |
 ''')
 
@@ -713,7 +709,6 @@ Na origem, o filtro decide o que **sai**; no destino, o que **entra**.
 | **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. |
 | **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Clique numa entrada para definir. |
 
-Conferir um item custa o mesmo com 9 ou com milhares de entradas: o filtro é compilado.
 ''', front('Filters', 'minecraft:hopper', 5) + '''
 # Filters
 
@@ -755,7 +750,6 @@ At the source, the filter decides what **leaves**; at the destination, what **en
 | **Components** (items) | Ignore: enchanted pickaxe = pickaxe. Require: only identical. |
 | **Stock** | At a destination, accept only up to N. At a source, always keep N. Click an entry to set it. |
 
-Checking an item costs the same with 9 or thousands of entries: the filter is compiled.
 ''')
 
 # =====================================================================================
@@ -775,7 +769,6 @@ Um filtro completo num item, para reaproveitar em várias faces. Vale para itens
 | | |
 | --- | --- |
 | **Vai em** | Os dois slots de cartão da face, na tela do roteador (por tipo: itens ou fluidos). |
-| **Empilha** | 16 |
 | **Receita** | Rende 2 cartões. |
 
 ## Comandos
@@ -806,7 +799,6 @@ A full filter in an item, to reuse on many faces. Works for items or for fluids.
 | | |
 | --- | --- |
 | **Goes in** | The face's two card slots, on the router screen (per type: items or fluids). |
-| **Stacks to** | 16 |
 | **Recipe** | Makes 2 cards. |
 
 ## Actions
@@ -843,7 +835,6 @@ Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inte
 | --- | --- |
 | **Modos** | Único e Área. |
 | **Tipo** | Todos, Itens, Fluidos ou Energia. |
-| **Empilha** | 1 |
 
 ## Comandos
 
@@ -858,14 +849,8 @@ Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inte
 ''' + fill(SCENE_AREA, BOX='Área marcada: todos os roteadores carregados dentro dela entram na rede',
            OTHER='Também entra: para o Vinculador, a máquina não importa', OTHER_COLOR='#3fc36b') + '''
 
-## Limites da área
-
-| Limite | Padrão |
-| --- | --- |
-| Tamanho máximo | 262.144 blocos |
-| Distância máxima até você | 64 blocos |
-
-O servidor pode mudar os dois na config (`linker`).
+A área pode ter até 262.144 blocos (por exemplo 64 × 64 × 64), e você precisa estar a até 64
+blocos dela.
 
 ## Receita
 
@@ -885,7 +870,6 @@ Picks your **active network** and puts routers in it, one at a time or a whole a
 | --- | --- |
 | **Modes** | Single and Area. |
 | **Type** | All, Items, Fluids or Energy. |
-| **Stacks to** | 1 |
 
 ## Actions
 
@@ -900,14 +884,8 @@ Picks your **active network** and puts routers in it, one at a time or a whole a
 ''' + fill(SCENE_AREA, BOX='Marked area: every loaded router inside joins the network',
            OTHER='Joins too: for the Linker, the machine does not matter', OTHER_COLOR='#3fc36b') + '''
 
-## Area limits
-
-| Limit | Default |
-| --- | --- |
-| Maximum size | 262,144 blocks |
-| Maximum distance from you | 64 blocks |
-
-The server can change both in the config (`linker`).
+The area can be up to 262,144 blocks (for example 64 × 64 × 64), and you need to be within 64
+blocks of it.
 
 ## Recipe
 
@@ -933,7 +911,6 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
-| **Empilha** | 1 |
 
 ## Comandos
 
@@ -976,7 +953,6 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | **Copies** | Faces, filters, priorities, redstone and each tab's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default) and Area. |
-| **Stacks to** | 1 |
 
 ## Actions
 
@@ -1022,7 +998,6 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | | |
 | --- | --- |
 | **Abre com** | Clique direito, ou a tecla **Abrir o Tablet de Rede** com o tablet no inventário (sem tecla padrão: escolha em Opções › Controles). |
-| **Empilha** | 1 |
 
 ## Abas
 
@@ -1030,7 +1005,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | --- | --- |
 | **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez. Clique num nó para abrir a tela dele à distância. |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
-| **Estatísticas** | Vazão por tipo, tempo do mod por tick, destinos cheios e chunks descarregados. |
+| **Estatísticas** | Quanto cada rede move por tipo, destinos cheios e roteadores em chunks descarregados. |
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 
@@ -1051,7 +1026,6 @@ An overview of all your networks, from anywhere.
 | | |
 | --- | --- |
 | **Opens with** | Right-click, or the **Open Network Tablet** key with the tablet in your inventory (unbound by default: set it in Options › Controls). |
-| **Stacks to** | 1 |
 
 ## Tabs
 
@@ -1059,7 +1033,7 @@ An overview of all your networks, from anywhere.
 | --- | --- |
 | **List** | Every node, with search and a role filter (extracts, inserts...). **Select** moves many nodes between networks at once. Click a node to open its screen remotely. |
 | **Map** | Top-down view colored by status. Click a point to open the node. |
-| **Statistics** | Throughput per type, mod time per tick, full destinations and unloaded chunks. |
+| **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
 
@@ -1085,8 +1059,7 @@ Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabal
 | | |
 | --- | --- |
 | **Vai em** | O slot do cabeçalho da tela do roteador. |
-| **Limite** | 16 chunks por jogador (padrão); vários roteadores no mesmo chunk contam uma vez. |
-| **Empilha** | 1 |
+| **Limite** | Cada jogador mantém até 16 chunks; vários roteadores no mesmo chunk contam uma vez. |
 
 ## Estados
 
@@ -1094,14 +1067,7 @@ Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabal
 | --- | --- |
 | **Ativo: chunks carregados** | O roteador e a máquina continuam trabalhando longe dos jogadores. |
 | **Inativo: limite de chunks do dono** | Quem pôs o upgrade já força o máximo de chunks permitido. |
-| **Inativo: desligado no servidor** | A config do servidor desligou o upgrade. |
-
-## Config do servidor
-
-| Chave | Padrão | O que faz |
-| --- | --- | --- |
-| `chunkLoading.enabled` | `true` | Liga ou desliga o upgrade. |
-| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forçados por jogador (0 = sem limite). |
+| **Inativo: desligado no servidor** | O servidor desativou este upgrade. |
 
 ## Receita
 
@@ -1120,8 +1086,7 @@ Keeps the router's chunk (and its machine) loaded, so it keeps working while you
 | | |
 | --- | --- |
 | **Goes in** | The slot in the router screen's header. |
-| **Limit** | 16 chunks per player (default); several routers in one chunk count once. |
-| **Stacks to** | 1 |
+| **Limit** | Each player keeps up to 16 chunks; several routers in one chunk count once. |
 
 ## States
 
@@ -1129,14 +1094,7 @@ Keeps the router's chunk (and its machine) loaded, so it keeps working while you
 | --- | --- |
 | **Active: chunks loaded** | The router and the machine keep working away from players. |
 | **Inactive: owner's chunk limit** | Whoever placed the upgrade already forces as many chunks as allowed. |
-| **Inactive: disabled on the server** | The server config turned the upgrade off. |
-
-## Server config
-
-| Key | Default | What it does |
-| --- | --- | --- |
-| `chunkLoading.enabled` | `true` | Turns the upgrade on or off. |
-| `chunkLoading.maxChunksPerPlayer` | `16` | Chunks forced per player (0 = unlimited). |
+| **Inactive: disabled on the server** | The server has turned this upgrade off. |
 
 ## Recipe
 
@@ -1211,90 +1169,9 @@ unavailable.
 ''')
 
 # =====================================================================================
-# Desempenho
-# =====================================================================================
-page('performance.md', front('Desempenho e config', 'minecraft:clock', 12) + '''
-# Desempenho e config
-
-O mod não faz tick por bloco: um gerenciador central move tudo, dentro de um **orçamento de tempo
-por tick**. O que não cabe continua no tick seguinte, sem perder nada. Com muitas máquinas, a vazão
-se divide, mas o lag nunca passa do teto.
-
-## Como o mod se protege
-
-| Mecanismo | O que faz |
-| --- | --- |
-| **Orçamento por tick** | Teto de tempo do mod: padrão de 1 ms, de 50 ms do tick. |
-| **Orçamento adaptativo** | Se o servidor passar de 40 ms por tick, o teto cai aos poucos (até 25% a partir de 50 ms) e volta sozinho. |
-| **Quem dorme não pesa** | Origens vazias e destinos cheios dormem e quase não custam. |
-| **Revezamento** | Com o orçamento esgotado, todas as origens continuam movendo, cada uma um pouco menos. |
-
-## Medir
-
-| Comando | Mostra |
-| --- | --- |
-| `/wa profile` (operador) | ms por tick do mod e de cada rede, operações por segundo, origens e destinos acordados e dormindo. |
-| Tablet › Estatísticas | Vazão por tipo e tempo do mod por tick, sem precisar ser operador. |
-
-## Config do servidor
-
-Arquivo `config/wirelessautomate-server.toml`:
-
-| Chave | Padrão | O que faz |
-| --- | --- | --- |
-| `performance.tickBudgetMs` | `1.0` | Teto de tempo do mod por tick, em ms. Mais = mais vazão com muitas máquinas. |
-| `performance.adaptiveBudget` | `true` | Reduz o teto quando o servidor está pesado. |
-| `tiers.<tier>.itemsPerSecond` | por tier | Itens por segundo, por face e tipo (0 = sem limite). |
-| `tiers.<tier>.fluidPerSecond` | por tier | Fluido e químico em mB/s (0 = sem limite). |
-| `tiers.<tier>.energyPerTick` | por tier | Energia em FE/t (0 = sem limite). |
-| `tiers.<tier>.range` | por tier | Alcance em blocos (0 = a dimensão inteira). |
-| `tiers.<tier>.crossDimension` | só Ultimate | Permite rotas entre dimensões. |
-| `chunkLoading.*` | | Veja [Upgrade de Chunk Loading](chunk-loading.md). |
-| `linker.maxAreaVolume` / `maxDistance` | `262144` / `64` | Área do Vinculador e do Configurador. |
-''', front('Performance and config', 'minecraft:clock', 12) + '''
-# Performance and config
-
-The mod doesn't tick per block: a central manager moves everything within a **time budget per
-tick**. Whatever doesn't fit continues next tick, nothing is lost. With many machines throughput is
-shared, but the lag never goes over the cap.
-
-## How the mod protects your TPS
-
-| Mechanism | What it does |
-| --- | --- |
-| **Budget per tick** | The mod's time cap: 1 ms by default, of the 50 ms tick. |
-| **Adaptive budget** | If the server goes over 40 ms per tick, the cap drops gradually (down to 25% from 50 ms) and comes back on its own. |
-| **Sleeping costs nothing** | Empty sources and full destinations sleep and barely cost anything. |
-| **Taking turns** | With the budget used up, every source keeps moving, each a little less. |
-
-## Measuring
-
-| Command | Shows |
-| --- | --- |
-| `/wa profile` (operator) | ms per tick of the mod and of each network, operations per second, sources and destinations awake and sleeping. |
-| Tablet › Statistics | Throughput per type and mod time per tick, no operator needed. |
-
-## Server config
-
-File `config/wirelessautomate-server.toml`:
-
-| Key | Default | What it does |
-| --- | --- | --- |
-| `performance.tickBudgetMs` | `1.0` | The mod's time cap per tick, in ms. More = more throughput with many machines. |
-| `performance.adaptiveBudget` | `true` | Lowers the cap when the server is struggling. |
-| `tiers.<tier>.itemsPerSecond` | per tier | Items per second, per face and type (0 = unlimited). |
-| `tiers.<tier>.fluidPerSecond` | per tier | Fluid and chemical in mB/s (0 = unlimited). |
-| `tiers.<tier>.energyPerTick` | per tier | Energy in FE/t (0 = unlimited). |
-| `tiers.<tier>.range` | per tier | Range in blocks (0 = the whole dimension). |
-| `tiers.<tier>.crossDimension` | Ultimate only | Allows routes between dimensions. |
-| `chunkLoading.*` | | See [Chunk Loading Upgrade](chunk-loading.md). |
-| `linker.maxAreaVolume` / `maxDistance` | `262144` / `64` | Linker and Configurator area. |
-''')
-
-# =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 13) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 12) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -1311,11 +1188,11 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | O modo aparece indisponível | A máquina não dá acesso àquele tipo por aquela face. | Escolha outra face no visor 3D, ou configure a máquina. |
 | Químicos não se movem | A face da máquina do Mekanism está desligada nos lados dela. | Ligue a face com a ferramenta de configuração do Mekanism. |
 | Não consigo pôr na rede | A rede é de outro jogador. | Peça ao dono, ou use uma rede sua. |
-| Vazão menor que a do tier | O orçamento do mod está no limite. | Normal com muitas máquinas; veja [Desempenho e config](performance.md). |
+| Vazão menor que a do tier | Muitas máquinas movendo ao mesmo tempo. | Normal: a vazão se divide entre elas, sem travar o jogo. |
 
-Ainda com dúvida? O `/wa profile` mostra, por rede, quantas origens e destinos estão acordados ou
-dormindo.
-''', front('Troubleshooting', 'minecraft:barrier', 13) + '''
+Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
+cada rede está movendo e quais destinos estão cheios.
+''', front('Troubleshooting', 'minecraft:barrier', 12) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -1332,10 +1209,10 @@ Something not moving? Check in order: it's almost always one of these.
 | The mode shows as unavailable | The machine gives no access to that type through that face. | Pick another face in the 3D viewer, or configure the machine. |
 | Chemicals don't move | The Mekanism machine's face is disabled in its side config. | Enable the face with Mekanism's configurator tool. |
 | Can't put it in a network | The network belongs to another player. | Ask the owner, or use one of yours. |
-| Less throughput than the tier | The mod's budget is at its limit. | Normal with many machines; see [Performance and config](performance.md). |
+| Less throughput than the tier | Many machines moving at once. | Normal: throughput is shared between them, without freezing the game. |
 
-Still stuck? `/wa profile` shows, per network, how many sources and destinations are awake or
-sleeping.
+Still stuck? Open the [Network Tablet](network-tablet.md): the **Statistics** tab shows what each
+network is moving and which destinations are full.
 ''')
 
 # =====================================================================================
@@ -1352,7 +1229,7 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 14) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 13) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
@@ -1364,7 +1241,7 @@ Todas com itens vanilla, na bancada.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 14) + '''
+''', front('All recipes', 'minecraft:crafting_table', 13) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.

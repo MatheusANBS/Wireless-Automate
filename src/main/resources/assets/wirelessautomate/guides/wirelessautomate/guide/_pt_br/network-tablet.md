@@ -22,7 +22,6 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | | |
 | --- | --- |
 | **Abre com** | Clique direito, ou a tecla **Abrir o Tablet de Rede** com o tablet no inventário (sem tecla padrão: escolha em Opções › Controles). |
-| **Empilha** | 1 |
 
 ## Abas
 
@@ -30,7 +29,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | --- | --- |
 | **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez. Clique num nó para abrir a tela dele à distância. |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
-| **Estatísticas** | Vazão por tipo, tempo do mod por tick, destinos cheios e chunks descarregados. |
+| **Estatísticas** | Quanto cada rede move por tipo, destinos cheios e roteadores em chunks descarregados. |
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 

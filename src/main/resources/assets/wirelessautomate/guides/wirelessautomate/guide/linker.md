@@ -23,7 +23,6 @@ Picks your **active network** and puts routers in it, one at a time or a whole a
 | --- | --- |
 | **Modes** | Single and Area. |
 | **Type** | All, Items, Fluids or Energy. |
-| **Stacks to** | 1 |
 
 ## Actions
 
@@ -53,14 +52,8 @@ Picks your **active network** and puts routers in it, one at a time or a whole a
   <IsometricCamera yaw="200" pitch="35" />
 </GameScene>
 
-## Area limits
-
-| Limit | Default |
-| --- | --- |
-| Maximum size | 262,144 blocks |
-| Maximum distance from you | 64 blocks |
-
-The server can change both in the config (`linker`).
+The area can be up to 262,144 blocks (for example 64 × 64 × 64), and you need to be within 64
+blocks of it.
 
 ## Recipe
 

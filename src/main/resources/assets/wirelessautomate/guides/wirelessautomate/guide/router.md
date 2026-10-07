@@ -27,8 +27,8 @@ machine face does.
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
+| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
-| **Stacks to** | 64 (the tier stays on the item when broken). |
 
 ## Recipe
 
@@ -52,17 +52,15 @@ machine face does.
 It doesn't matter which face it sits on: from its screen it reaches all six. Breaking the block
 behind it drops the router.
 
-## The screen
+## Setting up a face
 
-| Part | What it does |
+| Step | How |
 | --- | --- |
-| **Tabs** | Items, Fluids, Energy and Chemicals. Each tab has its own [network](networks.md), picked in the selector next to the tabs. |
-| **3D viewer** | Drag to rotate, scroll to zoom and click a machine face to select it. |
-| **U N E D S W buttons** | Pick the face: Up, North, East, Down, South and West. |
-| **Mode** | What the selected face does (table below). |
-| **More** | The face's priority and redstone. |
-| **Filter** | The **Edit** button opens the face's [filter](filters.md); next to it are two [Filter Card](filter-card.md) slots. |
-| **Header** | Name, current throughput, tier and the [Chunk Loading Upgrade](chunk-loading.md) slot. |
+| **1. Pick the type** | Click the tab: Items, Fluids, Energy or Chemicals. |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
+| **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
+| **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
+| **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
 
 ## Face modes
 
@@ -85,6 +83,7 @@ behind it drops the router.
 ## Specs per tier
 
 Throughput is **per face and per type**, counted at the sender. Chemicals use the fluid limit.
+Your server may use different values: the upgrade card's tooltip shows yours.
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
 | --- | --- | --- | --- | --- |

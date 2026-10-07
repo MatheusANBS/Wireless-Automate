@@ -3,7 +3,7 @@ navigation:
   title: Problemas comuns
   icon: minecraft:barrier
   parent: index.md
-  position: 13
+  position: 12
 ---
 
 
@@ -23,7 +23,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | O modo aparece indisponível | A máquina não dá acesso àquele tipo por aquela face. | Escolha outra face no visor 3D, ou configure a máquina. |
 | Químicos não se movem | A face da máquina do Mekanism está desligada nos lados dela. | Ligue a face com a ferramenta de configuração do Mekanism. |
 | Não consigo pôr na rede | A rede é de outro jogador. | Peça ao dono, ou use uma rede sua. |
-| Vazão menor que a do tier | O orçamento do mod está no limite. | Normal com muitas máquinas; veja [Desempenho e config](performance.md). |
+| Vazão menor que a do tier | Muitas máquinas movendo ao mesmo tempo. | Normal: a vazão se divide entre elas, sem travar o jogo. |
 
-Ainda com dúvida? O `/wa profile` mostra, por rede, quantas origens e destinos estão acordados ou
-dormindo.
+Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
+cada rede está movendo e quais destinos estão cheios.

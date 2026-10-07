@@ -74,5 +74,5 @@ the same type on the same network trades. Who sends and who receives comes from 
 | --- | --- |
 | Destination too far | Left out for that source. Range depends on the sender's tier ([Router](router.md)). |
 | Another dimension | Only from an **Ultimate** source. |
-| Unloaded chunk | The route pauses, at no cost, and resumes when the chunk loads. |
+| Unloaded chunk | The route pauses and resumes on its own when the chunk loads. |
 | Keep it working far away | Use the [Chunk Loading Upgrade](chunk-loading.md). |

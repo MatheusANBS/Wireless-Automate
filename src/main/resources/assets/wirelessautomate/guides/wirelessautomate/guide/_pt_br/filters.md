@@ -46,5 +46,3 @@ Na origem, o filtro decide o que **sai**; no destino, o que **entra**.
 | **Lista branca / negra** | Inverte o filtro. |
 | **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. |
 | **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Clique numa entrada para definir. |
-
-Conferir um item custa o mesmo com 9 ou com milhares de entradas: o filtro é compilado.

@@ -23,7 +23,6 @@ Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inte
 | --- | --- |
 | **Modos** | Único e Área. |
 | **Tipo** | Todos, Itens, Fluidos ou Energia. |
-| **Empilha** | 1 |
 
 ## Comandos
 
@@ -53,14 +52,8 @@ Escolhe a sua **rede ativa** e coloca roteadores nela, um a um ou uma área inte
   <IsometricCamera yaw="200" pitch="35" />
 </GameScene>
 
-## Limites da área
-
-| Limite | Padrão |
-| --- | --- |
-| Tamanho máximo | 262.144 blocos |
-| Distância máxima até você | 64 blocos |
-
-O servidor pode mudar os dois na config (`linker`).
+A área pode ter até 262.144 blocos (por exemplo 64 × 64 × 64), e você precisa estar a até 64
+blocos dela.
 
 ## Receita
 

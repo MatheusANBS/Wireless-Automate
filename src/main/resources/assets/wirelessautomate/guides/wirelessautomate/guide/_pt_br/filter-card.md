@@ -22,7 +22,6 @@ Um filtro completo num item, para reaproveitar em várias faces. Vale para itens
 | | |
 | --- | --- |
 | **Vai em** | Os dois slots de cartão da face, na tela do roteador (por tipo: itens ou fluidos). |
-| **Empilha** | 16 |
 | **Receita** | Rende 2 cartões. |
 
 ## Comandos

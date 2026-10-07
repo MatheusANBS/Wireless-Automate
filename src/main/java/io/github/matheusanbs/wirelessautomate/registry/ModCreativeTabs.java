@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -31,6 +32,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.LINKER.get());
                         output.accept(ModItems.FILTER_CARD.get());
                         output.accept(ModItems.CHUNK_LOADER_UPGRADE.get());
+                        GuideBook.create().ifPresent(output::accept);
                     })
                     .build());
 

@@ -24,7 +24,6 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | **Copies** | Faces, filters, priorities, redstone and each tab's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default) and Area. |
-| **Stacks to** | 1 |
 
 ## Actions
 

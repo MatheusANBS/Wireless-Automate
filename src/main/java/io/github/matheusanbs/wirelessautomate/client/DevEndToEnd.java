@@ -28,6 +28,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
@@ -920,13 +921,17 @@ public final class DevEndToEnd {
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "chemicals", "performance", "troubleshooting", "recipes");
+            "chemicals", "troubleshooting", "recipes");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}
      * e salva uma captura, para conferir as cenas 3D, as receitas e o texto.
      */
     private static void guideSteps(List<Step> list) {
+        list.add(new Step("livro-guia entregue no primeiro login", STEP_TIMEOUT_MS, () -> {
+        }, () -> GuideBook.create().isPresent() && onServer(server -> GuideBook.given(server.getPlayerList()
+                .getPlayer(Minecraft.getInstance().player.getUUID()))),
+                () -> "o livro não foi entregue (a marca no jogador não está lá)"));
         guidePages(list, "");
         // De novo em português (as páginas de _pt_br/), e de volta ao idioma de antes.
         list.add(language("pt_br"));

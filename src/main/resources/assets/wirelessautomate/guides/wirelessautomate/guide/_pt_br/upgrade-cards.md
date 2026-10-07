@@ -24,8 +24,8 @@ A configuração do roteador (faces, filtros, redes) não se perde.
 
 ## O que cada cartão aumenta
 
-Valores padrão, **por face e por tipo**. O servidor pode mudá-los na config; o tooltip do cartão
-mostra os valores do seu servidor. Químicos usam o limite de fluido.
+Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor. Químicos usam o
+limite de fluido.
 
 | Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
 | --- | --- | --- | --- | --- |
@@ -33,9 +33,7 @@ mostra os valores do seu servidor. Químicos usam o limite de fluido.
 | <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 8.192 → **131.072** | 512.000 → **8.000.000** | 256.000 → **4.000.000** | 1.024 → **a dimensão inteira** |
 | <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | **todas as dimensões** |
 
-Cada passo multiplica a vazão por 16. "Sem limite" quer dizer que só o orçamento de tempo do mod
-segura a vazão (veja [Desempenho e config](performance.md)). Alcance e dimensões contam pelo tier
-de quem **envia**.
+Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Como usar
 

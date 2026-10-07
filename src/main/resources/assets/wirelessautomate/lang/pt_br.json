@@ -112,5 +112,19 @@
   "gui.wirelessautomate.router.redstone.low": "Sem sinal",
   "gui.wirelessautomate.router.redstone.tooltip": "Clique para alternar: Ignorar, Com sinal, Sem sinal",
   "gui.wirelessautomate.router.redstone.narration": "Redstone: %s",
-  "gui.wirelessautomate.router.machine.none": "Sem máquina"
+  "gui.wirelessautomate.router.machine.none": "Sem máquina",
+  "container.wirelessautomate.filter.face": "Filtro: %s · %s",
+  "item.wirelessautomate.filter_card.type_changed": "Cartão de filtro: %s",
+  "item.wirelessautomate.filter_card.not_empty": "Esvazie o cartão para trocar entre itens e fluidos",
+  "item.wirelessautomate.filter_card.tooltip.summary": "%s · %s",
+  "item.wirelessautomate.filter_card.tooltip.whitelist": "Lista branca",
+  "item.wirelessautomate.filter_card.tooltip.blacklist": "Lista negra",
+  "item.wirelessautomate.filter_card.tooltip.empty": "Vazio: passa tudo",
+  "item.wirelessautomate.filter_card.tooltip.entries": "Entradas: %s",
+  "item.wirelessautomate.filter_card.tooltip.more": "  … e mais %s",
+  "item.wirelessautomate.filter_card.tooltip.stock": "%s (estoque %s)",
+  "item.wirelessautomate.filter_card.tooltip.components": "Exige componentes iguais",
+  "item.wirelessautomate.filter_card.tooltip.open": "Clique direito no ar: editar o filtro",
+  "item.wirelessautomate.filter_card.tooltip.toggle": "Shift + clique direito no ar: alternar entre itens e fluidos (vazio)",
+  "item.wirelessautomate.filter_card.tooltip.router": "Na mão principal, na tela de filtro de um roteador: importar e exportar"
 }

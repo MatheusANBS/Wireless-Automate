@@ -19,8 +19,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,11 +31,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 
 /**
@@ -96,6 +100,53 @@ public final class DevScreenshot {
                 screen.previewRename("Fornalha Norte 2");
             }, "6-renomear"));
 
+    /** Todos os passos, na ordem: os da tela e os do visor 3D. */
+    private static final List<Step> SEQUENCE = Stream.concat(STEPS.stream(), viewSteps().stream()).toList();
+
+    /**
+     * Visor 3D: a fornalha com o roteador em cima em dois ângulos, com uma face selecionada e o
+     * mouse sobre outra (o marcador mostra onde ele está, para conferir a escolha da face); um baú
+     * virado para o leste (renderizador de entidade) com o roteador no norte; e sem máquina.
+     */
+    private static List<Step> viewSteps() {
+        return List.of(
+                new Step(() -> {
+                    screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.NORTH);
+                    screen.previewViewDefault();
+                    int[] point = screen.previewViewFaceCenter(Direction.EAST);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "7-visor"),
+                new Step(() -> {
+                    screen.previewFace(Direction.EAST);
+                    screen.previewView(-120f, -20f, 1.1f);
+                    int[] point = screen.previewViewFaceCenter(Direction.NORTH);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "8-visor-de-baixo"),
+                new Step(() -> {
+                    RouterSnapshot s = screen.getMenu().snapshot();
+                    screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.ADVANCED, Direction.NORTH,
+                            s.network(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
+                            Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST), s.faces()));
+                    screen.previewFace(Direction.UP);
+                    screen.previewViewDefault();
+                    int[] point = screen.previewViewFaceCenter(Direction.EAST);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "9-visor-bau"),
+                new Step(() -> {
+                    RouterSnapshot s = screen.getMenu().snapshot();
+                    screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.BASIC, Direction.WEST,
+                            s.network(), s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
+                            s.faces()));
+                    screen.previewViewDefault();
+                    mouseX = mouseY = -1;
+                }, "10-visor-sem-maquina"));
+    }
+
     @SubscribeEvent
     static void onRender(ScreenEvent.Render.Post event) {
         if (OUTPUT == null || !(event.getScreen() instanceof TitleScreen title)) {
@@ -115,6 +166,19 @@ public final class DevScreenshot {
         event.getGuiGraphics().flush();
         RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         screen.renderWithTooltip(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
+        drawCursor(event.getGuiGraphics());
+    }
+
+    /** Marcador de 5×5 px no ponto do mouse simulado (as capturas não mostram o cursor). */
+    private static void drawCursor(GuiGraphics g) {
+        if (mouseX < 0) {
+            return;
+        }
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 500);
+        g.fill(mouseX - 2, mouseY - 2, mouseX + 3, mouseY + 3, 0xFF000000);
+        g.fill(mouseX - 1, mouseY - 1, mouseX + 2, mouseY + 2, 0xFFFF2BD6);
+        g.pose().popPose();
     }
 
     @SubscribeEvent
@@ -133,13 +197,13 @@ public final class DevScreenshot {
         int step = (ticks - 60) / STEP_TICKS;
         // o último quadro mostra o estado do passo anterior: salva, depois prepara o próximo
         if (step > 0) {
-            save(minecraft, STEPS.get(step - 1).file());
+            save(minecraft, SEQUENCE.get(step - 1).file());
         }
-        if (step >= STEPS.size()) {
+        if (step >= SEQUENCE.size()) {
             minecraft.stop();
             return;
         }
-        STEPS.get(step).setup().run();
+        SEQUENCE.get(step).setup().run();
     }
 
     private static void save(Minecraft minecraft, String name) {

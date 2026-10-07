@@ -115,8 +115,8 @@ tasks.named('test', Test).configure {
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
-// dev (runClient, também o do e2e) carrega o Sophisticated Storage, copiado para run/mods, junto
-// com o JEI; os GameTests não carregam nenhum dos dois mods do Modrinth.
+// dev (runClient, também o do e2e) carrega o Sophisticated Storage e o Observable, copiados para
+// run/mods, junto com o JEI; os GameTests não carregam nenhum mod do Modrinth.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -141,6 +141,10 @@ dependencies {
     benchMods 'maven.modrinth:spark:1.10.124-neoforge-1.21.1'
     clientMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
     clientMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
+    // Observable (perfil de lag por bloco e entidade, desenhado no mundo) e as dependências dele.
+    clientMods 'maven.modrinth:observable:5.4.4+neoforge'
+    clientMods 'maven.modrinth:kotlin-for-forge:5.12.0'
+    clientMods 'maven.modrinth:architectury-api:13.0.11+neoforge'
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -150,14 +154,14 @@ var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     into layout.projectDirectory.dir('run/bench/mods')
 }
 
-// run/mods do cliente: troca as versões do Sophisticated quando mudam e preserva o que o dono
+// run/mods do cliente: troca as versões dos mods acima quando mudam e preserva o que o dono
 // puser ali à mão.
 var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     from configurations.clientMods
     into layout.projectDirectory.dir('run/mods')
     preserve {
         include '**'
-        exclude 'sophisticated-*.jar'
+        exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar'
     }
 }
 

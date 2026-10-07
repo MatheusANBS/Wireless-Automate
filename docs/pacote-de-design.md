@@ -4,6 +4,8 @@ Transporte wireless de itens, fluidos, energia e químicos para NeoForge 1.21.1 
 
 ## Conteúdo
 
+O esquema abaixo é o do pacote original; no repositório, a prévia e a folha ficam em `docs/preview/` e os assets em `src/main/resources/assets/wirelessautomate/`.
+
 ```
 wireless-automate/
 ├── README.md
@@ -17,7 +19,7 @@ wireless-automate/
     ├── models/block/router_<tier>.json
     ├── models/item/*.json
     └── textures/
-        ├── item/                 8 itens, 16×16
+        ├── item/                 9 itens (com o livro-guia), 16×16
         ├── block/                faces do roteador por tier, 16×16
         └── gui/                  sprites das portas, 16×16
 ```
@@ -30,12 +32,13 @@ wireless-automate/
 | `item/network_tablet.png` | Tablet de rede |
 | `item/filter_card.png` | Cartão de filtro |
 | `item/linker.png` | Vinculador (controle) |
+| `item/guide.png` | Livro-guia (GuideME) |
 | `item/chunk_loader_upgrade.png` | Upgrade de chunk loading: cartão com faixa verde e grade 3×3 de chunks |
 | `item/tier_core_<tier>.png` | Upgrades de tier Avançado, Elite e Ultimate: cartão de circuito com faixa e núcleo do chip na cor do tier e 1 a 3 marcas de nível (não existe o básico) |
 | `block/router_<tier>_<face>.png` | Faces do roteador: front, back, side, top, bottom e antenna |
 | `gui/port_extract.png` | Porta Extrai (azul, seta para cima) |
 | `gui/port_insert.png` | Porta Insere (laranja, seta para baixo) |
-| `gui/port_both.png` | Porta Ambos (verde, seta dupla) |
+| `gui/port_both.png` | Porta Armazém, antes Ambos (verde, seta dupla) |
 | `gui/port_none.png` | Porta Nenhum (contorno pontilhado) |
 
 Tiers: `basic`, `advanced`, `elite`, `ultimate`.
@@ -45,7 +48,7 @@ Tiers: `basic`, `advanced`, `elite`, `ultimate`.
 - **Texturas de bloco:** cada face ocupa o canto superior esquerdo de um quadro 16×16 (frente 14×6, lateral 12×6, topo e base 14×12). O modelo já aponta as UVs certas.
 - **Modelo:** corpo de 14×6×12 px na base do bloco, frente (LEDs) para o sul, antenas atrás.
 - **Blockstate:** propriedades `facing` (face da máquina onde o roteador foi preso) e `tier`. As rotações seguem a mesma convenção do para-raios: `up` sem rotação, `down` com x=180, laterais com x=90 e y conforme a direção.
-- **LEDs:** na textura ficam só os encaixes escuros. O brilho de cada LED (energia, rede, atividade e destino cheio) entra como camada emissiva separada, a desenhar na fase de código.
+- **LEDs:** decorativos, desenhados na própria textura. Não acendem por estado nem têm camada emissiva (decisão do dono: o modelo fica como está).
 
 ## Família de cartões
 
@@ -60,7 +63,7 @@ Os upgrades de tier, o upgrade de chunk loading e o cartão de filtro têm a mes
 Todos os sprites saem de `scripts/textures/gerar_texturas.py` (Python 3 com Pillow). Cada sprite é uma grade de texto em que cada caractere aponta para uma cor de uma paleta nomeada (`PALETAS` no topo do script): para ajustar uma cor, mude a paleta; para mexer no desenho, mude a grade.
 
 ```bash
-python scripts/textures/gerar_texturas.py            # grava os 36 PNGs e a folha de sprites
+python scripts/textures/gerar_texturas.py            # grava os 37 PNGs e a folha de sprites
 python scripts/textures/gerar_texturas.py --so-folha # só refaz docs/preview/folha-de-sprites.png
 ```
 
@@ -70,4 +73,4 @@ A folha mostra tudo ampliado 8×, o roteador montado (frente + topo + lateral) d
 - 3 a 5 tons por material, luz de cima à esquerda;
 - itens com contorno escuro;
 - faces do roteador só no canto superior esquerdo do quadro (o resto transparente), menos o topo, que é preenchido com o casco porque também é a textura de partícula;
-- acento do roteador por tier: ferro (basic), ouro (advanced), ciano (elite), roxo (ultimate); os LEDs da frente ficam em x=2, 4, 6 e 8 como lentes apagadas, prontas para a camada emissiva.
+- acento do roteador por tier: ferro (basic), ouro (advanced), ciano (elite), roxo (ultimate); os LEDs da frente ficam em x=2, 4, 6 e 8 como lentes decorativas.

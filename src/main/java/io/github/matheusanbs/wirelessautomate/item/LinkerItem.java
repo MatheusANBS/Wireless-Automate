@@ -45,7 +45,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public class LinkerItem extends Item {
     private static final String KEY = "item.wirelessautomate.linker.";
-    /** Ordem do seletor; {@code null} é Todos. Químicos ficam de fora até o Mekanism entrar. */
+    /**
+     * Ordem do seletor; {@code null} é Todos. Químicos não têm posição própria: entram com Todos
+     * (que põe todas as abas na rede) ou pela aba Químicos da tela do roteador.
+     */
     private static final ResourceType[] CYCLE = {null, ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
 
     /** Codec do componente: o nome do tipo em minúsculas, só os tipos do seletor. */

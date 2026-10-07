@@ -1,64 +1,70 @@
 # Wireless Automate
 
-Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.1** (ATM10). A meta é ser o transporte mais rápido do pack e o mais leve em TPS. A especificação completa está em [`docs/especificacao.md`](docs/especificacao.md).
+Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-## Começando
+**Estado:** versão 0.1.0 publicada no CurseForge (projeto 1732160). Licença All Rights Reserved.
+
+## Recursos
+
+- **Roteador Wireless:** preso a qualquer face de uma máquina, acessa todas as faces dela.
+- **Redes por aba:** cada aba do roteador (Itens, Fluidos, Energia, Químicos) entra na sua própria rede; tudo do mesmo tipo na mesma rede troca entre si.
+- **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
+- **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada).
+- **Quatro tiers**, subidos com os Cartões de Upgrade Avançado, Elite e Ultimate (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada.
+- **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, em todas as abas ou num tipo só.
+- **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina.
+- **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
+- **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.
+- **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
+
+| Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
+| --- | --- | --- | --- | --- |
+| Básico | 512 | 32.000 | 16.000 | 128 blocos |
+| Avançado | 8.192 | 512.000 | 256.000 | 1.024 blocos |
+| Elite | 131.072 | 8.000.000 | 4.000.000 | Dimensão inteira |
+| Ultimate | Sem limite | Sem limite | Sem limite | Entre dimensões |
+
+A vazão vale por face e por tipo. Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`).
+
+## Integrações opcionais
+
+| Mod | O que traz |
+| --- | --- |
+| Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod |
+| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada |
+| GuideME | O livro-guia, em inglês e português |
+
+Sem um deles, a parte correspondente não carrega e o resto funciona normal.
+
+## Desenvolvimento
 
 ```bash
 ./scripts/setup.sh              # Linux, macOS ou WSL
 .\scripts\setup.ps1             # Windows (PowerShell)
 ```
 
-O script instala o que faltar (JDK 21, git, curl, unzip), baixa o Gradle pelo wrapper e roda o primeiro build, que baixa e decompila o Minecraft e o NeoForge. Opções: `--gametest` (`-GameTest`) roda também os GameTests; `--no-build` (`-NoBuild`) só instala as ferramentas. Sem permissão de root, o JDK vai para `.tools/jdk-21`.
-
-Em um ambiente na nuvem do Claude Code, `bash scripts/setup.sh --no-build` serve como script de setup do ambiente.
-
-## Comandos
+O script instala o que faltar (JDK 21, git, curl, unzip) e roda o primeiro build, que baixa e decompila o Minecraft (uns 4 minutos). Opções: `--gametest` (`-GameTest`) roda também os GameTests; `--no-build` (`-NoBuild`) só instala as ferramentas.
 
 | Comando | O que faz |
 | --- | --- |
-| `./gradlew build` | Compila, roda os testes de unidade e gera o jar em `build/libs/` |
-| `./gradlew test` | Só os testes de unidade (JUnit, lógica sem Minecraft) |
-| `./gradlew runGameTestServer` | Sobe um servidor sem tela, roda os GameTests do mod e sai com erro se algum falhar |
-| `./gradlew runClient` | Abre o Minecraft com o mod (`/test runall` roda os GameTests no mundo) |
-| `./gradlew runServer` | Servidor dedicado de dev |
+| `./gradlew build` | Compila, roda os testes JUnit e gera o jar em `build/libs/` |
+| `./gradlew test` | Só os testes JUnit (lógica sem Minecraft) |
+| `./gradlew runGameTestServer` | GameTests num servidor sem tela (sem o Mekanism); falha se algum teste falhar |
+| `./gradlew runGameTestServerChemicals` | GameTests de químicos, num servidor com o Mekanism |
+| `./gradlew runClient` | Cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism e GuideME, para testar à mão |
 | `./gradlew runData` | Geradores de dados, saída em `src/generated/resources/` |
+| `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (precisa de Xvfb) |
+| `./scripts/bench.sh <cenários>` | Benchmark num servidor dedicado com Sophisticated Storage (ver `docs/benchmark.md`) |
 
-O CI (`.github/workflows/build.yml`) roda `build` e `runGameTestServer` a cada push.
+O CI (`.github/workflows/build.yml`) roda `build`, `runGameTestServer` e `runGameTestServerChemicals` a cada push e pull request.
 
-## Estrutura
+## Organização
 
-```
-├── build.gradle, settings.gradle, gradle.properties   projeto ModDevGradle (versões no gradle.properties)
-├── scripts/setup.sh, setup.ps1                        setup do ambiente
-├── docs/
-│   ├── especificacao.md                               especificação do mod
-│   ├── progresso.md                                   o que está pronto, o que falta e o próximo passo
-│   ├── pacote-de-design.md                            notas do pacote de design (sprites e modelos)
-│   └── preview/                                       rascunho visual (HTML) e folha de sprites
-└── src/
-    ├── main/java/io/github/matheusanbs/wirelessautomate/
-    │   ├── WirelessAutomate.java     classe @Mod, eventos
-    │   ├── Config.java               config do servidor: orçamento de tempo e vazão por tier
-    │   ├── block/                    RouterBlock, RouterBlockEntity, RouterTier, formas
-    │   ├── item/                     núcleos de tier, configurador, tablet, vinculador, cartão, upgrade
-    │   ├── network/                  NetworkManager (gerenciador central), TickBudget, tipos e modos
-    │   ├── registry/                 DeferredRegisters de blocos, itens, block entities e aba criativa
-    │   ├── command/                  /wa profile
-    │   └── gametest/                 GameTests
-    ├── main/resources/
-    │   ├── assets/wirelessautomate/  blockstates, modelos, texturas e traduções (en_us, pt_br)
-    │   └── data/                     loot table, receita, tags e a estrutura vazia dos GameTests
-    ├── main/templates/META-INF/neoforge.mods.toml
-    └── test/java/                    testes de unidade (JUnit 5)
-```
+O mapa do código-fonte fica no [`CLAUDE.md`](CLAUDE.md) ("Mapa do código").
 
-## O que já existe
-
-- Roteador direcional (`facing` = face da máquina onde foi preso, `tier` de Básico a Ultimate), com forma de colisão que acompanha a rotação, quebra quando a máquina sai e guarda o tier ao ser quebrado.
-- Núcleos de tier sobem o roteador um tier por vez, sem perder o block entity.
-- Os sete itens registrados, com sprites; o comportamento de configurador, tablet, vinculador, cartão e upgrade ainda é stub.
-- Gerenciador central com orçamento de tempo adaptativo ao MSPT (o loop de rotas ainda é `TODO`) e `/wa profile`.
-- Config do servidor com os números da tabela de tiers.
-
-O estado detalhado de cada item do roadmap e o próximo passo ficam em [`docs/progresso.md`](docs/progresso.md). Agentes de IA começam por [`CLAUDE.md`](CLAUDE.md).
+- `docs/especificacao.md`: especificação do mod (fonte da verdade do design).
+- `docs/progresso.md`: o que está pronto, o que falta e o próximo passo.
+- `docs/benchmark.md`: como rodar o benchmark e os resultados.
+- `docs/pacote-de-design.md`: sprites e modelo do roteador.
+- `docs/curseforge/`: descrição, capa, banner e imagens da página do CurseForge.
+- `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (gera as texturas), `guide/` (gera as páginas do guia) e `curseforge/` (gera as imagens do CurseForge).

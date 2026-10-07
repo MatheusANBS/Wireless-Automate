@@ -14,19 +14,19 @@ Wireless Automate é um mod de transporte wireless de itens, fluidos, energia e 
 
 ## Componentes
 
-O mod tem um bloco e sete itens. Todo o resto é configuração.
+O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de filtro, Upgrade de chunk loading e três Cartões de Upgrade), mais o livro-guia quando o GuideME está instalado. Todo o resto é configuração.
 
 | Componente | Tipo | Função |
 | --- | --- | --- |
-| Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Corpo de 14×6×12 px, duas antenas e quatro LEDs: energia, rede, atividade e destino cheio. |
-| Núcleo de tier | Item | Clique no roteador para subir de tier no lugar, sem perder a configuração. |
+| Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
+| Cartões de Upgrade (Avançado, Elite, Ultimate) | Item | Sobem o roteador um tier, sem pular tiers: clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
 | Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área presos à mesma máquina. |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Escolhe a rede ativa e coloca roteadores nela, um a um ou por área. |
 | Cartão de filtro | Item | Guarda um filtro reutilizável entre roteadores. |
 | Upgrade de chunk loading | Item | Mantém carregado o chunk do roteador. |
 
-Sem partículas de item: a atividade aparece só nos LEDs e nas antenas, e o servidor só avisa o cliente quando o estado muda.
+Sem partículas de item nem animação no bloco: o modelo fica fixo (decisão do dono). O estado aparece na tela do roteador e no Tablet, e o servidor só avisa o cliente quando o estado muda.
 
 ## Tiers
 
@@ -43,7 +43,7 @@ A vazão vale por face e por tipo. Os números ficam no arquivo de config do ser
 
 ## Telas da interface
 
-São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes secundários recolhidos e um botão principal na cor do tier.
+São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não tem tela), todas com a mesma hierarquia: o essencial à vista, ajustes secundários recolhidos e um botão principal na cor do tier.
 
 ### Roteador
 
@@ -54,14 +54,14 @@ São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes se
 - **Visor 3D:** a máquina conectada e o roteador, na posição em que ele foi colocado, com as faces da máquina tocáveis. Botões por face logo abaixo.
 - **Face selecionada:** nome e slots que ela acessa (na fornalha: entrada em cima, combustível dos lados, saída embaixo), modo Extrai, Insere, Armazém ou Nenhum, e o filtro resumido em uma linha com Editar. A dica do Armazém: recebe de quem extrai e entrega para quem insere; não troca com outro armazém.
 - **Recolhido:** prioridade e redstone.
-- **Rodapé:** slots de cartões de filtro e de upgrade.
+- **Cartões e upgrade:** dois slots de Cartão de filtro por face e por tipo, abaixo da face selecionada; o slot do Upgrade de chunk loading fica no cabeçalho (é do roteador, não da face). Os upgrades de tier não usam slot: entram por clique ou na bancada.
 
 ### Filtro
 
 - **Abre com:** Editar no roteador, ou clique direito no ar segurando um Cartão de filtro.
 - Lista branca ou negra e, para itens, ignorar ou exigir componentes iguais.
 - Grade de entradas sem limite, com rolagem. Tocar numa entrada mostra a quantidade de estoque e Remover.
-- Abas Inventário e JEI: Shift + clique num item do inventário adiciona; clique no JEI adiciona mesmo sem ter o item.
+- Sem abas: Shift + clique num item do inventário do jogador adiciona; com o JEI, arrastar ou Shift + clique na lista dele adiciona mesmo sem ter o item.
 - **Recolhido:** regras por tag (`#c:ores`) ou mod (`@mekanism`).
 
 ### Tablet de rede
@@ -124,7 +124,7 @@ Não se liga um roteador a outro: cada aba (tipo de recurso) de um roteador entr
 - **Grupos:** juntam várias redes de um mesmo sistema para ver, pausar e retomar tudo de uma vez.
 - **Redstone:** por face e por tipo: ignorar, ativo com sinal ou ativo sem sinal.
 - **Chunks:** origem ou destino descarregado pausa a rota sem custo; o upgrade de chunk loading mantém o chunk do roteador carregado.
-- **Visualização:** segurando o Configurador ou o Tablet, linhas de conexão saem de quem extrai para quem insere.
+- **Visualização (planejado):** segurando o Configurador ou o Tablet, linhas de conexão saem de quem extrai para quem insere.
 
 ### Exemplo: processamento 5x do Mekanism
 
@@ -158,12 +158,13 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 | --- | --- | --- | --- |
 | Qualquer inventário, tanque ou máquina | Capabilities de item, fluido e energia do NeoForge | Compatibilidade geral | Nenhuma |
 | Químicos do Mekanism | API de químicos do Mekanism | Suporte a gases e afins | Opcional |
-| AE2 | Armazenamento por chave e quantidade `long` | Uma chamada move milhões de itens | Opcional |
-| Refined Storage 2 | API de armazenamento por recurso | Mesmo ganho do AE2 | Opcional |
-| Sophisticated Storage | Handler de itens com cache de slots | Varredura incremental de baús grandes | Nenhuma |
-| JEI | Ingredientes fantasmas | Arrastar e clicar para os filtros | Opcional |
+| AE2 (planejado) | Armazenamento por chave e quantidade `long` | Uma chamada move milhões de itens | Opcional |
+| Refined Storage 2 (planejado) | API de armazenamento por recurso | Mesmo ganho do AE2 | Opcional |
+| Sophisticated Storage (planejado) | Handler de itens com cache de slots | Varredura incremental de baús grandes | Nenhuma |
+| JEI | Ingredientes fantasmas e a receita de upgrade na bancada | Arrastar e clicar para os filtros | Opcional |
+| GuideME | Livro-guia data-driven | Guia no jogo, em inglês e português | Opcional |
 
-Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
+Hoje existem as capabilities do NeoForge, os químicos do Mekanism, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
 ## Arquitetura de performance
 
@@ -179,8 +180,8 @@ Ciclo do gerenciador a cada tick: pega a próxima rota acordada (em ordem de pri
 4. **Lotes:** em vez de mover pouco a cada tick, move a quantia de vários ticks numa operação só. A vazão é a mesma e o custo fixo cai. A energia é distribuída num único passe, com contas em `long`.
 5. **Filtros compilados:** ao salvar, o filtro vira conjuntos de hash. A resposta "este recurso passa?" fica em cache por tipo e só é refeita quando o filtro muda ou as tags recarregam.
 6. **Caches de capability:** cada face usa `BlockCapabilityCache`, que guarda a referência ao vizinho e avisa quando ela muda. Nenhuma busca de capability por tick.
-7. **Varredura incremental:** em inventários grandes, um cursor lembra onde parou e um índice guarda os slots com espaço ou com o recurso desejado.
-8. **Custo por vizinho:** o mod mede o tempo de cada destino. Destinos lentos de outros mods passam a ser chamados com menos frequência, sem frear o resto da rede.
+7. **Varredura incremental (planejado):** em inventários grandes, um cursor lembra onde parou e um índice guarda os slots com espaço ou com o recurso desejado.
+8. **Custo por vizinho (planejado):** o mod mede o tempo de cada destino. Destinos lentos de outros mods passam a ser chamados com menos frequência, sem frear o resto da rede.
 9. **Sem trabalho no cliente:** a tela recebe só diferenças, e só enquanto está aberta. Nada é sincronizado com a tela fechada.
 10. **Profiler embutido:** `/wa profile` mostra ms/tick por rede, operações, destinos dormindo e acordados.
 
@@ -190,7 +191,7 @@ O Sophisticated Storage é o banco de testes: baús com centenas de slots e slot
 
 | Cenário | Montagem | O que mede | Meta |
 | --- | --- | --- | --- |
-| Vazão bruta | 1 baú cheio enviando para 1 baú vazio, tier Ultimate | Itens/s máximos | Maior número possível dentro de 0,5 ms/tick |
+| Vazão bruta | 1 baú cheio enviando para 1 baú vazio, tier Ultimate | Itens/s máximos | Maior número possível dentro do orçamento |
 | Destino cheio | 50 origens enviando para destinos já cheios | Custo de tentar e falhar | Perto de 0 ms/tick após dormir |
 | Muitos tipos | Baú com centenas de itens diferentes e filtros grandes | Custo de filtro e varredura | Abaixo do orçamento |
 | Muitos nós | 500 nós ativos numa rede | Escala do gerenciador | Abaixo do orçamento |
@@ -199,20 +200,28 @@ O Sophisticated Storage é o banco de testes: baús com centenas de slots e slot
 
 - **Medição:** profiler embutido mais o Spark, com MSPT antes e depois de colocar a rede.
 - **Comparação:** os mesmos cenários com outros mods de transporte do ATM10, para sustentar o "mais eficiente".
-- **Regressão:** um cenário automatizado em GameTest roda a cada mudança de código para detectar perdas de performance.
+- **Regressão (planejado):** um cenário automatizado em GameTest rodará a cada mudança de código para detectar perdas de performance.
 
 ## Receitas e progressão
 
-O Básico usa só itens vanilla. Os tiers altos pedem materiais de mods do ATM, com receita alternativa quando o mod não está instalado.
+Todas as receitas usam só itens vanilla e ficam em data packs (`data/wirelessautomate/recipe/`), então o modpack pode trocar tudo sem mexer no código. O roteador nasce Básico; os tiers seguintes vêm dos Cartões de Upgrade, um de cada vez.
 
-| Tier | Ideia de receita | Alternativa sem o mod |
-| --- | --- | --- |
-| Básico | Ferro, redstone, olho de ender | — |
-| Avançado | Ouro, diamante, componente básico de mod tech | Bloco de diamante |
-| Elite | Netherita e liga avançada do Mekanism | Netherita e estrela do Nether |
-| Ultimate | Material de endgame do ATM | Ovo do dragão ou equivalente caro |
+| Item | Receita |
+| --- | --- |
+| Roteador (Básico) | Olho de ender em cima, ferro + redstone + ferro no meio, três ferros embaixo |
+| Cartão de Upgrade Avançado | Lingotes de ouro nos cantos, diamantes nas bordas, bloco de ouro no centro |
+| Cartão de Upgrade Elite | Estrela do Nether em cima, Cartão Avançado no centro, três lingotes de netherita em volta |
+| Cartão de Upgrade Ultimate | Ovo do dragão em cima, Cartão Elite no centro, três blocos de netherita e quatro fragmentos de eco |
+| Upgrade do roteador na bancada | Roteador + Cartão de Upgrade do tier seguinte, sem forma (também no JEI) |
+| Cartão de filtro (2) | Papel, redstone e comparador (`PRP` / `PCP`) |
+| Cópia de Cartão de filtro | Cartão configurado + cartão vazio, sem forma = dois iguais |
+| Upgrade de chunk loading | Olho de ender e diamante cercados de obsidiana, com duas redstones |
+| Configurador | Fragmento de ametista na ponta de dois gravetos, na diagonal |
+| Vinculador | Pérola do ender em cima, redstone entre cobres e três lingotes de cobre embaixo |
+| Tablet de rede | Lingotes de ferro dos lados; no meio, de cima para baixo, painel de vidro, olho de ender e redstone |
+| Livro-guia (só com o GuideME) | Livro + redstone, sem forma |
 
-As receitas ficam em data packs, então o modpack pode trocar tudo sem mexer no código. Os materiais exatos serão definidos no balanceamento.
+O balanceamento das receitas (materiais de mods do ATM nos tiers altos) ainda está em aberto.
 
 ## Roadmap
 
@@ -220,22 +229,24 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 **v1, motor e essencial**
 
-- [ ] Projeto NeoForge 1.21.1 e gerenciador central com orçamento de tempo
-- [ ] Roteador direcional com itens, fluidos e energia, configurado por face da máquina
-- [ ] Redes, rede ativa, prioridade, round-robin e redstone
-- [ ] Filtros sem limite (inventário, JEI, tags, mod, estoque) e cartões
-- [ ] Tiers e núcleos de upgrade
-- [ ] Configurador como pincel e Vinculador modo Único
-- [ ] Profiler embutido e benchmark com Sophisticated Storage
+- [x] Projeto NeoForge 1.21.1 e gerenciador central com orçamento de tempo
+- [x] Roteador direcional com itens, fluidos e energia, configurado por face da máquina
+- [x] Redes, rede ativa, prioridade, round-robin e redstone
+- [x] Filtros sem limite (inventário, JEI, tags, mod, estoque) e cartões
+- [x] Tiers e Cartões de Upgrade
+- [x] Configurador como pincel e Vinculador modo Único
+- [x] Profiler embutido e benchmark com Sophisticated Storage
 
 **v2, escala e integrações**
 
 - [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
-- [ ] Tablet: lista, mapa, estatísticas, redes e grupos
-- [ ] Configurador colando em área (mesma máquina) e Vinculador modo Área
+- [x] Tablet: lista, mapa, estatísticas, redes e grupos
+- [x] Configurador colando em área (mesma máquina) e Vinculador modo Área
 - [ ] Atalhos para AE2 e Refined Storage 2
-- [ ] Upgrade de chunk loading
-- [ ] Texturas finais no Blockbench e balanceamento das receitas
+- [x] Upgrade de chunk loading
+- [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
+- [x] Livro-guia no GuideME (opcional)
+- [ ] Balanceamento das receitas
 
 ### Decisões tomadas (7 de outubro de 2026)
 

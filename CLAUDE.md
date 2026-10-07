@@ -17,7 +17,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | Arquivo | Papel |
 | --- | --- |
 | `WirelessAutomate.java` | Classe `@Mod`: registra os DeferredRegisters e a config, e escuta os eventos de tick, parada do servidor e comandos |
-| `Config.java` | Config do servidor: `TICK_BUDGET_MS`, `ADAPTIVE_BUDGET` e `TIERS` (vazão e alcance por tier) |
+| `Config.java` | Config do servidor, por seção: `performance` (`tickBudgetMs`, `adaptiveBudget`), `tiers` (vazão, alcance e dimensão por tier), `chunkLoading` (`enabled`, `maxChunksPerPlayer`), `linker` (`maxAreaVolume`, `maxDistance`, valem também para o Configurador) e `guide.giveOnFirstJoin` |
 | `block/RouterBlock.java` | Bloco: `FACING` (face da máquina onde foi preso), `TIER`, `canSurvive`, `tryUpgrade` |
 | `block/RouterBlockEntity.java` | Dados do nó: rede por tipo (`networkId(type)`), cartões por face, `FaceConfig` por tipo e lado relativo, `powered` e os `BlockCapabilityCache` da máquina. Não faz tick: se registra no `NetworkManager` em `onLoad` e avisa `nodeChanged` quando muda |
 | `block/RouterShapes.java` | Formas de colisão rotacionadas pela mesma convenção do blockstate |
@@ -25,28 +25,28 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `network/NetworkManager.java` | Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento |
 | `network/NetworkRoutes.java`, `Port.java`, `NodePorts.java` | Rotas de uma rede: portas (nó, face, tipo) com vazão, cursor e sono que sobrevivem às remontagens |
 | `network/ItemTransfer.java`, `FluidTransfer.java`, `EnergyTransfer.java` | Uma visita de uma origem, por tipo de recurso |
-| `network/NetworkSavedData.java`, `WaNetwork.java` | Redes e rede ativa por jogador, salvas no overworld |
+| `network/NetworkSavedData.java`, `WaNetwork.java`, `WaGroup.java` | Redes, rede ativa por jogador e grupos de redes (só para organizar no Tablet, com pausar e retomar), salvos no overworld |
 | `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
-| `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java` | Lógica pura, testada por JUnit |
+| `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java`, `ReachBox.java`, `SourceCursor.java` | Lógica pura, testada por JUnit (também `client/RateFormat.java`, `linker/LinkerBox.java` e `filter/StockLimit.java`) |
 | `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
 | `filter/` | `Filter`/`FilterEntry` (modelo imutável com codecs), `FilterSet` (embutido + cartões), matchers compilados com cache, `FilterTags` (recarga de tags), `StockLimit` e `FilterCodecs.LENIENT` |
 | `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem`, `ChunkLoaderUpgradeItem` e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros) |
-| `linker/` | Vinculador: modo Área (`LinkerArea`, `LinkerBox`, `LinkerScan`, `LinkerActions`) |
+| `linker/` | Vinculador: modo (`LinkerMode`, Único ou Área) e a área (`LinkerArea`, `LinkerBox`, `LinkerScan`, `LinkerActions`) |
 | `preset/` | Configurador: regra das redes ao colar (`PresetApplier`) e colar em área na mesma máquina (`ConfiguratorArea`, usa a área do Vinculador) |
-| `chunk/` | Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`) |
+| `chunk/` | Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`), eventos de tick, config e parada (`ChunkLoaderEvents`) e o estado mostrado na tela (`ChunkLoadState`) |
 | `network/NodeIndex.java`, `NodeProbe.java` | Índice persistente dos nós (Tablet) e status de cada nó |
 | `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents`, `ModMenus`, `ModRecipes` |
-| `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) |
+| `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) e `RouterUpgradeRecipe` (roteador + Cartão de Upgrade do tier seguinte na bancada, também no JEI) |
 | `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
 | `compat/mekanism/`, `network/Chemicals.java`, `network/ChemicalTransfer.java` | Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism |
 | `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` e `/wa bench ...` |
-| `menu/RouterMenu.java`, `RouterSnapshot.java` | Menu da tela do roteador (sem slots) e o snapshot que o servidor manda só com a tela aberta |
+| `menu/RouterMenu.java`, `RouterSnapshot.java`, `RemoteRouterMenu.java` | Menu da tela do roteador (slots de cartão da face selecionada e o do upgrade de chunk loading), o snapshot que o servidor manda só com a tela aberta e a mesma tela aberta à distância pelo Tablet |
 | `menu/Tablet*`, `Linker*` | Menus e snapshots das telas do Tablet e do Vinculador (o Configurador não tem tela) |
 | `menu/FilterMenu.java`, `FilterView.java`, `FilterTarget.java` | Tela de filtro: de uma face (`RouterFaceFilterTarget`) ou de um cartão (`CardFilterTarget`); Shift + clique no inventário adiciona |
 | `packet/` | Payloads cliente↔servidor da tela e o registro com os handlers (`ModPayloads`); o servidor valida tudo |
 | `client/` | Só cliente: `RouterScreen`, `MachineView3D` (visor 3D), `FilterScreen`, `TabletScreen`, `LinkerScreen`, `AreaRenderer` (contorno da área do Vinculador e do Configurador), `LinkerScrollHandler`, widgets, `ClientSetup`, `DevScreenshot` (capturas com `WA_SCREENSHOT`) e `DevEndToEnd` (teste num mundo real com `WA_E2E`) |
-| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador, transferência, menus e filtros. `ChemicalGameTests` fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
+| `gametest/` | GameTests (template `empty`), 89 na run comum: roteador, configuração, redes por tipo, Armazém, transferência, filtros, slots de cartão, menus, payloads do JEI, Configurador, área do Vinculador, Tablet, chunk loading e receitas. `ChemicalGameTests` (3 testes) fica no namespace `wirelessautomate_chemicals` e só roda na run `gameTestServerChemicals` |
 | `scripts/textures/gerar_texturas.py` | Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; edite as paletas ali, não os PNGs |
 | `scripts/guide/gerar_guia.py` | Gera as páginas do livro-guia (GuideME) em inglês e português, lado a lado; edite ali, não os `.md` |
 | `scripts/curseforge/` | Capa (`gerar_capa.py`, 400x400) e banner e imagens da descrição (`gerar_imagens.py`) do CurseForge, em `docs/curseforge/`. As fotos vêm da vitrine: `WA_SHOWCASE=run/showcase ./gradlew runClient` (modo do `DevEndToEnd`) |
@@ -65,9 +65,10 @@ Recursos em `src/main/resources/`:
 ./gradlew test              # só JUnit
 ./gradlew runGameTestServer # GameTests headless (sem o Mekanism); falha o build se algum teste falhar
 ./gradlew runGameTestServerChemicals # GameTests de químicos, num servidor com o Mekanism na pasta mods
+./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism e GuideME, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
-./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; ~1 min)
+./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; alguns minutos, com as capturas do guia)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ```
 

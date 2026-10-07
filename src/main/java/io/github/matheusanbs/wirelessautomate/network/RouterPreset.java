@@ -22,8 +22,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Configuração copiável de um roteador: as faces de cada tipo, por {@link RelativeSide}, e a rede
  * de cada tipo (aba). Por ser relativa ao {@code facing}, colar num roteador virado para outro lado
- * gira a configuração junto. Imutável; vai no componente de item do Configurador e, mais tarde, na
- * biblioteca.
+ * gira a configuração junto. Imutável; vai no componente de item do Configurador.
  *
  * <p>Formato: {@code networks} é um mapa tipo → rede. Presets antigos, com uma rede única em
  * {@code network}, são lidos com essa rede em todos os tipos.

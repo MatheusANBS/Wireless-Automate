@@ -455,9 +455,9 @@ public final class DevEndToEnd {
             int y = pill.getY() + pill.getHeight() + 2 + 2 + row * DROPDOWN_ROW + DROPDOWN_ROW / 2;
             click(screen, x, y);
         }, () -> otherNetwork.equals(onServer(server -> router(server, routerB).networkId()))
-                && routerScreen().getMenu().snapshot().network().equals(Optional.of(otherNetwork)),
+                && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
                 () -> "servidor " + onServer(server -> String.valueOf(router(server, routerB).networkId()))
-                        + ", tela " + routerScreen().getMenu().snapshot().network()));
+                        + ", tela " + routerScreen().getMenu().snapshot().network(ResourceType.ITEM)));
         list.add(capture("5-roteador-b-final"));
         cardSteps(list);
         list.add(close("fechar B"));

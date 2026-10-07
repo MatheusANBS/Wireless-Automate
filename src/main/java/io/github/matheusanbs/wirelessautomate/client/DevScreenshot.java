@@ -104,7 +104,7 @@ public final class DevScreenshot {
                 screen.previewType(ResourceType.FLUID);
                 RouterSnapshot s = screen.getMenu().snapshot();
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                        s.network(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
+                        s.typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
                 int[] center = screen.previewEditFilterCenter();
                 mouseX = center[0];
                 mouseY = center[1];
@@ -145,7 +145,7 @@ public final class DevScreenshot {
                 new Step(() -> {
                     RouterSnapshot s = screen.getMenu().snapshot();
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.ADVANCED, Direction.NORTH,
-                            s.network(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
+                            s.typeNetworks(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
                             Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST), s.faces()));
                     screen.previewFace(Direction.UP);
                     screen.previewViewDefault();
@@ -156,7 +156,7 @@ public final class DevScreenshot {
                 new Step(() -> {
                     RouterSnapshot s = screen.getMenu().snapshot();
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.BASIC, Direction.WEST,
-                            s.network(), s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
+                            s.typeNetworks(), s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
                             s.faces()));
                     screen.previewViewDefault();
                     mouseX = mouseY = -1;
@@ -186,7 +186,7 @@ public final class DevScreenshot {
                     faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
                     faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true));
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                            s.network(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
+                            s.typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
                     screen.previewType(ResourceType.ITEM);
                     screen.previewFace(Direction.DOWN);
                     mouseX = mouseY = -1;
@@ -317,7 +317,7 @@ public final class DevScreenshot {
         int down = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
         FaceView d = faces.get(down);
         faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
-        RouterSnapshot snapshot = new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(), s.network(),
+        RouterSnapshot snapshot = new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(), s.typeNetworks(),
                 s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces));
 
         Inventory inventory = new Inventory(null);
@@ -441,7 +441,8 @@ public final class DevScreenshot {
                 new NetworkEntry(UUID.nameUUIDFromBytes("fluidos".getBytes()), "Fluidos", 0x45D6CC, true),
                 new NetworkEntry(UUID.nameUUIDFromBytes("energia".getBytes()), "Energia", 0xFFB020, false),
                 new NetworkEntry(UUID.nameUUIDFromBytes("minerio".getBytes()), "Minério", 0xD8875A, true));
-        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP, Optional.of(base),
+        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP,
+                java.util.Collections.nCopies(ResourceType.values().length, Optional.of(base)),
                 networks, false, new ItemStack(Items.FURNACE), Blocks.FURNACE.defaultBlockState(), List.copyOf(faces));
     }
 }

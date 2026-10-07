@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre as máquinas, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick. Redes e rede ativa existem e são salvas no mundo; o Vinculador (modo Único) e o Configurador (pincel) funcionam. Ainda não há telas: a configuração das faces é feita por `/wa face` ou pelo Configurador. Em tamanho, isso é perto de 45% do v1.
+O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre as máquinas, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick. Redes e rede ativa existem e são salvas no mundo; o Vinculador (modo Único) e o Configurador (pincel) funcionam. O clique direito no roteador abre a tela dele, com nome, rede, tier, vazão atual e as 6 faces da máquina por tipo (modo, prioridade, redstone). Faltam os filtros e o benchmark. Em tamanho, isso é perto de 60% do v1.
 
 ## Roadmap v1, motor e essencial
 
@@ -22,7 +22,7 @@ O motor funciona: roteadores na mesma rede movem itens, fluidos e energia entre 
 | Configurador como pincel e Vinculador modo Único | ✅ | `item/ConfiguratorItem.java`: Shift + clique copia, clique cola (`network/RouterPreset.java`, componente `wirelessautomate:preset`), relativo ao `facing`; a rede só é colada se o jogador puder usá-la. `item/LinkerItem.java`: clique no roteador põe na rede ativa. |
 | Profiler embutido | ✅ | `/wa profile`: linha geral e uma linha por rede com nós, ms/tick, operações por segundo e origens/destinos acordados e dormindo. |
 | Benchmark com Sophisticated Storage | ⬜ | — |
-| Telas (GUI) | ⬜ | Nenhuma tela ainda; o clique direito no roteador não abre nada. |
+| Telas (GUI) | 🟡 | Tela do roteador pronta: `client/RouterScreen.java` (cliente), `menu/RouterMenu.java` e `menu/RouterSnapshot.java` (o que a tela mostra) e `packet/` (payloads). O servidor manda o snapshot inteiro só quando o roteador ou as redes mudam, e a vazão no máximo 1×/s, tudo só com a tela aberta. As faces aparecem numa planificação 2D do cubo. **Faltam** o visor 3D, o Editar do filtro, o rodapé de cartões/upgrades e as telas de Filtro, Tablet, Vinculador e Configurador. |
 
 ## Roadmap v2, escala e integrações
 
@@ -30,13 +30,14 @@ Nada começado: químicos do Mekanism, Tablet, presets e código `WA1:`, Configu
 
 ## Próximo passo
 
-**A tela do roteador e os filtros.** Hoje a configuração só é feita por comando ou pelo Configurador.
+**Os filtros.** A tela do roteador já existe; o botão Editar do filtro está desativado esperando por eles.
 
-1. Sincronização sob demanda: o block entity manda ao cliente só o que a tela precisa, e só com ela aberta (pacotes `CustomPacketPayload`; nada com a tela fechada).
-2. `RouterMenu` + `RouterScreen`: cabeçalho (nome, rede, tier), abas por tipo, as 6 faces da máquina com modo, prioridade e redstone (a especificação descreve a tela em "Telas da interface"; o visor 3D pode vir depois de uma versão com botões).
-3. Ao abrir a tela pelo clique direito, o `RouterBlock.useItemOn` deve devolver `SKIP_DEFAULT_BLOCK_INTERACTION` quando a mão tiver o Vinculador ou o Configurador, senão o `useOn` deles deixa de rodar.
-4. Filtros dentro do `FaceConfig` (exato, tag, mod; lista branca/negra; compilados em conjuntos de hash) e o Cartão de Filtro. O `RouterPreset` já leva o que o `FaceConfig.save()` salvar.
-5. Benchmark com Sophisticated Storage (cenários "Muitos nós" e "Rede ociosa" da especificação).
+1. Filtro dentro do `FaceConfig` (exato, tag, mod; lista branca/negra; ignorar ou exigir componentes; estoque), compilado em conjuntos de hash com a resposta em cache por tipo, e aplicado em `ItemTransfer`/`FluidTransfer`. Teto interno de 4.096 entradas. O `RouterPreset` já leva o que o `FaceConfig.save()` salvar.
+2. Tela de Filtro (especificação "Telas da interface → Filtro"), aberta pelo Editar: grade com rolagem, Shift + clique no inventário adiciona; a aba JEI vem com a integração opcional.
+3. Cartão de Filtro (item com o filtro num componente) e os slots de cartões no rodapé da tela do roteador.
+4. Benchmark com Sophisticated Storage (cenários "Muitos nós" e "Rede ociosa" da especificação).
+
+Para conferir telas sem monitor: `WA_SCREENSHOT=<dir> xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient` desenha a tela do roteador com um snapshot de exemplo, salva PNGs e fecha o jogo (`client/DevScreenshot.java`; ponha `lang:pt_br` em `run/options.txt` para as capturas em português). A ida e volta real cliente↔servidor ainda não foi testada num mundo de verdade, só os handlers por GameTest.
 
 Limites conhecidos do motor, para depois: um fluido por tanque por visita, inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho, o round-robin recomeça a cada remontagem, e uma face Ambos em duas máquinas faz os itens irem e voltarem.
 
@@ -52,6 +53,7 @@ Limites conhecidos do motor, para depois: um fluido por tanque por visita, inser
 - Nunca se entrega na mesma porta (máquina e face) de onde se extraiu. Itens: extrai só o que o destino aceitou na simulação; sobra que o destino recusar volta à origem e, em último caso, cai no mundo (com log). Energia: extrai antes de entregar, então nunca se cria energia.
 - Lados relativos (`RelativeSide`): `FRONT` é a face onde o roteador está preso, `BACK` a oposta, `TOP` para onde apontam os LEDs, `LEFT`/`RIGHT` vistos de fora da face `FRONT`.
 - `/wa network` é de jogador comum; `/wa face` e `/wa profile` pedem permissão 2. A rede padrão de um jogador leva o nome dele.
+- Tela do roteador: o servidor valida tudo (mesmo `containerId`, até 8 blocos, prioridade −999..999, rede só do dono ou de op). A tela não muda nada sozinha: espera o snapshot do servidor. Com Vinculador, Configurador ou núcleo de tier na mão, o clique vai para o item, não para a tela.
 - A receita do roteador é ferro + redstone + olho de ender (`data/wirelessautomate/recipe/router.json`). Os núcleos ainda não têm receita.
 
 ## Decisões em aberto (da especificação)
@@ -65,4 +67,5 @@ Limites conhecidos do motor, para depois: um fluido por tanque por visita, inser
 | Data | O que foi feito |
 | --- | --- |
 | 2026-10-07 | Esqueleto: projeto ModDevGradle, assets do pacote de design, roteador com tiers, itens registrados, gerenciador com orçamento, `/wa profile`, config, traduções, scripts de setup, CI, 6 testes JUnit e 3 GameTests passando. |
+| 2026-10-07 | Tela do roteador (subagentes servidor e cliente sobre contratos): abrir pelo clique, snapshot só com a tela aberta, ações validadas, vazão atual por tipo, nome do nó, `RouterScreen` com cabeçalho, abas, faces, modos, prioridade e redstone, e modo de captura sob Xvfb. 49 testes JUnit e 27 GameTests passando. |
 | 2026-10-07 | Motor v1 (feito com subagentes em paralelo sobre contratos): redes e rede ativa salvas, configuração por face relativa, caches de capability, laço de itens, fluidos e energia com prioridade, round-robin, redstone, vazão, alcance e destinos dormindo; `/wa network`, `/wa face`, profiler por rede, Vinculador modo Único e Configurador pincel. 45 testes JUnit e 22 GameTests passando. |

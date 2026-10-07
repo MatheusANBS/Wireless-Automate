@@ -107,4 +107,36 @@ class RoundRobinOrderTest {
         List<String> withNull = java.util.Arrays.asList("a", null);
         assertThrows(NullPointerException.class, () -> order(withNull, Map.of()));
     }
+
+    @Test
+    void sharedLayoutKeepsCursorsPerOrder() {
+        RoundRobinOrder.Layout<String> layout = new RoundRobinOrder.Layout<>(List.of("a", "b", "c"), d -> d.equals("c") ? 1 : 0);
+        RoundRobinOrder<String> first = new RoundRobinOrder<>(layout);
+        RoundRobinOrder<String> second = new RoundRobinOrder<>(layout);
+        first.delivered("a");
+        assertEquals(List.of("c", "b", "a"), first.pass());
+        assertEquals(List.of("c", "a", "b"), second.pass());
+        assertEquals(3, second.size());
+    }
+
+    @Test
+    void passIsStableWhileDelivering() {
+        RoundRobinOrder<String> order = order(List.of("a", "b", "c"), Map.of());
+        List<String> pass = order.pass();
+        order.delivered("a");
+        assertEquals(List.of("a", "b", "c"), pass);
+        assertEquals(List.of("b", "c", "a"), order.pass());
+    }
+
+    @Test
+    void passReadsEveryGroupFromItsCursor() {
+        RoundRobinOrder<String> order = order(
+                List.of("a", "b", "c", "x", "y", "z", "w"), Map.of("a", 2, "b", 2, "c", 2, "w", -1));
+        order.delivered("b");
+        order.delivered("x");
+        List<String> pass = order.pass();
+        assertEquals(List.of("c", "a", "b", "y", "z", "x", "w"), pass);
+        assertEquals("y", pass.get(3));
+        assertThrows(IndexOutOfBoundsException.class, () -> pass.get(7));
+    }
 }

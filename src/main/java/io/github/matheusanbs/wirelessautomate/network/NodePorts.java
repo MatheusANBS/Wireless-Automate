@@ -77,11 +77,15 @@ final class NodePorts {
             // O inventário mudou: a volta sem achar nada recomeça do zero.
             port.idleSlots = 0;
             if (port.destination) {
-                List<Port> feeders = port.feeders;
-                for (int i = 0, n = feeders.size(); i < n; i++) {
-                    feeders.get(i).sourceBackoff.wake();
-                }
+                wakeAll(port.feeders);
+                wakeAll(port.sharedFeeders);
             }
+        }
+    }
+
+    private static void wakeAll(List<Port> sources) {
+        for (int i = 0, n = sources.size(); i < n; i++) {
+            sources.get(i).sourceBackoff.wake();
         }
     }
 }

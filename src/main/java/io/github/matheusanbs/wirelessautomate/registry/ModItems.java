@@ -32,10 +32,14 @@ public final class ModItems {
     public static final DeferredItem<ChunkLoaderUpgradeItem> CHUNK_LOADER_UPGRADE = ITEMS.registerItem(
             "chunk_loader_upgrade", ChunkLoaderUpgradeItem::new, new Item.Properties().stacksTo(1));
 
+    /** Núcleos de Avançado a Ultimate; não há núcleo Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);
 
     static {
         for (RouterTier tier : RouterTier.values()) {
+            if (tier == RouterTier.BASIC) {
+                continue;
+            }
             TIER_CORES.put(tier, ITEMS.registerItem("tier_core_" + tier.getSerializedName(),
                     props -> new TierCoreItem(tier, props), new Item.Properties()));
         }

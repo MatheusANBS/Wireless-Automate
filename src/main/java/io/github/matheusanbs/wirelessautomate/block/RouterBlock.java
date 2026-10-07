@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.block;
 import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -205,6 +206,12 @@ public class RouterBlock extends BaseEntityBlock {
      * Sobe o roteador em {@code pos} para {@code target}, se for exatamente o tier seguinte.
      * O block entity é mantido, então a configuração não se perde.
      */
+    /** Clique do meio (criativo): o roteador no tier do bloco, não o Básico padrão do item. */
+    @Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        return RouterBlockItem.withTier((RouterBlockItem) asItem(), state.getValue(TIER));
+    }
+
     public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target) {
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof RouterBlock) || state.getValue(TIER).next() != target) {

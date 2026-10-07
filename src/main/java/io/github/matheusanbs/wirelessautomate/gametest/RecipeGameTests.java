@@ -1,6 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.component.DataComponents;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
@@ -88,9 +96,54 @@ public final class RecipeGameTests {
         // Sem o núcleo anterior no centro não sai nada: a progressão é obrigatória.
         helper.assertTrue(find(helper, grid(null, Items.NETHER_STAR, null,
                 netherite, Items.DIAMOND, netherite, null, netherite, null)).isEmpty(), "Elite sem o Avançado");
-        // O núcleo Básico não tem receita: o roteador já nasce Básico.
-        helper.assertTrue(helper.getLevel().getRecipeManager().byKey(WirelessAutomate.id("tier_core_basic")).isEmpty(),
-                "núcleo Básico não deveria ter receita");
+        // Não há núcleo Básico: o roteador já nasce Básico.
+        helper.assertTrue(!ModItems.TIER_CORES.containsKey(RouterTier.BASIC)
+                && !BuiltInRegistries.ITEM.containsKey(WirelessAutomate.id("tier_core_basic")),
+                "não deveria existir núcleo Básico");
+        helper.succeed();
+    }
+
+    /** Roteador + núcleo do tier seguinte, em qualquer posição da grade, sobe um tier; o resto não casa. */
+    @GameTest(template = "empty")
+    public static void routerUpgradeRecipe(GameTestHelper helper) {
+        RouterTier[] tiers = RouterTier.values();
+        for (RouterTier tier : tiers) {
+            RouterTier next = tier.next();
+            if (next == null) {
+                continue;
+            }
+            ItemStack router = RouterBlockItem.withTier(ModItems.ROUTER.get(), tier);
+            router.set(DataComponents.CUSTOM_NAME, Component.literal("Fornalha 1"));
+            CraftingInput input = CraftingInput.of(3, 3, Arrays.asList(ItemStack.EMPTY, router, ItemStack.EMPTY,
+                    ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
+                    new ItemStack(ModItems.TIER_CORES.get(next).get()), ItemStack.EMPTY, ItemStack.EMPTY));
+            RecipeHolder<CraftingRecipe> holder = find(helper, input)
+                    .orElseThrow(() -> new GameTestAssertException("sem upgrade de " + tier));
+            helper.assertValueEqual(holder.id(), WirelessAutomate.id("router_upgrade"), "receita");
+            ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
+            helper.assertTrue(out.is(ModItems.ROUTER.get()), "resultado: " + out);
+            helper.assertValueEqual(out.getCount(), 1, "quantidade");
+            helper.assertValueEqual(RouterBlockItem.tierOf(out), next, "tier de " + tier);
+            helper.assertValueEqual(out.getHoverName().getString(), "Fornalha 1", "nome perdido");
+        }
+        ItemStack basic = RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.BASIC);
+        ItemStack elite = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ELITE).get());
+        ItemStack advanced = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get());
+        // Pular tier, roteador Ultimate, dois núcleos, dois roteadores ou só o roteador: nada.
+        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(basic, elite))).isEmpty(), "pulou tier");
+        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(
+                RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ULTIMATE),
+                new ItemStack(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get())))).isEmpty(), "Ultimate subiu");
+        helper.assertTrue(find(helper, CraftingInput.of(3, 1, List.of(basic, advanced, advanced.copy()))).isEmpty(),
+                "dois núcleos");
+        helper.assertTrue(find(helper, CraftingInput.of(3, 1, List.of(basic, basic.copy(), advanced))).isEmpty(),
+                "dois roteadores");
+        helper.assertTrue(find(helper, CraftingInput.of(1, 1, List.of(basic))).isEmpty(), "só o roteador");
+
+        // Clique do meio no bloco devolve o roteador no tier dele.
+        BlockState elitePlaced = ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.ELITE);
+        ItemStack picked = ModBlocks.ROUTER.get().getCloneItemStack(helper.getLevel(), BlockPos.ZERO, elitePlaced);
+        helper.assertValueEqual(RouterBlockItem.tierOf(picked), RouterTier.ELITE, "clique do meio");
         helper.succeed();
     }
 

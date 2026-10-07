@@ -114,8 +114,9 @@ tasks.named('test', Test).configure {
 
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
-// copiados para run/bench/mods só para o run benchServer: nem os GameTests nem o cliente das
-// capturas carregam esses mods. Rode com ./scripts/bench.sh.
+// copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
+// dev (runClient, também o do e2e) carrega o Sophisticated Storage, copiado para run/mods, junto
+// com o JEI; os GameTests não carregam nenhum dos dois mods do Modrinth.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -128,12 +129,18 @@ configurations {
         canBeConsumed = false
         transitive = false
     }
+    clientMods {
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 dependencies {
     benchMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
     benchMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
     benchMods 'maven.modrinth:spark:1.10.124-neoforge-1.21.1'
+    clientMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
+    clientMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -142,6 +149,19 @@ var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     from configurations.benchMods
     into layout.projectDirectory.dir('run/bench/mods')
 }
+
+// run/mods do cliente: troca as versões do Sophisticated quando mudam e preserva o que o dono
+// puser ali à mão.
+var prepareClientMods = tasks.register('prepareClientMods', Sync) {
+    from configurations.clientMods
+    into layout.projectDirectory.dir('run/mods')
+    preserve {
+        include '**'
+        exclude 'sophisticated-*.jar'
+    }
+}
+
+neoForge.runs.client.taskBefore prepareClientMods
 
 neoForge.runs {
     // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado

@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "wirelessautomate:item/tier_core_basic"
-  }
-}

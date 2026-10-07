@@ -22,7 +22,9 @@ public final class ModCreativeTabs {
                             output.accept(RouterBlockItem.withTier(ModItems.ROUTER.get(), tier));
                         }
                         for (RouterTier tier : RouterTier.values()) {
-                            output.accept(ModItems.TIER_CORES.get(tier).get());
+                            if (ModItems.TIER_CORES.containsKey(tier)) {
+                                output.accept(ModItems.TIER_CORES.get(tier).get());
+                            }
                         }
                         output.accept(ModItems.CONFIGURATOR.get());
                         output.accept(ModItems.NETWORK_TABLET.get());

@@ -121,6 +121,11 @@ public final class NetworkManager {
         }
     }
 
+    /** Portas do nó carregado, para o Tablet ler o sono dos destinos ({@link NodeProbe}); não as altera. */
+    @Nullable NodePorts ports(RouterBlockEntity node) {
+        return nodes.get(node);
+    }
+
     public int nodeCount() {
         return nodes.size();
     }
@@ -241,7 +246,8 @@ public final class NetworkManager {
         configChanged = false;
         for (int i = 0, n = networkList.size(); i < n; i++) {
             NetworkRoutes network = networkList.get(i);
-            boolean exists = data.network(network.id) != null;
+            // Rede pausada (grupo pausado no Tablet) conta como inexistente: fica sem rotas até retomar.
+            boolean exists = data.network(network.id) != null && !data.isPaused(network.id);
             if (all || exists != network.exists) {
                 network.exists = exists;
                 network.dirty = true;

@@ -8,7 +8,6 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -119,7 +118,7 @@ public final class LinkerActions {
             return LinkerProblem.TOO_FAR;
         }
         WaNetwork network = activeNetwork(player);
-        if (network != null && !ModPayloads.canUse(player, network)) {
+        if (network != null && !network.canUse(player)) {
             return LinkerProblem.FOREIGN_NETWORK;
         }
         return LinkerProblem.NONE;
@@ -237,11 +236,11 @@ public final class LinkerActions {
         return applied;
     }
 
-    /** Rede existente que o jogador pode usar (dono ou operador). */
+    /** Rede existente que o jogador pode usar (dono, operador ou rede pública). */
     public static boolean setActive(ServerPlayer player, @Nullable UUID id) {
         NetworkSavedData data = NetworkSavedData.get(player.server);
         WaNetwork network = id == null ? null : data.network(id);
-        if (network == null || !ModPayloads.canUse(player, network)) {
+        if (network == null || !network.canUse(player)) {
             return false;
         }
         data.setActiveNetwork(player.getUUID(), network.id());

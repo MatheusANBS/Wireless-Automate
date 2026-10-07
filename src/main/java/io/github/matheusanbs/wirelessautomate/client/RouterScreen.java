@@ -483,7 +483,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (machineView.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        boolean wasRenaming = renaming;
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (renaming && !wasRenaming) {
+            // a tela dá o foco ao botão clicado depois do onPress, tirando-o do campo do nome
+            setFocused(renameBox);
+        }
+        return handled;
     }
 
     @Override

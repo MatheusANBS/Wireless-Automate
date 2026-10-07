@@ -27,6 +27,16 @@ sourceSets.main.resources {
 
 repositories {
     // Repositórios das integrações opcionais (JEI, Mekanism, AE2...) entram aqui quando forem usadas.
+
+    // JEI (integração opcional, ver compat/jei). O modmaven.dev espelha o mesmo grupo.
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+        content {
+            includeGroup 'mezz.jei'
+            includeGroup 'net.mezzdev.config' // biblioteca de config que o JEI 19.56+ usa
+        }
+    }
 }
 
 neoForge {
@@ -82,9 +92,12 @@ configurations {
 }
 
 dependencies {
-    // Integrações opcionais (ver docs/especificacao.md, seção Integrações). Exemplo com JEI:
-    // compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    // localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    // Integrações opcionais (ver docs/especificacao.md, seção Integrações).
+
+    // JEI: só a API na compilação; o JEI completo só nas execuções de dev (runClient), sem virar
+    // dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")

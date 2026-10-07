@@ -32,9 +32,10 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# JEI 19 é a linha do 1.21.1. Arrastar funciona em toda ela; Shift + clique na lista pede 19.28+.
 [[dependencies.${mod_id}]]
     modId="jei"
     type="optional"
-    versionRange="*"
+    versionRange="[19,)"
     ordering="NONE"
     side="BOTH"

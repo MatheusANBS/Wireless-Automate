@@ -55,6 +55,9 @@ public final class ModPayloads {
                 (payload, context) -> handleOpenFilter(serverPlayer(context), payload));
         registrar.playToServer(EditFilterPayload.TYPE, EditFilterPayload.STREAM_CODEC,
                 (payload, context) -> handleEditFilter(serverPlayer(context), payload));
+        // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
+        registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
+                (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -228,6 +231,32 @@ public final class ModPayloads {
                 }
             }
         }
+        return true;
+    }
+
+    /**
+     * Ingrediente fantasma (JEI): acrescenta um item exato a um filtro de itens ou um fluido exato a
+     * um de fluidos, sem o jogador ter o recurso. Normaliza para quantidade 1 e sem estoque; o
+     * {@link Filter#withEntry} ignora duplicados e o teto. Devolve se a entrada foi aceita.
+     */
+    public static boolean handleAddFilterEntry(@Nullable ServerPlayer player, AddFilterEntryPayload payload) {
+        FilterMenu menu = player != null && player.containerMenu instanceof FilterMenu m
+                && m.containerId == payload.containerId() ? m : null;
+        if (menu == null || menu.target() == null || !menu.stillValid(player)) {
+            return false;
+        }
+        FilterTarget target = menu.target();
+        FilterEntry entry = switch (payload.entry()) {
+            case FilterEntry.ItemEntry e when target.type() == ResourceType.ITEM && !e.stack().isEmpty() ->
+                    new FilterEntry.ItemEntry(e.stack(), 0);
+            case FilterEntry.FluidEntry e when target.type() == ResourceType.FLUID && !e.stack().isEmpty() ->
+                    new FilterEntry.FluidEntry(e.stack(), 0);
+            default -> null;
+        };
+        if (entry == null) {
+            return false;
+        }
+        target.setFilter(target.filter().withEntry(entry));
         return true;
     }
 

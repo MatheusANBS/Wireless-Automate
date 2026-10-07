@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
@@ -14,6 +15,13 @@ public final class ModDataComponents {
     /** Configuração copiada pelo Configurador. */
     public static final Supplier<DataComponentType<RouterPreset>> PRESET = DATA_COMPONENTS.registerComponentType(
             "preset", builder -> builder.persistent(RouterPreset.CODEC).networkSynchronized(RouterPreset.STREAM_CODEC));
+
+    /** Tipo e filtro do Cartão de Filtro. */
+    public static final Supplier<DataComponentType<FilterCardItem.Contents>> CARD_FILTER =
+            DATA_COMPONENTS.registerComponentType("card_filter", builder -> builder
+                    .persistent(FilterCardItem.Contents.CODEC)
+                    .networkSynchronized(FilterCardItem.Contents.STREAM_CODEC)
+                    .cacheEncoding());
 
     private ModDataComponents() {
     }

@@ -9,6 +9,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Filtro de uma face (ou de um cartão), imutável. Sem entradas, passa tudo, em qualquer modo.
@@ -16,7 +17,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * de {@link #MAX_ENTRIES} entradas para proteger o dado salvo e o pacote de rede.
  *
  * <p>A pergunta "este recurso passa?" é respondida por um matcher compilado em conjuntos de hash
- * e guardado em cache (ver {@code TODO(contrato)} abaixo).
+ * e guardado no próprio filtro ({@link CompiledMatcher}); como o filtro é imutável, o matcher só
+ * é refeito quando o filtro é trocado, e o cache dele quando as tags recarregam.
  */
 public final class Filter {
     public static final int MAX_ENTRIES = 4096;
@@ -110,26 +112,73 @@ public final class Filter {
         return -1;
     }
 
-    // TODO(contrato): correspondência compilada (agente do motor). Sem entradas = passa tudo.
+    // Correspondência: compilada na primeira consulta de cada tipo (ver CompiledMatcher) e guardada
+    // aqui. Não entra em equals/hashCode nem nos codecs. Uma entrada que não vale para o tipo
+    // (fluido num filtro de itens) não casa com nada, mas conta para "o filtro tem entradas".
+
+    private @Nullable ItemMatcher itemMatcher;
+    private @Nullable FluidMatcher fluidMatcher;
+
+    private ItemMatcher items() {
+        ItemMatcher matcher = itemMatcher;
+        if (matcher == null) {
+            matcher = new ItemMatcher(entries, matchComponents);
+            itemMatcher = matcher;
+        }
+        return matcher;
+    }
+
+    private FluidMatcher fluids() {
+        FluidMatcher matcher = fluidMatcher;
+        if (matcher == null) {
+            matcher = new FluidMatcher(entries, matchComponents);
+            fluidMatcher = matcher;
+        }
+        return matcher;
+    }
 
     /** O item passa pelo filtro? */
     public boolean testItem(ItemStack stack) {
-        throw new UnsupportedOperationException("TODO");
+        if (entries.isEmpty()) {
+            return true;
+        }
+        return (items().index(stack) >= 0) == (listMode == ListMode.WHITELIST);
     }
 
     /** O fluido passa pelo filtro? */
     public boolean testFluid(FluidStack stack) {
-        throw new UnsupportedOperationException("TODO");
+        if (entries.isEmpty()) {
+            return true;
+        }
+        return (fluids().index(stack) >= 0) == (listMode == ListMode.WHITELIST);
     }
 
     /** Estoque da primeira entrada que casa com o item (lista branca), ou 0 se não houver. */
     public long itemStock(ItemStack stack) {
-        throw new UnsupportedOperationException("TODO");
+        if (!usesItemStock()) {
+            return 0;
+        }
+        int index = items().index(stack);
+        return index >= 0 ? entries.get(index).stock() : 0;
     }
 
     /** Estoque da primeira entrada que casa com o fluido (lista branca), ou 0 se não houver. */
     public long fluidStock(FluidStack stack) {
-        throw new UnsupportedOperationException("TODO");
+        if (!usesFluidStock()) {
+            return 0;
+        }
+        int index = fluids().index(stack);
+        return index >= 0 ? entries.get(index).stock() : 0;
+    }
+
+    /** Lista branca com alguma entrada de item (exata, tag ou mod) com estoque. Barato depois da primeira vez. */
+    public boolean usesItemStock() {
+        return listMode == ListMode.WHITELIST && !entries.isEmpty() && items().usesStock;
+    }
+
+    /** Lista branca com alguma entrada de fluido (exata, tag ou mod) com estoque. */
+    public boolean usesFluidStock() {
+        return listMode == ListMode.WHITELIST && !entries.isEmpty() && fluids().usesStock;
     }
 
     public static final Codec<Filter> CODEC = RecordCodecBuilder.create(i -> i.group(

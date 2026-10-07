@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -33,15 +34,14 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, rede e
- * tier; abas por tipo com a vazão; as 6 faces da máquina numa planificação do cubo; a face
- * selecionada com modo e filtro; prioridade e redstone recolhidos em "Mais".
+ * tier; abas por tipo com a vazão; o visor 3D da máquina com o roteador ({@link MachineView3D}) e
+ * os botões das 6 faces logo abaixo; a face selecionada com modo e filtro; prioridade e redstone
+ * recolhidos em "Mais".
  *
  * <p>Tudo vem de {@link RouterMenu#snapshot()}. Os botões leem o estado a cada quadro e
  * {@link #refresh()} reposiciona o que depende de texto, então um snapshot novo
  * ({@link RouterMenu#version()} mudou) aparece sem recriar widgets e sem perder aba, face ou o que
  * está aberto.
- *
- * <p>TODO: visor 3D da máquina com o roteador, com as faces tocáveis (a planificação fica abaixo dele).
  */
 public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Químicos ficam ocultos até o motor movê-los (o servidor ainda recusa CHEMICAL). */
@@ -59,13 +59,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int TAB_H = 15;
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
-    // visor: planificação do cubo vista do sul (oeste à esquerda, leste à direita)
+    // visor 3D e, logo abaixo, os botões das faces em duas fileiras (cada coluna é um eixo)
     private static final int VIEW_W = 100;
-    private static final int VIEW_H = 102;
-    private static final int CELL_W = 22;
-    private static final int CELL_H = 30;
-    private static final int CELL_GAP = 2;
-    private static final int MACHINE_Y = BODY_Y + VIEW_H + 4;
+    private static final int VIEW_H = 84;
+    private static final int FACE_W = 32;
+    private static final int FACE_H = 18;
+    private static final int FACE_GAP = 2;
+    private static final int FACES_Y = BODY_Y + VIEW_H + 3;
     // coluna da face selecionada
     private static final int RX = X0 + VIEW_W + 8;
     private static final int RW = X1 - RX;
@@ -82,21 +82,20 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int DROPDOWN_MAX_ROWS = 8;
 
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
-    private static final Map<Direction, int[]> CELLS = new EnumMap<>(Direction.class);
-
-    static {
-        CELLS.put(Direction.UP, new int[] {1, 0});
-        CELLS.put(Direction.WEST, new int[] {0, 1});
-        CELLS.put(Direction.SOUTH, new int[] {1, 1});
-        CELLS.put(Direction.EAST, new int[] {2, 1});
-        CELLS.put(Direction.NORTH, new int[] {3, 1});
-        CELLS.put(Direction.DOWN, new int[] {1, 2});
-    }
+    /** Ordem dos botões das faces: em cima Cima, Norte e Leste; embaixo as opostas. */
+    private static final Direction[] FACE_ORDER = {Direction.UP, Direction.NORTH, Direction.EAST, Direction.DOWN,
+            Direction.SOUTH, Direction.WEST};
 
     private final boolean preview;
     private final List<ResourceType> types = new ArrayList<>();
     private final List<FlatButton> buttons = new ArrayList<>();
     private final Map<ResourceType, FlatButton> tabButtons = new EnumMap<>(ResourceType.class);
+    private final MachineView3D machineView = new MachineView3D(direction -> {
+        face = direction;
+        refresh();
+    });
+    private final Map<Direction, FlatButton> faceButtons = new EnumMap<>(Direction.class);
+    private final Function<Direction, FaceView> faceViews = this::view;
 
     private ResourceType type = ResourceType.ITEM;
     private Direction face;
@@ -274,13 +273,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             tabX += width + 3;
         }
 
-        int viewX = x + X0 + (VIEW_W - (4 * CELL_W + 3 * CELL_GAP)) / 2;
-        int viewY = y + BODY_Y + 4;
-        for (Direction direction : Direction.values()) {
-            int[] cell = CELLS.get(direction);
-            add(new FlatButton(viewX + cell[0] * (CELL_W + CELL_GAP), viewY + cell[1] * (CELL_H + CELL_GAP),
-                    CELL_W, CELL_H, faceName(direction), (g, b, hovered) -> paintFace(g, b, hovered, direction),
-                    () -> face = direction).tooltip(() -> faceTooltip(direction)));
+        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, VIEW_W - 2, VIEW_H - 2);
+        for (int i = 0; i < FACE_ORDER.length; i++) {
+            Direction direction = FACE_ORDER[i];
+            faceButtons.put(direction, add(new FlatButton(x + X0 + (i % 3) * (FACE_W + FACE_GAP),
+                    y + FACES_Y + (i / 3) * (FACE_H + FACE_GAP), FACE_W, FACE_H, faceName(direction),
+                    (g, b, hovered) -> paintFace(g, b, hovered, direction), () -> face = direction)
+                    .tooltip(() -> faceTooltip(direction))));
         }
 
         for (int i = 0; i < MODES.length; i++) {
@@ -481,7 +480,28 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (renaming && !renameBox.isMouseOver(mouseX, mouseY)) {
             finishRename(true);
         }
+        if (machineView.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        // a tela de contêiner não repassa o arrasto aos filhos; o visor recebe direto
+        if (machineView.mouseDragged(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // soltar fora do visor também encerra o giro
+        if (machineView.mouseReleased(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -489,6 +509,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (networkListOpen && dropdownContains(mouseX, mouseY)) {
             networkScroll -= (int) Math.signum(scrollY);
             refresh();
+            return true;
+        }
+        if (!networkListOpen && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -545,11 +568,17 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 return;
             }
         }
-        ItemStack machine = snapshot().machine();
-        if (!machine.isEmpty() && mouseX >= leftPos + X0 && mouseX < leftPos + X0 + 16
-                && mouseY >= topPos + MACHINE_Y && mouseY < topPos + MACHINE_Y + 16) {
-            g.renderTooltip(font, machine, mouseX, mouseY);
+        // sobre uma face o visor mostra o nome dela embaixo; a dica cobriria o modelo
+        if (!machineView.isDragging() && machineView.contains(mouseX, mouseY) && machineView.hoveredFace() == null) {
+            setTooltipForNextRenderPass(machineTooltip());
         }
+    }
+
+    /** Dica do visor fora das faces: a máquina e como usar o visor. */
+    private Component machineTooltip() {
+        ItemStack machine = snapshot().machine();
+        Component name = machine.isEmpty() ? tr("machine.none") : machine.getHoverName();
+        return name.copy().append("\n").append(tr("view.hint").copy().withColor(GuiPaint.MUTED));
     }
 
     @Override
@@ -580,20 +609,27 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
         GuiPaint.textRight(g, font, rate(), x + X1, y + TAB_Y + 4, GuiPaint.MUTED);
 
-        // visor
+        // visor 3D: máquina e roteador; com a lista de redes aberta, nada de realce sob o mouse
         int vx = x + X0;
         int vy = y + BODY_Y;
         g.fillGradient(vx + 1, vy + 1, vx + VIEW_W - 1, vy + VIEW_H - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
         GuiPaint.outline(g, vx, vy, VIEW_W, VIEW_H, GuiPaint.LINE);
-
-        // máquina
-        ItemStack machine = s.machine();
-        if (!machine.isEmpty()) {
-            g.renderItem(machine, x + X0, y + MACHINE_Y);
+        Direction buttonHovered = null;
+        for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
+            if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
+                buttonHovered = entry.getKey();
+            }
         }
-        Component machineName = machine.isEmpty() ? tr("machine.none") : machine.getHoverName();
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, machineName, VIEW_W - 20), x + X0 + 20, y + MACHINE_Y + 4,
-                GuiPaint.MUTED);
+        machineView.render(g, s.machineState(), s.facing(), s.tier(), faceViews, face, buttonHovered,
+                networkListOpen ? -1 : mouseX, networkListOpen ? -1 : mouseY);
+        Direction pointed = machineView.hoveredFace();
+        if (s.machineState().isAir()) {
+            GuiPaint.textCentered(g, font, tr("machine.none"), vx + VIEW_W / 2, vy + VIEW_H - 12, GuiPaint.MUTED);
+        } else if (pointed != null) {
+            Component label = faceName(pointed);
+            g.fill(vx + 1, vy + VIEW_H - 13, vx + 7 + font.width(label), vy + VIEW_H - 1, 0xB011151B);
+            GuiPaint.text(g, font, label, vx + 4, vy + VIEW_H - 11, GuiPaint.FG);
+        }
 
         // face selecionada
         FaceView v = view();
@@ -663,20 +699,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
         FaceView v = view(direction);
         boolean selected = direction == face;
+        // a face sob o mouse no visor também realça o botão dela
+        boolean pointed = hovered || direction == machineView.hoveredFace();
         int x = b.getX();
         int y = b.getY();
-        int border = selected ? tierColor() : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        int border = selected ? tierColor() : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), v.available() ? GuiPaint.BUTTON : GuiPaint.INSET, border);
         if (selected) {
             GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, tierColor());
         }
-        GuiPaint.port(g, v.available() ? v.mode() : PortMode.NONE, x + 3, y + 3, v.available() ? 1f : 0.3f);
-        GuiPaint.textCentered(g, font, tr("face.short." + direction.getName()), x + b.getWidth() / 2 + 1, y + 20,
+        GuiPaint.port(g, v.available() ? v.mode() : PortMode.NONE, x + 1, y + 1, v.available() ? 1f : 0.3f);
+        GuiPaint.text(g, font, tr("face.short." + direction.getName()), x + 19, y + 5,
                 v.available() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
         if (direction == snapshot().facing()) {
             // marca do roteador preso nesta face: um "LED" na cor do tier ao lado da letra
-            int bx = x + b.getWidth() - 7;
-            int by = y + b.getHeight() - 8;
+            int bx = x + b.getWidth() - 9;
+            int by = y + 6;
             g.fill(bx, by, bx + 6, by + 6, GuiPaint.BEVEL_DARK);
             g.fill(bx + 1, by + 1, bx + 5, by + 5, tierColor());
             g.fill(bx + 1, by + 1, bx + 3, by + 3, GuiPaint.mix(tierColor(), 0xFFFFFFFF, 0.5f));
@@ -841,6 +879,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             }
         }
         return new int[] {-1, -1};
+    }
+
+    /** Visor no ângulo inicial do snapshot atual. */
+    void previewViewDefault() {
+        machineView.previewReset(snapshot().facing(), snapshot().machineState());
+    }
+
+    /** Visor num ângulo fixo (graus) e zoom. */
+    void previewView(float yaw, float pitch, float zoom) {
+        previewViewDefault();
+        machineView.previewAngles(yaw, pitch, zoom);
+    }
+
+    /** Ponto da tela no centro da face da máquina no visor, para simular o mouse em cima. */
+    int[] previewViewFaceCenter(Direction direction) {
+        return machineView.previewProject(direction, snapshot().facing(), snapshot().machineState());
     }
 
     int[] previewEditFilterCenter() {

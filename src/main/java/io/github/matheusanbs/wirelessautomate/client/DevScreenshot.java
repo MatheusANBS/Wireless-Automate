@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
@@ -40,6 +41,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -111,56 +113,109 @@ public final class DevScreenshot {
                 screen.previewRename("Fornalha Norte 2");
             }, "6-renomear"));
 
+    /** Todos os passos, na ordem: os da tela, os do visor 3D e os da tela de filtro. */
+    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps())
+            .flatMap(List::stream).toList();
+
+    /**
+     * Visor 3D: a fornalha com o roteador em cima em dois ângulos, com uma face selecionada e o
+     * mouse sobre outra (o marcador mostra onde ele está, para conferir a escolha da face); um baú
+     * virado para o leste (renderizador de entidade) com o roteador no norte; e sem máquina.
+     */
+    private static List<Step> viewSteps() {
+        return List.of(
+                new Step(() -> {
+                    screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.NORTH);
+                    screen.previewViewDefault();
+                    int[] point = screen.previewViewFaceCenter(Direction.EAST);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "7-visor"),
+                new Step(() -> {
+                    screen.previewFace(Direction.EAST);
+                    screen.previewView(-120f, -20f, 1.1f);
+                    int[] point = screen.previewViewFaceCenter(Direction.NORTH);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "8-visor-de-baixo"),
+                new Step(() -> {
+                    RouterSnapshot s = screen.getMenu().snapshot();
+                    screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.ADVANCED, Direction.NORTH,
+                            s.network(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
+                            Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST), s.faces()));
+                    screen.previewFace(Direction.UP);
+                    screen.previewViewDefault();
+                    int[] point = screen.previewViewFaceCenter(Direction.EAST);
+                    mouseX = point[0];
+                    mouseY = point[1];
+                }, "9-visor-bau"),
+                new Step(() -> {
+                    RouterSnapshot s = screen.getMenu().snapshot();
+                    screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.BASIC, Direction.WEST,
+                            s.network(), s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
+                            s.faces()));
+                    screen.previewViewDefault();
+                    mouseX = mouseY = -1;
+                }, "10-visor-sem-maquina"));
+    }
+
     // ------------------------------------------------------------------ tela de filtro
 
     /** Desenhada no lugar da {@link #screen} a partir do primeiro passo de filtro. */
     private static FilterScreen filterScreen;
 
-    private static final List<Step> FILTER_STEPS = List.of(
-            new Step(() -> {
-                // resumo do filtro na tela do roteador: lista branca embaixo, negra no norte
-                screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
-                RouterSnapshot s = screen.getMenu().snapshot();
-                List<FaceView> faces = new ArrayList<>(s.faces());
-                int down = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
-                int north = RouterSnapshot.index(ResourceType.ITEM, Direction.NORTH);
-                FaceView d = faces.get(down);
-                FaceView n = faces.get(north);
-                faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
-                faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true));
-                screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.network(),
-                        s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
-                screen.previewType(ResourceType.ITEM);
-                screen.previewFace(Direction.DOWN);
-                mouseX = mouseY = -1;
-            }, "f1-roteador-filtro"),
-            new Step(() -> {
-                mouseX = mouseY = -1;
-                filterScreen = filterScreen(itemFilter(Filter.ListMode.WHITELIST), Direction.DOWN);
-                filterScreen.previewSelect(2);
-                int[] center = filterScreen.previewEntryCenter(18);
-                mouseX = center[0];
-                mouseY = center[1];
-            }, "f2-filtro-itens"),
-            new Step(() -> {
-                mouseX = mouseY = -1;
-                filterScreen.previewMore(true, "#c:ores");
-            }, "f3-filtro-mais"),
-            new Step(() -> {
-                mouseX = mouseY = -1;
-                filterScreen = filterScreen(fluidFilter(), Direction.NORTH);
-                filterScreen.previewSelect(0);
-            }, "f4-filtro-fluidos"),
-            new Step(() -> {
-                filterScreen = filterScreen(itemFilter(Filter.ListMode.BLACKLIST).withMatchComponents(true), Direction.UP);
-                filterScreen.previewArmClear();
-            }, "f5-filtro-negra"),
-            new Step(() -> {
-                mouseX = mouseY = -1;
-                filterScreen = filterScreen(Filter.EMPTY, null);
-            }, "f6-filtro-cartao-vazio"));
-
-    private static final List<Step> ALL_STEPS = Stream.concat(STEPS.stream(), FILTER_STEPS.stream()).toList();
+    /**
+     * Tela de filtro: o resumo na tela do roteador e a FilterScreen com um filtro de exemplo (grade
+     * com seleção, "Mais" aberto, fluidos, lista negra com Limpar armado e cartão vazio).
+     */
+    private static List<Step> filterSteps() {
+        return List.of(
+                new Step(() -> {
+                    // resumo do filtro na tela do roteador, de volta à fornalha (o visor terminou sem
+                    // máquina): lista branca embaixo, negra no norte
+                    RouterSnapshot s = sample();
+                    List<FaceView> faces = new ArrayList<>(s.faces());
+                    int down = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
+                    int north = RouterSnapshot.index(ResourceType.ITEM, Direction.NORTH);
+                    FaceView d = faces.get(down);
+                    FaceView n = faces.get(north);
+                    faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
+                    faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true));
+                    screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
+                            s.network(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.DOWN);
+                    mouseX = mouseY = -1;
+                }, "f1-roteador-filtro"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen = filterScreen(itemFilter(Filter.ListMode.WHITELIST), Direction.DOWN);
+                    filterScreen.previewSelect(2);
+                    int[] center = filterScreen.previewEntryCenter(18);
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "f2-filtro-itens"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen.previewMore(true, "#c:ores");
+                }, "f3-filtro-mais"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen = filterScreen(fluidFilter(), Direction.NORTH);
+                    filterScreen.previewSelect(0);
+                }, "f4-filtro-fluidos"),
+                new Step(() -> {
+                    filterScreen = filterScreen(itemFilter(Filter.ListMode.BLACKLIST).withMatchComponents(true),
+                            Direction.UP);
+                    filterScreen.previewArmClear();
+                }, "f5-filtro-negra"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen = filterScreen(Filter.EMPTY, null);
+                }, "f6-filtro-cartao-vazio"));
+    }
 
     /** Filtro de uma face (ou de um cartão, sem face) com o inventário de exemplo e a cor Elite. */
     private static FilterScreen filterScreen(Filter filter, @Nullable Direction face) {
@@ -238,6 +293,19 @@ public final class DevScreenshot {
         event.getGuiGraphics().flush();
         RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         active.renderWithTooltip(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
+        drawCursor(event.getGuiGraphics());
+    }
+
+    /** Marcador de 5×5 px no ponto do mouse simulado (as capturas não mostram o cursor). */
+    private static void drawCursor(GuiGraphics g) {
+        if (mouseX < 0) {
+            return;
+        }
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 500);
+        g.fill(mouseX - 2, mouseY - 2, mouseX + 3, mouseY + 3, 0xFF000000);
+        g.fill(mouseX - 1, mouseY - 1, mouseX + 2, mouseY + 2, 0xFFFF2BD6);
+        g.pose().popPose();
     }
 
     @SubscribeEvent
@@ -256,13 +324,13 @@ public final class DevScreenshot {
         int step = (ticks - 60) / STEP_TICKS;
         // o último quadro mostra o estado do passo anterior: salva, depois prepara o próximo
         if (step > 0) {
-            save(minecraft, ALL_STEPS.get(step - 1).file());
+            save(minecraft, SEQUENCE.get(step - 1).file());
         }
-        if (step >= ALL_STEPS.size()) {
+        if (step >= SEQUENCE.size()) {
             minecraft.stop();
             return;
         }
-        ALL_STEPS.get(step).setup().run();
+        SEQUENCE.get(step).setup().run();
     }
 
     private static void save(Minecraft minecraft, String name) {

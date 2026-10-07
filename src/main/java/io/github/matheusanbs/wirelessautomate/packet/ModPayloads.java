@@ -1,15 +1,24 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -17,12 +26,13 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Registro dos pacotes do mod e os handlers. Código comum: os handlers do cliente só mexem no
- * {@link RouterMenu}, sem classes de tela.
+ * {@link RouterMenu} e no {@link FilterMenu}, sem classes de tela.
  *
  * <p>Os handlers rodam na thread principal (o padrão do {@link PayloadRegistrar} é
  * {@code HandlerThread.MAIN}). Os do servidor só agem se o jogador está com a tela daquele roteador
  * aberta ({@code containerId} igual e {@link RouterMenu#stillValid}) e validam os valores; depois de
- * aplicar, o {@link RouterMenu#broadcastChanges()} do próprio menu manda o snapshot novo.
+ * aplicar, o {@link RouterMenu#broadcastChanges()} do próprio menu manda o snapshot novo. A tela
+ * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
@@ -40,6 +50,11 @@ public final class ModPayloads {
                 (payload, context) -> handleSetNetwork(serverPlayer(context), payload));
         registrar.playToServer(RenameRouterPayload.TYPE, RenameRouterPayload.STREAM_CODEC,
                 (payload, context) -> handleRename(serverPlayer(context), payload));
+        registrar.playToClient(FilterViewPayload.TYPE, FilterViewPayload.STREAM_CODEC, ModPayloads::onFilterView);
+        registrar.playToServer(OpenFilterPayload.TYPE, OpenFilterPayload.STREAM_CODEC,
+                (payload, context) -> handleOpenFilter(serverPlayer(context), payload));
+        registrar.playToServer(EditFilterPayload.TYPE, EditFilterPayload.STREAM_CODEC,
+                (payload, context) -> handleEditFilter(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -59,6 +74,13 @@ public final class ModPayloads {
         RouterMenu menu = openMenu(context.player(), payload.containerId());
         if (menu != null && payload.perType().length == ResourceType.values().length) {
             menu.applyThroughput(payload.perType());
+        }
+    }
+
+    private static void onFilterView(FilterViewPayload payload, IPayloadContext context) {
+        if (context.player() != null && context.player().containerMenu instanceof FilterMenu menu
+                && menu.containerId == payload.containerId()) {
+            menu.applyView(payload.view());
         }
     }
 
@@ -111,6 +133,129 @@ public final class ModPayloads {
         }
         router.setName(payload.name());
         return true;
+    }
+
+    // Tela de filtro.
+
+    /**
+     * Botão Editar da tela do roteador: abre o filtro da face no lugar dela. Só itens e fluidos
+     * (energia não usa filtro; químicos ainda não).
+     */
+    public static boolean handleOpenFilter(@Nullable ServerPlayer player, OpenFilterPayload payload) {
+        RouterBlockEntity router = router(player, payload.containerId());
+        if (router == null || (payload.resource() != ResourceType.ITEM && payload.resource() != ResourceType.FLUID)) {
+            return false;
+        }
+        new RouterFaceFilterTarget(router, payload.resource(), payload.face()).open(player);
+        return true;
+    }
+
+    /** Uma edição no filtro da tela aberta. Devolve se a edição foi aceita (mesmo sem mudar nada). */
+    public static boolean handleEditFilter(@Nullable ServerPlayer player, EditFilterPayload payload) {
+        FilterMenu menu = player != null && player.containerMenu instanceof FilterMenu m
+                && m.containerId == payload.containerId() ? m : null;
+        if (menu == null || menu.target() == null || !menu.stillValid(player)) {
+            return false;
+        }
+        FilterTarget target = menu.target();
+        Filter filter = target.filter();
+        switch (payload.op()) {
+            case ADD_TAG -> {
+                ResourceLocation tag = parseTag(payload.text());
+                if (tag == null) {
+                    return false;
+                }
+                target.setFilter(filter.withEntry(new FilterEntry.TagEntry(tag, 0)));
+            }
+            case ADD_MOD -> {
+                String mod = parseMod(payload.text());
+                if (mod == null) {
+                    return false;
+                }
+                target.setFilter(filter.withEntry(new FilterEntry.ModEntry(mod, 0)));
+            }
+            case REMOVE -> {
+                if (!validIndex(filter, payload.index())) {
+                    return false;
+                }
+                target.setFilter(filter.withoutEntry(payload.index()));
+            }
+            case SET_STOCK -> {
+                if (!validIndex(filter, payload.index()) || payload.value() < 0
+                        || payload.value() > Integer.MAX_VALUE) {
+                    return false;
+                }
+                target.setFilter(filter.withStock(payload.index(), payload.value()));
+            }
+            case SET_LIST_MODE -> {
+                if (payload.value() != 0 && payload.value() != 1) {
+                    return false;
+                }
+                target.setFilter(filter.withListMode(payload.value() == 0
+                        ? Filter.ListMode.WHITELIST : Filter.ListMode.BLACKLIST));
+            }
+            case SET_COMPONENTS -> {
+                // Componentes só fazem sentido para itens.
+                if (target.type() != ResourceType.ITEM || (payload.value() != 0 && payload.value() != 1)) {
+                    return false;
+                }
+                target.setFilter(filter.withMatchComponents(payload.value() == 1));
+            }
+            case CLEAR -> target.setFilter(filter.cleared());
+            case IMPORT_CARD -> {
+                ItemStack card = player.getMainHandItem();
+                if (!(target instanceof RouterFaceFilterTarget) || !FilterCardItem.isCard(card)) {
+                    return false;
+                }
+                FilterCardItem.Contents contents = FilterCardItem.contents(card);
+                if (contents.type() != target.type()) {
+                    return false;
+                }
+                target.setFilter(contents.filter());
+            }
+            case EXPORT_CARD -> {
+                ItemStack card = player.getMainHandItem();
+                if (!(target instanceof RouterFaceFilterTarget) || !FilterCardItem.isCard(card)) {
+                    return false;
+                }
+                FilterCardItem.setContents(card, new FilterCardItem.Contents(target.type(), filter));
+            }
+            case BACK -> {
+                if (target instanceof RouterFaceFilterTarget face) {
+                    RouterMenu.open(player, face.router());
+                } else {
+                    player.closeContainer();
+                }
+            }
+        }
+        return true;
+    }
+
+    /** {@code c:ingots} ou {@code #c:ingots}, em minúsculas; {@code null} se não for um id válido. */
+    public static @Nullable ResourceLocation parseTag(String text) {
+        String value = text.strip();
+        if (value.startsWith("#")) {
+            value = value.substring(1).strip();
+        }
+        if (value.isEmpty()) {
+            return null;
+        }
+        ResourceLocation tag = ResourceLocation.tryParse(value.toLowerCase(Locale.ROOT));
+        return tag == null || tag.getPath().isEmpty() ? null : tag;
+    }
+
+    /** {@code mekanism} ou {@code @mekanism}, em minúsculas; {@code null} se não for um namespace válido. */
+    public static @Nullable String parseMod(String text) {
+        String value = text.strip();
+        if (value.startsWith("@")) {
+            value = value.substring(1).strip();
+        }
+        value = value.toLowerCase(Locale.ROOT);
+        return value.isEmpty() || value.length() > 64 || !ResourceLocation.isValidNamespace(value) ? null : value;
+    }
+
+    private static boolean validIndex(Filter filter, int index) {
+        return index >= 0 && index < filter.entries().size();
     }
 
     public static boolean canUse(ServerPlayer player, WaNetwork network) {

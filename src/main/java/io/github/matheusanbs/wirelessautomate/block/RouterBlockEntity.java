@@ -197,13 +197,16 @@ public class RouterBlockEntity extends BlockEntity {
     @SuppressWarnings("deprecation")
     public void setBlockState(BlockState state) {
         Direction oldFacing = facing();
+        RouterTier oldTier = tier();
         super.setBlockState(state);
-        if (facing() != oldFacing) {
+        boolean rotated = facing() != oldFacing;
+        if (rotated) {
             // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
             clearCaches();
-            if (level != null && !level.isClientSide) {
-                NetworkManager.get().nodeChanged(this);
-            }
+        }
+        // Upgrade de tier muda vazão e alcance das rotas.
+        if ((rotated || tier() != oldTier) && level != null && !level.isClientSide) {
+            NetworkManager.get().nodeChanged(this);
         }
     }
 

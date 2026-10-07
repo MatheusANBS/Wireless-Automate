@@ -208,10 +208,6 @@ public final class NetworkManager {
     }
 
     private void visit(Port source, long now) {
-        if (source.node.tier() != source.tier && source.network != null) {
-            // Upgrade de tier não passa por nodeChanged: vazão e alcance mudam na próxima montagem.
-            markDirty(source.network.id);
-        }
         switch (source.type) {
             case ITEM -> ItemTransfer.move(source, now);
             case FLUID -> FluidTransfer.move(source, now);

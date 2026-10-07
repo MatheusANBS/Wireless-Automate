@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import java.util.Locale;
 import java.util.Objects;
 import net.minecraft.nbt.CompoundTag;
@@ -17,7 +18,8 @@ public final class FaceConfig {
     private PortMode mode = PortMode.NONE;
     private int priority;
     private RedstoneMode redstone = RedstoneMode.IGNORE;
-    // Filtro: entra aqui como mais um campo, salvo em save()/load() e considerado em isDefault().
+    private Filter filter = Filter.EMPTY;
+    // TODO(contrato): salvar e ler o filtro em save()/load() (agente do motor).
 
     public PortMode mode() {
         return mode;
@@ -29,6 +31,17 @@ public final class FaceConfig {
 
     public RedstoneMode redstone() {
         return redstone;
+    }
+
+    public Filter filter() {
+        return filter;
+    }
+
+    public boolean setFilter(Filter filter) {
+        Objects.requireNonNull(filter);
+        boolean changed = !this.filter.equals(filter);
+        this.filter = filter;
+        return changed;
     }
 
     public boolean setMode(PortMode mode) {
@@ -56,6 +69,7 @@ public final class FaceConfig {
         boolean changed = setMode(other.mode);
         changed |= setPriority(other.priority);
         changed |= setRedstone(other.redstone);
+        changed |= setFilter(other.filter);
         return changed;
     }
 
@@ -70,7 +84,7 @@ public final class FaceConfig {
     }
 
     public boolean isDefault() {
-        return mode == PortMode.NONE && priority == 0 && redstone == RedstoneMode.IGNORE;
+        return mode == PortMode.NONE && priority == 0 && redstone == RedstoneMode.IGNORE && filter.isDefault();
     }
 
     /** NBT compacto: só os campos fora do padrão; uma face padrão vira uma tag vazia. */
@@ -111,16 +125,17 @@ public final class FaceConfig {
     @Override
     public boolean equals(Object o) {
         return o instanceof FaceConfig other
-                && mode == other.mode && priority == other.priority && redstone == other.redstone;
+                && mode == other.mode && priority == other.priority && redstone == other.redstone
+                && filter.equals(other.filter);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mode, priority, redstone);
+        return Objects.hash(mode, priority, redstone, filter);
     }
 
     @Override
     public String toString() {
-        return "FaceConfig[" + mode + ", priority=" + priority + ", redstone=" + redstone + "]";
+        return "FaceConfig[" + mode + ", priority=" + priority + ", redstone=" + redstone + ", " + filter + "]";
     }
 }

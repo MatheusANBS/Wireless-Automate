@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -181,6 +182,13 @@ public class RouterBlockEntity extends BlockEntity {
         changed |= config.setPriority(priority);
         changed |= config.setRedstone(redstone);
         if (changed) {
+            changed();
+        }
+    }
+
+    /** Troca o filtro da face. Energia não usa filtro, mas guardar não faz mal. */
+    public void setFilter(ResourceType type, Direction machineFace, Filter filter) {
+        if (face(type, machineFace).setFilter(filter)) {
             changed();
         }
     }

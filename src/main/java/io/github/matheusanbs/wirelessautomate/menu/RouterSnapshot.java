@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -19,6 +20,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -31,6 +35,7 @@ import net.neoforged.neoforge.items.IItemHandler;
  * @param network  rede do roteador, vazia se não tiver ou se ela não existir mais
  * @param networks redes que o jogador pode escolher no seletor
  * @param machine  ícone da máquina conectada ({@link ItemStack#EMPTY} se não houver item)
+ * @param machineState estado do bloco da máquina, para o visor 3D (ar se não houver)
  * @param faces    {@code ResourceType.values().length × 6}, no índice de {@link #index}
  */
 public record RouterSnapshot(
@@ -42,6 +47,7 @@ public record RouterSnapshot(
         List<NetworkEntry> networks,
         boolean powered,
         ItemStack machine,
+        BlockState machineState,
         List<FaceView> faces) {
 
     /** Uma rede no seletor. {@code owned}: o jogador é o dono. */
@@ -51,10 +57,13 @@ public record RouterSnapshot(
     /**
      * Configuração de uma face da máquina para um tipo.
      *
-     * @param slots o que a face acessa: slots (itens), tanques (fluidos) ou 1 (energia);
-     *              {@code -1} se a máquina não tem essa capability nessa face
+     * @param slots      o que a face acessa: slots (itens), tanques (fluidos) ou 1 (energia);
+     *                   {@code -1} se a máquina não tem essa capability nessa face
+     * @param filterSize entradas do filtro (0 = passa tudo)
+     * @param blacklist  o filtro é lista negra
      */
-    public record FaceView(PortMode mode, int priority, RedstoneMode redstone, int slots) {
+    public record FaceView(PortMode mode, int priority, RedstoneMode redstone, int slots, int filterSize,
+            boolean blacklist) {
         public boolean available() {
             return slots >= 0;
         }
@@ -90,9 +99,10 @@ public record RouterSnapshot(
         }
 
         Level level = router.getLevel();
-        ItemStack machine = level == null
-                ? ItemStack.EMPTY
-                : new ItemStack(level.getBlockState(router.machinePos()).getBlock().asItem());
+        BlockState machineState = level == null
+                ? Blocks.AIR.defaultBlockState()
+                : level.getBlockState(router.machinePos());
+        ItemStack machine = new ItemStack(machineState.getBlock().asItem());
 
         ResourceType[] types = ResourceType.values();
         FaceView[] faces = new FaceView[types.length * 6];
@@ -100,13 +110,14 @@ public record RouterSnapshot(
             for (Direction face : Direction.values()) {
                 FaceConfig config = router.face(type, face);
                 faces[index(type, face)] = new FaceView(config.mode(), config.priority(), config.redstone(),
-                        slots(router, type, face));
+                        slots(router, type, face), config.filter().entries().size(),
+                        config.filter().listMode() == Filter.ListMode.BLACKLIST);
             }
         }
 
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
                 Optional.ofNullable(current).map(WaNetwork::id), List.copyOf(networks), router.powered(), machine,
-                List.of(faces));
+                machineState, List.of(faces));
     }
 
     /** Slots (itens), tanques (fluidos) ou 1 (energia) da face; {@code -1} sem a capability. */
@@ -147,12 +158,15 @@ public record RouterSnapshot(
         }
         buf.writeBoolean(s.powered);
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.machine);
+        buf.writeVarInt(Block.getId(s.machineState));
         buf.writeVarInt(s.faces.size());
         for (FaceView face : s.faces) {
             buf.writeEnum(face.mode);
             buf.writeVarInt(face.priority);
             buf.writeEnum(face.redstone);
             buf.writeVarInt(face.slots);
+            buf.writeVarInt(face.filterSize);
+            buf.writeBoolean(face.blacklist);
         }
     }
 
@@ -169,13 +183,14 @@ public record RouterSnapshot(
         }
         boolean powered = buf.readBoolean();
         ItemStack machine = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+        BlockState machineState = Block.stateById(buf.readVarInt());
         int faceCount = buf.readVarInt();
         List<FaceView> faces = new ArrayList<>(faceCount);
         for (int i = 0; i < faceCount; i++) {
             faces.add(new FaceView(buf.readEnum(PortMode.class), buf.readVarInt(),
-                    buf.readEnum(RedstoneMode.class), buf.readVarInt()));
+                    buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
         }
         return new RouterSnapshot(pos, name, tier, facing, network, List.copyOf(networks), powered, machine,
-                List.copyOf(faces));
+                machineState, List.copyOf(faces));
     }
 }

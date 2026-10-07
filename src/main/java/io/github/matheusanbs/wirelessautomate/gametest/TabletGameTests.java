@@ -283,6 +283,10 @@ public final class TabletGameTests {
             eq(helper, a.networkId(ResourceType.FLUID), first.id(), "mudou com recusa");
             // pública: aceito
             data.update(foreign.withPublic(true));
+            helper.assertTrue(io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.capture(a, player).networks()
+                    .stream().anyMatch(e -> e.id().equals(foreign.id()) && !e.owned()), "rede pública fora do seletor da aba");
+            helper.assertTrue(io.github.matheusanbs.wirelessautomate.packet.ModPayloads.canUse(player,
+                    data.network(foreign.id())), "canUse recusou rede pública");
             eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, List.of(key(a)),
                     Optional.of(ResourceType.ENERGY), Optional.of(foreign.id()))), 1, "rede pública alheia");
             eq(helper, a.networkId(ResourceType.ENERGY), foreign.id(), "energia na rede pública");

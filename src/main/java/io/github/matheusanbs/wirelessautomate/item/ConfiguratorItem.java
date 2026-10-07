@@ -1,11 +1,15 @@
 package io.github.matheusanbs.wirelessautomate.item;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.preset.AreaActions;
+import io.github.matheusanbs.wirelessautomate.preset.AreaClipboard;
+import io.github.matheusanbs.wirelessautomate.preset.AreaSelection;
+import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,13 +30,16 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Configurador (varinha) como pincel: Shift + clique direito num roteador copia a configuração
- * para o item, e clique direito noutro roteador cola. A cópia é relativa ao {@code facing} e leva a
- * rede de cada tipo (aba) junto; cada uma só é colada se o jogador puder usá-la. Biblioteca e modo
- * Área ficam para depois.
+ * Configurador (varinha). No modo pincel, Shift + clique direito num roteador copia a configuração
+ * para o item e clique direito noutro roteador cola; a cópia é relativa ao {@code facing} e leva a
+ * rede de cada tipo (aba), colada só se o jogador puder usá-la ({@link PresetApplier}). No modo
+ * Área, Shift + clique num bloco marca os cantos e clique num bloco escolhe onde colar a cópia de
+ * área (clicar de novo no mesmo bloco cola); veja {@link AreaActions}. Shift + clique direito no ar
+ * abre a tela ({@link ConfiguratorMenu}): biblioteca de presets, código {@code WA1:} e área.
  */
 public class ConfiguratorItem extends Item {
     private static final String KEY = "item.wirelessautomate.configurator.";
@@ -94,34 +101,12 @@ public class ConfiguratorItem extends Item {
             player.displayClientMessage(Component.translatable(KEY + "empty"), true);
             return;
         }
+        PresetApplier.Checked checked = PresetApplier.check(player, preset);
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        List<UUID> applied = new ArrayList<>();
-        List<ResourceType> keptTypes = new ArrayList<>();
-        List<UUID> kept = new ArrayList<>();
-        WaNetwork denied = null;
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = preset.network(type);
-            if (id == null) {
-                continue;
-            }
-            WaNetwork network = data.network(id);
-            if (network != null && ModPayloads.canUse(player, network)) {
-                if (!applied.contains(id)) {
-                    applied.add(id);
-                }
-                continue;
-            }
-            preset = preset.withoutNetwork(type);
-            keptTypes.add(type);
-            if (!kept.contains(id)) {
-                kept.add(id);
-            }
-            if (network != null) {
-                denied = network;
-            }
-        }
+        preset = checked.preset();
         preset.applyTo(router);
-        player.displayClientMessage(pasteMessage(data, applied, keptTypes, kept, denied), true);
+        player.displayClientMessage(pasteMessage(data, checked.applied(), checked.keptTypes(), checked.kept(),
+                checked.denied()), true);
         player.level().playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
     }
 
@@ -169,12 +154,31 @@ public class ConfiguratorItem extends Item {
         if (!player.isSecondaryUseActive()) {
             return InteractionResultHolder.pass(stack);
         }
-        // TODO(v1): Shift + clique direito no ar abre a biblioteca de presets; por ora descarta a cópia.
-        if (!level.isClientSide) {
-            boolean had = stack.remove(ModDataComponents.PRESET.get()) != null;
-            player.displayClientMessage(Component.translatable(KEY + (had ? "cleared" : "empty")), true);
+        // jogadores falsos (máquinas de outros mods) não abrem telas
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && !(player instanceof FakePlayer)) {
+            ConfiguratorMenu.open(serverPlayer, hand);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+    }
+
+    /**
+     * Modo Área: o clique num bloco é da varinha antes de ser do bloco (senão clicar num baú o
+     * abriria). Shift + clique marca um canto; clique escolhe a origem da colagem ou cola.
+     */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        if (AreaActions.selection(stack).mode() != AreaSelection.Mode.AREA) {
+            return InteractionResult.PASS;
+        }
+        Level level = context.getLevel();
+        if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
+            BlockPos pos = context.getClickedPos();
+            Component message = context.isSecondaryUseActive()
+                    ? AreaActions.markCorner(player, stack, pos)
+                    : AreaActions.clickAnchor(player, stack, pos);
+            player.displayClientMessage(message, true);
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
@@ -193,8 +197,19 @@ public class ConfiguratorItem extends Item {
             String key = networks == 0 ? "tooltip.preset" : networks == 1 ? "tooltip.preset_network" : "tooltip.preset_networks";
             tooltip.add(Component.translatable(KEY + key, preset.configuredFaces()).withStyle(ChatFormatting.AQUA));
         }
-        tooltip.add(Component.translatable(KEY + "tooltip.copy").withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable(KEY + "tooltip.paste").withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable(KEY + "tooltip.clear").withStyle(ChatFormatting.DARK_GRAY));
+        AreaSelection selection = AreaActions.selection(stack);
+        AreaClipboard clipboard = AreaActions.clipboard(stack);
+        if (clipboard != null) {
+            tooltip.add(Component.translatable(KEY + "tooltip.clipboard", clipboard.size()).withStyle(ChatFormatting.AQUA));
+        }
+        if (selection.mode() == AreaSelection.Mode.AREA) {
+            tooltip.add(Component.translatable(KEY + "tooltip.mode_area").withStyle(ChatFormatting.GOLD));
+            tooltip.add(Component.translatable(KEY + "tooltip.mark").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable(KEY + "tooltip.anchor").withStyle(ChatFormatting.DARK_GRAY));
+        } else {
+            tooltip.add(Component.translatable(KEY + "tooltip.copy").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable(KEY + "tooltip.paste").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        tooltip.add(Component.translatable(KEY + "tooltip.open").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

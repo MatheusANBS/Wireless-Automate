@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.menu.ConfiguratorMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -11,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorActionPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -127,9 +129,12 @@ public final class ConfiguratorGameTests {
                                 PortMode.INSERT, "faces não coladas sem a rede");
                         helper.assertTrue(foreign.networkId(ResourceType.ITEM) == null, "colou rede de outro dono");
 
-                        // Shift + clique direito no ar descarta a cópia.
-                        player.setShiftKeyDown(true);
-                        ModItems.CONFIGURATOR.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+                        // Descartar a cópia é um botão da tela (Shift + clique direito no ar abre a tela).
+                        player.containerMenu = new ConfiguratorMenu(77, player, InteractionHand.MAIN_HAND,
+                                ConfiguratorMenu.initialView(player, InteractionHand.MAIN_HAND));
+                        ConfiguratorMenu.handle(player,
+                                ConfiguratorActionPayload.of(77, ConfiguratorActionPayload.Op.CLEAR_WAND));
+                        player.containerMenu = player.inventoryMenu;
                         helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "cópia não descartada");
                     } finally {
                         data.remove(own.id());

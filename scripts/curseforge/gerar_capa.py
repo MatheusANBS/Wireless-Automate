@@ -58,12 +58,23 @@ def ondas(img: Image.Image, cx: float, cy: float) -> None:
         d.arc(caixa, start=215, end=325, fill=cor + (255,), width=3 if i == 0 else 2)
 
 
-def faiscas(img: Image.Image) -> None:
-    """Algumas faíscas de 1 px em cruz, como itens voando pela rede."""
-    for (x, y, cor) in ((14, 22, CIANO[3]), (84, 30, CIANO[2]), (20, 70, OURO), (86, 66, CIANO[3]),
-                        (9, 46, CIANO[2]), (91, 48, OURO)):
-        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
-            img.putpixel((x + dx, y + dy), cor + (255,) if (dx, dy) == (0, 0) else tuple(c // 2 for c in cor) + (255,))
+def estrela(img: Image.Image, x: int, y: int, cor: tuple[int, int, int], grande: bool) -> None:
+    """Faísca em cruz: centro claro e braços na metade do brilho (os grandes, com 2 px de braço)."""
+    meia = tuple(c // 2 for c in cor) + (255,)
+    img.putpixel((x, y), cor + (255,))
+    for passo in ((1, 2) if grande else (1,)):
+        for dx, dy in ((passo, 0), (-passo, 0), (0, passo), (0, -passo)):
+            img.putpixel((x + dx, y + dy), cor + (255,) if passo == 1 and grande else meia)
+
+
+def faiscas(img: Image.Image, cx: float) -> None:
+    """Pares espelhados em volta do eixo das ondas: perto delas, nas laterais e embaixo, longe das bordas."""
+    # (distância do eixo, altura, cor, grande): fora do roteador, que ocupa o meio de y 24 a 86.
+    pares = ((31, 13, CIANO[3], True), (40, 29, OURO, False), (45, 48, CIANO[2], False),
+             (43, 68, OURO, True), (37, 90, CIANO[2], False))
+    for dx, y, cor, grande in pares:
+        for x in (round(cx - dx), round(cx + dx)):
+            estrela(img, x, y, cor, grande)
 
 
 # LEDs da frente acesos (na textura do jogo eles ficam apagados: a luz é uma camada à parte).
@@ -90,14 +101,19 @@ def capa() -> Image.Image:
     img = fundo()
     # Sombra elíptica no chão.
     sombra = Image.new("RGBA", (BASE, BASE), (0, 0, 0, 0))
-    ImageDraw.Draw(sombra).ellipse([BASE / 2 - 30, 80, BASE / 2 + 30, 90], fill=(0, 0, 0, 110))
+    ImageDraw.Draw(sombra).ellipse([BASE / 2 - 28, 80, BASE / 2 + 34, 90], fill=(0, 0, 0, 110))
     img.alpha_composite(sombra)
-    x = (BASE - roteador.width) // 2
+    # O eixo da composição é o meio das duas antenas (pontas achadas na própria imagem: colunas
+    # com pixel nas primeiras linhas). O roteador é posto com esse eixo no centro da capa, e as
+    # ondas e as faíscas são simétricas em volta dele.
+    colunas = [cx for cx in range(roteador.width) if any(roteador.getpixel((cx, cy))[3] for cy in range(3))]
+    meio = (colunas[0] + colunas[-1]) / 2
+    x = round(BASE / 2 - meio)
     y = 86 - roteador.height
     img.alpha_composite(roteador, (x, y))
-    # As ondas saem do meio das duas antenas.
-    ondas(img, BASE / 2, y + 4)
-    faiscas(img)
+    centro = x + meio
+    ondas(img, centro, y + 4)
+    faiscas(img, centro)
     return img.resize((BASE * ESCALA, BASE * ESCALA), Image.NEAREST)
 
 

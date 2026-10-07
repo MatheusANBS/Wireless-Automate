@@ -1,0 +1,18 @@
+{
+  "itemGroup.wirelessautomate": "Wireless Automate",
+  "block.wirelessautomate.router": "Wireless Router",
+  "item.wirelessautomate.configurator": "Configurator",
+  "item.wirelessautomate.network_tablet": "Network Tablet",
+  "item.wirelessautomate.linker": "Linker",
+  "item.wirelessautomate.filter_card": "Filter Card",
+  "item.wirelessautomate.chunk_loader_upgrade": "Chunk Loading Upgrade",
+  "item.wirelessautomate.tier_core_basic": "Basic Tier Core",
+  "item.wirelessautomate.tier_core_advanced": "Advanced Tier Core",
+  "item.wirelessautomate.tier_core_elite": "Elite Tier Core",
+  "item.wirelessautomate.tier_core_ultimate": "Ultimate Tier Core",
+  "tier.wirelessautomate.basic": "Basic",
+  "tier.wirelessautomate.advanced": "Advanced",
+  "tier.wirelessautomate.elite": "Elite",
+  "tier.wirelessautomate.ultimate": "Ultimate",
+  "command.wirelessautomate.profile": "Wireless Automate: %s nodes · avg %s ms/tick · last %s ms · budget %s ms"
+}

@@ -1,0 +1,62 @@
+# Wireless Automate · guia para agentes
+
+Mod NeoForge 1.21.1 (Java 21) de transporte wireless de itens, fluidos, energia e químicos, feito para o ATM10. A conversa com o dono é em português; código, comentários e docs também.
+
+## Leia antes de começar
+
+1. **`docs/progresso.md`**: o que está pronto, o que falta e o **próximo passo**. Quando pedirem para "continuar de onde parou", comece por ali.
+2. **`docs/especificacao.md`**: a fonte da verdade do design (componentes, tiers, telas, filtros, redes, arquitetura de performance, roadmap).
+3. `docs/pacote-de-design.md`: convenções dos sprites e do modelo do roteador.
+
+Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o próximo passo e uma linha no histórico.
+
+## Mapa do código
+
+Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
+
+| Arquivo | Papel |
+| --- | --- |
+| `WirelessAutomate.java` | Classe `@Mod`: registra os DeferredRegisters e a config, e escuta os eventos de tick, parada do servidor e comandos |
+| `Config.java` | Config do servidor: `TICK_BUDGET_MS`, `ADAPTIVE_BUDGET` e `TIERS` (vazão e alcance por tier) |
+| `block/RouterBlock.java` | Bloco: `FACING` (face da máquina onde foi preso), `TIER`, `canSurvive`, `tryUpgrade` |
+| `block/RouterBlockEntity.java` | Dados do nó (`networkId`). Não faz tick: se registra no `NetworkManager` em `onLoad` |
+| `block/RouterShapes.java` | Formas de colisão rotacionadas pela mesma convenção do blockstate |
+| `block/RouterTier.java` | Enum com os valores padrão da tabela de tiers |
+| `network/NetworkManager.java` | Gerenciador central, um por servidor. **O laço de transferência é o `TODO(v1)` em `tick`** |
+| `network/TickBudget.java` | Orçamento de tempo por tick, adaptativo ao MSPT. Lógica pura, testada por JUnit |
+| `network/PortMode.java`, `ResourceType.java` | Modo de face (Extrai, Insere, Ambos, Nenhum) e tipo de recurso |
+| `item/` | `TierCoreItem` e `RouterBlockItem` funcionam; os outros (Configurador, Tablet, Vinculador, Cartão, Chunk loader) são stubs |
+| `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs` |
+| `command/WaCommand.java` | `/wa profile` |
+| `gametest/RouterGameTests.java` | GameTests (template `empty`) |
+
+Recursos em `src/main/resources/`:
+- `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
+- `data/`: loot table, receita, tags e `wirelessautomate/structure/empty.nbt` (estrutura 3×3×3 vazia dos GameTests).
+- `src/main/templates/META-INF/neoforge.mods.toml`: preenchido pelo Gradle a partir do `gradle.properties`.
+
+## Comandos
+
+```bash
+./scripts/setup.sh          # instala o JDK 21 etc. e compila (use --gametest / --no-build)
+./gradlew build             # compila + JUnit; jar em build/libs/
+./gradlew test              # só JUnit
+./gradlew runGameTestServer # GameTests headless; falha o build se algum teste falhar
+./gradlew runData           # datagen para src/generated/resources/
+```
+
+Antes de commitar, rode `./gradlew build runGameTestServer`. O CI (`.github/workflows/build.yml`) roda os dois.
+
+## Convenções e armadilhas
+
+- **Pastas de dados do 1.21.1 são no singular:** `recipe/`, `loot_table/`, `structure/`, `tags/block/`, `tags/item/`.
+- **GameTests:** a classe leva `@GameTestHolder(WirelessAutomate.MODID)` e `@PrefixGameTestTemplate(false)`, e o template é `"empty"`. Os testes do mesmo lote rodam em paralelo e dividem o `NetworkManager`, então teste pertinência (`contains`) e não contagem. O `onLoad` de um block entity recém-colocado só roda no tick seguinte: use `startSequence().thenWaitUntil(...)`.
+- **Lógica pura sem classes do Minecraft** (como `TickBudget`) vai com teste JUnit em `src/test/java`. Lógica que depende do jogo vai com GameTest.
+- **Performance é requisito**, não detalhe (ver "Arquitetura de performance" na especificação):
+  - nada de tick por bloco;
+  - nada de busca de capability por tick, use `BlockCapabilityCache`;
+  - nada de sincronizar o cliente com a tela fechada.
+- **Rotação:** o `facing` do roteador segue a convenção do para-raios (`up` sem rotação, `down` x=180, laterais x=90 + y). Configurações por face devem ser salvas em relação ao `facing`.
+- **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal.
+- **Wrapper:** `gradle-wrapper.properties` usa `validateDistributionUrl=false`, porque a validação falha atrás do proxy do ambiente na nuvem.
+- **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O plugin ModDevGradle fica no `build.gradle`.

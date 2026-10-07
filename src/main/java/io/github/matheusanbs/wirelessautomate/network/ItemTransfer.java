@@ -52,27 +52,32 @@ final class ItemTransfer {
     /** Plano da última simulação de inserção; o laço roda numa thread só (a do servidor). */
     private static final InsertPlan PLAN = new InsertPlan();
 
-    static void move(Port source, long now) {
+    /**
+     * Uma visita. Devolve {@code true} se ela parou num teto da visita (tentativas, ou a janela de
+     * slots num inventário maior que ela) depois de mover, e o balde ainda tem saldo: o
+     * {@link NetworkManager} pode visitá-la de novo no mesmo tick se sobrar orçamento.
+     */
+    static boolean move(Port source, long now) {
         IItemHandler handler = source.node.items(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
             // Máquina sumiu ou chunk descarregado: a invalidação do cache refaz as rotas e acorda.
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         long tokens = source.limiter.available(now);
         if (tokens <= 0) {
-            return;
+            return false;
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         int slots = handler.getSlots();
         if (slots <= 0) {
             source.sourceBackoff.sleep(now);
-            return;
+            return false;
         }
         FilterSet filter = source.filter;
         boolean filtered = !filter.isEmpty();
@@ -91,6 +96,7 @@ final class ItemTransfer {
         int attempts = 0;
         long moved = 0;
         boolean destinationsAsleep = false;
+        boolean capped = false;
         while (scanned < limit) {
             int current = slot;
             scanned++;
@@ -129,6 +135,7 @@ final class ItemTransfer {
                 }
             }
             if (++attempts >= MAX_ATTEMPTS_PER_VISIT) {
+                capped = true;
                 break;
             }
             if (!NetworkManager.hasAwakeDestination(pass, now)) {
@@ -142,7 +149,7 @@ final class ItemTransfer {
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
-            return;
+            return tokens > 0 && (capped || (scanned >= limit && limit < slots));
         }
         source.idleSlots += scanned;
         if (destinationsAsleep || source.idleSlots >= slots) {
@@ -151,6 +158,7 @@ final class ItemTransfer {
             source.idleSlots = 0;
             source.sourceBackoff.sleep(now);
         }
+        return false;
     }
 
     /** Entrega o que der do slot, na ordem da passada. Devolve quanto foi entregue. */

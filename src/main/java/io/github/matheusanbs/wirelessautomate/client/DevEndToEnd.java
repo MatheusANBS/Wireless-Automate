@@ -4,19 +4,30 @@ import com.mojang.blaze3d.platform.NativeImage;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
+import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.preset.AreaActions;
+import io.github.matheusanbs.wirelessautomate.preset.AreaSelection;
+import io.github.matheusanbs.wirelessautomate.preset.PresetLibrary;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -52,10 +63,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
@@ -93,9 +106,17 @@ import org.lwjgl.glfw.GLFW;
  *   <li>renomeia o nó e troca a rede da aba Itens pelo seletor na linha das abas; depois troca só a
  *       da aba Energia e confere que a de Itens e a de Fluidos não mudaram;</li>
  *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot);</li>
+ *   <li>põe o Upgrade de chunk loading no slot de upgrade pela tela e confere o ticket no servidor e
+ *       o estado na tela; tira com Shift + clique e confere que o ticket saiu;</li>
  *   <li>transporte por aba: pedras em A não vão para B enquanto os itens dos dois estão em redes
  *       diferentes, e chegam quando os itens de A entram na rede dos de B, com a energia de cada um
- *       em outra rede.</li>
+ *       em outra rede;</li>
+ *   <li>Tablet de rede: abre pelo item, acha o roteador B pela busca, cria um grupo com a rede dos
+ *       itens, pausa o grupo e confere que as pedras param, retoma e confere que chegam, e abre o
+ *       roteador B à distância pela lista (20 blocos, longe demais para a tela comum).</li>
+ *   <li>Configurador: copia A com Shift + clique, abre a tela com Shift + clique direito no ar,
+ *       salva o preset na biblioteca, exporta e importa o código {@code WA1:} pela área de
+ *       transferência, marca uma área no mundo e aplica o preset de A em B pela aba Área.</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
  * cada passo só termina quando o servidor aplicou (lido no block entity, na thread do servidor) e o
@@ -473,8 +494,11 @@ public final class DevEndToEnd {
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         cardSteps(list);
+        chunkUpgradeSteps(list);
         list.add(close("fechar B"));
         typeNetworkTransferSteps(list);
+        tabletSteps(list);
+        configuratorSteps(list);
         return list;
     }
 
@@ -524,6 +548,78 @@ public final class DevEndToEnd {
                         + ", slot na tela " + routerScreen().getMenu().getSlot(0).getItem()
                         + ", na mão " + routerScreen().getMenu().getCarried()));
         list.add(capture("6-cartao-no-slot"));
+    }
+
+    /**
+     * Upgrade de chunk loading pela tela: o servidor dá o upgrade ao jogador, que o pega no inventário
+     * e solta no slot de upgrade; o roteador B fica com o upgrade, o jogador como dono e o ticket no
+     * chunk dele, e a tela mostra "ativo". Depois Shift + clique (o mesmo pacote do vanilla) tira o
+     * upgrade de volta para o inventário e o ticket sai.
+     */
+    private static void chunkUpgradeSteps(List<Step> list) {
+        list.add(new Step("upgrade no inventário", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).getInventory()
+                        .setItem(1, new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get()));
+                return null;
+            });
+        }, () -> inventoryUpgradeSlot() != null, () -> "upgrade no slot " + inventoryUpgradeSlot()));
+        list.add(new Step("upgrade no slot de upgrade", STEP_TIMEOUT_MS, () -> {
+            RouterScreen screen = routerScreen();
+            Slot from = inventoryUpgradeSlot();
+            if (from == null) {
+                throw new StepFailure("o upgrade sumiu do inventário");
+            }
+            click(screen, screen.getGuiLeft() + from.x + 8, screen.getGuiTop() + from.y + 8);
+            int[] to = screen.previewUpgradeSlotCenter();
+            click(screen, to[0], to[1]);
+        }, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            return onServer(server -> {
+                RouterBlockEntity router = router(server, routerB);
+                return router.hasChunkUpgrade() && playerId.equals(router.upgradeOwner())
+                        && router.chunkLoadState() == ChunkLoadState.ACTIVE
+                        && RouterChunkLoader.hasTicket(server.overworld(), routerB, ChunkPos.asLong(routerB));
+            }) && routerScreen().getMenu().getSlot(RouterMenu.UPGRADE_SLOT).hasItem()
+                    && routerScreen().getMenu().snapshot().chunkLoad() == ChunkLoadState.ACTIVE
+                    && routerScreen().getMenu().getCarried().isEmpty();
+        }, () -> "servidor " + onServer(server -> router(server, routerB).upgrade() + " "
+                + router(server, routerB).chunkLoadState()) + ", tela " + routerScreen().getMenu().snapshot().chunkLoad()
+                + ", na mão " + routerScreen().getMenu().getCarried()));
+        list.add(new Step("captura 7-upgrade-no-slot", STEP_TIMEOUT_MS, () -> {
+            int[] center = routerScreen().previewUpgradeSlotCenter();
+            moveMouse(center[0], center[1]);
+        }, () -> {
+            if (stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "7-upgrade-no-slot");
+            return true;
+        }, () -> "7-upgrade-no-slot.png"));
+        list.add(new Step("tirar o upgrade com Shift + clique", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.handleInventoryMouseClick(routerScreen().getMenu().containerId, RouterMenu.UPGRADE_SLOT,
+                    0, ClickType.QUICK_MOVE, minecraft.player);
+        }, () -> onServer(server -> {
+            RouterBlockEntity router = router(server, routerB);
+            return !router.hasChunkUpgrade() && router.chunkLoadState() == ChunkLoadState.NONE
+                    && !RouterChunkLoader.hasTicket(server.overworld(), routerB, ChunkPos.asLong(routerB));
+        }) && !routerScreen().getMenu().getSlot(RouterMenu.UPGRADE_SLOT).hasItem() && inventoryUpgradeSlot() != null
+                && routerScreen().getMenu().snapshot().chunkLoad() == ChunkLoadState.NONE,
+                () -> "servidor " + onServer(server -> router(server, routerB).upgrade().toString())
+                        + ", no inventário " + inventoryUpgradeSlot()));
+    }
+
+    /** O slot do inventário (na tela do roteador aberta) com o Upgrade de chunk loading, ou {@code null}. */
+    private static @Nullable Slot inventoryUpgradeSlot() throws StepFailure {
+        RouterMenu menu = routerScreen().getMenu();
+        for (int i = RouterMenu.CARD_SLOT_COUNT; i < RouterMenu.UPGRADE_SLOT; i++) {
+            if (menu.getSlot(i).getItem().is(ModItems.CHUNK_LOADER_UPGRADE.get())) {
+                return menu.getSlot(i);
+            }
+        }
+        return null;
     }
 
     /**
@@ -607,6 +703,317 @@ public final class DevEndToEnd {
                 && energyNetwork.equals(router(server, routerB).networkId(ResourceType.ENERGY))),
                 () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE)
                         + "; A: " + serverNetworksText(server, routerA) + "; B: " + serverNetworksText(server, routerB))));
+    }
+
+    // ------------------------------------------------------------------ Tablet de rede
+
+    private static final String GROUP_NAME = "E2E Grupo";
+    /** Posição do jogador antes de se afastar para abrir B à distância. */
+    private static Vec3 beforeTablet = Vec3.ZERO;
+
+    /**
+     * Tablet de rede: abre pelo item na mão, busca o nó B pelo nome, cria um grupo com a rede "E2E
+     * Outra" (a dos itens de A e B), pausa o grupo e confere que pedras postas em A ficam paradas,
+     * retoma e confere que chegam a B, e por fim abre B à distância clicando na linha dele.
+     */
+    private static void tabletSteps(List<Step> list) {
+        list.add(new Step("Tablet na mão", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
+                        new ItemStack(ModItems.NETWORK_TABLET.get()));
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.NETWORK_TABLET.get()),
+                () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("achar B pela busca", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.search")), "busca"));
+            type(NODE_NAME);
+        }, () -> {
+            TabletScreen screen = tabletScreen();
+            TabletSnapshot snapshot = screen.getMenu().snapshot();
+            return snapshot.query().search().equals(NODE_NAME) && snapshot.nodes().size() == 1
+                    && screen.nodeRowCenter(nodeB()) != null;
+        }, () -> "busca \"" + tabletScreen().getMenu().snapshot().query().search() + "\", nós "
+                + tabletScreen().getMenu().snapshot().nodes().stream().map(n -> n.key().pos().toShortString()).toList()));
+        list.add(capture("7-tablet-lista"));
+
+        // os widgets da aba só aparecem no quadro seguinte, como para o jogador
+        list.add(new Step("aba Grupos", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.groups")), "aba Grupos")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new"))) != null,
+                () -> "Novo grupo visível"));
+        list.add(new Step("novo grupo", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new")), "Novo grupo"));
+            type(GROUP_NAME);
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+        }, () -> group() != null && tabletScreen().getMenu().snapshot().groups().stream()
+                .anyMatch(g -> g.name().equals(GROUP_NAME)),
+                () -> "grupos na tela " + tabletScreen().getMenu().snapshot().groups()));
+        list.add(new Step("rede dos itens no grupo", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            int[] box = screen.groupNetworkCenter(otherNetwork);
+            if (box == null) {
+                throw new StepFailure("a rede " + OTHER_NETWORK + " não aparece na coluna do grupo");
+            }
+            click(screen, box[0], box[1]);
+        }, () -> {
+            WaGroup group = group();
+            // e o botão Pausar já redesenhado como ativo (a tela o atualiza a cada quadro)
+            AbstractWidget pause = find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")));
+            return group != null && group.networks().contains(otherNetwork) && pause != null && pause.active
+                    && tabletScreen().getMenu().snapshot().groups().stream()
+                            .anyMatch(g -> g.name().equals(GROUP_NAME) && g.networks().contains(otherNetwork));
+        }, () -> "grupo no servidor " + group()));
+        list.add(new Step("pausar o grupo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Pausar o grupo")),
+                () -> onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))
+                        && tabletScreen().getMenu().snapshot().groups().stream()
+                                .anyMatch(g -> g.name().equals(GROUP_NAME) && g.paused()),
+                () -> "pausada no servidor: " + onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))));
+        list.add(capture("8-tablet-grupo-pausado"));
+        list.add(new Step("rede pausada: pedras param", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((Container) server.overworld().getBlockEntity(chestA)).setItem(0, new ItemStack(Items.STONE, 64));
+            return null;
+        }), () -> {
+            if (onServer(server -> count(server, chestB, Items.STONE)) != 192) {
+                throw new StepFailure("pedras chegaram a B com a rede pausada");
+            }
+            return stepTicks >= 40 && onServer(server -> count(server, chestA, Items.STONE) == 64);
+        }, () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+        list.add(new Step("retomar: pedras chegam", 30_000,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Retomar o grupo")),
+                () -> onServer(server -> !NetworkSavedData.get(server).isPaused(otherNetwork)
+                        && count(server, chestA, Items.STONE) == 0 && count(server, chestB, Items.STONE) == 256),
+                () -> onServer(server -> "pausada " + NetworkSavedData.get(server).isPaused(otherNetwork) + ", A="
+                        + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+
+        list.add(new Step("afastar 20 blocos", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                beforeTablet = player.position();
+                player.teleportTo(player.serverLevel(), routerB.getX() + 0.5, routerB.getY(), routerB.getZ() + 20.5,
+                        180f, 10f);
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB)) > 15,
+                () -> "distância " + Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB))));
+        list.add(new Step("abrir B à distância pela lista", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.list")), "aba Lista"));
+            TabletScreen screen = tabletScreen();
+            int[] row = screen.nodeRowCenter(nodeB());
+            if (row == null) {
+                throw new StepFailure("B não está na lista");
+            }
+            click(screen, row[0], row[1]);
+        }, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            // passa alguns ticks aberta: a tela comum fecharia a mais de 8 blocos
+            return stepTicks >= 20 && Minecraft.getInstance().screen instanceof RouterScreen screen
+                    && screen.getMenu().snapshot().pos().equals(routerB)
+                    && onServer(server -> server.getPlayerList().getPlayer(playerId).containerMenu
+                            instanceof RemoteRouterMenu);
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("9-roteador-a-distancia"));
+        list.add(close("fechar B à distância"));
+        // de volta para onde estava: os passos seguintes clicam em blocos ao alcance da mão
+        list.add(new Step("voltar para perto dos baús", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.teleportTo(player.serverLevel(), beforeTablet.x, beforeTablet.y, beforeTablet.z, 180f, 30f);
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.position().distanceTo(beforeTablet) < 0.5,
+                () -> "distância " + Minecraft.getInstance().player.position().distanceTo(beforeTablet)));
+    }
+
+    private static TabletScreen tabletScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof TabletScreen screen) {
+            return screen;
+        }
+        throw new StepFailure("o Tablet não está aberto (tela: " + describe(Minecraft.getInstance().screen) + ")");
+    }
+
+    private static NodeIndex.NodeKey nodeB() {
+        return new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD, routerB);
+    }
+
+    /** O grupo do teste no servidor, ou {@code null}. */
+    private static @Nullable WaGroup group() throws Exception {
+        return onServer(server -> NetworkSavedData.get(server).groups().stream()
+                .filter(g -> g.name().equals(GROUP_NAME)).findFirst().orElse(null));
+    }
+
+    // ------------------------------------------------------------------ Configurador
+
+    private static final String PRESET_NAME = "E2E Extrai em cima";
+    private static String exportedCode;
+
+    /**
+     * Configurador pela tela de verdade: Shift + clique direito no roteador A copia; Shift + clique
+     * direito no ar abre a tela; "Salvar ou importar", nome e Salvar põem o preset na biblioteca;
+     * Exportar e Copiar levam o código {@code WA1:} à área de transferência, e Colar + Importar o
+     * trazem de volta como um preset novo. Depois, na aba Área: cliques em Área, Shift + clique no
+     * baú A e no roteador B marcam a área, e "Aplicar em área" põe o preset de A em B.
+     */
+    private static void configuratorSteps(List<Step> list) {
+        list.add(new Step("Configurador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
+            return null;
+        }), () -> Minecraft.getInstance().player.getMainHandItem().getItem() instanceof ConfiguratorItem,
+                () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(shift(true));
+        list.add(new Step("Shift + clique copia A", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(routerA), Direction.UP, routerA, false);
+            minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
+        }, () -> onServer(server -> serverWand(server).has(ModDataComponents.PRESET.get())),
+                () -> "varinha: " + onServer(server -> String.valueOf(serverWand(server).get(ModDataComponents.PRESET.get())))));
+        list.add(openConfigurator("abrir o Configurador"));
+        list.add(new Step("Salvar ou importar", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.more")),
+                        "Salvar ou importar")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.save"))) != null,
+                () -> "Salvar visível"));
+        // os botões se acertam no quadro seguinte, como para o jogador
+        list.add(new Step("digitar o nome", STEP_TIMEOUT_MS, () -> type(PRESET_NAME), () -> {
+            AbstractWidget save = find(byMessage(Component.translatable("gui.wirelessautomate.configurator.save")));
+            return save != null && save.active;
+        }, () -> "Salvar ativo com \"" + PRESET_NAME + "\""));
+        list.add(new Step("salvar o preset", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.save")), "Salvar"));
+        }, () -> onServer(server -> PresetLibrary.get(server).presets(Minecraft.getInstance().player.getUUID()).stream()
+                .anyMatch(entry -> entry.name().equals(PRESET_NAME)))
+                && configuratorScreen().getMenu().view().library().size() == 1,
+                () -> "biblioteca na tela: " + configuratorScreen().getMenu().view().library()));
+        list.add(capture("6-configurador-salvo"));
+        list.add(new Step("fechar Salvar ou importar", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.more")),
+                        "Salvar ou importar")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.export"))) != null,
+                () -> "Exportar visível"));
+        list.add(new Step("exportar código", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.export")), "Exportar")),
+                () -> configuratorScreen().getMenu().view().export().isPresent()
+                        && find(byMessage(Component.translatable("gui.wirelessautomate.configurator.code.copy"))) != null,
+                () -> "código na tela: " + configuratorScreen().getMenu().view().export()));
+        list.add(new Step("copiar código", STEP_TIMEOUT_MS, () -> {
+            exportedCode = configuratorScreen().getMenu().view().export().get().code();
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.code.copy")), "Copiar"));
+        }, () -> exportedCode.equals(Minecraft.getInstance().keyboardHandler.getClipboard()),
+                () -> "área de transferência: " + Minecraft.getInstance().keyboardHandler.getClipboard()));
+        list.add(capture("7-configurador-codigo"));
+        list.add(new Step("colar e importar o código", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.more")), "Salvar ou importar"));
+        }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.code.paste"))) != null,
+                () -> "Colar visível"));
+        list.add(new Step("colar o código", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.code.paste")), "Colar")),
+                () -> {
+                    AbstractWidget importButton = find(byMessage(Component.translatable("gui.wirelessautomate.configurator.import")));
+                    return importButton != null && importButton.active;
+                }, () -> "Importar ativo"));
+        list.add(new Step("importar", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.import")), "Importar"));
+        }, () -> onServer(server -> {
+            List<PresetLibrary.Entry> presets = PresetLibrary.get(server).presets(Minecraft.getInstance().player.getUUID());
+            return presets.size() == 2 && presets.get(1).name().equals(PRESET_NAME)
+                    && presets.get(1).preset().equals(presets.get(0).preset());
+        }) && configuratorScreen().getMenu().view().library().size() == 2,
+                () -> "aviso: " + configuratorScreen().getMenu().view().notice().map(Component::getString).orElse("-")));
+        list.add(capture("8-configurador-importado"));
+
+        list.add(new Step("aba Área e cliques em Área", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.tab.area")), "aba Área"));
+        }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.clicks.area"))) != null,
+                () -> "botão Área visível"));
+        list.add(new Step("cliques em Área", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.clicks.area")),
+                        "cliques Área")),
+                () -> onServer(server -> AreaActions.selection(serverWand(server)).mode() == AreaSelection.Mode.AREA)
+                        && configuratorScreen().getMenu().view().wand().areaMode(),
+                () -> "modo na tela: " + configuratorScreen().getMenu().view().wand()));
+        list.add(close("fechar o Configurador"));
+        list.add(shift(true));
+        list.add(new Step("marcar a área (baú A e roteador B)", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            for (BlockPos corner : List.of(chestA, routerB)) {
+                BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(corner), Direction.UP, corner, false);
+                minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
+            }
+        }, () -> Minecraft.getInstance().screen == null && onServer(server -> AreaActions.selection(serverWand(server)).complete()),
+                () -> "seleção: " + onServer(server -> AreaActions.selection(serverWand(server)).toString())));
+        list.add(capture("9-configurador-area-no-mundo"));
+        list.add(openConfigurator("reabrir o Configurador"));
+        list.add(new Step("Aplicar em área", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.tab.area")), "aba Área"));
+        }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.mode.apply"))) != null
+                && configuratorScreen().getMenu().view().area().routers().size() == 2,
+                () -> "área na tela: " + configuratorScreen().getMenu().view().area()));
+        list.add(new Step("modo Aplicar em área", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.mode.apply")),
+                        "Aplicar em área")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.configurator.machine"))) != null,
+                () -> "Limitar a visível"));
+        list.add(new Step("aplicar o preset de A em B", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.configurator.area.copy")),
+                    "Aplicar em 2 roteadores"));
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode() == PortMode.EXTRACT
+                && router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().isEmpty()),
+                () -> "B: " + onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).toString())
+                        + "; aviso: " + configuratorScreen().getMenu().view().notice().map(Component::getString).orElse("-")));
+        list.add(capture("10-configurador-aplicado"));
+        list.add(close("fechar o Configurador de novo"));
+    }
+
+    /** Segura ou solta o Shift como o teclado; termina quando o servidor vê o jogador agachado ou não. */
+    private static Step shift(boolean down) {
+        return new Step(down ? "segurar Shift" : "soltar Shift", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().options.keyShift.setDown(down),
+                () -> Minecraft.getInstance().player.isShiftKeyDown() == down && onServer(server -> server.getPlayerList()
+                        .getPlayer(Minecraft.getInstance().player.getUUID()).isShiftKeyDown() == down),
+                () -> "Shift no cliente " + Minecraft.getInstance().player.isShiftKeyDown());
+    }
+
+    /** Shift + clique direito no ar com o Shift já seguro; solta o Shift quando a tela abre. */
+    private static Step openConfigurator(String name) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (!minecraft.player.isShiftKeyDown()) {
+                throw new StepFailure("o Shift não está seguro");
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> {
+            boolean open = Minecraft.getInstance().screen instanceof ConfiguratorScreen;
+            if (open) {
+                Minecraft.getInstance().options.keyShift.setDown(false);
+            }
+            return open;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen));
+    }
+
+    private static ConfiguratorScreen configuratorScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof ConfiguratorScreen screen) {
+            return screen;
+        }
+        throw new StepFailure("a tela do Configurador não está aberta (tela: " + describe(Minecraft.getInstance().screen) + ")");
+    }
+
+    private static ItemStack serverWand(MinecraftServer server) {
+        return server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).getMainHandItem();
     }
 
     /** O slot do inventário (na tela do roteador aberta) com um Cartão de Filtro, ou {@code null}. */

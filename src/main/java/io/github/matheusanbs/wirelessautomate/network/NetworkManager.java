@@ -24,7 +24,11 @@ import org.jetbrains.annotations.Nullable;
  *       por origem acordada, e para quando o orçamento acaba, guardando o cursor para o tick seguinte.
  *       Se a volta inteira coube, o tick seguinte começa uma origem adiante: sem isso, as primeiras
  *       origens da lista levariam sempre todo o espaço que abre nos destinos.
- *       O relógio é lido uma vez por origem, e serve tanto ao orçamento quanto ao profiler.
+ *       O relógio é lido uma vez por origem, e serve tanto ao orçamento quanto ao profiler;
+ *   <li>com a volta inteira feita e orçamento sobrando, dá voltas extras só nas origens que pararam
+ *       por um teto da visita com saldo no balde ({@link #visit} devolve {@code true}): assim o tier
+ *       sem limite (e o Elite, acima de 32 pilhas por tick) é limitado pelo orçamento e não pelo teto
+ *       de tentativas, sem passar na frente de quem ainda não teve a primeira visita do tick.
  * </ol>
  *
  * <p>Cada tipo de recurso (aba) de um nó entra numa rede própria ({@link RouterBlockEntity#networkId(ResourceType)});
@@ -49,6 +53,8 @@ public final class NetworkManager {
     /** Origens com destino de todas as redes, na ordem da visita. */
     private final List<Port> sources = new ArrayList<>();
     private final List<Port> scratch = new ArrayList<>();
+    /** Origens que pararam num teto da visita com saldo, para as voltas extras do tick. */
+    private final List<Port> hungry = new ArrayList<>();
     private final TickBudget budget = new TickBudget(500_000L);
     private int cursor;
     private boolean dirty;
@@ -226,6 +232,7 @@ public final class NetworkManager {
         int visited = 0;
         int start = cursor < count ? cursor : 0;
         int index = start;
+        hungry.clear();
         for (int step = 0; step < count; step++) {
             Port source = sources.get(index);
             if (source.order != null && source.sourceBackoff.isAwake(now)) {
@@ -237,6 +244,7 @@ public final class NetworkManager {
                         timed.tickNanos += time - mark;
                     }
                     cursor = index;
+                    hungry.clear();
                     return time;
                 }
                 if (timed != null) {
@@ -246,12 +254,36 @@ public final class NetworkManager {
                 mark = time;
                 visited++;
                 visitCount++;
-                visit(source, now);
+                if (visit(source, now)) {
+                    hungry.add(source);
+                }
             }
             index = index + 1 == count ? 0 : index + 1;
         }
         if (count > 0) {
             cursor = start + 1 == count ? 0 : start + 1;
+        }
+        // Voltas extras, na mesma ordem, só com quem ainda tem o que mover e saldo para isso.
+        while (!hungry.isEmpty()) {
+            int kept = 0;
+            for (int i = 0, n = hungry.size(); i < n; i++) {
+                Port source = hungry.get(i);
+                long time = System.nanoTime();
+                if (timed != null) {
+                    timed.tickNanos += time - mark;
+                }
+                if (!budget.hasTime(time)) {
+                    hungry.clear();
+                    return time;
+                }
+                timed = source.network;
+                mark = time;
+                visitCount++;
+                if (visit(source, now)) {
+                    hungry.set(kept++, source);
+                }
+            }
+            hungry.subList(kept, hungry.size()).clear();
         }
         long time = System.nanoTime();
         if (timed != null) {
@@ -260,14 +292,20 @@ public final class NetworkManager {
         return time;
     }
 
-    private void visit(Port source, long now) {
-        switch (source.type) {
+    /** Uma visita. Devolve {@code true} se a origem parou num teto da visita e ainda tem saldo para mais. */
+    private boolean visit(Port source, long now) {
+        return switch (source.type) {
             case ITEM -> ItemTransfer.move(source, now);
-            case FLUID -> FluidTransfer.move(source, now);
-            case ENERGY -> EnergyTransfer.move(source, now);
-            case CHEMICAL -> {
+            case FLUID -> {
+                FluidTransfer.move(source, now);
+                yield false;
             }
-        }
+            case ENERGY -> {
+                EnergyTransfer.move(source, now);
+                yield false;
+            }
+            case CHEMICAL -> false;
+        };
     }
 
     /** Redes criadas ou removidas no {@link NetworkSavedData} mudam a validade das rotas. */

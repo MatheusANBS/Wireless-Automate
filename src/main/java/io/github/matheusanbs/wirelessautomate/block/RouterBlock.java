@@ -1,8 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
 import com.mojang.serialization.MapCodec;
+import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -71,6 +76,41 @@ public class RouterBlock extends BaseEntityBlock {
             return Blocks.AIR.defaultBlockState();
         }
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
+
+    /**
+     * Entra na rede ativa de quem colocou. Se o item trouxe dados do block entity com uma rede,
+     * eles já foram aplicados antes desta chamada e a rede que veio é mantida.
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router
+                && router.networkId() == null) {
+            router.setNetworkId(NetworkSavedData.get(player.server).activeOrCreate(player).id());
+        }
+    }
+
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            BlockPos neighborPos, boolean movedByPiston) {
+        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+            router.updatePowered();
+        }
+    }
+
+    /**
+     * O conteúdo da máquina mudou: acorda os destinos do nó. Só chega quando a máquina chama
+     * {@code setChanged()} no block entity (o NeoForge propaga para as 6 faces); máquinas que
+     * mudam o inventário sem isso ficam com o reserva, as checagens com backoff do gerenciador.
+     */
+    @Override
+    public void onNeighborChange(BlockState state, LevelReader level, BlockPos pos, BlockPos neighbor) {
+        if (!level.isClientSide() && neighbor.equals(attachedPos(state, pos))
+                && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+            NetworkManager.get().wake(router);
+        }
     }
 
     @Override

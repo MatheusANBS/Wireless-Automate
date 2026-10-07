@@ -18,7 +18,8 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  *   <li>{@code CLEAR}, {@code IMPORT_CARD}, {@code EXPORT_CARD}, {@code BACK}: nenhum
  *       ({@code BACK} volta para a tela do roteador)</li>
  * </ul>
- * Adicionar do inventário não usa este payload: é o Shift + clique do {@code FilterMenu}.
+ * Adicionar do inventário não usa este payload: é o Shift + clique do {@code FilterMenu}. Do JEI
+ * (sem ter o item) é o {@link AddFilterEntryPayload}.
  */
 public record EditFilterPayload(int containerId, Op op, int index, long value, String text)
         implements CustomPacketPayload {

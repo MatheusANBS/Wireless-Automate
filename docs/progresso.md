@@ -40,7 +40,8 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 ## Próximo passo
 
 1. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
-2. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.
+2. CurseForge: o projeto (ID 1732160) foi criado com a 0.1.0 enviada e em moderação. Ao lançar uma versão nova: subir o jar de `build/libs/`, NeoForge, 1.21.1, Java 21, Client and Server; a descrição vem de `docs/curseforge/descricao.md` (imagens já na galeria).
+3. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.
 
 **No Windows:** o `scripts/bench.sh` roda pelo Git Bash com `JAVA_HOME` apontando para o JDK 21 (o padrão da máquina é o 17). O `e2e.sh` e o modo de captura dependem do `xvfb-run`; sem ele, rode o cliente direto (`WA_E2E="$PWD/run/e2e" ./gradlew runClient`): a janela aparece e o roteiro roda sozinho. Num `run/` novo, a primeira execução para na tela de acessibilidade e o roteiro não começa; o `options.txt` fica com `onboardAccessibility:false` e a segunda execução passa.
 
@@ -89,6 +90,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-07 | Projeto publicado no CurseForge (ID 1732160): 0.1.0 enviada para moderação, descrição em Markdown com as imagens da galeria, licença All Rights Reserved com distribuição a terceiros liberada, e JEI, Mekanism e GuideME como dependências opcionais. |
 | 2026-10-07 | Página do CurseForge: capa 400x400, banner 1600x400 e sete imagens da descrição (fotos reais de uma vitrine montada pelo `DevEndToEnd` com `WA_SHOWCASE`, e os tiers desenhados com as texturas), tudo por script em `scripts/curseforge/`. |
 | 2026-10-07 | Ícone do roteador na cor do tier em todo lugar (inventário, mão, chão): propriedade de item `wirelessautomate:tier` no cliente e overrides em `models/item/router.json`; o guia mostra os quatro na página do roteador. |
 | 2026-10-07 | Guia só com o que o jogador precisa para operar (saiu a página de desempenho e config, a tabela da tela virou passo a passo de configurar uma face); livro-guia na aba criativa e entregue a cada jogador no primeiro login (`item/GuideBook`, config `guide.giveOnFirstJoin`). |

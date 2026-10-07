@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.AddFilterEntryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.EditFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.EditFilterPayload.Op;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -59,8 +61,10 @@ import org.lwjgl.glfw.GLFW;
  * acerta sem recriar widgets, mantendo rolagem, seleção e o que está aberto. Cada ação vira um
  * {@link EditFilterPayload}; o servidor valida e manda a visão nova.
  *
- * <p>TODO: aba JEI (clicar ou arrastar um ingrediente adiciona mesmo sem ter o item), quando o JEI
- * entrar nas dependências de compilação.
+ * <p>"Aba JEI": com o JEI instalado, a dica do inventário passa a citá-lo, e o plugin em
+ * {@code compat/jei} usa a parte pública "Ingredientes fantasmas" desta tela: arrastar um ingrediente
+ * para a grade (ou Shift + clique nele na lista) acrescenta a entrada, mesmo sem ter o item, pelo
+ * {@link AddFilterEntryPayload}. Esta classe não conhece nenhuma classe do JEI.
  */
 public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private static final int W = 256;
@@ -104,6 +108,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private static final int DANGER = 0xFFE5534B;
     private static final int SEL_BOX = 0xFF151A21;
     private static final long CLEAR_CONFIRM_MS = 3000;
+    /** JEI instalado: a dica fala dele e o plugin em {@code compat/jei} oferece arrastar e clicar. */
+    private static final boolean JEI = ModList.get().isLoaded("jei");
 
     private final boolean preview;
     private final List<FlatButton> buttons = new ArrayList<>();
@@ -123,6 +129,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private long clearArmedUntil;
     private String stockDraft = "";
     private String ruleDraft = "";
+    /** Entrada vinda do JEI: quando ela aparecer na visão, fica selecionada e à vista. */
+    private @Nullable FilterEntry pendingReveal;
 
     private FlatButton backButton;
     private FlatButton whiteButton;
@@ -207,6 +215,26 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
         scrollRow = Math.max(0, Math.min(scrollRow, maxScroll()));
         trim = resolveTrim();
+        revealPending();
+    }
+
+    /** Seleciona e rola até a entrada que veio do JEI, se ela já está no filtro. */
+    private void revealPending() {
+        if (pendingReveal == null) {
+            return;
+        }
+        int index = filter().indexOf(pendingReveal);
+        if (index < 0) {
+            return;
+        }
+        pendingReveal = null;
+        select(filter().entries().get(index), index);
+        int row = index / COLS;
+        if (row < scrollRow) {
+            scrollRow = row;
+        } else if (row >= scrollRow + ROWS) {
+            scrollRow = Math.min(maxScroll(), row - ROWS + 1);
+        }
     }
 
     /** Cor do tier do roteador, lida do bloco no mundo do cliente; sem ele, o destaque padrão. */
@@ -574,7 +602,13 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (clearArmed() && !clearButton.isMouseOver(mouseX, mouseY)) {
             clearArmedUntil = 0;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        boolean wasOpen = moreOpen;
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (moreOpen && !wasOpen) {
+            // a tela dá o foco ao botão clicado depois do onPress, tirando-o do campo de regra
+            setFocused(ruleBox);
+        }
+        return handled;
     }
 
     @Override
@@ -670,6 +704,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             setTooltipForNextRenderPass(tr("stock.tooltip"));
             return;
         }
+        if (JEI && mouseX >= leftPos + FilterMenu.INVENTORY_X - 1 && mouseX < leftPos + X1
+                && mouseY >= topPos + HINT_Y - 1 && mouseY < topPos + HINT_Y + 9) {
+            setTooltipForNextRenderPass(font.split(isFluid() ? tr("jei.tooltip.fluid") : tr("jei.tooltip.item"), 200));
+            return;
+        }
         renderTooltip(g, mouseX, mouseY);
     }
 
@@ -702,9 +741,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
 
         // inventário do jogador
-        Component hint = isFluid() ? tr("hint.fluid") : tr("hint.item");
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, hint, X1 - X0), x + FilterMenu.INVENTORY_X - 1, y + HINT_Y,
-                GuiPaint.MUTED);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, inventoryHint(), X1 - FilterMenu.INVENTORY_X + 1),
+                x + FilterMenu.INVENTORY_X - 1, y + HINT_Y, GuiPaint.MUTED);
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 GuiPaint.slot(g, x + FilterMenu.INVENTORY_X - 1 + col * CELL, y + FilterMenu.INVENTORY_Y - 1 + row * CELL);
@@ -773,7 +811,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int y = topPos;
         GuiPaint.box(g, x + RX, y + BOX_Y, RW, BOX_H, SEL_BOX, GuiPaint.LINE);
         if (selected == null) {
-            Component hint = filter().isEmpty() ? tr("select.empty") : tr("select.hint");
+            Component hint = !filter().isEmpty() ? tr("select.hint") : JEI ? tr("select.empty.jei") : tr("select.empty");
             List<FormattedCharSequence> lines = font.split(hint, IW);
             for (int i = 0; i < lines.size() && i < 6; i++) {
                 GuiPaint.text(g, font, lines.get(i), x + IX, y + BOX_Y + 5 + i * 10, GuiPaint.MUTED);
@@ -962,6 +1000,58 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return RateFormat.abbreviate(stock);
         }
         return stock < 1000 ? stock + "m" : RateFormat.abbreviate(stock / 1000) + "B";
+    }
+
+    /** A linha acima do inventário: como adicionar; com o JEI, cita ele também. */
+    private Component inventoryHint() {
+        if (JEI) {
+            return isFluid() ? tr("hint.fluid.jei") : tr("hint.item.jei");
+        }
+        return isFluid() ? tr("hint.fluid") : tr("hint.item");
+    }
+
+    // ------------------------------------------------------------------ ingredientes fantasmas (JEI)
+
+    /**
+     * A entrada que um ingrediente de fora (o JEI) acrescenta a este filtro: {@link ItemStack} num
+     * filtro de itens; {@link FluidStack}, ou um item que contém fluido (balde), num de fluidos.
+     * Vazio se não serve.
+     */
+    public Optional<FilterEntry> ghostEntry(Object ingredient) {
+        return switch (ingredient) {
+            case ItemStack stack -> FilterMenu.entryFor(view().type(), stack);
+            case FluidStack stack when isFluid() && !stack.isEmpty() -> Optional.of(new FluidEntry(stack, 0));
+            default -> Optional.empty();
+        };
+    }
+
+    /** Onde soltar um ingrediente arrastado: a grade de entradas, em coordenadas da tela. */
+    public Rect2i ghostArea() {
+        return new Rect2i(leftPos + X0, topPos + GRID_Y, GRID_W, GRID_H);
+    }
+
+    /**
+     * Acrescenta uma entrada vinda de fora, sem o jogador ter o item; o servidor valida e manda a
+     * visão nova, e a entrada fica selecionada quando chegar. Duplicada, só é selecionada.
+     */
+    public void addGhost(FilterEntry entry) {
+        pendingReveal = entry;
+        if (filter().indexOf(entry) >= 0) {
+            revealPending();
+        } else if (preview) {
+            FilterView v = view();
+            menu.applyView(new FilterView(v.type(), v.router(), v.face(), filter().withEntry(entry), v.hasCard()));
+        } else {
+            PacketDistributor.sendToServer(new AddFilterEntryPayload(menu.containerId, entry));
+        }
+    }
+
+    /**
+     * O que o painel ocupa além do retângulo da imagem, para o JEI não se sobrepor. Hoje o painel
+     * é a própria imagem; a lista fica aqui para quem acrescentar abas ou gavetas por fora.
+     */
+    public List<Rect2i> extraAreas() {
+        return List.of(new Rect2i(leftPos, topPos, W, H));
     }
 
     // ------------------------------------------------------------------ pintura dos botões

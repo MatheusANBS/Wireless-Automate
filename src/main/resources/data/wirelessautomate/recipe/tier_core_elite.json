@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "NAN",
+    " N "
+  ],
+  "key": {
+    "S": { "item": "minecraft:nether_star" },
+    "N": { "item": "minecraft:netherite_ingot" },
+    "A": { "item": "wirelessautomate:tier_core_advanced" }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_elite",
+    "count": 1
+  }
+}

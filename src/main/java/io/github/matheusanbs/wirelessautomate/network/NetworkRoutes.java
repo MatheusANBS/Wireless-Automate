@@ -17,6 +17,8 @@ import net.minecraft.core.Direction;
  * <ul>
  *   <li>origem = face ativa (modo e redstone) que extrai; destino = face ativa que insere;
  *   <li>uma origem não entrega na mesma máquina e mesma face de onde tira;
+ *   <li>uma face Ambos não entrega para outra face Ambos (senão os recursos iriam e voltariam entre
+ *       as duas máquinas): ela entrega só em faces que só inserem e recebe só de faces que só extraem;
  *   <li>alcance e dimensão vêm do tier da <b>origem</b>: mesma dimensão e distância euclidiana entre
  *       os roteadores até o alcance (0 = dimensão inteira); outra dimensão só com {@code crossDimension},
  *       e aí sem limite de distância;
@@ -73,7 +75,8 @@ final class NetworkRoutes {
                 scratch.clear();
                 for (int j = firstDestination; j < destinations.size(); j++) {
                     Port destination = destinations.get(j);
-                    if (!destination.sameEndpoint(source) && reachable(source, destination, range, crossDimension)) {
+                    if (!destination.sameEndpoint(source) && !bothToBoth(source, destination)
+                            && reachable(source, destination, range, crossDimension)) {
                         scratch.add(destination);
                         destination.feeders.add(source);
                     }
@@ -118,6 +121,11 @@ final class NetworkRoutes {
                 }
             }
         }
+    }
+
+    /** As duas portas estão em Ambos: depois de {@link #collectPorts}, origem e destino ao mesmo tempo. */
+    private static boolean bothToBoth(Port source, Port destination) {
+        return source.destination && destination.source;
     }
 
     private static boolean reachable(Port source, Port destination, int range, boolean crossDimension) {

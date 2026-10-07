@@ -105,7 +105,7 @@ final class NetworkRoutes {
                 Port port = member.port(type, face);
                 port.network = this;
                 port.priority = config.priority();
-                port.filter = config.filter();
+                port.filter = node.filterSet(type, face);
                 port.tier = tier;
                 port.machinePos = machine;
                 if (config.mode().extracts()) {

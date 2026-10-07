@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -9,16 +11,22 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringUtil;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -39,6 +47,12 @@ import org.jetbrains.annotations.Nullable;
  * <p>Para a tela do roteador há duas coisas baratas: {@link #changeVersion()}, que muda a cada
  * alteração do que a tela mostra (a tela aberta compara e reenvia; com ela fechada ninguém olha), e
  * os totais movidos por tipo ({@link #moved}), somados pelo motor numa visita que moveu algo.
+ *
+ * <p>Cartões de Filtro: cada face, para itens e para fluidos, tem {@link #CARD_SLOTS} slots de
+ * cartão, guardados por lado relativo como a configuração. O motor junta o filtro embutido e os dos
+ * cartões num {@link FilterSet} na montagem das rotas ({@link #filterSet}). Os cartões são itens
+ * físicos: saem do roteador quebrado e não vão no preset do Configurador (que só copia a
+ * configuração; o cartão é duplicado por receita ou exportando o filtro).
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -55,6 +69,12 @@ public class RouterBlockEntity extends BlockEntity {
     private int changeVersion;
     /** Total movido como origem, por {@link ResourceType#ordinal()}, desde que o nó carregou. Não é salvo. */
     private final long[] moved = new long[TYPES.length];
+    /** Slots de cartão por face e por tipo. */
+    public static final int CARD_SLOTS = 2;
+    /** Tipos com slots de cartão, na ordem de {@link #cards}. */
+    private static final ResourceType[] CARD_TYPES = {ResourceType.ITEM, ResourceType.FLUID};
+    /** [tipo de {@link #CARD_TYPES}][lado relativo][slot], nunca nulos. */
+    private final ItemStack[][][] cards = new ItemStack[CARD_TYPES.length][SIDES.length][CARD_SLOTS];
 
     /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
@@ -69,6 +89,7 @@ public class RouterBlockEntity extends BlockEntity {
                 row[i] = new FaceConfig();
             }
         }
+        clearCards();
     }
 
     public RouterTier tier() {
@@ -190,6 +211,119 @@ public class RouterBlockEntity extends BlockEntity {
     public void setFilter(ResourceType type, Direction machineFace, Filter filter) {
         if (face(type, machineFace).setFilter(filter)) {
             changed();
+        }
+    }
+
+    // ------------------------------------------------------------------ cartões de filtro
+
+    /** O tipo tem slots de cartão (itens e fluidos; energia não usa filtro e químicos ainda não). */
+    public static boolean hasCardSlots(ResourceType type) {
+        return cardIndex(type) >= 0;
+    }
+
+    private static int cardIndex(ResourceType type) {
+        return switch (type) {
+            case ITEM -> 0;
+            case FLUID -> 1;
+            default -> -1;
+        };
+    }
+
+    /** {@code stack} pode ir num slot de cartão de {@code type}: um Cartão de Filtro do mesmo tipo. */
+    public static boolean acceptsCard(ResourceType type, ItemStack stack) {
+        return hasCardSlots(type) && FilterCardItem.isCard(stack) && FilterCardItem.contents(stack).type() == type;
+    }
+
+    /** O cartão no slot; vazio se não houver ou se o tipo não tem slots. Não altere a pilha devolvida. */
+    public ItemStack card(ResourceType type, RelativeSide side, int slot) {
+        int index = cardIndex(type);
+        if (index < 0 || slot < 0 || slot >= CARD_SLOTS) {
+            return ItemStack.EMPTY;
+        }
+        return cards[index][side.ordinal()][slot];
+    }
+
+    /**
+     * Põe {@code stack} (guardada como está, sem cópia) no slot e avisa o motor. Não valida o
+     * tipo: quem chama (o slot do menu) já validou com {@link #acceptsCard}; um cartão que não
+     * vale para o tipo fica guardado, mas o motor o ignora.
+     */
+    public void setCard(ResourceType type, RelativeSide side, int slot, ItemStack stack) {
+        int index = cardIndex(type);
+        if (index < 0 || slot < 0 || slot >= CARD_SLOTS) {
+            return;
+        }
+        cards[index][side.ordinal()][slot] = stack;
+        changed();
+    }
+
+    /** Um cartão foi mexido no lugar (pilha do slot alterada): salva e remonta as rotas. */
+    public void cardsChanged() {
+        changed();
+    }
+
+    /** Cartões nos slots da face (absoluta) para o tipo. */
+    public int cardCount(ResourceType type, Direction machineFace) {
+        int index = cardIndex(type);
+        if (index < 0) {
+            return 0;
+        }
+        int count = 0;
+        for (ItemStack stack : cards[index][RelativeSide.fromAbsolute(facing(), machineFace).ordinal()]) {
+            if (!stack.isEmpty()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Os filtros da face (absoluta) para o tipo: o embutido e os dos cartões válidos, na ordem dos
+     * slots. Chamado pelo motor na montagem das rotas, não por tick; sem cartões não aloca.
+     */
+    public FilterSet filterSet(ResourceType type, Direction machineFace) {
+        RelativeSide side = RelativeSide.fromAbsolute(facing(), machineFace);
+        Filter embedded = face(type, side).filter();
+        int index = cardIndex(type);
+        if (index < 0) {
+            return embedded.asSet();
+        }
+        List<Filter> fromCards = null;
+        for (ItemStack stack : cards[index][side.ordinal()]) {
+            if (acceptsCard(type, stack)) {
+                if (fromCards == null) {
+                    fromCards = new ArrayList<>(CARD_SLOTS);
+                }
+                fromCards.add(FilterCardItem.contents(stack).filter());
+            }
+        }
+        return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
+    }
+
+    /** Tira todos os cartões (para soltar no mundo quando o roteador sai). */
+    public NonNullList<ItemStack> removeAllCards() {
+        NonNullList<ItemStack> removed = NonNullList.create();
+        for (ItemStack[][] byType : cards) {
+            for (ItemStack[] bySide : byType) {
+                for (int i = 0; i < bySide.length; i++) {
+                    if (!bySide[i].isEmpty()) {
+                        removed.add(bySide[i]);
+                        bySide[i] = ItemStack.EMPTY;
+                    }
+                }
+            }
+        }
+        if (!removed.isEmpty()) {
+            changed();
+        }
+        return removed;
+    }
+
+    private void clearCards() {
+        for (ItemStack[][] byType : cards) {
+            for (ItemStack[] bySide : byType) {
+                Arrays.fill(bySide, ItemStack.EMPTY);
+            }
         }
     }
 
@@ -361,6 +495,30 @@ public class RouterBlockEntity extends BlockEntity {
         if (!facesTag.isEmpty()) {
             tag.put("faces", facesTag);
         }
+        CompoundTag cardsTag = new CompoundTag();
+        for (int t = 0; t < CARD_TYPES.length; t++) {
+            CompoundTag typeTag = new CompoundTag();
+            for (RelativeSide side : SIDES) {
+                ListTag list = new ListTag();
+                ItemStack[] slots = cards[t][side.ordinal()];
+                for (int slot = 0; slot < slots.length; slot++) {
+                    if (!slots[slot].isEmpty()) {
+                        CompoundTag slotTag = new CompoundTag();
+                        slotTag.putByte("slot", (byte) slot);
+                        list.add(slots[slot].save(registries, slotTag));
+                    }
+                }
+                if (!list.isEmpty()) {
+                    typeTag.put(side.key(), list);
+                }
+            }
+            if (!typeTag.isEmpty()) {
+                cardsTag.put(typeKey(CARD_TYPES[t]), typeTag);
+            }
+        }
+        if (!cardsTag.isEmpty()) {
+            tag.put("cards", cardsTag);
+        }
     }
 
     @Override
@@ -378,6 +536,23 @@ public class RouterBlockEntity extends BlockEntity {
                     config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key()), registries));
                 } else {
                     config.reset();
+                }
+            }
+        }
+        clearCards();
+        CompoundTag cardsTag = tag.getCompound("cards");
+        for (int t = 0; t < CARD_TYPES.length; t++) {
+            CompoundTag typeTag = cardsTag.getCompound(typeKey(CARD_TYPES[t]));
+            for (RelativeSide side : SIDES) {
+                ListTag list = typeTag.getList(side.key(), Tag.TAG_COMPOUND);
+                for (int i = 0; i < list.size(); i++) {
+                    CompoundTag slotTag = list.getCompound(i);
+                    int slot = slotTag.getByte("slot");
+                    ItemStack[] slots = cards[t][side.ordinal()];
+                    if (slot >= 0 && slot < CARD_SLOTS) {
+                        // Item de mod removido: a pilha não lê e o slot fica vazio.
+                        ItemStack.parse(registries, slotTag).ifPresent(stack -> slots[slot] = stack);
+                    }
                 }
             }
         }

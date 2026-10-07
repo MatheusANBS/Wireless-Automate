@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.FluidEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ModEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
@@ -19,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -113,8 +115,8 @@ public final class DevScreenshot {
                 screen.previewRename("Fornalha Norte 2");
             }, "6-renomear"));
 
-    /** Todos os passos, na ordem: os da tela, os do visor 3D e os da tela de filtro. */
-    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps())
+    /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
+    private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps())
             .flatMap(List::stream).toList();
 
     /**
@@ -269,6 +271,79 @@ public final class DevScreenshot {
                 new FluidEntry(new FluidStack(Fluids.LAVA, 1), 0),
                 new TagEntry(ResourceLocation.parse("c:oil"), 0),
                 new ModEntry("mekanism", 500)));
+    }
+
+    // ------------------------------------------------------------------ slots de cartão
+
+    /**
+     * Slots de Cartão de Filtro na tela do roteador: a face de baixo com 12 entradas e um cartão
+     * de itens no primeiro slot, com o inventário cheio de exemplo; a dica do slot vazio; a aba
+     * de energia com "Mais" aberto (sem slots de cartão); e a de fluidos com um cartão no segundo slot.
+     */
+    private static List<Step> cardSteps() {
+        return List.of(
+                new Step(() -> {
+                    filterScreen = null;
+                    mouseX = mouseY = -1;
+                    screen = cardScreen();
+                    screen.previewType(ResourceType.ITEM);
+                    screen.previewFace(Direction.DOWN);
+                }, "c1-cartoes"),
+                new Step(() -> {
+                    int[] center = screen.previewCardSlotCenter(1);
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "c2-cartao-dica"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    screen.previewType(ResourceType.ENERGY);
+                    screen.previewFace(Direction.NORTH);
+                    screen.previewExpanded(true);
+                }, "c3-energia-mais"),
+                new Step(() -> {
+                    // sem servidor, os slots não trocam sozinhos: põe o que o servidor mandaria
+                    screen.previewType(ResourceType.FLUID);
+                    screen.previewFace(Direction.UP);
+                    screen.previewExpanded(false);
+                    screen.getMenu().getSlot(0).set(ItemStack.EMPTY);
+                    screen.getMenu().getSlot(1).set(card(ResourceType.FLUID, fluidFilter(), 1));
+                }, "c4-fluidos"));
+    }
+
+    /** Tela do roteador com um cartão de itens no primeiro slot e o inventário de exemplo. */
+    private static RouterScreen cardScreen() {
+        RouterSnapshot s = sample();
+        List<FaceView> faces = new ArrayList<>(s.faces());
+        int down = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
+        FaceView d = faces.get(down);
+        faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
+        RouterSnapshot snapshot = new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(), s.network(),
+                s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces));
+
+        Inventory inventory = new Inventory(null);
+        ItemStack[] items = {new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.COAL, 23),
+                card(ResourceType.ITEM, itemFilter(Filter.ListMode.WHITELIST), 3), card(ResourceType.FLUID, fluidFilter(), 1),
+                new ItemStack(ModItems.FILTER_CARD.get(), 8), new ItemStack(Items.OAK_LOG, 32),
+                new ItemStack(Items.LAVA_BUCKET), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.IRON_PICKAXE),
+                new ItemStack(Items.TORCH, 50)};
+        for (int i = 0; i < items.length; i++) {
+            inventory.setItem(i < 5 ? i : 9 + i, items[i]);
+        }
+        RouterMenu menu = new RouterMenu(0, inventory, snapshot);
+        menu.applyThroughput(new long[] {1_240, 0, 0, 0});
+        menu.getSlot(0).set(card(ResourceType.ITEM, new Filter(Filter.ListMode.WHITELIST, false,
+                List.of(new ItemEntry(new ItemStack(Items.DIAMOND), 0))), 1));
+        RouterScreen created = new RouterScreen(menu, inventory, Component.translatable("block.wirelessautomate.router"),
+                true);
+        Minecraft minecraft = Minecraft.getInstance();
+        created.init(minecraft, minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());
+        return created;
+    }
+
+    private static ItemStack card(ResourceType type, Filter filter, int count) {
+        ItemStack card = new ItemStack(ModItems.FILTER_CARD.get(), count);
+        FilterCardItem.setContents(card, new FilterCardItem.Contents(type, filter));
+        return card;
     }
 
     // ------------------------------------------------------------------ eventos

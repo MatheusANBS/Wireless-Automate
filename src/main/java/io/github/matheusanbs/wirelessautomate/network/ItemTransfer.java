@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Move itens de uma origem para os destinos dela, numa visita do {@link NetworkManager}.
@@ -24,8 +26,8 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
  * (slot só de saída, por exemplo), a sobra cai no mundo na posição do roteador e o caso vai para o
  * log. Se a extração real der menos que o simulado, só o que saiu é entregue e a visita para.
  *
- * <p>Filtros ({@link Port#filter}, pegos na montagem das rotas): o da origem decide que slots podem
- * sair, e o do destino o que pode entrar. Um slot recusado pela origem só conta como varrido (a
+ * <p>Filtros ({@link Port#filter}: o embutido e os dos cartões, montados na montagem das rotas; ver
+ * {@link FilterSet}): o da origem decide que slots podem sair, e o do destino o que pode entrar. Um slot recusado pela origem só conta como varrido (a
  * volta inteira sem mover ainda faz a origem dormir). Um destino que recusa pelo filtro, ou que já
  * tem o estoque, é só pulado, <b>sem dormir</b>: recusar o item A não diz nada sobre o B, e o
  * backoff de "cheio" o deixaria de fora também para o B. Só a recusa por falta de espaço (a
@@ -66,7 +68,7 @@ final class ItemTransfer {
             source.sourceBackoff.sleep(now);
             return;
         }
-        Filter filter = source.filter;
+        FilterSet filter = source.filter;
         boolean filtered = !filter.isEmpty();
         StockTally tally = null;
         if (filtered && filter.usesItemStock()) {
@@ -92,15 +94,16 @@ final class ItemTransfer {
                 continue;
             }
             int max = (int) Math.min(tokens, Integer.MAX_VALUE);
-            long[] stocked = null;
+            boolean stocked = false;
             if (filtered) {
                 if (!filter.testItem(inSlot)) {
                     continue;
                 }
-                long stock = tally == null ? 0 : filter.itemStock(inSlot);
+                Filter rule = tally == null ? null : filter.itemStockFilter(inSlot);
+                long stock = rule == null ? 0 : rule.itemStock(inSlot);
                 if (stock > 0) {
-                    stocked = tally.cell(handler, filter, inSlot);
-                    max = (int) StockLimit.extractable(stocked == null ? 0 : stocked[0], stock, max);
+                    stocked = true;
+                    max = (int) StockLimit.extractable(tally.lookup(handler, filter, rule, inSlot), stock, max);
                     if (max <= 0) {
                         continue;
                     }
@@ -108,8 +111,8 @@ final class ItemTransfer {
             }
             int amount = moveSlot(source, handler, current, max, order, pass, now);
             if (amount > 0) {
-                if (stocked != null) {
-                    stocked[0] -= amount;
+                if (stocked) {
+                    tally.took(amount);
                 }
                 tokens -= amount;
                 moved += amount;
@@ -163,15 +166,16 @@ final class ItemTransfer {
                 continue;
             }
             int want = remaining;
-            Filter accept = destination.filter;
+            FilterSet accept = destination.filter;
             if (!accept.isEmpty()) {
                 // Recusa do filtro ou estoque já atingido: pula sem dormir (ver o javadoc da classe).
                 if (!accept.testItem(offered)) {
                     continue;
                 }
-                long stock = accept.itemStock(offered);
+                Filter rule = accept.itemStockFilter(offered);
+                long stock = rule == null ? 0 : rule.itemStock(offered);
                 if (stock > 0) {
-                    want = (int) StockLimit.acceptable(countIn(target, offered, accept.matchComponents()), stock, want);
+                    want = (int) StockLimit.acceptable(countIn(target, offered, rule.matchComponents()), stock, want);
                     if (want <= 0) {
                         continue;
                     }
@@ -241,6 +245,8 @@ final class ItemTransfer {
     /**
      * Quanto de cada item com estoque há na origem, contado uma vez por visita (na primeira
      * consulta) e descontado conforme os itens saem. Os mapas são reaproveitados entre visitas.
+     * Conta por item e, se algum filtro com estoque exige componentes, também por item +
+     * componentes; a regra do estoque ({@link FilterSet#itemStockFilter}) escolhe qual contagem vale.
      */
     static final class StockTally {
         private final Reference2ObjectOpenHashMap<Item, long[]> byItem = new Reference2ObjectOpenHashMap<>();
@@ -249,6 +255,8 @@ final class ItemTransfer {
         private boolean counted;
 
         void reset() {
+            itemCell = null;
+            stackCell = null;
             if (counted) {
                 byItem.clear();
                 byStack.clear();
@@ -257,32 +265,56 @@ final class ItemTransfer {
         }
 
         /** A contagem do item, num {@code long[1]} que quem move desconta; {@code null} se não houver. */
-        long[] cell(IItemHandler handler, Filter filter, ItemStack stack) {
+        private long @Nullable [] itemCell;
+        private long @Nullable [] stackCell;
+
+        /**
+         * Quanto há do item na origem, pela chave da regra do estoque. Guarda as contagens dele para
+         * {@link #took}, que desconta das duas (a pilha do slot pode mudar ao sair).
+         */
+        long lookup(IItemHandler handler, FilterSet filters, Filter rule, ItemStack stack) {
             if (!counted) {
-                count(handler, filter);
+                count(handler, filters);
                 counted = true;
             }
-            return filter.matchComponents() ? byStack.get(stack) : byItem.get(stack.getItem());
+            itemCell = byItem.get(stack.getItem());
+            stackCell = byStack.isEmpty() ? null : byStack.get(stack);
+            long[] cell = rule.matchComponents() ? stackCell : itemCell;
+            return cell == null ? 0 : cell[0];
         }
 
-        private void count(IItemHandler handler, Filter filter) {
-            boolean components = filter.matchComponents();
+        /** Saíram {@code amount} do item da última {@link #lookup}. */
+        void took(long amount) {
+            if (itemCell != null) {
+                itemCell[0] -= amount;
+            }
+            if (stackCell != null) {
+                stackCell[0] -= amount;
+            }
+        }
+
+        private void count(IItemHandler handler, FilterSet filters) {
+            boolean components = filters.anyStockMatchesComponents();
             for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
                 ItemStack stack = handler.getStackInSlot(slot);
-                if (stack.isEmpty() || filter.itemStock(stack) <= 0) {
+                if (stack.isEmpty() || filters.itemStock(stack) <= 0) {
                     continue;
                 }
-                long[] cell = components ? byStack.get(stack) : byItem.get(stack.getItem());
+                long[] cell = byItem.get(stack.getItem());
                 if (cell == null) {
                     cell = new long[1];
-                    if (components) {
-                        // Cópia: a pilha do slot muda (e vira vazia) quando os itens saem.
-                        byStack.put(stack.copyWithCount(1), cell);
-                    } else {
-                        byItem.put(stack.getItem(), cell);
-                    }
+                    byItem.put(stack.getItem(), cell);
                 }
                 cell[0] += stack.getCount();
+                if (components) {
+                    long[] exact = byStack.get(stack);
+                    if (exact == null) {
+                        exact = new long[1];
+                        // Cópia: a pilha do slot muda (e vira vazia) quando os itens saem.
+                        byStack.put(stack.copyWithCount(1), exact);
+                    }
+                    exact[0] += stack.getCount();
+                }
             }
         }
     }

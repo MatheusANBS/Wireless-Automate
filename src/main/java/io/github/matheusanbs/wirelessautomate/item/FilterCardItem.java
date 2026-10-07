@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -64,7 +65,7 @@ public class FilterCardItem extends Item {
 
         public static final Codec<Contents> CODEC = RecordCodecBuilder.create(i -> i.group(
                 TYPE_CODEC.optionalFieldOf("type", ResourceType.ITEM).forGetter(Contents::type),
-                Filter.CODEC.optionalFieldOf("filter", Filter.EMPTY).forGetter(Contents::filter))
+                FilterCodecs.LENIENT.lenientOptionalFieldOf("filter", Filter.EMPTY).forGetter(Contents::filter))
                 .apply(i, Contents::new));
 
         public static final StreamCodec<RegistryFriendlyByteBuf, Contents> STREAM_CODEC = StreamCodec.composite(

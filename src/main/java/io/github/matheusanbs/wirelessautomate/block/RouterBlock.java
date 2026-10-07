@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -100,6 +101,9 @@ public class RouterBlock extends BaseEntityBlock {
                 && !router.hasNetwork()) {
             router.setNetworkId(NetworkSavedData.get(player.server).activeOrCreate(player).id());
         }
+        if (placer instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+            NodeIndex.placedBy(router, player.getUUID());
+        }
     }
 
     @Override
@@ -166,6 +170,8 @@ public class RouterBlock extends BaseEntityBlock {
             if (!upgrade.isEmpty()) {
                 Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgrade);
             }
+            // Por último: tirar os cartões avisa o índice, que senão guardaria o nó de novo.
+            NodeIndex.forget(level, pos);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

@@ -10,7 +10,6 @@ import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
 import java.util.Locale;
@@ -126,7 +125,7 @@ public class LinkerItem extends Item {
         if (!level.isClientSide && user instanceof ServerPlayer player) {
             WaNetwork network = NetworkSavedData.get(player.server).activeOrCreate(player);
             ResourceType type = type(stack);
-            if (!ModPayloads.canUse(player, network)) {
+            if (!network.canUse(player)) {
                 player.displayClientMessage(Component.translatable(KEY + "foreign", network.displayName()), true);
             } else if (LinkerActions.inNetwork(router, type, network.id())) {
                 player.displayClientMessage(type == null

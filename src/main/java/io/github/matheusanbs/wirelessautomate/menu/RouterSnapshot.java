@@ -97,8 +97,8 @@ public record RouterSnapshot(
     /**
      * Monta o snapshot do roteador para o jogador (as redes do seletor dependem dele). Só no servidor.
      *
-     * <p>O seletor traz as redes do jogador e, se for de outro dono, a rede atual do roteador
-     * ({@code owned = false}). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
+     * <p>O seletor traz as redes do jogador, as públicas de outros donos e, se for de outro dono, a
+     * rede atual do roteador ({@code owned = false} nas de outro dono). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
      * roteador, sem consulta direta de capability. O ícone da máquina é só o item do bloco, sem os
      * dados do block entity, para o pacote continuar pequeno.
      */
@@ -107,6 +107,12 @@ public record RouterSnapshot(
         List<NetworkEntry> networks = new ArrayList<>();
         for (WaNetwork network : data.networksOf(player.getUUID())) {
             networks.add(new NetworkEntry(network.id(), network.name(), network.color(), true));
+        }
+        // Redes públicas de outros donos também podem ser escolhidas (privacidade no Tablet).
+        for (WaNetwork network : data.networks()) {
+            if (network.isPublic() && !network.owner().equals(player.getUUID())) {
+                networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false));
+            }
         }
         List<Optional<UUID>> typeNetworks = new ArrayList<>();
         for (ResourceType type : ResourceType.values()) {

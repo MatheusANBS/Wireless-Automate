@@ -48,9 +48,11 @@ São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes se
 ### Roteador
 
 - **Abre com:** clique direito no roteador, ou à distância pelo Tablet.
-- **Cabeçalho:** nome do nó, seletor de rede e tier. As abas Itens, Fluidos, Energia e Químicos mostram a vazão atual na mesma linha. Químicos só existe com Mekanism.
+- **Cabeçalho:** nome do nó, vazão atual da aba selecionada e tier.
+- **Abas:** Itens, Fluidos, Energia e Químicos (Químicos só existe com Mekanism). Cada aba entra numa rede própria, e um ponto na cor da rede em cada aba mostra de relance quando estão em redes diferentes (vazado: sem rede).
+- **Rede da aba:** à direita das abas, o rótulo "Rede" e uma pílula com a rede da aba selecionada, na cor dela. Clicar abre a lista "Rede da aba Itens" (ou da aba atual) com as redes do jogador e "Sem rede"; escolher muda só aquela aba.
 - **Visor 3D:** a máquina conectada e o roteador, na posição em que ele foi colocado, com as faces da máquina tocáveis. Botões por face logo abaixo.
-- **Face selecionada:** nome e slots que ela acessa (na fornalha: entrada em cima, combustível dos lados, saída embaixo), modo Extrai, Insere, Ambos ou Nenhum, e o filtro resumido em uma linha com Editar.
+- **Face selecionada:** nome e slots que ela acessa (na fornalha: entrada em cima, combustível dos lados, saída embaixo), modo Extrai, Insere, Armazém ou Nenhum, e o filtro resumido em uma linha com Editar. A dica do Armazém: recebe de quem extrai e entrega para quem insere; não troca com outro armazém.
 - **Recolhido:** prioridade e redstone.
 - **Rodapé:** slots de cartões de filtro e de upgrade.
 
@@ -74,7 +76,8 @@ São cinco telas, todas com a mesma hierarquia: o essencial à vista, ajustes se
 ### Vinculador
 
 - **Abre com:** clique direito no ar. Shift + clique direito no ar alterna entre Único e Área.
-- Rede ativa: todo roteador colocado já entra nela.
+- Rede ativa: todo roteador colocado já entra nela, com todas as abas.
+- **Tipo:** Todos, Itens, Fluidos ou Energia, trocado com Shift + roda do mouse com o Vinculador na mão (a action bar mostra o tipo). Em Todos, vincula todas as abas do roteador; num tipo, só a aba daquele tipo.
 - **Único:** clique direito num roteador o coloca na rede ativa.
 - **Área:** Shift + clique em dois blocos marca os cantos; a tela mostra uma prévia de cima, quantos roteadores ficam dentro e o botão Vincular.
 
@@ -104,10 +107,12 @@ Cada face da máquina, para cada tipo, tem um filtro embutido sem limite de entr
 
 ## Redes, distribuição e redstone
 
-Não se liga um roteador a outro: cada roteador entra numa rede, e tudo na mesma rede troca entre si. Quem envia e quem recebe vem da configuração das faces da máquina; a ordem de entrega é por prioridade e, empatando, por round-robin.
+Não se liga um roteador a outro: cada aba (tipo de recurso) de um roteador entra numa rede, e tudo do mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem da configuração das faces da máquina; a ordem de entrega é por prioridade e, empatando, por round-robin.
 
-- **Faces da máquina:** o roteador acessa a máquina por qualquer face, não só pela que está encostado, porque o NeoForge consulta inventários informando a face. Cada face, por tipo, fica em Extrai, Insere, Ambos ou Nenhum.
-- **Entrar numa rede:** automático ao colocar (rede ativa), pelo seletor na tela do roteador ou pelo Vinculador.
+- **Rede por aba:** os itens, fluidos e energia de um roteador podem ir para redes diferentes. Exemplo: a fornalha da Linha 5x com Itens na rede "Linha 5x" e Energia na "Base", e o gerador com Energia na "Base". Ao colocar, todas as abas entram na rede ativa do jogador; quem não quer separar nada não vê diferença.
+- **Faces da máquina:** o roteador acessa a máquina por qualquer face, não só pela que está encostado, porque o NeoForge consulta inventários informando a face. Cada face, por tipo, fica em Extrai, Insere, Armazém ou Nenhum.
+- **Armazém:** a face recebe de quem extrai e entrega para quem insere, mas não troca com outra face Armazém (assim os recursos não vão e voltam entre dois baús). Serve para buffers e baús de armazenamento.
+- **Entrar numa rede:** automático ao colocar (todas as abas na rede ativa), pelo seletor de cada aba na tela do roteador ou pelo Vinculador (todas as abas ou só a do tipo escolhido com Shift + roda do mouse).
 - **Em massa:** Vinculador em modo Área, seleção múltipla no Tablet, ou o Configurador copiando a rede junto com o preset.
 - **Grupos:** juntam várias redes de um mesmo sistema para ver, pausar e retomar tudo de uma vez.
 - **Redstone:** por face e por tipo: ignorar, ativo com sinal ou ativo sem sinal.
@@ -227,8 +232,12 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [ ] Upgrade de chunk loading
 - [ ] Texturas finais no Blockbench e balanceamento das receitas
 
-### Decisões em aberto
+### Decisões tomadas (7 de outubro de 2026)
 
-- Canais dentro de uma rede, ou só redes mais filtros (sugestão: só redes no v1).
-- Materiais exatos das receitas dos tiers altos.
-- Orçamento padrão: 0,5 ms/tick ou outro valor.
+- **Canais:** só redes mais filtros no v1. Fluxos separados usam redes diferentes.
+- **Receitas dos tiers altos:** só itens vanilla. Avançado: ouro e diamante. Elite: netherita e estrela do Nether. Ultimate: ovo do dragão. O modpack ajusta por datapack ou KubeJS.
+- **Orçamento padrão:** 0,5 ms/tick.
+- **Cartões no roteador:** slots de cartão por face e por tipo, além do filtro embutido. O recurso passa se o filtro embutido ou algum cartão aceitar.
+- **Duplicar cartões:** receita sem forma, cartão configurado + cartão vazio = dois cartões iguais.
+- **JEI:** integração opcional já no v1 (dependência só de compilação, plugin carregado só com o JEI).
+- **Modo Armazém** (antes "Ambos"): uma face Armazém não entrega para outra face Armazém; extrai para faces que só inserem e recebe de faces que só extraem.

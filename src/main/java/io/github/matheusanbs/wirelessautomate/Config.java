@@ -15,6 +15,10 @@ public final class Config {
     public static final ModConfigSpec.DoubleValue TICK_BUDGET_MS;
     public static final ModConfigSpec.BooleanValue ADAPTIVE_BUDGET;
     public static final Map<RouterTier, TierValues> TIERS = new EnumMap<>(RouterTier.class);
+    public static final ModConfigSpec.BooleanValue CHUNK_LOADING_ENABLED;
+    public static final ModConfigSpec.IntValue CHUNK_LOADING_MAX_PER_PLAYER;
+    public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
+    public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
 
     public record TierValues(
             ModConfigSpec.LongValue itemsPerSecond,
@@ -52,6 +56,25 @@ public final class Config {
                             .define("crossDimension", tier.defaultCrossDimension)));
             builder.pop();
         }
+        builder.pop();
+
+        builder.push("chunkLoading");
+        CHUNK_LOADING_ENABLED = builder
+                .comment("Liga o Upgrade de chunk loading. Desligado, os upgrades ficam inativos e os chunks são liberados.")
+                .define("enabled", true);
+        CHUNK_LOADING_MAX_PER_PLAYER = builder
+                .comment("Chunks forçados por jogador (o dono é quem pôs o upgrade; 0 = sem limite).",
+                        "Cada chunk conta uma vez, mesmo com vários roteadores nele. Acima do limite o upgrade fica inativo.")
+                .defineInRange("maxChunksPerPlayer", 16, 0, Integer.MAX_VALUE);
+        builder.pop();
+
+        builder.push("linker");
+        LINKER_MAX_AREA_VOLUME = builder
+                .comment("Volume máximo, em blocos, da área do Vinculador (modo Área).")
+                .defineInRange("maxAreaVolume", 262_144, 1, 16_777_216);
+        LINKER_MAX_DISTANCE = builder
+                .comment("Distância máxima, em blocos, do jogador até a área para vincular por área (0 = sem limite).")
+                .defineInRange("maxDistance", 64, 0, 4096);
         builder.pop();
 
         SPEC = builder.build();

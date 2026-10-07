@@ -1,0 +1,64 @@
+package io.github.matheusanbs.wirelessautomate.bench;
+
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import java.util.Locale;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Cenários do benchmark (docs/especificacao.md, "Plano de benchmark", e docs/benchmark.md).
+ * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino.
+ *
+ * <p>{@code recyclePeriod}: a cada tantos ticks o benchmark reenche as origens e esvazia os
+ * destinos, fora do tempo medido, para a rede seguir ocupada durante a medição (0 = nunca).
+ */
+public enum BenchScenario {
+    MANY("many", 500, RouterTier.BASIC, 60, 20,
+            "Muitos nós: metade origens cheias de pedregulho, metade destinos vazios, todos ativos"),
+    IDLE("idle", 500, RouterTier.BASIC, 300, 0,
+            "Rede ociosa: origens e destinos vazios, nada para mover"),
+    FULL("full", 100, RouterTier.BASIC, 300, 0,
+            "Destino cheio: origens cheias enviando para destinos já cheios"),
+    RAW("raw", 2, RouterTier.ULTIMATE, 40, 1,
+            "Vazão bruta: inventário grande cheio para inventário grande vazio, tier Ultimate"),
+    BIG("big", 20, RouterTier.BASIC, 60, 20,
+            "Inventário grande: um item diferente por slot na origem, destino grande vazio"),
+    BIG_FULL("bigfull", 20, RouterTier.BASIC, 60, 20,
+            "Inventário grande quase cheio: o destino só tem espaço nos 4 últimos slots"),
+    TYPES("types", 20, RouterTier.BASIC, 60, 20,
+            "Muitos tipos: centenas de itens diferentes e filtros com milhares de entradas"),
+    MIXED("mixed", 498, RouterTier.BASIC, 60, 20,
+            "Misto: um terço itens, um terço fluidos e um terço energia, ao mesmo tempo"),
+    REBUILD("rebuild", 500, RouterTier.BASIC, 60, 20,
+            "Remontagem: como Muitos nós, e um nó muda de configuração a cada segundo");
+
+    public final String id;
+    public final int defaultNodes;
+    public final RouterTier tier;
+    public final int warmupTicks;
+    public final int recyclePeriod;
+    public final String description;
+
+    BenchScenario(String id, int defaultNodes, RouterTier tier, int warmupTicks, int recyclePeriod, String description) {
+        this.id = id;
+        this.defaultNodes = defaultNodes;
+        this.tier = tier;
+        this.warmupTicks = warmupTicks;
+        this.recyclePeriod = recyclePeriod;
+        this.description = description;
+    }
+
+    /** Usa inventário grande (baú duplo ou Sophisticated Storage de netherita). */
+    public boolean bigInventories() {
+        return this == RAW || this == BIG || this == BIG_FULL || this == TYPES;
+    }
+
+    public static @Nullable BenchScenario byId(String id) {
+        String key = id.toLowerCase(Locale.ROOT);
+        for (BenchScenario scenario : values()) {
+            if (scenario.id.equals(key)) {
+                return scenario;
+            }
+        }
+        return null;
+    }
+}

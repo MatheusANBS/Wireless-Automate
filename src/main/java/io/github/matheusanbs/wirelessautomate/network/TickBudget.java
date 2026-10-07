@@ -61,6 +61,13 @@ public final class TickBudget {
         return now - startedAt < limitNanos();
     }
 
+    /** Ainda há tempo ({@link #hasTime}) e um trabalho de {@code nanos} começando em {@code now} termina dentro do teto. */
+    public boolean fits(long now, long nanos) {
+        long used = now - startedAt;
+        long limit = limitNanos();
+        return used < limit && used + nanos <= limit;
+    }
+
     public void end(long now) {
         lastUsedNanos = now - startedAt;
         averageUsedNanos += (lastUsedNanos - averageUsedNanos) * AVERAGE_WEIGHT;

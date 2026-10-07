@@ -27,6 +27,16 @@ sourceSets.main.resources {
 
 repositories {
     // Repositórios das integrações opcionais (JEI, Mekanism, AE2...) entram aqui quando forem usadas.
+
+    // JEI (integração opcional, ver compat/jei). O modmaven.dev espelha o mesmo grupo.
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+        content {
+            includeGroup 'mezz.jei'
+            includeGroup 'net.mezzdev.config' // biblioteca de config que o JEI 19.56+ usa
+        }
+    }
 }
 
 neoForge {
@@ -53,6 +63,9 @@ neoForge {
         // Sai com erro se algum teste falhar, então serve como teste de integração no CI.
         gameTestServer {
             type = 'gameTestServer'
+            // Pasta própria, com o mundo apagado antes de cada rodada (tarefa abaixo): dados salvos de
+            // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
+            gameDirectory = project.file('run/gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -82,9 +95,12 @@ configurations {
 }
 
 dependencies {
-    // Integrações opcionais (ver docs/especificacao.md, seção Integrações). Exemplo com JEI:
-    // compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    // localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    // Integrações opcionais (ver docs/especificacao.md, seção Integrações).
+
+    // JEI: só a API na compilação; o JEI completo só nas execuções de dev (runClient), sem virar
+    // dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
@@ -94,6 +110,57 @@ dependencies {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+}
+
+// --- Benchmark (docs/benchmark.md) ---
+// Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
+// copiados para run/bench/mods só para o run benchServer: nem os GameTests nem o cliente das
+// capturas carregam esses mods. Rode com ./scripts/bench.sh.
+repositories {
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+configurations {
+    benchMods {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+dependencies {
+    benchMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
+    benchMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
+    benchMods 'maven.modrinth:spark:1.10.124-neoforge-1.21.1'
+}
+
+// Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
+// classpath do source set ou na pasta mods.
+var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
+    from configurations.benchMods
+    into layout.projectDirectory.dir('run/bench/mods')
+}
+
+neoForge.runs {
+    // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado
+    // pelo scripts/bench.sh. A propriedade wirelessautomate.bench liga as máquinas de teste de
+    // fluido e energia (bench/BenchCapabilities.java).
+    benchServer {
+        server()
+        gameDirectory = project.file('run/bench')
+        programArgument '--nogui'
+        jvmArgument '-Xmx2G'
+        systemProperty 'wirelessautomate.bench', 'true'
+        logLevel = org.slf4j.event.Level.INFO
+        taskBefore prepareBenchMods
+        // ./gradlew runBenchServer -PbenchJfr=<arquivo.jfr>: grava um perfil do Java Flight Recorder
+        // (local, sem enviar nada), para ver onde o tempo do mod vai (jfr print / JDK Mission Control).
+        if (project.hasProperty('benchJfr')) {
+            jvmArgument "-XX:StartFlightRecording=filename=${project.property('benchJfr')},settings=profile,method-profiling=max"
+        }
+    }
 }
 
 // Preenche os ${...} do neoforge.mods.toml com os valores do gradle.properties.
@@ -126,5 +193,13 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+// GameTests sempre num mundo novo (ver a run gameTestServer).
+def gameTestWorld = layout.projectDirectory.dir('run/gametest/world').asFile
+tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    doFirst {
+        gameTestWorld.deleteDir()
     }
 }

@@ -2,10 +2,7 @@ package io.github.matheusanbs.wirelessautomate.filter;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import java.util.List;
-import java.util.stream.Stream;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackLinkedSet;
@@ -13,9 +10,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link Filter} compilado para itens. Sem {@code matchComponents}, as entradas exatas valem pelo
- * {@link Item} e tudo cabe no cache por item. Com {@code matchComponents}, as exatas ficam num mapa
- * por item + componentes ({@link ItemStackLinkedSet#TYPE_AND_TAG}), consultado a cada pergunta
- * (hash dos componentes, sem alocar); tags e mods continuam no cache por item.
+ * {@link Item} e tudo cabe no mapa por item (com as tags expandidas). Com {@code matchComponents}, as
+ * exatas ficam num mapa por item + componentes ({@link ItemStackLinkedSet#TYPE_AND_TAG}), consultado
+ * a cada pergunta só se houver exatas (hash dos componentes, sem alocar); tags e mods continuam por item.
  */
 final class ItemMatcher extends CompiledMatcher<Item> {
     private final @Nullable Object2IntOpenCustomHashMap<ItemStack> exactWithComponents;
@@ -28,7 +25,7 @@ final class ItemMatcher extends CompiledMatcher<Item> {
         } else {
             exactWithComponents = null;
         }
-        compile(Registries.ITEM, !matchComponents);
+        compile(BuiltInRegistries.ITEM, !matchComponents);
     }
 
     /** Índice da primeira entrada que casa com a pilha, ou {@link #NONE}. */
@@ -52,12 +49,8 @@ final class ItemMatcher extends CompiledMatcher<Item> {
 
     @Override
     @SuppressWarnings("deprecation")
-    Stream<TagKey<Item>> tagsOf(Item item) {
-        return item.builtInRegistryHolder().tags();
-    }
-
-    @Override
     String namespaceOf(Item item) {
-        return BuiltInRegistries.ITEM.getKey(item).getNamespace();
+        // O id pelo holder do registro: sem busca no mapa do registro.
+        return item.builtInRegistryHolder().key().location().getNamespace();
     }
 }

@@ -44,10 +44,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Sono e despertar: em volta de cada visita o gerenciador anota a origem visitada. Assim, quando
  * a máquina de um destino avisa mudança porque nós acabamos de inserir nela ({@link #wake}), só as
  * portas do próprio nó acordam, e não as origens que entregam ali (ganhar recursos não abre espaço).
- * Depois da visita, se a origem dormiu, fica anotado o motivo ({@link Port#waitsDestination}): ela
- * ofereceu algo a um destino acordado (a leitura de capability de outra face durante a visita, ver
- * {@link #capabilityRead}) ou todos os destinos dormiam, e então espera destino; senão estava vazia.
- * Mudanças na máquina de um destino só acordam as que esperam destino.
+ * Quando a origem dorme, as transferências gravam o motivo ({@link SourceSleep},
+ * {@link Port#waitsDestination}): espera destino (todos dormiam, ou ofereceu algo e foi recusada) ou
+ * está vazia. Mudanças na máquina de um destino só acordam as que esperam destino.
  *
  * <p>O tempo das portas (balde, sono) é o {@code getTickCount()} do servidor.
  */
@@ -68,11 +67,8 @@ public final class NetworkManager {
 
     // Visita em andamento; o laço roda numa thread só (a do servidor). Fora de uma visita, visitNode é null.
     private static @Nullable RouterBlockEntity visitNode;
-    private static @Nullable Direction visitFace;
     private static @Nullable Level visitLevel;
     private static BlockPos visitMachine = BlockPos.ZERO;
-    /** A visita leu a capability de outra face ou nó: ofereceu algo a um destino acordado. */
-    private static boolean visitTouched;
 
     private final Map<RouterBlockEntity, NodePorts> nodes = new Reference2ObjectOpenHashMap<>();
     private final Map<UUID, NetworkRoutes> networks = new HashMap<>();
@@ -109,7 +105,6 @@ public final class NetworkManager {
     public static void reset() {
         instance = null;
         visitNode = null;
-        visitFace = null;
         visitLevel = null;
     }
 
@@ -210,17 +205,6 @@ public final class NetworkManager {
         }
     }
 
-    /**
-     * O nó leu a capability da face {@code face} da máquina. Durante uma visita, ler outra face ou
-     * outro nó que a origem visitada quer dizer que a origem ofereceu algo a um destino acordado:
-     * é como o gerenciador sabe o motivo do sono sem as transferências dizerem. Barato fora da visita.
-     */
-    public static void capabilityRead(RouterBlockEntity node, Direction face) {
-        if (visitNode != null && (node != visitNode || face != visitFace)) {
-            visitTouched = true;
-        }
-    }
-
     /** Portas do nó carregado, para o Tablet ler o sono dos destinos ({@link NodeProbe}); não as altera. */
     @Nullable NodePorts ports(RouterBlockEntity node) {
         return nodes.get(node);
@@ -285,6 +269,7 @@ public final class NetworkManager {
             int destinationCount = 0;
             int sourcesSleeping = 0;
             int destinationsSleeping = 0;
+            int destinationsFull = 0;
             for (ResourceType type : TYPES) {
                 List<Port> typeSources = network.sourcesOf[type.ordinal()];
                 List<Port> typeDestinations = network.destinationsOf[type.ordinal()];
@@ -298,13 +283,16 @@ public final class NetworkManager {
                 for (Port port : typeDestinations) {
                     if (port.destinationBackoff.isSleeping(now)) {
                         destinationsSleeping++;
+                        if (NodeProbe.isFull(port, now)) {
+                            destinationsFull++;
+                        }
                     }
                 }
             }
             result.add(new NetworkStats(network.id, network.members.size(), network.averageNanos,
                     network.lastNanos, network.opsLastSecond,
                     sourceCount - sourcesSleeping, sourcesSleeping,
-                    destinationCount - destinationsSleeping, destinationsSleeping));
+                    destinationCount - destinationsSleeping, destinationsSleeping, destinationsFull));
         }
         return result;
     }
@@ -415,14 +403,13 @@ public final class NetworkManager {
 
     /**
      * Uma visita, com a origem anotada em volta (ver a classe); devolve {@link #MOVED} e
-     * {@link #MORE} combinados. Se a origem dormiu, anota o motivo.
+     * {@link #MORE} combinados. Se moveu ou dormiu, a marca de "ofereceu" ({@link Port#offered}) volta
+     * a zero: ela vale para a volta sem mover, que pode durar várias visitas.
      */
     private int visit(Port source, long now) {
         visitNode = source.node;
-        visitFace = source.face;
         visitLevel = source.node.getLevel();
         visitMachine = source.machinePos;
-        visitTouched = false;
         int result;
         try {
             result = switch (source.type) {
@@ -433,12 +420,10 @@ public final class NetworkManager {
             };
         } finally {
             visitNode = null;
-            visitFace = null;
             visitLevel = null;
         }
-        if (source.sourceBackoff.isSleeping(now)) {
-            RoundRobinOrder<Port> order = source.order;
-            source.waitsDestination = visitTouched || order == null || !hasAwakeDestination(order.pass(), now);
+        if ((result & MOVED) != 0 || source.sourceBackoff.isSleeping(now)) {
+            source.offered = false;
         }
         return result;
     }

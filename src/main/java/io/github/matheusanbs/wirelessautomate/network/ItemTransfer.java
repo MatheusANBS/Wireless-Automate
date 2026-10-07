@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
@@ -33,13 +32,16 @@ import org.jetbrains.annotations.Nullable;
  * tem o estoque, é só pulado, <b>sem dormir</b>: recusar o item A não diz nada sobre o B, e o
  * backoff de "cheio" o deixaria de fora também para o B. Só a recusa por falta de espaço (a
  * inserção simulada não aceita nada de um item que o filtro deixa entrar) faz o destino dormir.
- * Se nenhum destino aceitar nenhum item, a origem é que dorme, pela volta sem mover.
+ * Se nenhum destino aceitar nenhum item, a origem é que dorme, pela volta sem mover; se todos os
+ * destinos estão dormindo, ela dorme até o primeiro deles acordar ({@link SourceSleep}).
  *
  * <p>Estoque: na origem, mantém N do item (mesmo item; com {@code matchComponents}, mesmos
  * componentes) contando o inventário inteiro uma vez por visita, só quando a visita encontra um
  * slot com estoque ({@link StockTally}): O(slots) por visita, e a conta é descontada conforme os
  * itens saem. No destino, aceita até N contando os slots do destino na mesma varredura que simula
- * a inserção ({@link InsertPlan}), só para entradas com estoque. Sem estoque no filtro, nada é contado.
+ * a inserção ({@link InsertPlan}), só para entradas com estoque, parando ao atingir o estoque; a
+ * contagem fica lembrada durante a visita, então o destino cheio não é varrido de novo a cada slot.
+ * Sem estoque no filtro, nada é contado.
  *
  * <p>Custo de uma entrega: uma varredura do destino ({@link InsertPlan}), em vez das quatro de
  * chamar o {@link ItemHandlerHelper#insertItemStacked} na simulação e de novo na inserção.
@@ -47,10 +49,21 @@ import org.jetbrains.annotations.Nullable;
 final class ItemTransfer {
     /** Slots examinados por visita: inventário grande continua do cursor no tick seguinte. */
     static final int MAX_SLOTS_PER_VISIT = 128;
-    /** Slots com item que tentam entregar por visita, para uma origem não comer o orçamento sozinha. */
+    /**
+     * Tentativas de entrega por visita, para uma origem não comer o orçamento sozinha. Um slot que
+     * entregou tudo o que ofereceu e ainda tem itens (gaveta, barril com upgrade de pilha) é tentado
+     * de novo, e cada repetição conta como uma tentativa.
+     */
     static final int MAX_ATTEMPTS_PER_VISIT = 32;
     /** Plano da última simulação de inserção; o laço roda numa thread só (a do servidor). */
     private static final InsertPlan PLAN = new InsertPlan();
+    /** Respostas do filtro da origem e do destino ({@link FilterSet#evaluateItem}), reaproveitadas. */
+    private static final FilterSet.ItemRule SOURCE_RULE = new FilterSet.ItemRule();
+    private static final FilterSet.ItemRule DESTINATION_RULE = new FilterSet.ItemRule();
+    /** Quanto a extração simulada do último {@link #moveSlot} ofereceu. */
+    private static int lastOffered;
+    /** O último {@link #moveSlot} pôs algum destino para dormir. */
+    private static boolean destinationSlept;
 
     /**
      * Uma visita. Devolve {@link NetworkManager#MOVED} se moveu algo, mais {@link NetworkManager#MORE}
@@ -61,8 +74,9 @@ final class ItemTransfer {
         IItemHandler handler = source.node.items(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
-            // Máquina sumiu ou chunk descarregado: a invalidação do cache refaz as rotas e acorda.
-            source.sourceBackoff.sleep(now);
+            // Máquina sumiu ou chunk descarregado: dorme como vazia. O listener da capability da
+            // face (ou a troca do bloco da máquina) acorda a porta, sem remontar as rotas.
+            SourceSleep.nothingToMove(source, now);
             return 0;
         }
         long tokens = source.limiter.available(now);
@@ -71,12 +85,12 @@ final class ItemTransfer {
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.untilDestinations(source, pass, now);
             return 0;
         }
         int slots = handler.getSlots();
         if (slots <= 0) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.nothingToMove(source, now);
             return 0;
         }
         FilterSet filter = source.filter;
@@ -90,6 +104,8 @@ final class ItemTransfer {
             }
             tally.reset();
         }
+        PLAN.beginVisit();
+        FilterSet.ItemRule rule = SOURCE_RULE;
         int slot = source.slotCursor < slots ? source.slotCursor : 0;
         int limit = Math.min(slots, MAX_SLOTS_PER_VISIT);
         int scanned = 0;
@@ -108,20 +124,21 @@ final class ItemTransfer {
             int max = (int) Math.min(tokens, Integer.MAX_VALUE);
             boolean stocked = false;
             if (filtered) {
-                if (!filter.testItem(inSlot)) {
+                // Passa? e estoque numa consulta só.
+                if (!filter.evaluateItem(inSlot, rule)) {
                     continue;
                 }
-                Filter rule = tally == null ? null : filter.itemStockFilter(inSlot);
-                long stock = rule == null ? 0 : rule.itemStock(inSlot);
-                if (stock > 0) {
+                if (rule.stock > 0) {
                     stocked = true;
-                    max = (int) StockLimit.extractable(tally.lookup(handler, filter, rule, inSlot), stock, max);
+                    max = (int) StockLimit.extractable(tally.lookup(handler, filter, rule.matchComponents, inSlot),
+                            rule.stock, max);
                     if (max <= 0) {
                         continue;
                     }
                 }
             }
             int amount = moveSlot(source, handler, current, max, order, pass, now);
+            boolean again = false;
             if (amount > 0) {
                 if (stocked) {
                     tally.took(amount);
@@ -133,14 +150,25 @@ final class ItemTransfer {
                     slot = current;
                     break;
                 }
+                // Pilha maior que uma extração (gaveta, upgrade de pilha): entregou tudo o que
+                // ofereceu e ainda tem itens, então tenta o mesmo slot de novo.
+                if (amount >= lastOffered && !handler.getStackInSlot(current).isEmpty()) {
+                    again = true;
+                    slot = current;
+                }
             }
             if (++attempts >= MAX_ATTEMPTS_PER_VISIT) {
                 capped = true;
                 break;
             }
-            if (!NetworkManager.hasAwakeDestination(pass, now)) {
+            // Destino só dorme por uma recusa nossa: sem recusa nesta tentativa, ainda há acordado.
+            if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
                 destinationsAsleep = true;
                 break;
+            }
+            if (again) {
+                // A repetição não conta como slot varrido (o teto dela são as tentativas).
+                scanned--;
             }
         }
         source.slotCursor = slot;
@@ -153,11 +181,14 @@ final class ItemTransfer {
             return more ? NetworkManager.MOVED | NetworkManager.MORE : NetworkManager.MOVED;
         }
         source.idleSlots += scanned;
-        if (destinationsAsleep || source.idleSlots >= slots) {
-            // Uma volta inteira sem mover (mesmo dividida em visitas), ou todos os destinos
-            // recusaram: dorme até alguém mudar.
+        if (destinationsAsleep) {
+            // Todos os destinos recusaram: dorme até o primeiro acordar.
             source.idleSlots = 0;
-            source.sourceBackoff.sleep(now);
+            SourceSleep.untilDestinations(source, pass, now);
+        } else if (source.idleSlots >= slots) {
+            // Uma volta inteira sem mover (mesmo dividida em visitas): dorme até alguém mudar.
+            source.idleSlots = 0;
+            SourceSleep.nothingToMove(source, now);
         }
         return 0;
     }
@@ -165,46 +196,77 @@ final class ItemTransfer {
     /** Entrega o que der do slot, na ordem da passada. Devolve quanto foi entregue. */
     private static int moveSlot(Port source, IItemHandler handler, int slot, int max,
             RoundRobinOrder<Port> order, List<Port> pass, long now) {
+        destinationSlept = false;
         ItemStack offered = handler.extractItem(slot, max, true);
+        lastOffered = offered.getCount();
         if (offered.isEmpty()) {
             return 0;
         }
         int remaining = offered.getCount();
         int moved = 0;
+        FilterSet.ItemRule rule = DESTINATION_RULE;
         for (int i = 0, n = pass.size(); i < n && remaining > 0; i++) {
             Port destination = pass.get(i);
             if (destination.destinationBackoff.isSleeping(now)) {
                 continue;
             }
-            IItemHandler target = destination.node.items(destination.face);
-            if (target == null) {
-                continue;
-            }
             FilterSet accept = destination.filter;
             long stock = 0;
-            int count = InsertPlan.COUNT_NONE;
+            boolean components = false;
             if (!accept.isEmpty()) {
                 // Recusa do filtro ou estoque já atingido: pula sem dormir (ver o javadoc da classe).
-                if (!accept.testItem(offered)) {
+                // O filtro vem antes da capability: recusar não precisa da máquina.
+                if (!accept.evaluateItem(offered, rule)) {
                     continue;
                 }
-                Filter rule = accept.itemStockFilter(offered);
-                stock = rule == null ? 0 : rule.itemStock(offered);
-                if (stock > 0) {
-                    count = rule.matchComponents() ? InsertPlan.COUNT_COMPONENTS : InsertPlan.COUNT_ITEM;
-                }
+                stock = rule.stock;
+                components = rule.matchComponents;
+            }
+            // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
+            source.offered = true;
+            IItemHandler target = destination.node.items(destination.face);
+            if (target == null) {
+                // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
+                // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
+                destination.sleepWithoutMachine(now);
+                destinationSlept = true;
+                continue;
             }
             ItemStack probe = remaining == offered.getCount() ? offered : offered.copyWithCount(remaining);
-            int accepts = PLAN.simulate(target, probe, count);
+            int accepts;
             if (stock > 0) {
-                int want = (int) StockLimit.acceptable(PLAN.counted(), stock, remaining);
+                // Contagem do destino: da memória da visita se já foi contado, senão na varredura que
+                // simula a inserção (que para ao atingir o estoque). Destino na própria máquina da
+                // origem não é lembrado: a extração muda a contagem dele.
+                boolean remember = !destination.machinePos.equals(source.machinePos)
+                        || destination.node.getLevel() != source.node.getLevel();
+                int memo = remember ? PLAN.recall(destination, offered, components) : -1;
+                long counted;
+                if (memo >= 0) {
+                    counted = PLAN.recalled(memo);
+                    if (counted >= stock) {
+                        continue;
+                    }
+                    accepts = PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
+                } else {
+                    accepts = PLAN.simulate(target, probe,
+                            components ? InsertPlan.COUNT_COMPONENTS : InsertPlan.COUNT_ITEM, stock);
+                    counted = PLAN.counted();
+                    if (remember) {
+                        PLAN.remember(destination, offered, components, counted, stock);
+                    }
+                }
+                int want = (int) StockLimit.acceptable(counted, stock, remaining);
                 if (want <= 0) {
                     continue;
                 }
                 accepts = Math.min(accepts, want);
+            } else {
+                accepts = PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
             }
             if (accepts <= 0) {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
                 continue;
             }
             ItemStack taken = handler.extractItem(slot, accepts, false);
@@ -218,6 +280,7 @@ final class ItemTransfer {
                 giveBack(source, handler, slot, leftover);
             }
             if (delivered > 0) {
+                PLAN.delivered(destination, offered, delivered);
                 destination.destinationBackoff.wake();
                 order.delivered(destination);
                 if (source.network != null) {
@@ -227,6 +290,7 @@ final class ItemTransfer {
                 remaining -= delivered;
             } else {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
             }
             if (takenCount < accepts) {
                 break;
@@ -257,7 +321,19 @@ final class ItemTransfer {
      * iguais e lembra os slots que aceitaram. A inserção real vai direto neles; o que sobrar (destino
      * que mudou ou mentiu na simulação) cai no {@code insertItemStacked}, e o que nem ele aceitar
      * volta para quem chamou, como antes. Se o destino tem estoque, a mesma passada conta o item
-     * (e então vai até o fim do inventário).
+     * (e então vai até o fim do inventário, ou até a contagem atingir o estoque).
+     *
+     * <p>Pilha igual já no limite do slot ({@link IItemHandler#getSlotLimit}): a primeira é simulada
+     * na ordem, como antes. Se ela recusou, as outras cheias não são simuladas na hora: vão para o
+     * fim, depois dos vazios, e só são tentadas se ainda sobrar. Um destino que aceita numa pilha
+     * cheia (um upgrade que anula o excesso) aceita já na primeira, e a ordem não muda. Em
+     * inventários de pilhas grandes, as cheias são a maior parte das chamadas, e as mais caras.
+     *
+     * <p>Memória da visita: a contagem de cada destino com estoque fica guardada até o fim da visita
+     * da origem ({@link #recall}) e soma o que entregamos, então um destino que já atingiu o estoque
+     * não é varrido de novo a cada slot da origem. Numa visita as contagens só sobem (só entregamos);
+     * a memória de outro destino abaixo do estoque é esquecida a cada entrega, porque dois destinos
+     * podem ver o mesmo inventário (metades de um baú duplo, interfaces da mesma rede de armazenamento).
      */
     static final class InsertPlan {
         static final int COUNT_NONE = 0;
@@ -265,20 +341,95 @@ final class ItemTransfer {
         static final int COUNT_ITEM = 1;
         /** Conta pelo item e componentes, como {@link ItemStack#isSameItemSameComponents}. */
         static final int COUNT_COMPONENTS = 2;
+        /** Destinos lembrados por visita; além disso, conta de novo como antes. */
+        private static final int MEMORY = 32;
 
         private int[] slots = new int[8];
         private int size;
         private int[] empties = new int[64];
+        private int[] fulls = new int[16];
         private long counted;
+
+        private final Port[] memoPorts = new Port[MEMORY];
+        private final Item[] memoItems = new Item[MEMORY];
+        /** Com componentes: a pilha (cópia de 1); sem: {@code null}. */
+        private final ItemStack[] memoStacks = new ItemStack[MEMORY];
+        private final long[] memoCounts = new long[MEMORY];
+        private final long[] memoStocks = new long[MEMORY];
+        private int memoSize;
+
+        /** Começo da visita de uma origem: esquece as contagens da anterior. */
+        void beginVisit() {
+            if (memoSize > 0) {
+                Arrays.fill(memoPorts, 0, memoSize, null);
+                Arrays.fill(memoItems, 0, memoSize, null);
+                Arrays.fill(memoStacks, 0, memoSize, null);
+                memoSize = 0;
+            }
+        }
+
+        /** Posição da contagem lembrada do item no destino, ou −1. */
+        int recall(Port destination, ItemStack stack, boolean components) {
+            for (int i = 0; i < memoSize; i++) {
+                if (memoPorts[i] == destination && matches(i, stack, components)) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        long recalled(int index) {
+            return memoCounts[index];
+        }
+
+        /** Lembra a contagem do item no destino; devolve a posição, ou −1 sem espaço. */
+        int remember(Port destination, ItemStack stack, boolean components, long count, long stock) {
+            if (memoSize == MEMORY) {
+                return -1;
+            }
+            int i = memoSize++;
+            memoPorts[i] = destination;
+            memoItems[i] = stack.getItem();
+            memoStacks[i] = components ? stack.copyWithCount(1) : null;
+            memoCounts[i] = count;
+            memoStocks[i] = stock;
+            return i;
+        }
+
+        /** Entregamos {@code amount} de {@code stack} no destino: soma no que foi lembrado dele. */
+        void delivered(Port destination, ItemStack stack, int amount) {
+            for (int i = 0; i < memoSize; i++) {
+                Port port = memoPorts[i];
+                if (port == destination) {
+                    if (matches(i, stack, memoStacks[i] != null)) {
+                        memoCounts[i] += amount;
+                    }
+                } else if (port != null && memoCounts[i] < memoStocks[i]) {
+                    // Pode ser o mesmo inventário por outro caminho: abaixo do estoque, conta de novo.
+                    memoPorts[i] = null;
+                }
+            }
+        }
+
+        private boolean matches(int i, ItemStack stack, boolean components) {
+            ItemStack exact = memoStacks[i];
+            if (components) {
+                return exact != null && ItemStack.isSameItemSameComponents(exact, stack);
+            }
+            return exact == null && memoItems[i] == stack.getItem();
+        }
 
         /**
          * Simula a inserção de {@code stack} e guarda o plano; com {@code count}, conta também o
-         * item no destino ({@link #counted}). Devolve quanto entraria.
+         * item no destino ({@link #counted}) e para quando a contagem chega a {@code stock} (aí o
+         * destino não aceita nada pelo estoque, e a resposta é 0). Devolve quanto entraria.
          */
-        int simulate(IItemHandler target, ItemStack stack, int count) {
+        int simulate(IItemHandler target, ItemStack stack, int count, long stock) {
             size = 0;
             counted = 0;
             int emptyCount = 0;
+            int fullCount = 0;
+            boolean fullRefused = false;
             ItemStack rest = stack;
             for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
                 boolean placing = !rest.isEmpty();
@@ -298,13 +449,32 @@ final class ItemTransfer {
                 boolean same = ItemStack.isSameItemSameComponents(inSlot, stack);
                 if (count == COUNT_COMPONENTS ? same : count == COUNT_ITEM && ItemStack.isSameItem(inSlot, stack)) {
                     counted += inSlot.getCount();
+                    if (counted >= stock) {
+                        // Estoque atingido: o resto do inventário não muda a resposta.
+                        size = 0;
+                        return 0;
+                    }
                 }
                 if (same && placing) {
-                    rest = offer(target, slot, rest);
+                    if (fullRefused && inSlot.getCount() >= target.getSlotLimit(slot)) {
+                        if (fullCount == fulls.length) {
+                            fulls = Arrays.copyOf(fulls, fullCount * 2);
+                        }
+                        fulls[fullCount++] = slot;
+                    } else {
+                        int before = rest.getCount();
+                        rest = offer(target, slot, rest);
+                        if (rest.getCount() == before && !fullRefused) {
+                            fullRefused = inSlot.getCount() >= target.getSlotLimit(slot);
+                        }
+                    }
                 }
             }
             for (int i = 0; i < emptyCount && !rest.isEmpty(); i++) {
                 rest = offer(target, empties[i], rest);
+            }
+            for (int i = 0; i < fullCount && !rest.isEmpty(); i++) {
+                rest = offer(target, fulls[i], rest);
             }
             return stack.getCount() - rest.getCount();
         }
@@ -339,12 +509,17 @@ final class ItemTransfer {
      * Quanto de cada item com estoque há na origem, contado uma vez por visita (na primeira
      * consulta) e descontado conforme os itens saem. Os mapas são reaproveitados entre visitas.
      * Conta por item e, se algum filtro com estoque exige componentes, também por item +
-     * componentes; a regra do estoque ({@link FilterSet#itemStockFilter}) escolhe qual contagem vale.
+     * componentes; a regra do estoque ({@link FilterSet#evaluateItem}) escolhe qual contagem vale.
+     *
+     * <p>Sem filtro que exija componentes ({@link FilterSet#itemsByItemOnly}), o estoque de uma pilha
+     * depende só do item, então conta todos os slots por item sem consultar o filtro: a consulta
+     * seria a mesma para todas as pilhas do item, e o item sem estoque nunca é procurado.
      */
     static final class StockTally {
         private final Reference2ObjectOpenHashMap<Item, long[]> byItem = new Reference2ObjectOpenHashMap<>();
         private final Object2ObjectOpenCustomHashMap<ItemStack, long[]> byStack =
                 new Object2ObjectOpenCustomHashMap<>(ItemStackLinkedSet.TYPE_AND_TAG);
+        private final FilterSet.ItemRule rule = new FilterSet.ItemRule();
         private boolean counted;
 
         void reset() {
@@ -362,17 +537,18 @@ final class ItemTransfer {
         private long @Nullable [] stackCell;
 
         /**
-         * Quanto há do item na origem, pela chave da regra do estoque. Guarda as contagens dele para
-         * {@link #took}, que desconta das duas (a pilha do slot pode mudar ao sair).
+         * Quanto há do item na origem, pela chave da regra do estoque ({@code components}: a regra
+         * exige componentes iguais). Guarda as contagens dele para {@link #took}, que desconta das
+         * duas (a pilha do slot pode mudar ao sair).
          */
-        long lookup(IItemHandler handler, FilterSet filters, Filter rule, ItemStack stack) {
+        long lookup(IItemHandler handler, FilterSet filters, boolean components, ItemStack stack) {
             if (!counted) {
                 count(handler, filters);
                 counted = true;
             }
             itemCell = byItem.get(stack.getItem());
             stackCell = byStack.isEmpty() ? null : byStack.get(stack);
-            long[] cell = rule.matchComponents() ? stackCell : itemCell;
+            long[] cell = components ? stackCell : itemCell;
             return cell == null ? 0 : cell[0];
         }
 
@@ -387,17 +563,26 @@ final class ItemTransfer {
         }
 
         private void count(IItemHandler handler, FilterSet filters) {
+            boolean byItemOnly = filters.itemsByItemOnly();
             boolean components = filters.anyStockMatchesComponents();
+            Item lastItem = null;
+            long[] lastCell = null;
             for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
                 ItemStack stack = handler.getStackInSlot(slot);
-                if (stack.isEmpty() || filters.itemStock(stack) <= 0) {
+                if (stack.isEmpty()) {
                     continue;
                 }
-                long[] cell = byItem.get(stack.getItem());
+                if (!byItemOnly && (!filters.evaluateItem(stack, rule) || rule.stock <= 0)) {
+                    continue;
+                }
+                Item item = stack.getItem();
+                long[] cell = item == lastItem ? lastCell : byItem.get(item);
                 if (cell == null) {
                     cell = new long[1];
-                    byItem.put(stack.getItem(), cell);
+                    byItem.put(item, cell);
                 }
+                lastItem = item;
+                lastCell = cell;
                 cell[0] += stack.getCount();
                 if (components) {
                     long[] exact = byStack.get(stack);

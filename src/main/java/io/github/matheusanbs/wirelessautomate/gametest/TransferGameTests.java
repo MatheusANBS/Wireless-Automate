@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -22,6 +23,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -288,6 +291,68 @@ public final class TransferGameTests {
             helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
             helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
         });
+    }
+
+    /**
+     * Slot com pilha maior que uma extração (gaveta, barril com upgrade de pilha) no Elite: a visita
+     * repete o slot enquanto houver saldo e itens, em vez de entregar 64 e passar para o próximo.
+     * Com 64 por visita o baú levaria 27 ticks para encher.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void bigStackSlotMovesMoreThanAStackPerVisit(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-pilha-grande");
+        BlockPos machine = helper.absolutePos(A);
+        TestMachines.reset(machine);
+        TestMachines.bigSlot(machine).set(Items.COBBLESTONE, 10_000);
+        RouterBlockEntity source = place(helper, A, TestMachines.BIG_SLOT.defaultBlockState(), network);
+        helper.setBlock(A.above(), helper.getBlockState(A.above()).setValue(RouterBlock.TIER, RouterTier.ELITE));
+        source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        int capacity = 27 * 64;
+        long[] started = new long[1];
+
+        helper.onEachTick(() -> helper.assertValueEqual(TestMachines.bigSlot(machine).count() + count(helper, B, Items.COBBLESTONE),
+                10_000, "pedregulho"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> started[0] = helper.getTick())
+                .thenWaitUntil(() -> assertCount(helper, B, Items.COBBLESTONE, capacity))
+                .thenExecute(() -> {
+                    long ticks = helper.getTick() - started[0];
+                    helper.assertTrue(ticks <= 10, "baú levou " + ticks + " ticks para encher: o slot não repetiu");
+                    helper.assertValueEqual(TestMachines.bigSlot(machine).count(), 10_000 - capacity, "na origem");
+                })
+                .thenSucceed();
+    }
+
+    /** Fluido num tanque acima da janela de uma visita (16): o cursor de tanques chega nele. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fluidBeyondSixteenTanksMoves(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-muitos-tanques");
+        BlockPos machine = helper.absolutePos(A);
+        TestMachines.reset(machine);
+        TestMachines.manyTanks(machine).set(18, new FluidStack(Fluids.WATER, 1_000));
+        RouterBlockEntity source = place(helper, A, TestMachines.MANY_TANKS.defaultBlockState(), network);
+        source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
+        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
+        target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> {
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
+                    helper.assertValueEqual(TestMachines.manyTanks(machine).amount(18), 0, "tanque 18");
+                })
+                .thenSucceed();
     }
 
     private static @Nullable NetworkStats stats(GameTestHelper helper, UUID network) {

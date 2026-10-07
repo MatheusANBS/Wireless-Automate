@@ -5,7 +5,9 @@ import net.minecraft.core.Direction;
 
 /**
  * Leitura do estado do motor para o Tablet: só lê as portas de um nó carregado, sem criar rotas nem
- * acordar nada. Chamado pelo menu do Tablet aberto, numa amostra a cada segundo, nunca por tick.
+ * acordar nada. O menu do Tablet aberto só sonda os nós da página mostrada (e, com o filtro de
+ * problemas, todos uma vez por amostra); os cheios de cada rede vêm contados nas estatísticas do
+ * gerenciador ({@link NetworkStats#destinationsFull()}).
  */
 public final class NodeProbe {
     /**
@@ -30,11 +32,15 @@ public final class NodeProbe {
                 continue;
             }
             Port port = ports.port(type, face);
-            if (port.destination && port.destinationBackoff.isSleeping(now)
-                    && port.destinationBackoff.nextIntervalTicks() >= FULL_INTERVAL) {
+            if (port.destination && isFull(port, now)) {
                 count++;
             }
         }
         return count;
+    }
+
+    /** O destino dorme depois de recusas seguidas (ver {@link #FULL_INTERVAL}). */
+    static boolean isFull(Port port, long now) {
+        return port.destinationBackoff.isSleeping(now) && port.destinationBackoff.nextIntervalTicks() >= FULL_INTERVAL;
     }
 }

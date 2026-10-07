@@ -3,12 +3,17 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
+import io.github.matheusanbs.wirelessautomate.network.NodeProbe;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -111,8 +116,9 @@ public final class WakeGameTests {
 
     /**
      * #1, motivo do sono: B está cheio; A tem itens e espera destino, E está vazia. Abrir espaço em B
-     * por fora acorda A na hora (e A entrega), mas não E. O destino D é uma pedra (sem inventário):
-     * nunca dorme, então E sempre acha um destino acordado e dorme por estar vazia, e não por B dormir.
+     * por fora acorda A na hora (e A entrega), mas não E. O destino D é um baú que recusa diamantes
+     * pelo filtro: recusa de filtro não faz dormir, então D fica acordado e E dorme por estar vazia, e
+     * não por todos os destinos dormirem.
      */
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void destinationChangeWakesOnlySourcesWaitingForIt(GameTestHelper helper) {
@@ -120,8 +126,9 @@ public final class WakeGameTests {
         RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
         RouterBlockEntity b = chest(helper, B, network, PortMode.INSERT);
         RouterBlockEntity e = chest(helper, E, network, PortMode.EXTRACT);
-        RouterBlockEntity d = place(helper, C, Blocks.STONE.defaultBlockState(), network);
-        d.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        RouterBlockEntity d = chest(helper, C, network, PortMode.INSERT);
+        d.setFilter(ResourceType.ITEM, Direction.UP, new Filter(Filter.ListMode.BLACKLIST, false,
+                List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 0))));
         chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
         ChestBlockEntity full = chestAt(helper, B);
         for (int i = 0; i < full.getContainerSize(); i++) {
@@ -145,6 +152,49 @@ public final class WakeGameTests {
                 .thenExecute(() -> helper.assertTrue(helper.getTick() - freedAt[0] < 10,
                         "A demorou " + (helper.getTick() - freedAt[0]) + " ticks para entregar"))
                 .thenSucceed();
+    }
+
+    /**
+     * Bônus do #2: um destino sem máquina (pedra, sem inventário) dorme sem contar como cheio; pôr um
+     * baú no lugar invalida a capability, o listener acorda o destino e a origem que esperava, e a
+     * entrega sai logo, sem esperar o teto do sono.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void destinationWithoutMachineSleepsUntilMachineAppears(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-destino-sem-maquina");
+        RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity d = place(helper, B, Blocks.STONE.defaultBlockState(), network);
+        d.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        long[] placedAt = {0};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, d))
+                .thenWaitUntil(() -> {
+                    NetworkStats stats = stats(helper, network);
+                    helper.assertTrue(stats != null && stats.destinationsSleeping() == 1, "o destino sem máquina não dormiu");
+                    helper.assertValueEqual(stats.destinationsFull(), 0, "destinos cheios");
+                    helper.assertValueEqual(NodeProbe.fullDestinations(d, ResourceType.ITEM, helper.getTick()), 0,
+                            "cheios no Tablet");
+                })
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    helper.setBlock(B, Blocks.CHEST);
+                    placedAt[0] = helper.getTick();
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - placedAt[0] < 10,
+                        "a entrega demorou " + (helper.getTick() - placedAt[0]) + " ticks"))
+                .thenSucceed();
+    }
+
+    private static NetworkStats stats(GameTestHelper helper, UUID network) {
+        for (NetworkStats stats : NetworkManager.get().stats(helper.getLevel().getServer())) {
+            if (stats.id().equals(network)) {
+                return stats;
+            }
+        }
+        return null;
     }
 
     /**

@@ -35,12 +35,19 @@ final class Port {
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
     @Nullable ItemTransfer.StockTally tally;
     /**
-     * Motivo do último sono da origem, anotado pelo {@link NetworkManager} depois da visita: {@code true}
-     * se ela tinha o que dar e os destinos recusaram ou dormiam (espera destino); {@code false} se não
-     * tinha o que dar (vazia, filtro ou estoque da própria origem). Uma mudança na máquina de um destino
-     * só acorda as que esperam destino; a origem vazia acorda pela própria máquina. Começa {@code true}.
+     * Motivo do último sono da origem, gravado onde ela dorme ({@link SourceSleep}): {@code true} se
+     * todos os destinos dormiam ou se ela ofereceu algo e foi recusada (espera destino); {@code false}
+     * se não tinha o que dar (vazia, filtro ou estoque da própria origem, sem máquina). Uma mudança na
+     * máquina de um destino só acorda as que esperam destino; a origem vazia acorda pela própria
+     * máquina. Começa {@code true}.
      */
     boolean waitsDestination = true;
+    /**
+     * A origem ofereceu algo a um destino acordado que passou no filtro dele, desde o último sono ou
+     * entrega (a volta sem mover pode durar várias visitas). Marcado pelas transferências, zerado pelo
+     * {@link NetworkManager} depois de uma visita que moveu ou dormiu.
+     */
+    boolean offered;
 
     // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
     // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
@@ -100,6 +107,15 @@ final class Port {
         feeders.clear();
         sharedFeeders = List.of();
         sharedBothFeeders = List.of();
+    }
+
+    /**
+     * Destino sem máquina (ou com o chunk dela descarregado): dorme até o listener da capability da
+     * face acordá-lo, ou no máximo {@link NetworkManager#MAX_SLEEP_TICKS}. Não mexe no intervalo, então
+     * não conta como cheio no Tablet ({@link NodeProbe#isFull}).
+     */
+    void sleepWithoutMachine(long now) {
+        destinationBackoff.sleepUntil(now, now + NetworkManager.MAX_SLEEP_TICKS);
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

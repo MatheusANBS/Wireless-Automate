@@ -29,7 +29,17 @@ public enum BenchScenario {
     MIXED("mixed", 498, RouterTier.BASIC, 60, 20,
             "Misto: um terço itens, um terço fluidos e um terço energia, ao mesmo tempo"),
     REBUILD("rebuild", 500, RouterTier.BASIC, 60, 20,
-            "Remontagem: como Muitos nós, e um nó muda de configuração a cada segundo");
+            "Remontagem: como Muitos nós, e um nó muda de configuração a cada segundo"),
+    SPARSE("sparse", 500, RouterTier.BASIC, 60, 20,
+            "Esparsa: só uma origem tem itens, as outras estão vazias; destinos vazios"),
+    STOCK("stock", 20, RouterTier.BASIC, 60, 0,
+            "Estoque atingido: origem grande cheia de pedregulho, destino grande com lista branca e o estoque já completo"),
+    BIG_STACK("bigstack", 2, RouterTier.ELITE, 60, 0,
+            "Pilha enorme: origem de 1 slot com 1.000.000 de itens para um ralo, tier Elite (máquinas de teste)"),
+    REDSTONE("redstone", 100, RouterTier.BASIC, 60, 20,
+            "Relógio de redstone: como Muitos nós, com um bloco de redstone que liga e desliga a cada tick em cima de cada roteador (nenhum usa redstone)"),
+    TABLET("tablet", 1000, RouterTier.BASIC, 60, 20,
+            "Tablet aberto: como Muitos nós, com um jogador falso de Tablet aberto, sincronizado a cada tick");
 
     public final String id;
     public final int defaultNodes;
@@ -49,7 +59,7 @@ public enum BenchScenario {
 
     /** Usa inventário grande (baú duplo ou Sophisticated Storage de netherita). */
     public boolean bigInventories() {
-        return this == RAW || this == BIG || this == BIG_FULL || this == TYPES;
+        return this == RAW || this == BIG || this == BIG_FULL || this == TYPES || this == STOCK;
     }
 
     public static @Nullable BenchScenario byId(String id) {

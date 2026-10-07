@@ -21,15 +21,21 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
  * a origem mantém N mB, o destino aceita até N mB.
  */
 final class FluidTransfer {
-    /** Tanques examinados por visita. */
+    /** Tanques examinados por visita: máquina com mais tanques continua do cursor na visita seguinte. */
     static final int MAX_TANKS_PER_VISIT = 16;
+    /** O último {@link #moveFluid} pôs algum destino para dormir. */
+    private static boolean destinationSlept;
 
-    /** Uma visita. Devolve {@code true} se moveu algo. */
+    /**
+     * Uma visita. Devolve {@code true} se moveu algo. Os tanques são varridos a partir do cursor da
+     * porta ({@link Port#slotCursor}, o mesmo dos slots de itens), como os slots: a origem só dorme
+     * por falta do que mover depois de uma volta inteira sem mover ({@link Port#idleSlots}).
+     */
     static boolean move(Port source, long now) {
         IFluidHandler handler = source.node.fluids(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.nothingToMove(source, now);
             return false;
         }
         long tokens = source.limiter.available(now);
@@ -38,14 +44,25 @@ final class FluidTransfer {
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.untilDestinations(source, pass, now);
             return false;
         }
-        int tanks = Math.min(handler.getTanks(), MAX_TANKS_PER_VISIT);
+        int tanks = handler.getTanks();
+        if (tanks <= 0) {
+            SourceSleep.nothingToMove(source, now);
+            return false;
+        }
+        int limit = Math.min(tanks, MAX_TANKS_PER_VISIT);
+        int tank = source.slotCursor < tanks ? source.slotCursor : 0;
+        int scanned = 0;
         FilterSet filter = source.filter;
         long moved = 0;
-        for (int tank = 0; tank < tanks && tokens > 0; tank++) {
-            FluidStack inTank = handler.getFluidInTank(tank);
+        boolean destinationsAsleep = false;
+        while (scanned < limit) {
+            int current = tank;
+            scanned++;
+            tank = tank + 1 == tanks ? 0 : tank + 1;
+            FluidStack inTank = handler.getFluidInTank(current);
             if (inTank.isEmpty() || !filter.testFluid(inTank)) {
                 continue;
             }
@@ -61,22 +78,38 @@ final class FluidTransfer {
             int amount = moveFluid(source, handler, inTank, max, order, pass, now);
             tokens -= amount;
             moved += amount;
-            if (!NetworkManager.hasAwakeDestination(pass, now)) {
+            if (tokens <= 0) {
+                // Sem saldo: o tanque pode ter mais, continua dele na próxima visita.
+                tank = current;
+                break;
+            }
+            if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
+                destinationsAsleep = true;
                 break;
             }
         }
+        source.slotCursor = tank;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
+            source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
             return true;
         }
-        source.sourceBackoff.sleep(now);
+        source.idleSlots += scanned;
+        if (destinationsAsleep) {
+            source.idleSlots = 0;
+            SourceSleep.untilDestinations(source, pass, now);
+        } else if (source.idleSlots >= tanks) {
+            source.idleSlots = 0;
+            SourceSleep.nothingToMove(source, now);
+        }
         return false;
     }
 
     private static int moveFluid(Port source, IFluidHandler handler, FluidStack inTank, int max,
             RoundRobinOrder<Port> order, List<Port> pass, long now) {
+        destinationSlept = false;
         FluidStack offered = handler.drain(inTank.copyWithAmount(max), FluidAction.SIMULATE);
         if (offered.isEmpty()) {
             return 0;
@@ -88,29 +121,38 @@ final class FluidTransfer {
             if (destination.destinationBackoff.isSleeping(now)) {
                 continue;
             }
-            IFluidHandler target = destination.node.fluids(destination.face);
-            if (target == null) {
-                continue;
-            }
             int want = remaining;
             FilterSet accept = destination.filter;
+            Filter rule = null;
             if (!accept.isEmpty()) {
-                // Recusa do filtro ou estoque já atingido: pula sem dormir.
+                // Recusa do filtro: pula sem dormir, e sem buscar a máquina.
                 if (!accept.testFluid(offered)) {
                     continue;
                 }
-                Filter rule = accept.fluidStockFilter(offered);
-                long stock = rule == null ? 0 : rule.fluidStock(offered);
-                if (stock > 0) {
-                    want = (int) StockLimit.acceptable(amountIn(target, offered, rule.matchComponents()), stock, want);
-                    if (want <= 0) {
-                        continue;
-                    }
+                rule = accept.fluidStockFilter(offered);
+            }
+            // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
+            source.offered = true;
+            IFluidHandler target = destination.node.fluids(destination.face);
+            if (target == null) {
+                // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
+                // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
+                destination.sleepWithoutMachine(now);
+                destinationSlept = true;
+                continue;
+            }
+            long stock = rule == null ? 0 : rule.fluidStock(offered);
+            if (stock > 0) {
+                // Estoque já atingido: pula sem dormir.
+                want = (int) StockLimit.acceptable(amountIn(target, offered, rule.matchComponents()), stock, want);
+                if (want <= 0) {
+                    continue;
                 }
             }
             int accepts = target.fill(offered.copyWithAmount(want), FluidAction.SIMULATE);
             if (accepts <= 0) {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
                 continue;
             }
             FluidStack taken = handler.drain(offered.copyWithAmount(Math.min(accepts, remaining)), FluidAction.EXECUTE);
@@ -132,6 +174,7 @@ final class FluidTransfer {
                 remaining -= filled;
             } else {
                 destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
             }
             if (takenAmount < accepts) {
                 break;

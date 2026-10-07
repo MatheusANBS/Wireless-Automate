@@ -24,7 +24,7 @@ final class EnergyTransfer {
         IEnergyStorage handler = source.node.energy(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null || !handler.canExtract()) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.nothingToMove(source, now);
             return false;
         }
         long tokens = source.limiter.available(now);
@@ -33,14 +33,16 @@ final class EnergyTransfer {
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.untilDestinations(source, pass, now);
             return false;
         }
         int offered = handler.extractEnergy((int) Math.min(tokens, Integer.MAX_VALUE), true);
         if (offered <= 0) {
-            source.sourceBackoff.sleep(now);
+            SourceSleep.nothingToMove(source, now);
             return false;
         }
+        // Tem energia e há destino acordado: se dormir, foi esperando destino (motivo do sono).
+        source.offered = true;
         int count = pass.size();
         ensureCapacity(count);
         for (int i = 0; i < count; i++) {
@@ -53,6 +55,9 @@ final class EnergyTransfer {
             }
             IEnergyStorage target = destination.node.energy(destination.face);
             if (target == null) {
+                // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
+                // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
+                destination.sleepWithoutMachine(now);
                 continue;
             }
             int accepts = target.canReceive() ? target.receiveEnergy(offered, true) : 0;
@@ -95,7 +100,8 @@ final class EnergyTransfer {
             source.sourceBackoff.wake();
             return true;
         }
-        source.sourceBackoff.sleep(now);
+        // Destinos que recusaram dormiram: se foram todos, a origem dorme até o primeiro acordar.
+        SourceSleep.idle(source, pass, now);
         return false;
     }
 

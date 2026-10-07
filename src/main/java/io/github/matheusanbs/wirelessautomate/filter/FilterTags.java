@@ -8,8 +8,8 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
 
 /**
  * Geração global das tags: sobe a cada recarga (servidor ou cliente). Os matchers compilados
- * guardam a geração em que montaram o cache e o descartam quando ela muda, então a recarga custa
- * uma comparação de inteiro por consulta, e nada de varrer filtros.
+ * guardam a geração em que expandiram as tags e refazem o mapa na primeira consulta depois que ela
+ * muda, então a recarga custa uma comparação de inteiro por consulta, e nada de varrer filtros.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID)
 public final class FilterTags {

@@ -6,6 +6,7 @@ import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -33,11 +34,16 @@ public final class MekanismChemicals {
         return ((IChemicalHandler) handler).getChemicalTanks();
     }
 
-    /** Id do químico ({@code mekanism:hydrogen}); a chave dos filtros. */
+    private static final ResourceLocation EMPTY = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");
+
+    /** Id do químico ({@code mekanism:hydrogen}); a chave dos filtros. Chamado no laço, não aloca. */
     public static ResourceLocation id(ChemicalStack stack) {
-        return stack.getChemicalHolder().unwrapKey()
-                .map(key -> key.location())
-                .orElseGet(() -> ResourceLocation.fromNamespaceAndPath("mekanism", "empty"));
+        Holder<Chemical> holder = stack.getChemicalHolder();
+        if (holder instanceof Holder.Reference<Chemical> reference) {
+            return reference.key().location();
+        }
+        ResourceLocation key = MekanismAPI.CHEMICAL_REGISTRY.getKey(holder.value());
+        return key != null ? key : EMPTY;
     }
 
     /** O primeiro químico guardado num item (tanque, cilindro), se houver. */

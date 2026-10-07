@@ -24,13 +24,80 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
  */
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, IChemicalTank[]> MANY = new ConcurrentHashMap<>();
 
     static void register(RegisterCapabilitiesEvent event) {
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> handler(pos), ChemicalTestTanks.BLOCK);
+        event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> manyHandler(pos),
+                ChemicalTestTanks.MANY_TANKS_BLOCK);
     }
 
     static void reset(BlockPos pos) {
         TANKS.remove(pos.immutable());
+        MANY.remove(pos.immutable());
+    }
+
+    /** Põe {@code amount} mB do químico no tanque {@code tank} do bloco de muitos tanques; devolve a sobra. */
+    static long fillTank(BlockPos pos, int tank, ResourceLocation chemical, long amount) {
+        ChemicalStack stack = new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(chemical).orElseThrow(), amount);
+        return manyTanks(pos)[tank].insert(stack, Action.EXECUTE, AutomationType.INTERNAL).getAmount();
+    }
+
+    /** Quanto há no tanque {@code tank} do bloco de muitos tanques. */
+    static long tankAmount(BlockPos pos, int tank) {
+        return manyTanks(pos)[tank].getStack().getAmount();
+    }
+
+    private static IChemicalTank[] manyTanks(BlockPos pos) {
+        return MANY.computeIfAbsent(pos.immutable(), key -> {
+            IChemicalTank[] tanks = new IChemicalTank[ChemicalTestTanks.MANY_TANKS];
+            for (int i = 0; i < tanks.length; i++) {
+                tanks[i] = BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
+                });
+            }
+            return tanks;
+        });
+    }
+
+    /** Muitos tanques, só de saída (inserir não aceita nada). */
+    private static IChemicalHandler manyHandler(BlockPos pos) {
+        IChemicalTank[] tanks = manyTanks(pos);
+        return new IChemicalHandler() {
+            @Override
+            public int getChemicalTanks() {
+                return tanks.length;
+            }
+
+            @Override
+            public ChemicalStack getChemicalInTank(int index) {
+                return tanks[index].getStack();
+            }
+
+            @Override
+            public void setChemicalInTank(int index, ChemicalStack stack) {
+                tanks[index].setStack(stack);
+            }
+
+            @Override
+            public long getChemicalTankCapacity(int index) {
+                return tanks[index].getCapacity();
+            }
+
+            @Override
+            public boolean isValid(int index, ChemicalStack stack) {
+                return false;
+            }
+
+            @Override
+            public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
+                return stack;
+            }
+
+            @Override
+            public ChemicalStack extractChemical(int index, long amount, Action action) {
+                return tanks[index].extract(amount, action, AutomationType.EXTERNAL);
+            }
+        };
     }
 
     static boolean hasHandler(ServerLevel level, BlockPos pos) {

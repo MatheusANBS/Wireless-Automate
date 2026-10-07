@@ -88,6 +88,10 @@ public final class BenchRunner {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     static void onTickStart(ServerTickEvent.Pre event) {
         tickStart = System.nanoTime();
+        BenchRun run = current;
+        if (run != null) {
+            run.preTick(event.getServer());
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -224,6 +228,14 @@ public final class BenchRunner {
         }
         if (scenario == BenchScenario.MIXED && !BenchCapabilities.enabled()) {
             return "o cenário misto precisa de -Dwirelessautomate.bench=true (run benchServer)";
+        }
+        if (scenario == BenchScenario.BIG_STACK) {
+            if (!BenchCapabilities.enabled()) {
+                return "o cenário bigstack precisa de -Dwirelessautomate.bench=true (run benchServer)";
+            }
+            if (storage != BenchStorage.VANILLA) {
+                return "o cenário bigstack usa só máquinas de teste; rode com vanilla";
+            }
         }
         return null;
     }

@@ -233,6 +233,41 @@ public final class RouterMenuGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void identicalSnapshotIsNotResent(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, CHEST);
+        ServerPlayer player = playerNear(helper, router);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        // Sem atribuir ao containerMenu: o tick do jogador não chama este menu.
+        RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
+                RouterSnapshot.capture(router, player));
+
+        // Rede privada de outro dono: a versão das redes muda, mas a tela continua igual.
+        int before = data.version();
+        data.create(UUID.randomUUID(), "teste-menu-alheia-privada");
+        helper.assertTrue(data.version() != before, "versão das redes não mudou");
+        helper.assertTrue(menu.pollSnapshot() == null, "snapshot igual reenviado");
+
+        // Redes do seletor e corpo vão em pacotes separados; o cliente junta os dois.
+        RouterMenu client = new RouterMenu(CONTAINER_ID, player.getInventory(), menu.snapshot());
+        WaNetwork own = data.create(player.getUUID(), "teste-menu-propria");
+        RouterSnapshot withNetwork = menu.pollSnapshot();
+        helper.assertTrue(withNetwork != null && withNetwork.networks().stream().anyMatch(e -> e.id().equals(own.id())),
+                "seletor sem a rede nova");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        RouterSnapshot.NETWORKS_CODEC.encode(buf, withNetwork.networks());
+        client.applyNetworks(RouterSnapshot.NETWORKS_CODEC.decode(buf));
+        router.setName("Corpo");
+        RouterSnapshot body = menu.pollSnapshot();
+        helper.assertTrue(body != null && body.name().equals("Corpo"), "nome fora do snapshot");
+        buf.clear();
+        RouterSnapshot.BODY_CODEC.encode(buf, body);
+        client.applySnapshotBody(RouterSnapshot.BODY_CODEC.decode(buf));
+        helper.assertTrue(client.snapshot().equals(menu.snapshot()), "cliente diferente do servidor: "
+                + client.snapshot() + " / " + menu.snapshot());
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void throughputCountsTheSource(GameTestHelper helper) {
         UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "Vazão").id();
         RouterBlockEntity source = chestWithRouter(helper, A);

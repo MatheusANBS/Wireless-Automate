@@ -23,8 +23,9 @@ import org.jetbrains.annotations.Nullable;
  *       mesmo que uma regra de outro filtro tenha.
  * </ul>
  *
- * <p>Custo: a correspondência compilada vive em cada {@link Filter} (e o cache dele), então o
- * conjunto não recompila nada; conferir um recurso custa uma consulta por filtro com entradas.
+ * <p>Custo: a correspondência compilada vive em cada {@link Filter}, então o conjunto não recompila
+ * nada; conferir um recurso custa uma consulta por filtro com entradas. O laço de itens usa
+ * {@link #evaluateItem}, que responde "passa?" e o estoque na mesma passada.
  * Uma face sem cartões usa {@link Filter#asSet()}, guardado no próprio filtro, e não aloca.
  */
 public final class FilterSet {
@@ -35,13 +36,26 @@ public final class FilterSet {
     private final boolean usesItemStock;
     private final boolean usesFluidStock;
     private final boolean usesChemicalStock;
+    private final boolean itemsByItemOnly;
+
+    /**
+     * Resposta de {@link #evaluateItem} além do "passa?": o estoque da regra (0 = sem limite) e se a
+     * contagem dele exige componentes iguais. Mutável e reaproveitada por quem chama (o laço roda
+     * numa thread só).
+     */
+    public static final class ItemRule {
+        public long stock;
+        public boolean matchComponents;
+    }
 
     private FilterSet(Filter[] filters) {
         this.filters = filters;
         boolean items = false;
         boolean fluids = false;
         boolean chemicals = false;
+        boolean byItem = true;
         for (Filter filter : filters) {
+            byItem &= !filter.matchComponents();
             items |= filter.usesItemStock();
             fluids |= filter.usesFluidStock();
             chemicals |= filter.usesChemicalStock();
@@ -49,6 +63,7 @@ public final class FilterSet {
         this.usesItemStock = items;
         this.usesFluidStock = fluids;
         this.usesChemicalStock = chemicals;
+        this.itemsByItemOnly = byItem;
     }
 
     /** Conjunto de um filtro só (sem cartões). Prefira {@link Filter#asSet()}, que fica em cache. */
@@ -100,6 +115,53 @@ public final class FilterSet {
             }
         }
         return false;
+    }
+
+    /**
+     * O item passa pelo conjunto? E, se passa, o estoque dele (o mesmo de {@link #itemStockFilter} e
+     * {@link #itemStock}) em {@code rule}, tudo numa passada: uma consulta por filtro, no máximo.
+     * Se não passa, {@code rule} fica zerado.
+     */
+    public boolean evaluateItem(ItemStack stack, ItemRule rule) {
+        rule.stock = 0;
+        rule.matchComponents = false;
+        if (filters.length == 0) {
+            return true;
+        }
+        boolean passes = false;
+        // O estoque é o da primeira lista branca que casa; sem estoque no conjunto, nem procura.
+        boolean decided = !usesItemStock;
+        for (Filter filter : filters) {
+            int index = filter.itemIndex(stack);
+            boolean whitelist = filter.listMode() == Filter.ListMode.WHITELIST;
+            if ((index >= 0) == whitelist) {
+                passes = true;
+            }
+            if (!decided && whitelist && index >= 0) {
+                decided = true;
+                long stock = filter.entries().get(index).stock();
+                if (stock > 0) {
+                    rule.stock = stock;
+                    rule.matchComponents = filter.matchComponents();
+                }
+            }
+            if (passes && decided) {
+                break;
+            }
+        }
+        if (!passes) {
+            rule.stock = 0;
+            rule.matchComponents = false;
+        }
+        return passes;
+    }
+
+    /**
+     * Nenhum filtro do conjunto exige componentes: o "passa?" e o estoque de um item dependem só do
+     * {@code Item}, não da pilha (a contagem do estoque da origem pode ser por item, sem o filtro).
+     */
+    public boolean itemsByItemOnly() {
+        return itemsByItemOnly;
     }
 
     /** O fluido passa pelo conjunto? */

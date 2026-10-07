@@ -4,11 +4,13 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import com.mojang.authlib.GameProfile;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.charset.StandardCharsets;
@@ -35,6 +37,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,10 +53,12 @@ final class BenchScene {
     static final UUID OWNER = UUID.nameUUIDFromBytes("wirelessautomate:bench".getBytes(StandardCharsets.UTF_8));
     /** Slots livres no fim do destino quase cheio ({@link BenchScenario#BIG_FULL}). */
     static final int FREE_TAIL_SLOTS = 4;
+    /** Estoque da lista branca do destino e quanto ele já tem ({@link BenchScenario#STOCK}). */
+    static final int STOCK_LIMIT = 1_000;
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
-    enum Machine { SMALL, BIG, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK }
+    enum Machine { SMALL, BIG, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK }
 
     /** Um nó: máquina, roteador em cima, tipo e papel; {@code index} varia o padrão de itens. */
     record Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind) {
@@ -63,6 +69,10 @@ final class BenchScene {
     final BenchStorage storage;
     final List<Node> nodes = new ArrayList<>();
     private final List<BlockPos> extraBlocks = new ArrayList<>();
+    /** Blocos de redstone que ligam e desligam ({@link BenchScenario#REDSTONE}), um acima de cada roteador. */
+    private final List<BlockPos> clocks = new ArrayList<>();
+    private boolean clockOn;
+    private @Nullable TabletMenu tablet;
     private final LongSet forcedChunks = new LongOpenHashSet();
     private final List<Item> sourceItems;
     private final List<Item> junkItems;
@@ -119,9 +129,12 @@ final class BenchScene {
                     kind = source ? Machine.ENERGY_SOURCE : Machine.ENERGY_SINK;
                 }
             }
+            if (scenario == BenchScenario.BIG_STACK) {
+                kind = source ? Machine.STACK_SOURCE : Machine.ITEM_SINK;
+            }
             nodes.add(new Node(i, machine, machine.above(), type, source, kind));
         }
-        max = ORIGIN.offset(side * width, 1, (count + side - 1) / side);
+        max = ORIGIN.offset(side * width, scenario == BenchScenario.REDSTONE ? 2 : 1, (count + side - 1) / side);
     }
 
     /** Põe máquinas e roteadores, enche as máquinas e configura as faces. Os roteadores ficam sem rede. */
@@ -164,6 +177,8 @@ final class BenchScene {
             case FLUID_SINK -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SINK.defaultBlockState(), PLACE_FLAGS);
             case ENERGY_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SOURCE.defaultBlockState(), PLACE_FLAGS);
             case ENERGY_SINK -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SINK.defaultBlockState(), PLACE_FLAGS);
+            case STACK_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.STACK_SOURCE.defaultBlockState(), PLACE_FLAGS);
+            case ITEM_SINK -> level.setBlock(node.machine(), BenchCapabilities.ITEM_SINK.defaultBlockState(), PLACE_FLAGS);
         }
     }
 
@@ -171,6 +186,9 @@ final class BenchScene {
         router.setMode(node.type(), Direction.UP, node.source() ? PortMode.EXTRACT : PortMode.INSERT);
         if (scenario == BenchScenario.TYPES) {
             router.setFilter(ResourceType.ITEM, Direction.UP, node.source() ? sourceFilter() : destinationFilter());
+        } else if (scenario == BenchScenario.STOCK && !node.source()) {
+            router.setFilter(ResourceType.ITEM, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
+                    List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), STOCK_LIMIT))));
         }
     }
 
@@ -207,6 +225,47 @@ final class BenchScene {
             if (router != null) {
                 router.setNetworkId(network);
             }
+        }
+    }
+
+    /**
+     * Abre o Tablet para um jogador falso dono da rede da cena ({@link BenchScenario#TABLET}): ele vê
+     * todos os nós dela. O menu é criado direto (sem pacote de abertura) e sincronizado por
+     * {@link #syncTablet}, como o {@code ServerPlayer} faz a cada tick com a tela aberta.
+     */
+    void openTablet() {
+        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(OWNER, "[wa-bench]"));
+        player.setPos(ORIGIN.getX() + 0.5, ORIGIN.getY() + 2, ORIGIN.getZ() + 0.5);
+        tablet = new TabletMenu(1, player.getInventory(), player);
+    }
+
+    /** Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. */
+    long syncTablet() {
+        TabletMenu menu = tablet;
+        if (menu == null) {
+            return 0;
+        }
+        // O que o broadcastChanges do menu faz no servidor, menos o envio: o jogador falso não tem
+        // canal de rede (o hasChannel dá NullPointerException) e o menu não tem slots.
+        long start = System.nanoTime();
+        menu.pollSnapshot();
+        return System.nanoTime() - start;
+    }
+
+    /** Liga ou desliga os blocos de redstone em cima dos roteadores, avisando os vizinhos. */
+    void toggleClocks() {
+        if (scenario != BenchScenario.REDSTONE) {
+            return;
+        }
+        clockOn = !clockOn;
+        BlockState state = (clockOn ? Blocks.REDSTONE_BLOCK : Blocks.AIR).defaultBlockState();
+        if (clocks.isEmpty()) {
+            for (Node node : nodes) {
+                clocks.add(node.router().above());
+            }
+        }
+        for (BlockPos pos : clocks) {
+            level.setBlock(pos, state, Block.UPDATE_ALL);
         }
     }
 
@@ -287,10 +346,12 @@ final class BenchScene {
                 continue;
             }
             if (node.source()) {
-                refill(node, handler);
+                if (activeSource(node)) {
+                    refill(node, handler);
+                }
             } else if (scenario == BenchScenario.BIG_FULL) {
                 clear(handler, Math.max(0, handler.getSlots() - FREE_TAIL_SLOTS));
-            } else if (scenario != BenchScenario.FULL) {
+            } else if (scenario != BenchScenario.FULL && scenario != BenchScenario.STOCK) {
                 clear(handler, 0);
             }
         }
@@ -310,14 +371,25 @@ final class BenchScene {
         }
     }
 
+    /** Origem que recebe itens: todas, menos no ocioso e, no esparso, só a primeira. */
+    private boolean activeSource(Node node) {
+        return scenario != BenchScenario.IDLE && (scenario != BenchScenario.SPARSE || node.index() == 0);
+    }
+
     private void fill(Node node) {
         IItemHandler handler = items(node);
         if (handler == null) {
             return;
         }
         if (node.source()) {
-            if (scenario != BenchScenario.IDLE) {
+            if (activeSource(node)) {
                 refill(node, handler);
+            }
+        } else if (scenario == BenchScenario.STOCK) {
+            int left = STOCK_LIMIT;
+            for (int slot = 0; slot < handler.getSlots() && left > 0; slot++) {
+                int count = Math.min(left, Items.COBBLESTONE.getDefaultMaxStackSize());
+                left -= count - handler.insertItem(slot, new ItemStack(Items.COBBLESTONE, count), false).getCount();
             }
         } else if (scenario == BenchScenario.FULL) {
             for (int slot = 0; slot < handler.getSlots(); slot++) {
@@ -333,7 +405,7 @@ final class BenchScene {
 
     /** Item que a origem guarda em cada slot: pedregulho, ou um diferente por slot nos inventários grandes. */
     private Item pattern(Node node, int slot) {
-        if (scenario == BenchScenario.RAW || !scenario.bigInventories()) {
+        if (scenario == BenchScenario.RAW || scenario == BenchScenario.STOCK || !scenario.bigInventories()) {
             return Items.COBBLESTONE;
         }
         return sourceItems.get((slot + node.index() * 7) % sourceItems.size());
@@ -376,6 +448,11 @@ final class BenchScene {
 
     /** Tira a rede, esvazia e remove tudo, solta os chunks. */
     void teardown() {
+        tablet = null;
+        for (BlockPos pos : clocks) {
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
+        }
+        clocks.clear();
         if (network != null) {
             NetworkSavedData.get(level.getServer()).remove(network);
             network = null;

@@ -20,6 +20,10 @@ import net.minecraft.resources.ResourceLocation;
  * {@link #PAGE_SIZE}, já filtrados pela busca e pelo papel ({@link Query}) e ordenados pela
  * distância ao jogador (os de outras dimensões no fim), para nenhum pacote levar milhares de nós.
  *
+ * <p>Vai ao cliente em duas partes, cada uma só quando muda: o cabeçalho ({@link #HEADER_CODEC}:
+ * estatísticas, redes, grupos e aviso, pequeno e mutável a cada amostra) e a página de nós
+ * ({@link Page}, a parte grande). O buffer de abertura leva as duas ({@link #STREAM_CODEC}).
+ *
  * @param dimension     dimensão do jogador, para o mapa
  * @param center        posição do jogador, centro do mapa
  * @param modNanos      tempo médio do mod por tick (todas as redes)
@@ -120,6 +124,34 @@ public record TabletSnapshot(
         }
     }
 
+    /**
+     * A página de nós: a consulta que ela responde, os totais e os nós.
+     *
+     * @param totalNodes    nós visíveis ao jogador, sem filtro
+     * @param matchingNodes nós que passam na consulta
+     */
+    public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes) {
+        /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
+        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of());
+        public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
+                StreamCodec.of(TabletSnapshot::encodePage, TabletSnapshot::decodePage);
+    }
+
+    public Page page() {
+        return new Page(query, totalNodes, matchingNodes, nodes);
+    }
+
+    /** O mesmo cabeçalho com outra página. */
+    public TabletSnapshot withPage(Page page) {
+        return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, page.query(),
+                page.totalNodes(), page.matchingNodes(), networks, groups, page.nodes(), notice, noticeId);
+    }
+
+    /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
+    public boolean sameHeader(TabletSnapshot other) {
+        return withPage(Page.EMPTY).equals(other.withPage(Page.EMPTY));
+    }
+
     public Optional<NetworkView> network(UUID id) {
         for (NetworkView view : networks) {
             if (view.id.equals(id)) {
@@ -134,19 +166,24 @@ public record TabletSnapshot(
         return Math.max(1, (matchingNodes + PAGE_SIZE - 1) / PAGE_SIZE);
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> STREAM_CODEC =
-            StreamCodec.of(TabletSnapshot::encode, TabletSnapshot::decode);
+    /** Snapshot inteiro (cabeçalho e página), para o buffer de abertura. */
+    public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> STREAM_CODEC = StreamCodec.of(
+            (buf, s) -> {
+                encodeHeader(buf, s);
+                encodePage(buf, s.page());
+            },
+            buf -> decodeHeader(buf).withPage(decodePage(buf)));
+    /** Só o cabeçalho; decodificado com {@link Page#EMPTY} no lugar da página. */
+    public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> HEADER_CODEC =
+            StreamCodec.of(TabletSnapshot::encodeHeader, TabletSnapshot::decodeHeader);
 
-    private static void encode(RegistryFriendlyByteBuf buf, TabletSnapshot s) {
+    private static void encodeHeader(RegistryFriendlyByteBuf buf, TabletSnapshot s) {
         buf.writeBoolean(s.operator);
         buf.writeResourceLocation(s.dimension);
         buf.writeBlockPos(s.center);
         buf.writeOptional(s.activeNetwork, (b, id) -> b.writeUUID(id));
         buf.writeVarLong(s.modNanos);
         buf.writeVarLong(s.budgetNanos);
-        Query.STREAM_CODEC.encode(buf, s.query);
-        buf.writeVarInt(s.totalNodes);
-        buf.writeVarInt(s.matchingNodes);
         buf.writeVarInt(s.networks.size());
         for (NetworkView n : s.networks) {
             buf.writeUUID(n.id);
@@ -179,8 +216,16 @@ public record TabletSnapshot(
                 buf.writeUUID(id);
             }
         }
-        buf.writeVarInt(s.nodes.size());
-        for (NodeView n : s.nodes) {
+        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
+        buf.writeVarInt(s.noticeId);
+    }
+
+    private static void encodePage(RegistryFriendlyByteBuf buf, Page page) {
+        Query.STREAM_CODEC.encode(buf, page.query);
+        buf.writeVarInt(page.totalNodes);
+        buf.writeVarInt(page.matchingNodes);
+        buf.writeVarInt(page.nodes.size());
+        for (NodeView n : page.nodes) {
             NodeKey.STREAM_CODEC.encode(buf, n.key);
             buf.writeUtf(n.name, 64);
             buf.writeResourceLocation(n.machine);
@@ -191,20 +236,15 @@ public record TabletSnapshot(
             buf.writeVarInt(n.roles);
             buf.writeEnum(n.status);
         }
-        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
-        buf.writeVarInt(s.noticeId);
     }
 
-    private static TabletSnapshot decode(RegistryFriendlyByteBuf buf) {
+    private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
         boolean operator = buf.readBoolean();
         ResourceLocation dimension = buf.readResourceLocation();
         BlockPos center = buf.readBlockPos();
         Optional<UUID> active = buf.readOptional(b -> b.readUUID());
         long modNanos = buf.readVarLong();
         long budgetNanos = buf.readVarLong();
-        Query query = Query.STREAM_CODEC.decode(buf);
-        int total = buf.readVarInt();
-        int matching = buf.readVarInt();
         int networkCount = buf.readVarInt();
         List<NetworkView> networks = new ArrayList<>(networkCount);
         for (int i = 0; i < networkCount; i++) {
@@ -228,6 +268,16 @@ public record TabletSnapshot(
             }
             groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members)));
         }
+        Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
+        int noticeId = buf.readVarInt();
+        return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
+                0, 0, List.copyOf(networks), List.copyOf(groups), List.of(), notice, noticeId);
+    }
+
+    private static Page decodePage(RegistryFriendlyByteBuf buf) {
+        Query query = Query.STREAM_CODEC.decode(buf);
+        int total = buf.readVarInt();
+        int matching = buf.readVarInt();
         int nodeCount = buf.readVarInt();
         List<NodeView> nodes = new ArrayList<>(nodeCount);
         for (int i = 0; i < nodeCount; i++) {
@@ -242,9 +292,6 @@ public record TabletSnapshot(
             nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), buf.readVarInt(),
                     buf.readEnum(NodeStatus.class)));
         }
-        Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
-        int noticeId = buf.readVarInt();
-        return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, query, total, matching,
-                List.copyOf(networks), List.copyOf(groups), List.copyOf(nodes), notice, noticeId);
+        return new Page(query, total, matching, List.copyOf(nodes));
     }
 }

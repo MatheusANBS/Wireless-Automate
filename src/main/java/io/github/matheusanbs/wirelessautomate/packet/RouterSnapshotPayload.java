@@ -7,12 +7,15 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/** Servidor → cliente: o roteador da tela aberta mudou. */
+/**
+ * Servidor → cliente: o roteador da tela aberta mudou. Vai sem as redes do seletor
+ * ({@link RouterSnapshot#BODY_CODEC}); elas vêm no {@link RouterNetworksPayload}, só quando mudam.
+ */
 public record RouterSnapshotPayload(int containerId, RouterSnapshot snapshot) implements CustomPacketPayload {
     public static final Type<RouterSnapshotPayload> TYPE = new Type<>(WirelessAutomate.id("router_snapshot"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RouterSnapshotPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, RouterSnapshotPayload::containerId,
-            RouterSnapshot.STREAM_CODEC, RouterSnapshotPayload::snapshot,
+            RouterSnapshot.BODY_CODEC, RouterSnapshotPayload::snapshot,
             RouterSnapshotPayload::new);
 
     @Override

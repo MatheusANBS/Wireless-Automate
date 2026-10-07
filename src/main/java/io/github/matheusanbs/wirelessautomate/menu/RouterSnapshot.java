@@ -33,6 +33,9 @@ import net.neoforged.neoforge.items.IItemHandler;
  * Tudo que a tela do roteador mostra, montado no servidor e enviado ao cliente só com a tela
  * aberta. As faces são absolutas (as da máquina), como a tela as mostra.
  *
+ * <p>Depois da abertura (que leva tudo, {@link #STREAM_CODEC}), o corpo ({@link #BODY_CODEC}) e as
+ * redes do seletor ({@link #NETWORKS_CODEC}) vão em pacotes separados, cada um só quando muda.
+ *
  * @param name     nome do nó dado pelo jogador; vazio = sem nome (a tela mostra o da máquina)
  * @param typeNetworks rede de cada aba, por {@link ResourceType#ordinal()}; vazia se não tiver ou se
  *                 ela não existir mais
@@ -65,6 +68,32 @@ public record RouterSnapshot(
 
     /** Uma rede no seletor. {@code owned}: o jogador é o dono. */
     public record NetworkEntry(UUID id, String name, int color, boolean owned) {
+    }
+
+    /** O mesmo snapshot com outras redes no seletor. */
+    public RouterSnapshot withNetworks(List<NetworkEntry> networks) {
+        return new RouterSnapshot(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState,
+                faces, chunkLoad);
+    }
+
+    /** Tudo igual menos, talvez, as redes do seletor. */
+    public boolean sameBody(RouterSnapshot other) {
+        return pos.equals(other.pos) && name.equals(other.name) && tier == other.tier && facing == other.facing
+                && typeNetworks.equals(other.typeNetworks) && powered == other.powered
+                && ItemStack.matches(machine, other.machine) && machineState == other.machineState
+                && faces.equals(other.faces) && chunkLoad == other.chunkLoad;
+    }
+
+    /** Igualdade de valor; o {@link ItemStack} da máquina é comparado por {@link ItemStack#matches}. */
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof RouterSnapshot other && sameBody(other) && networks.equals(other.networks);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(pos, name, tier, facing, typeNetworks, networks, powered,
+                ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad);
     }
 
     /**
@@ -171,10 +200,40 @@ public record RouterSnapshot(
         };
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, RouterSnapshot> STREAM_CODEC =
-            StreamCodec.of(RouterSnapshot::encode, RouterSnapshot::decode);
+    /** Snapshot inteiro, para o buffer de abertura. */
+    public static final StreamCodec<RegistryFriendlyByteBuf, RouterSnapshot> STREAM_CODEC = StreamCodec.of(
+            (buf, s) -> {
+                encodeBody(buf, s);
+                encodeNetworks(buf, s.networks);
+            },
+            buf -> decodeBody(buf).withNetworks(decodeNetworks(buf)));
+    /** Sem as redes do seletor: decodificado com a lista vazia (o cliente mantém a que tem). */
+    public static final StreamCodec<RegistryFriendlyByteBuf, RouterSnapshot> BODY_CODEC =
+            StreamCodec.of(RouterSnapshot::encodeBody, RouterSnapshot::decodeBody);
+    /** Só as redes do seletor. */
+    public static final StreamCodec<RegistryFriendlyByteBuf, List<NetworkEntry>> NETWORKS_CODEC =
+            StreamCodec.of(RouterSnapshot::encodeNetworks, RouterSnapshot::decodeNetworks);
 
-    private static void encode(RegistryFriendlyByteBuf buf, RouterSnapshot s) {
+    private static void encodeNetworks(RegistryFriendlyByteBuf buf, List<NetworkEntry> networks) {
+        buf.writeVarInt(networks.size());
+        for (NetworkEntry entry : networks) {
+            buf.writeUUID(entry.id);
+            buf.writeUtf(entry.name, 64);
+            buf.writeInt(entry.color);
+            buf.writeBoolean(entry.owned);
+        }
+    }
+
+    private static List<NetworkEntry> decodeNetworks(RegistryFriendlyByteBuf buf) {
+        int networkCount = buf.readVarInt();
+        List<NetworkEntry> networks = new ArrayList<>(networkCount);
+        for (int i = 0; i < networkCount; i++) {
+            networks.add(new NetworkEntry(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readBoolean()));
+        }
+        return List.copyOf(networks);
+    }
+
+    private static void encodeBody(RegistryFriendlyByteBuf buf, RouterSnapshot s) {
         buf.writeBlockPos(s.pos);
         buf.writeUtf(s.name, 64);
         buf.writeEnum(s.tier);
@@ -182,13 +241,6 @@ public record RouterSnapshot(
         buf.writeVarInt(s.typeNetworks.size());
         for (Optional<UUID> network : s.typeNetworks) {
             buf.writeOptional(network, (b, id) -> b.writeUUID(id));
-        }
-        buf.writeVarInt(s.networks.size());
-        for (NetworkEntry entry : s.networks) {
-            buf.writeUUID(entry.id);
-            buf.writeUtf(entry.name, 64);
-            buf.writeInt(entry.color);
-            buf.writeBoolean(entry.owned);
         }
         buf.writeBoolean(s.powered);
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.machine);
@@ -205,7 +257,7 @@ public record RouterSnapshot(
         buf.writeEnum(s.chunkLoad);
     }
 
-    private static RouterSnapshot decode(RegistryFriendlyByteBuf buf) {
+    private static RouterSnapshot decodeBody(RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         String name = buf.readUtf(64);
         RouterTier tier = buf.readEnum(RouterTier.class);
@@ -214,11 +266,6 @@ public record RouterSnapshot(
         List<Optional<UUID>> typeNetworks = new ArrayList<>(typeCount);
         for (int i = 0; i < typeCount; i++) {
             typeNetworks.add(buf.readOptional(b -> b.readUUID()));
-        }
-        int networkCount = buf.readVarInt();
-        List<NetworkEntry> networks = new ArrayList<>(networkCount);
-        for (int i = 0; i < networkCount; i++) {
-            networks.add(new NetworkEntry(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readBoolean()));
         }
         boolean powered = buf.readBoolean();
         ItemStack machine = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
@@ -230,7 +277,7 @@ public record RouterSnapshot(
                     buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
         }
         ChunkLoadState chunkLoad = buf.readEnum(ChunkLoadState.class);
-        return new RouterSnapshot(pos, name, tier, facing, List.copyOf(typeNetworks), List.copyOf(networks), powered, machine,
+        return new RouterSnapshot(pos, name, tier, facing, List.copyOf(typeNetworks), List.of(), powered, machine,
                 machineState, List.copyOf(faces), chunkLoad);
     }
 }

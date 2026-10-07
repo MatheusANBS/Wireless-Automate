@@ -17,8 +17,10 @@ public final class TabletPayloads {
     }
 
     public static void register(PayloadRegistrar registrar) {
-        registrar.playToClient(TabletSnapshotPayload.TYPE, TabletSnapshotPayload.STREAM_CODEC,
-                TabletPayloads::onSnapshot);
+        registrar.playToClient(TabletHeaderPayload.TYPE, TabletHeaderPayload.STREAM_CODEC,
+                TabletPayloads::onHeader);
+        registrar.playToClient(TabletPagePayload.TYPE, TabletPagePayload.STREAM_CODEC,
+                TabletPayloads::onPage);
         registrar.playToServer(TabletQueryPayload.TYPE, TabletQueryPayload.STREAM_CODEC,
                 (payload, context) -> handleQuery(serverPlayer(context), payload));
         registrar.playToServer(TabletMoveNodesPayload.TYPE, TabletMoveNodesPayload.STREAM_CODEC,
@@ -35,10 +37,17 @@ public final class TabletPayloads {
         return context.player() instanceof ServerPlayer player ? player : null;
     }
 
-    private static void onSnapshot(TabletSnapshotPayload payload, IPayloadContext context) {
+    private static void onHeader(TabletHeaderPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
-            menu.applySnapshot(payload.snapshot());
+            menu.applyHeader(payload.header());
+        }
+    }
+
+    private static void onPage(TabletPagePayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
+            menu.applyPage(payload.page());
         }
     }
 

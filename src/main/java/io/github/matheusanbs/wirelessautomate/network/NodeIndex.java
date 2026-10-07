@@ -80,6 +80,8 @@ public final class NodeIndex extends SavedData {
         private @Nullable UUID placedBy;
         /** O roteador carregado; não é salvo. */
         private @Nullable RouterBlockEntity router;
+        /** Texto da busca do Tablet, feito na primeira busca e refeito só quando o nó muda; não é salvo. */
+        private @Nullable String searchText;
 
         Entry(NodeKey key) {
             this.key = key;
@@ -144,6 +146,18 @@ public final class NodeIndex extends SavedData {
             return router() != null;
         }
 
+        /**
+         * Nome, máquina e coordenadas em minúsculas, separados por espaço, para a busca do Tablet.
+         * Montado uma vez e guardado até um desses dados mudar.
+         */
+        public String searchText() {
+            if (searchText == null) {
+                searchText = (name + ' ' + machine + ' ' + key.pos.getX() + ' ' + key.pos.getY() + ' '
+                        + key.pos.getZ()).toLowerCase(Locale.ROOT);
+            }
+            return searchText;
+        }
+
         /** Copia o que o índice guarda do roteador. Devolve se algum dado salvo mudou. */
         private boolean read(RouterBlockEntity from) {
             boolean changed = false;
@@ -176,6 +190,9 @@ public final class NodeIndex extends SavedData {
                     machine = block;
                     changed = true;
                 }
+            }
+            if (changed) {
+                searchText = null;
             }
             return changed;
         }
@@ -232,6 +249,8 @@ public final class NodeIndex extends SavedData {
     private final Map<NodeKey, Entry> entries = new LinkedHashMap<>();
     /** Muda a cada alteração, salva ou não (inclusive carregar e descarregar). Não é salvo. */
     private int version;
+    /** Muda só quando um dado salvo muda (não ao carregar ou descarregar). Não é salvo. */
+    private int dataVersion;
 
     public NodeIndex() {
     }
@@ -349,6 +368,14 @@ public final class NodeIndex extends SavedData {
         return version;
     }
 
+    /**
+     * Muda só quando um dado salvo do índice muda (nó novo ou removido, nome, tier, redes, papéis,
+     * máquina, quem colocou); carregar e descarregar chunks não mexe nela.
+     */
+    public int dataVersion() {
+        return dataVersion;
+    }
+
     public @Nullable Entry entry(NodeKey key) {
         return entries.get(key);
     }
@@ -367,6 +394,7 @@ public final class NodeIndex extends SavedData {
         super.setDirty(dirty);
         if (dirty) {
             version++;
+            dataVersion++;
         }
     }
 

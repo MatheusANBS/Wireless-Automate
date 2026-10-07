@@ -43,12 +43,14 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "2";
+    public static final String VERSION = "3";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
         registrar.playToClient(RouterSnapshotPayload.TYPE, RouterSnapshotPayload.STREAM_CODEC,
                 ModPayloads::onSnapshot);
+        registrar.playToClient(RouterNetworksPayload.TYPE, RouterNetworksPayload.STREAM_CODEC,
+                ModPayloads::onNetworks);
         registrar.playToClient(RouterThroughputPayload.TYPE, RouterThroughputPayload.STREAM_CODEC,
                 ModPayloads::onThroughput);
         registrar.playToServer(SetFacePayload.TYPE, SetFacePayload.STREAM_CODEC,
@@ -88,7 +90,14 @@ public final class ModPayloads {
     private static void onSnapshot(RouterSnapshotPayload payload, IPayloadContext context) {
         RouterMenu menu = openMenu(context.player(), payload.containerId());
         if (menu != null) {
-            menu.applySnapshot(payload.snapshot());
+            menu.applySnapshotBody(payload.snapshot());
+        }
+    }
+
+    private static void onNetworks(RouterNetworksPayload payload, IPayloadContext context) {
+        RouterMenu menu = openMenu(context.player(), payload.containerId());
+        if (menu != null) {
+            menu.applyNetworks(payload.networks());
         }
     }
 

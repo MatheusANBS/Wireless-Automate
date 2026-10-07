@@ -19,16 +19,20 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `WirelessAutomate.java` | Classe `@Mod`: registra os DeferredRegisters e a config, e escuta os eventos de tick, parada do servidor e comandos |
 | `Config.java` | Config do servidor: `TICK_BUDGET_MS`, `ADAPTIVE_BUDGET` e `TIERS` (vazão e alcance por tier) |
 | `block/RouterBlock.java` | Bloco: `FACING` (face da máquina onde foi preso), `TIER`, `canSurvive`, `tryUpgrade` |
-| `block/RouterBlockEntity.java` | Dados do nó (`networkId`). Não faz tick: se registra no `NetworkManager` em `onLoad` |
+| `block/RouterBlockEntity.java` | Dados do nó: `networkId`, `FaceConfig` por tipo e lado relativo, `powered` e os `BlockCapabilityCache` da máquina. Não faz tick: se registra no `NetworkManager` em `onLoad` e avisa `nodeChanged` quando muda |
 | `block/RouterShapes.java` | Formas de colisão rotacionadas pela mesma convenção do blockstate |
 | `block/RouterTier.java` | Enum com os valores padrão da tabela de tiers |
-| `network/NetworkManager.java` | Gerenciador central, um por servidor. **O laço de transferência é o `TODO(v1)` em `tick`** |
-| `network/TickBudget.java` | Orçamento de tempo por tick, adaptativo ao MSPT. Lógica pura, testada por JUnit |
-| `network/PortMode.java`, `ResourceType.java` | Modo de face (Extrai, Insere, Ambos, Nenhum) e tipo de recurso |
-| `item/` | `TierCoreItem` e `RouterBlockItem` funcionam; os outros (Configurador, Tablet, Vinculador, Cartão, Chunk loader) são stubs |
-| `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs` |
-| `command/WaCommand.java` | `/wa profile` |
-| `gametest/RouterGameTests.java` | GameTests (template `empty`) |
+| `network/NetworkManager.java` | Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento |
+| `network/NetworkRoutes.java`, `Port.java`, `NodePorts.java` | Rotas de uma rede: portas (nó, face, tipo) com vazão, cursor e sono que sobrevivem às remontagens |
+| `network/ItemTransfer.java`, `FluidTransfer.java`, `EnergyTransfer.java` | Uma visita de uma origem, por tipo de recurso |
+| `network/NetworkSavedData.java`, `WaNetwork.java` | Redes e rede ativa por jogador, salvas no overworld |
+| `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
+| `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java` | Lógica pura, testada por JUnit |
+| `network/PortMode.java`, `ResourceType.java`, `RedstoneMode.java` | Modo de face, tipo de recurso e controle por redstone |
+| `item/` | `TierCoreItem`, `RouterBlockItem`, `LinkerItem` (modo Único) e `ConfiguratorItem` (pincel) funcionam; Tablet, Cartão e Chunk loader são stubs |
+| `registry/` | `ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents` |
+| `command/WaCommand.java` | `/wa profile`, `/wa network ...` e `/wa face ...` |
+| `gametest/` | GameTests (template `empty`): roteador, configuração, redes, Configurador e transferência |
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
@@ -50,7 +54,7 @@ Antes de commitar, rode `./gradlew build runGameTestServer`. O CI (`.github/work
 ## Convenções e armadilhas
 
 - **Pastas de dados do 1.21.1 são no singular:** `recipe/`, `loot_table/`, `structure/`, `tags/block/`, `tags/item/`.
-- **GameTests:** a classe leva `@GameTestHolder(WirelessAutomate.MODID)` e `@PrefixGameTestTemplate(false)`, e o template é `"empty"`. Os testes do mesmo lote rodam em paralelo e dividem o `NetworkManager`, então teste pertinência (`contains`) e não contagem. O `onLoad` de um block entity recém-colocado só roda no tick seguinte: use `startSequence().thenWaitUntil(...)`.
+- **GameTests:** a classe leva `@GameTestHolder(WirelessAutomate.MODID)` e `@PrefixGameTestTemplate(false)`, e o template é `"empty"`. Os testes do mesmo lote rodam em paralelo e dividem o `NetworkManager`, então teste pertinência (`contains`) e não contagem. Também dividem o `NetworkSavedData`: cada teste cria a própria rede (`NetworkSavedData.get(server).create(...)`), porque um `networkId` que não existe lá deixa o roteador parado. O `onLoad` de um block entity recém-colocado só roda no tick seguinte: use `startSequence().thenWaitUntil(...)`.
 - **Lógica pura sem classes do Minecraft** (como `TickBudget`) vai com teste JUnit em `src/test/java`. Lógica que depende do jogo vai com GameTest.
 - **Performance é requisito**, não detalhe (ver "Arquitetura de performance" na especificação):
   - nada de tick por bloco;

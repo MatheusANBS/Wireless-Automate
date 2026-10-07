@@ -116,6 +116,7 @@ public final class NetworkManager {
         if (ports == null) {
             return;
         }
+        ports.invalidate();
         for (ResourceType type : TYPES) {
             UUID network = node.networkId(type);
             if (Objects.equals(network, ports.network(type))) {

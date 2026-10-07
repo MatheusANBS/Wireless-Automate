@@ -33,7 +33,8 @@ final class Port {
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
     @Nullable ItemTransfer.StockTally tally;
 
-    // Campos de rota, refeitos pela montagem da rede.
+    // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
+    // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
     @Nullable NetworkRoutes network;
     boolean source;
     boolean destination;
@@ -61,12 +62,20 @@ final class Port {
         this.type = type;
     }
 
-    /** Limpa os campos de rota antes da montagem. */
+    /** Limpa tudo o que a montagem preenche, inclusive o que veio da configuração da face. */
     void clearRoute() {
         network = null;
         source = false;
         destination = false;
         filter = FilterSet.EMPTY;
+        clearOrder();
+    }
+
+    /**
+     * Limpa só o que depende das outras portas (destinos e alimentadoras), e mantém o que veio da
+     * configuração da face: a porta de um nó que não mudou entra na montagem sem ser relida.
+     */
+    void clearOrder() {
         order = null;
         feeders.clear();
         sharedFeeders = List.of();

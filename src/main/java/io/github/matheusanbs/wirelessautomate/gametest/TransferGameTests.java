@@ -196,6 +196,33 @@ public final class TransferGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void reconfiguringSomeNodesKeepsTheOthersRouted(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-remontagem");
+        RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity b = chest(helper, B, network, PortMode.INSERT);
+        RouterBlockEntity c = chest(helper, C, network, PortMode.EXTRACT);
+        chestAt(helper, C).setItem(0, new ItemStack(Items.EMERALD, 5));
+
+        // A montagem relê só os nós que mudaram (B e C); A entra com as portas já lidas e continua.
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, b, c))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.EMERALD, 5))
+                .thenExecute(() -> {
+                    c.setMode(ResourceType.ITEM, Direction.UP, PortMode.NONE);
+                    b.setPriority(ResourceType.ITEM, Direction.UP, 3);
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
+                    chestAt(helper, C).setItem(0, new ItemStack(Items.EMERALD, 7));
+                })
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 10))
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    assertCount(helper, C, Items.EMERALD, 7);
+                    assertCount(helper, B, Items.EMERALD, 5);
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
     public static void redstoneHighWaitsForSignal(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-redstone");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);

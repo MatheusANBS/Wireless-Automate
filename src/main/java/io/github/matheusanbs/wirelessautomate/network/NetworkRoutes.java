@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +40,15 @@ import org.jetbrains.annotations.Nullable;
  * inteira no alcance, ver {@link ReachBox}). Essas origens dividem uma única ordem de destinos
  * ({@link RoundRobinOrder.Layout}) e entram uma vez só na lista {@link Port#sharedFeeders}, dividida
  * entre os destinos. As outras conferem destino a destino (O(destinos) cada) e, se a lista der
- * igual à de outra origem, dividem a ordem dela.
+ * igual à de outra origem, dividem a ordem dela. As faces só são relidas nos nós que mudaram desde
+ * a última montagem ({@link NodePorts#collected}); os outros entram com as portas já lidas.
  */
 final class NetworkRoutes {
     static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final Direction[] DIRECTIONS = Direction.values();
+    private static final RouterTier[] TIERS = RouterTier.values();
+    private static final Port[] NO_PORTS = new Port[0];
     private static final double AVERAGE_WEIGHT = 0.05;
 
     final UUID id;
@@ -57,6 +61,10 @@ final class NetworkRoutes {
     private final ReachBox destinationBox = new ReachBox();
     private final LongOpenHashSet destinationEndpoints = new LongOpenHashSet();
     private final Map<List<Port>, RoundRobinOrder.Layout<Port>> layouts = new HashMap<>();
+    /** Valores da config por tier, lidos uma vez por tipo em cada montagem. */
+    private final long[] tierRate = new long[TIERS.length];
+    private final int[] tierRange = new int[TIERS.length];
+    private final boolean[] tierCrossDimension = new boolean[TIERS.length];
     /** A rede existe no {@link NetworkSavedData}; se não, o id é tratado como "sem rede". */
     boolean exists;
     boolean dirty = true;
@@ -74,18 +82,18 @@ final class NetworkRoutes {
 
     /** Remonta origens, destinos e a ordem de entrega. {@code scratch} é uma lista reaproveitada. */
     void rebuild(List<Port> scratch) {
-        // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
-        for (int i = 0, n = members.size(); i < n; i++) {
-            NodePorts member = members.get(i);
-            for (ResourceType type : TYPES) {
-                if (id.equals(member.network(type))) {
-                    member.clearRoutes(type);
-                }
-            }
-        }
         sources.clear();
         destinations.clear();
         if (!exists) {
+            // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
+            for (int i = 0, n = members.size(); i < n; i++) {
+                NodePorts member = members.get(i);
+                for (ResourceType type : TYPES) {
+                    if (id.equals(member.network(type))) {
+                        member.clearRoutes(type);
+                    }
+                }
+            }
             return;
         }
         for (ResourceType type : TRANSFER_TYPES) {
@@ -96,12 +104,13 @@ final class NetworkRoutes {
             Level destinationLevel = measureDestinations(firstDestination, lastDestination);
             RoundRobinOrder.Layout<Port> everyDestination = null;
             List<Port> broadcast = null;
+            readTiers(type);
             for (int i = firstSource; i < sources.size(); i++) {
                 Port source = sources.get(i);
-                Config.TierValues tier = Config.TIERS.get(source.tier);
-                source.limiter.setRatePerSecond(ratePerSecond(type, tier));
-                int range = tier.range().get();
-                boolean crossDimension = tier.crossDimension().get();
+                int tier = source.tier.ordinal();
+                source.limiter.setRatePerSecond(tierRate[tier]);
+                int range = tierRange[tier];
+                boolean crossDimension = tierCrossDimension[tier];
                 // Rotas novas podem destravar uma origem que dormia por falta de destino.
                 source.sourceBackoff.wake();
                 if (lastDestination == firstDestination) {
@@ -138,6 +147,15 @@ final class NetworkRoutes {
             layouts.clear();
         }
         scratch.clear();
+    }
+
+    private void readTiers(ResourceType type) {
+        for (RouterTier tier : TIERS) {
+            Config.TierValues values = Config.TIERS.get(tier);
+            tierRate[tier.ordinal()] = ratePerSecond(type, values);
+            tierRange[tier.ordinal()] = values.range().get();
+            tierCrossDimension[tier.ordinal()] = values.crossDimension().get();
+        }
     }
 
     /**
@@ -194,41 +212,65 @@ final class NetworkRoutes {
         return layout;
     }
 
+    /**
+     * Junta as origens e os destinos do tipo. Um membro que não mudou desde a última montagem entra
+     * com as portas já lidas; os outros têm as faces relidas ({@link #readPorts}).
+     */
     private void collectPorts(ResourceType type) {
         for (int m = 0, n = members.size(); m < n; m++) {
             NodePorts member = members.get(m);
             if (!id.equals(member.network(type))) {
                 continue;
             }
-            RouterBlockEntity node = member.node;
-            boolean powered = node.powered();
-            RouterTier tier = null;
-            BlockPos machine = null;
-            for (Direction face : DIRECTIONS) {
-                FaceConfig config = node.face(type, face);
-                if (!config.isActive(powered)) {
-                    continue;
-                }
-                if (tier == null) {
-                    tier = node.tier();
-                    machine = node.machinePos();
-                }
-                Port port = member.port(type, face);
-                port.network = this;
-                port.priority = config.priority();
-                port.filter = node.filterSet(type, face);
-                port.tier = tier;
-                port.machinePos = machine;
-                if (config.mode().extracts()) {
-                    port.source = true;
+            Port[] active = member.collected(type);
+            if (active == null) {
+                member.clearRoutes(type);
+                active = readPorts(member, type);
+                member.setCollected(type, active);
+            }
+            for (Port port : active) {
+                port.clearOrder();
+                if (port.source) {
                     sources.add(port);
                 }
-                if (config.mode().inserts()) {
-                    port.destination = true;
+                if (port.destination) {
                     destinations.add(port);
                 }
             }
         }
+    }
+
+    /** Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas. */
+    private Port[] readPorts(NodePorts member, ResourceType type) {
+        RouterBlockEntity node = member.node;
+        boolean powered = node.powered();
+        // O facing sai do blockstate: lido uma vez por nó, e não uma por face.
+        Direction facing = node.facing();
+        Port[] active = NO_PORTS;
+        int count = 0;
+        RouterTier tier = null;
+        BlockPos machine = null;
+        for (Direction face : DIRECTIONS) {
+            FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, face));
+            if (!config.isActive(powered)) {
+                continue;
+            }
+            if (tier == null) {
+                tier = node.tier();
+                machine = node.machinePos();
+                active = new Port[DIRECTIONS.length];
+            }
+            Port port = member.port(type, face);
+            port.network = this;
+            port.priority = config.priority();
+            port.filter = node.filterSet(type, face);
+            port.tier = tier;
+            port.machinePos = machine;
+            port.source = config.mode().extracts();
+            port.destination = config.mode().inserts();
+            active[count++] = port;
+        }
+        return count == active.length ? active : Arrays.copyOf(active, count);
     }
 
     /** As duas portas estão em Ambos: depois de {@link #collectPorts}, origem e destino ao mesmo tempo. */

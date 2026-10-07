@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.Direction;
@@ -22,6 +23,12 @@ final class NodePorts {
     private final UUID[] networks = new UUID[TYPES.length];
     /** [tipo × 6 + face absoluta]. */
     private final Port[] ports = new Port[ResourceType.values().length * FACES];
+    /**
+     * Portas ativas de cada tipo, com os campos da configuração da face já preenchidos, da última
+     * leitura; {@code null} = ler de novo na próxima montagem. Toda mudança do nó que mexe nas rotas
+     * passa por {@link NetworkManager#nodeChanged}, que descarta a leitura.
+     */
+    private final Port[][] collected = new Port[TYPES.length][];
 
     NodePorts(RouterBlockEntity node) {
         this.node = node;
@@ -55,8 +62,12 @@ final class NodePorts {
         return false;
     }
 
-    /** Limpa os campos de rota das portas de um tipo, sem tocar nas dos outros (que podem estar noutra rede). */
+    /**
+     * Limpa os campos de rota das portas de um tipo e descarta a leitura dele, sem tocar nos outros
+     * tipos (que podem estar noutra rede).
+     */
     void clearRoutes(ResourceType type) {
+        collected[type.ordinal()] = null;
         int first = type.ordinal() * FACES;
         for (int i = first; i < first + FACES; i++) {
             Port port = ports[i];
@@ -64,6 +75,20 @@ final class NodePorts {
                 port.clearRoute();
             }
         }
+    }
+
+    /** A configuração do nó mudou: a próxima montagem relê as faces de todos os tipos. */
+    void invalidate() {
+        Arrays.fill(collected, null);
+    }
+
+    /** As portas ativas do tipo lidas na última montagem, ou {@code null} se é preciso ler de novo. */
+    Port @Nullable [] collected(ResourceType type) {
+        return collected[type.ordinal()];
+    }
+
+    void setCollected(ResourceType type, Port[] active) {
+        collected[type.ordinal()] = active;
     }
 
     /** A máquina mudou: acorda as portas do nó e as origens que entregam nos destinos dele. */

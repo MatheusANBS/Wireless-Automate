@@ -92,7 +92,10 @@ import org.lwjgl.glfw.GLFW;
  *   <li>Editar abre o filtro; uma regra por tag pelo campo de texto; Voltar;</li>
  *   <li>renomeia o nó e troca a rede da aba Itens pelo seletor na linha das abas; depois troca só a
  *       da aba Energia e confere que a de Itens e a de Fluidos não mudaram;</li>
- *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot).</li>
+ *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot);</li>
+ *   <li>transporte por aba: pedras em A não vão para B enquanto os itens dos dois estão em redes
+ *       diferentes, e chegam quando os itens de A entram na rede dos de B, com a energia de cada um
+ *       em outra rede.</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
  * cada passo só termina quando o servidor aplicou (lido no block entity, na thread do servidor) e o
@@ -471,6 +474,7 @@ public final class DevEndToEnd {
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         cardSteps(list);
         list.add(close("fechar B"));
+        typeNetworkTransferSteps(list);
         return list;
     }
 
@@ -551,12 +555,15 @@ public final class DevEndToEnd {
 
     /** Rede de cada aba no servidor, para o log. */
     private static String serverNetworks(BlockPos pos) throws Exception {
-        return onServer(server -> {
-            RouterBlockEntity router = router(server, pos);
-            return "itens " + networkName(router.networkId(ResourceType.ITEM)) + ", fluidos "
-                    + networkName(router.networkId(ResourceType.FLUID)) + ", energia "
-                    + networkName(router.networkId(ResourceType.ENERGY));
-        });
+        return onServer(server -> serverNetworksText(server, pos));
+    }
+
+    /** Na thread do servidor. */
+    private static String serverNetworksText(MinecraftServer server, BlockPos pos) {
+        RouterBlockEntity router = router(server, pos);
+        return "itens " + networkName(router.networkId(ResourceType.ITEM)) + ", fluidos "
+                + networkName(router.networkId(ResourceType.FLUID)) + ", energia "
+                + networkName(router.networkId(ResourceType.ENERGY));
     }
 
     /** Rede de cada aba no snapshot da tela, para o log. */
@@ -573,6 +580,33 @@ public final class DevEndToEnd {
         }
         return id.equals(mainNetwork) ? MAIN_NETWORK : id.equals(otherNetwork) ? OTHER_NETWORK
                 : id.equals(energyNetwork) ? ENERGY_NETWORK : id.toString();
+    }
+
+    /**
+     * Transporte por aba: com os itens de B na "E2E Outra" e os de A ainda na principal, pedras
+     * postas em A ficam paradas; com os itens de A também na "E2E Outra" elas chegam a B, mesmo com a
+     * energia de A na principal e a de B na "E2E Energia".
+     */
+    private static void typeNetworkTransferSteps(List<Step> list) {
+        list.add(new Step("itens de A e B em redes diferentes ficam parados", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((Container) server.overworld().getBlockEntity(chestA)).setItem(0, new ItemStack(Items.STONE, 64));
+            return null;
+        }), () -> {
+            if (onServer(server -> count(server, chestB, Items.STONE)) != 128) {
+                throw new StepFailure("pedras chegaram a B com os itens em redes diferentes");
+            }
+            // 2 s parados bastam: na mesma rede as 64 pedras passaram em menos de 1 s
+            return stepTicks >= 40 && onServer(server -> count(server, chestA, Items.STONE) == 64);
+        }, () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE)
+                + "; A: " + serverNetworksText(server, routerA) + "; B: " + serverNetworksText(server, routerB))));
+        list.add(new Step("itens de A na rede dos de B chegam, energia em outras redes", 30_000, () -> onServer(server -> {
+            router(server, routerA).setNetworkId(ResourceType.ITEM, otherNetwork);
+            return null;
+        }), () -> onServer(server -> count(server, chestA, Items.STONE) == 0 && count(server, chestB, Items.STONE) == 192
+                && mainNetwork.equals(router(server, routerA).networkId(ResourceType.ENERGY))
+                && energyNetwork.equals(router(server, routerB).networkId(ResourceType.ENERGY))),
+                () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE)
+                        + "; A: " + serverNetworksText(server, routerA) + "; B: " + serverNetworksText(server, routerB))));
     }
 
     /** O slot do inventário (na tela do roteador aberta) com um Cartão de Filtro, ou {@code null}. */

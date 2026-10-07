@@ -180,11 +180,11 @@ Ciclo do gerenciador a cada tick: pega a próxima rota acordada (em ordem de pri
 
 ### Técnicas
 
-1. **Gerenciador central:** os nós não fazem tick. Um único gerenciador por servidor processa todas as redes, com rotas pré-ordenadas por prioridade e reconstruídas só quando a rede muda.
+1. **Gerenciador central:** os nós não fazem tick. Um único gerenciador por servidor processa todas as redes, com rotas pré-ordenadas por prioridade e reconstruídas só quando a rede muda, e só no tipo de recurso que mudou. Sinal de redstone só remonta se alguma face usa redstone; invalidação de capability e mudança de estado da máquina não remontam.
 2. **Orçamento de tempo:** o mod tem um teto de tempo por tick (padrão 1 ms, configurável em `config/wirelessautomate-server.toml`). Se o trabalho não couber, continua no tick seguinte a partir de cursores salvos. O teto se reduz sozinho quando o MSPT do servidor sobe.
-3. **Destinos dormindo:** um destino que recusa um recurso entra numa lista negativa por tipo de recurso e é pulado. Ele acorda quando o inventário vizinho avisa uma mudança ao nó, com custo zero enquanto nada muda. Como reserva, há checagens com intervalo crescente, de 1 tick até alguns segundos.
+3. **Destinos dormindo:** um destino que recusa um recurso entra numa lista negativa por tipo de recurso e é pulado. Ele acorda quando o inventário vizinho avisa uma mudança ao nó, com custo zero enquanto nada muda. Como reserva, há checagens com intervalo crescente, de 1 tick até alguns segundos. As origens também dormem, com o motivo guardado: a vazia acorda quando a própria máquina muda, a que espera destino acorda junto com o primeiro destino que acordar. As entregas do próprio mod não acordam as outras origens, e um destino sem máquina dorme até a máquina aparecer.
 4. **Lotes:** em vez de mover pouco a cada tick, move a quantia de vários ticks numa operação só. A vazão é a mesma e o custo fixo cai. A energia é distribuída num único passe, com contas em `long`.
-5. **Filtros compilados:** ao salvar, o filtro vira conjuntos de hash. A resposta "este recurso passa?" fica em cache por tipo e só é refeita quando o filtro muda ou as tags recarregam.
+5. **Filtros compilados:** ao salvar, o filtro vira conjuntos de hash, com as tags já expandidas num mapa imutável, refeito só quando as tags recarregam. Cada slot passa pelo filtro uma vez só (passa e estoque juntos), e o destino que atingiu o estoque para a varredura na hora.
 6. **Caches de capability:** cada face usa `BlockCapabilityCache`, que guarda a referência ao vizinho e avisa quando ela muda. Nenhuma busca de capability por tick.
 7. **Varredura incremental (planejado):** em inventários grandes, um cursor lembra onde parou e um índice guarda os slots com espaço ou com o recurso desejado.
 8. **Custo por vizinho (planejado):** o mod mede o tempo de cada destino. Destinos lentos de outros mods passam a ser chamados com menos frequência, sem frear o resto da rede.

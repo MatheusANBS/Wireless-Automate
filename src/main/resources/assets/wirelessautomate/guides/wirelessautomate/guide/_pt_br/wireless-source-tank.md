@@ -60,8 +60,8 @@ filtro: Source é uma só.
 - **Tiers:** sobe com os mesmos [Cartões de Upgrade](upgrade-cards.md), no mundo ou na bancada, sem perder o conteúdo.
 - **Quebrar:** o item leva o conteúdo, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
 - **Comparador:** o sinal sobe com a ocupação.
-- **Outros mods** o veem como um tanque comum.
-- **Faces:** as seis são iguais. Ele não empurra nem puxa sozinho: quem move é o roteador, ou um cabo ou cano de outro mod. Uma máquina só encostada nele não recebe nada.
+- **Outros blocos do Ars** que usam a Source, como os Relays, ligam nele direto.
+- **Faces:** as seis são iguais. Além do roteador, os Sourcelinks e as máquinas do Ars por perto o usam pelo alcance, sem precisar encostar nele.
 
 ## Receita
 

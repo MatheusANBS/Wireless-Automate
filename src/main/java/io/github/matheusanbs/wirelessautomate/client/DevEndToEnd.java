@@ -1865,8 +1865,8 @@ public final class DevEndToEnd {
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source", "wireless-source-tank",
-            "troubleshooting", "recipes");
+            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source",
+            "wireless-source-tank", "troubleshooting", "recipes");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}

@@ -45,7 +45,8 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 Tiers can't be skipped: a Basic router won't take the Elite card.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
-[Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and [Source Tank](wireless-source-tank.md)), the same way and
+[Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and
+[Source Tank](wireless-source-tank.md)), the same way and
 keeping their contents. Each tier's capacity is on each one's page.
 
 ## Recipes

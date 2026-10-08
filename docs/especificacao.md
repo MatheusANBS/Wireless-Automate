@@ -185,7 +185,7 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 
 Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
-## Armazenamento do mod (planejado, 0.2)
+## Armazenamento do mod
 
 Motivação: no teste do dono (8/10/2026), 12 milhões de pedregulhos entre dois barris do Sophisticated Storage no Ultimate pararam em ~274 mil itens/s, com o orçamento de 1 ms cheio. O teto não é do motor: o `IItemHandler` extrai no máximo uma pilha (64) por chamada, então cada 64 itens custam quatro chamadas ao outro mod. Um armazenamento do próprio mod guarda **quantidades `long` por tipo** e conversa com o roteador por uma API interna, sem esse limite.
 
@@ -209,7 +209,7 @@ Capacidade proposta por tier (ajustável na config do servidor, seção `storage
 
 Como a transferência usa o atalho:
 
-- **Capability própria** (`wirelessautomate:bulk_items` e as equivalentes de fluido, energia e químico), lida pelo mesmo `BlockCapabilityCache` da face. Nada de `instanceof` nem busca por tick. API por chave e quantidade: `insert(chave, long, simular)` e `extract(chave, long, simular)`, mais a lista de chaves com quantidade.
+- **Capability própria** (`wirelessautomate:bulk_items` e as equivalentes de fluido, energia, químico e `wirelessautomate:bulk_source`), lida pelo mesmo `BlockCapabilityCache` da face. Nada de `instanceof` nem busca por tick. API por chave e quantidade: `insert(chave, long, simular)` e `extract(chave, long, simular)`, mais a lista de chaves com quantidade.
 - **Do mod para o mod:** uma operação por tipo de item, qualquer que seja a quantidade. Os 12 milhões viram uma chamada; o limite volta a ser o tier do roteador (ou nenhum, no Ultimate).
 - **Do mod para outro mod:** a origem entrega em blocos maiores que uma pilha, e o destino aceita o que a inserção dele aceitar. A sobra volta para o nosso baú.
 - **De outro mod para o mod:** limitado pela extração da origem (64 por chamada), mas a inserção do nosso lado é O(1).

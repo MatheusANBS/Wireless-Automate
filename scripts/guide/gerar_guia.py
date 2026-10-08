@@ -582,7 +582,8 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
-[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e [Tanque de Source](wireless-source-tank.md)), do mesmo jeito e sem
+[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e
+[Tanque de Source](wireless-source-tank.md)), do mesmo jeito e sem
 perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 ## Receitas
@@ -626,7 +627,8 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 Tiers can't be skipped: a Basic router won't take the Elite card.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
-[Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and [Source Tank](wireless-source-tank.md)), the same way and
+[Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and
+[Source Tank](wireless-source-tank.md)), the same way and
 keeping their contents. Each tier's capacity is on each one's page.
 
 ## Recipes
@@ -1888,7 +1890,15 @@ filtro: Source é uma só.
 | **Avançado** | 2.560.000 |
 | **Elite** | 40.960.000 |
 | **Ultimate** | Sem limite |
-''' + fill(COMMON_PT, FILTER_PT='', WHAT_PT='um tanque') + '''
+
+## Em comum com o Baú
+
+- **Tiers:** sobe com os mesmos [Cartões de Upgrade](upgrade-cards.md), no mundo ou na bancada, sem perder o conteúdo.
+- **Quebrar:** o item leva o conteúdo, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
+- **Comparador:** o sinal sobe com a ocupação.
+- **Outros blocos do Ars** que usam a Source, como os Relays, ligam nele direto.
+- **Faces:** as seis são iguais. Além do roteador, os Sourcelinks e as máquinas do Ars por perto o usam pelo alcance, sem precisar encostar nele.
+
 ## Receita
 
 Um Tanque Wireless com gemas de Source e ferro (só com o Ars Nouveau).
@@ -1931,7 +1941,15 @@ filter: Source is one thing.
 | **Advanced** | 2,560,000 |
 | **Elite** | 40,960,000 |
 | **Ultimate** | Unlimited |
-''' + fill(COMMON_EN, FILTER_EN='', WHAT_EN='tank') + '''
+
+## Shared with the Chest
+
+- **Tiers:** raised with the same [Upgrade Cards](upgrade-cards.md), in the world or in a crafting table, keeping the contents.
+- **Breaking:** the item takes the contents, and the tooltip shows the total. A full one always becomes an item (in creative, without a pickaxe or in an explosion).
+- **Comparator:** the signal rises with how full it is.
+- **Other Ars blocks** that use Source, like Relays, connect to it directly.
+- **Faces:** all six are the same. Besides the router, nearby Sourcelinks and Ars machines use it by range, without touching it.
+
 ## Recipe
 
 A Wireless Tank with Source gems and iron (only with Ars Nouveau).

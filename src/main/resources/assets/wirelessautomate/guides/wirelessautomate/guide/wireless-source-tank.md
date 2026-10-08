@@ -59,8 +59,8 @@ filter: Source is one thing.
 - **Tiers:** raised with the same [Upgrade Cards](upgrade-cards.md), in the world or in a crafting table, keeping the contents.
 - **Breaking:** the item takes the contents, and the tooltip shows the total. A full one always becomes an item (in creative, without a pickaxe or in an explosion).
 - **Comparator:** the signal rises with how full it is.
-- **Other mods** see it as a regular tank.
-- **Faces:** all six are the same. It doesn't push or pull by itself: the router moves things, or another mod's cable or pipe. A machine just placed against it gets nothing.
+- **Other Ars blocks** that use Source, like Relays, connect to it directly.
+- **Faces:** all six are the same. Besides the router, nearby Sourcelinks and Ars machines use it by range, without touching it.
 
 ## Recipe
 

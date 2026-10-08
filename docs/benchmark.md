@@ -220,3 +220,40 @@ Remontagens no "rebuild" (10 por repetição): **3,3–4,0 ms cada antes, 0,29�
 - O MSPT medido aqui inclui o mod, mas o MSPT que o `TickBudget.adapt` lê (`getAverageTickTimeNanos`) não inclui, porque o `Post` roda depois da conta do vanilla. O orçamento adaptativo, portanto, não enxerga o próprio custo do mod. É aceitável com 0,5–1 ms, mas vale saber.
 - Não há ainda o GameTest de regressão de performance da especificação. O caminho natural é um cenário pequeno (por exemplo, `rebuild` com 100 nós) que falhe se a remontagem passar de um limite folgado.
 - Energia e fluido do cenário misto usam máquinas de teste sem custo próprio: medem só o mod. Caldeirões não servem, porque trocam de bloco a cada balde e, com isso, remontam a rede inteira (o `AbstractCauldronBlock` invalida a capability).
+
+## Auditoria de performance: antes e depois (8 de outubro de 2026)
+
+Rodada completa (`./scripts/bench.sh`, 3 repetições) no container da nuvem (4 núcleos), com a máquina parada: antes = `fe987ba` (motor da 0.1.1 com os cenários novos), depois = todas as correções de [auditoria-performance.md](auditoria-performance.md). Mesma máquina nas duas, então os números se comparam entre si, não com as seções acima. Em "many", "rebuild" e "tablet" o mod sempre esgota o orçamento de 1 ms (é o teto que segura a vazão), então o que conta lá é a vazão e o custo por entrega.
+
+| Cenário | Armaz. | n | Mod média (ms/tick) | Mod p99 | Orçamento esgotado (%) | µs/visita | Unidades/s | Visitas/tick | Remontagens/s | Tablet (ms/tick) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| many | vanilla | 500 | 1,0569 → 1,0373 | 1,8494 → 1,7383 | 100,0 → 100,0 | 15,11 → 9,54 | 128160 → 128127 | 70,5 → 112,1 | 0,0 → 0,0 | — |
+| many | soph | 500 | 1,1256 → 1,1681 | 2,5829 → 2,8934 | 100,0 → 100,0 | 118,03 → 107,07 | 97638 → 112278 | 9,5 → 11,0 | 0,0 → 0,0 | — |
+| idle | vanilla | 500 | 0,0200 → 0,0226 | 0,1375 → 0,1317 | 0,0 → 0,0 | 8,01 → 9,05 | 0 → 0 | 2,5 → 2,5 | 0,0 → 0,0 | — |
+| idle | soph | 500 | 0,0228 → 0,0214 | 0,1996 → 0,1053 | 0,0 → 0,0 | 9,13 → 8,55 | 0 → 0 | 2,5 → 2,5 | 0,0 → 0,0 | — |
+| full | vanilla | 100 | 0,0088 → 0,0065 | 0,0494 → 0,0078 | 0,0 → 0,0 | 17,53 → 12,93 | 0 → 0 | 0,5 → 0,5 | 0,0 → 0,0 | — |
+| full | vanilla | 500 | 0,0232 → 0,0279 | 0,2387 → 0,4002 | 0,2 → 1,0 | 9,29 → 11,17 | 0 → 0 | 2,5 → 2,5 | 0,0 → 0,0 | — |
+| raw | vanilla | 2 | 0,2304 → 0,2815 | 0,3654 → 0,5960 | 0,0 → 0,0 | 115,31 → 141,32 | 69073 → 68885 | 2,0 → 2,0 | 0,0 → 0,0 | — |
+| raw | soph | 2 | 0,8281 → 0,7527 | 2,0253 → 2,7224 | 0,0 → 0,0 | 553,84 → 560,80 | 61167 → 56388 | 1,5 → 1,4 | 0,0 → 0,0 | — |
+| big | vanilla | 20 | 0,1096 → 0,1191 | 0,2717 → 0,2535 | 0,0 → 0,2 | 10,96 → 11,93 | 5120 → 5120 | 10,0 → 10,0 | 0,0 → 0,0 | — |
+| big | soph | 20 | 0,7269 → 0,7797 | 1,5855 → 1,4713 | 5,3 → 5,8 | 74,51 → 79,55 | 5115 → 5120 | 9,8 → 9,8 | 0,0 → 0,0 | — |
+| bigfull | vanilla | 20 | 0,0333 → 0,0375 | 0,2354 → 0,2722 | 0,0 → 0,2 | 12,12 → 14,62 | 2560 → 2560 | 2,8 → 2,6 | 0,0 → 0,0 | — |
+| bigfull | soph | 20 | 0,1434 → 0,1319 | 1,2533 → 1,1273 | 5,3 → 5,2 | 41,37 → 29,33 | 2544 → 2534 | 3,4 → 4,5 | 0,0 → 0,0 | — |
+| types | soph | 20 | 0,7440 → 0,7213 | 1,2050 → 1,3665 | 4,3 → 3,5 | 75,22 → 73,52 | 5120 → 5120 | 9,9 → 9,8 | 0,0 → 0,0 | — |
+| mixed | vanilla | 498 | 0,9874 → 0,9344 | 1,5229 → 1,5883 | 58,2 → 27,5 | 4,53 → 3,90 | 29235845 → 29281987 | 220,3 → 239,8 | 0,0 → 0,0 | — |
+| rebuild | vanilla | 500 | 1,0421 → 1,0260 | 2,1831 → 1,3796 | 100,0 → 100,0 | 21,17 → 8,62 | 127442 → 127970 | 49,9 → 119,6 | 1,0 → 1,0 | — |
+| sparse | vanilla | 500 | 0,2583 → 0,0719 | 0,7532 → 0,2064 | 0,7 → 0,2 | 1,03 → 15,19 | 512 → 512 | 249,8 → 4,7 | 0,0 → 0,0 | — |
+| sparse | soph | 500 | 0,6192 → 0,2289 | 1,1736 → 0,6426 | 1,0 → 0,0 | 2,48 → 48,35 | 512 → 512 | 249,2 → 4,7 | 0,0 → 0,0 | — |
+| stock | soph | 20 | 1,5232 → 0,0252 | 3,1574 → 0,3347 | 96,0 → 0,0 | 1570,29 → 44,97 | 0 → 0 | 1,0 → 0,6 | 0,0 → 0,0 | — |
+| bigstack | vanilla | 2 | 0,0356 → 0,0454 | 0,1084 → 0,1137 | 0,0 → 0,0 | 35,62 → 11,35 | 1280 → 131072 | 1,0 → 4,0 | 0,0 → 0,0 | — |
+| redstone | vanilla | 100 | 0,4962 → 0,3429 | 0,9192 → 1,2203 | 1,2 → 0,7 | 10,01 → 6,87 | 25600 → 25600 | 49,6 → 50,0 | 20,0 → 0,0 | — |
+| tablet | vanilla | 1000 | 1,0413 → 1,0548 | 1,4276 → 2,0344 | 100,0 → 100,0 | 46,38 → 41,03 | 230006 → 254556 | 22,5 → 25,7 | 0,0 → 0,0 | 0,1667 → 0,1234 |
+
+Leitura:
+- **sparse:** com 1 origem ativa e 249 vazias, as visitas por tick caem de ~250 para ~5 e o custo do mod cai 3,6× (vanilla) e 2,7× (Sophisticated). O µs/visita sobe porque sobram só as visitas que trabalham.
+- **stock:** destino no estoque passa de 1,5 ms/tick (orçamento esgotado em 96% dos ticks, nada se move) para 0,025 ms/tick, 60× menos.
+- **bigstack:** a pilha enorme num slot passa de 1.280 itens/s para 131.072 itens/s, o teto do Elite.
+- **redstone:** 20 remontagens/s por um relógio que ninguém usa viram 0.
+- **mixed:** orçamento esgotado cai de 58% para 27,5% dos ticks com a mesma vazão; **many soph** move 15% mais (97,6 mil → 112 mil itens/s); **tablet** −26% no Tablet aberto e +11% de vazão.
+- **raw vanilla:** esta rodada mostrou uma piora (115 → 141 µs/visita). A causa era o #14, que no baú vanilla nunca reconhecia a pilha cheia (o `getSlotLimit` é 99, a pilha para em 64) e só somava trabalho; corrigido em `ae302ec` (o máximo do item decide). Rodadas alternadas de `raw:2:5:vanilla` depois da correção, medianas de µs/visita: base 121 e 136, antes da correção 120 e 137, com a correção 111 e 117 (8–15% abaixo da base). A vazão bruta fica em ~69 mil itens/s, o teto do Ultimate.
+- O resto fica dentro do ruído da máquina (idle, full, big, bigfull, types).

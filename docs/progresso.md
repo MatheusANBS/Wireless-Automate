@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (7/10/2026): 0.1.0 publicada no CurseForge (ID 1732160), tudo no `main`.** Build com 93 testes JUnit e 100 + 4 GameTests (comuns + químicos) passando (o e2e foi rodado pela última vez antes do seletor de tipo do Configurador, do roteador sem rede ao colocar e das abas e do desvincular do Vinculador).
+**Etapa atual (8/10/2026): 0.1.0 publicada no CurseForge (ID 1732160); 0.1.1 pronta no `main` com a auditoria de performance aplicada, falta enviar.** Build com 101 testes JUnit e 115 + 5 GameTests (comuns + químicos) passando, e2e OK (308 linhas) depois de todas as mudanças.
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI, AE2/RS2 e o balanceamento das receitas.
 
@@ -39,11 +39,10 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-1. Testar no jogo o seletor de tipo do Configurador (Shift + roda, tooltip, mensagens), o roteador sem rede ao colocar e a tela nova do Vinculador (caixas das abas, linha "Nenhuma (desvincular)", botão Desvincular, cabeçalho com a seleção), e rodar o `./scripts/e2e.sh` numa máquina com Xvfb (não rodou depois dessas mudanças; o passo "só a aba Fluidos" do e2e agora desmarca as outras caixas, e a captura `l8-vinculador-desvincular` entrou no `DevScreenshot`).
-2. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
-3. Performance: a auditoria de 2026-10-07 está em [auditoria-performance.md](auditoria-performance.md), em ondas. Plano proposto (aguarda o dono): criar antes os cenários de benchmark que faltam (sparse, stock, bigstack, redstone), aplicar as ondas 1 e 2 e o item 10 (estoque) na 0.1.1, medir antes e depois, e deixar as ondas 3 e 4 para uma 0.1.2.
-4. CurseForge: o projeto (ID 1732160) foi criado com a 0.1.0 enviada e em moderação. A 0.1.1 (`build/libs/wirelessautomate-0.1.1.jar`, changelog em `docs/curseforge/changelog-0.1.1.md`) ainda não foi enviada: espera a decisão sobre a performance e o teste no jogo. Ao lançar uma versão nova: subir o jar de `build/libs/`, NeoForge, 1.21.1, Java 21, Client and Server; a descrição vem de `docs/curseforge/descricao.md` (imagens já na galeria).
-5. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.
+1. Enviar a 0.1.1 ao CurseForge: gerar o jar (`./gradlew build`, sai em `build/libs/wirelessautomate-0.1.1.jar`), changelog em `docs/curseforge/changelog-0.1.1.md` (já com a seção de performance). Ao lançar: NeoForge, 1.21.1, Java 21, Client and Server; a descrição vem de `docs/curseforge/descricao.md`.
+2. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
+3. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
+4. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.
 
 **No Windows:** o `scripts/bench.sh` roda pelo Git Bash com `JAVA_HOME` apontando para o JDK 21 (o padrão da máquina é o 17). O `e2e.sh` e o modo de captura dependem do `xvfb-run`; sem ele, rode o cliente direto (`WA_E2E="$PWD/run/e2e" ./gradlew runClient`): a janela aparece e o roteiro roda sozinho. Num `run/` novo, a primeira execução para na tela de acessibilidade e o roteiro não começa; o `options.txt` fica com `onboardAccessibility:false` e a segunda execução passa.
 
@@ -53,7 +52,7 @@ Para conferir telas sem monitor: `WA_SCREENSHOT=<dir> xvfb-run -a -s "-screen 0 
 
 Teste de ponta a ponta: `./scripts/e2e.sh` (precisa de Xvfb; alguns minutos, com as páginas do guia nos dois idiomas). Os GameTests rodam em `run/gametest`, com o mundo apagado antes de cada rodada (um mundo velho reaproveitado fazia testes falharem). Benchmark: `./scripts/bench.sh <cenários>`.
 
-Limites conhecidos do motor, para depois: um fluido por tanque por visita, inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho. A vazão na tela conta só o que o roteador moveu como origem (um roteador que só recebe mostra 0/s).
+Limites conhecidos do motor, para depois: um fluido por tanque por visita (os tanques além do 16º já são lidos, com cursor), inserção em inventário grande sem índice de slots com espaço, sem custo medido por vizinho. A vazão na tela conta só o que o roteador moveu como origem (um roteador que só recebe mostra 0/s).
 
 ## Decisões tomadas no código
 
@@ -92,6 +91,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-08 | Auditoria de performance aplicada (subagentes em três frentes + um de benchmark): origens com motivo do sono e entregas que não acordam as vazias, remontagem só do tipo que mudou e nunca por redstone sem uso, capability ou estado da máquina, pilha grande na vazão do tier, tanques além do 16º, origem dormindo até o destino acordar, estoque no destino sem varrer, filtros com tags expandidas e uma avaliação por slot, Tablet e telas mais leves (protocolo 3). Fora: #8 (lote mínimo, decisão do dono), formato do NodeIndex e alocações nas telas. Cenários novos no bench (sparse, stock, bigstack, redstone, tablet) com antes e depois em `docs/benchmark.md`: sparse 3,6× mais barato, stock 60×, bigstack 1.280 → 131.072 itens/s, redstone 20 → 0 remontagens/s. Seletor do Configurador e tela do Vinculador testados no jogo pelo dono. 101 JUnit, 115 + 5 GameTests, e2e OK. |
 | 2026-10-07 | Auditoria de performance (quatro agentes, só leitura) consolidada em `docs/auditoria-performance.md`: acordadas em massa das origens, remontagens por capability e redstone, slot de pilha grande preso em 64 por visita, tanques acima do 16º, estoque no destino e o Tablet em bases grandes. Nada aplicado. |
 | 2026-10-07 | Vinculador (ainda na 0.1.1): caixas por aba na tela (Itens, Fluidos, Energia e, com o Mekanism, Químicos; componente `linker_tabs`, `linker/LinkerTabs` com JUnit, `linker_type` antigo ainda vale) e "Nenhuma (desvincular)" na lista de redes (componente `linker_unlink`): clique e área tiram as abas marcadas da rede sem criar rede, roteadores protegidos ficam de fora na área. Todos sem o Mekanism não mexe mais na aba Químicos. Guia (Vinculador, Redes, Químicos), especificação, README, descrição e changelog do CurseForge em dia. 93 JUnit, 100 + 4 GameTests. |
 | 2026-10-07 | Configurador com seletor do tipo colado (Shift + roda do mouse: Todos, Itens, Fluidos, Energia e Químicos com o Mekanism; num tipo só, as outras abas do destino ficam intactas, no pincel e na área) e roteador colocado sem rede (o jogador vincula o primeiro e replica com o Configurador). Guia, especificação e descrição do CurseForge em dia. 83 JUnit, 94 + 3 GameTests. |

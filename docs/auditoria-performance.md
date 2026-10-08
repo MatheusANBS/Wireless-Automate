@@ -1,6 +1,8 @@
 # Auditoria de performance (2026-10-07)
 
-Leitura do código feita por quatro agentes (laço de transferência, rotas, filtros e o que fica fora do laço), depois da 0.1.1. Nada aqui foi aplicado ainda. Caminhos relativos a `src/main/java/io/github/matheusanbs/wirelessautomate/`. Ganhos são estimativas de leitura, a confirmar no benchmark.
+Leitura do código feita por quatro agentes (laço de transferência, rotas, filtros e o que fica fora do laço), depois da 0.1.1.
+
+**Estado (8/10/2026): aplicada na 0.1.1**, por subagentes em três frentes, com os números de antes e depois em [benchmark.md](benchmark.md) ("Auditoria de performance: antes e depois"). Tudo aplicado, menos: o **#8 (lote mínimo), recusado pelo dono** (o Básico continua com fluxo contínuo); dos menores, o **formato do NodeIndex** (impediria abrir o mundo numa 0.1.0) e as **alocações por quadro nas telas** (só cliente, ganho mínimo), deixados de fora por baixo impacto. O #14 precisou de um ajuste depois do benchmark (no baú vanilla a pilha cheia é decidida pelo máximo do item, não pelo limite do slot). O texto abaixo é o da auditoria original. Caminhos relativos a `src/main/java/io/github/matheusanbs/wirelessautomate/`. Ganhos são estimativas de leitura, a confirmar no benchmark.
 
 ## Onda 1: acordar e remontar menos (maior ganho, risco baixo)
 

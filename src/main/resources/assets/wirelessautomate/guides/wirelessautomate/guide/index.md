@@ -39,6 +39,7 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:storage_tank" /> [Wireless Tank](wireless-tank.md) | Many fluids in one tank, with billions of mB. |
 | <ItemImage id="wirelessautomate:storage_battery" /> [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
 | <ItemImage id="wirelessautomate:storage_chemical_tank" /> [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
+| <ItemImage id="wirelessautomate:storage_source_tank" /> [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
 
 ## Where to start
 

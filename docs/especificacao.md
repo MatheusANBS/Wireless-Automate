@@ -191,7 +191,7 @@ Motivação: no teste do dono (8/10/2026), 12 milhões de pedregulhos entre dois
 
 Decisões do dono (8/10/2026):
 
-- **Quatro blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia) e Tanque Químico (só com o Mekanism, pela ponte `Chemicals`).
+- **Cinco blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia), Tanque Químico (só com o Mekanism, pela ponte `Chemicals`) e Tanque de Source (só com o Ars Nouveau, pela ponte `Sources`).
 - **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Ultimate, sem pular e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
 - **Tipos ilimitados:** o limite é só a quantidade total do tier.
 - **Tela em lista com busca** (estilo terminal do AE2), redimensionável pelas bordas e pela alça do canto, sempre centralizada: grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
@@ -200,12 +200,12 @@ Decisões do dono (8/10/2026):
 
 Capacidade proposta por tier (ajustável na config do servidor, seção `storage`):
 
-| Tier | Baú (itens) | Tanque e Tanque Químico | Bateria |
-| --- | --- | --- | --- |
-| Básico | 262.144 | 1.000.000 mB | 16.000.000 FE |
-| Avançado | 16.777.216 | 64.000.000 mB | 1.000.000.000 FE |
-| Elite | 1.073.741.824 | 4.000.000.000 mB | 64.000.000.000 FE |
-| Ultimate | Sem limite | Sem limite | Sem limite |
+| Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
+| --- | --- | --- | --- | --- |
+| Básico | 262.144 | 1.000.000 mB | 16.000.000 FE | 160.000 |
+| Avançado | 16.777.216 | 64.000.000 mB | 1.000.000.000 FE | 2.560.000 |
+| Elite | 1.073.741.824 | 4.000.000.000 mB | 64.000.000.000 FE | 40.960.000 |
+| Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
 
 Como a transferência usa o atalho:
 
@@ -229,6 +229,8 @@ Decididos pelo dono depois (8/10/2026):
 - **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos Cartões de Upgrade, como no roteador.
 - **Texturas:** prontas em `scripts/textures/gerar_texturas.py` (ver "Armazenamento do mod" no pacote de design).
 - **Tanque, Bateria e Tanque Químico prontos (8/10/2026):** no mesmo molde do Baú. As APIs de fluido e energia do NeoForge são em `int` (até ~2,1 bilhões por chamada, e o motor faz uma por tipo por tick), então o Tanque e a Bateria têm capabilities próprias em `long` (`BulkFluids`, `BulkEnergy`) que o roteador usa quando a origem ou o destino é do mod; a de químico do Mekanism já é em `long`. O Tanque troca baldes no bloco e pela tela; a Bateria tem uma tela própria com a carga e a variação por tick, e não tem filtro.
+- **Tanque de Source pronto (8/10/2026, etapa 2):** guarda Source em `long` na base `ScalarStorageBlockEntity` (a mesma da Bateria, com o `ScalarStore`). Capacidade por tier de 160.000, 2.560.000, 40.960.000 e sem limite (config `sourceTankCapacity`). Sem filtro nem lista: a tela (`StorageScalarScreen`) tem a barra roxa, a vazão em Source/s e uma linha de dica. O bloco mostra o nível na coluna de vidro (propriedade `fill`, 0 a 10, forma fina como a Source Jar). Para o roteador, a capability `wirelessautomate:bulk_source` (em `long`, entre dois tanques tudo passa de uma vez). Para o Ars, `ArsStorage` dá a `ISourceCap` (roteador e Relays) e registra o provider no `SourceManager`: Sourcelinks a 5 blocos depositam e as máquinas do Ars tiram, como de uma Source Jar; a visão em `int` fica limitada a `Integer.MAX_VALUE`. Receita vanilla `IGI/GTG/IGI` com ferro, gema de Source e um Tanque Wireless, só com o Ars. Sempre registrado; sem o Ars some da aba criativa e do JEI, e o tooltip diz que precisa do Ars.
+- **Cores dos tipos:** Químicos `#97C853` (o verde do Tanque Químico) e Source `#B36DE0` (o roxo do Ars). Na barra do Tanque de Source: corpo `#9749C2`, sombra `#6B2F8F`, brilho `#EA8EF3`.
 - **Baú pronto (8/10/2026):** tudo o que está acima para o Baú, mais o filtro de entrada indo junto no item quebrado e o upgrade na bancada (a mesma receita do roteador). Na tela: clique pega uma pilha, botão direito meia, Shift + clique manda para o inventário; com item no cursor, clicar na lista guarda (botão direito, um). A tela recebe só as diferenças por tipo, no máximo a cada 5 ticks, e só aberta.
 
 ## Arquitetura de performance

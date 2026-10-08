@@ -228,6 +228,7 @@ recursos entre si, sem canos.
 | ''' + item('storage_tank') + ''' [Tanque Wireless](wireless-tank.md) | Vários fluidos num tanque só, com bilhões de mB. |
 | ''' + item('storage_battery') + ''' [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
 | ''' + item('storage_chemical_tank') + ''' [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
+| ''' + item('storage_source_tank') + ''' [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
 
 ## Por onde começar
 
@@ -281,6 +282,7 @@ resources with the others, with no pipes.
 | ''' + item('storage_tank') + ''' [Wireless Tank](wireless-tank.md) | Many fluids in one tank, with billions of mB. |
 | ''' + item('storage_battery') + ''' [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
 | ''' + item('storage_chemical_tank') + ''' [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
+| ''' + item('storage_source_tank') + ''' [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
 
 ## Where to start
 
@@ -580,7 +582,7 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
-[Bateria](wireless-battery.md) e [Tanque Químico](wireless-chemical-tank.md)), do mesmo jeito e sem
+[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e [Tanque de Source](wireless-source-tank.md)), do mesmo jeito e sem
 perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 ## Receitas
@@ -624,7 +626,7 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 Tiers can't be skipped: a Basic router won't take the Elite card.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
-[Battery](wireless-battery.md) and [Chemical Tank](wireless-chemical-tank.md)), the same way and
+[Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and [Source Tank](wireless-source-tank.md)), the same way and
 keeping their contents. Each tier's capacity is on each one's page.
 
 ## Recipes
@@ -1814,6 +1816,8 @@ o resto do mod funciona igual.
 | **3** | Os Sourcelinks enchem a primeira jarra; o roteador leva a Source para a segunda, e a máquina tira dela. |
 
 O roteador também liga direto nos Relays do Ars e na Imbuement Chamber.
+
+No lugar das Source Jars, um [Tanque de Source Wireless](wireless-source-tank.md) guarda muito mais e as máquinas do Ars tiram dele do mesmo jeito.
 ''', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 16) + '''
 # Ars Nouveau Source
 
@@ -1839,12 +1843,107 @@ and the rest of the mod works the same.
 | **3** | The Sourcelinks fill the first jar; the router carries the Source to the second, and the machine draws from it. |
 
 The router also connects straight to Ars Relays and the Imbuement Chamber.
+
+Instead of Source Jars, a [Wireless Source Tank](wireless-source-tank.md) holds far more and Ars machines draw from it the same way.
 ''')
+
+# =====================================================================================
+# Tanque de Source
+# =====================================================================================
+page('wireless-source-tank.md', front('Tanque de Source Wireless', 'wirelessautomate:storage_source_tank', 17,
+                                      item_ids=['wirelessautomate:storage_source_tank']) + '''
+# Tanque de Source Wireless
+
+<ItemImage id="wirelessautomate:storage_source_tank" scale="2" float="left" />
+
+Guarda **Source** do Ars Nouveau em grande quantidade, muito além de uma Source Jar. Só existe com o
+Ars Nouveau instalado. Preso a um roteador na aba **Source**, ele recebe e entrega Source como os
+outros armazenamentos.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_source_tank', LINE='Source de um Tanque para outro pela aba Source') + '''
+
+## Para o Ars
+
+- Os **Sourcelinks** num raio de 5 blocos depositam nele.
+- As máquinas do Ars por perto (Enchanting Apparatus, Imbuement Chamber, rituais, Spell Turrets e Relays de depósito) tiram dele, como de uma Source Jar.
+
+## Com o roteador
+
+Na aba **Source** ele funciona como qualquer outra face. Entre dois tanques, tudo passa de uma
+vez.
+
+## A tela
+
+Clique no Tanque: a barra roxa mostra quanto ele tem, a porcentagem e a vazão em Source por
+segundo. A coluna de vidro do bloco também mostra o nível, de vazio a cheio. O Tanque não tem
+filtro: Source é uma só.
+
+## Capacidade
+
+| Tier | Source |
+| --- | --- |
+| **Básico** | 160.000 |
+| **Avançado** | 2.560.000 |
+| **Elite** | 40.960.000 |
+| **Ultimate** | Sem limite |
+''' + fill(COMMON_PT, FILTER_PT='', WHAT_PT='um tanque') + '''
+## Receita
+
+Um Tanque Wireless com gemas de Source e ferro (só com o Ars Nouveau).
+
+<RecipeFor id="wirelessautomate:storage_source_tank" />
+''', front('Wireless Source Tank', 'wirelessautomate:storage_source_tank', 17,
+           item_ids=['wirelessautomate:storage_source_tank']) + '''
+# Wireless Source Tank
+
+<ItemImage id="wirelessautomate:storage_source_tank" scale="2" float="left" />
+
+Stores Ars Nouveau **Source** in large amounts, far beyond a Source Jar. It only exists with Ars
+Nouveau installed. Attached to a router on the **Source** tab, it takes and gives Source like the
+other storages.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_source_tank', LINE='Source from one Tank to another through the Source tab') + '''
+
+## For Ars
+
+- **Sourcelinks** within 5 blocks deposit into it.
+- Ars machines nearby (Enchanting Apparatus, Imbuement Chamber, rituals, Spell Turrets and deposit Relays) draw from it, as from a Source Jar.
+
+## With the router
+
+On the **Source** tab it works like any other face. Between two tanks, everything moves at once.
+
+## The screen
+
+Click the Tank: the purple bar shows how much it holds, the percentage and the rate in Source per
+second. The block's glass column also shows the level, from empty to full. The Tank has no
+filter: Source is one thing.
+
+## Capacity
+
+| Tier | Source |
+| --- | --- |
+| **Basic** | 160,000 |
+| **Advanced** | 2,560,000 |
+| **Elite** | 40,960,000 |
+| **Ultimate** | Unlimited |
+''' + fill(COMMON_EN, FILTER_EN='', WHAT_EN='tank') + '''
+## Recipe
+
+A Wireless Tank with Source gems and iron (only with Ars Nouveau).
+
+<RecipeFor id="wirelessautomate:storage_source_tank" />
+''')
+
 
 # =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 17) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 18) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -1865,7 +1964,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
 cada rede está movendo e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 17) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 18) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -1896,6 +1995,7 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:storage_tank" />
 <RecipeFor id="wirelessautomate:storage_battery" />
 <RecipeFor id="wirelessautomate:storage_chemical_tank" />
+<RecipeFor id="wirelessautomate:storage_source_tank" />
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
@@ -1906,26 +2006,26 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 18) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 19) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
 
 | Também na bancada | Como |
 | --- | --- |
-| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico) + o cartão do tier seguinte, em qualquer posição. |
+| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source) + o cartão do tier seguinte, em qualquer posição. |
 | **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios: o original volta. |
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 18) + '''
+''', front('All recipes', 'minecraft:crafting_table', 19) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank) + the next tier's card, in any slots. |
+| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the next tier's card, in any slots. |
 | **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
 | **This guide** | Book + redstone. |
 

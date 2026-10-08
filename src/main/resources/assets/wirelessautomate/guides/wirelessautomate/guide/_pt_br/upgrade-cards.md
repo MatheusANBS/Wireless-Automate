@@ -45,7 +45,7 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
-[Bateria](wireless-battery.md) e [Tanque Químico](wireless-chemical-tank.md)), do mesmo jeito e sem
+[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e [Tanque de Source](wireless-source-tank.md)), do mesmo jeito e sem
 perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 ## Receitas

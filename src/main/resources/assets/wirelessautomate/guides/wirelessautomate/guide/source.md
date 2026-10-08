@@ -31,3 +31,5 @@ and the rest of the mod works the same.
 | **3** | The Sourcelinks fill the first jar; the router carries the Source to the second, and the machine draws from it. |
 
 The router also connects straight to Ars Relays and the Imbuement Chamber.
+
+Instead of Source Jars, a [Wireless Source Tank](wireless-source-tank.md) holds far more and Ars machines draw from it the same way.

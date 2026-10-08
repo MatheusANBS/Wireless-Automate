@@ -3,7 +3,7 @@ navigation:
   title: Todas as receitas
   icon: minecraft:crafting_table
   parent: index.md
-  position: 18
+  position: 19
 ---
 
 
@@ -13,7 +13,7 @@ Todas com itens vanilla, na bancada.
 
 | Também na bancada | Como |
 | --- | --- |
-| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico) + o cartão do tier seguinte, em qualquer posição. |
+| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source) + o cartão do tier seguinte, em qualquer posição. |
 | **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios: o original volta. |
 | **Este guia** | Livro + redstone. |
 
@@ -22,6 +22,7 @@ Todas com itens vanilla, na bancada.
 <RecipeFor id="wirelessautomate:storage_tank" />
 <RecipeFor id="wirelessautomate:storage_battery" />
 <RecipeFor id="wirelessautomate:storage_chemical_tank" />
+<RecipeFor id="wirelessautomate:storage_source_tank" />
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />

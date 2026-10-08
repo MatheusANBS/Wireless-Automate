@@ -31,3 +31,5 @@ o resto do mod funciona igual.
 | **3** | Os Sourcelinks enchem a primeira jarra; o roteador leva a Source para a segunda, e a máquina tira dela. |
 
 O roteador também liga direto nos Relays do Ars e na Imbuement Chamber.
+
+No lugar das Source Jars, um [Tanque de Source Wireless](wireless-source-tank.md) guarda muito mais e as máquinas do Ars tiram dele do mesmo jeito.

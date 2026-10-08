@@ -327,7 +327,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         editFilterButton = add(new FlatButton(x + x1() - 40, y + FILTER_Y, 40, ROW_H, tr("filter.edit"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), this::openFilter)
-                .tooltip(() -> hasFilter() ? tr("filter.edit.tooltip") : tr("filter.untyped", typeName(type))));
+                .tooltip(() -> tr("filter.edit.tooltip")));
 
         moreButton = add(new FlatButton(x + X0, y + MORE_Y, 60, 12, tr("more"), this::paintMore,
                 () -> expanded = !expanded).tooltip(() -> tr("more.tooltip")));
@@ -427,7 +427,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         prioMinus.visible = prioPlus.visible = redstoneButton.visible = expanded;
         prioMinus.active = prioPlus.active = redstoneButton.active = v.available();
         redstoneButton.setMessage(tr("redstone.narration", redstoneName(v.redstone())));
-        editFilterButton.active = hasFilter();
+        editFilterButton.visible = editFilterButton.active = hasFilter();
 
         List<NetworkEntry> networks = s.networks();
         networkScroll = Math.max(0, Math.min(networkScroll, networks.size() + 1 - DROPDOWN_MAX_ROWS));
@@ -864,11 +864,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             int textX = x + CARD_BG_X + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
             GuiText.draw(g, font, filterSummary(v), textX, y + CARD_BG_Y + 5, x + x1() - textX, GuiPaint.FG);
         } else {
-            GuiText.draw(g, font, tr("filter.untyped", typeName(type)), x + rx(), y + FILTER_Y + 3, RW - 44,
+            int used = GuiText.wrap(g, font, tr("filter.untyped", typeName(type)), x + rx(), y + FILTER_Y + 3, RW, 2,
                     GuiPaint.DISABLED);
             long tierRate = Config.TIERS.get(s.tier()).rate(type);
             Component rateText = tierRate == 0 ? tr("rate.unlimited") : ResourceStyle.rate(type, tierRate);
-            GuiText.draw(g, font, tr("rate.tier", rateText), x + rx(), y + FILTER_Y + 17, RW, GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("rate.tier", rateText), x + rx(), y + FILTER_Y + 3 + used + 4, RW, GuiPaint.MUTED);
         }
 
         // recolhido, embaixo das faces: prioridade e redstone
@@ -1154,7 +1154,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     // ------------------------------------------------------------------ captura de desenvolvimento
 
     void previewType(ResourceType type) {
-        this.type = type;
+        selectType(type);
         refresh();
     }
 

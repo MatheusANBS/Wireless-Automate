@@ -181,7 +181,7 @@ Decisões do dono (8/10/2026):
 - **Quatro blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia) e Tanque Químico (só com o Mekanism, pela ponte `Chemicals`).
 - **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Ultimate, sem pular e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
 - **Tipos ilimitados:** o limite é só a quantidade total do tier.
-- **Tela em lista com busca** (estilo terminal do AE2): grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
+- **Tela em lista com busca** (estilo terminal do AE2), redimensionável pelas bordas e pela alça do canto, sempre centralizada: grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
 - **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
 - **Versão 0.2**, depois do envio da 0.1.1.
 

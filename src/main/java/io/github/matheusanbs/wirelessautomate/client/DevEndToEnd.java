@@ -130,7 +130,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
  *       dois blocos marca os cantos em volta dos roteadores, clique no ar abre a tela, que escolhe a
  *       rede e o tipo Fluidos e vincula; confere no servidor que só a aba de fluidos dos dois mudou.</li>
  *   <li>Baú Wireless: os 12 milhões de pedregulho de um Baú para outro com roteadores Ultimate, a
- *       tela (lista, busca, pegar e devolver pelo clique, filtro de entrada e Voltar), o Cartão de
+ *       tela (lista, busca, pegar e devolver pelo clique, redimensionar pela alça, filtro de entrada e Voltar), o Cartão de
  *       Upgrade no bloco, quebrar e recolocar com o conteúdo e uma foto dos blocos.</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
@@ -1166,6 +1166,7 @@ public final class DevEndToEnd {
     private static void storageChestSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         long[] started = new long[1];
+        boolean[] clicked = new boolean[3];
         list.add(new Step("Baú: 12 milhões de um Baú para outro", 30_000, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
@@ -1221,6 +1222,47 @@ public final class DevEndToEnd {
                 () -> "cursor " + chestScreen().getMenu().getCarried()));
         list.add(new Step("Baú: limpar a busca", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue(""),
                 () -> chestScreen().shownCount() == 3, () -> "na lista " + chestScreen().shownCount()));
+        int[] before = new int[2];
+        list.add(new Step("Baú: aumentar pela alça (+4 colunas, +2 linhas)", STEP_TIMEOUT_MS, () -> {
+            StorageChestScreen screen = chestScreen();
+            before[0] = screen.cols();
+            before[1] = screen.rows();
+            // Cresce em torno do centro: cada lado anda o que o mouse andou, então 2 células de
+            // mouse dão 4 colunas.
+            dragGrip(screen, 2 * 18, 18);
+        }, () -> chestScreen().cols() == before[0] + 4 && chestScreen().rows() == before[1] + 2
+                && inventoryFollows(chestScreen()),
+                () -> "grade " + chestScreen().cols() + "x" + chestScreen().rows() + ", antes " + before[0] + "x" + before[1]));
+        list.add(capture("bau-6-maior"));
+        list.add(new Step("Baú: Shift + clique no inventário na posição nova", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).getInventory().setItem(9, new ItemStack(Items.EMERALD, 5));
+                return null;
+            });
+        }, () -> {
+            StorageChestScreen screen = chestScreen();
+            Slot slot = screen.getMenu().slots.stream().filter(s -> s.getContainerSlot() == 9).findFirst().orElseThrow();
+            if (!clicked[2]) {
+                if (!slot.getItem().is(Items.EMERALD)) {
+                    return false;
+                }
+                clicked[2] = true;
+                // O mesmo pacote do Shift + clique da tela (que lê o teclado de verdade), pelo índice do
+                // slot trocado: ele precisa apontar para o mesmo slot no servidor.
+                Minecraft.getInstance().gameMode.handleInventoryMouseClick(screen.getMenu().containerId, slot.index, 0,
+                        ClickType.QUICK_MOVE, Minecraft.getInstance().player);
+            }
+            return onServer(server -> storageChest(server, storageB).storage().count(new ItemStack(Items.EMERALD)) == 5);
+        }, () -> onServer(server -> "esmeraldas no Baú " + storageChest(server, storageB).storage().count(new ItemStack(Items.EMERALD)))));
+        list.add(new Step("Baú: diminuir até o mínimo pela alça", STEP_TIMEOUT_MS,
+                () -> dragGrip(chestScreen(), -40 * 18, -40 * 18),
+                () -> chestScreen().cols() == 9 && chestScreen().rows() == 3 && inventoryFollows(chestScreen()),
+                () -> "grade " + chestScreen().cols() + "x" + chestScreen().rows()));
+        list.add(capture("bau-7-minimo"));
+        list.add(new Step("Baú: tamanho padrão de volta", STEP_TIMEOUT_MS,
+                () -> dragGrip(chestScreen(), (before[0] - 9) * 9, (before[1] - 3) * 9),
+                () -> chestScreen().cols() == before[0] && chestScreen().rows() == before[1],
+                () -> "grade " + chestScreen().cols() + "x" + chestScreen().rows()));
         list.add(new Step("Baú: abrir o filtro de entrada", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro")),
                 () -> Minecraft.getInstance().screen instanceof FilterScreen,
@@ -1232,7 +1274,6 @@ public final class DevEndToEnd {
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(close("Baú: fechar"));
 
-        boolean[] clicked = new boolean[2];
         list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {
             onServer(server -> {
                 server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
@@ -1273,8 +1314,9 @@ public final class DevEndToEnd {
                 BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(floor).add(0, 0.5, 0), Direction.UP, floor, false);
                 Minecraft.getInstance().gameMode.useItemOn(Minecraft.getInstance().player, InteractionHand.MAIN_HAND, hit);
             }
+            // + as 5 esmeraldas guardadas pelo Shift + clique depois de redimensionar
             return onServer(server -> server.overworld().getBlockEntity(storageB) instanceof StorageChestBlockEntity chest
-                    && chest.storage().total() == CHEST_TOTAL);
+                    && chest.storage().total() == CHEST_TOTAL + 5);
         }, () -> onServer(server -> server.overworld().getBlockEntity(storageB) instanceof StorageChestBlockEntity chest
                 ? "total " + chest.storage().total() : "sem Baú em " + storageB.toShortString())));
         list.add(capture("bau-4-tooltip-mao"));
@@ -1290,6 +1332,27 @@ public final class DevEndToEnd {
             return null;
         }), () -> stepTicks >= 20, () -> "esperando o chunk desenhar"));
         list.add(capture("bau-5-blocos"));
+    }
+
+    /** Arrasta a alça de redimensionar do Baú como o mouse: aperta, arrasta {@code dx, dy} e solta. */
+    private static void dragGrip(StorageChestScreen screen, int dx, int dy) {
+        int[] grip = screen.gripPoint();
+        screen.mouseClicked(grip[0], grip[1], 0);
+        screen.mouseDragged(grip[0] + dx, grip[1] + dy, 0, dx, dy);
+        screen.mouseReleased(grip[0] + dx, grip[1] + dy, 0);
+    }
+
+    /**
+     * Depois de redimensionar: o painel continua no centro da tela e o inventário do jogador
+     * acompanhou, centralizado embaixo dele.
+     */
+    private static boolean inventoryFollows(StorageChestScreen screen) {
+        Slot first = screen.getMenu().slots.stream().filter(s -> s.getContainerSlot() == 9).findFirst().orElseThrow();
+        int center = first.x + 9 * 18 / 2 - 1;
+        boolean centered = Math.abs(screen.getGuiLeft() + screen.getXSize() / 2 - screen.width / 2) <= 1
+                && Math.abs(screen.getGuiTop() + screen.getYSize() / 2 - screen.height / 2) <= 1;
+        return centered && Math.abs(center - screen.getXSize() / 2) <= 1
+                && first.y + 3 * 18 + 4 + 18 + 8 + 8 >= screen.getYSize() - 8;
     }
 
     private static StorageChestScreen chestScreen() throws StepFailure {

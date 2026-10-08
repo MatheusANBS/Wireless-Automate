@@ -99,6 +99,27 @@ public class StorageChestMenu extends AbstractContainerMenu {
         }
     }
 
+    /**
+     * Cliente: muda o inventário do jogador de lugar na tela (a tela do Baú é redimensionável). A
+     * posição de um slot só serve para desenhar e clicar, e o {@link Slot} a guarda como
+     * {@code final}; então os 36 slots são trocados por iguais na posição nova, com o mesmo índice
+     * no menu e no inventário. O servidor não usa a posição, e nada muda para ele.
+     */
+    public void placeInventory(int x, int y) {
+        for (int i = 0; i < slots.size(); i++) {
+            Slot old = slots.get(i);
+            int containerSlot = old.getContainerSlot();
+            int sx = x + (containerSlot % 9) * 18;
+            int sy = containerSlot < 9 ? y + 58 : y + (containerSlot / 9 - 1) * 18;
+            if (old.x == sx && old.y == sy) {
+                continue;
+            }
+            Slot moved = new Slot(old.container, containerSlot, sx, sy);
+            moved.index = old.index;
+            slots.set(i, moved);
+        }
+    }
+
     public StorageChestView view() {
         return view;
     }

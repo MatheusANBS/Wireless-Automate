@@ -259,6 +259,7 @@
   "gui.wirelessautomate.storage.sort.name": "Name",
   "gui.wirelessautomate.storage.sort.mod": "Mod",
   "gui.wirelessautomate.storage.sort.tooltip": "List order: amount, name or mod. Click to change",
+  "gui.wirelessautomate.storage.resize.tooltip": "Drag to resize (%s × %s)",
   "gui.wirelessautomate.storage.amount": "Amount: %s",
   "gui.wirelessautomate.storage.click.hint": "Click: a stack · Right: half · Shift: to inventory",
   "gui.wirelessautomate.storage.empty": "Empty. Shift + click in the inventory stores",

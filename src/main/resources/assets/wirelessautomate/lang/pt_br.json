@@ -259,6 +259,7 @@
   "gui.wirelessautomate.storage.sort.name": "Nome",
   "gui.wirelessautomate.storage.sort.mod": "Mod",
   "gui.wirelessautomate.storage.sort.tooltip": "Ordem da lista: quantidade, nome ou mod. Clique para trocar",
+  "gui.wirelessautomate.storage.resize.tooltip": "Arraste para redimensionar (%s × %s)",
   "gui.wirelessautomate.storage.amount": "Quantidade: %s",
   "gui.wirelessautomate.storage.click.hint": "Clique: uma pilha · Direito: metade · Shift: para o inventário",
   "gui.wirelessautomate.storage.empty": "Vazio. Shift + clique no inventário guarda",

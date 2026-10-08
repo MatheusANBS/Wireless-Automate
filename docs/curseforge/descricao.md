@@ -8,14 +8,14 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ## Features
 
-![Connect machines without pipes](https://media.forgecdn.net/attachments/2023/183/feature-1-network-png.png)
+![Connect machines without pipes](https://media.forgecdn.net/attachments/2025/358/feature-1-network-png.png)
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on.
 - **Networks, not cables.** Routers on the same network trade resources of the same type. Each resource tab of a router can join a different network, so a furnace's items can go to your ore line while its energy comes from your base grid.
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
 
-![Configure every face](https://media.forgecdn.net/attachments/2023/184/feature-2-router-png.png)
+![Configure every face](https://media.forgecdn.net/attachments/2025/359/feature-2-router-png.png)
 
 ### Filters with no entry limit
 
@@ -24,19 +24,19 @@ Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or bl
 - **Tag inspector:** put any item in the inspector and every tag it has shows up, ready to check and add. Or search every tag in the game, with how many items each one matches and a preview.
 - A resizable window with the entries in a searchable list.
 
-![Tags in one click](feature-3-filters.png)
+![Tags in one click](https://media.forgecdn.net/attachments/2025/360/feature-3-filters-png.png)
 
 ### Property rules
 
 Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (Fortune ≥ III) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
 
-![Property rules](feature-8-rules.png)
+![Property rules](https://media.forgecdn.net/attachments/2025/365/feature-8-rules-png.png)
 
 ### Four tiers
 
 Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
 
-![Four tiers](https://media.forgecdn.net/attachments/2023/186/feature-4-tiers-png.png)
+![Four tiers](https://media.forgecdn.net/attachments/2025/361/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
 | --- | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 ### Wireless storage
 
-![Storage of its own](feature-9-storage.png)
+![Storage of its own](https://media.forgecdn.net/attachments/2025/366/feature-9-storage-png.png)
 
 Four storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with Mekanism, the **Wireless Chemical Tank**. Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery.
 
@@ -64,11 +64,11 @@ Four storage blocks made for the router: the **Wireless Chest** (unlimited item 
 - **Break it and the contents go with the item**, like a shulker box, tier included.
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
 
-![Wireless Chest](feature-10-chest.png)
+![Wireless Chest](https://media.forgecdn.net/attachments/2025/367/feature-10-chest-png.png)
 
 ### Tools for big builds
 
-![Link whole areas at once](https://media.forgecdn.net/attachments/2023/187/feature-5-area-png.png)
+![Link whole areas at once](https://media.forgecdn.net/attachments/2025/362/feature-5-area-png.png)
 
 - **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs you check (Items, Fluids, Energy and, with Mekanism, Chemicals). Pick **None (unlink)** to take those tabs out of their network instead.
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks. Paste every tab or just one type (Shift + mouse wheel), leaving the other tabs alone.
@@ -76,13 +76,13 @@ Four storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 ### Network Tablet
 
-![Network Tablet](https://media.forgecdn.net/attachments/2023/188/feature-6-tablet-png.png)
+![Network Tablet](https://media.forgecdn.net/attachments/2025/363/feature-6-tablet-png.png)
 
 Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (items, fluids, energy and chemicals), and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 
 ### Built-in guide book
 
-![Built-in guide book](https://media.forgecdn.net/attachments/2023/189/feature-7-guide-png.png)
+![Built-in guide book](https://media.forgecdn.net/attachments/2025/364/feature-7-guide-png.png)
 
 Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
 

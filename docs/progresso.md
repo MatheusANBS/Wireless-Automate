@@ -39,7 +39,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-1. Enviar a 1.0.0 ao CurseForge: o jar é `build/libs/wirelessautomate-1.0.0.jar`; changelog em `docs/curseforge/changelog-1.0.0.md` (a 0.1.1 nunca foi enviada, então cole também o de `changelog-0.1.1.md` ou junte os dois). Ao lançar: NeoForge, 1.21.1, Java 21, Client and Server, Release. Descrição em `docs/curseforge/descricao.md`: as imagens novas (`feature-3-filters`, `feature-8-rules`, `feature-9-storage`, `feature-10-chest`) estão com o nome do arquivo no lugar do link; suba-as no CurseForge e troque pelos links. As fotos vêm de `WA_SHOWCASE=run/showcase ./gradlew runClient` e `python scripts/curseforge/gerar_imagens.py`.
+1. Enviar a 1.0.0 ao CurseForge: o jar é `build/libs/wirelessautomate-1.0.0.jar`; changelog em `docs/curseforge/changelog-1.0.0.md` (a 0.1.1 nunca foi enviada, então cole também o de `changelog-0.1.1.md` ou junte os dois). Ao lançar: NeoForge, 1.21.1, Java 21, Client and Server, Release. Descrição em `docs/curseforge/descricao.md`, já com os links das 10 imagens enviadas ao CurseForge (anexos 2025/358 a 367). As fotos vêm de `WA_SHOWCASE=run/showcase ./gradlew runClient` e `python scripts/curseforge/gerar_imagens.py`.
 2. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
 3. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
 4. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.

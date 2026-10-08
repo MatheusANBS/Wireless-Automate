@@ -215,6 +215,7 @@ Decididos pelo dono depois (8/10/2026):
 - **Capacidades:** a tabela acima é o padrão, ajustável na config.
 - **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos Cartões de Upgrade, como no roteador.
 - **Texturas:** prontas em `scripts/textures/gerar_texturas.py` (ver "Armazenamento do mod" no pacote de design).
+- **Baú pronto (8/10/2026):** tudo o que está acima para o Baú, mais o filtro de entrada indo junto no item quebrado e o upgrade na bancada (a mesma receita do roteador). Na tela: clique pega uma pilha, botão direito meia, Shift + clique manda para o inventário; com item no cursor, clicar na lista guarda (botão direito, um). A tela recebe só as diferenças por tipo, no máximo a cada 5 ticks, e só aberta.
 
 ## Arquitetura de performance
 

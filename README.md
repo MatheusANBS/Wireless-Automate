@@ -15,6 +15,7 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo (Shift + roda do mouse).
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
 - **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.
+- **Baú Wireless** (0.2): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (262.144, 16.777.216, 1.073.741.824 itens e sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
 - **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
@@ -24,14 +25,14 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 | Elite | 131.072 | 8.000.000 | 4.000.000 | Dimensão inteira |
 | Ultimate | Sem limite | Sem limite | Sem limite | Entre dimensões |
 
-A vazão vale por face e por tipo. Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`).
+A vazão vale por face e por tipo. Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`), assim como a capacidade do Baú Wireless por tier (`storage.chestCapacity`).
 
 ## Integrações opcionais
 
 | Mod | O que traz |
 | --- | --- |
 | Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod |
-| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada |
+| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada (roteador e Baú) |
 | GuideME | O livro-guia, em inglês e português |
 
 Sem um deles, a parte correspondente não carrega e o resto funciona normal.

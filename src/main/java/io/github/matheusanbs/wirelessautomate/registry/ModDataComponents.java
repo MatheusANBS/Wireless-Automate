@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
@@ -30,6 +32,11 @@ public final class ModDataComponents {
     public static final Supplier<DataComponentType<StorageContents>> STORAGE_CONTENTS =
             DATA_COMPONENTS.registerComponentType("storage_contents", builder -> builder
                     .persistent(StorageContents.CODEC).networkSynchronized(StorageContents.STREAM_CODEC));
+
+    /** Filtro de entrada de um Baú quebrado (volta ao bloco quando ele é colocado). */
+    public static final Supplier<DataComponentType<Filter>> STORAGE_FILTER =
+            DATA_COMPONENTS.registerComponentType("storage_filter", builder -> builder
+                    .persistent(FilterCodecs.LENIENT).networkSynchronized(Filter.STREAM_CODEC));
 
     /** Tipo e filtro do Cartão de Filtro. */
     public static final Supplier<DataComponentType<FilterCardItem.Contents>> CARD_FILTER =

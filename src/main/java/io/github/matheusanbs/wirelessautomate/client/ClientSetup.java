@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
@@ -44,6 +45,8 @@ public final class ClientSetup {
     static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.ROUTER.get(),
                 (RouterMenu menu, Inventory inventory, Component title) -> new RouterScreen(menu, inventory, title));
+        event.register(ModMenus.STORAGE_CHEST.get(), (StorageChestMenu menu, Inventory inventory, Component title)
+                -> new StorageChestScreen(menu, inventory, title));
         event.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
         event.register(ModMenus.LINKER.get(),

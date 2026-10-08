@@ -3,7 +3,7 @@ navigation:
   title: Químicos (Mekanism)
   icon: minecraft:glass_bottle
   parent: index.md
-  position: 11
+  position: 12
 ---
 
 

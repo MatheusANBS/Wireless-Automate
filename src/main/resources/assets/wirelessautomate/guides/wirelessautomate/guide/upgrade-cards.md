@@ -44,6 +44,9 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 
 Tiers can't be skipped: a Basic router won't take the Elite card.
 
+The same cards raise the [Wireless Chest](wireless-chest.md), the same way and keeping its
+contents: 262,144 → 16,777,216 → 1,073,741,824 items → unlimited.
+
 ## Recipes
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />

@@ -220,6 +220,7 @@ recursos entre si, sem canos.
 | ''' + item('configurator') + ''' [Configurador](configurator.md) | Copia a configuração de um roteador e cola em outros. |
 | ''' + item('network_tablet') + ''' [Tablet de Rede](network-tablet.md) | Vê e gerencia todas as suas redes de qualquer lugar. |
 | ''' + item('chunk_loader_upgrade') + ''' [Upgrade de Chunk Loading](chunk-loading.md) | Mantém o roteador trabalhando com você longe. |
+| ''' + item('storage_chest') + ''' [Baú Wireless](wireless-chest.md) | Guarda milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
 
 ## Por onde começar
 
@@ -269,6 +270,7 @@ resources with the others, with no pipes.
 | ''' + item('configurator') + ''' [Configurator](configurator.md) | Copies a router's configuration and pastes it on others. |
 | ''' + item('network_tablet') + ''' [Network Tablet](network-tablet.md) | See and manage all your networks from anywhere. |
 | ''' + item('chunk_loader_upgrade') + ''' [Chunk Loading Upgrade](chunk-loading.md) | Keeps the router working while you're away. |
+| ''' + item('storage_chest') + ''' [Wireless Chest](wireless-chest.md) | Stores millions of items by type; between two of them, a whole type moves at once. |
 
 ## Where to start
 
@@ -563,6 +565,9 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
+Os mesmos cartões sobem o [Baú Wireless](wireless-chest.md), do mesmo jeito e sem perder o
+conteúdo: 262.144 → 16.777.216 → 1.073.741.824 itens → sem limite.
+
 ## Receitas
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
@@ -602,6 +607,9 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 | **In a crafting table** | A router + the next tier's card, in any slots. The router's name is kept. |
 
 Tiers can't be skipped: a Basic router won't take the Elite card.
+
+The same cards raise the [Wireless Chest](wireless-chest.md), the same way and keeping its
+contents: 262,144 → 16,777,216 → 1,073,741,824 items → unlimited.
 
 ## Recipes
 
@@ -1184,9 +1192,183 @@ Keeps the router's chunk (and its machine) loaded, so it keeps working while you
 ''')
 
 # =====================================================================================
+# Baú Wireless
+# =====================================================================================
+SCENE_CHESTS = '''<GameScene zoom="4" interactive={true}>
+  <Block id="wirelessautomate:storage_chest" x="0" y="0" z="0" p:tier="elite" />
+  <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <Block id="wirelessautomate:storage_chest" x="4" y="0" z="0" p:tier="ultimate" />
+  <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <LineAnnotation from="0.5 1.5 0.5" to="4.5 1.5 0.5" color="#a46cff" thickness="0.08">
+    {LINE}
+  </LineAnnotation>
+  <BlockAnnotation x="0" y="0" z="0" color="#45d6cc">
+    {A}
+  </BlockAnnotation>
+  <BlockAnnotation x="4" y="0" z="0" color="#a46cff">
+    {B}
+  </BlockAnnotation>
+  <IsometricCamera yaw="200" pitch="30" />
+</GameScene>'''
+
+page('wireless-chest.md', front('Baú Wireless', 'wirelessautomate:storage_chest', 11,
+                                item_ids=['wirelessautomate:storage_chest']) + '''
+# Baú Wireless
+
+<ItemImage id="wirelessautomate:storage_chest" scale="2" float="left" />
+
+Um baú sem slots: guarda **milhões** de itens, por tipo, quantos tipos você quiser. O limite é só o
+total de itens do tier. Preso a um roteador, ele é o parceiro ideal da rede: entre dois Baús
+Wireless, um tipo inteiro passa **de uma vez**, sem o teto de uma pilha por vez dos baús comuns.
+
+<br clear="all" />
+
+''' + fill(SCENE_CHESTS, LINE='Um tipo inteiro por vez: milhões de itens num instante',
+           A='Baú Elite · roteador com a face de cima em **Extrai**',
+           B='Baú Ultimate · roteador com a face de cima em **Insere**') + '''
+
+## Capacidade
+
+Total de itens, todos os tipos somados. O tooltip do item mostra o valor do seu servidor.
+
+| Tier | Itens |
+| --- | --- |
+| **Básico** | 262.144 |
+| **Avançado** | 16.777.216 |
+| **Elite** | 1.073.741.824 |
+| **Ultimate** | Sem limite |
+
+Sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador, no mundo ou na
+bancada, **sem perder o conteúdo**.
+
+## A tela
+
+Clique com a mão vazia no Baú. A lista mostra cada tipo com a quantidade; passe o mouse para ver o
+número exato.
+
+| Quero... | Como |
+| --- | --- |
+| Achar um item | Digite na busca. **@mod** procura pelo mod (ex.: **@mekanism**). |
+| Mudar a ordem | O botão ao lado da busca alterna: quantidade, nome e mod. |
+| Pegar uma pilha | Clique no item. Botão direito: meia pilha. |
+| Mandar direto para o inventário | **Shift** + clique no item. |
+| Guardar o que está no cursor | Clique em qualquer lugar da lista. Botão direito: um só. |
+| Guardar do inventário | **Shift** + clique no item do inventário. |
+
+A barra embaixo da lista mostra quanto do tier já está ocupado.
+
+## Filtro de entrada
+
+O botão **Filtro**, no alto da tela, abre a mesma tela de [filtros](filters.md) do roteador. Ele
+decide o que pode **entrar** no Baú, por qualquer caminho: roteador, funil, outro mod ou a tela.
+
+| Na entrada do filtro | No Baú |
+| --- | --- |
+| Lista branca | Só entra o que está na lista. |
+| Lista negra | Entra tudo, menos o que está na lista. |
+| **Estoque** N | Guarda **até N** daquele item; o resto fica onde estava. |
+
+A bolinha do botão acende na cor do tier quando há um filtro. Cartões de Filtro também servem:
+importe e exporte pela tela do filtro.
+
+## Quebrar e levar
+
+Quebre o Baú com uma picareta: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o
+total e os tipos. Coloque de novo e está tudo lá.
+
+## Com outros blocos
+
+- **Funis, AE2, Refined Storage e outros mods** veem o Baú como um inventário comum, um slot por tipo.
+- **Comparador**: o sinal sobe com a ocupação (no Ultimate, 1 com qualquer coisa dentro).
+- Entre um Baú Wireless e um baú comum o roteador também é rápido, mas o baú comum continua
+  andando uma pilha por vez.
+
+## Receita
+
+<RecipeFor id="wirelessautomate:storage_chest" />
+''', front('Wireless Chest', 'wirelessautomate:storage_chest', 11,
+           item_ids=['wirelessautomate:storage_chest']) + '''
+# Wireless Chest
+
+<ItemImage id="wirelessautomate:storage_chest" scale="2" float="left" />
+
+A chest without slots: it stores **millions** of items, by type, as many types as you like. The
+only limit is the tier's total item count. Attached to a router it's the network's best friend:
+between two Wireless Chests, a whole type moves **at once**, with no one-stack-at-a-time cap like
+regular chests.
+
+<br clear="all" />
+
+''' + fill(SCENE_CHESTS, LINE='A whole type at a time: millions of items in an instant',
+           A='Elite chest · router with the top face on **Extract**',
+           B='Ultimate chest · router with the top face on **Insert**') + '''
+
+## Capacity
+
+Total items, all types added up. The item's tooltip shows your server's value.
+
+| Tier | Items |
+| --- | --- |
+| **Basic** | 262,144 |
+| **Advanced** | 16,777,216 |
+| **Elite** | 1,073,741,824 |
+| **Ultimate** | Unlimited |
+
+Raise the tier with the same [Upgrade Cards](upgrade-cards.md) as the router, in the world or in a
+crafting table, **keeping the contents**.
+
+## The screen
+
+Click the chest with an empty hand. The list shows each type with its amount; hover to see the
+exact number.
+
+| I want to... | How |
+| --- | --- |
+| Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**). |
+| Change the order | The button next to the search box cycles: amount, name and mod. |
+| Take a stack | Click the item. Right click: half a stack. |
+| Send it straight to the inventory | **Shift** + click the item. |
+| Store what's on the cursor | Click anywhere on the list. Right click: just one. |
+| Store from the inventory | **Shift** + click the item in your inventory. |
+
+The bar under the list shows how much of the tier is used.
+
+## Input filter
+
+The **Filter** button, at the top of the screen, opens the same [filter](filters.md) screen as the
+router. It decides what can **get in** the chest, by any path: router, hopper, another mod or the
+screen.
+
+| In the filter entry | In the chest |
+| --- | --- |
+| Whitelist | Only what's on the list gets in. |
+| Blacklist | Everything gets in except what's on the list. |
+| **Stock** N | Stores **up to N** of that item; the rest stays where it was. |
+
+The button's dot lights up in the tier color when there's a filter. Filter Cards work too: import
+and export them from the filter screen.
+
+## Break and carry
+
+Break the chest with a pickaxe: the item takes **all the contents and the filter** with it, and the
+tooltip shows the total and the types. Place it again and everything is there.
+
+## With other blocks
+
+- **Hoppers, AE2, Refined Storage and other mods** see the chest as a regular inventory, one slot per type.
+- **Comparator**: the signal rises with how full it is (on Ultimate, 1 with anything inside).
+- Between a Wireless Chest and a regular chest the router is fast too, but the regular chest still
+  moves one stack at a time.
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:storage_chest" />
+''')
+
+# =====================================================================================
 # Químicos
 # =====================================================================================
-page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 11) + '''
+page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 12) + '''
 # Químicos do Mekanism
 
 Com o **Mekanism** instalado, o roteador ganha a aba **Químicos**: gases, líquidos de infusão,
@@ -1218,7 +1400,7 @@ As máquinas e tanques do Mekanism vêm com as faces **desligadas** na configura
 próprio Mekanism. Ligue a face em que o roteador vai trabalhar com a ferramenta de configuração do
 Mekanism, como faria para um tubo; senão o roteador não enxerga o químico, e o modo da face aparece
 indisponível.
-''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 11) + '''
+''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 12) + '''
 # Mekanism chemicals
 
 With **Mekanism** installed, the router gets a **Chemicals** tab: gases, infuse types, pigments
@@ -1255,7 +1437,7 @@ unavailable.
 # =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 12) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 13) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -1276,7 +1458,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
 cada rede está movendo e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 12) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 13) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -1303,6 +1485,7 @@ network is moving and which destinations are full.
 # Todas as receitas
 # =====================================================================================
 RECIPES = '''<RecipeFor id="wirelessautomate:router" />
+<RecipeFor id="wirelessautomate:storage_chest" />
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
@@ -1313,26 +1496,26 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 13) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 14) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
 
 | Também na bancada | Como |
 | --- | --- |
-| **Subir o tier** | Roteador + o cartão do tier seguinte, em qualquer posição. |
+| **Subir o tier** | Roteador ou Baú Wireless + o cartão do tier seguinte, em qualquer posição. |
 | **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios: o original volta. |
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 13) + '''
+''', front('All recipes', 'minecraft:crafting_table', 14) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router + the next tier's card, in any slots. |
+| **Raise the tier** | Router or Wireless Chest + the next tier's card, in any slots. |
 | **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
 | **This guide** | Book + redstone. |
 

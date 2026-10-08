@@ -200,12 +200,13 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         return Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
     }
 
-    /** "Baixo · Itens" ou "Cartão de Filtro · Itens". */
+    /** "Baixo · Itens", "Baú Wireless · Itens" ou "Cartão de Filtro · Itens". */
     private Component context() {
         FilterView v = view();
         Component where = v.face().isPresent()
                 ? Component.translatable("gui.wirelessautomate.router.face." + v.face().get().getName())
-                : Component.translatable("item.wirelessautomate.filter_card");
+                : v.isCard() ? Component.translatable("item.wirelessautomate.filter_card")
+                : Component.translatable("block.wirelessautomate.storage_chest");
         return where.copy().append(" · ").append(typeName(v.type()));
     }
 
@@ -254,7 +255,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
     }
 
-    /** Cor do tier do roteador, lida do bloco no mundo do cliente; sem ele, o destaque padrão. */
+    /** Cor do tier do roteador (ou do Baú), lida do bloco no mundo do cliente; sem ele, o destaque padrão. */
     private int resolveTrim() {
         if (trimOverride != null) {
             return trimOverride;
@@ -262,7 +263,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         Optional<BlockPos> pos = view().router();
         if (pos.isPresent() && minecraft != null && minecraft.level != null && minecraft.level.isLoaded(pos.get())) {
             BlockState state = minecraft.level.getBlockState(pos.get());
-            if (state.getBlock() instanceof RouterBlock) {
+            // O roteador e o Baú usam a mesma propriedade de tier.
+            if (state.hasProperty(RouterBlock.TIER)) {
                 return GuiPaint.tierColor(state.getValue(RouterBlock.TIER));
             }
         }

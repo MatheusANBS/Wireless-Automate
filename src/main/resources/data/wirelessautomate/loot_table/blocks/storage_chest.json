@@ -20,7 +20,8 @@
               "function": "minecraft:copy_components",
               "source": "block_entity",
               "include": [
-                "wirelessautomate:storage_contents"
+                "wirelessautomate:storage_contents",
+                "wirelessautomate:storage_filter"
               ]
             }
           ]

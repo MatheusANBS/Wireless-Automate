@@ -35,6 +35,7 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:configurator" /> [Configurator](configurator.md) | Copies a router's configuration and pastes it on others. |
 | <ItemImage id="wirelessautomate:network_tablet" /> [Network Tablet](network-tablet.md) | See and manage all your networks from anywhere. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Chunk Loading Upgrade](chunk-loading.md) | Keeps the router working while you're away. |
+| <ItemImage id="wirelessautomate:storage_chest" /> [Wireless Chest](wireless-chest.md) | Stores millions of items by type; between two of them, a whole type moves at once. |
 
 ## Where to start
 

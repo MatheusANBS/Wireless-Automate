@@ -4,8 +4,10 @@ import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -65,12 +67,13 @@ public class StorageChestBlock extends BaseEntityBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    /** Clique direito: o resumo do conteúdo na barra de ação (a tela em lista vem depois). */
+    /** Clique direito abre a tela do Baú (a lista com busca). */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hitResult) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest) {
-            player.displayClientMessage(summary(chest.storage().total(), chest.storage().types(), chest.capacity()), true);
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest) {
+            StorageChestMenu.open(serverPlayer, chest);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

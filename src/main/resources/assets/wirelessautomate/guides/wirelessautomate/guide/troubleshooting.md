@@ -3,7 +3,7 @@ navigation:
   title: Troubleshooting
   icon: minecraft:barrier
   parent: index.md
-  position: 12
+  position: 13
 ---
 
 

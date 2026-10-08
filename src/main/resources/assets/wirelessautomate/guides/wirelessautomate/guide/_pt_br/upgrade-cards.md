@@ -44,6 +44,9 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
+Os mesmos cartões sobem o [Baú Wireless](wireless-chest.md), do mesmo jeito e sem perder o
+conteúdo: 262.144 → 16.777.216 → 1.073.741.824 itens → sem limite.
+
 ## Receitas
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />

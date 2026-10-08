@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -65,6 +66,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
@@ -79,6 +81,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
@@ -89,6 +92,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 
 /**
  * Teste de ponta a ponta num mundo de verdade (cliente + servidor integrado). Só roda com a
@@ -124,6 +129,9 @@ import org.lwjgl.glfw.GLFW;
  *   <li>Vinculador por área (por último): Shift + clique no ar passa para Área, Shift + clique em
  *       dois blocos marca os cantos em volta dos roteadores, clique no ar abre a tela, que escolhe a
  *       rede e o tipo Fluidos e vincula; confere no servidor que só a aba de fluidos dos dois mudou.</li>
+ *   <li>Baú Wireless: os 12 milhões de pedregulho de um Baú para outro com roteadores Ultimate, a
+ *       tela (lista, busca, pegar e devolver pelo clique, filtro de entrada e Voltar), o Cartão de
+ *       Upgrade no bloco, quebrar e recolocar com o conteúdo e uma foto dos blocos.</li>
  * </ol>
  * Os cliques passam pelo mesmo caminho do mouse ({@code screen.mouseClicked} no centro do widget) e
  * cada passo só termina quando o servidor aplicou (lido no block entity, na thread do servidor) e o
@@ -509,6 +517,7 @@ public final class DevEndToEnd {
         tabletSteps(list);
         configuratorSteps(list);
         linkerAreaSteps(list);
+        storageChestSteps(list);
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
         }
@@ -1141,12 +1150,176 @@ public final class DevEndToEnd {
         showRouters.add(pos);
     }
 
+    // ------------------------------------------------------------------ Baú Wireless
+
+    /** Total guardado nos dois Baús do roteiro: 12 milhões de pedregulho, 64 diamantes e 1.000 de terra. */
+    private static final long CHEST_TOTAL = 12_000_000L + 64 + 1_000;
+    private static BlockPos storageA = BlockPos.ZERO;
+    private static BlockPos storageB = BlockPos.ZERO;
+
+    /**
+     * Baú Wireless num mundo real: dois Baús (Elite e Ultimate) com roteadores Ultimate na rede
+     * principal; os 12 milhões de pedregulho do teste do dono passam de um para o outro. Depois a
+     * tela: lista, busca, pegar e devolver uma pilha pelo clique, o filtro de entrada e Voltar. Por
+     * fim o Cartão de Upgrade no Baú, quebrar e recolocar com o conteúdo e uma foto dos blocos.
+     */
+    private static void storageChestSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        long[] started = new long[1];
+        list.add(new Step("Baú: 12 milhões de um Baú para outro", 30_000, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            BlockPos base = player.blockPosition();
+            // Ao alcance do clique (o servidor recusa de longe) e longe dos baús A e B do roteiro.
+            storageA = base.offset(-2, 0, -1);
+            storageB = base.offset(2, 0, -1);
+            level.setBlockAndUpdate(storageA, ModBlocks.STORAGE_CHEST.get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ELITE));
+            level.setBlockAndUpdate(storageB, ModBlocks.STORAGE_CHEST.get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+            ItemStorage storage = storageChest(server, storageA).storage();
+            storage.insert(new ItemStack(Items.COBBLESTONE), 12_000_000L, false);
+            storage.insert(new ItemStack(Items.DIAMOND), 64, false);
+            storage.insert(new ItemStack(Items.DIRT), 1_000, false);
+            for (BlockPos chest : List.of(storageA, storageB)) {
+                level.setBlockAndUpdate(chest.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                        .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+                RouterBlockEntity router = router(server, chest.above());
+                router.setNetworkId(ResourceType.ITEM, mainNetwork);
+                router.setMode(ResourceType.ITEM, Direction.UP, chest == storageA ? PortMode.EXTRACT : PortMode.INSERT);
+            }
+            started[0] = server.getTickCount();
+            return null;
+        }), () -> onServer(server -> storageChest(server, storageA).storage().isEmpty()
+                && storageChest(server, storageB).storage().total() == CHEST_TOTAL),
+                () -> onServer(server -> "A=" + storageChest(server, storageA).storage().total() + " B="
+                        + storageChest(server, storageB).storage().total() + " em "
+                        + (server.getTickCount() - started[0]) + " ticks")));
+
+        list.add(new Step("Baú: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(storageB),
+                () -> Minecraft.getInstance().screen instanceof StorageChestScreen screen
+                        && screen.getMenu().view().types() == 3 && screen.getMenu().view().header().total() == CHEST_TOTAL,
+                () -> Minecraft.getInstance().screen instanceof StorageChestScreen screen
+                        ? "tipos " + screen.getMenu().view().types() + ", total " + screen.getMenu().view().header().total()
+                        : "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("bau-1-tela"));
+        list.add(new Step("Baú: busca", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue("diam"),
+                () -> chestScreen().shownCount() == 1, () -> "na lista " + chestScreen().shownCount()));
+        list.add(capture("bau-2-busca"));
+        list.add(new Step("Baú: pegar uma pilha pelo clique", STEP_TIMEOUT_MS, () -> {
+            int[] cell = chestScreen().cellCenter(0);
+            click(chestScreen(), cell[0], cell[1]);
+        }, () -> chestScreen().getMenu().getCarried().is(Items.DIAMOND) && chestScreen().getMenu().getCarried().getCount() == 64
+                && onServer(server -> storageChest(server, storageB).storage().count(new ItemStack(Items.DIAMOND)) == 0),
+                () -> "cursor " + chestScreen().getMenu().getCarried()));
+        list.add(new Step("Baú: devolver pelo clique na lista", STEP_TIMEOUT_MS, () -> {
+            int[] cell = chestScreen().cellCenter(3);
+            click(chestScreen(), cell[0], cell[1]);
+        }, () -> chestScreen().getMenu().getCarried().isEmpty()
+                && onServer(server -> storageChest(server, storageB).storage().total() == CHEST_TOTAL),
+                () -> "cursor " + chestScreen().getMenu().getCarried()));
+        list.add(new Step("Baú: limpar a busca", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue(""),
+                () -> chestScreen().shownCount() == 3, () -> "na lista " + chestScreen().shownCount()));
+        list.add(new Step("Baú: abrir o filtro de entrada", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro")),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("bau-3-filtro"));
+        list.add(new Step("Baú: voltar do filtro", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
+                () -> Minecraft.getInstance().screen instanceof StorageChestScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(close("Baú: fechar"));
+
+        boolean[] clicked = new boolean[2];
+        list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
+                        new ItemStack(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get()));
+                return null;
+            });
+        }, () -> {
+            if (!Minecraft.getInstance().player.getMainHandItem().is(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get())) {
+                return false;
+            }
+            if (!clicked[0]) {
+                clicked[0] = true;
+                useOn(storageA);
+            }
+            return onServer(server -> server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER) == RouterTier.ULTIMATE);
+        }, () -> onServer(server -> "tier " + server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER))));
+
+        list.add(new Step("Baú: quebrar e recolocar com o conteúdo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            level.destroyBlock(storageB.above(), false);
+            level.destroyBlock(storageB, true);
+            List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, new AABB(storageB).inflate(2),
+                    entity -> entity.getItem().is(ModItems.STORAGE_CHEST.get()));
+            if (drops.size() != 1) {
+                throw new IllegalStateException("Baús no chão: " + drops.size());
+            }
+            player.setItemInHand(InteractionHand.MAIN_HAND, drops.get(0).getItem().copy());
+            drops.get(0).discard();
+            return null;
+        }), () -> {
+            if (!Minecraft.getInstance().player.getMainHandItem().is(ModItems.STORAGE_CHEST.get())) {
+                return false;
+            }
+            if (!clicked[1]) {
+                clicked[1] = true;
+                BlockPos floor = storageB.below();
+                BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(floor).add(0, 0.5, 0), Direction.UP, floor, false);
+                Minecraft.getInstance().gameMode.useItemOn(Minecraft.getInstance().player, InteractionHand.MAIN_HAND, hit);
+            }
+            return onServer(server -> server.overworld().getBlockEntity(storageB) instanceof StorageChestBlockEntity chest
+                    && chest.storage().total() == CHEST_TOTAL);
+        }, () -> onServer(server -> server.overworld().getBlockEntity(storageB) instanceof StorageChestBlockEntity chest
+                ? "total " + chest.storage().total() : "sem Baú em " + storageB.toShortString())));
+        list.add(capture("bau-4-tooltip-mao"));
+
+        list.add(new Step("Baú: olhar os blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            ServerLevel level = player.serverLevel();
+            level.setBlockAndUpdate(storageB.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                    .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+            BlockPos look = storageA.offset(2, 0, 4);
+            player.teleportTo(level, look.getX() + 0.5, look.getY(), look.getZ() + 0.5, 180f, 25f);
+            return null;
+        }), () -> stepTicks >= 20, () -> "esperando o chunk desenhar"));
+        list.add(capture("bau-5-blocos"));
+    }
+
+    private static StorageChestScreen chestScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof StorageChestScreen screen) {
+            return screen;
+        }
+        throw new StepFailure("a tela do Baú não está aberta: " + describe(Minecraft.getInstance().screen));
+    }
+
+    /** Na thread do servidor. */
+    private static StorageChestBlockEntity storageChest(MinecraftServer server, BlockPos pos) {
+        if (!(server.overworld().getBlockEntity(pos) instanceof StorageChestBlockEntity chest)) {
+            throw new IllegalStateException("sem Baú Wireless em " + pos.toShortString());
+        }
+        return chest;
+    }
+
+    /** Clique direito do jogador no bloco, pela face de cima, com o que estiver na mão. */
+    private static void useOn(BlockPos pos) {
+        Minecraft minecraft = Minecraft.getInstance();
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.SOUTH, pos, false);
+        minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
+    }
+
     // ------------------------------------------------------------------ Guia (GuideME)
 
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "chemicals", "troubleshooting", "recipes");
+            "wireless-chest", "chemicals", "troubleshooting", "recipes");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}

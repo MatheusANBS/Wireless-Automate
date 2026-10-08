@@ -35,6 +35,7 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:configurator" /> [Configurador](configurator.md) | Copia a configuração de um roteador e cola em outros. |
 | <ItemImage id="wirelessautomate:network_tablet" /> [Tablet de Rede](network-tablet.md) | Vê e gerencia todas as suas redes de qualquer lugar. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Upgrade de Chunk Loading](chunk-loading.md) | Mantém o roteador trabalhando com você longe. |
+| <ItemImage id="wirelessautomate:storage_chest" /> [Baú Wireless](wireless-chest.md) | Guarda milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
 
 ## Por onde começar
 

@@ -18,7 +18,10 @@ import net.minecraft.world.item.ItemStackLinkedSet;
  * todos os tipos ({@link StorageMath}); {@code <= 0} é sem limite.
  *
  * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e avisa os vizinhos,
- * o que acorda os roteadores presos nele).
+ * o que acorda os roteadores presos nele) e sobe a {@link #version()}, que a tela aberta compara.
+ *
+ * <p>A {@link Admission} decide quanto de cada tipo pode entrar (o filtro de entrada do Baú), em
+ * qualquer caminho: roteador, funil, outro mod ou a tela.
  */
 public final class ItemStorage implements BulkItems {
     private static final class Entry {
@@ -30,17 +33,36 @@ public final class ItemStorage implements BulkItems {
         }
     }
 
+    /** Quanto de {@code amount} da chave pode entrar, antes da capacidade (filtro de entrada). */
+    @FunctionalInterface
+    public interface Admission {
+        Admission ALL = (key, amount) -> amount;
+
+        long admit(ItemStack key, long amount);
+    }
+
     private final List<Entry> entries = new ArrayList<>();
     private final Object2ObjectOpenCustomHashMap<ItemStack, Entry> index =
             new Object2ObjectOpenCustomHashMap<>(ItemStackLinkedSet.TYPE_AND_TAG);
     private final Runnable onChange;
     private final LongSupplier capacity;
     private long total;
+    private int version;
+    private Admission admission = Admission.ALL;
 
     /** {@code capacity} é lida a cada inserção: muda com o tier e com a config, sem copiar nada. */
     public ItemStorage(Runnable onChange, LongSupplier capacity) {
         this.onChange = onChange;
         this.capacity = capacity;
+    }
+
+    public void setAdmission(Admission admission) {
+        this.admission = admission;
+    }
+
+    /** Sobe a cada mudança do conteúdo. */
+    public int version() {
+        return version;
     }
 
     public long total() {
@@ -92,7 +114,7 @@ public final class ItemStorage implements BulkItems {
         if (key.isEmpty()) {
             return 0;
         }
-        long accepted = StorageMath.accept(total, capacity.getAsLong(), amount);
+        long accepted = StorageMath.accept(total, capacity.getAsLong(), admission.admit(key, amount));
         if (accepted <= 0 || simulate) {
             return accepted;
         }
@@ -104,7 +126,7 @@ public final class ItemStorage implements BulkItems {
         }
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
-        onChange.run();
+        changed();
         return accepted;
     }
 
@@ -127,15 +149,21 @@ public final class ItemStorage implements BulkItems {
             index.remove(entry.key);
             entries.remove(entry);
         }
-        onChange.run();
+        changed();
         return taken;
     }
 
-    /** Esvazia sem avisar (para carregar ou mover o conteúdo). */
+    private void changed() {
+        version++;
+        onChange.run();
+    }
+
+    /** Esvazia sem avisar o block entity (para carregar ou mover o conteúdo); a tela vê pela versão. */
     public void clear() {
         entries.clear();
         index.clear();
         total = 0;
+        version++;
     }
 
     /** Lista de {@code {item, count}}, com o item salvo como pilha de 1. */

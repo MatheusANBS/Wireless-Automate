@@ -12,7 +12,8 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * O que a tela de filtro mostra. Filtro de uma face de roteador ({@code router} e {@code face}
- * presentes) ou de um Cartão de Filtro (os dois vazios).
+ * presentes), o de entrada de um Baú ({@code router} com a posição do Baú, sem {@code face}) ou de
+ * um Cartão de Filtro (os dois vazios).
  *
  * @param type     ITEM ou FLUID (energia não usa filtro)
  * @param hasCard  o jogador tem um Cartão de Filtro na mão principal (habilita importar/exportar)

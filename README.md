@@ -16,6 +16,7 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
 - **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.
 - **Baú Wireless** (0.2): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (262.144, 16.777.216, 1.073.741.824 itens e sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
+- **Tanque, Bateria e Tanque Químico Wireless** (0.2): o mesmo molde do Baú para fluidos (vários por tanque, até 4 bilhões de mB no Elite), energia (até 64 bilhões de FE no Elite) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
 - **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
@@ -25,14 +26,14 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 | Elite | 131.072 | 8.000.000 | 4.000.000 | Dimensão inteira |
 | Ultimate | Sem limite | Sem limite | Sem limite | Entre dimensões |
 
-A vazão vale por face e por tipo. Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`), assim como a capacidade do Baú Wireless por tier (`storage.chestCapacity`).
+A vazão vale por face e por tipo. Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`), assim como a capacidade dos armazenamentos por tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity` e `chemicalTankCapacity`).
 
 ## Integrações opcionais
 
 | Mod | O que traz |
 | --- | --- |
-| Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod |
-| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada (roteador e Baú) |
+| Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod, e o Tanque Químico Wireless |
+| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada (roteador e armazenamentos) |
 | GuideME | O livro-guia, em inglês e português |
 
 Sem um deles, a parte correspondente não carrega e o resto funciona normal.

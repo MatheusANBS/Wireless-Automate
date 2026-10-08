@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
+import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismStorage;
+import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
 import java.util.Optional;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -8,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -62,6 +65,23 @@ public final class Chemicals {
     /** Cor RGB do químico (branco se não existir). */
     public static int tint(ResourceLocation id) {
         return LOADED ? MekanismChemicals.tint(id) : 0xFFFFFF;
+    }
+
+    /** Registra a capability de químico do Tanque Químico; sem o Mekanism, nada. */
+    public static void registerStorage(RegisterCapabilitiesEvent event) {
+        if (LOADED) {
+            MekanismStorage.register(event);
+        }
+    }
+
+    /** Enche o recipiente do Mekanism com o químico do Tanque Químico; devolve quanto passou (0 sem ele). */
+    public static long fillContainer(ItemStack container, ChemicalStorage storage, ResourceLocation id) {
+        return LOADED && !container.isEmpty() ? MekanismStorage.fillContainer(container, storage, id) : 0;
+    }
+
+    /** Esvazia o recipiente do Mekanism no Tanque Químico; devolve quanto passou (0 sem ele). */
+    public static long emptyContainer(ItemStack container, ChemicalStorage storage) {
+        return LOADED && !container.isEmpty() ? MekanismStorage.emptyContainer(container, storage) : 0;
     }
 
     /** Uma visita de uma origem de químicos; sem o Mekanism não há portas de químico. */

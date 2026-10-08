@@ -3,7 +3,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,16 +11,16 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * Filtro de entrada de um Baú: o que pode entrar nele, por qualquer caminho. Mesma tela de filtro
- * do roteador; o "estoque" de uma entrada vira "guardar até N deste item". Voltar reabre a tela do
- * Baú.
+ * Filtro de entrada de um armazenamento por tipo (Baú, Tanque, Tanque Químico): o que pode entrar
+ * nele, por qualquer caminho. Mesma tela de filtro do roteador, do tipo do recurso guardado; o
+ * "estoque" de uma entrada vira "guardar até N". Voltar reabre a tela do armazenamento.
  */
-public record StorageChestFilterTarget(StorageChestBlockEntity chest) implements FilterTarget {
-    /** Abre a tela de filtro do Baú para o jogador. */
+public record StorageFilterTarget(StorageBlockEntity storage) implements FilterTarget {
+    /** Abre a tela de filtro do armazenamento para o jogador. */
     public void open(ServerPlayer player) {
         FilterView view = view(player);
         Component title = Component.translatable("container.wirelessautomate.filter.chest",
-                chest.getBlockState().getBlock().getName());
+                storage.getBlockState().getBlock().getName());
         player.openMenu(new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
                 buf -> FilterView.STREAM_CODEC.encode(buf, view));
@@ -28,33 +28,33 @@ public record StorageChestFilterTarget(StorageChestBlockEntity chest) implements
 
     @Override
     public ResourceType type() {
-        return ResourceType.ITEM;
+        return storage.kind().resource;
     }
 
     @Override
     public Filter filter() {
-        return chest.filter();
+        return storage.filter();
     }
 
     @Override
     public void setFilter(Filter filter) {
-        chest.setFilter(filter);
+        storage.setFilter(filter);
     }
 
     @Override
     public boolean stillValid(Player player) {
-        return StorageChestMenu.stillValid(chest, player);
+        return StorageListMenu.stillValid(storage, player);
     }
 
     @Override
     public int version() {
-        return chest.filterVersion();
+        return storage.filterVersion();
     }
 
-    /** Com a posição e sem face: a tela mostra "Baú Wireless" e o botão Voltar. */
+    /** Com a posição e sem face: a tela mostra o nome do bloco e o botão Voltar. */
     @Override
     public FilterView view(Player player) {
-        return new FilterView(ResourceType.ITEM, Optional.of(chest.getBlockPos()), Optional.empty(), filter(),
+        return new FilterView(type(), Optional.of(storage.getBlockPos()), Optional.empty(), filter(),
                 FilterCardItem.isCard(player.getMainHandItem()));
     }
 }

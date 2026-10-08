@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "wirelessautomate:block/storage_battery_ultimate_side",
+    "top": "wirelessautomate:block/storage_battery_ultimate_top",
+    "bottom": "wirelessautomate:block/storage_ultimate_bottom",
+    "particle": "wirelessautomate:block/storage_battery_ultimate_side"
+  }
+}

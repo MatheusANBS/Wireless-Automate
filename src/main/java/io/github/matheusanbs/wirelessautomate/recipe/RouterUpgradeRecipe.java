@@ -5,8 +5,8 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlock;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
@@ -18,10 +18,10 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um Baú) e um núcleo do tier
+ * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um núcleo do tier
  * seguinte ao dele (Básico + Avançado, Avançado + Elite, Elite + Ultimate), como o clique com o
- * núcleo no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageChestBlock#tryUpgrade}).
- * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um Baú cheio),
+ * núcleo no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
+ * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um armazenamento cheio),
  * no tier novo. Os dois guardam o tier no {@code block_state}, com a mesma propriedade.
  */
 public class RouterUpgradeRecipe extends CustomRecipe {
@@ -29,7 +29,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
         super(category);
     }
 
-    /** O roteador ou o Baú no tier novo, ou vazio se a grade não casa. */
+    /** O roteador ou o armazenamento no tier novo, ou vazio se a grade não casa. */
     public static ItemStack upgraded(CraftingInput input) {
         ItemStack router = ItemStack.EMPTY;
         RouterTier core = null;
@@ -38,7 +38,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
             if (stack.isEmpty()) {
                 continue;
             }
-            if ((stack.getItem() instanceof RouterBlockItem || stack.getItem() instanceof StorageChestBlockItem)
+            if ((stack.getItem() instanceof RouterBlockItem || stack.getItem() instanceof StorageBlockItem)
                     && router.isEmpty()) {
                 router = stack;
             } else if (stack.getItem() instanceof TierCoreItem item && core == null) {

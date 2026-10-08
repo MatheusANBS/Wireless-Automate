@@ -81,6 +81,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -93,7 +94,12 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * Teste de ponta a ponta num mundo de verdade (cliente + servidor integrado). Só roda com a
@@ -1199,9 +1205,9 @@ public final class DevEndToEnd {
                         + (server.getTickCount() - started[0]) + " ticks")));
 
         list.add(new Step("Baú: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(storageB),
-                () -> Minecraft.getInstance().screen instanceof StorageChestScreen screen
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen screen
                         && screen.getMenu().view().types() == 3 && screen.getMenu().view().header().total() == CHEST_TOTAL,
-                () -> Minecraft.getInstance().screen instanceof StorageChestScreen screen
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen screen
                         ? "tipos " + screen.getMenu().view().types() + ", total " + screen.getMenu().view().header().total()
                         : "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bau-1-tela"));
@@ -1224,7 +1230,7 @@ public final class DevEndToEnd {
                 () -> chestScreen().shownCount() == 3, () -> "na lista " + chestScreen().shownCount()));
         int[] before = new int[2];
         list.add(new Step("Baú: aumentar pela alça (+4 colunas, +2 linhas)", STEP_TIMEOUT_MS, () -> {
-            StorageChestScreen screen = chestScreen();
+            StorageListScreen screen = chestScreen();
             before[0] = screen.cols();
             before[1] = screen.rows();
             // Cresce em torno do centro: cada lado anda o que o mouse andou, então 2 células de
@@ -1240,7 +1246,7 @@ public final class DevEndToEnd {
                 return null;
             });
         }, () -> {
-            StorageChestScreen screen = chestScreen();
+            StorageListScreen screen = chestScreen();
             Slot slot = screen.getMenu().slots.stream().filter(s -> s.getContainerSlot() == 9).findFirst().orElseThrow();
             if (!clicked[2]) {
                 if (!slot.getItem().is(Items.EMERALD)) {
@@ -1270,7 +1276,7 @@ public final class DevEndToEnd {
         list.add(capture("bau-3-filtro"));
         list.add(new Step("Baú: voltar do filtro", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
-                () -> Minecraft.getInstance().screen instanceof StorageChestScreen,
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(close("Baú: fechar"));
 
@@ -1332,10 +1338,45 @@ public final class DevEndToEnd {
             return null;
         }), () -> stepTicks >= 20, () -> "esperando o chunk desenhar"));
         list.add(capture("bau-5-blocos"));
+
+        // Tanque e Bateria: a tela de cada um, com conteúdo.
+        BlockPos[] more = new BlockPos[2];
+        list.add(new Step("Tanque e Bateria: preparar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            BlockPos base = player.blockPosition();
+            more[0] = base.offset(-1, 0, -2);
+            more[1] = base.offset(1, 0, -2);
+            level.setBlockAndUpdate(more[0], ModBlocks.STORAGE.get(StorageKind.TANK).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ELITE));
+            level.setBlockAndUpdate(more[1], ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+            StorageTankBlockEntity tank = (StorageTankBlockEntity) level.getBlockEntity(more[0]);
+            tank.storage().insert(new FluidStack(Fluids.WATER, 1), 1_250_000_000L, false);
+            tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
+            StorageBatteryBlockEntity battery = (StorageBatteryBlockEntity) level.getBlockEntity(more[1]);
+            battery.store().insert(640_000_000L, false);
+            return null;
+        }), () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            return minecraft.level != null && minecraft.level.getBlockState(more[0]).getBlock() instanceof StorageBlock
+                    && minecraft.level.getBlockState(more[1]).getBlock() instanceof StorageBlock;
+        }, () -> "blocos no cliente"));
+        list.add(new Step("Tanque: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(more[0]),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen screen && screen.getMenu().view().types() == 2,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("tanque-1-tela"));
+        list.add(close("Tanque: fechar"));
+        list.add(new Step("Bateria: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(more[1]),
+                () -> Minecraft.getInstance().screen instanceof StorageBatteryScreen screen && screen.getMenu().received()
+                        && screen.getMenu().stored() == 640_000_000L,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("bateria-1-tela"));
+        list.add(close("Bateria: fechar"));
     }
 
     /** Arrasta a alça de redimensionar do Baú como o mouse: aperta, arrasta {@code dx, dy} e solta. */
-    private static void dragGrip(StorageChestScreen screen, int dx, int dy) {
+    private static void dragGrip(StorageListScreen screen, int dx, int dy) {
         int[] grip = screen.gripPoint();
         screen.mouseClicked(grip[0], grip[1], 0);
         screen.mouseDragged(grip[0] + dx, grip[1] + dy, 0, dx, dy);
@@ -1346,7 +1387,7 @@ public final class DevEndToEnd {
      * Depois de redimensionar: o painel continua no centro da tela e o inventário do jogador
      * acompanhou, centralizado embaixo dele.
      */
-    private static boolean inventoryFollows(StorageChestScreen screen) {
+    private static boolean inventoryFollows(StorageListScreen screen) {
         Slot first = screen.getMenu().slots.stream().filter(s -> s.getContainerSlot() == 9).findFirst().orElseThrow();
         int center = first.x + 9 * 18 / 2 - 1;
         boolean centered = Math.abs(screen.getGuiLeft() + screen.getXSize() / 2 - screen.width / 2) <= 1
@@ -1355,8 +1396,8 @@ public final class DevEndToEnd {
                 && first.y + 3 * 18 + 4 + 18 + 8 + 8 >= screen.getYSize() - 8;
     }
 
-    private static StorageChestScreen chestScreen() throws StepFailure {
-        if (Minecraft.getInstance().screen instanceof StorageChestScreen screen) {
+    private static StorageListScreen chestScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof StorageListScreen screen) {
             return screen;
         }
         throw new StepFailure("a tela do Baú não está aberta: " + describe(Minecraft.getInstance().screen));
@@ -1382,7 +1423,8 @@ public final class DevEndToEnd {
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "wireless-chest", "chemicals", "troubleshooting", "recipes");
+            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals",
+            "troubleshooting", "recipes");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}

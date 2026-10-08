@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
 import java.util.Map;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -20,11 +21,9 @@ public final class Config {
     public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
-    /** Capacidade do Baú por tier, em itens (todos os tipos somados; 0 = sem limite). */
-    public static final Map<RouterTier, ModConfigSpec.LongValue> CHEST_CAPACITY = new EnumMap<>(RouterTier.class);
-
-    /** Capacidade padrão do Baú por tier (a ordem do {@link RouterTier}); 0 = sem limite. */
-    private static final long[] DEFAULT_CHEST_CAPACITY = {262_144L, 16_777_216L, 1_073_741_824L, 0L};
+    /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
+    public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
+            new EnumMap<>(StorageKind.class);
 
     public record TierValues(
             ModConfigSpec.LongValue itemsPerSecond,
@@ -84,13 +83,21 @@ public final class Config {
         builder.pop();
 
         builder.push("storage");
-        builder.comment("Capacidade do Baú do mod por tier, em itens (todos os tipos somados; 0 = sem limite).");
-        builder.push("chestCapacity");
-        for (RouterTier tier : RouterTier.values()) {
-            CHEST_CAPACITY.put(tier, builder.defineInRange(tier.getSerializedName(),
-                    DEFAULT_CHEST_CAPACITY[tier.ordinal()], 0L, Long.MAX_VALUE));
+        for (StorageKind kind : StorageKind.values()) {
+            builder.comment(switch (kind) {
+                case CHEST -> "Capacidade do Baú por tier, em itens (todos os tipos somados; 0 = sem limite).";
+                case TANK -> "Capacidade do Tanque por tier, em mB (todos os fluidos somados; 0 = sem limite).";
+                case BATTERY -> "Capacidade da Bateria por tier, em FE (0 = sem limite).";
+                case CHEMICAL_TANK -> "Capacidade do Tanque Químico por tier, em mB (todos os químicos somados; 0 = sem limite).";
+            });
+            builder.push(kind.configKey);
+            Map<RouterTier, ModConfigSpec.LongValue> byTier = new EnumMap<>(RouterTier.class);
+            for (RouterTier tier : RouterTier.values()) {
+                byTier.put(tier, builder.defineInRange(tier.getSerializedName(), kind.defaultCapacity(tier), 0L, Long.MAX_VALUE));
+            }
+            STORAGE_CAPACITY.put(kind, byTier);
+            builder.pop();
         }
-        builder.pop();
         builder.pop();
 
         builder.push("guide");
@@ -102,9 +109,14 @@ public final class Config {
         SPEC = builder.build();
     }
 
-    /** Capacidade do Baú no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */
+    /** Capacidade do armazenamento no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */
+    public static long storageCapacity(StorageKind kind, RouterTier tier) {
+        return SPEC.isLoaded() ? STORAGE_CAPACITY.get(kind).get(tier).get() : kind.defaultCapacity(tier);
+    }
+
+    /** Capacidade do Baú no tier; 0 = sem limite. */
     public static long chestCapacity(RouterTier tier) {
-        return SPEC.isLoaded() ? CHEST_CAPACITY.get(tier).get() : DEFAULT_CHEST_CAPACITY[tier.ordinal()];
+        return storageCapacity(StorageKind.CHEST, tier);
     }
 
     private Config() {

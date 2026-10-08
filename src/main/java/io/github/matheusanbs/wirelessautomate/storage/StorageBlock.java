@@ -1,13 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -23,19 +24,33 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.fluids.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Baú do mod: guarda itens por tipo e quantidade {@code long}, com a capacidade do tier
- * ({@link RouterBlock#TIER}, a mesma propriedade do roteador). Sobe de tier com os mesmos Cartões
- * de Upgrade, sem perder o conteúdo. O roteador preso nele usa o {@link BulkItems}.
+ * Bloco de armazenamento do mod: Baú, Tanque, Bateria ou Tanque Químico ({@link StorageKind}), com
+ * a capacidade do tier ({@link RouterBlock#TIER}, a mesma propriedade do roteador). Sobe de tier
+ * com os mesmos Cartões de Upgrade, sem perder o conteúdo. Clique direito abre a tela; no Tanque, um
+ * balde (ou outro recipiente de fluido) na mão enche ou esvazia direto.
+ *
+ * <p>Com conteúdo, o bloco nunca some sem virar item, como a caixa de shulker (ver
+ * {@link #playerWillDestroy}).
  */
-public class StorageChestBlock extends BaseEntityBlock {
-    public static final MapCodec<StorageChestBlock> CODEC = simpleCodec(StorageChestBlock::new);
+public class StorageBlock extends BaseEntityBlock {
+    public static final MapCodec<StorageBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            StringRepresentable.fromEnum(StorageKind::values).fieldOf("kind").forGetter(StorageBlock::kind),
+            propertiesCodec()).apply(instance, StorageBlock::new));
 
-    public StorageChestBlock(Properties properties) {
+    private final StorageKind kind;
+
+    public StorageBlock(StorageKind kind, Properties properties) {
         super(properties);
+        this.kind = kind;
         registerDefaultState(stateDefinition.any().setValue(RouterBlock.TIER, RouterTier.BASIC));
+    }
+
+    public StorageKind kind() {
+        return kind;
     }
 
     @Override
@@ -55,37 +70,58 @@ public class StorageChestBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new StorageChestBlockEntity(pos, state);
+        return switch (kind) {
+            case CHEST -> new StorageChestBlockEntity(pos, state);
+            case TANK -> new StorageTankBlockEntity(pos, state);
+            case BATTERY -> new StorageBatteryBlockEntity(pos, state);
+            case CHEMICAL_TANK -> new StorageChemicalTankBlockEntity(pos, state);
+        };
     }
 
-    /** O Cartão de Upgrade age pelo próprio {@code useOn}; o resto segue para o clique sem item. */
+    /**
+     * O Cartão de Upgrade age pelo próprio {@code useOn}. No Tanque, um recipiente de fluido enche ou
+     * esvazia direto (o mesmo caminho dos tanques comuns). O resto segue para o clique sem item.
+     */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (stack.getItem() instanceof TierCoreItem) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
+        if (kind == StorageKind.TANK && FluidUtil.interactWithFluidHandler(player, hand, level, pos, hitResult.getDirection())) {
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    /** Clique direito abre a tela do Baú (a lista com busca). */
+    /** Clique direito abre a tela (a lista com busca, ou a da Bateria). */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hitResult) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
-                && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest) {
-            StorageChestMenu.open(serverPlayer, chest);
+                && level.getBlockEntity(pos) instanceof StorageBlockEntity storage) {
+            storage.open(serverPlayer);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** "12.600.000 itens em 3 tipos · capacidade 16.777.216" (ou "sem limite"). */
-    public static Component summary(long total, int types, long capacity) {
-        Component limit = capacity <= 0
-                ? Component.translatable("block.wirelessautomate.storage_chest.unlimited")
-                : Component.literal(TierCoreItem.grouped(capacity));
-        return Component.translatable("block.wirelessautomate.storage_chest.summary",
-                TierCoreItem.grouped(total), TierCoreItem.grouped(types), limit);
+    /** Quantidade com a unidade do tipo: "262.144 itens", "1.000.000 mB", "16.000.000 FE". */
+    public static Component amount(StorageKind kind, long value) {
+        return Component.translatable("gui.wirelessautomate.unit." + kind.unit, TierCoreItem.grouped(value));
+    }
+
+    /** Capacidade com a unidade, ou "sem limite". */
+    public static Component capacity(StorageKind kind, long capacity) {
+        return capacity <= 0 ? Component.translatable("block.wirelessautomate.storage.unlimited") : amount(kind, capacity);
+    }
+
+    /** "12.600.000 itens em 3 tipos · capacidade 16.777.216 itens" (na Bateria, sem os tipos). */
+    public static Component summary(StorageKind kind, long total, int types, long capacity) {
+        return kind.hasTypes()
+                ? Component.translatable("block.wirelessautomate.storage.summary", amount(kind, total),
+                        TierCoreItem.grouped(types), capacity(kind, capacity))
+                : Component.translatable("block.wirelessautomate.storage.summary.energy", amount(kind, total),
+                        capacity(kind, capacity));
     }
 
     @Override
@@ -95,23 +131,21 @@ public class StorageChestBlock extends BaseEntityBlock {
 
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest
-                ? StorageMath.signal(chest.storage().total(), chest.capacity())
-                : 0;
+        return level.getBlockEntity(pos) instanceof StorageBlockEntity storage ? storage.signal() : 0;
     }
 
     /**
-     * Um Baú com conteúdo nunca some sem virar item, como a caixa de shulker: se a quebra não vai
+     * Com conteúdo, o bloco nunca some sem virar item, como a caixa de shulker: se a quebra não vai
      * dropar nada (criativo, ou sem a ferramenta certa), o próprio bloco solta o item com o conteúdo.
      * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui não se faz nada.
      */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest
-                && !chest.storage().isEmpty()
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageBlockEntity storage
+                && !storage.isEmptyContents()
                 && (player.isCreative() || !state.canHarvestBlock(level, pos, player))) {
-            ItemStack stack = StorageChestBlockItem.withTier((StorageChestBlockItem) asItem(), state.getValue(RouterBlock.TIER));
-            stack.applyComponents(chest.collectComponents());
+            ItemStack stack = StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
+            stack.applyComponents(storage.collectComponents());
             ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
             drop.setDefaultPickUpDelay();
             level.addFreshEntity(drop);
@@ -126,22 +160,22 @@ public class StorageChestBlock extends BaseEntityBlock {
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest) {
-            chest.stash();
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof StorageBlockEntity storage) {
+            storage.stash();
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
-    /** Clique do meio (criativo): o Baú no tier do bloco, vazio. */
+    /** Clique do meio (criativo): o bloco no tier dele, vazio. */
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
-        return StorageChestBlockItem.withTier((StorageChestBlockItem) asItem(), state.getValue(RouterBlock.TIER));
+        return StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
     }
 
-    /** Sobe o Baú em {@code pos} para {@code target}, se for exatamente o tier seguinte. */
+    /** Sobe o armazenamento em {@code pos} para {@code target}, se for exatamente o tier seguinte. */
     public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof StorageChestBlock) || state.getValue(RouterBlock.TIER).next() != target) {
+        if (!(state.getBlock() instanceof StorageBlock) || state.getValue(RouterBlock.TIER).next() != target) {
             return false;
         }
         if (!level.isClientSide) {

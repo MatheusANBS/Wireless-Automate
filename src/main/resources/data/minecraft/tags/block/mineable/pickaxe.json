@@ -1,6 +1,9 @@
 {
   "values": [
     "wirelessautomate:router",
-    "wirelessautomate:storage_chest"
+    "wirelessautomate:storage_chest",
+    "wirelessautomate:storage_tank",
+    "wirelessautomate:storage_battery",
+    "wirelessautomate:storage_chemical_tank"
   ]
 }

@@ -200,13 +200,21 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         return Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
     }
 
-    /** "Baixo · Itens", "Baú Wireless · Itens" ou "Cartão de Filtro · Itens". */
+    /** Nome do armazenamento do filtro de entrada, pelo bloco no mundo do cliente. */
+    private Component storageName(FilterView v) {
+        if (minecraft != null && minecraft.level != null && v.router().isPresent()) {
+            return minecraft.level.getBlockState(v.router().get()).getBlock().getName();
+        }
+        return Component.translatable("block.wirelessautomate.storage_chest");
+    }
+
+    /** "Baixo · Itens", "Tanque Wireless · Fluidos" ou "Cartão de Filtro · Itens". */
     private Component context() {
         FilterView v = view();
         Component where = v.face().isPresent()
                 ? Component.translatable("gui.wirelessautomate.router.face." + v.face().get().getName())
                 : v.isCard() ? Component.translatable("item.wirelessautomate.filter_card")
-                : Component.translatable("block.wirelessautomate.storage_chest");
+                : storageName(v);
         return where.copy().append(" · ").append(typeName(v.type()));
     }
 
@@ -927,31 +935,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private void renderFluid(GuiGraphics g, FluidStack stack, int x, int y) {
-        if (stack.isEmpty()) {
-            return;
-        }
-        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(stack.getFluid());
-        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(ext.getStillTexture(stack));
-        int tint = ext.getTintColor(stack);
-        RenderSystem.enableBlend();
-        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f,
-                ((tint >>> 24) & 0xFF) / 255f);
-        RenderSystem.disableBlend();
+        GuiPaint.fluid(g, stack, x, y);
     }
 
     /** Químico do Mekanism: a textura dele tingida, como os fluidos; "?" se ele não existe mais. */
     private void renderChemical(GuiGraphics g, ResourceLocation id, int x, int y) {
-        ResourceLocation icon = Chemicals.icon(id);
-        if (icon == null) {
-            g.fill(x, y, x + 16, y + 16, GuiPaint.mix(GuiPaint.INSET, trim, 0.18f));
-            GuiPaint.textCentered(g, font, Component.literal("?"), x + 8, y + 4, trim);
-            return;
-        }
-        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(icon);
-        int tint = Chemicals.tint(id);
-        RenderSystem.enableBlend();
-        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f, 1f);
-        RenderSystem.disableBlend();
+        GuiPaint.chemical(g, font, id, x, y, trim);
     }
 
     private List<ItemStack> itemMembers(FilterEntry entry) {

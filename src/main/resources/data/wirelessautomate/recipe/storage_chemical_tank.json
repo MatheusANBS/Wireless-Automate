@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "IBI",
+    "BTB",
+    "IBI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "B": {
+      "item": "minecraft:glass_bottle"
+    },
+    "T": {
+      "item": "wirelessautomate:storage_tank"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:storage_chemical_tank",
+    "count": 1
+  }
+}

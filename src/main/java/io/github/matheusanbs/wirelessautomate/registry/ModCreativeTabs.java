@@ -4,7 +4,9 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -28,8 +30,14 @@ public final class ModCreativeTabs {
                                 output.accept(ModItems.TIER_CORES.get(tier).get());
                             }
                         }
-                        for (RouterTier tier : RouterTier.values()) {
-                            output.accept(StorageChestBlockItem.withTier(ModItems.STORAGE_CHEST.get(), tier));
+                        for (StorageKind kind : StorageKind.values()) {
+                            // O Tanque Químico só aparece com o Mekanism (sem ele não troca nada).
+                            if (kind == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+                                continue;
+                            }
+                            for (RouterTier tier : RouterTier.values()) {
+                                output.accept(StorageBlockItem.withTier(ModItems.STORAGE.get(kind).get(), tier));
+                            }
                         }
                         output.accept(ModItems.CONFIGURATOR.get());
                         output.accept(ModItems.NETWORK_TABLET.get());

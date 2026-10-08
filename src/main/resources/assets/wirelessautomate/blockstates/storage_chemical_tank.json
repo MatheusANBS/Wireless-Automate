@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "tier=basic": {
+      "model": "wirelessautomate:block/storage_chemical_tank_basic"
+    },
+    "tier=advanced": {
+      "model": "wirelessautomate:block/storage_chemical_tank_advanced"
+    },
+    "tier=elite": {
+      "model": "wirelessautomate:block/storage_chemical_tank_elite"
+    },
+    "tier=ultimate": {
+      "model": "wirelessautomate:block/storage_chemical_tank_ultimate"
+    }
+  }
+}

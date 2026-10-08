@@ -4,7 +4,8 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -27,8 +28,11 @@ public final class ModMenus {
     public static final Supplier<MenuType<TabletMenu>> NETWORK_TABLET =
             MENU_TYPES.register("network_tablet", () -> IMenuTypeExtension.create(TabletMenu::new));
 
-    public static final Supplier<MenuType<StorageChestMenu>> STORAGE_CHEST =
-            MENU_TYPES.register("storage_chest", () -> IMenuTypeExtension.create(StorageChestMenu::new));
+    /** Tela em lista do Baú e dos Tanques (o tipo vem no buffer de abertura). */
+    public static final Supplier<MenuType<StorageListMenu<?>>> STORAGE_LIST =
+            MENU_TYPES.register("storage_list", () -> IMenuTypeExtension.create(StorageListMenu::fromNetwork));
+    public static final Supplier<MenuType<StorageBatteryMenu>> STORAGE_BATTERY =
+            MENU_TYPES.register("storage_battery", () -> IMenuTypeExtension.create(StorageBatteryMenu::new));
 
     private ModMenus() {
     }

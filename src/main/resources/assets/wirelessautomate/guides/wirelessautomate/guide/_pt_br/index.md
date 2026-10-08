@@ -36,6 +36,9 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:network_tablet" /> [Tablet de Rede](network-tablet.md) | Vê e gerencia todas as suas redes de qualquer lugar. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Upgrade de Chunk Loading](chunk-loading.md) | Mantém o roteador trabalhando com você longe. |
 | <ItemImage id="wirelessautomate:storage_chest" /> [Baú Wireless](wireless-chest.md) | Guarda milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
+| <ItemImage id="wirelessautomate:storage_tank" /> [Tanque Wireless](wireless-tank.md) | Vários fluidos num tanque só, com bilhões de mB. |
+| <ItemImage id="wirelessautomate:storage_battery" /> [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
+| <ItemImage id="wirelessautomate:storage_chemical_tank" /> [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 
 ## Por onde começar
 

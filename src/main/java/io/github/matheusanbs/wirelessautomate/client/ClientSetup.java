@@ -5,11 +5,13 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,7 +30,7 @@ public final class ClientSetup {
     }
 
     /**
-     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e do Baú (0 = Básico ... 3 =
+     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e dos armazenamentos (0 = Básico ... 3 =
      * Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      */
     @SubscribeEvent
@@ -36,8 +38,10 @@ public final class ClientSetup {
         event.enqueueWork(() -> {
             ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
                     (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal());
-            ItemProperties.register(ModItems.STORAGE_CHEST.get(), WirelessAutomate.id("tier"),
-                    (stack, level, entity, seed) -> StorageChestBlockItem.tierOf(stack).ordinal());
+            for (StorageKind kind : StorageKind.values()) {
+                ItemProperties.register(ModItems.STORAGE.get(kind).get(), WirelessAutomate.id("tier"),
+                        (stack, level, entity, seed) -> StorageBlockItem.tierOf(stack).ordinal());
+            }
         });
     }
 
@@ -45,8 +49,10 @@ public final class ClientSetup {
     static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.ROUTER.get(),
                 (RouterMenu menu, Inventory inventory, Component title) -> new RouterScreen(menu, inventory, title));
-        event.register(ModMenus.STORAGE_CHEST.get(), (StorageChestMenu menu, Inventory inventory, Component title)
-                -> new StorageChestScreen(menu, inventory, title));
+        event.register(ModMenus.STORAGE_LIST.get(), (StorageListMenu<?> menu, Inventory inventory, Component title)
+                -> new StorageListScreen(menu, inventory, title));
+        event.register(ModMenus.STORAGE_BATTERY.get(), (StorageBatteryMenu menu, Inventory inventory, Component title)
+                -> new StorageBatteryScreen(menu, inventory, title));
         event.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
         event.register(ModMenus.LINKER.get(),

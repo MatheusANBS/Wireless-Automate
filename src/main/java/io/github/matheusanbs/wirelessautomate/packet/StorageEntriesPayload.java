@@ -1,28 +1,61 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestView;
+import io.github.matheusanbs.wirelessautomate.menu.ListKind;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListView;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.netty.handler.codec.DecoderException;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
- * Servidor → cliente: tipos do Baú da tela aberta que mudaram (quantidade nova; 0 = saiu) e o
- * cabeçalho. Uma sincronização grande vai em vários pacotes de até {@link #MAX_ENTRIES} tipos; só o
- * primeiro leva {@code reset}.
+ * Servidor → cliente: tipos do armazenamento da tela em lista aberta que mudaram (quantidade nova;
+ * 0 = saiu) e o cabeçalho. A chave viaja pelo codec do tipo de armazenamento ({@link ListKind}):
+ * item, fluido ou id de químico. Uma sincronização grande vai em vários pacotes de até
+ * {@link #MAX_ENTRIES} tipos; só o primeiro leva {@code reset}.
  */
-public record StorageEntriesPayload(int containerId, boolean reset, StorageChestView.Header header,
-        List<StorageChestView.Entry> entries) implements CustomPacketPayload {
+public record StorageEntriesPayload(int containerId, StorageKind kind, boolean reset, StorageListView.Header header,
+        List<StorageListView.Entry<Object>> entries) implements CustomPacketPayload {
     public static final int MAX_ENTRIES = 256;
     public static final Type<StorageEntriesPayload> TYPE = new Type<>(WirelessAutomate.id("storage_entries"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, StorageEntriesPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, StorageEntriesPayload::containerId,
-            ByteBufCodecs.BOOL, StorageEntriesPayload::reset,
-            StorageChestView.Header.STREAM_CODEC, StorageEntriesPayload::header,
-            StorageChestView.Entry.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_ENTRIES)), StorageEntriesPayload::entries,
-            StorageEntriesPayload::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, StorageEntriesPayload> STREAM_CODEC =
+            StreamCodec.of(StorageEntriesPayload::write, StorageEntriesPayload::read);
+
+    private static void write(RegistryFriendlyByteBuf buf, StorageEntriesPayload payload) {
+        buf.writeVarInt(payload.containerId);
+        buf.writeEnum(payload.kind);
+        buf.writeBoolean(payload.reset);
+        StorageListView.Header.STREAM_CODEC.encode(buf, payload.header);
+        ListKind<Object> kind = ListKind.of(payload.kind);
+        buf.writeVarInt(payload.entries.size());
+        for (StorageListView.Entry<Object> entry : payload.entries) {
+            kind.codec.encode(buf, entry.key());
+            buf.writeVarLong(entry.count());
+        }
+    }
+
+    private static StorageEntriesPayload read(RegistryFriendlyByteBuf buf) {
+        int containerId = buf.readVarInt();
+        StorageKind storage = buf.readEnum(StorageKind.class);
+        if (!storage.hasTypes()) {
+            throw new DecoderException("Armazenamento sem lista: " + storage);
+        }
+        boolean reset = buf.readBoolean();
+        StorageListView.Header header = StorageListView.Header.STREAM_CODEC.decode(buf);
+        ListKind<Object> kind = ListKind.of(storage);
+        int size = buf.readVarInt();
+        if (size < 0 || size > MAX_ENTRIES) {
+            throw new DecoderException("Tipos demais num pacote: " + size);
+        }
+        List<StorageListView.Entry<Object>> entries = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            entries.add(new StorageListView.Entry<>(kind.codec.decode(buf), buf.readVarLong()));
+        }
+        return new StorageEntriesPayload(containerId, storage, reset, header, entries);
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

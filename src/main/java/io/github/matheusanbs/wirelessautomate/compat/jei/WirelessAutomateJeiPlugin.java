@@ -5,7 +5,10 @@ import io.github.matheusanbs.wirelessautomate.client.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import net.minecraft.world.item.Item;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
@@ -41,7 +44,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
 
     /**
      * O upgrade na bancada ({@code RouterUpgradeRecipe}) é uma receita especial, que o JEI não
-     * mostra; aqui vão os três casos do roteador e os três do Baú como receitas sem forma só de exibição.
+     * mostra; aqui vão os três casos do roteador e os de cada armazenamento como receitas sem forma só de exibição.
      */
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
@@ -57,12 +60,18 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
             upgrades.add(new RecipeHolder<>(WirelessAutomate.id("jei/router_upgrade_" + next.getSerializedName()),
                     new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
                             RouterBlockItem.withTier(ModItems.ROUTER.get(), next), ingredients)));
-            NonNullList<Ingredient> chest = NonNullList.of(Ingredient.EMPTY,
-                    Ingredient.of(StorageChestBlockItem.withTier(ModItems.STORAGE_CHEST.get(), tier)),
-                    Ingredient.of(ModItems.TIER_CORES.get(next).get()));
-            upgrades.add(new RecipeHolder<>(WirelessAutomate.id("jei/storage_chest_upgrade_" + next.getSerializedName()),
-                    new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
-                            StorageChestBlockItem.withTier(ModItems.STORAGE_CHEST.get(), next), chest)));
+            for (StorageKind kind : StorageKind.values()) {
+                if (kind == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+                    continue;
+                }
+                Item item = ModItems.STORAGE.get(kind).get();
+                NonNullList<Ingredient> storage = NonNullList.of(Ingredient.EMPTY,
+                        Ingredient.of(StorageBlockItem.withTier(item, tier)),
+                        Ingredient.of(ModItems.TIER_CORES.get(next).get()));
+                upgrades.add(new RecipeHolder<>(WirelessAutomate.id("jei/" + kind.id + "_upgrade_" + next.getSerializedName()),
+                        new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
+                                StorageBlockItem.withTier(item, next), storage)));
+            }
         }
         registration.addRecipes(RecipeTypes.CRAFTING, upgrades);
     }

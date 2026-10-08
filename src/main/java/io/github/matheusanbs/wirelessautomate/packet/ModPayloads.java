@@ -14,8 +14,9 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestFilterTarget;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -46,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "4";
+    public static final String VERSION = "5";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -80,10 +81,11 @@ public final class ModPayloads {
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
                 (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
-        // Tela do Baú (handlers no StorageChestMenu).
-        registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageChestMenu::onEntries);
+        // Telas dos armazenamentos (handlers no StorageListMenu e no StorageBatteryMenu).
+        registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
-                (payload, context) -> StorageChestMenu.handle(serverPlayer(context), payload));
+                (payload, context) -> StorageListMenu.handle(serverPlayer(context), payload));
+        registrar.playToClient(BatteryStatePayload.TYPE, BatteryStatePayload.STREAM_CODEC, StorageBatteryMenu::onState);
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
     }
@@ -320,8 +322,8 @@ public final class ModPayloads {
             case BACK -> {
                 if (target instanceof RouterFaceFilterTarget face) {
                     RouterMenu.open(player, face.router());
-                } else if (target instanceof StorageChestFilterTarget chest) {
-                    StorageChestMenu.open(player, chest.chest());
+                } else if (target instanceof StorageFilterTarget storage) {
+                    storage.storage().open(player);
                 } else {
                     player.closeContainer();
                 }

@@ -44,8 +44,9 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
-Os mesmos cartões sobem o [Baú Wireless](wireless-chest.md), do mesmo jeito e sem perder o
-conteúdo: 262.144 → 16.777.216 → 1.073.741.824 itens → sem limite.
+Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
+[Bateria](wireless-battery.md) e [Tanque Químico](wireless-chemical-tank.md)), do mesmo jeito e sem
+perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 ## Receitas
 

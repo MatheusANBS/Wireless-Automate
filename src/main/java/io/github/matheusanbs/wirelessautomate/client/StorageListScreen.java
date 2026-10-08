@@ -2,15 +2,19 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestView;
+import io.github.matheusanbs.wirelessautomate.menu.ListKind;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListView;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.packet.StorageActionPayload;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -19,28 +23,34 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Baú: a lista de tipos guardados numa grade com rolagem, busca (nome, ou {@code @mod}) e
- * ordenação (quantidade, nome, mod), a ocupação do tier e o inventário do jogador. A lista vem da
- * {@link StorageChestView} e só é refeita quando ela, a busca ou a ordem mudam.
+ * Tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico): os tipos guardados numa
+ * grade com rolagem, busca (nome, ou {@code @mod}) e ordenação (quantidade, nome, mod), a ocupação
+ * do tier e o inventário do jogador. A lista vem da {@link StorageListView} e só é refeita quando
+ * ela, a busca ou a ordem mudam. O que muda de um armazenamento para outro (desenhar, nomear e
+ * clicar num tipo) está nos métodos por {@link ListKind}.
  *
  * <p>A janela é redimensionável: arraste a borda direita, a de baixo ou a alça do canto. Ela cresce
  * em torno do centro (a borda puxada segue o mouse e a oposta se move igual), então continua
  * centralizada; a grade ganha colunas e linhas, o inventário fica centralizado embaixo e o tamanho
  * é lembrado na sessão.
  *
- * <p>Clique numa célula: uma pilha para o cursor; botão direito: meia pilha; Shift + clique: uma
- * pilha para o inventário. Com um item no cursor, clicar na grade guarda tudo (botão direito: um).
- * Shift + clique no inventário guarda a pilha. O servidor valida tudo.
+ * <p>Baú: clique numa célula põe uma pilha no cursor; botão direito, meia pilha; Shift + clique,
+ * uma pilha no inventário. Com um item no cursor, clicar na grade guarda tudo (botão direito: um).
+ * Tanques: com um recipiente no cursor (balde, tanque de outro mod), clicar num tipo enche o
+ * recipiente com ele, ou o esvazia se ele já estiver cheio; botão direito esvazia um. Shift + clique
+ * no inventário guarda a pilha (ou esvazia os recipientes). O servidor valida tudo.
  */
-public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu> {
+public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?>> {
     private static final int X0 = 8;
     private static final int HEAD_Y = 6;
     private static final int SEARCH_Y = 21;
@@ -82,8 +92,9 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
 
     private final boolean preview;
     private final List<FlatButton> buttons = new ArrayList<>();
-    private final Map<ItemStack, String> names = new HashMap<>();
-    private List<ItemStack> shown = List.of();
+    /** Nome em minúsculas por tipo (as chaves da visão são os mesmos objetos até saírem). */
+    private final Map<Object, String> names = new IdentityHashMap<>();
+    private List<Object> shown = List.of();
     private int shownVersion = -1;
     private String shownSearch = "";
     private Sort shownSort = sort;
@@ -102,12 +113,12 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
     private double resizeGrabX;
     private double resizeGrabY;
 
-    public StorageChestScreen(StorageChestMenu menu, Inventory inventory, Component title) {
+    public StorageListScreen(StorageListMenu<?> menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
     }
 
     /** @param preview sem servidor (captura de desenvolvimento): os cliques não fazem nada */
-    public StorageChestScreen(StorageChestMenu menu, Inventory inventory, Component title, boolean preview) {
+    public StorageListScreen(StorageListMenu<?> menu, Inventory inventory, Component title, boolean preview) {
         super(menu, inventory, title);
         this.preview = preview;
         this.inventoryLabelY = -1000;
@@ -157,13 +168,22 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         return Component.translatable("gui.wirelessautomate.storage." + key, args);
     }
 
-    private StorageChestView view() {
-        return menu.view();
+    @SuppressWarnings("unchecked")
+    private StorageListView<Object> view() {
+        return (StorageListView<Object>) menu.view();
+    }
+
+    private StorageKind storageKind() {
+        return menu.kind().storage;
+    }
+
+    private boolean items() {
+        return storageKind() == StorageKind.CHEST;
     }
 
     private RouterTier tier() {
         return minecraft != null && minecraft.level != null
-                ? RouterTier.values()[StorageChestMenu.tierOrdinal(minecraft.level, menu.pos())]
+                ? RouterTier.values()[StorageListMenu.tierOrdinal(minecraft.level, menu.pos())]
                 : RouterTier.BASIC;
     }
 
@@ -186,7 +206,7 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
                     GuiPaint.dot(g, b.getX() + 5, b.getY() + 4,
                             view().header().filtered() ? GuiPaint.tierColor(tier()) : GuiPaint.DISABLED);
                 },
-                () -> send(StorageActionPayload.Action.OPEN_FILTER, ItemStack.EMPTY))
+                () -> send(StorageActionPayload.Action.OPEN_FILTER, null))
                 .tooltip(() -> view().header().filtered() ? tr("filter.on.tooltip") : tr("filter.off.tooltip")));
 
         sortButton = add(new FlatButton(0, 0, SORT_W, ROW_H, Component.empty(),
@@ -230,9 +250,10 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         return addRenderableWidget(button);
     }
 
-    private void send(StorageActionPayload.Action action, ItemStack key) {
+    private void send(StorageActionPayload.Action action, @Nullable Object key) {
         if (!preview) {
-            PacketDistributor.sendToServer(new StorageActionPayload(menu.containerId, action, key));
+            PacketDistributor.sendToServer(new StorageActionPayload(menu.containerId, storageKind(), action,
+                    Optional.ofNullable(key)));
         }
     }
 
@@ -247,18 +268,19 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         shownVersion = view().version();
         shownSearch = search;
         shownSort = sort;
-        List<ItemStack> keys = view().keys();
-        List<ItemStack> kept = new ArrayList<>(keys.size());
-        for (ItemStack key : keys) {
+        List<Object> keys = view().keys();
+        names.keySet().retainAll(new java.util.HashSet<>(keys));
+        List<Object> kept = new ArrayList<>(keys.size());
+        for (Object key : keys) {
             if (matches(key, search)) {
                 kept.add(key);
             }
         }
-        Comparator<ItemStack> byName = Comparator.comparing(this::name);
-        Comparator<ItemStack> order = switch (sort) {
-            case COUNT -> Comparator.<ItemStack>comparingLong(key -> view().count(key)).reversed().thenComparing(byName);
+        Comparator<Object> byName = Comparator.comparing(this::name);
+        Comparator<Object> order = switch (sort) {
+            case COUNT -> Comparator.<Object>comparingLong(key -> view().count(key)).reversed().thenComparing(byName);
             case NAME -> byName;
-            case MOD -> Comparator.<ItemStack, String>comparing(StorageChestScreen::namespace).thenComparing(byName);
+            case MOD -> Comparator.<Object, String>comparing(StorageListScreen::namespace).thenComparing(byName);
         };
         kept.sort(order);
         shown = kept;
@@ -266,7 +288,7 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
     }
 
     /** Busca: cada palavra precisa aparecer no nome; {@code @texto} procura no id do mod. */
-    private boolean matches(ItemStack key, String search) {
+    private boolean matches(Object key, String search) {
         if (search.isEmpty()) {
             return true;
         }
@@ -284,12 +306,74 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
     }
 
     /** Nome em minúsculas, guardado por tipo (o nome de um item com componentes pode ser caro). */
-    private String name(ItemStack key) {
-        return names.computeIfAbsent(key, k -> k.getHoverName().getString().toLowerCase(Locale.ROOT));
+    private String name(Object key) {
+        return names.computeIfAbsent(key, k -> displayName(k).getString().toLowerCase(Locale.ROOT));
     }
 
-    private static String namespace(ItemStack key) {
-        return BuiltInRegistries.ITEM.getKey(key.getItem()).getNamespace();
+    // ------------------------------------------------------------------ por tipo de armazenamento
+
+    /** Nome do tipo para mostrar: o do item, o do fluido ou o do químico. */
+    private static Component displayName(Object key) {
+        return switch (key) {
+            case ItemStack stack -> stack.getHoverName();
+            case FluidStack fluid -> fluid.getHoverName();
+            case ResourceLocation id -> Chemicals.name(id);
+            default -> Component.literal(String.valueOf(key));
+        };
+    }
+
+    /** Mod do tipo, para a busca {@code @mod} e a ordem por mod. */
+    private static String namespace(Object key) {
+        return switch (key) {
+            case ItemStack stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+            case FluidStack fluid -> BuiltInRegistries.FLUID.getKey(fluid.getFluid()).getNamespace();
+            case ResourceLocation id -> id.getNamespace();
+            default -> "";
+        };
+    }
+
+    /** O tipo na célula: o item, ou a textura do fluido ou do químico tingida. */
+    private void renderKey(GuiGraphics g, Object key, int x, int y, int trim) {
+        switch (key) {
+            case ItemStack stack -> g.renderItem(stack, x, y);
+            case FluidStack fluid -> GuiPaint.fluid(g, fluid, x, y);
+            case ResourceLocation id -> GuiPaint.chemical(g, font, id, x, y, trim);
+            default -> {
+            }
+        }
+    }
+
+    /** Quantidade com a unidade para a dica: "Quantidade: 12.600.000" ou "12.600.000 mB". */
+    private Component amountLine(long count) {
+        return items() ? tr("amount", TierCoreItem.grouped(count))
+                : tr("amount.mb", TierCoreItem.grouped(count));
+    }
+
+    /** Dica do tipo sob o mouse: a do item (com os componentes) ou o nome, e a quantidade. */
+    private void renderKeyTooltip(GuiGraphics g, Object key, int mouseX, int mouseY) {
+        List<Component> lines = new ArrayList<>();
+        if (key instanceof ItemStack stack) {
+            lines.addAll(getTooltipFromContainerItem(stack));
+        } else {
+            lines.add(displayName(key));
+            if (minecraft != null && minecraft.options.advancedItemTooltips) {
+                String id = key instanceof FluidStack fluid ? BuiltInRegistries.FLUID.getKey(fluid.getFluid()).toString()
+                        : String.valueOf(key);
+                lines.add(Component.literal(id).withStyle(ChatFormatting.DARK_GRAY));
+            }
+        }
+        lines.add(amountLine(view().count(key)).copy().withStyle(ChatFormatting.AQUA));
+        lines.add(tr(items() ? "click.hint" : "click.hint.tank").withStyle(ChatFormatting.DARK_GRAY));
+        if (key instanceof ItemStack stack) {
+            g.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
+        } else {
+            g.renderComponentTooltip(font, lines, mouseX, mouseY);
+        }
+    }
+
+    /** Quantidade abreviada com a unidade: "12.6M" nos itens, "12.6M mB" nos tanques. */
+    private String abbreviated(long value) {
+        return items() ? RateFormat.abbreviate(value) : RateFormat.abbreviate(value) + " mB";
     }
 
     // Para o teste de ponta a ponta (DevEndToEnd).
@@ -322,12 +406,12 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
     }
 
     private int maxScroll() {
-        int rows = (shown.size() + cols - 1) / cols;
-        return Math.max(0, rows - rows);
+        int lines = (shown.size() + cols - 1) / cols;
+        return Math.max(0, lines - rows);
     }
 
     /** O tipo na célula sob o mouse, ou {@code null}. */
-    private @Nullable ItemStack keyAt(double mouseX, double mouseY) {
+    private @Nullable Object keyAt(double mouseX, double mouseY) {
         int col = (int) Math.floor((mouseX - leftPos - GRID_X + 1) / CELL);
         int row = (int) Math.floor((mouseY - topPos - GRID_Y + 1) / CELL);
         if (col < 0 || col >= cols || row < 0 || row >= rows) {
@@ -414,13 +498,18 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         }
         if (inGrid(mouseX, mouseY) && (button == 0 || button == 1)) {
             setFocused(null);
+            Object key = keyAt(mouseX, mouseY);
             if (!menu.getCarried().isEmpty()) {
-                send(button == 0 ? StorageActionPayload.Action.INSERT_CARRIED
-                        : StorageActionPayload.Action.INSERT_CARRIED_ONE, ItemStack.EMPTY);
+                // Tanques: clique num tipo enche o recipiente com ele (ou o esvazia, se cheio).
+                if (!items() && button == 0 && key != null) {
+                    send(StorageActionPayload.Action.TAKE_STACK, key);
+                } else {
+                    send(button == 0 ? StorageActionPayload.Action.INSERT_CARRIED
+                            : StorageActionPayload.Action.INSERT_CARRIED_ONE, null);
+                }
                 return true;
             }
-            ItemStack key = keyAt(mouseX, mouseY);
-            if (key != null) {
+            if (key != null && items()) {
                 StorageActionPayload.Action action = button == 1 ? StorageActionPayload.Action.TAKE_HALF
                         : Screen.hasShiftDown() ? StorageActionPayload.Action.TAKE_TO_INVENTORY
                         : StorageActionPayload.Action.TAKE_STACK;
@@ -517,12 +606,9 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
             setTooltipForNextRenderPass(tr("resize.tooltip", cols, rows));
             return;
         }
-        ItemStack key = menu.getCarried().isEmpty() && resizing == null ? keyAt(mouseX, mouseY) : null;
+        Object key = (menu.getCarried().isEmpty() || !items()) && resizing == null ? keyAt(mouseX, mouseY) : null;
         if (key != null) {
-            List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(key));
-            lines.add(tr("amount", TierCoreItem.grouped(view().count(key))).withStyle(ChatFormatting.AQUA));
-            lines.add(tr("click.hint").withStyle(ChatFormatting.DARK_GRAY));
-            g.renderTooltip(font, lines, key.getTooltipImage(), key, mouseX, mouseY);
+            renderKeyTooltip(g, key, mouseX, mouseY);
             return;
         }
         renderTooltip(g, mouseX, mouseY);
@@ -563,13 +649,13 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         }
         int first = scrollRow * cols;
         for (int i = 0; i < rows * cols && first + i < shown.size(); i++) {
-            ItemStack key = shown.get(first + i);
+            Object key = shown.get(first + i);
             int cx = x + GRID_X + (i % cols) * CELL;
             int cy = y + GRID_Y + (i / cols) * CELL;
-            g.renderItem(key, cx, cy);
+            renderKey(g, key, cx, cy, trim);
             drawCount(g, view().count(key), cx, cy);
         }
-        ItemStack hovered = keyAt(mouseX, mouseY);
+        Object hovered = keyAt(mouseX, mouseY);
         if (hovered != null || inGrid(mouseX, mouseY) && !menu.getCarried().isEmpty()) {
             int col = (int) Math.floor((mouseX - x - GRID_X + 1) / (double) CELL);
             int row = (int) Math.floor((mouseY - y - GRID_Y + 1) / (double) CELL);
@@ -579,7 +665,7 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         }
         if (shown.isEmpty()) {
             // Quebrado em linhas dentro da grade: na largura mínima a frase não cabe numa só.
-            Component empty = view().types() == 0 ? tr("empty") : tr("no_match");
+            Component empty = view().types() > 0 ? tr("no_match") : tr(items() ? "empty" : "empty.tank");
             List<FormattedCharSequence> lines = font.split(empty, cols * CELL - 8);
             int lineY = y + GRID_Y + (rows * CELL - lines.size() * 10) / 2;
             for (FormattedCharSequence line : lines) {
@@ -602,10 +688,10 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         }
 
         // ocupação
-        StorageChestView.Header header = view().header();
+        StorageListView.Header header = view().header();
         Component usage = header.capacity() <= 0
-                ? tr("usage.unlimited", RateFormat.abbreviate(header.total()), TierCoreItem.grouped(view().types()))
-                : tr("usage", RateFormat.abbreviate(header.total()), RateFormat.abbreviate(header.capacity()),
+                ? tr("usage.unlimited", abbreviated(header.total()), TierCoreItem.grouped(view().types()))
+                : tr("usage", abbreviated(header.total()), abbreviated(header.capacity()),
                         TierCoreItem.grouped(view().types()));
         // Cortada com reticências antes da porcentagem, se não couber.
         int usageMax = barX() + 4 - GRID_X + 1 - (header.capacity() > 0 ? 30 : 0);
@@ -652,9 +738,9 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         }
     }
 
-    /** Quantidade abreviada no canto da célula, em meia escala, por cima do item. */
+    /** Quantidade abreviada no canto da célula, em meia escala, por cima do tipo (mB nos tanques). */
     private void drawCount(GuiGraphics g, long count, int cx, int cy) {
-        if (count <= 1) {
+        if (count <= 1 && items()) {
             return;
         }
         String text = RateFormat.abbreviate(count);

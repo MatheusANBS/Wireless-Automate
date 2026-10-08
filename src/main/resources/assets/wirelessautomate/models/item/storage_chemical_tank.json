@@ -1,0 +1,23 @@
+{
+  "parent": "wirelessautomate:block/storage_chemical_tank_basic",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/storage_chemical_tank_advanced"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/storage_chemical_tank_elite"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/storage_chemical_tank_ultimate"
+    }
+  ]
+}

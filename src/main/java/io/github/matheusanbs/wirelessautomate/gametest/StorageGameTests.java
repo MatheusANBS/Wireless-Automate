@@ -3,12 +3,13 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.command.StorageCommand;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import io.github.matheusanbs.wirelessautomate.menu.StorageChestMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -19,13 +20,17 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorageHandler;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -34,7 +39,6 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -49,9 +53,12 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -73,15 +80,22 @@ public final class StorageGameTests {
         return NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
     }
 
-    /** Roteador do tier em cima de {@code machine}, na rede, com a face de cima no modo dado. */
+    /** Roteador do tier em cima de {@code machine}, na rede, com a face de cima de itens no modo dado. */
     private static RouterBlockEntity router(GameTestHelper helper, BlockPos machine, RouterTier tier,
             @Nullable UUID network, PortMode mode) {
+        return router(helper, machine, tier, network, ResourceType.ITEM, mode);
+    }
+
+    /** O mesmo, para o tipo de recurso dado. */
+    private static RouterBlockEntity router(GameTestHelper helper, BlockPos machine, RouterTier tier,
+            @Nullable UUID network, ResourceType type, PortMode mode) {
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, tier));
         RouterBlockEntity router = helper.getBlockEntity(routerPos);
         router.setNetworkId(network);
-        router.setMode(ResourceType.ITEM, Direction.UP, mode);
+        router.setNetworkId(type, network);
+        router.setMode(type, Direction.UP, mode);
         return router;
     }
 
@@ -139,9 +153,9 @@ public final class StorageGameTests {
         ItemStorage storage = chest.storage();
         helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), basic + 100, false), basic, "cheio no Básico");
         helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 1, true), 0L, "cheio aceita nada");
-        helper.assertTrue(StorageChestBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED),
+        helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED),
                 "upgrade para Avançado");
-        helper.assertFalse(StorageChestBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ULTIMATE),
+        helper.assertFalse(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ULTIMATE),
                 "não pula tier");
         StorageChestBlockEntity upgraded = helper.getBlockEntity(A);
         helper.assertTrue(upgraded == chest, "o block entity é o mesmo");
@@ -329,7 +343,7 @@ public final class StorageGameTests {
         ItemStorage storage = chest.storage();
         storage.insert(new ItemStack(Items.COBBLESTONE), 1_000, false);
         ServerPlayer player = playerNear(helper, chest);
-        StorageChestMenu menu = openMenu(player, chest);
+        StorageListMenu<ItemStack> menu = openMenu(player, chest);
         ItemStack cobble = new ItemStack(Items.COBBLESTONE);
 
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_STACK, cobble), "pegar pilha");
@@ -357,7 +371,7 @@ public final class StorageGameTests {
 
     /**
      * A tela recebe tudo na abertura e depois só as diferenças, no máximo a cada
-     * {@link StorageChestMenu#SYNC_INTERVAL} ticks; um tipo que zera chega com 0.
+     * {@link StorageListMenu#SYNC_INTERVAL} ticks; um tipo que zera chega com 0.
      */
     @GameTest(template = "empty")
     public static void screenReceivesOnlyChanges(GameTestHelper helper) {
@@ -367,17 +381,17 @@ public final class StorageGameTests {
         storage.insert(new ItemStack(Items.DIAMOND), 5, false);
         ServerPlayer player = playerNear(helper, chest);
         // Fora do containerMenu do jogador: o tick dele chamaria broadcastChanges e consumiria o envio.
-        StorageChestMenu menu = new StorageChestMenu(CONTAINER_ID, player.getInventory(), chest);
-        StorageChestMenu.Sync first = menu.poll();
+        StorageListMenu<ItemStack> menu = new StorageListMenu<>(CONTAINER_ID, player.getInventory(), chest);
+        StorageListMenu.Sync<ItemStack> first = menu.poll();
         helper.assertTrue(first != null && first.reset(), "a abertura manda tudo");
         helper.assertValueEqual(first.changes().size(), 2, "dois tipos");
         helper.assertTrue(menu.poll() == null, "nada mudou, nada vai");
         storage.extract(new ItemStack(Items.DIAMOND), 5, false);
         helper.assertTrue(menu.poll() == null, "espera o intervalo");
         helper.startSequence()
-                .thenIdle(StorageChestMenu.SYNC_INTERVAL + 1)
+                .thenIdle(StorageListMenu.SYNC_INTERVAL + 1)
                 .thenExecute(() -> {
-                    StorageChestMenu.Sync next = menu.poll();
+                    StorageListMenu.Sync<ItemStack> next = menu.poll();
                     helper.assertTrue(next != null && !next.reset(), "a diferença vai depois do intervalo");
                     helper.assertValueEqual(next.changes().size(), 1, "só o tipo que mudou");
                     helper.assertValueEqual(next.changes().get(0).count(), 0L, "diamante saiu");
@@ -389,7 +403,7 @@ public final class StorageGameTests {
     /** Baú + Cartão de Upgrade do tier seguinte na bancada: sobe o tier e mantém a referência ao conteúdo. */
     @GameTest(template = "empty")
     public static void chestUpgradeRecipe(GameTestHelper helper) {
-        ItemStack chest = StorageChestBlockItem.withTier(ModItems.STORAGE_CHEST.get(), RouterTier.BASIC);
+        ItemStack chest = StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(), RouterTier.BASIC);
         StorageContents contents = new StorageContents(UUID.randomUUID(), 3, 12_345L);
         chest.set(ModDataComponents.STORAGE_CONTENTS.get(), contents);
         CraftingInput input = CraftingInput.of(2, 1,
@@ -398,7 +412,7 @@ public final class StorageGameTests {
                 .orElseThrow(() -> new GameTestAssertException("sem receita de upgrade do Baú"))
                 .value().assemble(input, helper.getLevel().registryAccess());
         helper.assertTrue(out.is(ModItems.STORAGE_CHEST.get()), "resultado: " + out);
-        helper.assertValueEqual(StorageChestBlockItem.tierOf(out), RouterTier.ADVANCED, "tier");
+        helper.assertValueEqual(StorageBlockItem.tierOf(out), RouterTier.ADVANCED, "tier");
         helper.assertValueEqual(out.get(ModDataComponents.STORAGE_CONTENTS.get()), contents, "conteúdo mantido");
         CraftingInput skip = CraftingInput.of(2, 1,
                 List.of(chest, new ItemStack(ModItems.TIER_CORES.get(RouterTier.ELITE).get())));
@@ -446,13 +460,13 @@ public final class StorageGameTests {
      */
     @GameTest(template = "empty")
     public static void recoverCommandGivesTheContentsBack(GameTestHelper helper) {
-        StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.BASIC);
+        StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.ELITE);
         chest.storage().insert(new ItemStack(Items.DIAMOND), 777, false);
         // Sai do mundo sem drop nenhum, como um /setblock: o conteúdo fica órfão no servidor.
         helper.getLevel().setBlock(helper.absolutePos(A), Blocks.AIR.defaultBlockState(), 3);
         UUID orphan = null;
-        for (Map.Entry<UUID, Tag> entry : StorageSavedData.get(helper.getLevel().getServer()).contents().entrySet()) {
-            if (entry.getValue() instanceof ListTag list && list.size() == 1
+        for (Map.Entry<UUID, StorageSavedData.Stored> entry : StorageSavedData.get(helper.getLevel().getServer()).contents().entrySet()) {
+            if (entry.getValue().data() instanceof ListTag list && list.size() == 1
                     && list.getCompound(0).getLong("count") == 777) {
                 orphan = entry.getKey();
             }
@@ -476,8 +490,25 @@ public final class StorageGameTests {
         StorageContents contents = given.get(ModDataComponents.STORAGE_CONTENTS.get());
         helper.assertTrue(contents != null && contents.id().equals(orphan) && contents.total() == 777,
                 "o item aponta para o conteúdo: " + given);
+        helper.assertValueEqual(StorageBlockItem.tierOf(given), RouterTier.ELITE, "o tier que se perdeu");
         place(helper, given, B);
         helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 777L, "os diamantes voltaram");
+        helper.succeed();
+    }
+
+    /**
+     * Conteúdos guardados antes de o tier ser gravado: o {@code recover} escolhe o menor tier que
+     * comporta tudo (pela capacidade da config), para nada ficar além do limite.
+     */
+    @GameTest(template = "empty")
+    public static void recoverGuessesTheTierOfOldContents(GameTestHelper helper) {
+        long basic = Config.storageCapacity(StorageKind.CHEST, RouterTier.BASIC);
+        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()), 10),
+                RouterTier.BASIC, "pouco cabe no Básico");
+        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()),
+                basic + 1), RouterTier.ADVANCED, "um a mais que o Básico vai para o Avançado");
+        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, RouterTier.ELITE,
+                new ListTag()), 10), RouterTier.ELITE, "gravado vale o gravado");
         helper.succeed();
     }
 
@@ -518,14 +549,203 @@ public final class StorageGameTests {
         return player;
     }
 
-    private static StorageChestMenu openMenu(ServerPlayer player, StorageChestBlockEntity chest) {
-        StorageChestMenu menu = new StorageChestMenu(CONTAINER_ID, player.getInventory(), chest);
+    private static StorageListMenu<ItemStack> openMenu(ServerPlayer player, StorageChestBlockEntity chest) {
+        StorageListMenu<ItemStack> menu = new StorageListMenu<>(CONTAINER_ID, player.getInventory(), chest);
         player.containerMenu = menu;
         return menu;
     }
 
-    private static boolean act(ServerPlayer player, StorageChestMenu menu, StorageActionPayload.Action action, ItemStack key) {
-        return StorageChestMenu.handle(player, new StorageActionPayload(menu.containerId, action, key));
+    private static boolean act(ServerPlayer player, StorageListMenu<ItemStack> menu, StorageActionPayload.Action action, ItemStack key) {
+        return StorageListMenu.handle(player, new StorageActionPayload(menu.containerId, StorageKind.CHEST, action,
+                key.isEmpty() ? Optional.empty() : Optional.of(key)));
+    }
+
+    // ------------------------------------------------------------------ Tanque e Bateria
+
+    private static StorageTankBlockEntity storageTank(GameTestHelper helper, BlockPos pos, RouterTier tier) {
+        helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.TANK).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
+        return helper.getBlockEntity(pos);
+    }
+
+    private static StorageBatteryBlockEntity storageBattery(GameTestHelper helper, BlockPos pos, RouterTier tier) {
+        helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
+        return helper.getBlockEntity(pos);
+    }
+
+    private static long fluid(GameTestHelper helper, BlockPos pos, net.minecraft.world.level.material.Fluid fluid) {
+        StorageTankBlockEntity tank = helper.getBlockEntity(pos);
+        return tank.storage().count(new FluidStack(fluid, 1));
+    }
+
+    private static long energy(GameTestHelper helper, BlockPos pos) {
+        StorageBatteryBlockEntity battery = helper.getBlockEntity(pos);
+        return battery.store().stored();
+    }
+
+    /** Tanque: vários fluidos por tipo, capacidade total do tier, e a visão de handler de fluido comum. */
+    @GameTest(template = "empty")
+    public static void tankStoresFluidsByType(GameTestHelper helper) {
+        StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
+        long capacity = Config.storageCapacity(StorageKind.TANK, RouterTier.BASIC);
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 400_000), FluidAction.EXECUTE), 400_000,
+                "água pela visão comum");
+        helper.assertValueEqual(tank.storage().insert(new FluidStack(Fluids.LAVA, 1), capacity, false),
+                capacity - 400_000, "lava até a capacidade");
+        helper.assertValueEqual(tank.storage().types(), 2, "dois fluidos");
+        helper.assertValueEqual(tank.handler().getTanks(), 3, "um tanque por fluido + o vazio");
+        helper.assertValueEqual(tank.handler().drain(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE).getAmount(),
+                1_000, "drena a água pedida");
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 5_000), FluidAction.SIMULATE), 1_000,
+                "cheio: só cabe o que saiu");
+        helper.succeed();
+    }
+
+    /** Balde no bloco: esvazia o balde cheio no Tanque e enche o vazio com o que tiver, como num tanque comum. */
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void bucketOnTheTankBlock(GameTestHelper helper) {
+        StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
+        player.setGameMode(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(tank.getBlockPos()), Direction.UP, tank.getBlockPos(), false);
+        tank.getBlockState().useItemOn(player.getMainHandItem(), helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
+        helper.assertValueEqual(fluid(helper, A, Fluids.WATER), 1_000L, "o balde esvaziou no Tanque");
+        helper.assertTrue(player.getMainHandItem().is(Items.BUCKET), "balde vazio na mão: " + player.getMainHandItem());
+        tank.getBlockState().useItemOn(player.getMainHandItem(), helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
+        helper.assertValueEqual(fluid(helper, A, Fluids.WATER), 0L, "o balde encheu");
+        helper.assertTrue(player.getMainHandItem().is(Items.WATER_BUCKET), "balde de água na mão: " + player.getMainHandItem());
+        helper.succeed();
+    }
+
+    /** Filtro de entrada no Tanque: só a lava entra, por qualquer caminho. */
+    @GameTest(template = "empty")
+    public static void tankInputFilter(GameTestHelper helper) {
+        StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
+        tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
+                List.of(new FilterEntry.FluidEntry(new FluidStack(Fluids.LAVA, 1), 0))));
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE), 0, "água recusada");
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.LAVA, 1_000), FluidAction.EXECUTE), 1_000, "lava aceita");
+        helper.succeed();
+    }
+
+    /**
+     * Tanque → Tanque no Ultimate pelo roteador: 50 milhões de mB passam em poucos ticks (a API de
+     * fluido já passa até 2 bilhões por chamada), sem fluido criado nem perdido.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void tankToTankMovesMillions(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-tanque-tanque");
+        storageTank(helper, A, RouterTier.ULTIMATE).storage().insert(new FluidStack(Fluids.WATER, 1), 50_000_000L, false);
+        storageTank(helper, B, RouterTier.ULTIMATE);
+        RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.INSERT);
+        long[] started = new long[1];
+        helper.onEachTick(() -> helper.assertValueEqual(fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER),
+                50_000_000L, "água"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> started[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(fluid(helper, B, Fluids.WATER), 50_000_000L, "água no destino"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 20,
+                        "levou " + (helper.getTick() - started[0]) + " ticks"))
+                .thenSucceed();
+    }
+
+    /** Bateria: capacidade do tier e a visão {@code IEnergyStorage} comum. */
+    @GameTest(template = "empty")
+    public static void batteryStoresEnergy(GameTestHelper helper) {
+        StorageBatteryBlockEntity battery = storageBattery(helper, A, RouterTier.BASIC);
+        long capacity = Config.storageCapacity(StorageKind.BATTERY, RouterTier.BASIC);
+        helper.assertValueEqual(battery.store().insert(capacity + 500, false), capacity, "cheia no Básico");
+        helper.assertValueEqual(battery.handler().receiveEnergy(10, true), 0, "cheia não recebe");
+        helper.assertValueEqual(battery.handler().extractEnergy(1_000, false), 1_000, "extrai pela visão comum");
+        helper.assertValueEqual(battery.handler().getEnergyStored(), (int) (capacity - 1_000), "guardado");
+        helper.assertValueEqual(battery.signal(), 14, "comparador quase cheio");
+        helper.succeed();
+    }
+
+    /**
+     * Bateria → Bateria no Ultimate pelo roteador: 5 bilhões de FE (mais que um {@code int}) passam
+     * em poucos ticks, sem energia criada nem perdida.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void batteryToBatteryMovesBillions(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-bateria-bateria");
+        storageBattery(helper, A, RouterTier.ULTIMATE).store().insert(5_000_000_000L, false);
+        storageBattery(helper, B, RouterTier.ULTIMATE);
+        RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.INSERT);
+        helper.onEachTick(() -> helper.assertValueEqual(energy(helper, A) + energy(helper, B), 5_000_000_000L, "energia"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> helper.assertValueEqual(energy(helper, B), 5_000_000_000L, "energia no destino"))
+                .thenSucceed();
+    }
+
+    /** Tanque e Bateria quebrados no criativo também viram item com o conteúdo, e o conteúdo volta ao colocar. */
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void tankAndBatteryKeepContentsWhenBroken(GameTestHelper helper) {
+        storageTank(helper, A, RouterTier.ELITE).storage().insert(new FluidStack(Fluids.LAVA, 1), 7_654_321L, false);
+        storageBattery(helper, B, RouterTier.ELITE).store().insert(9_876_543L, false);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.CREATIVE);
+        for (BlockPos pos : List.of(A, B)) {
+            player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above()));
+            player.gameMode.destroyBlock(helper.absolutePos(pos));
+        }
+        ItemStack tank = pickUp(helper, A, StorageKind.TANK, 7_654_321L);
+        ItemStack battery = pickUp(helper, B, StorageKind.BATTERY, 9_876_543L);
+        place(helper, tank, A, StorageKind.TANK);
+        place(helper, battery, B, StorageKind.BATTERY);
+        helper.assertValueEqual(fluid(helper, A, Fluids.LAVA), 7_654_321L, "a lava voltou");
+        helper.assertValueEqual(energy(helper, B), 9_876_543L, "a energia voltou");
+        helper.succeed();
+    }
+
+    /** Tira do chão o item do armazenamento com o total dado (perto da posição relativa). */
+    private static ItemStack pickUp(GameTestHelper helper, BlockPos pos, StorageKind kind, long total) {
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                new AABB(helper.absolutePos(pos)).inflate(4), entity -> {
+                    StorageContents contents = entity.getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+                    return entity.getItem().is(ModItems.STORAGE.get(kind).get()) && contents != null && contents.total() == total;
+                });
+        helper.assertValueEqual(drops.size(), 1, kind + " no chão com " + total);
+        ItemStack stack = drops.get(0).getItem().copy();
+        drops.get(0).discard();
+        return stack;
+    }
+
+    /** Tela do Tanque: balde vazio no cursor enche com o fluido clicado; cheio, esvazia; Shift + clique esvazia do inventário. */
+    @GameTest(template = "empty")
+    @SuppressWarnings({"removal", "unchecked"})
+    public static void tankScreenFillsAndEmptiesBuckets(GameTestHelper helper) {
+        StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
+        tank.storage().insert(new FluidStack(Fluids.WATER, 1), 5_000, false);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
+        player.getInventory().clearContent();
+        StorageListMenu<FluidStack> menu = (StorageListMenu<FluidStack>) (StorageListMenu<?>)
+                new StorageListMenu<>(CONTAINER_ID, player.getInventory(), tank);
+        player.containerMenu = menu;
+        FluidStack water = new FluidStack(Fluids.WATER, 1);
+        menu.setCarried(new ItemStack(Items.BUCKET));
+        helper.assertTrue(StorageListMenu.handle(player, new StorageActionPayload(CONTAINER_ID, StorageKind.TANK,
+                StorageActionPayload.Action.TAKE_STACK, Optional.of(water))), "encher o balde");
+        helper.assertTrue(menu.getCarried().is(Items.WATER_BUCKET), "balde de água no cursor: " + menu.getCarried());
+        helper.assertValueEqual(tank.storage().count(water), 4_000L, "saiu um balde");
+        helper.assertTrue(StorageListMenu.handle(player, new StorageActionPayload(CONTAINER_ID, StorageKind.TANK,
+                StorageActionPayload.Action.INSERT_CARRIED)), "esvaziar o balde");
+        helper.assertTrue(menu.getCarried().is(Items.BUCKET), "balde vazio no cursor");
+        helper.assertValueEqual(tank.storage().count(water), 5_000L, "voltou o balde");
+        menu.setCarried(ItemStack.EMPTY);
+        player.getInventory().setItem(9, new ItemStack(Items.WATER_BUCKET));
+        menu.quickMoveStack(player, 0);
+        helper.assertValueEqual(tank.storage().count(water), 6_000L, "Shift + clique esvaziou o balde do inventário");
+        helper.assertTrue(player.getInventory().countItem(Items.BUCKET) == 1, "o balde vazio voltou ao inventário");
+        helper.succeed();
     }
 
     /**
@@ -533,11 +753,15 @@ public final class StorageGameTests {
      * pedra embaixo. Sem jogador, para a colisão com ele não impedir.
      */
     private static void place(GameTestHelper helper, ItemStack stack, BlockPos pos) {
+        place(helper, stack, pos, StorageKind.CHEST);
+    }
+
+    private static void place(GameTestHelper helper, ItemStack stack, BlockPos pos, StorageKind kind) {
         helper.setBlock(pos.below(), Blocks.STONE);
         BlockPos floor = helper.absolutePos(pos).below();
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(floor).add(0, 0.5, 0), Direction.UP, floor, false);
         ((BlockItem) stack.getItem()).place(new BlockPlaceContext(helper.getLevel(), null, InteractionHand.MAIN_HAND, stack, hit));
-        helper.assertBlockPresent(ModBlocks.STORAGE_CHEST.get(), pos);
+        helper.assertBlockPresent(ModBlocks.STORAGE.get(kind).get(), pos);
     }
 
     private StorageGameTests() {

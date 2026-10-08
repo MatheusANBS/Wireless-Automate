@@ -2,7 +2,10 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
-import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import java.util.EnumMap;
+import java.util.Map;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -20,13 +23,21 @@ public final class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .noOcclusion());
 
-    /** Baú do mod (armazenamento por tipo e quantidade, com tiers). */
-    public static final DeferredBlock<StorageChestBlock> STORAGE_CHEST = BLOCKS.registerBlock("storage_chest", StorageChestBlock::new,
-            BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .strength(3.0F, 6.0F)
-                    .sound(SoundType.METAL)
-                    .requiresCorrectToolForDrops());
+    /** Armazenamentos do mod (Baú, Tanque, Bateria, Tanque Químico), com tiers. */
+    public static final Map<StorageKind, DeferredBlock<StorageBlock>> STORAGE = new EnumMap<>(StorageKind.class);
+
+    static {
+        for (StorageKind kind : StorageKind.values()) {
+            STORAGE.put(kind, BLOCKS.registerBlock(kind.id, props -> new StorageBlock(kind, props),
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .strength(3.0F, 6.0F)
+                            .sound(SoundType.METAL)
+                            .requiresCorrectToolForDrops()));
+        }
+    }
+
+    public static final DeferredBlock<StorageBlock> STORAGE_CHEST = STORAGE.get(StorageKind.CHEST);
 
     private ModBlocks() {
     }

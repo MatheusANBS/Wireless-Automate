@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
@@ -14,6 +15,9 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.UUID;
@@ -217,6 +221,58 @@ public final class ChemicalGameTests {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         data.remove(before);
         data.remove(target);
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ Tanque Químico do mod
+
+    private static StorageChemicalTankBlockEntity chemicalTank(GameTestHelper helper, BlockPos pos, RouterTier tier,
+            UUID network, PortMode mode) {
+        helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.CHEMICAL_TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, tier));
+        helper.setBlock(pos.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+        RouterBlockEntity router = helper.getBlockEntity(pos.above());
+        router.setNetworkId(network);
+        router.setMode(ResourceType.CHEMICAL, Direction.UP, mode);
+        return helper.getBlockEntity(pos);
+    }
+
+    /**
+     * Tanque Químico: o Mekanism o vê pela capability dele (um tanque por químico), e o roteador move
+     * 3 bilhões de mB de hidrogênio de um para outro em poucos ticks, sem criar nem perder nada.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void chemicalTankToChemicalTank(GameTestHelper helper) {
+        if (!Chemicals.LOADED) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-tanque-quimico");
+        StorageChemicalTankBlockEntity from = chemicalTank(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        chemicalTank(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+        helper.assertTrue(ChemicalTestSupport.hasHandler(helper.getLevel(), helper.absolutePos(A)), "capability do Mekanism");
+        fill(helper, A, HYDROGEN, 3_000_000_000L);
+        helper.assertValueEqual(from.storage().count(HYDROGEN), 3_000_000_000L, "guardado por id");
+        helper.onEachTick(() -> helper.assertValueEqual(amount(helper, A, HYDROGEN) + amount(helper, B, HYDROGEN),
+                3_000_000_000L, "hidrogênio"));
+        helper.succeedWhen(() -> helper.assertValueEqual(amount(helper, B, HYDROGEN), 3_000_000_000L, "no destino"));
+    }
+
+    /** Filtro de entrada do Tanque Químico: só o oxigênio entra, também pelo Mekanism. */
+    @GameTest(template = "empty")
+    public static void chemicalTankInputFilter(GameTestHelper helper) {
+        if (!Chemicals.LOADED) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-tanque-quimico-filtro");
+        StorageChemicalTankBlockEntity tank = chemicalTank(helper, A, RouterTier.BASIC, network, PortMode.INSERT);
+        tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false, List.of(new FilterEntry.ChemicalEntry(OXYGEN, 0))));
+        long rest = ChemicalTestSupport.fill(helper.getLevel(), helper.absolutePos(A), HYDROGEN, 1_000);
+        helper.assertValueEqual(rest, 1_000L, "hidrogênio recusado");
+        fill(helper, A, OXYGEN, 1_000);
+        helper.assertValueEqual(tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
         helper.succeed();
     }
 }

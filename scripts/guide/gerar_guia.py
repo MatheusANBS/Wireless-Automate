@@ -221,6 +221,9 @@ recursos entre si, sem canos.
 | ''' + item('network_tablet') + ''' [Tablet de Rede](network-tablet.md) | Vê e gerencia todas as suas redes de qualquer lugar. |
 | ''' + item('chunk_loader_upgrade') + ''' [Upgrade de Chunk Loading](chunk-loading.md) | Mantém o roteador trabalhando com você longe. |
 | ''' + item('storage_chest') + ''' [Baú Wireless](wireless-chest.md) | Guarda milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
+| ''' + item('storage_tank') + ''' [Tanque Wireless](wireless-tank.md) | Vários fluidos num tanque só, com bilhões de mB. |
+| ''' + item('storage_battery') + ''' [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
+| ''' + item('storage_chemical_tank') + ''' [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 
 ## Por onde começar
 
@@ -271,6 +274,9 @@ resources with the others, with no pipes.
 | ''' + item('network_tablet') + ''' [Network Tablet](network-tablet.md) | See and manage all your networks from anywhere. |
 | ''' + item('chunk_loader_upgrade') + ''' [Chunk Loading Upgrade](chunk-loading.md) | Keeps the router working while you're away. |
 | ''' + item('storage_chest') + ''' [Wireless Chest](wireless-chest.md) | Stores millions of items by type; between two of them, a whole type moves at once. |
+| ''' + item('storage_tank') + ''' [Wireless Tank](wireless-tank.md) | Many fluids in one tank, with billions of mB. |
+| ''' + item('storage_battery') + ''' [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
+| ''' + item('storage_chemical_tank') + ''' [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
 
 ## Where to start
 
@@ -565,8 +571,9 @@ Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de 
 
 Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
 
-Os mesmos cartões sobem o [Baú Wireless](wireless-chest.md), do mesmo jeito e sem perder o
-conteúdo: 262.144 → 16.777.216 → 1.073.741.824 itens → sem limite.
+Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
+[Bateria](wireless-battery.md) e [Tanque Químico](wireless-chemical-tank.md)), do mesmo jeito e sem
+perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 ## Receitas
 
@@ -608,8 +615,9 @@ Each step multiplies throughput by 16. Range and dimensions follow the **sender'
 
 Tiers can't be skipped: a Basic router won't take the Elite card.
 
-The same cards raise the [Wireless Chest](wireless-chest.md), the same way and keeping its
-contents: 262,144 → 16,777,216 → 1,073,741,824 items → unlimited.
+The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
+[Battery](wireless-battery.md) and [Chemical Tank](wireless-chemical-tank.md)), the same way and
+keeping their contents. Each tier's capacity is on each one's page.
 
 ## Recipes
 
@@ -1368,9 +1376,265 @@ item: in creative, without a pickaxe or in an explosion, nothing is lost.
 ''')
 
 # =====================================================================================
+# Tanque, Bateria e Tanque Químico
+# =====================================================================================
+SCENE_STORAGE_PAIR = '''<GameScene zoom="4" interactive={true}>
+  <Block id="wirelessautomate:{BLOCK}" x="0" y="0" z="0" p:tier="elite" />
+  <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <Block id="wirelessautomate:{BLOCK}" x="4" y="0" z="0" p:tier="ultimate" />
+  <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <LineAnnotation from="0.5 1.5 0.5" to="4.5 1.5 0.5" color="#a46cff" thickness="0.08">
+    {LINE}
+  </LineAnnotation>
+  <IsometricCamera yaw="200" pitch="30" />
+</GameScene>'''
+
+COMMON_PT = '''
+## Em comum com o Baú
+
+- **Tiers:** sobe com os mesmos [Cartões de Upgrade](upgrade-cards.md), no mundo ou na bancada, sem perder o conteúdo.
+- **Quebrar:** o item leva o conteúdo{FILTER_PT}, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
+- **Comparador:** o sinal sobe com a ocupação.
+- **Outros mods** o veem como {WHAT_PT} comum.
+'''
+COMMON_EN = '''
+## Shared with the Chest
+
+- **Tiers:** raised with the same [Upgrade Cards](upgrade-cards.md), in the world or in a crafting table, keeping the contents.
+- **Breaking:** the item takes the contents{FILTER_EN}, and the tooltip shows the total. A full one always becomes an item (in creative, without a pickaxe or in an explosion).
+- **Comparator:** the signal rises with how full it is.
+- **Other mods** see it as a regular {WHAT_EN}.
+'''
+
+page('wireless-tank.md', front('Tanque Wireless', 'wirelessautomate:storage_tank', 12,
+                               item_ids=['wirelessautomate:storage_tank']) + '''
+# Tanque Wireless
+
+<ItemImage id="wirelessautomate:storage_tank" scale="2" float="left" />
+
+Um tanque para **vários fluidos ao mesmo tempo**, quantos couberem na capacidade do tier. Cada
+fluido aparece numa lista, como os itens do [Baú Wireless](wireless-chest.md). Preso a um roteador,
+ele troca bilhões de mB de uma vez.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_tank', LINE='Fluido de um Tanque para outro pela aba Fluidos') + '''
+
+## Capacidade
+
+Total em mB, todos os fluidos somados.
+
+| Tier | mB |
+| --- | --- |
+| **Básico** | 1.000.000 |
+| **Avançado** | 64.000.000 |
+| **Elite** | 4.000.000.000 |
+| **Ultimate** | Sem limite |
+
+## Baldes e recipientes
+
+| Quero... | Como |
+| --- | --- |
+| Esvaziar um balde | Clique no Tanque com o balde cheio na mão, ou Shift + clique nele no inventário da tela. |
+| Encher um balde | Clique no Tanque com o balde vazio (pega o primeiro fluido), ou, na tela, clique no fluido com o balde no cursor. |
+| Outros recipientes | Tanques e células de outros mods funcionam igual, pela tela. |
+
+Na tela, com um recipiente no cursor: clique num fluido enche o recipiente com ele, ou o esvazia se
+ele já estiver cheio; o botão direito esvazia um. A busca, a ordem e o redimensionar são os do Baú.
+
+## Filtro de entrada
+
+O botão **Filtro** da tela abre a [tela de filtros](filters.md) de fluidos: só entra o que ele
+aceita, e o **estoque** de uma entrada vira "guardar até N mB".
+''' + fill(COMMON_PT, FILTER_PT=' e o filtro', WHAT_PT='um tanque') + '''
+## Receita
+
+<RecipeFor id="wirelessautomate:storage_tank" />
+''', front('Wireless Tank', 'wirelessautomate:storage_tank', 12,
+           item_ids=['wirelessautomate:storage_tank']) + '''
+# Wireless Tank
+
+<ItemImage id="wirelessautomate:storage_tank" scale="2" float="left" />
+
+A tank for **many fluids at once**, as many as fit in the tier's capacity. Each fluid shows up in a
+list, like the items in the [Wireless Chest](wireless-chest.md). Attached to a router, it trades
+billions of mB at once.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_tank', LINE='Fluid from one Tank to another through the Fluids tab') + '''
+
+## Capacity
+
+Total in mB, all fluids added up.
+
+| Tier | mB |
+| --- | --- |
+| **Basic** | 1,000,000 |
+| **Advanced** | 64,000,000 |
+| **Elite** | 4,000,000,000 |
+| **Ultimate** | Unlimited |
+
+## Buckets and containers
+
+| I want to... | How |
+| --- | --- |
+| Empty a bucket | Click the Tank with the full bucket in hand, or Shift + click it in the screen's inventory. |
+| Fill a bucket | Click the Tank with an empty bucket (takes the first fluid), or, on the screen, click the fluid with the bucket on the cursor. |
+| Other containers | Tanks and cells from other mods work the same way, through the screen. |
+
+On the screen, with a container on the cursor: clicking a fluid fills the container with it, or
+empties it if it's already full; right click empties one. Search, order and resizing are the
+Chest's.
+
+## Input filter
+
+The screen's **Filter** button opens the fluid [filter screen](filters.md): only what it accepts
+gets in, and an entry's **stock** means "store up to N mB".
+''' + fill(COMMON_EN, FILTER_EN=' and the filter', WHAT_EN='tank') + '''
+## Recipe
+
+<RecipeFor id="wirelessautomate:storage_tank" />
+''')
+
+page('wireless-battery.md', front('Bateria Wireless', 'wirelessautomate:storage_battery', 13,
+                                  item_ids=['wirelessautomate:storage_battery']) + '''
+# Bateria Wireless
+
+<ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
+
+Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um roteador na aba
+**Energia**, ela carrega e descarrega bilhões de FE por tick.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_battery', LINE='Energia de uma Bateria para outra pela aba Energia') + '''
+
+## Capacidade
+
+| Tier | FE |
+| --- | --- |
+| **Básico** | 16.000.000 |
+| **Avançado** | 1.000.000.000 |
+| **Elite** | 64.000.000.000 |
+| **Ultimate** | Sem limite |
+
+## A tela
+
+Clique na Bateria: a barra mostra a carga e a porcentagem, e embaixo a variação por tick
+(**carregando**, **descarregando** ou **estável**). Passe o mouse na barra para o valor exato.
+A Bateria não tem filtro: energia é uma só.
+''' + fill(COMMON_PT, FILTER_PT='', WHAT_PT='uma bateria') + '''
+## Receita
+
+<RecipeFor id="wirelessautomate:storage_battery" />
+''', front('Wireless Battery', 'wirelessautomate:storage_battery', 13,
+           item_ids=['wirelessautomate:storage_battery']) + '''
+# Wireless Battery
+
+<ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
+
+Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a router on the
+**Energy** tab, it charges and discharges billions of FE per tick.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_battery', LINE='Energy from one Battery to another through the Energy tab') + '''
+
+## Capacity
+
+| Tier | FE |
+| --- | --- |
+| **Basic** | 16,000,000 |
+| **Advanced** | 1,000,000,000 |
+| **Elite** | 64,000,000,000 |
+| **Ultimate** | Unlimited |
+
+## The screen
+
+Click the Battery: the bar shows the charge and the percentage, and below it the change per tick
+(**charging**, **draining** or **idle**). Hover the bar for the exact value. The Battery has no
+filter: energy is just one thing.
+''' + fill(COMMON_EN, FILTER_EN='', WHAT_EN='battery') + '''
+## Recipe
+
+<RecipeFor id="wirelessautomate:storage_battery" />
+''')
+
+page('wireless-chemical-tank.md', front('Tanque Químico Wireless', 'wirelessautomate:storage_chemical_tank', 14,
+                                        item_ids=['wirelessautomate:storage_chemical_tank']) + '''
+# Tanque Químico Wireless
+
+<ItemImage id="wirelessautomate:storage_chemical_tank" scale="2" float="left" />
+
+O [Tanque Wireless](wireless-tank.md) para os **químicos do Mekanism** (gases, líquidos de
+infusão, pigmentos, slurries): vários ao mesmo tempo, na capacidade do tier. Só existe com o
+Mekanism instalado. Preso a um roteador na aba **Químicos**, um tipo inteiro passa de uma vez.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_chemical_tank', LINE='Químico de um Tanque para outro pela aba Químicos') + '''
+
+## Capacidade
+
+A mesma do Tanque: 1.000.000, 64.000.000 e 4.000.000.000 mB, e sem limite no Ultimate.
+
+## Recipientes do Mekanism
+
+Na tela, com um tanque ou cilindro de químico do Mekanism no cursor: clique num químico enche o
+recipiente com ele, ou o esvazia se ele já estiver cheio; o botão direito esvazia um. Shift +
+clique num recipiente do inventário esvazia ele no Tanque.
+
+## Filtro de entrada
+
+O botão **Filtro** abre a tela de filtros de químicos (por químico ou por mod); o **estoque** vira
+"guardar até N mB".
+''' + fill(COMMON_PT, FILTER_PT=' e o filtro', WHAT_PT='um tanque de químicos') + '''
+## Receita
+
+Um Tanque Wireless com frascos de vidro e ferro (só com o Mekanism).
+
+<RecipeFor id="wirelessautomate:storage_chemical_tank" />
+''', front('Wireless Chemical Tank', 'wirelessautomate:storage_chemical_tank', 14,
+           item_ids=['wirelessautomate:storage_chemical_tank']) + '''
+# Wireless Chemical Tank
+
+<ItemImage id="wirelessautomate:storage_chemical_tank" scale="2" float="left" />
+
+The [Wireless Tank](wireless-tank.md) for **Mekanism chemicals** (gases, infuse types, pigments,
+slurries): many at once, within the tier's capacity. It only exists with Mekanism installed.
+Attached to a router on the **Chemicals** tab, a whole type moves at once.
+
+<br clear="all" />
+
+''' + fill(SCENE_STORAGE_PAIR, BLOCK='storage_chemical_tank', LINE='Chemical from one Tank to another through the Chemicals tab') + '''
+
+## Capacity
+
+The same as the Tank: 1,000,000, 64,000,000 and 4,000,000,000 mB, and unlimited on Ultimate.
+
+## Mekanism containers
+
+On the screen, with a Mekanism chemical tank or canister on the cursor: clicking a chemical fills
+the container with it, or empties it if it's already full; right click empties one. Shift + click
+a container in the inventory empties it into the Tank.
+
+## Input filter
+
+The **Filter** button opens the chemical filter screen (by chemical or by mod); the **stock** means
+"store up to N mB".
+''' + fill(COMMON_EN, FILTER_EN=' and the filter', WHAT_EN='chemical tank') + '''
+## Recipe
+
+A Wireless Tank with glass bottles and iron (only with Mekanism).
+
+<RecipeFor id="wirelessautomate:storage_chemical_tank" />
+''')
+
+# =====================================================================================
 # Químicos
 # =====================================================================================
-page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 12) + '''
+page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 15) + '''
 # Químicos do Mekanism
 
 Com o **Mekanism** instalado, o roteador ganha a aba **Químicos**: gases, líquidos de infusão,
@@ -1402,7 +1666,7 @@ As máquinas e tanques do Mekanism vêm com as faces **desligadas** na configura
 próprio Mekanism. Ligue a face em que o roteador vai trabalhar com a ferramenta de configuração do
 Mekanism, como faria para um tubo; senão o roteador não enxerga o químico, e o modo da face aparece
 indisponível.
-''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 12) + '''
+''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 15) + '''
 # Mekanism chemicals
 
 With **Mekanism** installed, the router gets a **Chemicals** tab: gases, infuse types, pigments
@@ -1439,7 +1703,7 @@ unavailable.
 # =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 13) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 16) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -1460,7 +1724,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
 cada rede está movendo e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 13) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 16) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -1488,6 +1752,9 @@ network is moving and which destinations are full.
 # =====================================================================================
 RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:storage_chest" />
+<RecipeFor id="wirelessautomate:storage_tank" />
+<RecipeFor id="wirelessautomate:storage_battery" />
+<RecipeFor id="wirelessautomate:storage_chemical_tank" />
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
@@ -1498,26 +1765,26 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 14) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 17) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
 
 | Também na bancada | Como |
 | --- | --- |
-| **Subir o tier** | Roteador ou Baú Wireless + o cartão do tier seguinte, em qualquer posição. |
+| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico) + o cartão do tier seguinte, em qualquer posição. |
 | **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios: o original volta. |
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 14) + '''
+''', front('All recipes', 'minecraft:crafting_table', 17) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router or Wireless Chest + the next tier's card, in any slots. |
+| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank) + the next tier's card, in any slots. |
 | **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
 | **This guide** | Book + redstone. |
 

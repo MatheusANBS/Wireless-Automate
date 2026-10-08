@@ -3,14 +3,20 @@ package io.github.matheusanbs.wirelessautomate.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * Paleta e primitivas de desenho das telas, tiradas do rascunho visual
@@ -158,6 +164,36 @@ public final class GuiPaint {
         if (checked) {
             g.fill(x + 2, y + 2, x + 7, y + 7, color);
         }
+    }
+
+    /** Fluido 16×16: a textura parada dele, tingida, como os tanques mostram. */
+    public static void fluid(GuiGraphics g, FluidStack stack, int x, int y) {
+        if (stack.isEmpty()) {
+            return;
+        }
+        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(stack.getFluid());
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+                .apply(ext.getStillTexture(stack));
+        int tint = ext.getTintColor(stack);
+        RenderSystem.enableBlend();
+        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f,
+                ((tint >>> 24) & 0xFF) / 255f);
+        RenderSystem.disableBlend();
+    }
+
+    /** Químico do Mekanism 16×16: a textura dele tingida, como os fluidos; "?" se ele não existe mais. */
+    public static void chemical(GuiGraphics g, Font font, ResourceLocation id, int x, int y, int trim) {
+        ResourceLocation icon = Chemicals.icon(id);
+        if (icon == null) {
+            g.fill(x, y, x + 16, y + 16, mix(INSET, trim, 0.18f));
+            textCentered(g, font, Component.literal("?"), x + 8, y + 4, trim);
+            return;
+        }
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(icon);
+        int tint = Chemicals.tint(id);
+        RenderSystem.enableBlend();
+        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f, (tint & 0xFF) / 255f, 1f);
+        RenderSystem.disableBlend();
     }
 
     /** Texto cortado com reticências para caber em {@code maxWidth}. */

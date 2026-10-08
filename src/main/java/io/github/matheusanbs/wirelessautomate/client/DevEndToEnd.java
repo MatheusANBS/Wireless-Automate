@@ -1697,7 +1697,8 @@ public final class DevEndToEnd {
                     () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received()
                             && screen.getMenu().kind() == StorageKind.SOURCE_TANK && screen.getMenu().stored() == 1_640_000L,
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
-            list.add(clipCheck(label + "tanque de Source"));
+            list.add(new Step(label + "Tanque de Source: nenhum texto cortado", STEP_TIMEOUT_MS, () -> {
+            }, () -> GuiText.clipCount() == 0, () -> GuiText.clipCount() + " texto(s) cortado(s) na tela do tanque"));
             list.add(capture("tanque-source-1-tela" + suffix));
             list.add(close(label + "Tanque de Source: fechar"));
             if (code.equals("pt_br")) {

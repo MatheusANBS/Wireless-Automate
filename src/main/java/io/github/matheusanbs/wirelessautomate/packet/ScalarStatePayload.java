@@ -7,7 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
- * Servidor → cliente: a energia da Bateria da tela aberta e o tick do servidor em que foi lida (a
+ * Servidor → cliente: o conteúdo (energia ou Source) do armazenamento da tela aberta e o tick do servidor em que foi lida (a
  * tela calcula a variação por tick entre dois pacotes).
  */
 public record ScalarStatePayload(int containerId, long stored, long capacity, long tick) implements CustomPacketPayload {

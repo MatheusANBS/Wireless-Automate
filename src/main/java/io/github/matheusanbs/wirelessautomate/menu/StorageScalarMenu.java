@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 public class StorageScalarMenu extends AbstractContainerMenu {
     private final BlockPos pos;
     private final StorageKind kind;
-    private final @Nullable ScalarStorageBlockEntity battery;
+    private final @Nullable ScalarStorageBlockEntity storage;
     private final @Nullable ServerPlayer viewer;
     private long sentStored = -1;
     private long sentCapacity = -1;
@@ -38,11 +38,11 @@ public class StorageScalarMenu extends AbstractContainerMenu {
     private boolean received;
 
     /** Servidor. */
-    public StorageScalarMenu(int containerId, Inventory inventory, ScalarStorageBlockEntity battery) {
+    public StorageScalarMenu(int containerId, Inventory inventory, ScalarStorageBlockEntity storage) {
         super(ModMenus.STORAGE_SCALAR.get(), containerId);
-        this.pos = battery.getBlockPos();
-        this.kind = battery.kind();
-        this.battery = battery;
+        this.pos = storage.getBlockPos();
+        this.kind = storage.kind();
+        this.storage = storage;
         this.viewer = inventory.player instanceof ServerPlayer player ? player : null;
     }
 
@@ -56,17 +56,17 @@ public class StorageScalarMenu extends AbstractContainerMenu {
         super(ModMenus.STORAGE_SCALAR.get(), containerId);
         this.pos = pos;
         this.kind = kind;
-        this.battery = null;
+        this.storage = null;
         this.viewer = null;
     }
 
-    public static void open(ServerPlayer player, ScalarStorageBlockEntity battery) {
+    public static void open(ServerPlayer player, ScalarStorageBlockEntity storage) {
         player.openMenu(new SimpleMenuProvider(
-                        (containerId, inventory, p) -> new StorageScalarMenu(containerId, inventory, battery),
-                        battery.getBlockState().getBlock().getName()),
+                        (containerId, inventory, p) -> new StorageScalarMenu(containerId, inventory, storage),
+                        storage.getBlockState().getBlock().getName()),
                 buf -> {
-                    BlockPos.STREAM_CODEC.encode(buf, battery.getBlockPos());
-                    buf.writeEnum(battery.kind());
+                    BlockPos.STREAM_CODEC.encode(buf, storage.getBlockPos());
+                    buf.writeEnum(storage.kind());
                 });
     }
 
@@ -113,18 +113,18 @@ public class StorageScalarMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return battery == null || StorageListMenu.stillValid(battery, player);
+        return storage == null || StorageListMenu.stillValid(storage, player);
     }
 
     @Override
     public void broadcastChanges() {
         super.broadcastChanges();
-        if (battery == null || viewer == null) {
+        if (storage == null || viewer == null) {
             return;
         }
         long now = viewer.server.getTickCount();
-        long value = battery.store().stored();
-        long cap = battery.capacity();
+        long value = storage.store().stored();
+        long cap = storage.capacity();
         // O primeiro vai na hora; depois, quando muda (no máximo a cada SYNC_INTERVAL ticks) e a cada
         // 20 ticks sem mudança, para a variação voltar a 0 na tela.
         boolean first = sentStored < 0;

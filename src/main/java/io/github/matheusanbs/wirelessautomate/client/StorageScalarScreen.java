@@ -2,10 +2,10 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
-import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -22,7 +22,8 @@ import net.minecraft.world.entity.player.Inventory;
 public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMenu> {
     private static final int W = 220;
     private static final int H = 104;
-    private static final int HINT_H = 26;
+    private static final int HINT_H = 34;
+    private static final int HINT_LINES = 3;
     private static final int X0 = 10;
     private static final int HEAD_Y = 8;
     private static final int BAR_Y = 30;
@@ -38,7 +39,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
     public StorageScalarScreen(StorageScalarMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         this.imageWidth = W;
-        this.imageHeight = menu.kind() == StorageKind.SOURCE_TANK ? H + HINT_H : H;
+        this.imageHeight = heightFor(menu.kind());
     }
 
     private boolean source() {
@@ -49,8 +50,9 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         return Component.translatable("gui.wirelessautomate." + (source() ? "source_tank." : "battery.") + key, args);
     }
 
-    private int height() {
-        return source() ? H + HINT_H : H;
+    /** O tanque leva a dica em até 3 linhas (a frase inteira cabe em 3 nos dois idiomas, com 220 px). */
+    private static int heightFor(StorageKind kind) {
+        return kind == StorageKind.SOURCE_TANK ? H + HINT_H : H;
     }
 
     private RouterTier tier() {
@@ -85,7 +87,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         int y = topPos;
         RouterTier tier = tier();
         int trim = GuiPaint.tierColor(tier);
-        GuiPaint.panel(g, x, y, W, height(), trim);
+        GuiPaint.panel(g, x, y, W, imageHeight, trim);
 
         // cabeçalho: nome e tier (o nome cortado com reticências se não couber)
         Component tierName = Component.translatable(tier.translationKey());
@@ -136,12 +138,12 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         GuiPaint.dot(g, barX, barY + BAR_H + 20, color);
         GuiText.draw(g, font, flow, barX + 9, barY + BAR_H + 19, barW - 10, GuiPaint.MUTED);
 
-        // dica do tanque: um filete e o texto em até duas linhas, com o ícone da Source
+        // dica do tanque: um filete e o texto em até três linhas, com o ícone da Source
         if (source()) {
             int ruleY = y + H - 12;
             g.fill(barX, ruleY, barX + barW, ruleY + 1, GuiPaint.LINE);
             ResourceStyle.drawIcon(g, ResourceType.SOURCE, barX, ruleY + 6);
-            GuiText.wrap(g, font, tr("hint"), barX + 13, ruleY + 6, barW - 13, 2, GuiPaint.MUTED);
+            GuiText.wrap(g, font, tr("hint"), barX + 13, ruleY + 6, barW - 13, HINT_LINES, GuiPaint.MUTED);
         }
     }
 

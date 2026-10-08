@@ -20,7 +20,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Máquinas de teste dos GameTests que o vanilla não tem: um slot com pilha enorme (como uma gaveta
- * ou um barril com upgrade de pilha) e uma máquina com mais tanques que a janela de uma visita.
+ * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita e um
+ * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism).
  * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
  * {@code -Dwirelessautomate.gameTests=true} (a run {@code gameTestServer} liga).
  */
@@ -30,10 +31,13 @@ public final class TestMachines {
     public static final Block BIG_SLOT = Blocks.SPONGE;
     /** {@link ManyTanks#TANKS} tanques de fluido, só de saída. */
     public static final Block MANY_TANKS = Blocks.WET_SPONGE;
+    /** Um tanque de saída que devolve a pilha interna em {@code getFluidInTank} ({@link LiveTank}). */
+    public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -44,9 +48,10 @@ public final class TestMachines {
         if (!ENABLED) {
             return;
         }
-        WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas em {} e {}", BIG_SLOT, MANY_TANKS);
+        WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas em {}, {} e {}", BIG_SLOT, MANY_TANKS, LIVE_TANK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> bigSlot(pos), BIG_SLOT);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
+        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -58,10 +63,15 @@ public final class TestMachines {
         return TANKS.computeIfAbsent(pos.immutable(), key -> new ManyTanks());
     }
 
+    static LiveTank liveTank(BlockPos pos) {
+        return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
+    }
+
     /** Esquece o estado da posição (o mundo dos testes é reaproveitado entre lotes). */
     static void reset(BlockPos pos) {
         BIG_SLOTS.remove(pos.immutable());
         TANKS.remove(pos.immutable());
+        LIVE_TANKS.remove(pos.immutable());
     }
 
     static final class BigSlot implements IItemHandler {
@@ -199,6 +209,67 @@ public final class TestMachines {
             if (action.execute()) {
                 tanks[tank] = tanks[tank].getAmount() == taken ? FluidStack.EMPTY
                         : tanks[tank].copyWithAmount(tanks[tank].getAmount() - taken);
+            }
+            return out;
+        }
+    }
+
+    /**
+     * Um tanque só, de saída, como o {@code BasicFluidTank} do Mekanism: {@code getFluidInTank} devolve
+     * a pilha guardada (não uma cópia) e o dreno a encolhe no lugar, então quem guardou a referência
+     * a vê zerar quando o tanque esvazia.
+     */
+    static final class LiveTank implements IFluidHandler {
+        static final int CAPACITY = 1_000;
+        private FluidStack stored = FluidStack.EMPTY;
+
+        void set(FluidStack stack) {
+            stored = stack.copy();
+        }
+
+        int amount() {
+            return stored.getAmount();
+        }
+
+        @Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return stored;
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return CAPACITY;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            return false;
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            return 0;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            return FluidStack.isSameFluidSameComponents(stored, resource) ? drain(resource.getAmount(), action) : FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            int taken = Math.min(maxDrain, stored.getAmount());
+            if (taken <= 0) {
+                return FluidStack.EMPTY;
+            }
+            FluidStack out = stored.copyWithAmount(taken);
+            if (action.execute()) {
+                stored.shrink(taken);
             }
             return out;
         }

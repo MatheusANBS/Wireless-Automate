@@ -79,6 +79,11 @@ final class FluidTransfer {
             if (inTank.isEmpty() || !filter.testFluid(inTank)) {
                 continue;
             }
+            if (bulk == null) {
+                // A chave é cópia: o Mekanism devolve a pilha interna do tanque e a encolhe no dreno;
+                // ao esvaziar, a referência zera e o enchimento recebia FluidStack.EMPTY (fluido perdido).
+                inTank = inTank.copy();
+            }
             long max = bulk != null ? Math.min(tokens, bulk.count(current)) : Math.min(tokens, Integer.MAX_VALUE);
             Filter rule = filter.fluidStockFilter(inTank);
             long stock = rule == null ? 0 : rule.fluidStock(inTank);

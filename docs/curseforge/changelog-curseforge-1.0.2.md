@@ -1,3 +1,9 @@
+## 1.0.2
+
+Bug fix: fluids pulled from Mekanism machines no longer vanish.
+
+- A router extracting fluid from some Mekanism machines (for example the Rotary Condensentrator's output) could empty the machine's tank and deliver nothing: when the tank was drained completely, the fluid was lost on the way to other machines. It only worked into a Wireless Tank. Fluids now arrive intact in any destination. Items, energy and chemicals were not affected.
+
 ## 1.0.1
 
 Compatibility fix: works with NeoForge 21.1.251 (All the Mods 10).

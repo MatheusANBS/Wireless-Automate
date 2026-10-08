@@ -387,6 +387,35 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Origem que devolve a pilha interna e a encolhe ao drenar (como o Rotary Condensentrator do
+     * Mekanism): esvaziar o tanque não pode zerar o fluido que vai para o destino, senão ele some.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fluidFromLiveTankIsNotLost(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-tanque-vivo");
+        BlockPos machine = helper.absolutePos(A);
+        TestMachines.reset(machine);
+        TestMachines.liveTank(machine).set(new FluidStack(Fluids.WATER, 1_000));
+        RouterBlockEntity source = place(helper, A, TestMachines.LIVE_TANK.defaultBlockState(), network);
+        source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
+        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
+        target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.liveTank(machine).amount(), 0, "tanque vivo"))
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
+                })
+                .thenSucceed();
+    }
+
     private static @Nullable NetworkStats stats(GameTestHelper helper, UUID network) {
         for (NetworkStats stats : NetworkManager.get().stats(helper.getLevel().getServer())) {
             if (stats.id().equals(network)) {

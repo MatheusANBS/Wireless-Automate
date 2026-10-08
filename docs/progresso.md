@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (8/10/2026): 1.2.0 fechada (tier Esmeralda, tiers do Allthemodium e escada ×8), no branch `claude/peaceful-dijkstra-8tbqv0`; a 1.1.0 está no `main`, no GitHub e no CurseForge (ID 1732160).** Build com 134 JUnit e 159 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK.
+**Etapa atual (8/10/2026): 1.2.0 publicada (tier Esmeralda, tiers do Allthemodium e escada ×8): no `main`, tag `v1.2.0` e release no GitHub com o jar; a descrição do CurseForge já está com as imagens novas (ID 1732160).** Build com 134 JUnit e 159 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK.
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI e AE2/RS2.
 
@@ -42,7 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-1. **Publicar a 1.2.0** (o dono decide): merge no `main`, tag `v1.2.0`, release no GitHub com `build/libs/wirelessautomate-1.2.0.jar` e `docs/curseforge/changelog-1.2.0.md`; no CurseForge, o jar, o changelog unificado (`changelog-curseforge-1.2.0.md`) e o Allthemodium como dependência opcional. A imagem `feature-4-tiers` da descrição ainda mostra quatro tiers: refazer com o `wa-curseforge-imagens`.
+1. **Subir a 1.2.0 no CurseForge** (o dono): o jar `build/libs/wirelessautomate-1.2.0.jar`, o changelog unificado (`changelog-curseforge-1.2.0.md`) e o Allthemodium como dependência opcional.
 1b. Testar num ATM10 real: receitas do ATM no JEI (com o fragmento de ATM Star), tooltip dos cartões, cores, e a migração da config num servidor que já tinha a 1.1. Sem teste automático: Allthemodium sem o All The Tweaks (a terceira versão do Ultimate).
 2. Acompanhar a moderação da 1.0.2 no CurseForge (ID 1732160) e o retorno de quem usa com o Mekanism.
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
@@ -97,6 +97,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-08 | Release da 1.2.0: verificação completa (build, 159 + 7 + 15 + 2 GameTests, e2e com 522 passos), tag `v1.2.0` e release no GitHub com o jar. Links das imagens novas na descrição do CurseForge. |
 | 2026-10-08 | Imagens do CurseForge em alta resolução: a vitrine renderiza fora da tela em 3840x2400 com a interface na escala 6 (o layout da escala 2 em 1280x800; `WA_SHOWCASE_SCALE` muda o fator) e o `gerar_imagens.py` sai em 1920 px, com recortes em coordenadas de 1280x800 e sem ampliar por fator quebrado. Recortes das telas refeitos para as telas maiores. A imagem do guia também sai da vitrine (página Getting started, depois de o GuideME desenhar). |
 | 2026-10-08 | Fechamento da 1.2.0: `mod_version`, changelog separado e unificado (`changelog-curseforge-1.2.0.md`), descrição do CurseForge e README com a escada nova e o Allthemodium. |
 | 2026-10-08 | Tier Esmeralda (entre dimensões) e, com o Allthemodium, os tiers Allthemodium, Vibranium e Unobtainium, em roteadores, armazenamentos e cartões. Rebalanceamento ×8 com nerf nos tiers vanilla (Básico 32 itens/s). Receitas condicionais pelas tags `c:` do ATM e Ultimate com fragmento de ATM Star no ATM10. Texturas, modelos e blockstates por tier gerados pelo script; guia com tabelas geradas. Run nova `gameTestServerAllthemodium`. Migração da config antiga (`migration.balanceVersion`), e2e e benchmark ajustados à escada nova; tela da Bateria e do Tanque de Source com 240 px (o nome não cortava com a pílula "Esmeralda"); duas corridas do roteiro do e2e corrigidas (caixa de tags ainda invisível, botão Todos antes do estado novo chegar à tela). 134 JUnit, 159 + 7 + 15 + 2 GameTests, e2e OK (522 passos, com o Allthemodium no cliente). |

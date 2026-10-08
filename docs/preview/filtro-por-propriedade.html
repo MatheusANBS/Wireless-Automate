@@ -1,0 +1,553 @@
+<title>Filtro por propriedade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: as duas telas do jogo lado a lado (empilham no estreito), escala em "pixels de GUI" via --u; paleta do GuiPaint */
+:root {
+  --u: 2px;
+  --page: #0E1217;
+  --page-fg: #D5DDE5;
+  --page-mu: #8B98A6;
+  --panel: #1B2129;
+  --bevel-l: #3A4452;
+  --bevel-d: #0C0F13;
+  --inset: #11151B;
+  --line: #2A3340;
+  --btn: #1C242D;
+  --btn-b: #2A3542;
+  --btn-hb: #56606F;
+  --fg: #E8EDF2;
+  --mu: #93A0AE;
+  --dis: #5B6675;
+  --dark: #0D1116;
+  --ac: #45D6CC;
+  --ac-bg: #143230;
+  --danger: #E5534B;
+  --enchant: #A46CFF;
+  --gold: #F2C04A;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+@media (min-width: 1500px) { :root { --u: 2.5px } }
+@media (max-width: 600px) { :root { --u: calc((100vw - 40px) / 256) } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; padding: 0 16px; }
+.wrap { max-width: 1340px; margin: 0 auto; padding-block: 28px 48px; }
+header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; margin-bottom: 6px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 30px; letter-spacing: .02em; color: var(--ac); margin: 0; text-wrap: balance }
+.status { font-family: var(--pix); font-size: 14px; color: var(--gold); border: 1px solid #5a4a20; padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 70ch; margin: 0 0 24px }
+.stage { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start }
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+figcaption { font-size: 14px; color: var(--page-mu); max-width: calc(var(--u) * 256) }
+figcaption b { color: var(--page-fg); font-weight: 700 }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; margin-top: 36px }
+.notes h2 { font-family: var(--pix); font-weight: 500; font-size: 18px; color: var(--fg); margin: 0 0 8px }
+.notes ul { margin: 0; padding-left: 18px; color: var(--page-mu) }
+.notes li { margin-bottom: 6px }
+.notes li b { color: var(--page-fg) }
+code { font-family: var(--pix); color: var(--ac); font-size: .95em }
+
+.gui { position: relative; width: calc(var(--u) * 256); height: calc(var(--u) * 232); background: var(--panel);
+  border: var(--u) solid var(--ac); box-shadow: 0 0 0 var(--u) var(--bevel-d), 0 0 0 calc(var(--u) * 2) var(--bevel-l);
+  font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--fg); user-select: none; flex: none }
+.gui.flash { animation: flash .6s ease-out }
+@keyframes flash { from { box-shadow: 0 0 0 var(--u) var(--bevel-d), 0 0 0 calc(var(--u) * 6) var(--ac) } }
+.a { position: absolute }
+.t { position: absolute; white-space: nowrap }
+.mu { color: var(--mu) } .dis { color: var(--dis) } .acc { color: var(--ac) } .red { color: var(--danger) }
+button.a { font: inherit; color: var(--fg); background: var(--btn); border: var(--u) solid var(--btn-b); padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2) }
+button.a:hover { border-color: var(--btn-hb) }
+button.a:focus-visible, .row:focus-visible, .slot:focus-visible { outline: var(--u) solid var(--gold); outline-offset: 0 }
+button.a.on { background: var(--ac); border-color: var(--ac); color: var(--dark) }
+button.a.ghost { background: transparent; border-color: transparent; justify-content: flex-start; color: var(--mu) }
+button.a.ghost:hover { color: var(--fg) }
+.box { background: var(--inset); border: var(--u) solid var(--line) }
+.cell { position: absolute; background: var(--inset); border: var(--u) solid var(--line) }
+.slot { position: absolute; width: calc(var(--u) * 18); height: calc(var(--u) * 18); background: var(--inset);
+  border: var(--u) solid var(--line); padding: 0; cursor: pointer }
+.slot.sel { border-color: var(--ac); background: var(--ac-bg) }
+.slot.hit { border-color: var(--ac); background: var(--ac-bg) }
+.slot.dim .spr { opacity: .28 }
+.spr { position: absolute; left: var(--u); top: var(--u); width: calc(var(--u) * 16); height: calc(var(--u) * 16); image-rendering: pixelated; background-size: 100% 100% }
+.spr.glint::after { content: ""; position: absolute; inset: 0; -webkit-mask: var(--m) 0 0 / 100% 100%; mask: var(--m) 0 0 / 100% 100%;
+  background: linear-gradient(115deg, transparent 30%, rgba(190, 120, 255, .65) 45%, transparent 60%) 0 0 / 300% 100%; animation: glint 2.6s linear infinite }
+@media (prefers-reduced-motion: reduce) { .spr.glint::after { animation: none; background-position: 50% 0 } .gui.flash { animation: none } }
+@keyframes glint { from { background-position: 150% 0 } to { background-position: -150% 0 } }
+.qty { position: absolute; right: 0; bottom: calc(var(--u) * -1); color: #fff; text-shadow: var(--u) var(--u) 0 #3f3f3f; font-size: calc(var(--u) * 8) }
+.badge-tag { position: absolute; left: 0; top: calc(var(--u) * -1); color: var(--ac); text-shadow: var(--u) var(--u) 0 #000 }
+.badge-prop { position: absolute; left: var(--u); top: var(--u); width: calc(var(--u) * 4); height: calc(var(--u) * 4); background: var(--enchant);
+  transform: rotate(45deg); box-shadow: 0 0 0 calc(var(--u) * .7) #1a0d33 }
+.ck { position: absolute; width: calc(var(--u) * 8); height: calc(var(--u) * 8); border: var(--u) solid var(--mu); background: var(--inset) }
+.ck.on { background: var(--ac); border-color: var(--ac) }
+.ck.on::after { content: ""; position: absolute; left: calc(var(--u) * 1.5); top: calc(var(--u) * 0); width: calc(var(--u) * 2); height: calc(var(--u) * 4);
+  border: solid var(--dark); border-width: 0 var(--u) var(--u) 0; transform: rotate(40deg) }
+.row { position: absolute; left: 0; right: 0; height: calc(var(--u) * 12); cursor: pointer; background: transparent; border: 0; padding: 0; font: inherit; color: var(--mu); text-align: left }
+.row:hover { background: #18202a }
+.row.sel { background: #1d2a33 }
+.row.on { color: var(--fg) }
+.wraptext { position: absolute; white-space: normal; line-height: calc(var(--u) * 10) }
+.field { position: absolute; font: inherit; color: var(--fg); background: #000; border: var(--u) solid var(--btn-hb); padding: 0 calc(var(--u) * 3); outline: none }
+.field:focus { border-color: var(--ac) }
+.field::placeholder { color: var(--dis) }
+.sb { position: absolute; background: var(--inset) }
+.sb i { position: absolute; left: 0; right: 0; background: var(--btn-hb) }
+#tip { position: fixed; z-index: 10; pointer-events: none; font-family: var(--pix); font-size: 16px; line-height: 20px; background: rgba(16, 0, 16, .94);
+  border: 2px solid #2b0f5c; outline: 2px solid rgba(16, 0, 16, .94); padding: 3px 7px; max-width: 320px }
+#tip .n { color: #fff } #tip .n.ench { color: #55FFFF } #tip .n.named { font-style: italic }
+#tip .g { color: #A8A8A8 } #tip .ok { color: var(--ac) } #tip .no { color: var(--danger) }
+.toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--u) * -14); white-space: nowrap; color: var(--gold); font-size: calc(var(--u) * 7) }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Filtro por propriedade</h1>
+    <span class="status">Proposta · aguardando aprovação</span>
+  </header>
+  <p class="lede">Uma regra nova no filtro que não depende do item: "Encantado" pega espada, armadura, picareta e arco encantados de uma vez. As duas telas abaixo funcionam; passe o mouse no inventário para ver o tooltip e use Shift + clique na tela nova.</p>
+
+  <div class="stage">
+    <figure>
+      <div class="gui" id="s1" aria-label="Tela de filtro"></div>
+      <figcaption><b>Tela de filtro (a que já existe).</b> A regra entra na grade como as de tag e de mod, com o losango roxo no canto. Em <b>Mais</b> aparece o botão <b>Por propriedade</b>, que abre a tela ao lado. Clique na entrada para ver o resumo, o estoque e o Editar.</figcaption>
+    </figure>
+    <figure>
+      <div class="gui" id="s2" aria-label="Tela por propriedade"></div>
+      <figcaption><b>Tela nova: Por propriedade.</b> Marque as condições na lista; à direita fica o ajuste da linha selecionada. O inventário destaca o que a regra pega. Shift + clique num item marca as propriedades que ele tem.</figcaption>
+    </figure>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Como a regra decide</h2>
+      <ul>
+        <li><b>Todas</b> exige todas as condições marcadas; <b>Qualquer uma</b> aceita se uma bater.</li>
+        <li><b>Só em</b> é opcional e sempre soma às outras: "Encantado" + <code>#c:armors</code> pega só armadura encantada.</li>
+        <li><b>Encantamento</b> vale para itens e livros: "Fortuna ≥ III" pega a picareta e o livro. A roda do mouse no nome troca o encantamento.</li>
+        <li>Funciona em lista branca e lista negra, e aceita estoque como qualquer entrada.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Para você decidir</h2>
+      <ul>
+        <li>A lista de condições está boa? Falta alguma (ex.: "Com efeito de poção", "Tem conteúdo", como mochila cheia)?</li>
+        <li>O Livro encantado separado do Encantado faz sentido, ou livro deve contar como encantado?</li>
+        <li>Danificado e Durabilidade cheia: só sim ou não, ou com porcentagem (ex.: desgaste acima de 50%)?</li>
+        <li>O botão fica em Mais, ou ganha lugar fixo na tela de filtro?</li>
+      </ul>
+    </section>
+  </div>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+/* ---------------------------------------------------------------- sprites */
+const PAL = {
+  O: "#0b1412", H: "#6b4a2b", h: "#8a6338",
+  B: "#33d6c4", L: "#c9fff7", D: "#1d8f86",
+  C: "#8a2b3a", c: "#5a1a26", G: "#e8c04a", P: "#ede6d6",
+  R: "#e0405a", W: "#c8d8e8", r: "#a02a40",
+  Y: "#f2d24a", y: "#c99a1a", s: "#fff6b0",
+  M: "#7a8694", m: "#4a5462", E: "#45e07a", e: "#2c9a50",
+  g: "#808080", k: "#5e5e5e", l: "#a0a0a0", v: "#2fae5f"
+};
+const MAPS = {
+  sword: ["..............OO",".............OLO","............OLBO","...........OLBO.","..........OLBO..",".........OLBO...","........OLBO....","...OO..OLBO.....","...ODOOLBO......","....ODLBO.......",".....ODO........","....OHODO.......","...OHO.ODO......",".OOHO...OO......","OBHO............","OOO............."],
+  pick: ["................","....OOOOOO......","...OBBBBLLO.....","....OOOOBBLO....","........OBBLO...",".......OHOBBO...","......OHO.OBO...",".....OHO..OBO...","....OHO...OBO...","...OHO.....OO...","..OHO...........",".OHO............","OHO.............","OO..............","................","................"],
+  book: ["................","..OOOOOOOOOOO...","..OCCCCCCCCPO...","..OCCCCCCCCPPO..","..OCCGGGGCCPPO..","..OCCCCCCCCPPO..","..OCCGGGGCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OccccccccccO..","...OOOOOOOOOOO..","................","................"],
+  potion: ["................","......OOOO......","......OWWO......",".......OO.......","......OWWO......",".....OWRRWO.....","....ORRRRRRO....","...ORLRRRRRRO...","...ORLRRRRRRO...","...ORRRRRRRRO...","...ORRRRRRRrO...","....ORRRRRrO....",".....OOOOOO.....","................","................","................"],
+  gem: ["................","................","....OOOOOOOO....","...OLLBBBBBBO...","..OLLBBBBBBBBO..",".OBBBBBBBBBBBBO.","..OBBBBBBBBBDO..","...OBBBBBBBDO...","....OBBBBBDO....",".....OBBBDO.....","......OBDO......",".......OO.......","................","................","................","................"],
+  ingot: ["................","................","................","................",".....OOOOOOOO...","....OssssssYO...","...OsYYYYYYYYO..","..OYYYYYYYYYyO..",".OYYYYYYYYYyO...",".OyyyyyyyyyO....","..OOOOOOOOOO....","................","................","................","................","................"],
+  cell: ["................",".....OOOOOO.....",".....OMMMMO.....","....OOOOOOOO....","....OMmmmmMO....","....OmEEEEmO....","....OmEEEEmO....","....OmmmmmmO....","....OmEEEEmO....","....OmEEEEmO....","....OmmmmmmO....","....OmeeeemO....","....OmeeeemO....","....OOOOOOOO....","................","................"]
+};
+const HALF = {
+  chest: ["........",".OOOO...","OBBBBO..","OBLBBBOO","OBLBBBBB","OOLBBBBB",".OOBBBBB","..OBLBBB","..OBLBBB","..OBLBBB","..OBBBBB","..OBBBBB","..ODDDDD","..OOOOOO","........","........"],
+  helm: ["........","........","........","...OOOOO","..OBBBBB",".OBLBBBB",".OBLBBBB",".OBBBBBB",".OBBBOOO",".OBBO...",".OBBO...",".ODDO...",".OOOO...","........","........","........"]
+};
+for (const [k, h] of Object.entries(HALF)) MAPS[k] = h.map(r => r + [...r].reverse().join(""));
+function noise(seed, speck) {
+  let x = seed; const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
+  return Array.from({ length: 16 }, (_, y) => Array.from({ length: 16 }, (_, i) => {
+    if (y === 0 || y === 15 || i === 0 || i === 15) return "k";
+    const v = rnd(); if (speck && v > .86) return "v"; return v < .3 ? "k" : v < .75 ? "g" : "l";
+  }).join(""));
+}
+MAPS.cobble = noise(7, false); MAPS.ore = noise(3, true);
+const SPR = {};
+for (const [k, rows] of Object.entries(MAPS)) {
+  const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d");
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== ".") { g.fillStyle = PAL[ch] || "#f0f"; g.fillRect(x, y, 1, 1) } }));
+  SPR[k] = c.toDataURL();
+}
+function sprite(k, glint) {
+  const u = SPR[k]; return `<span class="spr${glint ? " glint" : ""}" style="background-image:url(${u});--m:url(${u})"></span>`;
+}
+
+/* ---------------------------------------------------------------- dados */
+const ENCH = [["fortune", "Fortuna", 3], ["silk", "Toque de seda", 1], ["mending", "Remendo", 1], ["protection", "Proteção", 4],
+  ["sharpness", "Afiação", 5], ["efficiency", "Eficiência", 5], ["unbreaking", "Inquebrável", 3]];
+const ENAME = Object.fromEntries(ENCH.map(e => [e[0], e[1]]));
+const ROMAN = ["", "I", "II", "III", "IV", "V"];
+const TAGS = { "#c:armors": "armor", "#c:tools/melee_weapon": "weapon", "#c:tools/mining_tool": "tool" };
+const it = (s, n, o = {}) => Object.assign({ s, n, q: 1 }, o);
+const INV = [
+  it("sword", "Espada de diamante", { c: "weapon", e: { sharpness: 5, mending: 1 }, max: 1561 }),
+  it("chest", "Peitoral de diamante", { c: "armor", e: { protection: 4 }, max: 528, d: 50 }),
+  it("pick", "Picareta da Mina", { c: "tool", e: { fortune: 3, mending: 1 }, max: 1561, d: 120, nm: 1 }),
+  it("pick", "Picareta de diamante", { c: "tool", max: 1561, d: 200 }),
+  it("chest", "Peitoral de diamante", { c: "armor", max: 528 }),
+  it("book", "Livro encantado", { book: 1, e: { fortune: 3 } }),
+  it("book", "Livro encantado", { book: 1, e: { mending: 1 } }),
+  it("sword", "Espada de diamante", { c: "weapon", max: 1561, d: 10 }),
+  it("helm", "Capacete de diamante", { c: "armor", e: { protection: 2 }, max: 363 }),
+  it("gem", "Diamante", { q: 12 }), it("cobble", "Pedregulho", { q: 64 }), it("cobble", "Pedregulho", { q: 37 }),
+  it("cell", "Célula de energia", { data: 1 }), it("potion", "Poção de cura"), it("ingot", "Lingote de ouro", { q: 9 }),
+  it("pick", "Picareta de diamante", { c: "tool", e: { silk: 1 }, max: 1561, unb: 1 }),
+  it("helm", "Capacete do Zé", { c: "armor", e: { protection: 4, unbreaking: 3 }, max: 363, d: 90, nm: 1 }),
+  null, null, null, null, null, null, null, null, null, null,
+  it("sword", "Espada de diamante", { c: "weapon", e: { sharpness: 3 }, max: 1561, d: 400 }), it("pick", "Picareta de diamante", { c: "tool", e: { efficiency: 5, unbreaking: 3 }, max: 1561 }),
+  null, it("cobble", "Pedregulho", { q: 64 }), null, null, it("ingot", "Lingote de ouro", { q: 3 }), null, null
+];
+const enchanted = x => x && x.e && Object.keys(x.e).length > 0;
+
+/* condições da tela nova, na ordem da lista */
+const ROWS = [
+  { k: "ench", label: () => "Encantado", desc: "Qualquer item com encantamento: espada, armadura, ferramenta, arco… Livros contam à parte.", test: x => enchanted(x) && !x.book },
+  { k: "book", label: () => "Livro encantado", desc: "Livro com encantamento guardado.", test: x => !!x.book },
+  { k: "spec", label: s => `${ENAME[s.spec.e]} ≥ ${ROMAN[s.spec.lv] || s.spec.lv}`, desc: "", test: (x, s) => ((x.e && x.e[s.spec.e]) || 0) >= s.spec.lv },
+  { k: "dmg", label: () => "Danificado", desc: "Com algum desgaste.", test: x => (x.d || 0) > 0 },
+  { k: "full", label: () => "Durabilidade cheia", desc: "Sem desgaste. Itens que não gastam não contam.", test: x => !!x.max && !x.d },
+  { k: "name", label: () => "Renomeado", desc: "Com nome dado na bigorna.", test: x => !!x.nm },
+  { k: "unb", label: () => "Indestrutível", desc: "Nunca perde durabilidade (componente unbreakable).", test: x => !!x.unb },
+  { k: "data", label: () => "Dados de mod", desc: "Com dados extras de algum mod: energia, conteúdo, dono…", test: x => !!x.data },
+  { k: "only", label: s => `Só em ${s.only.tag || "…"}`, desc: "", test: (x, s) => TAGS[s.only.tag] === x.c }
+];
+const s2 = { mode: "all", sel: 0, scroll: 0, on: { ench: true }, spec: { e: "fortune", lv: 3 }, only: { tag: "#c:armors" }, toast: "" };
+
+function ruleOf(s) {
+  return { mode: s.mode, on: { ...s.on }, spec: { ...s.spec }, only: { ...s.only } };
+}
+function conds(r) { return ROWS.filter(w => w.k !== "only" && r.on[w.k]) }
+function matches(r, x) {
+  if (!x) return false;
+  const cs = conds(r); if (!cs.length) return false;
+  if (r.on.only && TAGS[r.only.tag] !== x.c) return false;
+  return r.mode === "all" ? cs.every(w => w.test(x, r)) : cs.some(w => w.test(x, r));
+}
+function summary(r) {
+  const parts = conds(r).map(w => w.label(r));
+  return { parts, joined: parts.join(r.mode === "all" ? " e " : " ou "), only: r.on.only ? r.only.tag : "" };
+}
+function ruleIcon(r) {
+  if (r.on.only) return { armor: "chest", weapon: "sword", tool: "pick" }[TAGS[r.only.tag]] || "book";
+  if (r.on.book && !r.on.ench) return "book";
+  if (r.on.ench || r.on.spec) return "sword";
+  return "pick";
+}
+
+/* tela de filtro (existente) */
+const s1 = {
+  white: true, comps: false, more: false, sel: 4,
+  entries: [
+    { kind: "tag", s: "ore", label: "#c:ores" }, { kind: "item", item: INV[14] }, { kind: "item", item: INV[9] },
+    { kind: "item", item: INV[10], stock: 16 },
+    { kind: "prop", rule: { mode: "all", on: { ench: true }, spec: { e: "fortune", lv: 3 }, only: { tag: "" } } }
+  ], stockOf: {}, toast: ""
+};
+
+/* ---------------------------------------------------------------- desenho */
+const U = n => `calc(var(--u) * ${n})`;
+function el(p, tag, x, y, w, h, cls = "", html = "", attrs = {}) {
+  const d = document.createElement(tag); d.className = "a " + cls;
+  let st = `left:${U(x)};top:${U(y)};`; if (w != null) st += `width:${U(w)};`; if (h != null) st += `height:${U(h)};`;
+  d.style.cssText = st; d.innerHTML = html; for (const [k, v] of Object.entries(attrs)) d.setAttribute(k, v); p.appendChild(d); return d;
+}
+const txt = (p, x, y, s, cls = "") => el(p, "span", x, y, null, null, "t " + cls, s);
+const btn = (p, x, y, w, h, s, act, cls = "", attrs = {}) => el(p, "button", x, y, w, h, cls, s, Object.assign({ "data-act": act, type: "button" }, attrs));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function slot(p, x, y, item, extra = "", attrs = {}) {
+  let inner = "";
+  if (item) inner = sprite(item.s, enchanted(item) || item.book) + (item.q > 1 ? `<span class="qty">${item.q}</span>` : "");
+  return el(p, "button", x, y, null, null, "slot " + extra, inner, Object.assign({ type: "button" }, attrs));
+}
+function inventory(p, screen, hitRule) {
+  const x0 = 47;
+  INV.forEach((x, i) => {
+    const r = i < 27 ? Math.floor(i / 9) : 3, c = i % 9;
+    const y = r < 3 ? 147 + r * 18 : 205;
+    const cls = hitRule ? (matches(hitRule, x) ? "hit" : x ? "dim" : "") : "";
+    slot(p, x0 + c * 18, y, x, cls, { "data-inv": i, "data-screen": screen, "aria-label": x ? x.n : "Slot vazio" });
+  });
+}
+function scrollbar(p, x, y, h, total, vis, pos) {
+  const sb = el(p, "div", x, y, 4, h, "sb");
+  if (total > vis) { const th = Math.max(8, h * vis / total); const top = (h - th) * pos / (total - vis); el(sb, "i", 0, top, null, th, "") .style.position = "absolute"; }
+}
+
+/* ---- tela 1 */
+function drawS1() {
+  const g = document.getElementById("s1"); g.innerHTML = "";
+  txt(g, 9, 11, "Filtro");
+  txt(g, 125, 11, "Norte · Itens", "mu");
+  btn(g, 207, 8, 40, 13, "Voltar", "noop");
+  btn(g, 9, 26, 60, 15, "Lista branca", "white", s1.white ? "on" : "");
+  btn(g, 71, 26, 58, 15, "Lista negra", "black", s1.white ? "" : "on");
+  const cb = btn(g, 175, 26, 72, 15, `<span class="ck${s1.comps ? " on" : ""}" style="left:${U(4)};top:${U(3)}"></span><span class="t" style="left:${U(16)};top:${U(3.5)}">Componentes</span>`, "comps");
+  el(g, "div", 9, 45, 238, 1, "", "").style.background = "var(--line)";
+  txt(g, 9, 49, `Entradas · ${s1.entries.length}`, "mu");
+  const grid = el(g, "div", 9, 59, 110, 74, "box");
+  for (let i = 0; i < 24; i++) {
+    const e = s1.entries[i], cx = 9 + (i % 6) * 18, cy = 59 + Math.floor(i / 6) * 18;
+    let inner = "";
+    if (e) {
+      if (e.kind === "tag") inner = sprite(e.s) + `<span class="badge-tag">#</span>`;
+      else if (e.kind === "item") inner = sprite(e.item.s, enchanted(e.item));
+      else inner = sprite(ruleIcon(e.rule), true) + `<span class="badge-prop"></span>`;
+      const st = e.stock ?? 0; if (st) inner += `<span class="qty">${st}</span>`;
+    }
+    const sl = el(g, "button", cx, cy, null, null, "slot" + (i === s1.sel && e ? " sel" : ""), inner, { type: "button", "data-entry": i, "aria-label": e ? entryName(e) : "Entrada vazia" });
+    sl.style.width = sl.style.height = U(18);
+  }
+  scrollbar(g, 121, 59, 74, 4, 4, 0);
+  const box = el(g, "div", 129, 46, 118, 74, "box");
+  const IX = 134, IW = 108;
+  if (s1.more) {
+    txt(g, IX, 51, "Tag ou mod", "mu");
+    const f = el(g, "input", IX, 60, IW, 13, "field", "", { id: "rulebox", placeholder: "#c:ores, @mekanism", "aria-label": "Tag ou mod" });
+    btn(g, IX, 75, IW, 13, "Adicionar", "noop");
+    btn(g, IX, 91, IW, 13, `${sprite("book", true).replace('class="spr', 'style="position:relative;left:auto;top:auto;width:' + U(9) + ';height:' + U(9) + '" class="spr')}Por propriedade`, "openprop", "", { title: "Encantado, danificado, renomeado… para qualquer item" }).style.color = "var(--ac)";
+    btn(g, IX, 106, 52, 11, "Importar", "noop");
+    btn(g, IX + 56, 106, 52, 11, "Exportar", "noop");
+  } else {
+    const e = s1.entries[s1.sel];
+    if (!e) {
+      el(g, "div", IX, 51, IW, 60, "wraptext mu", s1.entries.length ? "Clique numa entrada para ajustar o estoque ou remover." : "Adicione pelo inventário embaixo ou por tag, mod e propriedade em Mais.");
+    } else {
+      if (e.kind === "prop") {
+        const sm = summary(e.rule);
+        el(g, "div", IX, 50, IW, 10, "wraptext", `<span style="color:var(--enchant)">◆</span> Por propriedade`);
+        const lines = sm.parts.slice(0, 2).map((p, i) => (i ? (e.rule.mode === "all" ? "e " : "ou ") : "") + p);
+        if (sm.parts.length > 2) lines.push(`+${sm.parts.length - 2} condições`);
+        lines.push(sm.only ? `só em ${sm.only}` : "qualquer item");
+        el(g, "div", IX, 61, IW, 22, "wraptext acc", lines.slice(0, 2).map(esc).join("<br>")).style.overflow = "hidden";
+      } else {
+        el(g, "div", IX, 50, IW, 30, "wraptext", esc(entryName(e)) + (e.kind === "tag" ? `<br><span class="mu">Tudo o que tem esta tag</span>` : ""));
+      }
+      txt(g, IX, 86, "Estoque", "mu");
+      btn(g, IX + 40, 83, 14, 14, "−", "stock-", "", { "aria-label": "Diminuir estoque" });
+      txt(g, IX + 58, 86, e.stock ? String(e.stock) : "nenhum", e.stock ? "" : "dis");
+      btn(g, IX + IW - 14, 83, 14, 14, "+", "stock+", "", { "aria-label": "Aumentar estoque" });
+      if (e.kind === "prop") {
+        btn(g, IX, 101, 52, 14, "Editar", "edit");
+        btn(g, IX + 56, 101, 52, 14, "Remover", "remove");
+      } else btn(g, IX, 101, IW, 14, "Remover", "remove");
+    }
+  }
+  btn(g, 129, 123, 50, 11, (s1.more ? "▾ Menos" : "▸ Mais"), "more", "ghost");
+  btn(g, 207, 123, 40, 13, "Limpar", "noop");
+  txt(g, 55, 137, "Shift + clique aqui ou arraste do JEI", "mu");
+  inventory(g, 1, null);
+  if (s1.toast) el(g, "div", 128, 232, null, null, "toast", esc(s1.toast)).style.left = "50%";
+}
+function entryName(e) {
+  if (e.kind === "tag") return e.label;
+  if (e.kind === "item") return e.item.n;
+  const sm = summary(e.rule); return sm.joined + (sm.only ? " · só em " + sm.only : "");
+}
+
+/* ---- tela 2 */
+const VIS = 6;
+function drawS2() {
+  const g = document.getElementById("s2"); g.innerHTML = "";
+  const r = ruleOf(s2);
+  txt(g, 9, 11, "Por propriedade");
+  txt(g, 125, 11, "Norte · Itens", "mu");
+  btn(g, 207, 8, 40, 13, "Voltar", "back");
+  btn(g, 9, 26, 40, 15, "Todas", "all", s2.mode === "all" ? "on" : "", { title: "Exige todas as condições marcadas" });
+  btn(g, 51, 26, 66, 15, "Qualquer uma", "any", s2.mode === "any" ? "on" : "", { title: "Basta uma condição" });
+  const can = conds(r).length > 0;
+  btn(g, 183, 26, 64, 15, "Adicionar", "add", can ? "on" : "", { title: can ? "Põe a regra na grade do filtro" : "Marque ao menos uma condição" });
+  el(g, "div", 9, 45, 238, 1, "", "").style.background = "var(--line)";
+  const n = ROWS.filter(w => s2.on[w.k]).length;
+  txt(g, 9, 49, `Condições · ${n}`, "mu");
+  const list = el(g, "div", 9, 59, 110, 74, "box", "", { id: "plist" });
+  list.style.overflow = "hidden";
+  s2.scroll = Math.max(0, Math.min(s2.scroll, ROWS.length - VIS));
+  ROWS.slice(s2.scroll, s2.scroll + VIS).forEach((w, i) => {
+    const idx = s2.scroll + i, on = !!s2.on[w.k];
+    const row = document.createElement("button"); row.type = "button";
+    row.className = "row" + (on ? " on" : "") + (idx === s2.sel ? " sel" : "");
+    row.style.top = U(i * 12); row.dataset.row = idx; row.setAttribute("aria-pressed", on);
+    row.innerHTML = `<span class="ck${on ? " on" : ""}" data-ck="${idx}" style="left:${U(2)};top:${U(1.5)}"></span><span class="t" style="left:${U(13)};top:${U(2.5)}">${esc(w.label(s2))}</span>`;
+    list.appendChild(row);
+  });
+  scrollbar(g, 121, 59, 74, ROWS.length, VIS, s2.scroll);
+
+  el(g, "div", 129, 46, 118, 74, "box");
+  const IX = 134, IW = 108, w = ROWS[s2.sel];
+  el(g, "div", IX, 50, IW, 10, "wraptext" + (s2.on[w.k] ? " acc" : ""), esc(w.k === "spec" ? "Encantamento" : w.k === "only" ? "Só em" : w.label(s2)));
+  if (w.k === "spec") {
+    txt(g, IX, 63, "Qual", "mu");
+    btn(g, IX + 24, 60, 12, 13, "‹", "ench-", "", { "aria-label": "Encantamento anterior" });
+    el(g, "div", IX + 38, 60, 56, 13, "box", `<span class="t" style="left:${U(3)};top:${U(2)}">${esc(ENAME[s2.spec.e])}</span>`, { id: "enchname", title: "Roda do mouse troca" });
+    btn(g, IX + 96, 60, 12, 13, "›", "ench+", "", { "aria-label": "Próximo encantamento" });
+    txt(g, IX, 81, "Nível ≥", "mu");
+    btn(g, IX + 40, 78, 14, 13, "−", "lv-", "", { "aria-label": "Diminuir nível" });
+    txt(g, IX + 62, 81, ROMAN[s2.spec.lv] || String(s2.spec.lv));
+    btn(g, IX + IW - 14, 78, 14, 13, "+", "lv+", "", { "aria-label": "Aumentar nível" });
+    el(g, "div", IX, 96, IW, 20, "wraptext dis", "Pega itens e livros.");
+  } else if (w.k === "only") {
+    const f = el(g, "input", IX, 60, IW, 13, "field", "", { id: "onlybox", placeholder: "#c:armors", "aria-label": "Tag de item" });
+    f.value = s2.only.tag;
+    const known = !s2.only.tag || TAGS[s2.only.tag];
+    btn(g, IX, 76, 34, 12, "Armad.", "tag:#c:armors", s2.only.tag === "#c:armors" ? "on" : "", { title: "#c:armors" });
+    btn(g, IX + 37, 76, 34, 12, "Armas", "tag:#c:tools/melee_weapon", s2.only.tag === "#c:tools/melee_weapon" ? "on" : "", { title: "#c:tools/melee_weapon" });
+    btn(g, IX + 74, 76, 34, 12, "Ferram.", "tag:#c:tools/mining_tool", s2.only.tag === "#c:tools/mining_tool" ? "on" : "", { title: "#c:tools/mining_tool" });
+    el(g, "div", IX, 92, IW, 26, "wraptext " + (known ? "dis" : "red"), known ? "Soma às outras condições." : "Nenhum item do inventário tem esta tag.");
+  } else {
+    el(g, "div", IX, 62, IW, 56, "wraptext mu", esc(w.desc));
+  }
+
+  const hits = INV.filter(x => matches(r, x)).length;
+  txt(g, 9, 125, !conds(r).length ? "Marque uma condição" : hits ? `Pega ${hits} do inventário` : "Nada do inventário bate", !conds(r).length ? "dis" : hits ? "acc" : "red");
+  btn(g, 207, 123, 40, 13, "Limpar", "clear");
+  txt(g, 47, 137, "Shift + clique: marca o que o item tem", "mu");
+  inventory(g, 2, r);
+  if (s2.toast) el(g, "div", 128, 232, null, null, "toast", esc(s2.toast)).style.left = "50%";
+}
+
+/* ---------------------------------------------------------------- ações */
+function flash(id) { const g = document.getElementById(id); g.classList.remove("flash"); void g.offsetWidth; g.classList.add("flash"); g.scrollIntoView({ behavior: "smooth", block: "nearest" }) }
+let t1, t2;
+function toast(s, which, msg) { s.toast = msg; clearTimeout(which === 1 ? t1 : t2); const f = () => { s.toast = ""; which === 1 ? drawS1() : drawS2() }; if (which === 1) t1 = setTimeout(f, 2200); else t2 = setTimeout(f, 2200) }
+
+document.getElementById("s1").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act],[data-entry],[data-inv]"); if (!b) return;
+  if (b.dataset.entry != null) { const i = +b.dataset.entry; if (s1.entries[i]) { s1.sel = i; s1.more = false } drawS1(); return }
+  if (b.dataset.inv != null) {
+    const x = INV[+b.dataset.inv];
+    if (x && ev.shiftKey) {
+      if (s1.entries.some(e => e.kind === "item" && e.item.n === x.n && e.item.s === x.s && JSON.stringify(e.item.e) === JSON.stringify(x.e))) toast(s1, 1, "Já está no filtro");
+      else { s1.entries.push({ kind: "item", item: x }); s1.sel = s1.entries.length - 1; s1.more = false }
+    } else if (x) toast(s1, 1, "Shift + clique para adicionar");
+    drawS1(); return;
+  }
+  const a = b.dataset.act, e = s1.entries[s1.sel];
+  if (a === "white") s1.white = true;
+  else if (a === "black") s1.white = false;
+  else if (a === "comps") s1.comps = !s1.comps;
+  else if (a === "more") s1.more = !s1.more;
+  else if (a === "stock+" && e) e.stock = (e.stock || 0) + (ev.shiftKey ? 64 : 1);
+  else if (a === "stock-" && e) e.stock = Math.max(0, (e.stock || 0) - (ev.shiftKey ? 64 : 1));
+  else if (a === "remove" && e) { s1.entries.splice(s1.sel, 1); s1.sel = Math.min(s1.sel, s1.entries.length - 1) }
+  else if (a === "edit" && e && e.kind === "prop") { Object.assign(s2, { mode: e.rule.mode, on: { ...e.rule.on }, spec: { ...e.rule.spec }, only: { ...e.rule.only } }); s2.editing = s1.sel; drawS2(); flash("s2") }
+  else if (a === "openprop") { s2.editing = null; flash("s2") }
+  drawS1();
+});
+
+document.getElementById("s2").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act],[data-row],[data-inv]"); if (!b) return;
+  if (b.dataset.row != null) {
+    const i = +b.dataset.row, k = ROWS[i].k;
+    if (ev.target.closest("[data-ck]") || s2.sel === i) s2.on[k] = !s2.on[k];
+    s2.sel = i; drawS2(); return;
+  }
+  if (b.dataset.inv != null) {
+    const x = INV[+b.dataset.inv];
+    if (x && ev.shiftKey) {
+      const on = {};
+      if (enchanted(x) && !x.book) on.ench = true;
+      if (x.book) on.book = true;
+      if (x.d) on.dmg = true;
+      if (x.max && !x.d) on.full = true;
+      if (x.nm) on.name = true;
+      if (x.unb) on.unb = true;
+      if (x.data) on.data = true;
+      if (s2.on.only) on.only = true;
+      s2.on = on;
+      if (!Object.keys(on).filter(k => k !== "only").length) toast(s2, 2, "Este item não tem propriedade especial");
+      else toast(s2, 2, "Marcado o que " + x.n + " tem");
+    } else if (x) toast(s2, 2, "Shift + clique para marcar o que ele tem");
+    drawS2(); return;
+  }
+  const a = b.dataset.act;
+  if (a === "all") s2.mode = "all";
+  else if (a === "any") s2.mode = "any";
+  else if (a === "clear") s2.on = {};
+  else if (a === "ench+" || a === "ench-") {
+    const i = ENCH.findIndex(e => e[0] === s2.spec.e), n = ENCH[(i + (a === "ench+" ? 1 : ENCH.length - 1)) % ENCH.length];
+    s2.spec = { e: n[0], lv: Math.min(s2.spec.lv, n[2]) }; s2.on.spec = true;
+  }
+  else if (a === "lv+" || a === "lv-") {
+    const max = ENCH.find(e => e[0] === s2.spec.e)[2];
+    s2.spec.lv = Math.max(1, Math.min(max, s2.spec.lv + (a === "lv+" ? 1 : -1))); s2.on.spec = true;
+  }
+  else if (a.startsWith("tag:")) { s2.only.tag = a.slice(4); s2.on.only = true }
+  else if (a === "add") {
+    const r = ruleOf(s2);
+    if (!conds(r).length) { toast(s2, 2, "Marque ao menos uma condição"); drawS2(); return }
+    const sig = entryName({ kind: "prop", rule: r });
+    if (s2.editing != null && s1.entries[s2.editing]?.kind === "prop") { s1.entries[s2.editing].rule = r; s1.sel = s2.editing; s2.editing = null; toast(s1, 1, "Regra atualizada") }
+    else if (s1.entries.some(e => e.kind === "prop" && entryName(e) === sig)) { toast(s2, 2, "Esta regra já está no filtro"); drawS2(); return }
+    else { s1.entries.push({ kind: "prop", rule: r }); s1.sel = s1.entries.length - 1; toast(s1, 1, "Regra adicionada") }
+    s1.more = false; drawS1(); flash("s1");
+  }
+  else if (a === "back") flash("s1");
+  drawS2();
+});
+document.getElementById("s2").addEventListener("input", ev => {
+  if (ev.target.id === "onlybox") {
+    s2.only.tag = ev.target.value.trim(); s2.on.only = !!s2.only.tag;
+    const pos = ev.target.selectionStart; drawS2();
+    const f = document.getElementById("onlybox"); f.focus(); f.setSelectionRange(pos, pos);
+  }
+});
+document.getElementById("s2").addEventListener("wheel", ev => {
+  if (ev.target.closest("#enchname")) {
+    ev.preventDefault();
+    const i = ENCH.findIndex(e => e[0] === s2.spec.e), n = ENCH[(i + (ev.deltaY > 0 ? 1 : ENCH.length - 1)) % ENCH.length];
+    s2.spec = { e: n[0], lv: Math.min(s2.spec.lv, n[2]) }; s2.on.spec = true; drawS2();
+  } else if (ev.target.closest("#plist")) {
+    ev.preventDefault(); s2.scroll += ev.deltaY > 0 ? 1 : -1; drawS2();
+  }
+}, { passive: false });
+
+/* tooltip estilo Minecraft */
+const tip = document.getElementById("tip");
+document.addEventListener("mousemove", ev => {
+  const b = ev.target.closest("[data-inv],[data-entry]");
+  let html = "";
+  if (b && b.dataset.inv != null) {
+    const x = INV[+b.dataset.inv];
+    if (x) {
+      html = `<div class="n${enchanted(x) && !x.book ? " ench" : ""}${x.nm ? " named" : ""}">${esc(x.n)}</div>`;
+      if (x.e) for (const [k, v] of Object.entries(x.e)) html += `<div class="g">${esc(ENAME[k])}${ENAME[k] === "Remendo" || ENAME[k] === "Toque de seda" ? "" : " " + ROMAN[v]}</div>`;
+      if (x.unb) html += `<div style="color:#5555FF">Inquebrável</div>`;
+      if (x.max) html += `<div class="g">Durabilidade: ${x.max - (x.d || 0)} / ${x.max}</div>`;
+      if (x.data) html += `<div class="g">Energia: 2,4 MFE</div>`;
+      if (b.dataset.screen === "2" && conds(ruleOf(s2)).length) html += matches(ruleOf(s2), x) ? `<div class="ok">✔ a regra pega</div>` : `<div class="no">✘ a regra não pega</div>`;
+    }
+  } else if (b && b.dataset.entry != null) {
+    const e = s1.entries[+b.dataset.entry];
+    if (e && e.kind === "prop") {
+      const sm = summary(e.rule);
+      html = `<div class="n" style="color:#D3B6FF">Por propriedade</div>` + sm.parts.map((p, i) => `<div class="g">${i ? (e.rule.mode === "all" ? "e " : "ou ") : ""}${esc(p)}</div>`).join("") +
+        `<div class="g">${sm.only ? "só em " + esc(sm.only) : "qualquer item"}</div>` + (e.stock ? `<div class="g">Estoque: ${e.stock}</div>` : "") + `<div style="color:#5B6675">Clique para estoque, editar ou remover</div>`;
+    } else if (e) html = `<div class="n">${esc(entryName(e))}</div>` + (e.kind === "tag" ? `<div class="g">Tudo o que tem esta tag</div>` : "") + (e.stock ? `<div class="g">Estoque: ${e.stock}</div>` : "");
+  }
+  if (html) {
+    tip.innerHTML = html; tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = ev.clientX + 14, y = ev.clientY - 18;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = innerHeight - h - 8;
+    tip.style.left = x + "px"; tip.style.top = Math.max(8, y) + "px";
+  } else tip.hidden = true;
+});
+
+drawS1(); drawS2();
+</script>

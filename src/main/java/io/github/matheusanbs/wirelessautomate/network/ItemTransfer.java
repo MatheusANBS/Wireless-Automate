@@ -64,6 +64,8 @@ final class ItemTransfer {
     private static int lastOffered;
     /** O último {@link #moveSlot} pôs algum destino para dormir. */
     private static boolean destinationSlept;
+    /** Entregas da rajada do último {@link #moveSlot}; cada uma conta como uma tentativa. */
+    private static int burstSteps;
 
     /**
      * Uma visita. Devolve {@link NetworkManager#MOVED} se moveu algo, mais {@link NetworkManager#MORE}
@@ -137,7 +139,9 @@ final class ItemTransfer {
                     }
                 }
             }
-            int amount = moveSlot(source, handler, current, max, order, pass, now);
+            int amount = moveSlot(source, handler, current, max, order, pass, now,
+                    MAX_ATTEMPTS_PER_VISIT - attempts - 1);
+            attempts += burstSteps;
             boolean again = false;
             if (amount > 0) {
                 if (stocked) {
@@ -193,10 +197,15 @@ final class ItemTransfer {
         return 0;
     }
 
-    /** Entrega o que der do slot, na ordem da passada. Devolve quanto foi entregue. */
+    /**
+     * Entrega o que der do slot, na ordem da passada. Devolve quanto foi entregue. Com
+     * {@code allowance} &gt; 0, pode seguir numa rajada ({@link #burst}) e anota as entregas dela em
+     * {@link #burstSteps}.
+     */
     private static int moveSlot(Port source, IItemHandler handler, int slot, int max,
-            RoundRobinOrder<Port> order, List<Port> pass, long now) {
+            RoundRobinOrder<Port> order, List<Port> pass, long now, int allowance) {
         destinationSlept = false;
+        burstSteps = 0;
         ItemStack offered = handler.extractItem(slot, max, true);
         lastOffered = offered.getCount();
         if (offered.isEmpty()) {
@@ -288,6 +297,11 @@ final class ItemTransfer {
                 }
                 moved += delivered;
                 remaining -= delivered;
+                if (remaining == 0 && stock == 0 && allowance > 0 && takenCount == offered.getCount()) {
+                    // Entregou a extração inteira e o slot pode ter mais (gaveta, upgrade de pilha):
+                    // as próximas vão direto para este destino, sem simular.
+                    moved += burst(source, handler, slot, target, destination, offered, max - moved, allowance);
+                }
             } else {
                 destination.destinationBackoff.sleep(now);
                 destinationSlept = true;
@@ -295,6 +309,55 @@ final class ItemTransfer {
             if (takenCount < accepts) {
                 break;
             }
+        }
+        return moved;
+    }
+
+    /**
+     * Rajada: o destino acabou de receber a extração inteira do slot, então as próximas extrações
+     * do mesmo item vão direto para os slots do plano dele, sem as duas simulações (extração e
+     * inserção), que numa pilha enorme eram metade das chamadas. A ordem não muda: na mesma visita a
+     * passada é a mesma, e os destinos antes dele seguem recusando o mesmo item (filtro, estoque já
+     * atingido, dormindo). A conservação também não: só o que saiu é inserido, e a sobra volta para
+     * a origem como numa entrega comum. Para no primeiro sinal de mudança (outro item no slot,
+     * extração menor, destino que não aceitou tudo); a tentativa seguinte, completa, decide o resto.
+     * Devolve quanto entregou; cada extração conta em {@link #burstSteps}.
+     */
+    private static int burst(Port source, IItemHandler handler, int slot, IItemHandler target, Port destination,
+            ItemStack offered, int cap, int allowance) {
+        int size = offered.getCount();
+        int moved = 0;
+        while (burstSteps < allowance && moved < cap) {
+            if (!ItemStack.isSameItemSameComponents(handler.getStackInSlot(slot), offered)) {
+                break;
+            }
+            int want = Math.min(size, cap - moved);
+            ItemStack taken = handler.extractItem(slot, want, false);
+            if (taken.isEmpty()) {
+                break;
+            }
+            burstSteps++;
+            if (!ItemStack.isSameItemSameComponents(taken, offered)) {
+                // O filtro do destino aprovou outro item: devolve.
+                giveBack(source, handler, slot, taken);
+                break;
+            }
+            int takenCount = taken.getCount();
+            ItemStack leftover = PLAN.execute(target, taken);
+            int delivered = takenCount - leftover.getCount();
+            if (!leftover.isEmpty()) {
+                giveBack(source, handler, slot, leftover);
+            }
+            if (delivered > 0 && source.network != null) {
+                source.network.ops++;
+            }
+            moved += delivered;
+            if (delivered < want) {
+                break;
+            }
+        }
+        if (moved > 0) {
+            PLAN.delivered(destination, offered, moved);
         }
         return moved;
     }

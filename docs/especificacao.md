@@ -172,6 +172,50 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 
 Hoje existem as capabilities do NeoForge, os químicos do Mekanism, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
+## Armazenamento do mod (planejado, 0.2)
+
+Motivação: no teste do dono (8/10/2026), 12 milhões de pedregulhos entre dois barris do Sophisticated Storage no Ultimate pararam em ~274 mil itens/s, com o orçamento de 1 ms cheio. O teto não é do motor: o `IItemHandler` extrai no máximo uma pilha (64) por chamada, então cada 64 itens custam quatro chamadas ao outro mod. Um armazenamento do próprio mod guarda **quantidades `long` por tipo** e conversa com o roteador por uma API interna, sem esse limite.
+
+Decisões do dono (8/10/2026):
+
+- **Quatro blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia) e Tanque Químico (só com o Mekanism, pela ponte `Chemicals`).
+- **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Ultimate, sem pular e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
+- **Tipos ilimitados:** o limite é só a quantidade total do tier.
+- **Tela em lista com busca** (estilo terminal do AE2): grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
+- **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
+- **Versão 0.2**, depois do envio da 0.1.1.
+
+Capacidade proposta por tier (ajustável na config do servidor, seção `storage`):
+
+| Tier | Baú (itens) | Tanque e Tanque Químico | Bateria |
+| --- | --- | --- | --- |
+| Básico | 262.144 | 1.000.000 mB | 16.000.000 FE |
+| Avançado | 16.777.216 | 64.000.000 mB | 1.000.000.000 FE |
+| Elite | 1.073.741.824 | 4.000.000.000 mB | 64.000.000.000 FE |
+| Ultimate | Sem limite | Sem limite | Sem limite |
+
+Como a transferência usa o atalho:
+
+- **Capability própria** (`wirelessautomate:bulk_items` e as equivalentes de fluido, energia e químico), lida pelo mesmo `BlockCapabilityCache` da face. Nada de `instanceof` nem busca por tick. API por chave e quantidade: `insert(chave, long, simular)` e `extract(chave, long, simular)`, mais a lista de chaves com quantidade.
+- **Do mod para o mod:** uma operação por tipo de item, qualquer que seja a quantidade. Os 12 milhões viram uma chamada; o limite volta a ser o tier do roteador (ou nenhum, no Ultimate).
+- **Do mod para outro mod:** a origem entrega em blocos maiores que uma pilha, e o destino aceita o que a inserção dele aceitar. A sobra volta para o nosso baú.
+- **De outro mod para o mod:** limitado pela extração da origem (64 por chamada), mas a inserção do nosso lado é O(1).
+- Filtros da face (embutido e cartões), estoque, prioridade, round-robin e sono valem igual: a regra é a mesma do `ItemTransfer`, só a chamada muda.
+
+Compatibilidade: o bloco também expõe as capabilities padrão do NeoForge (`IItemHandler` com um slot virtual por tipo mais um vazio, extração de no máximo uma pilha; `IFluidHandler`, `IEnergyStorage`), então funis, AE2, RS e outros mods o veem como um inventário comum. O atalho é só para o nosso roteador.
+
+Também no desenho:
+
+- **Filtro de entrada no bloco**, reaproveitando `FilterSet`, a tela de filtro e o Cartão de Filtro: o que pode entrar, por qualquer caminho.
+- **Sem tick:** o block entity só guarda dados e avisa o `NetworkManager` quando o conteúdo muda (acorda as origens e os destinos presos a ele). A tela recebe diferenças e só enquanto está aberta.
+- **Quebrar o bloco:** o conteúdo vai no item, como numa caixa de shulker.
+
+Em aberto:
+
+- **Tamanho do item quebrado:** com tipos ilimitados, o componente do item pode estourar o limite de pacote. Opções: limitar os tipos guardados no item, ou guardar o conteúdo no `SavedData` com um id no item.
+- **Receitas** de cada bloco e se o Tanque Químico tem receita própria ou sai do Tanque.
+- **Valores finais** da tabela de capacidade.
+
 ## Arquitetura de performance
 
 Regra de ouro: uma operação que não move nada não pode custar nada. O custo vem de verificar, filtrar e tentar inserir em destinos cheios, então a arquitetura evita cada um desses passos.
@@ -253,6 +297,10 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
 - [x] Livro-guia no GuideME (opcional)
 - [ ] Balanceamento das receitas
+
+**0.2, armazenamento do mod**
+
+- [ ] Baú, Tanque, Bateria e Tanque Químico com tiers, tela em lista e atalho no roteador (ver "Armazenamento do mod")
 
 ### Decisões tomadas (7 de outubro de 2026)
 

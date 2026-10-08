@@ -208,13 +208,13 @@ Também no desenho:
 
 - **Filtro de entrada no bloco**, reaproveitando `FilterSet`, a tela de filtro e o Cartão de Filtro: o que pode entrar, por qualquer caminho.
 - **Sem tick:** o block entity só guarda dados e avisa o `NetworkManager` quando o conteúdo muda (acorda as origens e os destinos presos a ele). A tela recebe diferenças e só enquanto está aberta.
-- **Quebrar o bloco:** o conteúdo vai no item, como numa caixa de shulker.
 
-Em aberto:
+Decididos pelo dono depois (8/10/2026):
 
-- **Tamanho do item quebrado:** com tipos ilimitados, o componente do item pode estourar o limite de pacote. Opções: limitar os tipos guardados no item, ou guardar o conteúdo no `SavedData` com um id no item.
-- **Receitas** de cada bloco e se o Tanque Químico tem receita própria ou sai do Tanque.
-- **Valores finais** da tabela de capacidade.
+- **Quebrar o bloco:** o conteúdo fica no servidor (um `SavedData` com um id); o item leva só o id e um resumo (tipos e total). Não estoura o limite de pacote. O item é uma referência: duplicá-lo (criativo, dupe) não duplica o conteúdo, os dois apontam para o mesmo.
+- **Capacidades:** a tabela acima é o padrão, ajustável na config.
+- **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos Cartões de Upgrade, como no roteador.
+- **Texturas:** prontas em `scripts/textures/gerar_texturas.py` (ver "Armazenamento do mod" no pacote de design).
 
 ## Arquitetura de performance
 

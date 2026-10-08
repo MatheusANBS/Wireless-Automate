@@ -31,6 +31,7 @@ from PIL import Image, ImageDraw, ImageFont
 RAIZ = Path(__file__).resolve().parents[2]
 ASSETS = RAIZ / "src/main/resources/assets/wirelessautomate/textures"
 FOLHA = RAIZ / "docs/preview/folha-de-sprites.png"
+VITRINE = RAIZ / "docs/preview/armazenamento-preview.png"
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +94,16 @@ PALETAS: dict[str, dict[str, str]] = {
     "porta_both": {"4": "#aee9c0", "3": "#74d995", "2": "#41c96b", "1": "#2e8d4b", "w": "#123a20",
                    "s": "#0a2413", "a": "#d3f5dd"},
     "porta_none": {"d": "#aab3bd", "e": "#6f7984"},
+
+    # Armazenamento do mod: vidro dos visores, fluido (azul do Tablet), energia (amarelo do Tablet),
+    # químico (verde-amarelado, longe do verde do chunk loading) e o cubo de item do baú.
+    "vidro": {"V": "#e2f4f8", "v": "#26394a", "w": "#1a2733", "t": "#8fa6b4"},
+    "fluido": {"F": "#b4d7ff", "f": "#4d8ae6", "g": "#2f62b3", "G": "#234a8a", "u": "#d6e9ff"},
+    "energia": {"Y": "#fff3b0", "y": "#f2b234", "z": "#4f3a12"},
+    "quimico": {"C": "#d9f2a6", "c": "#97c853", "k": "#5f8c2e", "K": "#3a561c", "b": "#f3fde0"},
+    "caixa": {"T": "#e3c084", "R": "#6c4c28",
+              "Q": "#a3a3a3", "q": "#6e6e6e", "A": "#ffe88a", "a": "#d9a032",
+              "D": "#a6fff6", "d": "#2fbfb3", "E": "#ff5a4a", "e": "#a51b12", "l": "#1b2027"},
     "branco": {"W": "#ffffff"},
 }
 
@@ -244,6 +255,182 @@ def antena(tier: str) -> Image.Image:
         "D",
     ]
     return pinta(grade, leg)
+
+
+# ---------------------------------------------------------------------------
+# Armazenamento do mod (cubos inteiros: Baú, Tanque, Bateria e Tanque Químico)
+# ---------------------------------------------------------------------------
+# Mesmo casco e mesmo acento por tier do roteador. Moldura de cada face (feita em código, igual
+# nas seis): borda de 1 px na cor do tier com cantos em L de 3 px um tom acima, um anel de casco
+# com chanfro (claro em cima/esquerda, escuro embaixo/direita) e um recesso com sombra em
+# cima/esquerda e lábio claro embaixo/direita, em volta de um painel 10×10 (x, y = 3..12).
+# As laterais mostram o recurso; o topo, o símbolo wireless do roteador com um núcleo na cor do
+# recurso (dá para achar o bloco olhando de cima); a base é a mesma para os quatro.
+
+def moldura_armazenamento(painel: list[str]) -> list[str]:
+    assert len(painel) == 10 and all(len(linha) == 10 for linha in painel), "painel 10×10"
+    g = [["p"] * 16 for _ in range(16)]
+    for i in range(16):
+        g[0][i], g[i][0], g[15][i], g[i][15] = "3", "3", "1", "1"
+    for i in range(1, 15):
+        g[1][i], g[i][1], g[14][i], g[i][14] = "h", "m", "s", "s"
+    for i in range(2, 14):
+        g[2][i], g[i][2], g[13][i], g[i][13] = "o", "o", "m", "m"
+    g[13][2], g[2][13] = "o", "o"
+    # Cantos em L na cor do tier: um tom acima nos lados claros, um abaixo nos escuros.
+    for k in range(3):
+        g[0][k] = g[k][0] = "4"
+        g[0][15 - k] = "4" if k else "3"
+        g[k][15] = "2"
+        g[15 - k][0] = "2"
+        g[15][k] = "2" if k else "1"
+        g[15][15 - k] = g[15 - k][15] = "0"
+    g[1][1], g[1][14], g[14][1], g[14][14] = "3", "2", "2", "1"
+    for y, linha in enumerate(painel):
+        for x, ch in enumerate(linha):
+            g[3 + y][3 + x] = ch
+    return ["".join(linha) for linha in g]
+
+
+# Baú: quatro slots de inventário (escuros em cima/esquerda e claros embaixo/direita, como os do
+# jogo) com um bloco de pedra, um lingote de ouro, um diamante e pó de redstone.
+PAINEL_BAU = [
+    "oooopoooop",
+    "oQQqholllh",
+    "oQqqhoAAah",
+    "oqqqhoaaah",
+    "phhhhphhhh",
+    "oooopoooop",
+    "olDlhoEleh",
+    "oDddholEeh",
+    "oldlhoellh",
+    "phhhhphhhh",
+]
+
+# Tanque: visor de vidro, fluido até ~60% com a superfície clara, reflexo na diagonal e marcas
+# de nível à direita.
+PAINEL_TANQUE = [
+    "wwwwwwwwww",
+    "wVvvvvvvvw",
+    "wvVvvvvvvt",
+    "wvvvvvvvvw",
+    "FFFFFFFFFt",
+    "fuffffffff",
+    "fffffffuft",
+    "ffuffffffg",
+    "ffffffffgt",
+    "gggggGGGGG",
+]
+
+# Bateria: raio grande com brilho em volta ('z', posto em código) no painel escuro.
+PAINEL_BATERIA = [
+    "oooooooooo",
+    "ooooooYYyo",
+    "oooooYYyoo",
+    "ooooYYyooo",
+    "oooYYYYYyo",
+    "ooooooYyoo",
+    "oooooYyooo",
+    "ooooYyoooo",
+    "oooYyooooo",
+    "oooooooooo",
+]
+
+# Tanque Químico: visor de vidro cheio de gás, claro em cima e escuro embaixo, com bolhas e
+# marcas de nível (o tanque de fluido fica pela metade, o de gás cheio).
+PAINEL_QUIMICO = [
+    "KKKKKKKKKK",
+    "KVCCCCCCcK",
+    "KCVCCbCcct",
+    "KCCCCCcccK",
+    "KcCcccccct",
+    "KccccbcckK",
+    "Kcccccckkt",
+    "KcbcccckkK",
+    "Kkckkkkkkt",
+    "KKKKKKKKKK",
+]
+
+# Topo: arcos wireless na cor do tier e o núcleo na cor do recurso ('X' claro, 'x' escuro).
+PAINEL_TOPO = [
+    "ssssssssss",
+    "pppppppppp",
+    "pp433332pp",
+    "p4pppppp1p",
+    "ppp4332ppp",
+    "pp3pppp1pp",
+    "ppppXXpppp",
+    "ppppxxpppp",
+    "pppssssppp",
+    "pppppppppp",
+]
+
+# Base: chapa com grade de ventilação.
+PAINEL_BASE = [
+    "ssssssssss",
+    "pppppppppp",
+    "pooooooooh",
+    "pmmmmmmmmh",
+    "pooooooooh",
+    "pmmmmmmmmh",
+    "pooooooooh",
+    "pmmmmmmmmh",
+    "phhhhhhhhh",
+    "pppppppppp",
+]
+
+ARMAZENAMENTOS = {
+    "storage_chest": (PAINEL_BAU, ("caixa.T", "caixa.R")),
+    "storage_tank": (PAINEL_TANQUE, ("fluido.F", "fluido.g")),
+    "storage_battery": (PAINEL_BATERIA, ("energia.Y", "energia.y")),
+    "storage_chemical_tank": (PAINEL_QUIMICO, ("quimico.C", "quimico.k")),
+}
+
+
+def face_armazenamento(tier: str, painel: list[str], nucleo: tuple[str, str] | None = None) -> Image.Image:
+    p = f"roteador_{tier}"
+    leg = legenda(**{t: f"{p}.{t}" for t in "43210"})
+    leg.update(legenda(h="casco.4", m="casco.3", p="casco.2", s="casco.1", o="casco.0"))
+    for paleta in ("vidro", "fluido", "energia", "quimico", "caixa"):
+        leg.update({c: rgb(cor) for c, cor in PALETAS[paleta].items()})
+    if nucleo:
+        leg.update(legenda(X=nucleo[0], x=nucleo[1]))
+    grade = moldura_armazenamento(painel)
+    if any("Y" in linha for linha in painel):
+        # Brilho do raio: o fundo escuro vizinho (4 lados) de um pixel do raio.
+        g = [list(linha) for linha in grade]
+        for y in range(3, 13):
+            for x in range(3, 13):
+                if g[y][x] == "o" and any(grade[y + dy][x + dx] in "Yy"
+                                          for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    g[y][x] = "z"
+        grade = ["".join(linha) for linha in g]
+    return pinta(grade, leg)
+
+
+def cubo_montado(topo: Image.Image, lado: Image.Image, s: int = 6) -> Image.Image:
+    """Cubo em projeção isométrica simples: topo e duas laterais (a da direita mais escura)."""
+    W, H = 32 * s + 2, 32 * s + 2
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    cx, cy = W // 2, 16 * s + 1
+
+    def P(x, y, z):  # x para a direita-baixo, z para a esquerda-baixo, y para cima; 0..16
+        return (cx + (x - z) * s, cy + (x + z) * s // 2 - y * s)
+
+    def quad(pts, cor):
+        d.polygon([P(*p) for p in pts], fill=cor[:3])
+
+    for v in range(16):
+        for u in range(16):
+            quad([(u, 16, v), (u + 1, 16, v), (u + 1, 16, v + 1), (u, 16, v + 1)], topo.getpixel((u, v)))
+            # Lateral esquerda (z = 16), u da esquerda para a direita.
+            quad([(u, 16 - v, 16), (u + 1, 16 - v, 16), (u + 1, 15 - v, 16), (u, 15 - v, 16)],
+                 _escurece(lado.getpixel((u, v)), 0.82))
+            # Lateral direita (x = 16).
+            quad([(16, 16 - v, 16 - u), (16, 16 - v, 15 - u), (16, 15 - v, 15 - u), (16, 15 - v, 16 - u)],
+                 _escurece(lado.getpixel((u, v)), 0.62))
+    return img
 
 
 # ---------------------------------------------------------------------------
@@ -597,6 +784,10 @@ def gerar() -> dict[str, Image.Image]:
         sprites[f"block/router_{tier}_top"] = face_roteador(tier, TOPO, preencher_resto=True)
         sprites[f"block/router_{tier}_bottom"] = face_roteador(tier, BASE)
         sprites[f"block/router_{tier}_antenna"] = antena(tier)
+        sprites[f"block/storage_{tier}_bottom"] = face_armazenamento(tier, PAINEL_BASE)
+        for nome, (painel, nucleo) in ARMAZENAMENTOS.items():
+            sprites[f"block/{nome}_{tier}_side"] = face_armazenamento(tier, painel)
+            sprites[f"block/{nome}_{tier}_top"] = face_armazenamento(tier, PAINEL_TOPO, nucleo)
     sprites["gui/port_extract"] = porta("extract", SETA_CIMA)
     sprites["gui/port_insert"] = porta("insert", SETA_CIMA[::-1])
     sprites["gui/port_both"] = porta("both", SETA_DUPLA)
@@ -696,13 +887,26 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         faces = [(f"{tier}_{f}", tile(sprites[f"block/router_{tier}_{f}"]))
                  for f in ["front", "back", "side", "top", "bottom", "antenna"]]
         linhas.append((f"Roteador {tier}", faces))
+    for tier in TIERS_ROTEADOR:
+        faces = [(f"{tier}_bottom", tile(sprites[f"block/storage_{tier}_bottom"]))]
+        for n in ARMAZENAMENTOS:
+            curto = n.removeprefix("storage_").replace("chemical_tank", "chemical")
+            faces.append((f"{curto} side", tile(sprites[f"block/{n}_{tier}_side"])))
+            faces.append((f"{curto} top", tile(sprites[f"block/{n}_{tier}_top"])))
+        linhas.append((f"Armazenamento {tier}", faces))
 
     margem, gap = 16, 12
     colunas = 9
     largura = margem * 2 + colunas * celula + (colunas - 1) * gap
     montados = [roteador_montado(t, sprites) for t in TIERS_ROTEADOR]
     alt_montado = max(m.height for m in montados)
-    altura = margem + sum(20 + celula + rotulo + gap for _ in linhas) + 20 + alt_montado + rotulo + 40 + 64
+    cubos = [(f"{n.removeprefix('storage_')} {t}",
+              cubo_montado(sprites[f"block/{n}_{t}_top"], sprites[f"block/{n}_{t}_side"]))
+             for n in ARMAZENAMENTOS for t in TIERS_ROTEADOR]
+    por_linha = largura // (cubos[0][1].width + gap)
+    alt_cubos = -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
+    altura = (margem + sum(20 + celula + rotulo + gap for _ in linhas) + 20 + alt_montado + rotulo + 40 + 64
+              + alt_cubos)
     out = Image.new("RGBA", (largura, altura), fundo + (255,))
     d = ImageDraw.Draw(out)
     y = margem
@@ -731,6 +935,15 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         out.alpha_composite(img, (x, y + 8))
         out.alpha_composite(img.resize((32, 32), Image.NEAREST), (x + 20, y))
         x += 64
+    y += 56
+    out.info["cubos_y"] = y
+    d.text((margem, y), "Armazenamento montado (topo + laterais)", fill=texto, font=fonte)
+    y += 20
+    for i, (nome, cubo) in enumerate(cubos):
+        cx = margem + (i % por_linha) * (cubo.width + gap)
+        cy = y + (i // por_linha) * (cubo.height + rotulo + gap)
+        out.alpha_composite(cubo, (cx, cy))
+        d.text((cx + 10, cy + cubo.height + 2), nome, fill=texto, font=fonte)
     return out
 
 
@@ -743,7 +956,10 @@ def main() -> None:
             destino.parent.mkdir(parents=True, exist_ok=True)
             img.save(destino)
     FOLHA.parent.mkdir(parents=True, exist_ok=True)
-    folha(sprites).convert("RGB").save(FOLHA)
+    imagem = folha(sprites).convert("RGB")
+    imagem.save(FOLHA)
+    # Recorte dos cubos de armazenamento montados, para julgar o conjunto sem a folha inteira.
+    imagem.crop((0, imagem.info["cubos_y"] - 8, imagem.width, imagem.height)).save(VITRINE)
     print(f"{len(sprites)} sprites{' (não gravados)' if so_folha else ''}; folha em {FOLHA.relative_to(RAIZ)}")
 
 

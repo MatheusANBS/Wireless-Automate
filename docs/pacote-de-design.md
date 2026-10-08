@@ -36,6 +36,9 @@ wireless-automate/
 | `item/chunk_loader_upgrade.png` | Upgrade de chunk loading: cartão com faixa verde e grade 3×3 de chunks |
 | `item/tier_core_<tier>.png` | Upgrades de tier Avançado, Elite e Ultimate: cartão de circuito com faixa e núcleo do chip na cor do tier e 1 a 3 marcas de nível (não existe o básico) |
 | `block/router_<tier>_<face>.png` | Faces do roteador: front, back, side, top, bottom e antenna |
+| `block/storage_<tipo>_<tier>_side.png` | Laterais do armazenamento (`chest`, `tank`, `battery`, `chemical_tank`): quatro slots com itens, visor de fluido pela metade, raio com brilho, visor cheio de gás |
+| `block/storage_<tipo>_<tier>_top.png` | Topo do armazenamento: arcos wireless na cor do tier e núcleo na cor do recurso |
+| `block/storage_<tier>_bottom.png` | Base dos quatro tipos: grade de ventilação |
 | `gui/port_extract.png` | Porta Extrai (azul, seta para cima) |
 | `gui/port_insert.png` | Porta Insere (laranja, seta para baixo) |
 | `gui/port_both.png` | Porta Armazém, antes Ambos (verde, seta dupla) |
@@ -58,12 +61,29 @@ Os upgrades de tier, o upgrade de chunk loading e o cartão de filtro têm a mes
 - **Chunk loading:** placa ardósia, faixa verde e grade de chunks com o do centro aceso.
 - **Filtro:** placa verde de circuito, faixa prateada e funil claro no lugar do chip.
 
+## Armazenamento do mod (0.2)
+
+Quatro cubos inteiros (Baú, Tanque, Bateria e Tanque Químico) com o casco e o acento por tier do roteador. A moldura é a mesma nas seis faces e sai de `moldura_armazenamento` no script:
+
+- borda de 1 px na cor do tier, com cantos em L de 3 px um tom acima (abaixo nos lados escuros);
+- anel de casco com chanfro;
+- recesso com sombra em cima/esquerda e lábio claro embaixo/direita, em volta de um painel 10×10.
+
+As quatro laterais são iguais, porque o roteador pode ser preso em qualquer face. O painel mostra o recurso:
+
+- **Baú:** quatro slots de inventário (pedra, lingote de ouro, diamante e redstone).
+- **Tanque:** visor de vidro com fluido azul até ~60%, reflexo e marcas de nível.
+- **Bateria:** raio amarelo com brilho âmbar no fundo escuro.
+- **Tanque Químico:** visor cheio de gás verde-amarelado com bolhas e as mesmas marcas de nível.
+
+O topo traz os arcos wireless do roteador na cor do tier e um núcleo na cor do recurso, para achar o bloco olhando de cima; a base é a mesma para os quatro. A folha mostra os 16 cubos montados, e `docs/preview/armazenamento-preview.png` é o recorte deles.
+
 ## Estilo e como regenerar
 
 Todos os sprites saem de `scripts/textures/gerar_texturas.py` (Python 3 com Pillow). Cada sprite é uma grade de texto em que cada caractere aponta para uma cor de uma paleta nomeada (`PALETAS` no topo do script): para ajustar uma cor, mude a paleta; para mexer no desenho, mude a grade.
 
 ```bash
-python scripts/textures/gerar_texturas.py            # grava os 37 PNGs e a folha de sprites
+python scripts/textures/gerar_texturas.py            # grava os 73 PNGs e a folha de sprites
 python scripts/textures/gerar_texturas.py --so-folha # só refaz docs/preview/folha-de-sprites.png
 ```
 

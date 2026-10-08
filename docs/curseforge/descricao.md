@@ -4,7 +4,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-![Everything wireless](ENVIAR:feature-0-overview.png)
+![Everything wireless](ENVIAR:feature-0-overview.jpg)
 
 ---
 
@@ -83,7 +83,7 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Relays and the Imbuement Chamber connect straight to a router, so Source travels wirelessly between them like any other resource, at the Source/s of the router's tier.
 
-![Ars Nouveau Source](ENVIAR:feature-11-source.png)
+![Ars Nouveau Source](ENVIAR:feature-11-source.jpg)
 
 The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
 

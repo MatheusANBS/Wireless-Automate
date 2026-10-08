@@ -19,6 +19,8 @@ As duas etapas saem juntas na **1.1.0**, com a etapa 0. Cada etapa tem plano, te
 | Escopo | Aba Source (roteador, Vinculador, Configurador, Tablet, já pelo registro), o Tanque, guia e JEI. As Spell Turrets do Ars puxam do Tanque sem código a mais (pelo `SourceManager`); o guia diz isso |
 | Lançamento | Junto com a etapa 0, numa 1.1.0 |
 
+Cores (decidido no mockup do tanque): Source `#B36DE0` (roxo do Ars) e Químicos `#97C853`.
+
 ## Fatos do Ars Nouveau (investigados no código, 5.2.0 a 5.13.3)
 
 - Mod id `ars_nouveau`; exige GeckoLib e Curios. A API de Source é **idêntica de 5.2.0.750 (a primeira para 1.21.1) a 5.13.3.1423**: a dependência opcional é `[5.2,)`, e o mod funciona com a versão que o ATM10 trouxer.

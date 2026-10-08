@@ -814,8 +814,8 @@ ICONES_TIPO = {
         "eblbbbbde",
         "ebbbbbdde",
         ".eeeeeee.",
-    ], legenda(b="#b45cff", l="#ddb8ff", d="#7430b8", e="#c8d2dc")),
-    # Source (Ars Nouveau): a textura já sai agora; o tipo entra na etapa 1.
+    ], legenda(b="#97c853", l="#d9f2a6", d="#5f8c2e", e="#c8d2dc")),
+    # Source (Ars Nouveau): o roxo da Source do Ars.
     "source": ([
         "....l....",
         "....l....",
@@ -826,7 +826,7 @@ ICONES_TIPO = {
         "...bbd...",
         "....d....",
         "....d....",
-    ], legenda(b="#ff5cc8", l="#ffc0eb", d="#b02f86", e="#ffffff")),
+    ], legenda(b="#b36de0", l="#ea8ef3", d="#6b2f8f", e="#ffffff")),
 }
 
 

@@ -19,8 +19,8 @@ public final class ResourceStyle {
             case ITEM -> 0xFFD9A35B;
             case FLUID -> 0xFF3D8BFF;
             case ENERGY -> 0xFFFFB020;
-            case CHEMICAL -> 0xFFB45CFF;
-            case SOURCE -> 0xFFFF5CC8;
+            case CHEMICAL -> 0xFF97C853;
+            case SOURCE -> 0xFFB36DE0;
         };
     }
 

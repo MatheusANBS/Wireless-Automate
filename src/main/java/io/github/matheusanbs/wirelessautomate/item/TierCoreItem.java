@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.List;
@@ -62,6 +63,9 @@ public class TierCoreItem extends Item {
         tooltip.add(line("items", rate(from, Stat.ITEMS), rate(tier, Stat.ITEMS)));
         tooltip.add(line("fluids", rate(from, Stat.FLUID), rate(tier, Stat.FLUID)));
         tooltip.add(line("energy", rate(from, Stat.ENERGY), rate(tier, Stat.ENERGY)));
+        if (Sources.LOADED) {
+            tooltip.add(line("source", rate(from, Stat.SOURCE), rate(tier, Stat.SOURCE)));
+        }
         tooltip.add(line("range", range(from), range(tier)));
         for (StorageKind kind : StorageKind.values()) {
             if (kind != StorageKind.CHEMICAL_TANK || Chemicals.LOADED) {
@@ -76,7 +80,8 @@ public class TierCoreItem extends Item {
     private enum Stat {
         ITEMS(ResourceType.ITEM),
         FLUID(ResourceType.FLUID),
-        ENERGY(ResourceType.ENERGY);
+        ENERGY(ResourceType.ENERGY),
+        SOURCE(ResourceType.SOURCE);
 
         final ResourceType type;
 

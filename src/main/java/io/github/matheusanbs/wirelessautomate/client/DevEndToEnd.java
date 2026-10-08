@@ -590,18 +590,31 @@ public final class DevEndToEnd {
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
-        // No mínimo (300), com os 4 tipos do runClient, as abas cabem com o nome só na ativa.
+        if (LoadedTypes.contains(ResourceType.SOURCE)) {
+            list.add(new Step("aba Source", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.source")), "aba Source")),
+                    () -> routerScreen().getMenu().selectedType() == ResourceType.SOURCE,
+                    () -> "aba na tela " + routerScreen().getMenu().selectedType()));
+            list.add(clipCheck("aba Source"));
+            list.add(capture("1d-roteador-aba-source"));
+            list.add(new Step("de volta à aba Itens depois da Source", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
+                    () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
+                    () -> "aba na tela " + routerScreen().getMenu().selectedType()));
+        }
+        // No mínimo (300), com os 5 tipos do runClient (Mekanism e Ars), as abas cabem com o nome só na ativa.
         list.add(new Step("abas no tamanho mínimo", STEP_TIMEOUT_MS,
                 () -> { },
                 () -> routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME,
                 () -> "modo das abas " + routerScreen().tabMode()));
         list.add(capture("1b-roteador-abas"));
-        // Maior: a largura extra vai para o visor e as abas; a coluna da direita e o inventário vão
-        // junto com a borda direita.
+        // Maior (420 x 300): com os 5 tipos do runClient (Mekanism e Ars) as abas ainda não cabem
+        // com todos os nomes, então o modo continua ACTIVE_NAME. A largura extra vai para o visor; a
+        // coluna da direita e o inventário vão junto com a borda direita.
         list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(420, 300),
                 () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
-                        && routerScreen().tabMode() == TabLayout.Mode.FULL
+                        && routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME
                         && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
                                 == routerScreen().size()[0] - 9 - 162 + 1,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
@@ -1925,7 +1938,14 @@ public final class DevEndToEnd {
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         // três abas (sem Químicos): o título "Abas: Itens + Fluidos + Energia" é o texto mais longo
         list.add(new Step("pt: três abas", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.chemical")), "aba Químicos")),
+                () -> {
+                    for (ResourceType type : new ResourceType[] {ResourceType.CHEMICAL, ResourceType.SOURCE}) {
+                        if (linkerScreen().getMenu().snapshot().available().contains(type)) {
+                            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
+                                    + type.key())), "aba " + type));
+                        }
+                    }
+                },
                 () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 3),
                 () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(clipCheck("pt: Vinculador"));
@@ -2084,7 +2104,7 @@ public final class DevEndToEnd {
                 () -> {
                     // de Todos, desmarca as outras caixas (só aparecem os tipos disponíveis)
                     for (ResourceType type : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
-                            ResourceType.CHEMICAL}) {
+                            ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                         if (linkerScreen().getMenu().snapshot().available().contains(type)) {
                             click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
                                     + type.key())), "aba " + type));

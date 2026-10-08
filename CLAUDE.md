@@ -91,4 +91,4 @@ Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChem
 - **Rotação:** o `facing` do roteador segue a convenção do para-raios (`up` sem rotação, `down` x=180, laterais x=90 + y). Configurações por face devem ser salvas em relação ao `facing`.
 - **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal. Os GameTests rodam em `run/gametest`, com o mundo apagado a cada rodada.
 - **Wrapper:** `gradle-wrapper.properties` usa `validateDistributionUrl=false`, porque a validação falha atrás do proxy do ambiente na nuvem.
-- **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O plugin ModDevGradle fica no `build.gradle`.
+- **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O `neo_version` vira a versão **mínima** exigida no `neoforge.mods.toml`: não suba além da que o ATM10 usa (hoje 21.1.251), senão o mod não carrega no pack. O plugin ModDevGradle fica no `build.gradle`.

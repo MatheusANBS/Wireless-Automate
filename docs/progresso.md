@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (8/10/2026): 1.0.2 pronta no `main` (correção de fluidos do Mekanism sumindo), falta enviar ao CurseForge (ID 1732160; lá está a 0.1.0).** A 1.0 junta a 0.1.1 (auditoria de performance), os armazenamentos do mod e o filtro v2. Build com 105 JUnit e 149 + 7 GameTests (comuns + químicos) passando, e2e OK (411 passos) e vitrine refeita.
+**Etapa atual (8/10/2026): 1.0.2 pronta no `main` (correção de fluidos do Mekanism sumindo), enviada ao CurseForge (ID 1732160) com o changelog unificado.** A 1.0 junta a 0.1.1 (auditoria de performance), os armazenamentos do mod e o filtro v2. Build com 105 JUnit e 149 + 7 GameTests (comuns + químicos) passando, e2e OK (411 passos) e vitrine refeita.
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI, AE2/RS2 e o balanceamento das receitas.
 
@@ -39,7 +39,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-1. Enviar a 1.0.2 ao CurseForge: o jar é `build/libs/wirelessautomate-1.0.2.jar`; changelog unificado (1.0.2, 1.0.1, 1.0.0 e 0.1.1, nenhuma delas foi enviada) em `docs/curseforge/changelog-curseforge-1.0.2.md`. Ao lançar: NeoForge, 1.21.1, Java 21, Client and Server, Release. Descrição em `docs/curseforge/descricao.md`, já com os links das 10 imagens enviadas ao CurseForge (anexos 2025/358 a 367). As fotos vêm de `WA_SHOWCASE=run/showcase ./gradlew runClient` e `python scripts/curseforge/gerar_imagens.py`.
+1. Acompanhar a moderação da 1.0.2 no CurseForge (ID 1732160) e o retorno de quem usa com o Mekanism.
 2. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
 3. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
 4. Depois: balanceamento das receitas, atalhos de AE2/RS2, e o teste num ATM10 real com o jar de `build/libs/`.
@@ -92,6 +92,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-08 | 1.0.2 enviada ao CurseForge pelo dono, com o changelog unificado (1.0.2, 1.0.1, 1.0.0 e 0.1.1). README sem a menção à 0.1.0 lá. |
 | 2026-10-08 | **1.0.2**, bug do dono: roteador extraindo fluido do Rotary Condensentrator do Mekanism esvaziava a máquina e o fluido sumia (para o Tanque Wireless funcionava). O `getFluidInTank` do Mekanism devolve a pilha interna e o dreno a encolhe no lugar; ao esvaziar, a chave do `FluidTransfer` zerava e o `fill` recebia `FluidStack.EMPTY` (`copyWithAmount` de pilha vazia), e a devolução também. A chave agora é uma cópia. Itens e químicos já usavam a cópia da extração simulada. GameTest `fluidFromLiveTankIsNotLost` com o `TestMachines.LiveTank` (falhava antes). 149 + 7 GameTests. Changelog unificado em `docs/curseforge/changelog-curseforge-1.0.2.md`. |
 | 2026-10-08 | **1.0.1**: o ATM10 vem com NeoForge 21.1.251 e a 1.0.0 exigia 21.1.256 (o `versionRange` do `neoforge.mods.toml` é a versão de compilação). `neo_version=21.1.251`: compila, 105 JUnit, 148 + 7 GameTests e e2e (411 passos) rodando sobre a 251. Changelog em `docs/curseforge/changelog-1.0.1.md`. Para subir a versão do NeoForge no futuro, não passe da que o ATM10 usa. |
 | 2026-10-08 | **1.0.0** a pedido do dono ("versão final"): `mod_version=1.0.0`, changelog em `docs/curseforge/changelog-1.0.0.md`, descrição do CurseForge com o filtro v2, as regras e os armazenamentos. Vitrine (`WA_SHOWCASE`) com a fileira dos quatro armazenamentos, a tela do Baú e as abas Tags e Regra do filtro (inventário de exemplo; avisos e chat limpos antes das fotos); imagens novas `feature-3-filters`, `feature-8-rules`, `feature-9-storage` e `feature-10-chest`. |

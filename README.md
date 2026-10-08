@@ -2,7 +2,7 @@
 
 Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-**Estado:** versão 1.0 lançada. Baixe o jar na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), que tem também o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). No CurseForge (projeto 1732160) ainda está a 0.1.0. Licença All Rights Reserved.
+**Estado:** versão 1.0 lançada. Baixe o jar na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), que tem também o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Também no CurseForge (projeto 1732160). Licença All Rights Reserved.
 
 ## Recursos
 

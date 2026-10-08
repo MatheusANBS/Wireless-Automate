@@ -153,44 +153,71 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
     return img
 
 
+# (tier, nome, cor do nome, só com o Allthemodium) na ordem do RouterTier, e as vazões padrão do ResourceType
+# (os químicos dividem a vazão com os fluidos); 0 = sem limite. Alcance: o padrão do RouterTier.
 TIERS = [
-    # (tier, nome, cor do nome, itens/s, mB/s, FE/t, Source/s, alcance) — os padrões de RouterTier
-    # e do ResourceType (os químicos dividem a vazão com os fluidos).
-    ("basic", "Basic", (200, 204, 210), "512", "32,000", "16,000", "1,000", "128 blocks"),
-    ("advanced", "Advanced", (226, 179, 71), "8,192", "512,000", "256,000", "16,000", "1,024 blocks"),
-    ("elite", "Elite", (69, 214, 204), "131,072", "8,000,000", "4,000,000", "256,000", "Whole dimension"),
-    ("ultimate", "Ultimate", (164, 108, 255), "Unlimited", "Unlimited", "Unlimited", "Unlimited", "Every dimension"),
+    ("basic", "Basic", (200, 204, 210), False),
+    ("advanced", "Advanced", (226, 179, 71), False),
+    ("elite", "Elite", (69, 214, 204), False),
+    ("emerald", "Emerald", (47, 220, 98), False),
+    ("allthemodium", "Allthemodium", (255, 139, 4), True),
+    ("vibranium", "Vibranium", (38, 222, 136), True),
+    ("unobtainium", "Unobtainium", (209, 82, 227), True),
+    ("ultimate", "Ultimate", (164, 108, 255), False),
 ]
+VAZOES = [
+    ("Items/s", [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0]),
+    ("Fluids (mB/s)", [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0]),
+    ("Energy (FE/t)", [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 262_144_000, 0]),
+    ("Source/s", [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0]),
+]
+ALCANCE = ["64 blocks", "512 blocks", "Dimension"] + ["All dims"] * 5
 
 
 def tiers() -> Image.Image:
-    """Os quatro roteadores (texturas do mod, LEDs acesos) com a vazão e o alcance de cada um."""
+    """Os oito roteadores (texturas do mod, LEDs acesos) numa tabela com a vazão e o alcance de cada um."""
     largura, faixa = 1280, 150
-    img = Image.new("RGB", (largura, faixa + 650), FUNDO)
+    rotulo_w, margem = 236, 24
+    coluna = (largura - rotulo_w - margem) // len(TIERS)
+    img = Image.new("RGB", (largura, faixa + 680), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
     d.rectangle([0, faixa - 4, largura, faixa - 1], fill=CIANO)
-    escreve_pixel(img, "Four tiers", 32, 34, 6, CIANO_CLARO, sombra=(8, 40, 44))
-    d.text((34, 34 + 42 + 24), "Upgrade cards raise throughput and range, per face and per resource type.",
-           fill=TEXTO, font=fonte(30))
+    escreve_pixel(img, "Eight tiers", 32, 34, 6, CIANO_CLARO, sombra=(8, 40, 44))
+    d.text((34, 34 + 42 + 24), "Upgrade cards raise throughput and range. Allthemodium (ATM10) adds three steps.",
+           fill=TEXTO, font=fonte(28))
+    x0 = rotulo_w
+    # faixa "Allthemodium" sobre as três colunas do mod
+    atm = [i for i, t in enumerate(TIERS) if t[3]]
+    ax0, ax1 = x0 + atm[0] * coluna + 4, x0 + (atm[-1] + 1) * coluna - 4
+    d.rounded_rectangle([ax0, faixa + 22, ax1, faixa + 614], radius=10, fill=(26, 24, 20))
     sprites = capa.tex.gerar()
-    coluna = largura // 4
-    rotulos = ("Items/s", "Fluid & chemicals (mB/s)", "Energy (FE/t)", "Source/s", "Range")
-    for i, (tier, nome, cor, *valores) in enumerate(TIERS):
+    for i, (tier, nome, cor, _) in enumerate(TIERS):
+        cx = x0 + i * coluna + coluna // 2
         sprites[f"block/router_{tier}_front"] = capa.acende_leds(sprites[f"block/router_{tier}_front"])
         arte = capa.tex.roteador_montado(tier, sprites, s=3)
         arte = arte.crop(arte.getbbox())
-        arte = arte.resize((arte.width * 3, arte.height * 3), Image.NEAREST)
-        cx = i * coluna + coluna // 2
-        img.paste(arte, (cx - arte.width // 2, faixa + 230 - arte.height), arte)
-        escreve_pixel(img, nome, cx - largura_pixel(nome, 5) // 2, faixa + 255, 5, cor, sombra=(0, 0, 0))
-        y = faixa + 310
-        for rotulo, valor in zip(rotulos, valores):
-            d.text((cx, y), rotulo, fill=MUTED, font=fonte(22), anchor="mt")
-            d.text((cx, y + 26), valor, fill=TEXTO, font=fonte(28), anchor="mt")
-            y += 62
-        if i:
-            d.line([(i * coluna, faixa + 30), (i * coluna, faixa + 592)], fill=(36, 50, 64), width=2)
+        escala = min(2, (coluna - 16) // arte.width)
+        arte = arte.resize((arte.width * escala, arte.height * escala), Image.NEAREST)
+        img.paste(arte, (cx - arte.width // 2, faixa + 190 - arte.height), arte)
+        d.text((cx, faixa + 204), nome, fill=cor, font=fonte(22 if len(nome) < 11 else 19), anchor="mt")
+    y = faixa + 256
+    linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
+    linhas.append(("Range", ALCANCE))
+    for n, (rotulo, valores) in enumerate(linhas):
+        if n % 2 == 0:
+            d.rectangle([24, y - 12, largura - margem, y + 50], fill=(18, 27, 37))
+            d.rectangle([ax0, y - 12, ax1, y + 50], fill=(34, 30, 24))
+        d.text((34, y + 19), rotulo, fill=MUTED, font=fonte(22), anchor="lm")
+        for i, valor in enumerate(valores):
+            cx = x0 + i * coluna + coluna // 2
+            d.text((cx, y + 19), valor, fill=TEXTO, font=fonte(20), anchor="mm")
+        y += 72
+    # borda e título do bloco do Allthemodium por cima das faixas
+    d.rounded_rectangle([ax0, faixa + 22, ax1, faixa + 614], radius=10, outline=(120, 74, 20), width=2)
+    d.text(((ax0 + ax1) // 2, faixa + 30), "Only with Allthemodium", fill=(255, 176, 80), font=fonte(20), anchor="mt")
+    d.text((34, faixa + 640), "Per face and per resource type; chemicals use the fluid rate. "
+           "Without Allthemodium, Emerald upgrades straight to Ultimate.", fill=MUTED, font=fonte(20))
     return img
 
 

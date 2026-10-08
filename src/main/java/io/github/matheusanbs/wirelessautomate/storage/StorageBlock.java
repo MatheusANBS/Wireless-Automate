@@ -142,8 +142,7 @@ public class StorageBlock extends BaseEntityBlock {
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageBlockEntity storage
-                && !storage.isEmptyContents()
-                && (player.isCreative() || !state.canHarvestBlock(level, pos, player))) {
+                && !storage.isEmptyContents() && !lootWillDrop(player, state, level, pos)) {
             ItemStack stack = StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
             stack.applyComponents(storage.collectComponents());
             ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
@@ -151,6 +150,15 @@ public class StorageBlock extends BaseEntityBlock {
             level.addFreshEntity(drop);
         }
         return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /**
+     * A quebra vai rodar a loot table? A mesma pergunta do {@code ServerPlayerGameMode.destroyBlock}:
+     * fora do criativo (pelo modo de jogo do servidor) e com a ferramenta certa.
+     */
+    private static boolean lootWillDrop(Player player, BlockState state, Level level, BlockPos pos) {
+        boolean creative = player instanceof ServerPlayer serverPlayer ? serverPlayer.gameMode.isCreative() : player.isCreative();
+        return !creative && state.canHarvestBlock(level, pos, player);
     }
 
     /**

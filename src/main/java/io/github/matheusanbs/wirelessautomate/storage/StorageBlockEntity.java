@@ -126,13 +126,19 @@ public abstract class StorageBlockEntity extends BlockEntity {
         return storageId;
     }
 
-    /** O bloco saiu do mundo: o conteúdo vai para o {@link StorageSavedData}, pelo id do drop. */
+    /**
+     * O bloco saiu do mundo: o conteúdo é copiado para o {@link StorageSavedData}, pelo id do drop.
+     *
+     * <p>Não esvazia o block entity: na quebra do sobrevivência o NeoForge tira o bloco
+     * ({@code removeBlock}, que chama isto) <b>antes</b> de a loot table montar o drop
+     * ({@code playerDestroy}), lendo este mesmo block entity. Esvaziado, o item cairia sem a
+     * referência e o conteúdo ficaria órfão. O block entity é descartado logo depois.
+     */
     void stash() {
         if (isEmptyContents() || !(level instanceof ServerLevel server)) {
             return;
         }
         StorageSavedData.get(server.getServer()).put(storageId(), kind, tier(), saveContents(server.registryAccess()));
-        clearContents();
     }
 
     @Override

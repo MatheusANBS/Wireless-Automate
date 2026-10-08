@@ -531,14 +531,17 @@ public final class StorageGameTests {
         helper.succeed();
     }
 
-    /** Exatamente um Baú no chão perto de {@code absolute} levando o conteúdo com esse total. */
+    /**
+     * Exatamente um Baú no chão perto de {@code absolute}, e levando o conteúdo com esse total. Conta
+     * também os vazios: um drop sem a referência é o bug de o conteúdo sumir.
+     */
     private static void assertDroppedWith(GameTestHelper helper, BlockPos absolute, long total) {
-        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(4),
-                entity -> {
-                    StorageContents contents = entity.getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
-                    return entity.getItem().is(ModItems.STORAGE_CHEST.get()) && contents != null && contents.total() == total;
-                });
-        helper.assertValueEqual(drops.size(), 1, "Baús no chão com " + total + " itens");
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(1.5),
+                entity -> entity.getItem().is(ModItems.STORAGE_CHEST.get()));
+        helper.assertValueEqual(drops.size(), 1, "Baús no chão " + drops.stream()
+                .map(e -> String.valueOf(e.getItem().get(ModDataComponents.STORAGE_CONTENTS.get()))).toList());
+        StorageContents contents = drops.get(0).getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+        helper.assertTrue(contents != null && contents.total() == total, "o Baú no chão leva o conteúdo: " + contents);
         drops.forEach(ItemEntity::discard);
     }
 
@@ -705,14 +708,44 @@ public final class StorageGameTests {
         helper.succeed();
     }
 
+    /**
+     * Bateria quebrada por um jogador de cada jeito (sobrevivência com picareta, sem picareta e no
+     * criativo): o item leva a energia e colocá-lo a devolve.
+     */
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void batteryKeepsEnergyHoweverBroken(GameTestHelper helper) {
+        Object[][] cases = {
+                {GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 3_000_000_001L},
+                {GameType.SURVIVAL, ItemStack.EMPTY, 3_000_000_002L},
+                {GameType.CREATIVE, ItemStack.EMPTY, 3_000_000_003L},
+        };
+        for (Object[] c : cases) {
+            long energy = (long) c[2];
+            storageBattery(helper, A, RouterTier.ELITE).store().insert(energy, false);
+            BlockPos absolute = helper.absolutePos(A);
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            player.moveTo(Vec3.atCenterOf(absolute.above()));
+            player.setGameMode((GameType) c[0]);
+            player.setItemInHand(InteractionHand.MAIN_HAND, (ItemStack) c[1]);
+            player.gameMode.destroyBlock(absolute);
+            helper.assertBlockNotPresent(ModBlocks.STORAGE.get(StorageKind.BATTERY).get(), A);
+            ItemStack item = pickUp(helper, A, StorageKind.BATTERY, energy);
+            helper.assertValueEqual(StorageBlockItem.tierOf(item), RouterTier.ELITE, "tier no item (" + c[0] + ")");
+            place(helper, item, A, StorageKind.BATTERY);
+            helper.assertValueEqual(energy(helper, A), energy, "energia de volta (" + c[0] + ", " + c[1] + ")");
+            helper.setBlock(A, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
     /** Tira do chão o item do armazenamento com o total dado (perto da posição relativa). */
     private static ItemStack pickUp(GameTestHelper helper, BlockPos pos, StorageKind kind, long total) {
         List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
-                new AABB(helper.absolutePos(pos)).inflate(4), entity -> {
-                    StorageContents contents = entity.getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
-                    return entity.getItem().is(ModItems.STORAGE.get(kind).get()) && contents != null && contents.total() == total;
-                });
-        helper.assertValueEqual(drops.size(), 1, kind + " no chão com " + total);
+                new AABB(helper.absolutePos(pos)).inflate(1.5), entity -> entity.getItem().is(ModItems.STORAGE.get(kind).get()));
+        helper.assertValueEqual(drops.size(), 1, kind + " no chão");
+        StorageContents contents = drops.get(0).getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+        helper.assertTrue(contents != null && contents.total() == total, kind + " leva o conteúdo: " + contents);
         ItemStack stack = drops.get(0).getItem().copy();
         drops.get(0).discard();
         return stack;

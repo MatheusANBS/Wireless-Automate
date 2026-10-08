@@ -589,6 +589,12 @@ public final class DevEndToEnd {
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
+        // No mínimo (300), com os 4 tipos do runClient, as abas cabem com o nome só na ativa.
+        list.add(new Step("abas no tamanho mínimo", STEP_TIMEOUT_MS,
+                () -> { },
+                () -> routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME,
+                () -> "modo das abas " + routerScreen().tabMode()));
+        list.add(capture("1b-roteador-abas"));
         cardSteps(list);
         chunkUpgradeSteps(list);
         list.add(close("fechar B"));

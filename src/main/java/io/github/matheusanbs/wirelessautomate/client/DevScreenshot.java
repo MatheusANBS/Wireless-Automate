@@ -482,15 +482,15 @@ public final class DevScreenshot {
         UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
         List<TabletSnapshot.NetworkView> networks = List.of(
                 new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1, 1, 2,
-                        42_000, 61, 1_240, 0, 0),
+                        42_000, 61, 1_240, 0, 0, 0),
                 new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0, 0, 0,
-                        18_000, 20, 0, 48_000, 0),
+                        18_000, 20, 0, 48_000, 0, 0),
                 new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0, 0,
-                        0, 9_000, 20, 0, 0, 120_000),
+                        0, 9_000, 20, 0, 0, 120_000, 0),
                 new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
-                        0, 0, 0, 0, 0),
+                        0, 0, 0, 0, 0, 0),
                 new TabletSnapshot.NetworkView(line, "Linha 5x", 0xA46CFF, "Dev", true, true, false, true, 8, 0, 0, 0,
-                        0, 0, 0, 0, 0));
+                        0, 0, 0, 0, 0, 0));
         int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
         int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
         int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);

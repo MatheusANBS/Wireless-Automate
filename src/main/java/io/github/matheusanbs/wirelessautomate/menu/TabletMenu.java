@@ -90,7 +90,8 @@ public class TabletMenu extends AbstractContainerMenu {
     private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
-    private static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    private static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY,
+            ResourceType.CHEMICAL};
 
     /** Ações da tela sobre redes e grupos ({@code TabletActionPayload}). */
     public enum Action {
@@ -422,12 +423,12 @@ public class TabletMenu extends AbstractContainerMenu {
         totals.forEach((id, t) -> {
             WaNetwork network = data.network(id);
             NetworkStats s = stats.get(id);
-            long[] rates = networkRates.getOrDefault(id, new long[3]);
+            long[] rates = networkRates.getOrDefault(id, new long[TRANSFER_TYPES.length]);
             networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
                     network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
                     t.nodes, t.unloaded, s == null ? 0 : s.destinationsFull(), s == null ? 0 : s.destinationsSleeping(),
                     s == null ? 0 : Math.round(s.averageNanos()), s == null ? 0 : s.opsLastSecond(),
-                    rates[0], rates[1], rates[2]));
+                    rates[0], rates[1], rates[2], rates[3]));
         });
         List<GroupView> groups = new ArrayList<>();
         for (WaGroup group : data.groups()) {
@@ -658,12 +659,13 @@ public class TabletMenu extends AbstractContainerMenu {
         /** Movido desde a amostra anterior, na ordem de {@link #TRANSFER_TYPES}. */
         final long[] moved = new long[TRANSFER_TYPES.length];
 
-        /** Itens e mB por segundo, energia por tick. */
+        /** Itens, mB de fluido e mB de químico por segundo, energia por tick. */
         long[] rates(long elapsed) {
             return new long[] {
                 (moved[0] * 20 + elapsed / 2) / elapsed,
                 (moved[1] * 20 + elapsed / 2) / elapsed,
-                (moved[2] + elapsed / 2) / elapsed
+                (moved[2] + elapsed / 2) / elapsed,
+                (moved[3] * 20 + elapsed / 2) / elapsed
             };
         }
     }

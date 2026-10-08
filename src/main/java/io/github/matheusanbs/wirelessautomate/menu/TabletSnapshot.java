@@ -92,7 +92,7 @@ public record TabletSnapshot(
     }
 
     /**
-     * Uma rede visível. Vazões da última amostra: itens/s, mB/s e FE/t; o tempo e as operações vêm
+     * Uma rede visível. Vazões da última amostra: itens/s, mB/s, FE/t e mB/s de químico; o tempo e as operações vêm
      * do profiler do motor ({@code /wa profile}).
      *
      * @param manageable o jogador pode renomear, mudar cor e privacidade e remover (dono ou op)
@@ -102,7 +102,7 @@ public record TabletSnapshot(
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
             boolean isPublic, boolean paused, int nodes, int unloaded, int full, int sleeping, long averageNanos,
-            int opsPerSecond, long itemRate, long fluidRate, long energyRate) {
+            int opsPerSecond, long itemRate, long fluidRate, long energyRate, long chemicalRate) {
     }
 
     /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
@@ -203,6 +203,7 @@ public record TabletSnapshot(
             buf.writeVarLong(n.itemRate);
             buf.writeVarLong(n.fluidRate);
             buf.writeVarLong(n.energyRate);
+            buf.writeVarLong(n.chemicalRate);
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -251,7 +252,7 @@ public record TabletSnapshot(
             networks.add(new NetworkView(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readUtf(64),
                     buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(),
                     buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(),
-                    buf.readVarLong(), buf.readVarLong(), buf.readVarLong()));
+                    buf.readVarLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarLong()));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);

@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
@@ -1327,6 +1328,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         long items = 0;
         long fluids = 0;
         long energy = 0;
+        long chemicals = 0;
         int full = 0;
         int unloaded = 0;
         int paused = 0;
@@ -1334,17 +1336,23 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             items += n.itemRate();
             fluids += n.fluidRate();
             energy += n.energyRate();
+            chemicals += n.chemicalRate();
             full += n.full();
             unloaded += n.unloaded();
             paused += n.paused() ? 1 : 0;
         }
-        int colW = (X1 - X0) / 3;
-        statColumn(g, x + X0, y + BODY_Y + 20, typeName(ResourceType.ITEM), rate(ResourceType.ITEM, items),
+        // químicos só com o Mekanism: a quarta coluna aparece só com ele
+        int colW = (X1 - X0) / (Chemicals.LOADED ? 4 : 3);
+        statColumn(g, x + X0, y + BODY_Y + 20, colW, typeName(ResourceType.ITEM), rate(ResourceType.ITEM, items),
                 GuiPaint.modeColor(PortMode.EXTRACT));
-        statColumn(g, x + X0 + colW, y + BODY_Y + 20, typeName(ResourceType.FLUID), rate(ResourceType.FLUID, fluids),
+        statColumn(g, x + X0 + colW, y + BODY_Y + 20, colW, typeName(ResourceType.FLUID), rate(ResourceType.FLUID, fluids),
                 0xFF3D8BFF);
-        statColumn(g, x + X0 + 2 * colW, y + BODY_Y + 20, typeName(ResourceType.ENERGY),
+        statColumn(g, x + X0 + 2 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.ENERGY),
                 rate(ResourceType.ENERGY, energy), 0xFFFFB020);
+        if (Chemicals.LOADED) {
+            statColumn(g, x + X0 + 3 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.CHEMICAL),
+                    rate(ResourceType.CHEMICAL, chemicals), 0xFFB45CFF);
+        }
         MutableComponent warnings = Component.empty();
         appendWarning(warnings, full, "stats.full", statusColor(NodeStatus.FULL));
         appendWarning(warnings, unloaded, "stats.unloaded", statusColor(NodeStatus.UNLOADED));
@@ -1370,6 +1378,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             MutableComponent rates = rate(ResourceType.ITEM, n.itemRate()).copy()
                     .append(" · ").append(rate(ResourceType.FLUID, n.fluidRate()))
                     .append(" · ").append(rate(ResourceType.ENERGY, n.energyRate()));
+            if (Chemicals.LOADED) {
+                rates.append(" · ").append(rate(ResourceType.CHEMICAL, n.chemicalRate()));
+            }
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, rates, X1 - X0 - 10), x + X0 + 5, cy + 14, GuiPaint.MUTED);
             MutableComponent line = Component.empty();
             if (n.paused()) {
@@ -1395,10 +1406,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
     }
 
-    private void statColumn(GuiGraphics g, int x, int y, Component label, Component value, int color) {
+    private void statColumn(GuiGraphics g, int x, int y, int width, Component label, Component value, int color) {
         GuiPaint.dot(g, x, y + 1, color);
-        GuiPaint.text(g, font, label, x + 8, y, GuiPaint.MUTED);
-        GuiPaint.text(g, font, value, x + 8, y + 10, GuiPaint.FG);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, label, width - 10), x + 8, y, GuiPaint.MUTED);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, value, width - 10), x + 8, y + 10, GuiPaint.FG);
     }
 
     private void appendWarning(MutableComponent line, int count, String key, int color) {

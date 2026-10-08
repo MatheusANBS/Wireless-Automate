@@ -485,11 +485,15 @@ public final class DevEndToEnd {
         // os widgets de uma aba só aparecem no quadro seguinte, como para o jogador
         list.add(new Step("filtro: aba Tags", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.tags")), "aba Tags")),
-                () -> filterScreen().tab() == FilterScreen.Tab.TAGS && filterScreen().tagSearchBox().isFocused(),
+                // visível também: a caixa só aparece no quadro seguinte e, invisível, ignora o que se digita
+                () -> filterScreen().tab() == FilterScreen.Tab.TAGS && filterScreen().tagSearchBox().isFocused()
+                        && filterScreen().tagSearchBox().isVisible(),
                 () -> "aba " + filterScreen().tab()));
         list.add(new Step("filtro: buscar a tag", STEP_TIMEOUT_MS, () -> type(TAG_RULE.substring(3)),
                 () -> filterScreen().candidateLabels().contains(TAG_RULE),
-                () -> "linhas " + filterScreen().candidateLabels()));
+                () -> "linhas " + filterScreen().candidateLabels() + ", busca '" + filterScreen().tagSearchBox().getValue()
+                        + "', foco " + filterScreen().getFocused() + ", tags do registro "
+                        + net.minecraft.core.registries.BuiltInRegistries.ITEM.getTags().count()));
         list.add(new Step("filtro: marcar a tag", STEP_TIMEOUT_MS, () -> {
             int index = filterScreen().candidateLabels().indexOf(TAG_RULE);
             int[] row = filterScreen().candidateCenter(index);
@@ -2600,7 +2604,9 @@ public final class DevEndToEnd {
         // de Todos, o botão deixa só a primeira aba; apertado de novo, marca tudo outra vez
         list.add(new Step("Todos com tudo marcado deixa uma aba", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),
-                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 1),
+                // espera a tela também: o próximo clique lê o estado dela, e um estado velho desmarcaria de novo
+                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 1)
+                        && linkerScreen().getMenu().snapshot().tabs().effective(LoadedTypes.LIST).size() == 1,
                 () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(new Step("Todos marca tudo", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),

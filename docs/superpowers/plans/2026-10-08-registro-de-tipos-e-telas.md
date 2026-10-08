@@ -774,67 +774,85 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Arquivos:**
 - Mudar: `scripts/textures/gerar_texturas.py`
-- Criar (gerados): `src/main/resources/assets/wirelessautomate/textures/gui/type/{item,fluid,energy,chemical}.png`
+- Criar (gerados): `src/main/resources/assets/wirelessautomate/textures/gui/type/{item,fluid,energy,chemical,source}.png`
 - Criar: `<base>client/ResourceStyle.java`
 - Mudar: `<base>client/RouterScreen.java` (L241-243, 262-279), `<base>client/TabletScreen.java` (L209-216, 308-316, 1345-1355), `<base>client/LinkerScreen.java` (L113-116), `<base>client/FilterScreen.java` (L292)
 
 **Interfaces:**
-- Produz: `ResourceStyle.color(ResourceType) → int`, `ResourceStyle.name(ResourceType) → Component`, `ResourceStyle.rate(ResourceType, long) → Component`, `ResourceStyle.access(ResourceType, int slots) → Component`, `ResourceStyle.drawIcon(GuiGraphics, ResourceType, int x, int y)` (8 × 8).
+- Produz: `ResourceStyle.color(ResourceType) → int`, `ResourceStyle.name(ResourceType) → Component`, `ResourceStyle.rate(ResourceType, long) → Component`, `ResourceStyle.access(ResourceType, int slots) → Component`, `ResourceStyle.drawIcon(GuiGraphics, ResourceType, int x, int y)` (9 × 9), `ResourceStyle.ICON = 9`.
 
 - [ ] **Passo 1: ícones no script**
 
 Em `gerar_texturas.py`, antes de `def gerar()`, acrescente:
 
 ```python
-# Ícones dos tipos de recurso (8x8, dobrados para 16x16; a tela desenha em 8x8).
+# Ícones dos tipos de recurso: direção "Sólido" aprovada pelo dono (8/10/2026), 9x9 sem contorno,
+# três tons da cor do tipo e um brilho. Ficam no canto de cima à esquerda de uma textura 16x16
+# (o padrão do script); a tela desenha só o recorte 9x9. Prancha: https://claude.ai/artifact/X5fHncvZXXnSpS3Fo4sDZM
 ICONES_TIPO = {
     "item": ([
-        "........",
-        ".OOOOOO.",
-        "OLwwwwwO",
-        "OwwOOwwO",
-        "OWWOOWWO",
-        "OwwwwwwO",
-        "OWWWWWWO",
-        ".OOOOOO.",
-    ], legenda(O="#0b0f14", L="#f2cf8f", w="#d9a35b", W="#8a6236")),
+        "...lll...",
+        ".lllllll.",
+        "bllllllld",
+        "bbblllddd",
+        "bbbbedddd",
+        "bbbbedddd",
+        "bbbbedddd",
+        ".bbbeddd.",
+        "...bed...",
+    ], legenda(b="#d9a35b", l="#f6d59a", d="#93622a", e="#fff0cc")),
     "fluid": ([
-        "...O....",
-        "..ObO...",
-        "..ObO...",
-        ".ObBbO..",
-        "ObBbbbO.",
-        "ObbbbdO.",
-        ".OdddO..",
-        "..OOO...",
-    ], legenda(O="#0b0f14", b="#3d8bff", B="#9cc6ff", d="#1f5bb8")),
+        "....b....",
+        "...bbb...",
+        "...bbb...",
+        "..bbbbb..",
+        ".bbbbbbb.",
+        ".blbbbbb.",
+        ".blbbbbd.",
+        "..bbbbd..",
+        "...ddd...",
+    ], legenda(b="#3d8bff", l="#a9cdff", d="#1f57b0")),
     "energy": ([
-        "....OO..",
-        "...OyO..",
-        "..OyO...",
-        ".OyyyyO.",
-        "..OOyO..",
-        "...OyO..",
-        "..OyO...",
-        "..OO....",
-    ], legenda(O="#0b0f14", y="#ffb020")),
+        "....llll.",
+        "...lllb..",
+        "..lbbb...",
+        ".bbbbbbb.",
+        "....bbd..",
+        "...bbd...",
+        "..bdd....",
+        "..bd.....",
+        ".d.......",
+    ], legenda(b="#ffb020", l="#ffe08a", d="#c47500")),
     "chemical": ([
-        "..OOOO..",
-        "...gg...",
-        "...OO...",
-        "..OCcO..",
-        ".OCccCO.",
-        ".OccccO.",
-        ".OccccO.",
-        "..OOOO..",
-    ], legenda(O="#0b0f14", g="#c8d2dc", C="#e2c2ff", c="#b45cff")),
+        "..eeeee..",
+        "...e.e...",
+        "...e.e...",
+        "..e...e..",
+        ".ebbbbbe.",
+        "ebblbbbbe",
+        "eblbbbbde",
+        "ebbbbbdde",
+        ".eeeeeee.",
+    ], legenda(b="#b45cff", l="#ddb8ff", d="#7430b8", e="#c8d2dc")),
+    # Source (Ars Nouveau): a textura já sai agora; o tipo entra na etapa 1.
+    "source": ([
+        "....l....",
+        "....l....",
+        "...lbb...",
+        "..lbebb..",
+        "llbeeebdd",
+        "..bbebd..",
+        "...bbd...",
+        "....d....",
+        "....d....",
+    ], legenda(b="#ff5cc8", l="#ffc0eb", d="#b02f86", e="#ffffff")),
 }
 
 
 def icone_tipo(grade: list[str], leg: dict[str, tuple[int, int, int, int]]) -> Image.Image:
-    """Ícone 8x8 dobrado para 16x16 (pixel a pixel), no padrão de 16x16 do script."""
-    dobrada = [("".join(ch * 2 for ch in linha)) for linha in grade for _ in range(2)]
-    return pinta(dobrada, leg)
+    """Ícone 9x9 no canto de cima à esquerda de uma textura 16x16 (o resto transparente)."""
+    assert len(grade) == 9 and all(len(linha) == 9 for linha in grade), "ícone de tipo é 9x9"
+    return pinta(grade, leg)
 ```
 
 e, dentro de `gerar()`, depois das portas:
@@ -849,7 +867,7 @@ Na `folha()`, acrescente uma linha `("Tipos de recurso", [(n, tile(sprites[f"gui
 - [ ] **Passo 2: gerar**
 
 Rode: `python scripts/textures/gerar_texturas.py`
-Esperado: a mensagem com a contagem de sprites (4 a mais que antes) e os quatro PNGs em `textures/gui/type/`. Abra `docs/preview/folha-de-sprites.png` e confira a linha nova.
+Esperado: a mensagem com a contagem de sprites (5 a mais que antes) e os cinco PNGs em `textures/gui/type/` (`source.png` fica sem uso até a etapa 1). Abra `docs/preview/folha-de-sprites.png` e confira a linha nova.
 
 - [ ] **Passo 3: `ResourceStyle`**
 
@@ -910,9 +928,12 @@ public final class ResourceStyle {
         return ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID, "textures/gui/type/" + type.key() + ".png");
     }
 
-    /** Ícone 8 × 8 em ({@code x}, {@code y}). */
+    /** Lado do ícone em pixels de GUI. */
+    public static final int ICON = 9;
+
+    /** Ícone 9 × 9 em ({@code x}, {@code y}): o recorte do canto da textura 16 × 16. */
     public static void drawIcon(GuiGraphics g, ResourceType type, int x, int y) {
-        g.blit(icon(type), x, y, 8, 8, 0, 0, 16, 16, 16, 16);
+        g.blit(icon(type), x, y, 0, 0, ICON, ICON, 16, 16);
     }
 }
 ```
@@ -1145,7 +1166,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Teste: `src/test/.../client/TabLayoutTest.java`, `src/test/.../client/CardGridTest.java`
 
 **Interfaces:**
-- Produz: `TabLayout.choose(int[] fullWidths, int active, int available) → TabLayout.Result(Mode mode, int[] widths)`, `TabLayout.ICON_TAB = 22`, `TabLayout.GAP = 3`, `enum TabLayout.Mode { FULL, ACTIVE_NAME, ICONS }`; `CardGrid.columns(int count, int available, int minWidth, int gap) → int`; `GuiText.beginFrame()`, `GuiText.draw(GuiGraphics, Font, Component, int x, int y, int width, int color)`, `GuiText.wrap(GuiGraphics, Font, Component, int x, int y, int width, int maxLines, int color) → int` (altura usada), `GuiText.clipAt(double, double) → @Nullable Component`, `GuiText.clipCount() → int`.
+- Produz: `TabLayout.choose(int[] fullWidths, int active, int available) → TabLayout.Result(Mode mode, int[] widths)`, `TabLayout.ICON_TAB = 24`, `TabLayout.GAP = 3`, `enum TabLayout.Mode { FULL, ACTIVE_NAME, ICONS }`; `CardGrid.columns(int count, int available, int minWidth, int gap) → int`; `GuiText.beginFrame()`, `GuiText.draw(GuiGraphics, Font, Component, int x, int y, int width, int color)`, `GuiText.wrap(GuiGraphics, Font, Component, int x, int y, int width, int maxLines, int color) → int` (altura usada), `GuiText.clipAt(double, double) → @Nullable Component`, `GuiText.clipCount() → int`.
 
 - [ ] **Passo 1: testes que falham**
 
@@ -1169,16 +1190,16 @@ class TabLayoutTest {
 
     @Test
     void onlyTheActiveNameWhenTight() {
-        TabLayout.Result r = TabLayout.choose(FULL, 3, 170);
+        TabLayout.Result r = TabLayout.choose(FULL, 3, 180);
         assertEquals(TabLayout.Mode.ACTIVE_NAME, r.mode());
-        assertArrayEquals(new int[] {22, 22, 22, 66, 22}, r.widths());
+        assertArrayEquals(new int[] {24, 24, 24, 66, 24}, r.widths());
     }
 
     @Test
     void iconsWhenEvenThatDoesNotFit() {
         TabLayout.Result r = TabLayout.choose(FULL, 3, 110);
         assertEquals(TabLayout.Mode.ICONS, r.mode());
-        assertArrayEquals(new int[] {22, 22, 22, 22, 22}, r.widths());
+        assertArrayEquals(new int[] {24, 24, 24, 24, 24}, r.widths());
     }
 
     @Test
@@ -1233,8 +1254,8 @@ package io.github.matheusanbs.wirelessautomate.client;
  * outras no ícone; ou só ícones.
  */
 public final class TabLayout {
-    /** Largura de uma aba só com a bolinha da rede e o ícone. */
-    public static final int ICON_TAB = 22;
+    /** Largura de uma aba só com a bolinha da rede e o ícone 9 × 9. */
+    public static final int ICON_TAB = 24;
     public static final int GAP = 3;
 
     public enum Mode { FULL, ACTIVE_NAME, ICONS }
@@ -1451,7 +1472,7 @@ No `init()`, troque o laço das abas (L307-315) por botões criados sem posiçã
         int[] full = new int[types.size()];
         int active = 0;
         for (int i = 0; i < types.size(); i++) {
-            full[i] = TAB_DOT + 8 + 3 + font.width(typeName(types.get(i))) + 12;
+            full[i] = 4 + TAB_DOT + ResourceStyle.ICON + 3 + font.width(typeName(types.get(i))) + 6;
             if (types.get(i) == type) {
                 active = i;
             }
@@ -1480,9 +1501,9 @@ No `init()`, troque o laço das abas (L307-315) por botões criados sem posiçã
 `paintTab` (L913-925): depois do fundo e da bolinha da rede (que ficam), desenhe o ícone e, se a largura passar de `TabLayout.ICON_TAB`, o nome; a aba ativa ganha o sublinhado na cor do tipo:
 
 ```java
-        ResourceStyle.drawIcon(g, t, b.getX() + 4 + TAB_DOT, b.getY() + 4);
+        ResourceStyle.drawIcon(g, t, b.getX() + 4 + TAB_DOT, b.getY() + 3);
         if (b.getWidth() > TabLayout.ICON_TAB) {
-            int textX = b.getX() + 4 + TAB_DOT + 8 + 3;
+            int textX = b.getX() + 4 + TAB_DOT + ResourceStyle.ICON + 3;
             GuiText.draw(g, font, typeName(t), textX, b.getY() + 4, b.getX() + b.getWidth() - 4 - textX,
                     t == type ? GuiPaint.FG : GuiPaint.MUTED);
         }
@@ -1827,7 +1848,7 @@ Em `LinkerScreen`:
 - `TABS` continua `ResourceType.values()`; a posição de cada chip passa a ser calculada em `refresh()` pela ordem entre os visíveis (`snapshot().available().contains(t)`): coluna `i % 2`, linha `i / 2`, a partir de `TYPE_Y`, com `typeW = (LW - 2) / 2` e `TYPE_H = 16` como hoje.
 - A lista de redes encolhe quando os tipos precisam de mais linhas: `typeRows = (visíveis + 1) / 2`; `listRows = 8 - typeRows` (2 linhas de tipo → 6 de rede, como hoje; 3 → 5). `ROWS`, `LIST_H`, `NEW_Y`, `TYPE_LABEL_Y` e `TYPE_Y` viram métodos que usam `listRows()`. Os 6 botões de linha da lista continuam criados; os que passam de `listRows()` ficam invisíveis.
 - Botão **Todos** à direita do rótulo "Tipos" (`x + X0 + LW - 50`, `y + typeLabelY() - 3`, 50 × 12), pintado como caixa de marcar com `tr("type.all")`; ação: se todas as disponíveis estão marcadas, manda `SET_TABS` com a máscara só da primeira disponível (não dá para ficar sem nenhuma); senão manda `SET_TABS` com `LinkerTabs.available(snapshot().available().types()).mask()`. Em preview (`DevScreenshot`), aplique direto no snapshot local como o `toggleTab` faz.
-- `paintCheck` (L834-847): caixa 7 × 7, ícone `ResourceStyle.drawIcon` logo depois e o nome por `GuiText.draw` com a largura que sobra; marcado, a borda do chip na cor `ResourceStyle.color(t)` (em vez de `ACCENT`; no modo desvincular continua `UNLINK`). A mensagem do botão continua `typeName(t)` (o e2e acha o chip por ela).
+- `paintCheck` (L834-847): caixa 7 × 7, ícone `ResourceStyle.drawIcon` (9 × 9, centrado na altura do chip: `b.getY() + (b.getHeight() - ResourceStyle.ICON) / 2`) logo depois e o nome por `GuiText.draw` com a largura que sobra; marcado, a borda do chip na cor `ResourceStyle.color(t)` (em vez de `ACCENT`; no modo desvincular continua `UNLINK`). A mensagem do botão continua `typeName(t)` (o e2e acha o chip por ela).
 - O botão de vincular diz quantos tipos: `linkLabel()` passa a `tr(unlink() ? "unlink.count.types" : "link.count.types", toLink(), effectiveCount)`; mantenha as chaves antigas `link.count`/`unlink.count` para quando todos os tipos estão marcados.
 - Título (L465-472) e demais textos variáveis por `GuiText.draw`/`GuiText.wrap`; `GuiText.beginFrame()` no começo do `render` e o tooltip de texto cortado no fim, como no roteador.
 
@@ -1925,8 +1946,8 @@ O `mapW()` já usa `X1 - X0`: passa a `x1() - X0`.
             int cy = top + (i / cols) * (CARD_H + CARD_GAP);
             GuiPaint.box(g, cx, cy, cardW, CARD_H, GuiPaint.INSET, GuiPaint.LINE);
             g.fill(cx, cy, cx + cardW, cy + 1, ResourceStyle.color(t));
-            ResourceStyle.drawIcon(g, t, cx + 4, cy + 4);
-            GuiText.draw(g, font, ResourceStyle.name(t), cx + 15, cy + 4, cardW - 19, GuiPaint.FG);
+            ResourceStyle.drawIcon(g, t, cx + 4, cy + 3);
+            GuiText.draw(g, font, ResourceStyle.name(t), cx + 16, cy + 4, cardW - 20, GuiPaint.FG);
             GuiText.draw(g, font, ResourceStyle.rate(t, rate), cx + 4, cy + 15, cardW - 8, ResourceStyle.color(t));
             Component detail = sleeping > 0 ? tr("stats.card.detail.sleeping", sources, destinations, sleeping)
                     : tr("stats.card.detail", sources, destinations);

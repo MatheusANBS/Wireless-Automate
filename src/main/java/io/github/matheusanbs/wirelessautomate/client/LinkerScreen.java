@@ -112,7 +112,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     private static Component typeName(@Nullable ResourceType type) {
         return type == null ? tr("type.all")
-                : Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
+                : ResourceStyle.name(type);
     }
 
     private static Component modeName(LinkerMode mode) {

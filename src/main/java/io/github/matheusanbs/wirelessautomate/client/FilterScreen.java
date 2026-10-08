@@ -290,7 +290,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private static Component typeName(ResourceType type) {
-        return Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
+        return ResourceStyle.name(type);
     }
 
     /** Nome do armazenamento do filtro de entrada, pelo bloco no mundo do cliente. */

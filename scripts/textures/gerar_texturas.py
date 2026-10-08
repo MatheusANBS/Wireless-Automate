@@ -767,6 +767,75 @@ def porta_nenhum() -> Image.Image:
 # Montagem
 # ---------------------------------------------------------------------------
 
+# Ícones dos tipos de recurso: direção "Sólido" aprovada pelo dono (8/10/2026), 9x9 sem contorno,
+# três tons da cor do tipo e um brilho. Ficam no canto de cima à esquerda de uma textura 16x16
+# (o padrão do script); a tela desenha só o recorte 9x9. Prancha: https://claude.ai/artifact/X5fHncvZXXnSpS3Fo4sDZM
+ICONES_TIPO = {
+    "item": ([
+        "...lll...",
+        ".lllllll.",
+        "bllllllld",
+        "bbblllddd",
+        "bbbbedddd",
+        "bbbbedddd",
+        "bbbbedddd",
+        ".bbbeddd.",
+        "...bed...",
+    ], legenda(b="#d9a35b", l="#f6d59a", d="#93622a", e="#fff0cc")),
+    "fluid": ([
+        "....b....",
+        "...bbb...",
+        "...bbb...",
+        "..bbbbb..",
+        ".bbbbbbb.",
+        ".blbbbbb.",
+        ".blbbbbd.",
+        "..bbbbd..",
+        "...ddd...",
+    ], legenda(b="#3d8bff", l="#a9cdff", d="#1f57b0")),
+    "energy": ([
+        "....llll.",
+        "...lllb..",
+        "..lbbb...",
+        ".bbbbbbb.",
+        "....bbd..",
+        "...bbd...",
+        "..bdd....",
+        "..bd.....",
+        ".d.......",
+    ], legenda(b="#ffb020", l="#ffe08a", d="#c47500")),
+    "chemical": ([
+        "..eeeee..",
+        "...e.e...",
+        "...e.e...",
+        "..e...e..",
+        ".ebbbbbe.",
+        "ebblbbbbe",
+        "eblbbbbde",
+        "ebbbbbdde",
+        ".eeeeeee.",
+    ], legenda(b="#b45cff", l="#ddb8ff", d="#7430b8", e="#c8d2dc")),
+    # Source (Ars Nouveau): a textura já sai agora; o tipo entra na etapa 1.
+    "source": ([
+        "....l....",
+        "....l....",
+        "...lbb...",
+        "..lbebb..",
+        "llbeeebdd",
+        "..bbebd..",
+        "...bbd...",
+        "....d....",
+        "....d....",
+    ], legenda(b="#ff5cc8", l="#ffc0eb", d="#b02f86", e="#ffffff")),
+}
+
+
+def icone_tipo(grade: list[str], leg: dict[str, tuple[int, int, int, int]]) -> Image.Image:
+    """Ícone 9x9 no canto de cima à esquerda de uma textura 16x16 (o resto transparente)."""
+    assert len(grade) == 9 and all(len(linha) == 9 for linha in grade), "ícone de tipo é 9x9"
+    return pinta(grade, leg)
+
+
 def gerar() -> dict[str, Image.Image]:
     sprites: dict[str, Image.Image] = {}
     sprites["item/configurator"] = configurador()
@@ -792,6 +861,8 @@ def gerar() -> dict[str, Image.Image]:
     sprites["gui/port_insert"] = porta("insert", SETA_CIMA[::-1])
     sprites["gui/port_both"] = porta("both", SETA_DUPLA)
     sprites["gui/port_none"] = porta_nenhum()
+    for nome, (grade, leg) in ICONES_TIPO.items():
+        sprites[f"gui/type/{nome}"] = icone_tipo(grade, leg)
     for nome, img in sprites.items():
         assert img.size == (16, 16), nome
         alfas = set(img.getchannel("A").tobytes())
@@ -883,6 +954,7 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
     # Itens em tamanho real (1× e 2×), como no inventário.
     linhas.append(("Portas da tela", [(n, tile(sprites[f"gui/{n}"]))
                                       for n in ["port_extract", "port_insert", "port_both", "port_none"]]))
+    linhas.append(("Tipos de recurso", [(n, tile(sprites[f"gui/type/{n}"])) for n in ICONES_TIPO]))
     for tier in TIERS_ROTEADOR:
         faces = [(f"{tier}_{f}", tile(sprites[f"block/router_{tier}_{f}"]))
                  for f in ["front", "back", "side", "top", "bottom", "antenna"]]

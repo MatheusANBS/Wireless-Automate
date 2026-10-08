@@ -211,7 +211,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private static Component typeName(ResourceType type) {
-        return Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
+        return ResourceStyle.name(type);
     }
 
     private Block machineBlock(NodeView node) {
@@ -306,13 +306,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private Component rate(ResourceType type, long value) {
-        return switch (type) {
-            case ITEM -> tr("rate.items", RateFormat.abbreviate(value));
-            case FLUID, CHEMICAL -> value >= 1000
-                    ? tr("rate.buckets", RateFormat.abbreviate(value / 1000))
-                    : tr("rate.millibuckets", RateFormat.abbreviate(value));
-            case ENERGY -> tr("rate.energy", RateFormat.abbreviate(value));
-        };
+        return ResourceStyle.rate(type, value);
     }
 
     // ------------------------------------------------------------------ montagem
@@ -1344,14 +1338,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         // químicos só com o Mekanism: a quarta coluna aparece só com ele
         int colW = (X1 - X0) / (Chemicals.LOADED ? 4 : 3);
         statColumn(g, x + X0, y + BODY_Y + 20, colW, typeName(ResourceType.ITEM), rate(ResourceType.ITEM, items),
-                GuiPaint.modeColor(PortMode.EXTRACT));
+                ResourceStyle.color(ResourceType.ITEM));
         statColumn(g, x + X0 + colW, y + BODY_Y + 20, colW, typeName(ResourceType.FLUID), rate(ResourceType.FLUID, fluids),
-                0xFF3D8BFF);
+                ResourceStyle.color(ResourceType.FLUID));
         statColumn(g, x + X0 + 2 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.ENERGY),
-                rate(ResourceType.ENERGY, energy), 0xFFFFB020);
+                rate(ResourceType.ENERGY, energy), ResourceStyle.color(ResourceType.ENERGY));
         if (Chemicals.LOADED) {
             statColumn(g, x + X0 + 3 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.CHEMICAL),
-                    rate(ResourceType.CHEMICAL, chemicals), 0xFFB45CFF);
+                    rate(ResourceType.CHEMICAL, chemicals), ResourceStyle.color(ResourceType.CHEMICAL));
         }
         MutableComponent warnings = Component.empty();
         appendWarning(warnings, full, "stats.full", statusColor(NodeStatus.FULL));

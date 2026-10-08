@@ -239,7 +239,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private static Component typeName(ResourceType type) {
-        return tr("type." + type.name().toLowerCase(Locale.ROOT));
+        return ResourceStyle.name(type);
     }
 
     private static Component faceName(Direction direction) {
@@ -259,23 +259,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (!view.available()) {
             return tr("access.none");
         }
-        return switch (type) {
-            case ITEM -> view.slots() == 1 ? tr("access.slot") : tr("access.slots", view.slots());
-            case FLUID, CHEMICAL -> view.slots() == 1 ? tr("access.tank") : tr("access.tanks", view.slots());
-            case ENERGY -> tr("access.energy");
-        };
+        return ResourceStyle.access(type, view.slots());
     }
 
     private Component rate() {
         long[] perType = menu.throughput();
         long value = type.ordinal() < perType.length ? perType[type.ordinal()] : 0L;
-        return switch (type) {
-            case ITEM -> tr("rate.items", RateFormat.abbreviate(value));
-            case FLUID, CHEMICAL -> value >= 1000
-                    ? tr("rate.buckets", RateFormat.abbreviate(value / 1000))
-                    : tr("rate.millibuckets", RateFormat.abbreviate(value));
-            case ENERGY -> tr("rate.energy", RateFormat.abbreviate(value));
-        };
+        return ResourceStyle.rate(type, value);
     }
 
     // ------------------------------------------------------------------ montagem

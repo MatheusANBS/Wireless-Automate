@@ -70,11 +70,6 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     /** Largura fixa além das colunas (margens e barra de rolagem). */
     private static final int FIXED_W = GRID_X + 3 + 4 + 8;
 
-    /** Arrasto de redimensionar: pela borda direita, pela de baixo ou pela alça do canto. */
-    private enum Resize {
-        WIDTH, HEIGHT, BOTH
-    }
-
     /** Ordem da lista; fica entre aberturas da tela na mesma sessão. */
     private enum Sort {
         COUNT, NAME, MOD;
@@ -105,13 +100,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private FlatButton sortButton;
     private int cols = savedCols;
     private int rows = savedRows;
-    private @Nullable Resize resizing;
-    /** Centro da janela no começo do arrasto: ele não se mexe enquanto o tamanho muda. */
-    private double resizeCenterX;
-    private double resizeCenterY;
-    /** Distância do mouse até a borda arrastada no começo, para a borda não pular para o cursor. */
-    private double resizeGrabX;
-    private double resizeGrabY;
+    /** Arrasto de redimensionar: pela borda direita, pela de baixo ou pela alça do canto. */
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
 
     public StorageListScreen(StorageListMenu<?> menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -433,25 +423,6 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     // ------------------------------------------------------------------ entrada
 
-    /** O que o mouse redimensiona ali, ou {@code null}: a alça do canto, a borda direita ou a de baixo. */
-    private @Nullable Resize resizeAt(double mouseX, double mouseY) {
-        double right = leftPos + imageWidth;
-        double bottom = topPos + imageHeight;
-        if (mouseX < leftPos || mouseY < topPos || mouseX >= right || mouseY >= bottom) {
-            return null;
-        }
-        if (mouseX >= right - GRIP && mouseY >= bottom - GRIP) {
-            return Resize.BOTH;
-        }
-        if (mouseX >= right - EDGE) {
-            return Resize.WIDTH;
-        }
-        if (mouseY >= bottom - EDGE) {
-            return Resize.HEIGHT;
-        }
-        return null;
-    }
-
     /**
      * Redimensiona em torno do centro: a borda arrastada segue o mouse e a oposta se move igual,
      * espelhada, então o painel continua centralizado e a borda sob o cursor é sempre a que se puxa.
@@ -460,13 +431,13 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private void dragResize(double mouseX, double mouseY) {
         int newCols = cols;
         int newRows = rows;
-        if (resizing != Resize.HEIGHT) {
-            double wanted = 2 * (mouseX + resizeGrabX - resizeCenterX);
+        if (resizeHandle.changesWidth()) {
+            double wanted = resizeHandle.wantedWidth(mouseX);
             newCols = (int) Math.round((wanted - FIXED_W) / CELL);
             newCols = Math.max(MIN_COLS, Math.min(newCols, maxCols()));
         }
-        if (resizing != Resize.WIDTH) {
-            double wanted = 2 * (mouseY + resizeGrabY - resizeCenterY);
+        if (resizeHandle.changesHeight()) {
+            double wanted = resizeHandle.wantedHeight(mouseY);
             newRows = (int) Math.round((wanted - FIXED_H) / CELL);
             newRows = Math.max(MIN_ROWS, Math.min(newRows, maxRows()));
         }
@@ -481,19 +452,13 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public void resize(net.minecraft.client.Minecraft minecraft, int width, int height) {
-        resizing = null;
+        resizeHandle.end();
         super.resize(minecraft, width, height);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        Resize edge = button == 0 ? resizeAt(mouseX, mouseY) : null;
-        if (edge != null) {
-            resizing = edge;
-            resizeCenterX = leftPos + imageWidth / 2.0;
-            resizeCenterY = topPos + imageHeight / 2.0;
-            resizeGrabX = leftPos + imageWidth - mouseX;
-            resizeGrabY = topPos + imageHeight - mouseY;
+        if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
             return true;
         }
         if (inGrid(mouseX, mouseY) && (button == 0 || button == 1)) {
@@ -527,7 +492,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (resizing != null) {
+        if (resizeHandle.dragging()) {
             dragResize(mouseX, mouseY);
             return true;
         }
@@ -540,8 +505,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizing != null) {
-            resizing = null;
+        if (resizeHandle.dragging()) {
+            resizeHandle.end();
             return true;
         }
         if (draggingBar) {
@@ -602,11 +567,12 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                 return;
             }
         }
-        if (resizing == null && resizeAt(mouseX, mouseY) != null) {
+        if (!resizeHandle.dragging()
+                && resizeHandle.at(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight) != null) {
             setTooltipForNextRenderPass(tr("resize.tooltip", cols, rows));
             return;
         }
-        Object key = (menu.getCarried().isEmpty() || !items()) && resizing == null ? keyAt(mouseX, mouseY) : null;
+        Object key = (menu.getCarried().isEmpty() || !items()) && !resizeHandle.dragging() ? keyAt(mouseX, mouseY) : null;
         if (key != null) {
             renderKeyTooltip(g, key, mouseX, mouseY);
             return;
@@ -707,24 +673,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         }
 
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        Resize hover = resizing != null ? resizing : resizeAt(mouseX, mouseY);
-        int grip = hover != null ? trim : GuiPaint.BUTTON_HOVER_BORDER;
-        int gx = x + imageWidth - 4;
-        int gy = y + imageHeight - 4;
-        for (int i = 0; i < 3; i++) {
-            int d = 2 + i * 2;
-            for (int k = 0; k <= d; k += 1) {
-                if (k % 2 == 0) {
-                    g.fill(gx - d + k, gy - k, gx - d + k + 1, gy - k + 1, grip);
-                }
-            }
-        }
-        if (hover == Resize.WIDTH || hover == Resize.BOTH) {
-            g.fill(x + imageWidth - 3, y + 3, x + imageWidth - 2, y + imageHeight - 3, grip);
-        }
-        if (hover == Resize.HEIGHT || hover == Resize.BOTH) {
-            g.fill(x + 3, y + imageHeight - 3, x + imageWidth - 3, y + imageHeight - 2, grip);
-        }
+        ResizeGrip.renderDotted(g, x, y, imageWidth, imageHeight,
+                resizeHandle.hover(mouseX, mouseY, x, y, imageWidth, imageHeight), trim);
 
         // inventário do jogador
         for (int row = 0; row < 3; row++) {

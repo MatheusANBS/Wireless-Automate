@@ -146,12 +146,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         MORE
     }
 
-    private enum Resize {
-        WIDTH,
-        HEIGHT,
-        BOTH
-    }
-
     /** Uma linha da aba Tags: tag, mod ou químico para marcar; {@code count} = itens que ela pega (−1 = não se sabe). */
     private record Candidate(FilterEntry entry, String label, int count) {
     }
@@ -165,11 +159,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private int trim = ACCENT;
     private @Nullable Integer trimOverride;
     private Tab tab = Tab.ENTRY;
-    private @Nullable Resize resizing;
-    private double resizeCenterX;
-    private double resizeCenterY;
-    private double resizeGrabX;
-    private double resizeGrabY;
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
 
     // lista de entradas
     private @Nullable FilterEntry selected;
@@ -1385,25 +1375,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 && mouseX >= leftPos + ix() - 1 && mouseX < leftPos + ix() + IW;
     }
 
-    /** O que o mouse redimensiona ali, ou {@code null}: a alça do canto, a borda direita ou a de baixo. */
-    private @Nullable Resize resizeAt(double mouseX, double mouseY) {
-        double right = leftPos + imageWidth;
-        double bottom = topPos + imageHeight;
-        if (mouseX < leftPos || mouseY < topPos || mouseX >= right || mouseY >= bottom) {
-            return null;
-        }
-        if (mouseX >= right - GRIP && mouseY >= bottom - GRIP) {
-            return Resize.BOTH;
-        }
-        if (mouseX >= right - EDGE) {
-            return Resize.WIDTH;
-        }
-        if (mouseY >= bottom - EDGE) {
-            return Resize.HEIGHT;
-        }
-        return null;
-    }
-
     /**
      * Redimensiona em torno do centro, como o Baú: a borda arrastada segue o mouse e a oposta se move
      * igual, então o painel continua centralizado. A altura anda de linha em linha da lista.
@@ -1411,12 +1382,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private void dragResize(double mouseX, double mouseY) {
         int w = imageWidth;
         int h = imageHeight;
-        if (resizing != Resize.HEIGHT) {
-            double wanted = 2 * (mouseX + resizeGrabX - resizeCenterX);
+        if (resizeHandle.changesWidth()) {
+            double wanted = resizeHandle.wantedWidth(mouseX);
             w = (int) Math.max(MIN_W, Math.min(maxW(), Math.round(wanted / 2) * 2));
         }
-        if (resizing != Resize.WIDTH) {
-            double wanted = 2 * (mouseY + resizeGrabY - resizeCenterY);
+        if (resizeHandle.changesHeight()) {
+            double wanted = resizeHandle.wantedHeight(mouseY);
             int steps = (int) Math.round((wanted - MIN_H) / ROW);
             h = Math.max(MIN_H, Math.min(maxH(), MIN_H + steps * ROW));
         }
@@ -1429,7 +1400,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
-        resizing = null;
+        resizeHandle.end();
         super.resize(minecraft, width, height);
     }
 
@@ -1439,13 +1410,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             commitStock();
             unfocus();
         }
-        Resize edge = button == 0 ? resizeAt(mouseX, mouseY) : null;
-        if (edge != null) {
-            resizing = edge;
-            resizeCenterX = leftPos + imageWidth / 2.0;
-            resizeCenterY = topPos + imageHeight / 2.0;
-            resizeGrabX = leftPos + imageWidth - mouseX;
-            resizeGrabY = topPos + imageHeight - mouseY;
+        if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
             return true;
         }
         // Ctrl + clique num item do inventário: inspeciona as tags dele (não mexe no item).
@@ -1517,7 +1482,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (resizing != null) {
+        if (resizeHandle.dragging()) {
             dragResize(mouseX, mouseY);
             return true;
         }
@@ -1530,8 +1495,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizing != null || draggingBar || listPress) {
-            resizing = null;
+        if (resizeHandle.dragging() || draggingBar || listPress) {
+            resizeHandle.end();
             draggingBar = false;
             listPress = false;
             return true;
@@ -1625,7 +1590,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         refresh();
         hoveredCandidate = candidateAt(mouseX, mouseY);
         super.render(g, mouseX, mouseY, partialTick);
-        if (resizing != null) {
+        if (resizeHandle.dragging()) {
             return;
         }
         for (FlatButton button : buttons) {
@@ -1637,7 +1602,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 return;
             }
         }
-        if (resizeAt(mouseX, mouseY) != null) {
+        if (resizeHandle.at(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight) != null) {
             setTooltipForNextRenderPass(tr("resize.tooltip"));
             return;
         }
@@ -1704,7 +1669,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case RULE -> renderRuleTab(g);
             case MORE -> renderMoreTab(g);
         }
-        renderGrip(g, mouseX, mouseY);
+        ResizeGrip.renderSolid(g, leftPos, topPos, imageWidth, imageHeight,
+                resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight), trim);
     }
 
     private void renderList(GuiGraphics g, int mouseX, int mouseY) {
@@ -1788,25 +1754,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 g.fill(sx + 1, sy + 1, sx + 17, sy + 17, GuiPaint.mix(GuiPaint.INSET, trim, 0.35f));
                 GuiPaint.outline(g, sx, sy, 18, 18, trim);
             }
-        }
-    }
-
-    private void renderGrip(GuiGraphics g, int mouseX, int mouseY) {
-        int x = leftPos;
-        int y = topPos;
-        Resize hover = resizing != null ? resizing : resizeAt(mouseX, mouseY);
-        int color = hover != null ? trim : GuiPaint.BUTTON_HOVER_BORDER;
-        int gx = x + imageWidth - 4;
-        int gy = y + imageHeight - 4;
-        for (int d = 0; d <= 4; d += 2) {
-            for (int k = 0; k <= d; k++) {
-                g.fill(gx - d + k, gy - k, gx - d + k + 1, gy - k + 1, color);
-            }
-        }
-        if (hover == Resize.WIDTH) {
-            g.fill(x + imageWidth - 3, y + 3, x + imageWidth - 2, y + imageHeight - 3, color);
-        } else if (hover == Resize.HEIGHT) {
-            g.fill(x + 3, y + imageHeight - 3, x + imageWidth - 3, y + imageHeight - 2, color);
         }
     }
 

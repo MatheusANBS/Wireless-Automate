@@ -150,13 +150,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private int w = MIN_W;
     private int h = MIN_H;
-    private @Nullable Resize resizing;
-    private double resizeCenterX;
-    private double resizeCenterY;
-    private double resizeGrabX;
-    private double resizeGrabY;
-
-    private enum Resize { WIDTH, HEIGHT, BOTH }
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
 
     public RouterScreen(RouterMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -710,13 +704,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        Resize edge = button == 0 && !networkListOpen ? resizeAt(mouseX, mouseY) : null;
-        if (edge != null) {
-            resizing = edge;
-            resizeCenterX = leftPos + w / 2.0;
-            resizeCenterY = topPos + h / 2.0;
-            resizeGrabX = leftPos + w - mouseX;
-            resizeGrabY = topPos + h - mouseY;
+        if (button == 0 && !networkListOpen && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
         if (networkListOpen) {
@@ -746,7 +734,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (resizing != null) {
+        if (resizeHandle.dragging()) {
             dragResize(mouseX, mouseY);
             return true;
         }
@@ -759,8 +747,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizing != null) {
-            resizing = null;
+        if (resizeHandle.dragging()) {
+            resizeHandle.end();
             return true;
         }
         // soltar fora do visor também encerra o giro
@@ -770,22 +758,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    /** O que o mouse redimensiona ali, ou {@code null}: a alça do canto, a borda direita ou a de baixo. */
-    private @Nullable Resize resizeAt(double mouseX, double mouseY) {
-        int right = leftPos + w;
-        int bottom = topPos + h;
-        if (mouseX < leftPos || mouseY < topPos || mouseX >= right || mouseY >= bottom) {
-            return null;
-        }
-        if (mouseX >= right - GRIP && mouseY >= bottom - GRIP) {
-            return Resize.BOTH;
-        }
-        if (mouseX >= right - EDGE) {
-            return Resize.WIDTH;
-        }
-        return mouseY >= bottom - EDGE ? Resize.HEIGHT : null;
-    }
-
     /**
      * Redimensiona em torno do centro, como o filtro: a borda arrastada segue o mouse e a oposta se
      * move igual, então o painel continua centralizado.
@@ -793,12 +765,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private void dragResize(double mouseX, double mouseY) {
         int newW = w;
         int newH = h;
-        if (resizing != Resize.HEIGHT) {
-            double wanted = 2 * (mouseX + resizeGrabX - resizeCenterX);
+        if (resizeHandle.changesWidth()) {
+            double wanted = resizeHandle.wantedWidth(mouseX);
             newW = Math.max(MIN_W, Math.min(maxW(), (int) Math.round(wanted / 2) * 2));
         }
-        if (resizing != Resize.WIDTH) {
-            double wanted = 2 * (mouseY + resizeGrabY - resizeCenterY);
+        if (resizeHandle.changesHeight()) {
+            double wanted = resizeHandle.wantedHeight(mouseY);
             newH = Math.max(MIN_H, Math.min(maxH(), (int) Math.round(wanted / 2) * 2));
         }
         if (newW != w || newH != h) {
@@ -822,7 +794,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
-        resizing = null;
+        resizeHandle.end();
         super.resize(minecraft, width, height);
     }
 
@@ -886,7 +858,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             }
             return;
         }
-        if (resizing != null || resizeAt(mouseX, mouseY) != null) {
+        if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
             return;
         }
@@ -1063,22 +1035,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
 
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        Resize hover = resizing != null ? resizing : networkListOpen ? null : resizeAt(mouseX, mouseY);
-        int grip = hover != null ? trim : GuiPaint.BUTTON_HOVER_BORDER;
-        int gx = x + w - 4;
-        int gy = y + h - 4;
-        for (int i = 0; i < 3; i++) {
-            int d = 2 + i * 2;
-            for (int k = 0; k <= d; k += 2) {
-                g.fill(gx - d + k, gy - k, gx - d + k + 1, gy - k + 1, grip);
-            }
-        }
-        if (hover == Resize.WIDTH || hover == Resize.BOTH) {
-            g.fill(x + w - 3, y + 3, x + w - 2, y + h - 3, grip);
-        }
-        if (hover == Resize.HEIGHT || hover == Resize.BOTH) {
-            g.fill(x + 3, y + h - 3, x + w - 3, y + h - 2, grip);
-        }
+        ResizeHandle.Edge hover = resizeHandle.dragging() || !networkListOpen
+                ? resizeHandle.hover(mouseX, mouseY, x, y, w, h) : null;
+        ResizeGrip.renderDotted(g, x, y, w, h, hover, trim);
     }
 
     /** Upgrade apagado no fundo do slot de upgrade vazio. */

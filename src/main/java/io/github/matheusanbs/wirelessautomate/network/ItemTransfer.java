@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
+import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.Arrays;
@@ -45,6 +46,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Custo de uma entrega: uma varredura do destino ({@link InsertPlan}), em vez das quatro de
  * chamar o {@link ItemHandlerHelper#insertItemStacked} na simulação e de novo na inserção.
+ *
+ * <p>Baú do mod ({@link BulkItems}): como origem, a visita percorre tipos em vez de slots
+ * ({@link #moveBulk}); como destino, guarda pela chave, sem varrer slots. Entre dois Baús, um tipo
+ * inteiro passa numa chamada só, sem o teto de uma pilha por extração do {@link IItemHandler}. As
+ * regras de filtro, estoque, ordem e sono são as mesmas.
  */
 final class ItemTransfer {
     /** Slots examinados por visita: inventário grande continua do cursor no tick seguinte. */
@@ -73,6 +79,10 @@ final class ItemTransfer {
      * balde ainda tem saldo: o gerenciador pode visitá-la de novo no mesmo tick se sobrar orçamento.
      */
     static int move(Port source, long now) {
+        BulkItems bulk = source.node.bulkItems(source.face);
+        if (bulk != null) {
+            return moveBulk(source, bulk, now);
+        }
         IItemHandler handler = source.node.items(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
@@ -233,8 +243,10 @@ final class ItemTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
-            IItemHandler target = destination.node.items(destination.face);
-            if (target == null) {
+            // Baú do mod: guarda por tipo, sem varrer slots. Senão, o inventário da máquina.
+            BulkItems bulkTarget = destination.node.bulkItems(destination.face);
+            IItemHandler target = bulkTarget == null ? destination.node.items(destination.face) : null;
+            if (bulkTarget == null && target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
                 destination.sleepWithoutMachine(now);
@@ -242,38 +254,14 @@ final class ItemTransfer {
                 continue;
             }
             ItemStack probe = remaining == offered.getCount() ? offered : offered.copyWithCount(remaining);
-            int accepts;
-            if (stock > 0) {
-                // Contagem do destino: da memória da visita se já foi contado, senão na varredura que
-                // simula a inserção (que para ao atingir o estoque). Destino na própria máquina da
-                // origem não é lembrado: a extração muda a contagem dele.
-                boolean remember = !destination.machinePos.equals(source.machinePos)
-                        || destination.node.getLevel() != source.node.getLevel();
-                int memo = remember ? PLAN.recall(destination, offered, components) : -1;
-                long counted;
-                if (memo >= 0) {
-                    counted = PLAN.recalled(memo);
-                    if (counted >= stock) {
-                        continue;
-                    }
-                    accepts = PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
-                } else {
-                    accepts = PLAN.simulate(target, probe,
-                            components ? InsertPlan.COUNT_COMPONENTS : InsertPlan.COUNT_ITEM, stock);
-                    counted = PLAN.counted();
-                    if (remember) {
-                        PLAN.remember(destination, offered, components, counted, stock);
-                    }
-                }
-                int want = (int) StockLimit.acceptable(counted, stock, remaining);
-                if (want <= 0) {
-                    continue;
-                }
-                accepts = Math.min(accepts, want);
-            } else {
-                accepts = PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
+            int accepts = bulkTarget != null
+                    ? (int) bulkAccepts(bulkTarget, probe, remaining, stock, components)
+                    : planInsert(source, destination, target, offered, probe, stock, components);
+            if (accepts < 0) {
+                // Estoque do destino atingido: pula sem dormir.
+                continue;
             }
-            if (accepts <= 0) {
+            if (accepts == 0) {
                 destination.destinationBackoff.sleep(now);
                 destinationSlept = true;
                 continue;
@@ -283,7 +271,7 @@ final class ItemTransfer {
                 break;
             }
             int takenCount = taken.getCount();
-            ItemStack leftover = PLAN.execute(target, taken);
+            ItemStack leftover = execute(bulkTarget, target, taken);
             int delivered = takenCount - leftover.getCount();
             if (!leftover.isEmpty()) {
                 giveBack(source, handler, slot, leftover);
@@ -300,7 +288,7 @@ final class ItemTransfer {
                 if (remaining == 0 && stock == 0 && allowance > 0 && takenCount == offered.getCount()) {
                     // Entregou a extração inteira e o slot pode ter mais (gaveta, upgrade de pilha):
                     // as próximas vão direto para este destino, sem simular.
-                    moved += burst(source, handler, slot, target, destination, offered, max - moved, allowance);
+                    moved += burst(source, handler, slot, bulkTarget, target, destination, offered, max - moved, allowance);
                 }
             } else {
                 destination.destinationBackoff.sleep(now);
@@ -323,8 +311,8 @@ final class ItemTransfer {
      * extração menor, destino que não aceitou tudo); a tentativa seguinte, completa, decide o resto.
      * Devolve quanto entregou; cada extração conta em {@link #burstSteps}.
      */
-    private static int burst(Port source, IItemHandler handler, int slot, IItemHandler target, Port destination,
-            ItemStack offered, int cap, int allowance) {
+    private static int burst(Port source, IItemHandler handler, int slot, @Nullable BulkItems bulkTarget,
+            @Nullable IItemHandler target, Port destination, ItemStack offered, int cap, int allowance) {
         int size = offered.getCount();
         int moved = 0;
         while (burstSteps < allowance && moved < cap) {
@@ -343,7 +331,7 @@ final class ItemTransfer {
                 break;
             }
             int takenCount = taken.getCount();
-            ItemStack leftover = PLAN.execute(target, taken);
+            ItemStack leftover = execute(bulkTarget, target, taken);
             int delivered = takenCount - leftover.getCount();
             if (!leftover.isEmpty()) {
                 giveBack(source, handler, slot, leftover);
@@ -360,6 +348,349 @@ final class ItemTransfer {
             PLAN.delivered(destination, offered, moved);
         }
         return moved;
+    }
+
+    /**
+     * Quanto o inventário {@code target} aceita de {@code probe}, já com o estoque do destino, e deixa
+     * o plano da inserção em {@link #PLAN}. Devolve −1 se o estoque já foi atingido (pular sem dormir).
+     *
+     * <p>Contagem do estoque: da memória da visita se o destino já foi contado, senão na varredura
+     * que simula a inserção (que para ao atingir o estoque). Destino na própria máquina da origem não
+     * é lembrado: a extração muda a contagem dele.
+     */
+    private static int planInsert(Port source, Port destination, IItemHandler target, ItemStack offered,
+            ItemStack probe, long stock, boolean components) {
+        if (stock <= 0) {
+            return PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
+        }
+        boolean remember = !sameMachine(source, destination);
+        int memo = remember ? PLAN.recall(destination, offered, components) : -1;
+        long counted;
+        int accepts;
+        if (memo >= 0) {
+            counted = PLAN.recalled(memo);
+            if (counted >= stock) {
+                return -1;
+            }
+            accepts = PLAN.simulate(target, probe, InsertPlan.COUNT_NONE, 0);
+        } else {
+            accepts = PLAN.simulate(target, probe,
+                    components ? InsertPlan.COUNT_COMPONENTS : InsertPlan.COUNT_ITEM, stock);
+            counted = PLAN.counted();
+            if (remember) {
+                PLAN.remember(destination, offered, components, counted, stock);
+            }
+        }
+        int want = (int) StockLimit.acceptable(counted, stock, probe.getCount());
+        return want <= 0 ? -1 : Math.min(accepts, want);
+    }
+
+    /**
+     * Quanto um Baú do mod aceita de {@code amount} da chave, já com o estoque do destino; −1 se o
+     * estoque já foi atingido. A contagem sai do próprio Baú (O(1) com componentes, O(tipos) sem).
+     */
+    private static long bulkAccepts(BulkItems target, ItemStack key, long amount, long stock, boolean components) {
+        long room = target.insert(key, amount, true);
+        if (stock > 0) {
+            long counted = components ? target.count(key) : target.countItem(key);
+            long want = StockLimit.acceptable(counted, stock, amount);
+            if (want <= 0) {
+                return -1;
+            }
+            room = Math.min(room, want);
+        }
+        return room;
+    }
+
+    /** Inserção real: no Baú do mod direto pela chave, senão pelos slots do plano. Devolve a sobra. */
+    private static ItemStack execute(@Nullable BulkItems bulkTarget, @Nullable IItemHandler target, ItemStack stack) {
+        if (bulkTarget == null) {
+            return PLAN.execute(target, stack);
+        }
+        int count = stack.getCount();
+        long in = bulkTarget.insert(stack, count, false);
+        return in >= count ? ItemStack.EMPTY : stack.copyWithCount(count - (int) in);
+    }
+
+    /** As duas portas dão na mesma máquina (faces diferentes de um mesmo bloco). */
+    private static boolean sameMachine(Port a, Port b) {
+        return a.machinePos.equals(b.machinePos) && a.node.getLevel() == b.node.getLevel();
+    }
+
+    /**
+     * Visita de uma origem que é um Baú do mod ({@link BulkItems}): percorre os <b>tipos</b>, com o
+     * mesmo cursor, a mesma janela por visita e os mesmos tetos de {@link #move}, e entrega cada tipo
+     * em quantidades {@code long} ({@link #deliverBulk}). Filtro e estoque da origem valem igual; o
+     * estoque conta pelo inventário visto como slots ({@link StockTally}), uma vez por visita.
+     */
+    private static int moveBulk(Port source, BulkItems bulk, long now) {
+        RoundRobinOrder<Port> order = source.order;
+        if (order == null) {
+            SourceSleep.nothingToMove(source, now);
+            return 0;
+        }
+        long tokens = source.limiter.available(now);
+        if (tokens <= 0) {
+            return 0;
+        }
+        List<Port> pass = order.pass();
+        if (!NetworkManager.hasAwakeDestination(pass, now)) {
+            SourceSleep.untilDestinations(source, pass, now);
+            return 0;
+        }
+        int types = bulk.types();
+        if (types <= 0) {
+            SourceSleep.nothingToMove(source, now);
+            return 0;
+        }
+        FilterSet filter = source.filter;
+        boolean filtered = !filter.isEmpty();
+        StockTally tally = null;
+        IItemHandler view = null;
+        if (filtered && filter.usesItemStock()) {
+            view = source.node.items(source.face);
+            tally = source.tally;
+            if (tally == null) {
+                tally = new StockTally();
+                source.tally = tally;
+            }
+            tally.reset();
+        }
+        PLAN.beginVisit();
+        FilterSet.ItemRule rule = SOURCE_RULE;
+        int index = source.slotCursor < types ? source.slotCursor : 0;
+        int limit = Math.min(types, MAX_SLOTS_PER_VISIT);
+        int scanned = 0;
+        int attempts = 0;
+        long moved = 0;
+        boolean destinationsAsleep = false;
+        boolean capped = false;
+        while (scanned < limit) {
+            // A lista encolhe quando um tipo zera: o cursor volta ao começo.
+            types = bulk.types();
+            if (types == 0) {
+                break;
+            }
+            int current = index < types ? index : 0;
+            scanned++;
+            index = current + 1 == types ? 0 : current + 1;
+            ItemStack key = bulk.key(current);
+            long max = Math.min(tokens, bulk.count(current));
+            if (max <= 0) {
+                continue;
+            }
+            boolean stocked = false;
+            if (filtered) {
+                if (!filter.evaluateItem(key, rule)) {
+                    continue;
+                }
+                if (rule.stock > 0 && tally != null && view != null) {
+                    stocked = true;
+                    max = StockLimit.extractable(tally.lookup(view, filter, rule.matchComponents, key), rule.stock, max);
+                    if (max <= 0) {
+                        continue;
+                    }
+                }
+            }
+            long amount = deliverBulk(source, bulk, key, max, order, pass, now, MAX_ATTEMPTS_PER_VISIT - attempts - 1);
+            attempts += burstSteps;
+            if (amount > 0) {
+                if (stocked) {
+                    tally.took(amount);
+                }
+                tokens -= amount;
+                moved += amount;
+                if (tokens <= 0) {
+                    index = current;
+                    break;
+                }
+            }
+            if (++attempts >= MAX_ATTEMPTS_PER_VISIT) {
+                capped = true;
+                break;
+            }
+            if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
+                destinationsAsleep = true;
+                break;
+            }
+        }
+        source.slotCursor = index;
+        if (moved > 0) {
+            source.node.addMoved(source.type, moved);
+            source.idleSlots = 0;
+            source.limiter.consume(moved);
+            source.sourceBackoff.wake();
+            boolean more = tokens > 0 && (capped || (scanned >= limit && limit < bulk.types()));
+            return more ? NetworkManager.MOVED | NetworkManager.MORE : NetworkManager.MOVED;
+        }
+        source.idleSlots += scanned;
+        if (destinationsAsleep) {
+            source.idleSlots = 0;
+            SourceSleep.untilDestinations(source, pass, now);
+        } else if (source.idleSlots >= types) {
+            source.idleSlots = 0;
+            SourceSleep.nothingToMove(source, now);
+        }
+        return 0;
+    }
+
+    /**
+     * Entrega até {@code max} de um tipo do Baú de origem, na ordem da passada. Para outro Baú do mod
+     * é uma transferência só, de qualquer tamanho. Para um inventário comum vai em pilhas (o tamanho
+     * máximo do item), a primeira simulada e as seguintes direto nos slots do plano, como a
+     * {@link #burst rajada}, cada uma contando como tentativa ({@link #burstSteps}, até
+     * {@code allowance}); com estoque no destino, uma pilha por destino. Devolve quanto entregou.
+     */
+    private static long deliverBulk(Port source, BulkItems bulk, ItemStack key, long max,
+            RoundRobinOrder<Port> order, List<Port> pass, long now, int allowance) {
+        destinationSlept = false;
+        burstSteps = 0;
+        long remaining = max;
+        long moved = 0;
+        FilterSet.ItemRule rule = DESTINATION_RULE;
+        for (int i = 0, n = pass.size(); i < n && remaining > 0; i++) {
+            Port destination = pass.get(i);
+            if (destination.destinationBackoff.isSleeping(now) || sameMachine(source, destination)) {
+                continue;
+            }
+            FilterSet accept = destination.filter;
+            long stock = 0;
+            boolean components = false;
+            if (!accept.isEmpty()) {
+                if (!accept.evaluateItem(key, rule)) {
+                    continue;
+                }
+                stock = rule.stock;
+                components = rule.matchComponents;
+            }
+            source.offered = true;
+            BulkItems bulkTarget = destination.node.bulkItems(destination.face);
+            if (bulkTarget != null) {
+                long room = bulkAccepts(bulkTarget, key, remaining, stock, components);
+                if (room < 0) {
+                    continue;
+                }
+                if (room == 0) {
+                    destination.destinationBackoff.sleep(now);
+                    destinationSlept = true;
+                    continue;
+                }
+                long taken = bulk.extract(key, room, false);
+                if (taken <= 0) {
+                    break;
+                }
+                long in = bulkTarget.insert(key, taken, false);
+                if (in < taken) {
+                    giveBackBulk(source, bulk, key, taken - in);
+                }
+                if (in > 0) {
+                    delivered(source, destination, order);
+                    moved += in;
+                    remaining -= in;
+                } else {
+                    destination.destinationBackoff.sleep(now);
+                    destinationSlept = true;
+                }
+                if (taken < room) {
+                    break;
+                }
+                continue;
+            }
+            IItemHandler target = destination.node.items(destination.face);
+            if (target == null) {
+                destination.sleepWithoutMachine(now);
+                destinationSlept = true;
+                continue;
+            }
+            int stackSize = Math.max(1, key.getMaxStackSize());
+            boolean first = true;
+            boolean sourceEmpty = false;
+            while (remaining > 0) {
+                int chunk = (int) Math.min(remaining, stackSize);
+                int accepts;
+                if (first) {
+                    accepts = planInsert(source, destination, target, key, key.copyWithCount(chunk), stock, components);
+                    if (accepts < 0) {
+                        break;
+                    }
+                    if (accepts == 0) {
+                        destination.destinationBackoff.sleep(now);
+                        destinationSlept = true;
+                        break;
+                    }
+                } else {
+                    if (burstSteps >= allowance) {
+                        break;
+                    }
+                    burstSteps++;
+                    accepts = chunk;
+                }
+                long taken = bulk.extract(key, accepts, false);
+                if (taken <= 0) {
+                    sourceEmpty = true;
+                    break;
+                }
+                ItemStack leftover = PLAN.execute(target, key.copyWithCount((int) taken));
+                int delivered = (int) taken - leftover.getCount();
+                if (!leftover.isEmpty()) {
+                    giveBackBulk(source, bulk, leftover, leftover.getCount());
+                }
+                if (delivered > 0) {
+                    PLAN.delivered(destination, key, delivered);
+                    delivered(source, destination, order);
+                    moved += delivered;
+                    remaining -= delivered;
+                } else if (first) {
+                    destination.destinationBackoff.sleep(now);
+                    destinationSlept = true;
+                }
+                if (taken < accepts) {
+                    sourceEmpty = true;
+                    break;
+                }
+                if (delivered < accepts || stock > 0) {
+                    break;
+                }
+                first = false;
+            }
+            if (sourceEmpty) {
+                break;
+            }
+        }
+        return moved;
+    }
+
+    /** Uma entrega que deixou algo no destino: acorda-o, conta na volta da passada e nas operações. */
+    private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order) {
+        destination.destinationBackoff.wake();
+        order.delivered(destination);
+        if (source.network != null) {
+            source.network.ops++;
+        }
+    }
+
+    /**
+     * Devolve ao Baú de origem o que o destino recusou depois de aceitar na simulação. Cabe sempre
+     * (acabou de sair de lá); se a capacidade da config caiu nesse meio-tempo, o resto cai no mundo.
+     */
+    private static void giveBackBulk(Port source, BulkItems bulk, ItemStack key, long amount) {
+        long back = bulk.insert(key, amount, false);
+        long rest = amount - back;
+        if (rest <= 0) {
+            return;
+        }
+        Level level = source.node.getLevel();
+        WirelessAutomate.LOGGER.warn("Destino recusou {} x {} e o Baú de origem {} não aceitou de volta; soltando no mundo",
+                rest, key, source);
+        if (level == null) {
+            return;
+        }
+        int stackSize = Math.max(1, key.getMaxStackSize());
+        while (rest > 0) {
+            int drop = (int) Math.min(rest, stackSize);
+            Block.popResource(level, source.node.getBlockPos(), key.copyWithCount(drop));
+            rest -= drop;
+        }
     }
 
     private static void giveBack(Port source, IItemHandler handler, int slot, ItemStack leftover) {

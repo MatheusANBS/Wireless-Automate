@@ -1,0 +1,23 @@
+{
+  "parent": "wirelessautomate:block/storage_chest_basic",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/storage_chest_advanced"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/storage_chest_elite"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/storage_chest_ultimate"
+    }
+  ]
+}

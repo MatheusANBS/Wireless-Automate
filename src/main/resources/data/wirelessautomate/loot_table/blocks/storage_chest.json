@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wirelessautomate:storage_chest",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "wirelessautomate:storage_chest",
+              "properties": [
+                "tier"
+              ]
+            },
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "wirelessautomate:storage_contents"
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wirelessautomate:blocks/storage_chest"
+}

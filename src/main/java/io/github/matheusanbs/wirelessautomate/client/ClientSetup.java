@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,13 +27,17 @@ public final class ClientSetup {
     }
 
     /**
-     * Propriedade {@code wirelessautomate:tier} do item do roteador (0 = Básico ... 3 = Ultimate):
-     * os overrides de {@code models/item/router.json} trocam o ícone pelo modelo do tier.
+     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e do Baú (0 = Básico ... 3 =
+     * Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      */
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
-                (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal()));
+        event.enqueueWork(() -> {
+            ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
+                    (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal());
+            ItemProperties.register(ModItems.STORAGE_CHEST.get(), WirelessAutomate.id("tier"),
+                    (stack, level, entity, seed) -> StorageChestBlockItem.tierOf(stack).ordinal());
+        });
     }
 
     @SubscribeEvent

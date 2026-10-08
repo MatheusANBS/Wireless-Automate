@@ -20,6 +20,11 @@ public final class Config {
     public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
+    /** Capacidade do Baú por tier, em itens (todos os tipos somados; 0 = sem limite). */
+    public static final Map<RouterTier, ModConfigSpec.LongValue> CHEST_CAPACITY = new EnumMap<>(RouterTier.class);
+
+    /** Capacidade padrão do Baú por tier (a ordem do {@link RouterTier}); 0 = sem limite. */
+    private static final long[] DEFAULT_CHEST_CAPACITY = {262_144L, 16_777_216L, 1_073_741_824L, 0L};
 
     public record TierValues(
             ModConfigSpec.LongValue itemsPerSecond,
@@ -78,6 +83,16 @@ public final class Config {
                 .defineInRange("maxDistance", 64, 0, 4096);
         builder.pop();
 
+        builder.push("storage");
+        builder.comment("Capacidade do Baú do mod por tier, em itens (todos os tipos somados; 0 = sem limite).");
+        builder.push("chestCapacity");
+        for (RouterTier tier : RouterTier.values()) {
+            CHEST_CAPACITY.put(tier, builder.defineInRange(tier.getSerializedName(),
+                    DEFAULT_CHEST_CAPACITY[tier.ordinal()], 0L, Long.MAX_VALUE));
+        }
+        builder.pop();
+        builder.pop();
+
         builder.push("guide");
         GIVE_GUIDE_ON_FIRST_JOIN = builder
                 .comment("Entrega o livro-guia (precisa do GuideME) a cada jogador no primeiro login.")
@@ -85,6 +100,11 @@ public final class Config {
         builder.pop();
 
         SPEC = builder.build();
+    }
+
+    /** Capacidade do Baú no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */
+    public static long chestCapacity(RouterTier tier) {
+        return SPEC.isLoaded() ? CHEST_CAPACITY.get(tier).get() : DEFAULT_CHEST_CAPACITY[tier.ordinal()];
     }
 
     private Config() {

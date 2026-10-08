@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -26,6 +27,9 @@ public final class ModCreativeTabs {
                             if (ModItems.TIER_CORES.containsKey(tier)) {
                                 output.accept(ModItems.TIER_CORES.get(tier).get());
                             }
+                        }
+                        for (RouterTier tier : RouterTier.values()) {
+                            output.accept(StorageChestBlockItem.withTier(ModItems.STORAGE_CHEST.get(), tier));
                         }
                         output.accept(ModItems.CONFIGURATOR.get());
                         output.accept(ModItems.NETWORK_TABLET.get());

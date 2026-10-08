@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.world.item.Item;
@@ -20,6 +21,9 @@ public final class ModItems {
 
     public static final DeferredItem<RouterBlockItem> ROUTER = ITEMS.register("router",
             () -> new RouterBlockItem(ModBlocks.ROUTER.get(), new Item.Properties()));
+
+    public static final DeferredItem<StorageChestBlockItem> STORAGE_CHEST = ITEMS.register("storage_chest",
+            () -> new StorageChestBlockItem(ModBlocks.STORAGE_CHEST.get(), new Item.Properties()));
 
     public static final DeferredItem<ConfiguratorItem> CONFIGURATOR = ITEMS.registerItem("configurator",
             ConfiguratorItem::new, new Item.Properties().stacksTo(1));

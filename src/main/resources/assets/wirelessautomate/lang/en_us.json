@@ -1,6 +1,10 @@
 {
   "itemGroup.wirelessautomate": "Wireless Automate",
   "block.wirelessautomate.router": "Wireless Router",
+  "block.wirelessautomate.storage_chest": "Wireless Chest",
+  "block.wirelessautomate.storage_chest.summary": "%s items in %s types · capacity %s",
+  "block.wirelessautomate.storage_chest.empty": "Empty · capacity %s",
+  "block.wirelessautomate.storage_chest.unlimited": "unlimited",
   "item.wirelessautomate.configurator": "Configurator",
   "item.wirelessautomate.network_tablet": "Network Tablet",
   "item.wirelessautomate.linker": "Linker",
@@ -16,6 +20,7 @@
   "item.wirelessautomate.tier_core.fluids": "  Fluids and chemicals (mB/s): %s → %s",
   "item.wirelessautomate.tier_core.energy": "  Energy (FE/t): %s → %s",
   "item.wirelessautomate.tier_core.range": "  Range: %s → %s",
+  "item.wirelessautomate.tier_core.chest": "  Chest (items): %s → %s",
   "item.wirelessautomate.tier_core.unlimited": "unlimited",
   "item.wirelessautomate.tier_core.range.blocks": "%s blocks",
   "item.wirelessautomate.tier_core.range.dimension": "the whole dimension",

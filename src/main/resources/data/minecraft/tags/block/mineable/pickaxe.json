@@ -1,3 +1,6 @@
 {
-  "values": ["wirelessautomate:router"]
+  "values": [
+    "wirelessautomate:router",
+    "wirelessautomate:storage_chest"
+  ]
 }

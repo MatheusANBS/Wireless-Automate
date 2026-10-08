@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -98,6 +99,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
+    private final BlockCapabilityCache<BulkItems, @Nullable Direction>[] bulkItemCaches = newCaches();
     private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
     private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
     /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
@@ -529,6 +531,14 @@ public class RouterBlockEntity extends BlockEntity {
         return capability(itemCaches, Capabilities.ItemHandler.BLOCK, ResourceType.ITEM, machineFace);
     }
 
+    /**
+     * Itens por tipo e quantidade (o Baú do mod) pela face, ou {@code null} se a máquina não tiver.
+     * O motor tenta esta antes de {@link #items}: entre dois baús do mod, um tipo inteiro numa chamada.
+     */
+    public @Nullable BulkItems bulkItems(Direction machineFace) {
+        return capability(bulkItemCaches, BulkItems.BLOCK, ResourceType.ITEM, machineFace);
+    }
+
     public @Nullable IFluidHandler fluids(Direction machineFace) {
         return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, ResourceType.FLUID, machineFace);
     }
@@ -590,6 +600,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     private void clearCaches() {
         Arrays.fill(itemCaches, null);
+        Arrays.fill(bulkItemCaches, null);
         Arrays.fill(fluidCaches, null);
         Arrays.fill(energyCaches, null);
         Arrays.fill(chemicalCaches, null);

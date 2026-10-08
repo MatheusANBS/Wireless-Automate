@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.item;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlock;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
@@ -18,7 +19,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 
 /**
- * Cartão de upgrade de tier: clique no roteador para subir de tier no lugar, sem perder a
+ * Cartão de upgrade de tier: clique no roteador (ou no Baú) para subir de tier no lugar, sem perder a
  * configuração (ou junte os dois na bancada, {@code RouterUpgradeRecipe}). O tooltip mostra o que
  * ele aumenta, com os valores da config do servidor (sincronizada com o cliente) ou os padrões.
  */
@@ -36,7 +37,8 @@ public class TierCoreItem extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        if (!RouterBlock.tryUpgrade(context.getLevel(), context.getClickedPos(), tier)) {
+        if (!RouterBlock.tryUpgrade(context.getLevel(), context.getClickedPos(), tier)
+                && !StorageChestBlock.tryUpgrade(context.getLevel(), context.getClickedPos(), tier)) {
             return InteractionResult.PASS;
         }
         Player player = context.getPlayer();
@@ -58,6 +60,7 @@ public class TierCoreItem extends Item {
         tooltip.add(line("fluids", rate(from, Stat.FLUID), rate(tier, Stat.FLUID)));
         tooltip.add(line("energy", rate(from, Stat.ENERGY), rate(tier, Stat.ENERGY)));
         tooltip.add(line("range", range(from), range(tier)));
+        tooltip.add(line("chest", capacity(from), capacity(tier)));
         tooltip.add(Component.translatable(KEY + "use").withStyle(ChatFormatting.DARK_GRAY));
     }
 
@@ -90,9 +93,15 @@ public class TierCoreItem extends Item {
      * Número com separador de milhar do idioma: a chave {@code wirelessautomate.number.group} é
      * "." em português e "," em inglês ({@link Language} existe no cliente e no servidor).
      */
-    static String grouped(long value) {
+    public static String grouped(long value) {
         String separator = Language.getInstance().getOrDefault("wirelessautomate.number.group", ",");
         return String.format(Locale.ROOT, "%,d", value).replace(",", separator);
+    }
+
+    /** Capacidade do Baú no tier, pela config; 0 = sem limite. */
+    private static Component capacity(RouterTier tier) {
+        long value = Config.chestCapacity(tier);
+        return value <= 0 ? Component.translatable(KEY + "unlimited") : Component.literal(grouped(value));
     }
 
     private static Component range(RouterTier tier) {

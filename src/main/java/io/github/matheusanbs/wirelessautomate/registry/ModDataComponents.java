@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
+import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -24,6 +25,11 @@ public final class ModDataComponents {
     /** Configuração copiada pelo Configurador. */
     public static final Supplier<DataComponentType<RouterPreset>> PRESET = DATA_COMPONENTS.registerComponentType(
             "preset", builder -> builder.persistent(RouterPreset.CODEC).networkSynchronized(RouterPreset.STREAM_CODEC));
+
+    /** Referência ao conteúdo de um Baú quebrado cheio, mais o resumo do tooltip. */
+    public static final Supplier<DataComponentType<StorageContents>> STORAGE_CONTENTS =
+            DATA_COMPONENTS.registerComponentType("storage_contents", builder -> builder
+                    .persistent(StorageContents.CODEC).networkSynchronized(StorageContents.STREAM_CODEC));
 
     /** Tipo e filtro do Cartão de Filtro. */
     public static final Supplier<DataComponentType<FilterCardItem.Contents>> CARD_FILTER =

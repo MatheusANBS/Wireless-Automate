@@ -120,4 +120,4 @@ All recipes use vanilla items.
 ## Requirements
 
 - Minecraft **1.21.1**
-- **NeoForge** 21.1
+- **NeoForge** 21.1.251 or newer (works with All the Mods 10)

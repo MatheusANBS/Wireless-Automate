@@ -163,6 +163,13 @@ public final class DevEndToEnd {
     /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
     private static final String SHOWCASE = System.getenv("WA_SHOWCASE");
     private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : SHOWCASE;
+    /**
+     * Ampliação das fotos da vitrine: o quadro é renderizado fora da tela em 1280x800 vezes este fator, com a
+     * interface na escala 2 vezes ele (o mesmo layout da escala 2 em 1280x800, com mais pixels). A janela
+     * continua pequena; só o framebuffer cresce. {@code WA_SHOWCASE_SCALE} muda o fator (1 desliga).
+     */
+    private static final int SHOWCASE_SCALE = SHOWCASE == null ? 1
+            : Math.max(1, Integer.parseInt(System.getenv().getOrDefault("WA_SHOWCASE_SCALE", "3")));
     static final String WORLD = "wa-e2e";
     private static final String MAIN_NETWORK = "E2E Principal";
     private static final String OTHER_NETWORK = "E2E Outra";
@@ -249,7 +256,18 @@ public final class DevEndToEnd {
             // sem as dicas do tutorial no canto das capturas
             minecraft.getTutorial().setStep(TutorialSteps.NONE);
         }
-        if (ticks == 3) {
+        if (SHOWCASE_SCALE > 1 && ticks >= 3) {
+            // a janela pode mudar de tamanho depois (o GLFW avisa atrasado): reimpõe o framebuffer grande
+            var window = minecraft.getWindow();
+            if (window.getWidth() != 1280 * SHOWCASE_SCALE || window.getHeight() != 800 * SHOWCASE_SCALE) {
+                window.setWidth(1280 * SHOWCASE_SCALE);
+                window.setHeight(800 * SHOWCASE_SCALE);
+                minecraft.options.guiScale().set(2 * SHOWCASE_SCALE);
+                minecraft.resizeDisplay();
+                WirelessAutomate.LOGGER.info("vitrine: framebuffer {}x{}, escala de GUI {}", window.getWidth(),
+                        window.getHeight(), window.getGuiScale());
+            }
+        } else if (ticks == 3) {
             // no Windows a janela de 1280x800 sai menor e a escala 3 não deixa espaço para as
             // telas crescerem: escolhe a maior escala que caiba, sem salvar as opções do usuário
             var window = minecraft.getWindow();
@@ -2882,14 +2900,17 @@ public final class DevEndToEnd {
      */
     private static void moveMouse(int guiX, int guiY) {
         Minecraft minecraft = Minecraft.getInstance();
-        double scale = minecraft.getWindow().getGuiScale();
+        // o MouseHandler converte pela largura da janela, que fica menor que o framebuffer na vitrine
+        var window = minecraft.getWindow();
+        double scaleX = (double) window.getScreenWidth() / window.getGuiScaledWidth();
+        double scaleY = (double) window.getScreenHeight() / window.getGuiScaledHeight();
         try {
             Field x = minecraft.mouseHandler.getClass().getDeclaredField("xpos");
             Field y = minecraft.mouseHandler.getClass().getDeclaredField("ypos");
             x.setAccessible(true);
             y.setAccessible(true);
-            x.setDouble(minecraft.mouseHandler, guiX * scale);
-            y.setDouble(minecraft.mouseHandler, guiY * scale);
+            x.setDouble(minecraft.mouseHandler, guiX * scaleX);
+            y.setDouble(minecraft.mouseHandler, guiY * scaleY);
         } catch (ReflectiveOperationException | RuntimeException e) {
             WirelessAutomate.LOGGER.debug("E2E: não deu para mover o cursor", e);
         }

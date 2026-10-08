@@ -35,6 +35,7 @@ repositories {
         content {
             includeGroup 'mezz.jei'
             includeGroup 'net.mezzdev.config' // biblioteca de config que o JEI 19.56+ usa
+            includeGroup 'com.hollingsworth.ars_nouveau' // Ars Nouveau (Source, ver compat/arsnouveau).
         }
     }
     // Mekanism (químicos, ver compat/mekanism).
@@ -118,6 +119,14 @@ dependencies {
     // Tudo que toca na API fica em compat/mekanism e só carrega com o Mekanism presente.
     compileOnly "mekanism:Mekanism:${minecraft_version}-${mekanism_version}:api"
 
+    // Ars Nouveau: o jar inteiro só na compilação (não há jar de API), sem as dependências dele. O
+    // mod completo, com GeckoLib e Curios, vai para a pasta mods do runClient e da run
+    // gameTestServerSource (abaixo). Tudo que toca na API fica em compat/arsnouveau e só carrega
+    // com o Ars presente.
+    compileOnly("com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}") {
+        transitive = false
+    }
+
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -131,8 +140,8 @@ tasks.named('test', Test).configure {
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
-// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism e o
-// GuideME, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
+// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau
+// e o GuideME, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -153,6 +162,10 @@ configurations {
         canBeConsumed = false
         transitive = false
     }
+    sourceTestMods {
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 dependencies {
@@ -169,6 +182,13 @@ dependencies {
     // GuideME: o livro-guia do mod (data-driven, em assets/wirelessautomate/guides); opcional.
     clientMods 'maven.modrinth:guideme:21.1.19'
     chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    // Ars Nouveau (Source) e as dependências obrigatórias dele.
+    clientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
+    clientMods "maven.modrinth:geckolib:${geckolib_version}"
+    clientMods "maven.modrinth:curios:${curios_version}"
+    sourceTestMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
+    sourceTestMods "maven.modrinth:geckolib:${geckolib_version}"
+    sourceTestMods "maven.modrinth:curios:${curios_version}"
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -186,7 +206,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     preserve {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
-                'Mekanism-*.jar', 'guideme-*.jar'
+                'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar'
     }
 }
 
@@ -223,6 +243,24 @@ neoForge.runs {
     }
 }
 neoForge.runs.client.taskBefore prepareObservableConfig
+
+// GameTests de Source: um servidor de testes próprio, com o Ars Nouveau (e GeckoLib e Curios) na
+// pasta mods, que roda só o namespace wirelessautomate_source (gametest/SourceGameTests).
+// ./gradlew runGameTestServerSource
+var prepareSourceTestMods = tasks.register('prepareSourceTestMods', Sync) {
+    from configurations.sourceTestMods
+    into layout.projectDirectory.dir('run/gametest-source/mods')
+}
+
+neoForge.runs {
+    gameTestServerSource {
+        type = 'gameTestServer'
+        gameDirectory = project.file('run/gametest-source')
+        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_source'
+        systemProperty 'wirelessautomate.sourceTests', 'true'
+        taskBefore prepareSourceTestMods
+    }
+}
 
 neoForge.runs {
     // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado
@@ -291,9 +329,16 @@ tasks.matching { it.name == 'runGameTestServerChemicals' }.configureEach {
     }
 }
 
+def sourceTestWorld = layout.projectDirectory.dir('run/gametest-source/world').asFile
+tasks.matching { it.name == 'runGameTestServerSource' }.configureEach {
+    doFirst {
+        sourceTestWorld.deleteDir()
+    }
+}
+
 // O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
 // Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.
-[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals'].each { name, dir ->
+[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals', runGameTestServerSource: 'run/gametest-source'].each { name, dir ->
     def log = layout.projectDirectory.file("${dir}/logs/latest.log").asFile
     tasks.matching { it.name == name }.configureEach {
         doFirst {

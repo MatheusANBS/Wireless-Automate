@@ -36,7 +36,7 @@ Capacidades padrão dos armazenamentos:
 | Unobtainium | 8.589.934.592 | 67.108.864.000 | 262.144.000.000 | 2.621.440.000 |
 | Ultimate | sem limite | sem limite | sem limite | sem limite |
 
-Configs que já existem guardam os valores antigos (o NeoForge não sobrescreve); as seções novas (`tiers.emerald`, `tiers.allthemodium`, `tiers.vibranium`, `tiers.unobtainium` e as chaves novas em `storage.*`) entram com os padrões. Isso vai no changelog.
+Configs que já existem guardariam os valores antigos (o NeoForge não sobrescreve) e o Elite ficaria acima da Esmeralda. Por isso a chave `migration.balanceVersion` (0 num arquivo antigo): na primeira carga, `Config.migrateBalance()` troca pelo padrão novo só os valores de vazão, alcance e capacidade que ainda estão no padrão antigo, e marca a versão 1. O que o dono do servidor mudou fica. As seções novas (`tiers.emerald`... e as chaves novas em `storage.*`) entram com os padrões.
 
 ## Receitas
 

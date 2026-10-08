@@ -106,7 +106,7 @@ public class StorageBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** Quantidade com a unidade do tipo: "262.144 itens", "1.000.000 mB", "16.000.000 FE". */
+    /** Quantidade com a unidade do tipo: "32.768 itens", "256.000 mB", "1.000.000 FE". */
     public static Component amount(StorageKind kind, long value) {
         return Component.translatable("gui.wirelessautomate.unit." + kind.unit, TierCoreItem.grouped(value));
     }

@@ -32,7 +32,7 @@ O script prepara `run/bench` (eula, `server.properties` com um mundo plano novo,
 
 ## Método
 
-Código em `src/main/java/.../bench/`. Cada nó é uma máquina com um roteador em cima, configurado pela face de cima da máquina. Origens e destinos se alternam na grade, todos na mesma rede, com tier Básico (512 itens/s por face), exceto na vazão bruta, que usa o Ultimate. Cada repetição segue estas fases:
+Código em `src/main/java/.../bench/`. Cada nó é uma máquina com um roteador em cima, configurado pela face de cima da máquina. Origens e destinos se alternam na grade, todos na mesma rede, com tier Elite (2.048 itens/s por face), exceto na vazão bruta, que usa o Ultimate, e na pilha enorme, que usa o Allthemodium (131.072 itens/s). Até 8/10/2026 os cenários usavam o Básico a 512 itens/s; o balanceamento ×8 baixou o Básico para 32 e os cenários passaram para o Elite, então as rodadas antigas não se comparam uma a uma com as novas. Cada repetição segue estas fases:
 
 1. **Montagem:** máquinas cheias ou vazias conforme o cenário, roteadores sem rede e chunks forçados. A fase espera todos os roteadores se registrarem, mais 20 ticks.
 2. **Linha de base (100 ticks):** o MSPT com a cena montada, mas sem rede, que é o "antes" pedido pela especificação.
@@ -70,7 +70,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `rebuild` | Como `many`, e a cada segundo um nó muda de prioridade | Custo de remontar as rotas | Abaixo do orçamento |
 | `sparse` | n nós (padrão 500): só a primeira origem tem pedregulho, as outras 249 estão vazias; destinos vazios | Quantas origens vazias cada entrega acorda (visitas por tick com uma única origem ativa) | Visitas por tick perto das de uma origem só |
 | `stock` | Pares de inventários grandes (padrão 20): origem cheia de pedregulho; destino com lista branca de pedregulho com estoque de 1.000 e já com 1.000 dentro | Custo de tentar inserir num destino que já atingiu o estoque | Perto de 0 (nada se move) |
-| `bigstack` | 1 par (máquinas de teste): origem de 1 slot com uma pilha de 1.000.000 de pedregulhos (como gaveta ou bin, extrai até 64 por vez) para um ralo, tier Elite | Vazão de uma pilha enorme num slot só | Perto da vazão do Elite (131.072 itens/s) |
+| `bigstack` | 1 par (máquinas de teste): origem de 1 slot com uma pilha de 1.000.000 de pedregulhos (como gaveta ou bin, extrai até 64 por vez) para um ralo, tier Allthemodium | Vazão de uma pilha enorme num slot só | Perto da vazão do Allthemodium (131.072 itens/s) |
 | `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
 | `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
 

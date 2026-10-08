@@ -47,7 +47,7 @@ limit. Source only with Ars Nouveau.
 | <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1,048,576 → **8,388,608** | 65,536,000 → **524,288,000** | 32,768,000 → **262,144,000** | 3,276,800 → **26,214,400** | every dimension |
 | <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8,388,608 → **Unlimited** | 524,288,000 → **Unlimited** | 262,144,000 → **Unlimited** | 26,214,400 → **Unlimited** | every dimension |
 
-¹ Only with the Allthemodium mod.
+¹ Only with the Allthemodium mod. Without it, the Ultimate Card comes after Emerald (16,384 items/s → unlimited).
 
 Each step multiplies throughput by 8. Range and dimensions follow the **sender's** tier.
 

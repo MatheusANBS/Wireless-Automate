@@ -30,8 +30,8 @@ public final class ClientSetup {
     }
 
     /**
-     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e dos armazenamentos (0 = Básico ... 3 =
-     * Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
+     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e dos armazenamentos (a posição no
+     * {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      */
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {

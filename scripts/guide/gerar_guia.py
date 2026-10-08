@@ -243,7 +243,10 @@ def card_table(lang):
         reach = after if before == after else f'{before} → **{after}**'
         rows.append(f"| {item('tier_core_' + TIERS[i][0])} **{tier_name(lang, i)}** | " + ' | '.join(cells)
                     + f' | {reach} |')
-    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
+    without = {'pt': ' Sem ele, o Cartão Ultimate vem depois do Cartão Esmeralda ({} → sem limite).',
+               'en': ' Without it, the Ultimate Card comes after Emerald ({} → unlimited).'}[lang]
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang] + without.format(num(lang, RATES['item'][3]) + (
+        ' itens/s' if lang == 'pt' else ' items/s'))
 
 
 TIER_TABLE = {'pt': tier_table('pt'), 'en': tier_table('en')}

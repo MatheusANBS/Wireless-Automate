@@ -1602,7 +1602,7 @@ public final class DevEndToEnd {
      */
     private static void showcaseStorage(MinecraftServer server, ServerLevel level, UUID network) {
         StorageKind[] kinds = StorageKind.values();
-        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ELITE};
+        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.EMERALD, RouterTier.ULTIMATE, RouterTier.EMERALD, RouterTier.EMERALD};
         String[] names = {"Main Storage", "Water Tank", "Base Battery", "Hydrogen", "Source Reserve"};
         for (int i = 0; i < kinds.length; i++) {
             if (!kinds[i].loaded()) {
@@ -1629,13 +1629,13 @@ public final class DevEndToEnd {
                     }
                 }
                 case StorageTankBlockEntity tank -> {
-                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 2_400_000_000L, false);
+                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
                     tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
                 }
                 case StorageBatteryBlockEntity battery -> battery.store().insert(60_000_000_000L, false);
                 case StorageChemicalTankBlockEntity chemical ->
-                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 2_000_000_000L, false);
-                case StorageSourceTankBlockEntity source -> source.store().insert(40_000_000L, false);
+                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 100_000_000L, false);
+                case StorageSourceTankBlockEntity source -> source.store().insert(4_000_000L, false);
                 default -> {
                 }
             }
@@ -1716,9 +1716,9 @@ public final class DevEndToEnd {
         router(server, showSourceJar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.EXTRACT);
         router(server, tank.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
         router(server, jar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
-        // Os quatro tiers, sem roteador, cada um num nível.
-        RouterTier[] tiers = RouterTier.values();
-        long[] contents = {0L, 640_000L, 24_576_000L, 3_000_000_000L};
+        // Quatro tiers, sem roteador, cada um num nível.
+        RouterTier[] tiers = SOURCE_TANK_TIERS;
+        long[] contents = SOURCE_TANK_CONTENTS;
         for (int i = 0; i < 4; i++) {
             // Vistos de dentro (olhando para o sul), o Básico fica à esquerda.
             BlockPos pos = showBase.offset(11 - 2 * i, 0, -5);
@@ -1788,6 +1788,15 @@ public final class DevEndToEnd {
 
     /** Total guardado nos dois Baús do roteiro: 12 milhões de pedregulho, 64 diamantes e 1.000 de terra. */
     private static final long CHEST_TOTAL = 12_000_000L + 64 + 1_000;
+
+    /** O Baú A é Esmeralda e sobe para o tier seguinte: o Ultimate, ou o Allthemodium com o mod. */
+    private static RouterTier chestUpgrade() {
+        return java.util.Objects.requireNonNull(RouterTier.EMERALD.next());
+    }
+    /** Os Tanques de Source das fotos: Básico vazio, Avançado a 30%, Elite a 60% e Ultimate (níveis 0, 3, 6 e 10). */
+    private static final RouterTier[] SOURCE_TANK_TIERS = {RouterTier.BASIC, RouterTier.ADVANCED, RouterTier.ELITE,
+            RouterTier.ULTIMATE};
+    private static final long[] SOURCE_TANK_CONTENTS = {0L, 24_000L, 384_000L, 3_000_000_000L};
     private static BlockPos storageA = BlockPos.ZERO;
     private static BlockPos storageB = BlockPos.ZERO;
 
@@ -1810,7 +1819,7 @@ public final class DevEndToEnd {
             storageA = base.offset(-2, 0, -1);
             storageB = base.offset(2, 0, -1);
             level.setBlockAndUpdate(storageA, ModBlocks.STORAGE_CHEST.get().defaultBlockState()
-                    .setValue(RouterBlock.TIER, RouterTier.ELITE));
+                    .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             level.setBlockAndUpdate(storageB, ModBlocks.STORAGE_CHEST.get().defaultBlockState()
                     .setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
             ItemStorage storage = storageChest(server, storageA).storage();
@@ -1911,18 +1920,18 @@ public final class DevEndToEnd {
         list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {
             onServer(server -> {
                 server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
-                        new ItemStack(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get()));
+                        new ItemStack(ModItems.TIER_CORES.get(chestUpgrade()).get()));
                 return null;
             });
         }, () -> {
-            if (!Minecraft.getInstance().player.getMainHandItem().is(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get())) {
+            if (!Minecraft.getInstance().player.getMainHandItem().is(ModItems.TIER_CORES.get(chestUpgrade()).get())) {
                 return false;
             }
             if (!clicked[0]) {
                 clicked[0] = true;
                 useOn(storageA);
             }
-            return onServer(server -> server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER) == RouterTier.ULTIMATE);
+            return onServer(server -> server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER) == chestUpgrade());
         }, () -> onServer(server -> "tier " + server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER))));
 
         list.add(new Step("Baú: quebrar e recolocar com o conteúdo", STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -1976,14 +1985,14 @@ public final class DevEndToEnd {
             more[0] = base.offset(-1, 0, -2);
             more[1] = base.offset(1, 0, -2);
             level.setBlockAndUpdate(more[0], ModBlocks.STORAGE.get(StorageKind.TANK).get().defaultBlockState()
-                    .setValue(RouterBlock.TIER, RouterTier.ELITE));
+                    .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             level.setBlockAndUpdate(more[1], ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
-                    .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+                    .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             StorageTankBlockEntity tank = (StorageTankBlockEntity) level.getBlockEntity(more[0]);
-            tank.storage().insert(new FluidStack(Fluids.WATER, 1), 1_250_000_000L, false);
+            tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
             tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
             StorageBatteryBlockEntity battery = (StorageBatteryBlockEntity) level.getBlockEntity(more[1]);
-            battery.store().insert(640_000_000L, false);
+            battery.store().insert(320_000_000L, false);
             return null;
         }), () -> {
             Minecraft minecraft = Minecraft.getInstance();
@@ -1997,7 +2006,7 @@ public final class DevEndToEnd {
         list.add(close("Tanque: fechar"));
         list.add(new Step("Bateria: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(more[1]),
                 () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received()
-                        && screen.getMenu().stored() == 640_000_000L,
+                        && screen.getMenu().stored() == 320_000_000L,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bateria-1-tela"));
         list.add(close("Bateria: fechar"));
@@ -2018,7 +2027,7 @@ public final class DevEndToEnd {
             BlockPos pos = at[0] = where.get();
             ServerLevel level = server.getPlayerList().getPlayer(playerId).serverLevel();
             level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
-                    .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+                    .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             ((StorageSourceTankBlockEntity) level.getBlockEntity(pos)).store().insert(1_640_000L, false);
             return null;
         }), () -> Minecraft.getInstance().level != null
@@ -2060,8 +2069,8 @@ public final class DevEndToEnd {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
             origin[0] = player.blockPosition();
-            RouterTier[] tiers = RouterTier.values();
-            long[] contents = {0L, 640_000L, 24_576_000L, 3_000_000_000L};
+            RouterTier[] tiers = SOURCE_TANK_TIERS;
+            long[] contents = SOURCE_TANK_CONTENTS;
             for (int i = 0; i < 4; i++) {
                 tanks[i] = origin[0].offset(-3 + 2 * i, 0, 4);
                 level.setBlockAndUpdate(tanks[i], ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()

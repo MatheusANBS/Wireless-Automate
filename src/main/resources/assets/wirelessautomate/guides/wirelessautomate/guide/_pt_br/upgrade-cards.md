@@ -47,7 +47,7 @@ limite de fluido. Source só com o Ars Nouveau.
 | <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1.048.576 → **8.388.608** | 65.536.000 → **524.288.000** | 32.768.000 → **262.144.000** | 3.276.800 → **26.214.400** | todas as dimensões |
 | <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8.388.608 → **Sem limite** | 524.288.000 → **Sem limite** | 262.144.000 → **Sem limite** | 26.214.400 → **Sem limite** | todas as dimensões |
 
-¹ Só com o mod Allthemodium.
+¹ Só com o mod Allthemodium. Sem ele, o Cartão Ultimate vem depois do Cartão Esmeralda (16.384 itens/s → sem limite).
 
 Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de quem **envia**.
 

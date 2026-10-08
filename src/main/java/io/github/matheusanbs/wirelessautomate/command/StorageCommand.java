@@ -95,6 +95,9 @@ public final class StorageCommand {
             return stored.tier();
         }
         for (RouterTier tier : RouterTier.values()) {
+            if (!tier.loaded()) {
+                continue; // um tier do Allthemodium sem o mod não vira item
+            }
             long capacity = Config.storageCapacity(stored.kind(), tier);
             if (capacity <= 0 || capacity >= total) {
                 return tier;

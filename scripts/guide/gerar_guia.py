@@ -972,9 +972,7 @@ Também tira roteadores da rede.
 | --- | --- |
 | **Rede** | Clique numa rede para torná-la a ativa, ou em **+ Nova rede** para criar uma. |
 | **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
-| **Abas** | Uma caixa por aba. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
-
-Marque os tipos nas caixas; Todos marca ou desmarca todos.
+| **Abas** | Um botão colorido por tipo: clique para marcar ou desmarcar (marcado = borda e fundo na cor do tipo). **Todos** marca todos os tipos. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
 
 ''' + fill(SCENE_AREA, BOX='Área marcada: todos os roteadores carregados dentro dela entram na rede',
            OTHER='Também entra: para o Vinculador, a máquina não importa', OTHER_COLOR='#3fc36b') + '''
@@ -1028,9 +1026,7 @@ also takes routers out of their network.
 | --- | --- |
 | **Network** | Click a network to make it active, or **+ New network** to create one. |
 | **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
-| **Tabs** | One checkbox per tab. Only the checked tabs change; the others stay as they are. At least one stays checked. |
-
-Tick the types in the boxes; All ticks or unticks every one.
+| **Tabs** | One colored button per type: click to mark or unmark it (marked = border and tint in the type's color). **All** marks every type. Only the marked tabs change; the others stay as they are. At least one stays marked. |
 
 ''' + fill(SCENE_AREA, BOX='Marked area: every loaded router inside joins the network',
            OTHER='Joins too: for the Linker, the machine does not matter', OTHER_COLOR='#3fc36b') + '''

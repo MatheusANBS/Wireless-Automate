@@ -103,4 +103,13 @@ public final class GuiText {
         Clip c = CLIPS.getFirst();
         return new int[] {c.x() + c.width() / 2, c.y() + c.height() / 2};
     }
+
+    /** Os centros de todos os textos cortados no último frame (gancho do e2e). */
+    public static List<int[]> clipCenters() {
+        List<int[]> centers = new ArrayList<>();
+        for (Clip c : CLIPS) {
+            centers.add(new int[] {c.x() + c.width() / 2, c.y() + c.height() / 2});
+        }
+        return centers;
+    }
 }

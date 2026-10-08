@@ -1874,7 +1874,20 @@ public final class DevEndToEnd {
                         && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(longNetwork)),
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", rede "
                         + routerScreen().getMenu().snapshot().network(ResourceType.ITEM)));
-        list.add(clipCheck("pt: roteador mínimo"));
+        list.add(new Step("pt: nome longo cortado com tooltip inteiro", STEP_TIMEOUT_MS, () -> {
+            int[] center = GuiText.firstClipCenter();
+            if (center != null) {
+                moveMouse(center[0], center[1]);
+            }
+        }, () -> {
+            for (int[] c : GuiText.clipCenters()) {
+                Component full = GuiText.clipAt(c[0], c[1]);
+                if (full != null && full.getString().contains(LONG_NETWORK)) {
+                    return true;
+                }
+            }
+            return false;
+        }, () -> GuiText.clipCount() + " texto(s) cortado(s), nenhum com o nome longo inteiro"));
         list.add(capture("1d-roteador-pt-min"));
         list.add(new Step("pt: roteador no máximo", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(10_000, 10_000),

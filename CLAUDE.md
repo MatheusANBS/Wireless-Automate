@@ -42,7 +42,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
 | `compat/mekanism/`, `network/Chemicals.java`, `network/ChemicalTransfer.java` | Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism |
 | `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
-| `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...`, `/wa bench ...` e `/wa storage list` e `recover` (`StorageCommand`: devolve como item o conteúdo de um armazenamento que sumiu, no tier gravado) |
+| `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` (os tipos são os do registro, inclusive `chemical` com o Mekanism), `/wa bench ...` e `/wa storage list` e `recover` (`StorageCommand`: devolve como item o conteúdo de um armazenamento que sumiu, no tier gravado) |
 | `menu/RouterMenu.java`, `RouterSnapshot.java`, `RemoteRouterMenu.java` | Menu da tela do roteador (slots de cartão da face selecionada e o do upgrade de chunk loading), o snapshot que o servidor manda só com a tela aberta e a mesma tela aberta à distância pelo Tablet |
 | `menu/Tablet*`, `Linker*` | Menus e snapshots das telas do Tablet e do Vinculador (o Configurador não tem tela) |
 | `menu/StorageList*`, `ListKind`, `StorageBatteryMenu`, `StorageFilterTarget` | Telas dos armazenamentos: a lista genérica do Baú e dos Tanques (`StorageListMenu<K>` com a visão `StorageListView<K>`; só o inventário do jogador como slots, só as diferenças por tipo a cada 5 ticks e com a tela aberta, cliques validados no servidor; `ListKind` diz como cada chave viaja e se compara), a da Bateria (estado pelo `BatteryStatePayload`) e o filtro de entrada na tela de filtro |
@@ -71,7 +71,7 @@ Recursos em `src/main/resources/`:
 ./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism e GuideME, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
-./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; alguns minutos, com as capturas do guia)
+./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; alguns minutos, com as capturas do guia; força a escala 2 da interface quando a janela é pequena e faz uma volta em pt_br com rede de nome longo, conferindo o tooltip dos textos cortados)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ```
 

@@ -1101,16 +1101,23 @@ public final class DevEndToEnd {
     private static BlockPos showSourceJar;
     private static final List<BlockPos> showTanks = new ArrayList<>();
 
-    /** Metade da largura da casa (paredes em x = ±12) e as paredes norte e sul. */
+    /** Metade da largura da casa (paredes em x = ±12) e as paredes norte e sul (o salão dos tiers no fundo). */
     private static final int HOUSE_X = 12;
-    private static final int HOUSE_NORTH = -18;
+    private static final int HOUSE_NORTH = -27;
+    /** Linha do salão dos tiers: os oito roteadores em x = -7..7, cada um sobre o bloco do seu material. */
+    private static final int TIER_HALL_Z = -24;
+
+    /** O tier do Allthemodium se o mod está no cliente de dev, senão o substituto (a vitrine roda sem ele também). */
+    private static RouterTier atm(RouterTier tier, RouterTier fallback) {
+        return tier.loaded() ? tier : fallback;
+    }
     private static final int HOUSE_SOUTH = -2;
 
     /**
      * Fotos da página do CurseForge, numa casa de quartzo sem teto, de dia: a linha de fornalhas
      * (oeste), a galeria dos cinco armazenamentos com fluxo de verdade para um cofre sob o piso
-     * (norte), a vitrine dos itens do mod em pedestais (centro) e o laboratório do Ars Nouveau com
-     * os quatro tiers do Tanque de Source (leste). Fotografa a casa inteira, cada ala e as telas. As
+     * (centro-norte), o salão dos oito tiers (fundo), a vitrine dos itens do mod em pedestais (centro)
+     * e o laboratório do Ars Nouveau com quatro tiers do Tanque de Source (leste). Fotografa a casa inteira, cada ala e as telas. As
      * imagens finais saem de scripts/curseforge/gerar_imagens.py.
      */
     private static List<Step> showcase() {
@@ -1120,7 +1127,7 @@ public final class DevEndToEnd {
                         && showRouters.stream().allMatch(DevEndToEnd::clientSees),
                 () -> showRouters.size() + " roteadores"));
         // A casa inteira, de cima, vista do jardim.
-        list.add(showLook("câmera na casa", 0, 11, 1.5, 0, 0, -10.5, false));
+        list.add(showLook("câmera na casa", 0, 17, 4.5, 0, 0, -14.5, false));
         list.add(wait("chunks e itens", 100));
         list.add(capture("s0-casa"));
         // A linha de fornalhas, da ala oeste.
@@ -1224,6 +1231,10 @@ public final class DevEndToEnd {
                 return null;
             });
         }, () -> Minecraft.getInstance().player.getInventory().isEmpty(), () -> "inventário"));
+        // O salão dos tiers, visto de trás da galeria dos armazenamentos.
+        list.add(showLook("câmera no salão dos tiers", 0, 1.1, -16.9, 0, 2.3, -24, false));
+        list.add(wait("salão dos tiers", 20));
+        list.add(capture("s15-tiers"));
         // A vitrine dos itens, de perto.
         list.add(showLook("câmera na vitrine", 0, 4.2, -5, 0, 0.8, -10.5, false));
         list.add(wait("vitrine", 20));
@@ -1371,6 +1382,7 @@ public final class DevEndToEnd {
             showcaseSmelting(server, level, smelting.id());
             showcaseStorage(server, level, storage.id());
             showcaseDisplay(server);
+            showcaseTiers(server, level, data.create(player.getUUID(), "Tier Hall").id());
             if (StorageKind.SOURCE_TANK.loaded()) {
                 showcaseArcane(server, level, arcane.id());
             }
@@ -1415,7 +1427,7 @@ public final class DevEndToEnd {
             put(level, post[0], 1, post[1], Blocks.POLISHED_DEEPSLATE_WALL.defaultBlockState());
             put(level, post[0], 2, post[1], Blocks.LANTERN.defaultBlockState());
         }
-        for (int[] tree : new int[][] {{-17, -4}, {17, -4}, {-17, -16}, {17, -16}}) {
+        for (int[] tree : new int[][] {{-17, -4}, {17, -4}, {-17, -15}, {17, -15}, {-17, -26}, {17, -26}}) {
             cherryTree(level, tree[0], tree[1]);
         }
         net.minecraft.world.level.block.Block[] flowers = {Blocks.ALLIUM, Blocks.OXEYE_DAISY, Blocks.CORNFLOWER,
@@ -1559,11 +1571,12 @@ public final class DevEndToEnd {
     }
 
     /**
-     * Ala oeste: cinco fornalhas acesas contra a parede, uma por tier (a do meio repete o Elite), com
+     * Ala oeste: cinco fornalhas acesas contra a parede, cada uma com um tier (Básico ao Allthemodium), com
      * filtro de minérios e carvão, o baú de entrada cheio, um barril e o baú de saída.
      */
     private static void showcaseSmelting(MinecraftServer server, ServerLevel level, UUID network) {
-        String[] tiers = {"basic", "advanced", "elite", "ultimate", "elite"};
+        String[] tiers = {"basic", "advanced", "elite", "emerald",
+                atm(RouterTier.ALLTHEMODIUM, RouterTier.ULTIMATE).getSerializedName()};
         Filter ores = new Filter(Filter.ListMode.WHITELIST, false, List.of(
                 new FilterEntry.TagEntry(ResourceLocation.parse("c:ores"), 0),
                 new FilterEntry.ItemEntry(new ItemStack(Items.RAW_IRON), 0),
@@ -1599,14 +1612,15 @@ public final class DevEndToEnd {
     }
 
     /**
-     * Ala norte: os armazenamentos do mod numa galeria (Baú Ultimate com dezenas de tipos e milhões de
+     * Ala norte: os armazenamentos do mod numa galeria, em tiers variados (Baú Unobtainium com dezenas de tipos e milhões de
      * itens, Tanque, Bateria, Tanque Químico com o Mekanism e Tanque de Source com o Ars), cada um com
      * um roteador Avançado que tira para um igual Ultimate sob o piso: o fluxo dura a sessão inteira e
      * dá números de verdade ao Tablet.
      */
     private static void showcaseStorage(MinecraftServer server, ServerLevel level, UUID network) {
         StorageKind[] kinds = StorageKind.values();
-        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.EMERALD, RouterTier.ULTIMATE, RouterTier.EMERALD, RouterTier.EMERALD};
+        RouterTier[] tiers = {atm(RouterTier.UNOBTAINIUM, RouterTier.ULTIMATE), atm(RouterTier.VIBRANIUM, RouterTier.EMERALD),
+                RouterTier.ULTIMATE, atm(RouterTier.ALLTHEMODIUM, RouterTier.EMERALD), RouterTier.EMERALD};
         String[] names = {"Main Storage", "Water Tank", "Base Battery", "Hydrogen", "Source Reserve"};
         for (int i = 0; i < kinds.length; i++) {
             if (!kinds[i].loaded()) {
@@ -1667,7 +1681,9 @@ public final class DevEndToEnd {
                 {"{id:\"wirelessautomate:linker\",count:1}", "{id:\"wirelessautomate:configurator\",count:1}",
                         "{id:\"wirelessautomate:network_tablet\",count:1}", "{id:\"wirelessautomate:filter_card\",count:1}",
                         guide},
-                {"{id:\"wirelessautomate:tier_core_advanced\",count:1}", "{id:\"wirelessautomate:tier_core_elite\",count:1}",
+                {"{id:\"wirelessautomate:tier_core_emerald\",count:1}",
+                        "{id:\"wirelessautomate:tier_core_" + atm(RouterTier.VIBRANIUM, RouterTier.ELITE).getSerializedName()
+                                + "\",count:1}",
                         "{id:\"wirelessautomate:tier_core_ultimate\",count:1}",
                         "{id:\"wirelessautomate:chunk_loader_upgrade\",count:1}", "{id:\"wirelessautomate:router\",count:1}"}};
         int[] zs = {-12, -9};
@@ -1684,9 +1700,50 @@ public final class DevEndToEnd {
     }
 
     /**
+     * Fundo da casa: o salão dos tiers. Os oito roteadores em fila (Básico à esquerda), cada um sobre um
+     * pedestal com o bloco do material do tier (ferro, ouro, diamante, esmeralda, os três metais do
+     * Allthemodium e netherita) e o Cartão de Upgrade flutuando em cima; tapete laranja sob os do ATM.
+     * Sem o Allthemodium, os três do meio ficam de fora.
+     */
+    private static void showcaseTiers(MinecraftServer server, ServerLevel level, UUID network) {
+        String[] materials = {"minecraft:iron_block", "minecraft:gold_block", "minecraft:diamond_block",
+                "minecraft:emerald_block", "allthemodium:allthemodium_block", "allthemodium:vibranium_block",
+                "allthemodium:unobtainium_block", "minecraft:netherite_block"};
+        String[] names = {"Basic", "Advanced", "Elite", "Emerald", "Allthemodium", "Vibranium", "Unobtainium", "Ultimate"};
+        RouterTier[] tiers = RouterTier.values();
+        for (int x = -9; x <= 9; x++) {
+            for (int z = TIER_HALL_Z - 1; z <= TIER_HALL_Z + 1; z++) {
+                boolean atmBand = x >= 0 && x <= 6 && tiers[4].loaded();
+                put(level, x, 0, z, (atmBand ? Blocks.ORANGE_CARPET : Blocks.GRAY_CARPET).defaultBlockState());
+            }
+        }
+        for (int i = 0; i < tiers.length; i++) {
+            if (!tiers[i].loaded()) {
+                continue;
+            }
+            int x = -7 + 2 * i;
+            put(level, x, 0, TIER_HALL_Z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+            command(server, "setblock " + at(x, 1, TIER_HALL_Z) + " " + materials[i]);
+            BlockPos block = showBase.offset(x, 1, TIER_HALL_Z);
+            placeShowRouter(server, level, block, tiers[i].getSerializedName(), names[i] + " Router", network);
+            if (ModItems.TIER_CORES.containsKey(tiers[i])) {
+                command(server, String.format(java.util.Locale.ROOT,
+                        "summon minecraft:item_display %.2f %.2f %.2f {item:{id:\"wirelessautomate:tier_core_%s\",count:1},"
+                                + "billboard:\"center\",brightness:{sky:15,block:15},transformation:{left_rotation:[0f,0f,0f,1f],"
+                                + "right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[0.7f,0.7f,0.7f]}}",
+                        block.getX() + 0.5, block.getY() + 2.5, block.getZ() + 0.5, tiers[i].getSerializedName()));
+            }
+        }
+        // Lanternas no piso nas pontas da fila.
+        for (int x : new int[] {-9, 9}) {
+            put(level, x, -1, TIER_HALL_Z, Blocks.SEA_LANTERN.defaultBlockState());
+        }
+    }
+
+    /**
      * Ala leste, com o Ars: piso de pedra de Source, um Enchanting Apparatus com quatro pedestais,
      * Sourcelinks, uma Source Jar criativa cujo roteador manda a Source sem fio para um Tanque de
-     * Source e uma Source Jar, e os quatro tiers do Tanque de Source (vazio, 25%, 60% e cheio) junto à
+     * Source e uma Source Jar, e quatro tiers do Tanque de Source (vazio, 30%, 60% e cheio) junto à
      * parede sul.
      */
     private static void showcaseArcane(MinecraftServer server, ServerLevel level, UUID network) {
@@ -1720,9 +1777,14 @@ public final class DevEndToEnd {
         router(server, showSourceJar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.EXTRACT);
         router(server, tank.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
         router(server, jar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
-        // Quatro tiers, sem roteador, cada um num nível.
-        RouterTier[] tiers = SOURCE_TANK_TIERS;
-        long[] contents = SOURCE_TANK_CONTENTS;
+        // Quatro tiers, sem roteador, cada um num nível: vazio, 30%, 60% e cheio.
+        RouterTier[] tiers = {RouterTier.ELITE, RouterTier.EMERALD, atm(RouterTier.VIBRANIUM, RouterTier.ADVANCED),
+                RouterTier.ULTIMATE};
+        long[] contents = new long[4];
+        for (int i = 1; i < 3; i++) {
+            contents[i] = io.github.matheusanbs.wirelessautomate.Config.storageCapacity(StorageKind.SOURCE_TANK, tiers[i]) * 3 * i / 10;
+        }
+        contents[3] = 3_000_000_000L;
         for (int i = 0; i < 4; i++) {
             // Vistos de dentro (olhando para o sul), o Básico fica à esquerda.
             BlockPos pos = showBase.offset(11 - 2 * i, 0, -5);

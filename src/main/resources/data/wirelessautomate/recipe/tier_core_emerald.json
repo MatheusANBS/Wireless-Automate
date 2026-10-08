@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BYB",
+    "RCR",
+    "BYB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:emerald_block"
+    },
+    "Y": {
+      "item": "minecraft:ender_eye"
+    },
+    "R": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "C": {
+      "item": "wirelessautomate:tier_core_elite"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_emerald",
+    "count": 1
+  }
+}

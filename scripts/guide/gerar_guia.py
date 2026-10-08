@@ -78,8 +78,10 @@ SCENE_TIERS = '''<GameScene zoom="3" interactive={true}>
   <Block id="wirelessautomate:router" x="2" y="1" z="0" p:facing="up" p:tier="advanced" />
   <Block id="minecraft:barrel" x="4" y="0" z="0" p:facing="up" />
   <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="elite" />
-  <Block id="minecraft:blast_furnace" x="6" y="0" z="0" />
-  <Block id="wirelessautomate:router" x="6" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <Block id="minecraft:smoker" x="6" y="0" z="0" />
+  <Block id="wirelessautomate:router" x="6" y="1" z="0" p:facing="up" p:tier="emerald" />
+  <Block id="minecraft:blast_furnace" x="8" y="0" z="0" />
+  <Block id="wirelessautomate:router" x="8" y="1" z="0" p:facing="up" p:tier="ultimate" />
   <BlockAnnotation x="0" y="1" z="0" color="#c8ccd2">
     {BASIC}
   </BlockAnnotation>
@@ -89,7 +91,10 @@ SCENE_TIERS = '''<GameScene zoom="3" interactive={true}>
   <BlockAnnotation x="4" y="1" z="0" color="#45d6cc">
     {ELITE}
   </BlockAnnotation>
-  <BlockAnnotation x="6" y="1" z="0" color="#a06bff">
+  <BlockAnnotation x="6" y="1" z="0" color="#2fdc62">
+    {EMERALD}
+  </BlockAnnotation>
+  <BlockAnnotation x="8" y="1" z="0" color="#a06bff">
     {ULTIMATE}
   </BlockAnnotation>
   <IsometricCamera yaw="200" pitch="30" />
@@ -164,24 +169,85 @@ SCENE_AREA = '''<GameScene zoom="3" interactive={true}>
 
 # ------------------------------------------------------------------ textos repetidos
 
-TIER_TABLE = {
-    'pt': '''| Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
-| --- | --- | --- | --- | --- | --- |
-| **Básico** | 512 | 32.000 | 16.000 | 1.000 | 128 blocos |
-| **Avançado** | 8.192 | 512.000 | 256.000 | 16.000 | 1.024 blocos |
-| **Elite** | 131.072 | 8.000.000 | 4.000.000 | 256.000 | A dimensão inteira |
-| **Ultimate** | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões |
-
-Source só com o Ars Nouveau.''',
-    'en': '''| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
-| --- | --- | --- | --- | --- | --- |
-| **Basic** | 512 | 32,000 | 16,000 | 1,000 | 128 blocks |
-| **Advanced** | 8,192 | 512,000 | 256,000 | 16,000 | 1,024 blocks |
-| **Elite** | 131,072 | 8,000,000 | 4,000,000 | 256,000 | The whole dimension |
-| **Ultimate** | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
-
-Source only with Ars Nouveau.''',
+# Tiers na ordem do RouterTier: id, nome pt, nome en, só com o Allthemodium. Os números abaixo são os padrões da
+# config (ResourceType e StorageKind); 0 = sem limite.
+TIERS = [
+    ('basic', 'Básico', 'Basic', False),
+    ('advanced', 'Avançado', 'Advanced', False),
+    ('elite', 'Elite', 'Elite', False),
+    ('emerald', 'Esmeralda', 'Emerald', False),
+    ('allthemodium', 'Allthemodium', 'Allthemodium', True),
+    ('vibranium', 'Vibranium', 'Vibranium', True),
+    ('unobtainium', 'Unobtainium', 'Unobtainium', True),
+    ('ultimate', 'Ultimate', 'Ultimate', False),
+]
+RATES = {  # por tier: itens/s, fluido e químico mB/s, energia FE/t, Source/s
+    'item': [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0],
+    'fluid': [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0],
+    'energy': [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 262_144_000, 0],
+    'source': [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0],
 }
+RANGE = {
+    'pt': ['64 blocos', '512 blocos', 'A dimensão inteira'] + ['Todas as dimensões'] * 5,
+    'en': ['64 blocks', '512 blocks', 'The whole dimension'] + ['Every dimension'] * 5,
+}
+CAPACITY = {
+    'chest': [32_768, 262_144, 2_097_152, 16_777_216, 134_217_728, 1_073_741_824, 8_589_934_592, 0],
+    'tank': [256_000, 2_048_000, 16_384_000, 131_072_000, 1_048_576_000, 8_388_608_000, 67_108_864_000, 0],
+    'battery': [1_000_000, 8_000_000, 64_000_000, 512_000_000, 4_096_000_000, 32_768_000_000,
+                262_144_000_000, 0],
+    'source_tank': [10_000, 80_000, 640_000, 5_120_000, 40_960_000, 327_680_000, 2_621_440_000, 0],
+}
+UNLIMITED = {'pt': 'Sem limite', 'en': 'Unlimited'}
+ATM_NOTE = {'pt': '¹ Só com o mod Allthemodium.', 'en': '¹ Only with the Allthemodium mod.'}
+
+
+def num(lang, n):
+    """Número com o separador de milhar do idioma, ou "sem limite" para 0."""
+    if n == 0:
+        return UNLIMITED[lang]
+    return f'{n:,}'.replace(',', '.' if lang == 'pt' else ',')
+
+
+def tier_name(lang, i):
+    _, pt, en, atm = TIERS[i]
+    return (pt if lang == 'pt' else en) + ('¹' if atm else '')
+
+
+def tier_table(lang):
+    head = {'pt': '| Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |',
+            'en': '| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |'}[lang]
+    rows = [head, '| --- | --- | --- | --- | --- | --- |']
+    for i in range(len(TIERS)):
+        rows.append(f'| **{tier_name(lang, i)}** | ' + ' | '.join(num(lang, RATES[k][i]) for k in RATES)
+                    + f' | {RANGE[lang][i]} |')
+    tail = {'pt': 'Source só com o Ars Nouveau.', 'en': 'Source only with Ars Nouveau.'}[lang]
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang] + ' ' + tail
+
+
+def capacity_table(lang, kind, unit):
+    rows = [f'| Tier | {unit} |', '| --- | --- |']
+    for i in range(len(TIERS)):
+        rows.append(f'| **{tier_name(lang, i)}** | {num(lang, CAPACITY[kind][i])} |')
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
+
+
+def card_table(lang):
+    """O antes e o depois de cada cartão, na escada com o Allthemodium."""
+    head = {'pt': '| Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |',
+            'en': '| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |'}[lang]
+    rows = [head, '| --- | --- | --- | --- | --- | --- |']
+    for i in range(1, len(TIERS)):
+        cells = [f'{num(lang, RATES[k][i - 1])} → **{num(lang, RATES[k][i])}**' for k in RATES]
+        before, after = RANGE[lang][i - 1].lower(), RANGE[lang][i].lower()
+        reach = after if before == after else f'{before} → **{after}**'
+        rows.append(f"| {item('tier_core_' + TIERS[i][0])} **{tier_name(lang, i)}** | " + ' | '.join(cells)
+                    + f' | {reach} |')
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
+
+
+TIER_TABLE = {'pt': tier_table('pt'), 'en': tier_table('en')}
+CARD_IMAGES = '\n'.join(f'  <ItemImage id="wirelessautomate:tier_core_{t[0]}" scale="2" />' for t in TIERS[1:])
 
 PAGES = []
 
@@ -450,6 +516,7 @@ Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D 
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'emerald'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
 </Row>
 
@@ -458,7 +525,7 @@ O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra o
 
 ''' + TIER_TABLE['pt'] + '''
 
-''' + fill(SCENE_TIERS, BASIC='Básico', ADVANCED='Avançado', ELITE='Elite', ULTIMATE='Ultimate') + '''
+''' + fill(SCENE_TIERS, BASIC='Básico', ADVANCED='Avançado', ELITE='Elite', EMERALD='Esmeralda', ULTIMATE='Ultimate') + '''
 
 No criativo, o clique do meio pega o roteador já no tier do bloco.
 ''', front('Wireless Router', 'wirelessautomate:router', 2, item_ids=['wirelessautomate:router']) + '''
@@ -530,6 +597,7 @@ Drag the right edge, the bottom edge or the corner to make the screen bigger; th
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'emerald'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
 </Row>
 
@@ -538,7 +606,7 @@ Your server may use different values: the upgrade card's tooltip shows yours.
 
 ''' + TIER_TABLE['en'] + '''
 
-''' + fill(SCENE_TIERS, BASIC='Basic', ADVANCED='Advanced', ELITE='Elite', ULTIMATE='Ultimate') + '''
+''' + fill(SCENE_TIERS, BASIC='Basic', ADVANCED='Advanced', ELITE='Elite', EMERALD='Emerald', ULTIMATE='Ultimate') + '''
 
 In creative, middle-click picks the router in the block's tier.
 ''')
@@ -547,30 +615,26 @@ In creative, middle-click picks the router in the block's tier.
 # Cartões de upgrade
 # =====================================================================================
 page('upgrade-cards.md', front('Cartões de Upgrade', 'wirelessautomate:tier_core_advanced', 3, item_ids=[
-    'wirelessautomate:tier_core_advanced', 'wirelessautomate:tier_core_elite', 'wirelessautomate:tier_core_ultimate']) + '''
+    f'wirelessautomate:tier_core_{t[0]}' for t in TIERS[1:]]) + '''
 # Cartões de Upgrade
 
 <Row gap="8">
-  <ItemImage id="wirelessautomate:tier_core_advanced" scale="2" />
-  <ItemImage id="wirelessautomate:tier_core_elite" scale="2" />
-  <ItemImage id="wirelessautomate:tier_core_ultimate" scale="2" />
+''' + CARD_IMAGES + '''
 </Row>
 
-Todo roteador nasce **Básico**. Cada cartão sobe **um** tier: Básico → Avançado → Elite → Ultimate.
-A configuração do roteador (faces, filtros, redes) não se perde.
+Todo roteador nasce **Básico**. Cada cartão sobe **um** tier: Básico → Avançado → Elite →
+Esmeralda → Ultimate. Com o mod **Allthemodium**, entram três degraus entre a Esmeralda e o
+Ultimate: Allthemodium → Vibranium → Unobtainium. A configuração do roteador (faces, filtros, redes)
+não se perde.
 
 ## O que cada cartão aumenta
 
 Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor. Químicos usam o
 limite de fluido. Source só com o Ars Nouveau.
 
-| Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
-| --- | --- | --- | --- | --- | --- |
-| ''' + item('tier_core_advanced') + ''' **Avançado** | 512 → **8.192** | 32.000 → **512.000** | 16.000 → **256.000** | 1.000 → **16.000** | 128 → **1.024 blocos** |
-| ''' + item('tier_core_elite') + ''' **Elite** | 8.192 → **131.072** | 512.000 → **8.000.000** | 256.000 → **4.000.000** | 16.000 → **256.000** | 1.024 → **a dimensão inteira** |
-| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | 256.000 → **sem limite** | **todas as dimensões** |
+''' + card_table('pt') + '''
 
-Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de quem **envia**.
+Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Como usar
 
@@ -590,32 +654,35 @@ perder o conteúdo. A capacidade de cada tier está na página de cada um.
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
+<RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
+
+Com o Allthemodium, os cartões dele pedem o cartão anterior no centro e os materiais do próprio
+metal: lingotes e blocos de Allthemodium; lingotes, blocos e liga Vibranium-Allthemodium; lingotes,
+blocos e liga Unobtainium-Vibranium. O Ultimate passa a pedir o Cartão Unobtainium e, no ATM10 (com
+o All The Tweaks), fragmentos de ATM Star, ovo do dragão e blocos de liga Unobtainium-Allthemodium.
+O JEI mostra as receitas do seu pack.
 ''', front('Upgrade Cards', 'wirelessautomate:tier_core_advanced', 3, item_ids=[
-    'wirelessautomate:tier_core_advanced', 'wirelessautomate:tier_core_elite', 'wirelessautomate:tier_core_ultimate']) + '''
+    f'wirelessautomate:tier_core_{t[0]}' for t in TIERS[1:]]) + '''
 # Upgrade Cards
 
 <Row gap="8">
-  <ItemImage id="wirelessautomate:tier_core_advanced" scale="2" />
-  <ItemImage id="wirelessautomate:tier_core_elite" scale="2" />
-  <ItemImage id="wirelessautomate:tier_core_ultimate" scale="2" />
+''' + CARD_IMAGES + '''
 </Row>
 
 Every router starts as **Basic**. Each card raises **one** tier: Basic → Advanced → Elite →
-Ultimate. The router's configuration (faces, filters, networks) is kept.
+Emerald → Ultimate. With the **Allthemodium** mod, three steps go between Emerald and Ultimate:
+Allthemodium → Vibranium → Unobtainium. The router's configuration (faces, filters, networks) is
+kept.
 
 ## What each card raises
 
 Per face and per type. The card's tooltip shows your server's values. Chemicals use the fluid
 limit. Source only with Ars Nouveau.
 
-| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
-| --- | --- | --- | --- | --- | --- |
-| ''' + item('tier_core_advanced') + ''' **Advanced** | 512 → **8,192** | 32,000 → **512,000** | 16,000 → **256,000** | 1,000 → **16,000** | 128 → **1,024 blocks** |
-| ''' + item('tier_core_elite') + ''' **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 16,000 → **256,000** | 1,024 → **the whole dimension** |
-| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | 256,000 → **unlimited** | **every dimension** |
+''' + card_table('en') + '''
 
-Each step multiplies throughput by 16. Range and dimensions follow the **sender's** tier.
+Each step multiplies throughput by 8. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 
@@ -635,7 +702,14 @@ keeping their contents. Each tier's capacity is on each one's page.
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
+<RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
+
+With Allthemodium, its cards take the previous card in the middle and the metal's own materials:
+Allthemodium ingots and blocks; Vibranium ingots, blocks and Vibranium-Allthemodium alloy;
+Unobtainium ingots, blocks and Unobtainium-Vibranium alloy. Ultimate then takes the Unobtainium Card
+and, in ATM10 (with All The Tweaks), ATM Star shards, a dragon egg and Unobtainium-Allthemodium alloy
+blocks. JEI shows your pack's recipes.
 ''')
 
 # =====================================================================================
@@ -678,7 +752,7 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 | Situação | O que acontece |
 | --- | --- |
 | Destino longe demais | Fica de fora daquela origem. O alcance depende do tier de quem envia ([Roteador](router.md)). |
-| Outra dimensão | Só com origem **Ultimate**. |
+| Outra dimensão | Só com origem **Esmeralda** ou acima. |
 | Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
 | Quer manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
 ''', front('Networks', 'wirelessautomate:linker', 4) + '''
@@ -718,7 +792,7 @@ the same type on the same network trades. Who sends and who receives comes from 
 | Situation | What happens |
 | --- | --- |
 | Destination too far | Left out for that source. Range depends on the sender's tier ([Router](router.md)). |
-| Another dimension | Only from an **Ultimate** source. |
+| Another dimension | Only from an **Emerald** or higher source. |
 | Unloaded chunk | The route pauses and resumes on its own when the chunk loads. |
 | Keep it working far away | Use the [Chunk Loading Upgrade](chunk-loading.md). |
 ''')
@@ -1327,12 +1401,7 @@ Wireless, um tipo inteiro passa **de uma vez**, sem o teto de uma pilha por vez 
 
 Total de itens, todos os tipos somados. O tooltip do item mostra o valor do seu servidor.
 
-| Tier | Itens |
-| --- | --- |
-| **Básico** | 262.144 |
-| **Avançado** | 16.777.216 |
-| **Elite** | 1.073.741.824 |
-| **Ultimate** | Sem limite |
+''' + capacity_table('pt', 'chest', 'Itens') + '''
 
 Sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador, no mundo ou na
 bancada, **sem perder o conteúdo**.
@@ -1404,12 +1473,7 @@ regular chests.
 
 Total items, all types added up. The item's tooltip shows your server's value.
 
-| Tier | Items |
-| --- | --- |
-| **Basic** | 262,144 |
-| **Advanced** | 16,777,216 |
-| **Elite** | 1,073,741,824 |
-| **Ultimate** | Unlimited |
+''' + capacity_table('en', 'chest', 'Items') + '''
 
 Raise the tier with the same [Upgrade Cards](upgrade-cards.md) as the router, in the world or in a
 crafting table, **keeping the contents**.
@@ -1514,12 +1578,7 @@ ele troca bilhões de mB de uma vez.
 
 Total em mB, todos os fluidos somados.
 
-| Tier | mB |
-| --- | --- |
-| **Básico** | 1.000.000 |
-| **Avançado** | 64.000.000 |
-| **Elite** | 4.000.000.000 |
-| **Ultimate** | Sem limite |
+''' + capacity_table('pt', 'tank', 'mB') + '''
 
 ## Baldes e recipientes
 
@@ -1558,12 +1617,7 @@ billions of mB at once.
 
 Total in mB, all fluids added up.
 
-| Tier | mB |
-| --- | --- |
-| **Basic** | 1,000,000 |
-| **Advanced** | 64,000,000 |
-| **Elite** | 4,000,000,000 |
-| **Ultimate** | Unlimited |
+''' + capacity_table('en', 'tank', 'mB') + '''
 
 ## Buckets and containers
 
@@ -1602,12 +1656,7 @@ Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um
 
 ## Capacidade
 
-| Tier | FE |
-| --- | --- |
-| **Básico** | 16.000.000 |
-| **Avançado** | 1.000.000.000 |
-| **Elite** | 64.000.000.000 |
-| **Ultimate** | Sem limite |
+''' + capacity_table('pt', 'battery', 'FE') + '''
 
 ## A tela
 
@@ -1633,12 +1682,7 @@ Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a ro
 
 ## Capacity
 
-| Tier | FE |
-| --- | --- |
-| **Basic** | 16,000,000 |
-| **Advanced** | 1,000,000,000 |
-| **Elite** | 64,000,000,000 |
-| **Ultimate** | Unlimited |
+''' + capacity_table('en', 'battery', 'FE') + '''
 
 ## The screen
 
@@ -1667,7 +1711,9 @@ Mekanism instalado. Preso a um roteador na aba **Químicos**, um tipo inteiro pa
 
 ## Capacidade
 
-A mesma do Tanque: 1.000.000, 64.000.000 e 4.000.000.000 mB, e sem limite no Ultimate.
+A mesma do [Tanque](wireless-tank.md), em mB, todos os químicos somados.
+
+''' + capacity_table('pt', 'tank', 'mB') + '''
 
 ## Recipientes do Mekanism
 
@@ -1701,7 +1747,9 @@ Attached to a router on the **Chemicals** tab, a whole type moves at once.
 
 ## Capacity
 
-The same as the Tank: 1,000,000, 64,000,000 and 4,000,000,000 mB, and unlimited on Ultimate.
+The same as the [Tank](wireless-tank.md), in mB, all chemicals added up.
+
+''' + capacity_table('en', 'tank', 'mB') + '''
 
 ## Mekanism containers
 
@@ -1806,7 +1854,7 @@ o resto do mod funciona igual.
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
 | Rede própria na aba | Sim. |
 | Vinculador e Configurador | Sim: o chip **Source** e o atalho na roda do mouse. |
-| Vazão | Por tier: Básico 1.000/s, Avançado 16.000/s, Elite 256.000/s, Ultimate sem limite. |
+| Vazão | Por tier: Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite (tabela completa no [Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos, como a energia. |
 
 ## Exemplo: Source dos Sourcelinks até o Enchanting Apparatus
@@ -1833,7 +1881,7 @@ and the rest of the mod works the same.
 | Mode, priority and redstone per face | Yes, like the other tabs. |
 | Its own network on the tab | Yes. |
 | Linker and Configurator | Yes: the **Source** chip and the mouse wheel shortcut. |
-| Throughput | Per tier: Basic 1,000/s, Advanced 16,000/s, Elite 256,000/s, Ultimate unlimited. |
+| Throughput | Per tier: Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited (full table on the [Router](router.md) page). |
 | Filter and Filter Card | No: Source has no types, like energy. |
 
 ## Example: Source from the Sourcelinks to the Enchanting Apparatus
@@ -1884,12 +1932,7 @@ filtro: Source é uma só.
 
 ## Capacidade
 
-| Tier | Source |
-| --- | --- |
-| **Básico** | 160.000 |
-| **Avançado** | 2.560.000 |
-| **Elite** | 40.960.000 |
-| **Ultimate** | Sem limite |
+''' + capacity_table('pt', 'source_tank', 'Source') + '''
 
 ## Em comum com o Baú
 
@@ -1935,12 +1978,7 @@ filter: Source is one thing.
 
 ## Capacity
 
-| Tier | Source |
-| --- | --- |
-| **Basic** | 160,000 |
-| **Advanced** | 2,560,000 |
-| **Elite** | 40,960,000 |
-| **Ultimate** | Unlimited |
+''' + capacity_table('en', 'source_tank', 'Source') + '''
 
 ## Shared with the Chest
 

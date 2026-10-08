@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IAI",
+    "BCB",
+    "IAI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/vibranium"
+    },
+    "A": {
+      "tag": "c:ingots/vibranium_allthemodium_alloy"
+    },
+    "B": {
+      "tag": "c:storage_blocks/vibranium"
+    },
+    "C": {
+      "item": "wirelessautomate:tier_core_allthemodium"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_vibranium",
+    "count": 1
+  }
+}

@@ -40,6 +40,9 @@ public class TierCoreItem extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
+        if (!tier.loaded()) {
+            return InteractionResult.PASS;
+        }
         if (!RouterBlock.tryUpgrade(context.getLevel(), context.getClickedPos(), tier)
                 && !StorageBlock.tryUpgrade(context.getLevel(), context.getClickedPos(), tier)) {
             return InteractionResult.PASS;
@@ -56,7 +59,13 @@ public class TierCoreItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        RouterTier from = RouterTier.values()[tier.ordinal() - 1];
+        if (!tier.loaded()) {
+            tooltip.add(Component.translatable(KEY + "requires").withStyle(ChatFormatting.RED));
+        }
+        RouterTier from = tier.previous();
+        if (from == null) {
+            return;
+        }
         tooltip.add(Component.translatable(KEY + "upgrades", Component.translatable(from.translationKey()),
                 Component.translatable(tier.translationKey())).withStyle(ChatFormatting.GRAY));
         tooltip.add(line("items", rate(from, Stat.ITEMS), rate(tier, Stat.ITEMS)));

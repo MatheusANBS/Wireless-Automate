@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "wirelessautomate:block/storage_tank_unobtainium_side",
+    "top": "wirelessautomate:block/storage_tank_unobtainium_top",
+    "bottom": "wirelessautomate:block/storage_unobtainium_bottom",
+    "particle": "wirelessautomate:block/storage_tank_unobtainium_side"
+  }
+}

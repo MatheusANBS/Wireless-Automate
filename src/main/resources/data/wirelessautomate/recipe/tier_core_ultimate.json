@@ -1,4 +1,13 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:mod_loaded",
+        "modid": "allthemodium"
+      }
+    }
+  ],
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
@@ -7,10 +16,18 @@
     "XBX"
   ],
   "key": {
-    "D": { "item": "minecraft:dragon_egg" },
-    "E": { "item": "wirelessautomate:tier_core_elite" },
-    "B": { "item": "minecraft:netherite_block" },
-    "X": { "item": "minecraft:echo_shard" }
+    "D": {
+      "item": "minecraft:dragon_egg"
+    },
+    "E": {
+      "item": "wirelessautomate:tier_core_emerald"
+    },
+    "B": {
+      "item": "minecraft:netherite_block"
+    },
+    "X": {
+      "item": "minecraft:echo_shard"
+    }
   },
   "result": {
     "id": "wirelessautomate:tier_core_ultimate",

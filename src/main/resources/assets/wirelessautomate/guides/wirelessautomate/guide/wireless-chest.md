@@ -43,10 +43,16 @@ Total items, all types added up. The item's tooltip shows your server's value.
 
 | Tier | Items |
 | --- | --- |
-| **Basic** | 262,144 |
-| **Advanced** | 16,777,216 |
-| **Elite** | 1,073,741,824 |
+| **Basic** | 32,768 |
+| **Advanced** | 262,144 |
+| **Elite** | 2,097,152 |
+| **Emerald** | 16,777,216 |
+| **Allthemodium¹** | 134,217,728 |
+| **Vibranium¹** | 1,073,741,824 |
+| **Unobtainium¹** | 8,589,934,592 |
 | **Ultimate** | Unlimited |
+
+¹ Only with the Allthemodium mod.
 
 Raise the tier with the same [Upgrade Cards](upgrade-cards.md) as the router, in the world or in a
 crafting table, **keeping the contents**.

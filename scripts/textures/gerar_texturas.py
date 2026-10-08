@@ -53,6 +53,12 @@ PALETAS: dict[str, dict[str, str]] = {
     "roteador_advanced": {"4": "#ffe27d", "3": "#dcb257", "2": "#b88a2c", "1": "#916b1f", "0": "#644915"},
     "roteador_elite": {"4": "#a5f6ef", "3": "#5cc7c0", "2": "#2f9e98", "1": "#257d78", "0": "#185653"},
     "roteador_ultimate": {"4": "#dcc3ff", "3": "#9b7ad8", "2": "#6e44b8", "1": "#573593", "0": "#3b2368"},
+    # Esmeralda: verde puro, puxado para o amarelo, para não confundir com o Vibranium.
+    "roteador_emerald": {"4": "#c4ffd6", "3": "#4ee87a", "2": "#1fbf4e", "1": "#128a37", "0": "#0a5c24"},
+    # Tiers do Allthemodium: tons tirados dos lingotes do próprio mod (os PNGs dele não são usados).
+    "roteador_allthemodium": {"4": "#fff07a", "3": "#ffc70c", "2": "#ff8b04", "1": "#cf5a13", "0": "#a92405"},
+    "roteador_vibranium": {"4": "#73ffb9", "3": "#26de88", "2": "#1bb38a", "1": "#0f5c7a", "0": "#0e3c78"},
+    "roteador_unobtainium": {"4": "#f6c2fb", "3": "#ea84f5", "2": "#d152e3", "1": "#a82ce3", "0": "#432a94"},
     # Lentes dos LEDs apagadas (energia, rede, atividade, cheio): a camada emissiva entra depois.
     "leds": {"E": "#5a4a1c", "e": "#3a3014", "N": "#1c4f55", "n": "#133438",
              "A": "#2c5426", "a": "#1d3819", "F": "#5c2424", "f": "#3c1818"},
@@ -70,6 +76,10 @@ PALETAS: dict[str, dict[str, str]] = {
     "cartao_advanced": {"4": "#fff0b0", "3": "#ffd365", "2": "#f2b234", "1": "#c7841c", "0": "#87540f"},
     "cartao_elite": {"4": "#d2fdf8", "3": "#86efe6", "2": "#45d6cc", "1": "#2aa39b", "0": "#196b66"},
     "cartao_ultimate": {"4": "#efe2ff", "3": "#c7a3ff", "2": "#a46cff", "1": "#7a45d6", "0": "#4f2896"},
+    "cartao_emerald": {"4": "#dcffe6", "3": "#7af59c", "2": "#2fdc62", "1": "#18a345", "0": "#0d6a2b"},
+    "cartao_allthemodium": {"4": "#ffffba", "3": "#ffe03e", "2": "#ffa60c", "1": "#e0700a", "0": "#a92405"},
+    "cartao_vibranium": {"4": "#b4ffd9", "3": "#73ffb9", "2": "#26de88", "1": "#178287", "0": "#0e3c78"},
+    "cartao_unobtainium": {"4": "#f9d6fd", "3": "#ea84f5", "2": "#d152e3", "1": "#a82ce3", "0": "#432a94"},
     "cartao_filtro": {"4": "#f4f7fa", "3": "#cdd5de", "2": "#a3aeba", "1": "#78838f", "0": "#525b65"},
     "funil": {"W": "#f2f8f5", "a": "#b3d3c4"},
     "cartao_chunk": {"4": "#e2ffc8", "3": "#b4f37f", "2": "#7fd34b", "1": "#509a2c", "0": "#2f641a"},
@@ -116,8 +126,14 @@ PALETAS: dict[str, dict[str, str]] = {
     "vidro_tanque": {"V": "#e6f6f7", "v": "#b9dde3", "e": "#7fb3c0"},
 }
 
-TIERS_ROTEADOR = ["basic", "advanced", "elite", "ultimate"]
-TIERS_CARTAO = ["advanced", "elite", "ultimate"]
+# A ordem do RouterTier (o predicado wirelessautomate:tier do modelo do item é a posição aqui).
+TIERS_ROTEADOR = ["basic", "advanced", "elite", "emerald", "allthemodium", "vibranium", "unobtainium", "ultimate"]
+TIERS_CARTAO = TIERS_ROTEADOR[1:]
+# Tiers do Allthemodium: cartão com os contatos no metal do tier, em vez de ouro.
+TIERS_ATM = ["allthemodium", "vibranium", "unobtainium"]
+# Marcas acesas na faixa do cartão: 1 a 4 na escada vanilla, 1 a 3 dentro da família do Allthemodium.
+MARCAS_CARTAO = {"advanced": 1, "elite": 2, "emerald": 3, "ultimate": 4,
+                 "allthemodium": 1, "vibranium": 2, "unobtainium": 3}
 
 
 def legenda(**mapa: str) -> dict[str, tuple[int, int, int, int]]:
@@ -451,19 +467,19 @@ def cubo_montado(topo: Image.Image, lado: Image.Image, s: int = 6) -> Image.Imag
 # Legenda: 4..0 = faixa; '?' = marca de nível na faixa; H P S D = placa (luz, base, sombra, fundo);
 # G g y = ouro; K k j = chip; i = pinos; c d e = núcleo do chip na cor do tier; L = grade; W a = funil.
 
-# Cartão de upgrade de tier: chip com o núcleo na cor do tier e 1 a 3 marcas acesas na faixa.
+# Cartão de upgrade de tier: chip com o núcleo na cor do tier e 1 a 4 marcas acesas na faixa.
 CARTAO_UPGRADE = [
     "................",
     "................",
     ".OOOOOOOOOOOOOO.",
     "O433HHHHHHHHHHPO",
-    "O322HPPiPPiPPPSO",
-    "O3?2HPKKKKKkPPSO",
-    "O322HPKkcdkjPPSO",
-    "O2?1HPKkdekjPPSO",
-    "O211HPkjjjjjPPSO",
-    "O2?1HPPiPPiPPPSO",
-    "O110HPGPGPGPGPSO",
+    "O3?2HPPiPPiPPPSO",
+    "O322HPKKKKKkPPSO",
+    "O3?2HPKkcdkjPPSO",
+    "O221HPKkdekjPPSO",
+    "O2?1HPkjjjjjPPSO",
+    "O211HPPiPPiPPPSO",
+    "O1?0HPGPGPGPGPSO",
     "O100HPgPgPgPgPSO",
     "O000SSySySySySDO",
     ".OOOOOOOOOOOOOO.",
@@ -512,10 +528,11 @@ CARTAO_FILTRO = [
 ]
 
 
-def cartao(grade: list[str], faixa: str, placa: str = "placa", pips: int = 0) -> Image.Image:
+def cartao(grade: list[str], faixa: str, placa: str = "placa", pips: int = 0,
+           contatos: str = "ouro") -> Image.Image:
     leg = legenda(O="contorno.O",
                   H=f"{placa}.4", P=f"{placa}.2", S=f"{placa}.1", D=f"{placa}.0",
-                  G="ouro.3", g="ouro.2", y="ouro.1",
+                  G=f"{contatos}.3", g=f"{contatos}.2", y=f"{contatos}.1",
                   K="chip.3", k="chip.2", j="chip.1", i="chip.p",
                   W="funil.W", a="funil.a")
     leg.update({t: rgb(PALETAS[faixa][t]) for t in "43210"})
@@ -1037,6 +1054,60 @@ def _grava_json(destino: Path, dados: dict) -> None:
     destino.write_text(json.dumps(dados, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
 
+ROTACOES_ROTEADOR = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "south": {"x": 90, "y": 180},
+                     "east": {"x": 90, "y": 90}, "west": {"x": 90, "y": 270}}
+
+
+def _sobreposicoes(modelo: str, sufixo: str = "") -> list[dict]:
+    """Overrides do modelo do item: o predicado wirelessautomate:tier é a posição do tier no enum."""
+    return [{"predicate": {"wirelessautomate:tier": n}, "model": f"{modelo}_{t}{sufixo}"}
+            for n, t in enumerate(TIERS_ROTEADOR[1:], start=1)]
+
+
+def modelos_tiers() -> None:
+    """Modelos de bloco, blockstates e modelos de item do roteador, dos armazenamentos e dos cartões, por tier.
+
+    O modelo do roteador (elementos e UVs) vem do router_basic.json, que é o molde escrito à mão; os outros
+    tiers só trocam as texturas.
+    """
+    molde = (MODELOS / "models/block/router_basic.json").read_text(encoding="utf-8")
+    variantes: dict[str, dict] = {}
+    for t in TIERS_ROTEADOR:
+        if t != "basic":
+            destino = MODELOS / f"models/block/router_{t}.json"
+            destino.write_text(molde.replace("router_basic_", f"router_{t}_"), encoding="utf-8", newline="\n")
+        for face, rot in ROTACOES_ROTEADOR.items():
+            variantes[f"facing={face},tier={t}"] = {"model": f"wirelessautomate:block/router_{t}", **rot}
+    _grava_json(MODELOS / "blockstates/router.json", {"variants": variantes})
+    _grava_json(MODELOS / "models/item/router.json", {
+        "parent": "wirelessautomate:block/router_basic",
+        "overrides": _sobreposicoes("wirelessautomate:block/router"),
+    })
+    for nome in ARMAZENAMENTOS:
+        variantes = {}
+        for t in TIERS_ROTEADOR:
+            _grava_json(MODELOS / f"models/block/{nome}_{t}.json", {
+                "parent": "minecraft:block/cube_bottom_top",
+                "textures": {
+                    "side": f"wirelessautomate:block/{nome}_{t}_side",
+                    "top": f"wirelessautomate:block/{nome}_{t}_top",
+                    "bottom": f"wirelessautomate:block/storage_{t}_bottom",
+                    "particle": f"wirelessautomate:block/{nome}_{t}_side",
+                },
+            })
+            variantes[f"tier={t}"] = {"model": f"wirelessautomate:block/{nome}_{t}"}
+        _grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": variantes})
+        _grava_json(MODELOS / f"models/item/{nome}.json", {
+            "parent": f"wirelessautomate:block/{nome}_basic",
+            "overrides": _sobreposicoes(f"wirelessautomate:block/{nome}"),
+        })
+    for t in TIERS_CARTAO:
+        _grava_json(MODELOS / f"models/item/tier_core_{t}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/tier_core_{t}"},
+        })
+
+
 def modelos_tanque_source() -> None:
     """Grava os 44 modelos (tier x nível), o blockstate e o modelo do item do Tanque de Source."""
     variantes: dict[str, dict] = {}
@@ -1061,8 +1132,7 @@ def modelos_tanque_source() -> None:
     _grava_json(MODELOS / "blockstates/storage_source_tank.json", {"variants": variantes})
     _grava_json(MODELOS / "models/item/storage_source_tank.json", {
         "parent": f"{comum}_basic_6",
-        "overrides": [{"predicate": {"wirelessautomate:tier": n}, "model": f"{comum}_{t}_6"}
-                      for n, t in enumerate(TIERS_ROTEADOR[1:], start=1)],
+        "overrides": _sobreposicoes(comum, "_6"),
     })
 
 
@@ -1128,8 +1198,9 @@ def gerar() -> dict[str, Image.Image]:
     sprites["item/linker"] = vinculador()
     sprites["item/chunk_loader_upgrade"] = cartao(CARTAO_CHUNK, "cartao_chunk")
     sprites["item/guide"] = livro()
-    for n, tier in enumerate(TIERS_CARTAO, start=1):
-        sprites[f"item/tier_core_{tier}"] = cartao(CARTAO_UPGRADE, f"cartao_{tier}", pips=n)
+    for tier in TIERS_CARTAO:
+        sprites[f"item/tier_core_{tier}"] = cartao(CARTAO_UPGRADE, f"cartao_{tier}", pips=MARCAS_CARTAO[tier],
+                                                   contatos=f"cartao_{tier}" if tier in TIERS_ATM else "ouro")
     for tier in TIERS_ROTEADOR:
         sprites[f"block/router_{tier}_front"] = face_roteador(tier, FRENTE)
         sprites[f"block/router_{tier}_back"] = face_roteador(tier, TRAS)
@@ -1233,9 +1304,11 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         return t
 
     linhas: list[tuple[str, list[tuple[str, Image.Image]]]] = []
-    itens = ["configurator", "network_tablet", "linker", "filter_card", "chunk_loader_upgrade",
-             "tier_core_advanced", "tier_core_elite", "tier_core_ultimate", "guide"]
+    itens = ["configurator", "network_tablet", "linker", "filter_card", "chunk_loader_upgrade", "guide"]
+    cartoes = [f"tier_core_{t}" for t in TIERS_CARTAO]
     linhas.append(("Itens", [(n, tile(sprites[f"item/{n}"])) for n in itens]))
+    linhas.append(("Cartões de Upgrade", [(n.removeprefix("tier_core_"), tile(sprites[f"item/{n}"]))
+                                          for n in cartoes]))
     # Itens em tamanho real (1× e 2×), como no inventário.
     linhas.append(("Portas da tela", [(n, tile(sprites[f"gui/{n}"]))
                                       for n in ["port_extract", "port_insert", "port_both", "port_none"]]))
@@ -1253,16 +1326,16 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         linhas.append((f"Armazenamento {tier}", faces))
 
     margem, gap = 16, 12
-    colunas = 9
+    colunas = 11
     largura = margem * 2 + colunas * celula + (colunas - 1) * gap
-    montados = [roteador_montado(t, sprites) for t in TIERS_ROTEADOR]
+    montados = [roteador_montado(t, sprites, s=7) for t in TIERS_ROTEADOR]
     alt_montado = max(m.height for m in montados)
     cubos = [(f"{n.removeprefix('storage_')} {t}",
               cubo_montado(sprites[f"block/{n}_{t}_top"], sprites[f"block/{n}_{t}_side"]))
              for n in ARMAZENAMENTOS for t in TIERS_ROTEADOR]
     por_linha = largura // (cubos[0][1].width + gap)
     alt_cubos = -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
-    tanques = [(t, tanque_source_montado(t, 6, sprites)) for t in TIERS_ROTEADOR]
+    tanques = [(t, tanque_source_montado(t, 6, sprites, s=7)) for t in TIERS_ROTEADOR]
     niveis = [(n, tanque_source_montado("elite", n, sprites, s=6)) for n in (0, 2, 5, 8, 10)]
     alt_tanques = 20 + tanques[0][1].height + rotulo + gap + 20 + niveis[0][1].height + rotulo + gap
     altura = (margem + sum(20 + celula + rotulo + gap for _ in linhas) + 20 + alt_montado + rotulo + 40 + 64
@@ -1290,7 +1363,7 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
     d.text((margem, y), "Itens em 1x e 2x", fill=texto, font=fonte)
     y += 18
     x = margem
-    for n in itens:
+    for n in itens + cartoes:
         img = sprites[f"item/{n}"]
         out.alpha_composite(img, (x, y + 8))
         out.alpha_composite(img.resize((32, 32), Image.NEAREST), (x + 20, y))
@@ -1326,6 +1399,7 @@ def main() -> None:
     so_folha = "--so-folha" in sys.argv
     sprites = gerar()
     if not so_folha:
+        modelos_tiers()
         modelos_tanque_source()
         for nome, img in sprites.items():
             destino = ASSETS / f"{nome}.png"

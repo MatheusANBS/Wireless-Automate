@@ -9,6 +9,18 @@
     "tier=elite": {
       "model": "wirelessautomate:block/storage_chest_elite"
     },
+    "tier=emerald": {
+      "model": "wirelessautomate:block/storage_chest_emerald"
+    },
+    "tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_chest_allthemodium"
+    },
+    "tier=vibranium": {
+      "model": "wirelessautomate:block/storage_chest_vibranium"
+    },
+    "tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_chest_unobtainium"
+    },
     "tier=ultimate": {
       "model": "wirelessautomate:block/storage_chest_ultimate"
     }

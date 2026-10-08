@@ -99,6 +99,138 @@
     "fill=10,tier=elite": {
       "model": "wirelessautomate:block/storage_source_tank_elite_10"
     },
+    "fill=0,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_0"
+    },
+    "fill=1,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_1"
+    },
+    "fill=2,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_2"
+    },
+    "fill=3,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_3"
+    },
+    "fill=4,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_4"
+    },
+    "fill=5,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_5"
+    },
+    "fill=6,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_6"
+    },
+    "fill=7,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_7"
+    },
+    "fill=8,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_8"
+    },
+    "fill=9,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_9"
+    },
+    "fill=10,tier=emerald": {
+      "model": "wirelessautomate:block/storage_source_tank_emerald_10"
+    },
+    "fill=0,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_0"
+    },
+    "fill=1,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_1"
+    },
+    "fill=2,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_2"
+    },
+    "fill=3,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_3"
+    },
+    "fill=4,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_4"
+    },
+    "fill=5,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_5"
+    },
+    "fill=6,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_6"
+    },
+    "fill=7,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_7"
+    },
+    "fill=8,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_8"
+    },
+    "fill=9,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_9"
+    },
+    "fill=10,tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_source_tank_allthemodium_10"
+    },
+    "fill=0,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_0"
+    },
+    "fill=1,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_1"
+    },
+    "fill=2,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_2"
+    },
+    "fill=3,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_3"
+    },
+    "fill=4,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_4"
+    },
+    "fill=5,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_5"
+    },
+    "fill=6,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_6"
+    },
+    "fill=7,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_7"
+    },
+    "fill=8,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_8"
+    },
+    "fill=9,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_9"
+    },
+    "fill=10,tier=vibranium": {
+      "model": "wirelessautomate:block/storage_source_tank_vibranium_10"
+    },
+    "fill=0,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_0"
+    },
+    "fill=1,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_1"
+    },
+    "fill=2,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_2"
+    },
+    "fill=3,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_3"
+    },
+    "fill=4,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_4"
+    },
+    "fill=5,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_5"
+    },
+    "fill=6,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_6"
+    },
+    "fill=7,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_7"
+    },
+    "fill=8,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_8"
+    },
+    "fill=9,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_9"
+    },
+    "fill=10,tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_source_tank_unobtainium_10"
+    },
     "fill=0,tier=ultimate": {
       "model": "wirelessautomate:block/storage_source_tank_ultimate_0"
     },

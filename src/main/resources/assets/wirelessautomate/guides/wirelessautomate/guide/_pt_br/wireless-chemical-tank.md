@@ -32,7 +32,20 @@ Mekanism instalado. Preso a um roteador na aba **Químicos**, um tipo inteiro pa
 
 ## Capacidade
 
-A mesma do Tanque: 1.000.000, 64.000.000 e 4.000.000.000 mB, e sem limite no Ultimate.
+A mesma do [Tanque](wireless-tank.md), em mB, todos os químicos somados.
+
+| Tier | mB |
+| --- | --- |
+| **Básico** | 256.000 |
+| **Avançado** | 2.048.000 |
+| **Elite** | 16.384.000 |
+| **Esmeralda** | 131.072.000 |
+| **Allthemodium¹** | 1.048.576.000 |
+| **Vibranium¹** | 8.388.608.000 |
+| **Unobtainium¹** | 67.108.864.000 |
+| **Ultimate** | Sem limite |
+
+¹ Só com o mod Allthemodium.
 
 ## Recipientes do Mekanism
 

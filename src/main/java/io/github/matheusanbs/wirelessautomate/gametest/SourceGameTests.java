@@ -210,9 +210,9 @@ public final class SourceGameTests {
                 .thenIdle(20)
                 .thenExecute(() -> {
                     int moved = amount(helper, B);
-                    helper.assertTrue(moved >= 1_000, "o limitador travou, passou só " + moved);
-                    // Um segundo de balde (1.000) + 20 ticks a 50 por tick (1.000), com folga de um tick.
-                    helper.assertTrue(moved <= 2_050, "passou do limite do tier: " + moved);
+                    helper.assertTrue(moved >= 100, "o limitador travou, passou só " + moved);
+                    // Um segundo de balde (100) + 20 ticks a 5 por tick (100), com folga de um tick.
+                    helper.assertTrue(moved <= 205, "passou do limite do tier: " + moved);
                     helper.assertValueEqual(amount(helper, A) + moved, 10_000, "Source perdida ou criada");
                 })
                 .thenSucceed();
@@ -359,7 +359,7 @@ public final class SourceGameTests {
                     List<BlockPos> empty = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(empty.contains(tankPos), "o tanque vazio não aceita Source: " + empty);
                     SourceTestSupport.set(helper.getLevel(), tankPos, 200_000);
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 160_000L,
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 10_000L,
                             "setSource limitado à capacidade");
                     helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10,
                             "nível depois do setSource");

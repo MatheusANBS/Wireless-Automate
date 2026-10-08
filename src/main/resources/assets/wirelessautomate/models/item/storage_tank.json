@@ -17,6 +17,30 @@
       "predicate": {
         "wirelessautomate:tier": 3
       },
+      "model": "wirelessautomate:block/storage_tank_emerald"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 4
+      },
+      "model": "wirelessautomate:block/storage_tank_allthemodium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 5
+      },
+      "model": "wirelessautomate:block/storage_tank_vibranium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 6
+      },
+      "model": "wirelessautomate:block/storage_tank_unobtainium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 7
+      },
       "model": "wirelessautomate:block/storage_tank_ultimate"
     }
   ]

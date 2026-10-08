@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IBI",
+    "ICI",
+    "IBI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/allthemodium"
+    },
+    "B": {
+      "tag": "c:storage_blocks/allthemodium"
+    },
+    "C": {
+      "item": "wirelessautomate:tier_core_emerald"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_allthemodium",
+    "count": 1
+  }
+}

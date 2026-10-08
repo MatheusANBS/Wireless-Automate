@@ -13,19 +13,24 @@ import net.minecraft.util.StringRepresentable;
 public enum StorageKind implements StringRepresentable {
     /** Itens por tipo. */
     CHEST("storage_chest", "chestCapacity", ResourceType.ITEM, "items",
-            new long[] {262_144L, 16_777_216L, 1_073_741_824L, 0L}),
+            new long[] {32_768L, 262_144L, 2_097_152L, 16_777_216L, 134_217_728L, 1_073_741_824L,
+                    8_589_934_592L, 0L}),
     /** Fluidos por tipo, em mB. */
     TANK("storage_tank", "tankCapacity", ResourceType.FLUID, "mb",
-            new long[] {1_000_000L, 64_000_000L, 4_000_000_000L, 0L}),
+            new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
+                    8_388_608_000L, 67_108_864_000L, 0L}),
     /** Energia, em FE. */
     BATTERY("storage_battery", "batteryCapacity", ResourceType.ENERGY, "fe",
-            new long[] {16_000_000L, 1_000_000_000L, 64_000_000_000L, 0L}),
+            new long[] {1_000_000L, 8_000_000L, 64_000_000L, 512_000_000L, 4_096_000_000L,
+                    32_768_000_000L, 262_144_000_000L, 0L}),
     /** Químicos do Mekanism por tipo, em mB. */
     CHEMICAL_TANK("storage_chemical_tank", "chemicalTankCapacity", ResourceType.CHEMICAL, "mb",
-            new long[] {1_000_000L, 64_000_000L, 4_000_000_000L, 0L}),
+            new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
+                    8_388_608_000L, 67_108_864_000L, 0L}),
     /** Source do Ars Nouveau. Só aparece (aba, JEI, receita) com o Ars; o bloco existe sempre. */
     SOURCE_TANK("storage_source_tank", "sourceTankCapacity", ResourceType.SOURCE, "source",
-            new long[] {160_000L, 2_560_000L, 40_960_000L, 0L});
+            new long[] {10_000L, 80_000L, 640_000L, 5_120_000L, 40_960_000L, 327_680_000L,
+                    2_621_440_000L, 0L});
 
     /** Id do bloco e do item. */
     public final String id;

@@ -88,6 +88,7 @@ Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D 
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'basic'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'advanced'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'elite'}" />
+  <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'emerald'}" />
   <ItemImage id="wirelessautomate:router" scale="2" components="minecraft:block_state={tier:'ultimate'}" />
 </Row>
 
@@ -96,12 +97,16 @@ O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra o
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
-| **Básico** | 512 | 32.000 | 16.000 | 1.000 | 128 blocos |
-| **Avançado** | 8.192 | 512.000 | 256.000 | 16.000 | 1.024 blocos |
-| **Elite** | 131.072 | 8.000.000 | 4.000.000 | 256.000 | A dimensão inteira |
+| **Básico** | 32 | 2.000 | 1.000 | 100 | 64 blocos |
+| **Avançado** | 256 | 16.000 | 8.000 | 800 | 512 blocos |
+| **Elite** | 2.048 | 128.000 | 64.000 | 6.400 | A dimensão inteira |
+| **Esmeralda** | 16.384 | 1.024.000 | 512.000 | 51.200 | Todas as dimensões |
+| **Allthemodium¹** | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Todas as dimensões |
+| **Vibranium¹** | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Todas as dimensões |
+| **Unobtainium¹** | 8.388.608 | 524.288.000 | 262.144.000 | 26.214.400 | Todas as dimensões |
 | **Ultimate** | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões |
 
-Source só com o Ars Nouveau.
+¹ Só com o mod Allthemodium. Source só com o Ars Nouveau.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />
@@ -110,8 +115,10 @@ Source só com o Ars Nouveau.
   <Block id="wirelessautomate:router" x="2" y="1" z="0" p:facing="up" p:tier="advanced" />
   <Block id="minecraft:barrel" x="4" y="0" z="0" p:facing="up" />
   <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="elite" />
-  <Block id="minecraft:blast_furnace" x="6" y="0" z="0" />
-  <Block id="wirelessautomate:router" x="6" y="1" z="0" p:facing="up" p:tier="ultimate" />
+  <Block id="minecraft:smoker" x="6" y="0" z="0" />
+  <Block id="wirelessautomate:router" x="6" y="1" z="0" p:facing="up" p:tier="emerald" />
+  <Block id="minecraft:blast_furnace" x="8" y="0" z="0" />
+  <Block id="wirelessautomate:router" x="8" y="1" z="0" p:facing="up" p:tier="ultimate" />
   <BlockAnnotation x="0" y="1" z="0" color="#c8ccd2">
     Básico
   </BlockAnnotation>
@@ -121,7 +128,10 @@ Source só com o Ars Nouveau.
   <BlockAnnotation x="4" y="1" z="0" color="#45d6cc">
     Elite
   </BlockAnnotation>
-  <BlockAnnotation x="6" y="1" z="0" color="#a06bff">
+  <BlockAnnotation x="6" y="1" z="0" color="#2fdc62">
+    Esmeralda
+  </BlockAnnotation>
+  <BlockAnnotation x="8" y="1" z="0" color="#a06bff">
     Ultimate
   </BlockAnnotation>
   <IsometricCamera yaw="200" pitch="30" />

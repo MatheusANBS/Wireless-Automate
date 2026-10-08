@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "wirelessautomate:block/storage_chemical_tank_allthemodium_side",
+    "top": "wirelessautomate:block/storage_chemical_tank_allthemodium_top",
+    "bottom": "wirelessautomate:block/storage_allthemodium_bottom",
+    "particle": "wirelessautomate:block/storage_chemical_tank_allthemodium_side"
+  }
+}

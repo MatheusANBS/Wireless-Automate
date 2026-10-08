@@ -33,10 +33,16 @@ Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a ro
 
 | Tier | FE |
 | --- | --- |
-| **Basic** | 16,000,000 |
-| **Advanced** | 1,000,000,000 |
-| **Elite** | 64,000,000,000 |
+| **Basic** | 1,000,000 |
+| **Advanced** | 8,000,000 |
+| **Elite** | 64,000,000 |
+| **Emerald** | 512,000,000 |
+| **Allthemodium¹** | 4,096,000,000 |
+| **Vibranium¹** | 32,768,000,000 |
+| **Unobtainium¹** | 262,144,000,000 |
 | **Ultimate** | Unlimited |
+
+¹ Only with the Allthemodium mod.
 
 ## The screen
 

@@ -21,11 +21,14 @@ public final class ModCreativeTabs {
                     .title(Component.translatable("itemGroup.wirelessautomate"))
                     .icon(() -> ModItems.ROUTER.get().getDefaultInstance())
                     .displayItems((params, output) -> {
+                        // Os tiers do Allthemodium só aparecem com ele (o JEI lista o que está aqui).
                         for (RouterTier tier : RouterTier.values()) {
-                            output.accept(RouterBlockItem.withTier(ModItems.ROUTER.get(), tier));
+                            if (tier.loaded()) {
+                                output.accept(RouterBlockItem.withTier(ModItems.ROUTER.get(), tier));
+                            }
                         }
                         for (RouterTier tier : RouterTier.values()) {
-                            if (ModItems.TIER_CORES.containsKey(tier)) {
+                            if (tier.loaded() && ModItems.TIER_CORES.containsKey(tier)) {
                                 output.accept(ModItems.TIER_CORES.get(tier).get());
                             }
                         }
@@ -35,7 +38,9 @@ public final class ModCreativeTabs {
                                 continue;
                             }
                             for (RouterTier tier : RouterTier.values()) {
-                                output.accept(StorageBlockItem.withTier(ModItems.STORAGE.get(kind).get(), tier));
+                                if (tier.loaded()) {
+                                    output.accept(StorageBlockItem.withTier(ModItems.STORAGE.get(kind).get(), tier));
+                                }
                             }
                         }
                         output.accept(ModItems.CONFIGURATOR.get());

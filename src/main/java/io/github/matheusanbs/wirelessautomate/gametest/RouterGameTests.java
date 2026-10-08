@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -49,6 +50,34 @@ public final class RouterGameTests {
         helper.assertTrue(!RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ELITE), "pulou um tier");
         helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ADVANCED), "não subiu de tier");
         helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ADVANCED);
+        helper.succeed();
+    }
+
+    /** Sem o Allthemodium, a escada é Elite → Esmeralda → Ultimate; os tiers do ATM ficam de fora. */
+    @GameTest(template = "empty")
+    public static void withoutAllthemodiumEmeraldGoesToUltimate(GameTestHelper helper) {
+        helper.setBlock(MACHINE, Blocks.FURNACE);
+        helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        BlockPos router = helper.absolutePos(ROUTER);
+
+        helper.assertValueEqual(RouterTier.ELITE.next(), RouterTier.EMERALD, "depois do Elite");
+        helper.assertValueEqual(RouterTier.EMERALD.next(), RouterTier.ULTIMATE, "depois da Esmeralda");
+        helper.assertValueEqual(RouterTier.ULTIMATE.previous(), RouterTier.EMERALD, "antes do Ultimate");
+        helper.assertValueEqual(RouterTier.VIBRANIUM.next(), RouterTier.ULTIMATE, "bloco que ficou no Vibranium");
+        helper.assertFalse(RouterTier.ALLTHEMODIUM.loaded(), "Allthemodium carregado sem o mod");
+        helper.assertTrue(RouterTier.EMERALD.loaded(), "Esmeralda não carregada");
+
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.EMERALD), "Elite não subiu");
+        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ALLTHEMODIUM),
+                "subiu para um tier do ATM sem o mod");
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ULTIMATE),
+                "Esmeralda não subiu para o Ultimate");
+        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ULTIMATE);
+
+        // Entre dimensões começa na Esmeralda; o Elite fica na dimensão dele.
+        helper.assertTrue(Config.TIERS.get(RouterTier.EMERALD).crossDimension().get(), "Esmeralda sem entre dimensões");
+        helper.assertFalse(Config.TIERS.get(RouterTier.ELITE).crossDimension().get(), "Elite entre dimensões");
         helper.succeed();
     }
 

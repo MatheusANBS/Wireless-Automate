@@ -29,6 +29,9 @@ jobs:
       - name: GameTests de Source (Ars Nouveau)
         run: ./gradlew runGameTestServerSource
 
+      - name: GameTests dos tiers do ATM (Allthemodium e All The Tweaks)
+        run: ./gradlew runGameTestServerAllthemodium
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

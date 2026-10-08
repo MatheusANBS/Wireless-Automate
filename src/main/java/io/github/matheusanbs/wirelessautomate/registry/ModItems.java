@@ -46,7 +46,7 @@ public final class ModItems {
     public static final DeferredItem<ChunkLoaderUpgradeItem> CHUNK_LOADER_UPGRADE = ITEMS.registerItem(
             "chunk_loader_upgrade", ChunkLoaderUpgradeItem::new, new Item.Properties().stacksTo(1));
 
-    /** Núcleos de Avançado a Ultimate; não há núcleo Básico (o roteador já nasce Básico). */
+    /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);
 
     static {

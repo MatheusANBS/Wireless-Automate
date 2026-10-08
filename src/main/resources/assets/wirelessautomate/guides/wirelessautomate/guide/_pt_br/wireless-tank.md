@@ -36,10 +36,16 @@ Total em mB, todos os fluidos somados.
 
 | Tier | mB |
 | --- | --- |
-| **Básico** | 1.000.000 |
-| **Avançado** | 64.000.000 |
-| **Elite** | 4.000.000.000 |
+| **Básico** | 256.000 |
+| **Avançado** | 2.048.000 |
+| **Elite** | 16.384.000 |
+| **Esmeralda** | 131.072.000 |
+| **Allthemodium¹** | 1.048.576.000 |
+| **Vibranium¹** | 8.388.608.000 |
+| **Unobtainium¹** | 67.108.864.000 |
 | **Ultimate** | Sem limite |
+
+¹ Só com o mod Allthemodium.
 
 ## Baldes e recipientes
 

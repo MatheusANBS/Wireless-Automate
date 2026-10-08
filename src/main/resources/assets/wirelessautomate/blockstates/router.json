@@ -78,6 +78,110 @@
       "x": 90,
       "y": 270
     },
+    "facing=up,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald"
+    },
+    "facing=down,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald",
+      "x": 180
+    },
+    "facing=north,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald",
+      "x": 90
+    },
+    "facing=south,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west,tier=emerald": {
+      "model": "wirelessautomate:block/router_emerald",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium"
+    },
+    "facing=down,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium",
+      "x": 180
+    },
+    "facing=north,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium",
+      "x": 90
+    },
+    "facing=south,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west,tier=allthemodium": {
+      "model": "wirelessautomate:block/router_allthemodium",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium"
+    },
+    "facing=down,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium",
+      "x": 180
+    },
+    "facing=north,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium",
+      "x": 90
+    },
+    "facing=south,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west,tier=vibranium": {
+      "model": "wirelessautomate:block/router_vibranium",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium"
+    },
+    "facing=down,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium",
+      "x": 180
+    },
+    "facing=north,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium",
+      "x": 90
+    },
+    "facing=south,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west,tier=unobtainium": {
+      "model": "wirelessautomate:block/router_unobtainium",
+      "x": 90,
+      "y": 270
+    },
     "facing=up,tier=ultimate": {
       "model": "wirelessautomate:block/router_ultimate"
     },

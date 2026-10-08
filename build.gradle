@@ -150,6 +150,11 @@ repositories {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
         filter { includeGroup 'maven.modrinth' }
     }
+    // Allthemodium e All The Tweaks só existem no CurseForge.
+    exclusiveContent {
+        forRepository { maven { name = 'CurseMaven'; url = 'https://cursemaven.com' } }
+        filter { includeGroup 'curse.maven' }
+    }
 }
 
 configurations {
@@ -166,6 +171,10 @@ configurations {
         transitive = false
     }
     sourceTestMods {
+        canBeConsumed = false
+        transitive = false
+    }
+    atmTestMods {
         canBeConsumed = false
         transitive = false
     }
@@ -192,6 +201,12 @@ dependencies {
     sourceTestMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
     sourceTestMods "maven.modrinth:geckolib:${geckolib_version}"
     sourceTestMods "maven.modrinth:curios:${curios_version}"
+    // Allthemodium (tiers Allthemodium, Vibranium e Unobtainium) e All The Tweaks (fragmento de ATM Star).
+    clientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
+    clientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    atmTestMods "curse.maven:allthemodium-364466:${allthemodium_file}"
+    atmTestMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    atmTestMods "maven.modrinth:geckolib:${geckolib_version}" // o Allthemodium 3.2 exige
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -209,7 +224,8 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     preserve {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
-                'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar'
+                'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar',
+                'allthemodium-*.jar', 'all-the-tweaks-*.jar'
     }
 }
 
@@ -262,6 +278,23 @@ neoForge.runs {
         systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_source'
         systemProperty 'wirelessautomate.sourceTests', 'true'
         taskBefore prepareSourceTestMods
+    }
+}
+
+// GameTests dos tiers do ATM: um servidor de testes próprio, com o Allthemodium e o All The Tweaks na
+// pasta mods, que roda só o namespace wirelessautomate_atm (gametest/AtmGameTests).
+// ./gradlew runGameTestServerAllthemodium
+var prepareAtmTestMods = tasks.register('prepareAtmTestMods', Sync) {
+    from configurations.atmTestMods
+    into layout.projectDirectory.dir('run/gametest-atm/mods')
+}
+
+neoForge.runs {
+    gameTestServerAllthemodium {
+        type = 'gameTestServer'
+        gameDirectory = project.file('run/gametest-atm')
+        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_atm'
+        taskBefore prepareAtmTestMods
     }
 }
 
@@ -339,16 +372,25 @@ tasks.matching { it.name == 'runGameTestServerSource' }.configureEach {
     }
 }
 
+def atmTestWorld = layout.projectDirectory.dir('run/gametest-atm/world').asFile
+tasks.matching { it.name == 'runGameTestServerAllthemodium' }.configureEach {
+    doFirst {
+        atmTestWorld.deleteDir()
+    }
+}
+
 // Cada servidor ou cliente de dev usa ~3 GB, e o org.gradle.parallel poderia rodá-los juntos numa mesma
 // invocação. Este serviço tem uma vaga só: as tarefas que sobem o jogo rodam uma de cada vez.
 abstract class OneGame implements BuildService<BuildServiceParameters.None> {}
 def oneGame = gradle.sharedServices.registerIfAbsent('oneGame', OneGame) { maxParallelUsages = 1 }
-tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 'runGameTestServerSource', 'runClient', 'runBenchServer'] }
+tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 'runGameTestServerSource',
+        'runGameTestServerAllthemodium', 'runClient', 'runBenchServer'] }
         .configureEach { usesService(oneGame) }
 
 // O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
 // Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.
-[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals', runGameTestServerSource: 'run/gametest-source'].each { name, dir ->
+[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals', runGameTestServerSource: 'run/gametest-source',
+ runGameTestServerAllthemodium: 'run/gametest-atm'].each { name, dir ->
     def log = layout.projectDirectory.file("${dir}/logs/latest.log").asFile
     tasks.matching { it.name == name }.configureEach {
         doFirst {

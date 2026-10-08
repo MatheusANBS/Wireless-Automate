@@ -206,49 +206,50 @@ ALCANCE = ["64 blocks", "512 blocks", "Dimension"] + ["All dims"] * 5
 
 def tiers() -> Image.Image:
     """Os oito roteadores (texturas do mod, LEDs acesos) numa tabela com a vazão e o alcance de cada um."""
-    largura, faixa = 1280, 150
-    rotulo_w, margem = 236, 24
+    largura, faixa = LARGURA, u(150)
+    rotulo_w, margem = u(236), u(24)
     coluna = (largura - rotulo_w - margem) // len(TIERS)
-    img = Image.new("RGB", (largura, faixa + 680), FUNDO)
+    img = Image.new("RGB", (largura, faixa + u(680)), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
-    d.rectangle([0, faixa - 4, largura, faixa - 1], fill=CIANO)
-    escreve_pixel(img, "Eight tiers", 32, 34, 6, CIANO_CLARO, sombra=(8, 40, 44))
-    d.text((34, 34 + 42 + 24), "Upgrade cards raise throughput and range. Allthemodium (ATM10) adds three steps.",
-           fill=TEXTO, font=fonte(28))
+    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=CIANO)
+    escreve_pixel(img, "Eight tiers", u(32), u(34), u(6), CIANO_CLARO, sombra=(8, 40, 44))
+    d.text((u(34), u(34 + 42 + 24)), "Upgrade cards raise throughput and range. Allthemodium (ATM10) adds three steps.",
+           fill=TEXTO, font=fonte(u(28)))
     x0 = rotulo_w
     # faixa "Allthemodium" sobre as três colunas do mod
     atm = [i for i, t in enumerate(TIERS) if t[3]]
     # a borda fica um pouco fora das colunas: "Allthemodium" ocupa quase a coluna inteira
-    ax0, ax1 = x0 + atm[0] * coluna - 8, x0 + (atm[-1] + 1) * coluna + 8
-    d.rounded_rectangle([ax0, faixa + 22, ax1, faixa + 614], radius=10, fill=(26, 24, 20))
+    ax0, ax1 = x0 + atm[0] * coluna - u(8), x0 + (atm[-1] + 1) * coluna + u(8)
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), fill=(26, 24, 20))
     sprites = capa.tex.gerar()
     for i, (tier, nome, cor, _) in enumerate(TIERS):
         cx = x0 + i * coluna + coluna // 2
         sprites[f"block/router_{tier}_front"] = capa.acende_leds(sprites[f"block/router_{tier}_front"])
         arte = capa.tex.roteador_montado(tier, sprites, s=3)
         arte = arte.crop(arte.getbbox())
-        escala = min(2, (coluna - 16) // arte.width)
+        escala = min(u(2), (coluna - u(16)) // arte.width)
         arte = arte.resize((arte.width * escala, arte.height * escala), Image.NEAREST)
-        img.paste(arte, (cx - arte.width // 2, faixa + 190 - arte.height), arte)
-        d.text((cx, faixa + 204), nome, fill=cor, font=fonte(22 if len(nome) < 11 else 18), anchor="mt")
-    y = faixa + 256
+        img.paste(arte, (cx - arte.width // 2, faixa + u(190) - arte.height), arte)
+        d.text((cx, faixa + u(204)), nome, fill=cor, font=fonte(u(22 if len(nome) < 11 else 18)), anchor="mt")
+    y = faixa + u(256)
     linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
     linhas.append(("Range", ALCANCE))
     for n, (rotulo, valores) in enumerate(linhas):
         if n % 2 == 0:
-            d.rectangle([24, y - 12, largura - margem, y + 50], fill=(18, 27, 37))
-            d.rectangle([ax0, y - 12, ax1, y + 50], fill=(34, 30, 24))
-        d.text((34, y + 19), rotulo, fill=MUTED, font=fonte(22), anchor="lm")
+            d.rectangle([u(24), y - u(12), largura - margem, y + u(50)], fill=(18, 27, 37))
+            d.rectangle([ax0, y - u(12), ax1, y + u(50)], fill=(34, 30, 24))
+        d.text((u(34), y + u(19)), rotulo, fill=MUTED, font=fonte(u(22)), anchor="lm")
         for i, valor in enumerate(valores):
             cx = x0 + i * coluna + coluna // 2
-            d.text((cx, y + 19), valor, fill=TEXTO, font=fonte(20), anchor="mm")
-        y += 72
+            d.text((cx, y + u(19)), valor, fill=TEXTO, font=fonte(u(20)), anchor="mm")
+        y += u(72)
     # borda e título do bloco do Allthemodium por cima das faixas
-    d.rounded_rectangle([ax0, faixa + 22, ax1, faixa + 614], radius=10, outline=(120, 74, 20), width=2)
-    d.text(((ax0 + ax1) // 2, faixa + 30), "Only with Allthemodium", fill=(255, 176, 80), font=fonte(20), anchor="mt")
-    d.text((34, faixa + 640), "Per face and per resource type; chemicals use the fluid rate. "
-           "Without Allthemodium, Emerald upgrades straight to Ultimate.", fill=MUTED, font=fonte(20))
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), outline=(120, 74, 20), width=u(2))
+    d.text(((ax0 + ax1) // 2, faixa + u(30)), "Only with Allthemodium", fill=(255, 176, 80), font=fonte(u(20)),
+           anchor="mt")
+    d.text((u(34), faixa + u(640)), "Per face and per resource type; chemicals use the fluid rate. "
+           "Without Allthemodium, Emerald upgrades straight to Ultimate.", fill=MUTED, font=fonte(u(20)))
     return img
 
 

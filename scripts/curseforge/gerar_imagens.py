@@ -1,7 +1,6 @@
 """Gera o banner e as imagens da descrição do projeto no CurseForge.
 
     WA_SHOWCASE=run/showcase ./gradlew runClient    # fotos da vitrine (DevEndToEnd, modo WA_SHOWCASE), 3840x2400
-    WA_E2E=run/e2e ./gradlew runClient               # capturas do guia (opcional: guia-*.png)
     python scripts/curseforge/gerar_imagens.py
 
 O CurseForge não fixa tamanho para imagens da descrição; a regra é mostrar o mod como ele é no
@@ -23,7 +22,6 @@ import gerar_capa as capa  # noqa: E402
 
 SAIDA = RAIZ / "docs" / "curseforge"
 VITRINE = RAIZ / "run" / "showcase"
-E2E = RAIZ / "run" / "e2e"
 
 FUNDO = (14, 20, 28)
 FAIXA = (20, 30, 41)
@@ -301,7 +299,7 @@ DESTAQUES = [
      VITRINE / "s6b-tablet-estatisticas.png", (60, 80, 1222, 720)),
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
-     E2E / "guia-getting-started.png", (300, 40, 1270, 568)),
+     VITRINE / "s8-guia.png", (296, 52, 1266, 658)),
 ]
 
 

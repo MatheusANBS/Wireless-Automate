@@ -1332,10 +1332,12 @@ public final class DevEndToEnd {
         list.add(close("fechar o Tablet"));
         if (ModList.get().isLoaded("guideme")) {
             list.add(new Step("guia", STEP_TIMEOUT_MS,
-                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:router.md"),
+                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:getting-started.md"),
                     () -> Minecraft.getInstance().screen != null
                             && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
+            // o GuideME monta a página e a cena 3D nos primeiros quadros: sem a espera, a captura pega a tela anterior
+            list.add(wait("guia desenhado", 40));
             list.add(capture("s8-guia"));
         }
         return list;

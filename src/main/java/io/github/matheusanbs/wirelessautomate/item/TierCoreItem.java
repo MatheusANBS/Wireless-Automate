@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.List;
@@ -73,9 +74,15 @@ public class TierCoreItem extends Item {
     private static final String KEY = "item.wirelessautomate.tier_core.";
 
     private enum Stat {
-        ITEMS,
-        FLUID,
-        ENERGY
+        ITEMS(ResourceType.ITEM),
+        FLUID(ResourceType.FLUID),
+        ENERGY(ResourceType.ENERGY);
+
+        final ResourceType type;
+
+        Stat(ResourceType type) {
+            this.type = type;
+        }
     }
 
     private static Component line(String key, Component before, Component after) {
@@ -87,11 +94,7 @@ public class TierCoreItem extends Item {
     private static Component rate(RouterTier tier, Stat stat) {
         Config.TierValues values = Config.TIERS.get(tier);
         boolean loaded = Config.SPEC.isLoaded();
-        long value = switch (stat) {
-            case ITEMS -> loaded ? values.itemsPerSecond().get() : tier.defaultItemsPerSecond;
-            case FLUID -> loaded ? values.fluidPerSecond().get() : tier.defaultFluidPerSecond;
-            case ENERGY -> loaded ? values.energyPerTick().get() : tier.defaultEnergyPerTick;
-        };
+        long value = loaded ? values.rate(stat.type) : stat.type.defaultRate(tier.ordinal());
         return value <= 0 ? Component.translatable(KEY + "unlimited") : Component.literal(grouped(value));
     }
 

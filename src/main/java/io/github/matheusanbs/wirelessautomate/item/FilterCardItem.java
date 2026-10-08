@@ -11,7 +11,6 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -47,7 +46,7 @@ public class FilterCardItem extends Item {
         public Contents {
             Objects.requireNonNull(type);
             Objects.requireNonNull(filter);
-            if (type != ResourceType.ITEM && type != ResourceType.FLUID) {
+            if (!type.cards()) {
                 throw new IllegalArgumentException("Cartão de filtro de " + type);
             }
         }
@@ -57,12 +56,12 @@ public class FilterCardItem extends Item {
         }
 
         private static final Codec<ResourceType> TYPE_CODEC = Codec.STRING.comapFlatMap(
-                name -> switch (name) {
-                    case "item" -> DataResult.success(ResourceType.ITEM);
-                    case "fluid" -> DataResult.success(ResourceType.FLUID);
-                    default -> DataResult.error(() -> "Tipo de cartão de filtro inválido: " + name);
+                key -> {
+                    ResourceType type = ResourceType.byKey(key);
+                    return type != null && type.cards() ? DataResult.success(type)
+                            : DataResult.error(() -> "tipo de cartão inválido: " + key);
                 },
-                type -> type.name().toLowerCase(Locale.ROOT));
+                ResourceType::key);
 
         public static final Codec<Contents> CODEC = RecordCodecBuilder.create(i -> i.group(
                 TYPE_CODEC.optionalFieldOf("type", ResourceType.ITEM).forGetter(Contents::type),
@@ -173,6 +172,6 @@ public class FilterCardItem extends Item {
     }
 
     public static Component typeName(ResourceType type) {
-        return Component.translatable("gui.wirelessautomate.router.type." + type.name().toLowerCase(Locale.ROOT));
+        return Component.translatable("gui.wirelessautomate.router.type." + type.key());
     }
 }

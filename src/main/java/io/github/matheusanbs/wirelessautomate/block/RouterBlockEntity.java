@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -88,9 +87,9 @@ public class RouterBlockEntity extends BlockEntity {
     /** Slots de cartão por face e por tipo. */
     public static final int CARD_SLOTS = 2;
     /** Tipos com slots de cartão, na ordem de {@link #cards}. */
-    private static final ResourceType[] CARD_TYPES = {ResourceType.ITEM, ResourceType.FLUID};
-    private static final int CARD_TYPES_MASK =
-            NetworkManager.typeBit(ResourceType.ITEM) | NetworkManager.typeBit(ResourceType.FLUID);
+    private static final ResourceType[] CARD_TYPES = Arrays.stream(TYPES).filter(ResourceType::cards)
+            .toArray(ResourceType[]::new);
+    private static final int CARD_TYPES_MASK = cardTypesMask();
     /** [tipo de {@link #CARD_TYPES}][lado relativo][slot], nunca nulos. */
     private final ItemStack[][][] cards = new ItemStack[CARD_TYPES.length][SIDES.length][CARD_SLOTS];
     /** Upgrade de chunk loading no slot (ou vazio) e quem o pôs. */
@@ -314,17 +313,26 @@ public class RouterBlockEntity extends BlockEntity {
 
     // ------------------------------------------------------------------ cartões de filtro
 
-    /** O tipo tem slots de cartão (itens e fluidos; energia não usa filtro e químicos ainda não). */
+    /** O tipo tem slots de cartão ({@link ResourceType#cards()}). */
     public static boolean hasCardSlots(ResourceType type) {
-        return cardIndex(type) >= 0;
+        return type.cards();
+    }
+
+    private static int cardTypesMask() {
+        int mask = 0;
+        for (ResourceType type : CARD_TYPES) {
+            mask |= NetworkManager.typeBit(type);
+        }
+        return mask;
     }
 
     private static int cardIndex(ResourceType type) {
-        return switch (type) {
-            case ITEM -> 0;
-            case FLUID -> 1;
-            default -> -1;
-        };
+        for (int i = 0; i < CARD_TYPES.length; i++) {
+            if (CARD_TYPES[i] == type) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** {@code stack} pode ir num slot de cartão de {@code type}: um Cartão de Filtro do mesmo tipo. */
@@ -750,7 +758,7 @@ public class RouterBlockEntity extends BlockEntity {
         for (ResourceType type : ResourceType.values()) {
             UUID network = networks[type.ordinal()];
             if (network != null) {
-                networksTag.putUUID(type.name().toLowerCase(Locale.ROOT), network);
+                networksTag.putUUID(type.key(), network);
             }
         }
         if (!networksTag.isEmpty()) {
@@ -772,7 +780,7 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
             if (!typeTag.isEmpty()) {
-                facesTag.put(typeKey(type), typeTag);
+                facesTag.put(type.key(), typeTag);
             }
         }
         if (!facesTag.isEmpty()) {
@@ -796,7 +804,7 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
             if (!typeTag.isEmpty()) {
-                cardsTag.put(typeKey(CARD_TYPES[t]), typeTag);
+                cardsTag.put(CARD_TYPES[t].key(), typeTag);
             }
         }
         if (!cardsTag.isEmpty()) {
@@ -817,14 +825,14 @@ public class RouterBlockEntity extends BlockEntity {
         UUID legacy = tag.hasUUID("network") ? tag.getUUID("network") : null;
         CompoundTag networksTag = tag.getCompound("networks");
         for (ResourceType type : ResourceType.values()) {
-            String key = type.name().toLowerCase(Locale.ROOT);
+            String key = type.key();
             networks[type.ordinal()] = networksTag.hasUUID(key) ? networksTag.getUUID(key) : legacy;
         }
         name = sanitizeName(tag.getString("name"));
         powered = tag.getBoolean("powered");
         CompoundTag facesTag = tag.getCompound("faces");
         for (ResourceType type : TYPES) {
-            CompoundTag typeTag = facesTag.getCompound(typeKey(type));
+            CompoundTag typeTag = facesTag.getCompound(type.key());
             for (RelativeSide side : SIDES) {
                 FaceConfig config = face(type, side);
                 if (typeTag.contains(side.key(), CompoundTag.TAG_COMPOUND)) {
@@ -837,7 +845,7 @@ public class RouterBlockEntity extends BlockEntity {
         clearCards();
         CompoundTag cardsTag = tag.getCompound("cards");
         for (int t = 0; t < CARD_TYPES.length; t++) {
-            CompoundTag typeTag = cardsTag.getCompound(typeKey(CARD_TYPES[t]));
+            CompoundTag typeTag = cardsTag.getCompound(CARD_TYPES[t].key());
             for (RelativeSide side : SIDES) {
                 ListTag list = typeTag.getList(side.key(), Tag.TAG_COMPOUND);
                 for (int i = 0; i < list.size(); i++) {
@@ -864,9 +872,5 @@ public class RouterBlockEntity extends BlockEntity {
                 RouterChunkLoader.get().loaded(this);
             }
         }
-    }
-
-    private static String typeKey(ResourceType type) {
-        return type.name().toLowerCase(Locale.ROOT);
     }
 }

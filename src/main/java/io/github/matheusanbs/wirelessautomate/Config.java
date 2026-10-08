@@ -1,8 +1,10 @@
 package io.github.matheusanbs.wirelessautomate;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -25,12 +27,20 @@ public final class Config {
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
 
+    /** Comentário de cada chave de vazão, na ordem em que aparecem no arquivo. */
+    private static final Map<String, String> RATE_COMMENTS = Map.of(
+            "itemsPerSecond", "Itens por segundo, por face e por tipo (0 = sem limite).",
+            "fluidPerSecond", "Fluido e químico em mB por segundo (0 = sem limite).",
+            "energyPerTick", "Energia em FE por tick (0 = sem limite).");
+
     public record TierValues(
-            ModConfigSpec.LongValue itemsPerSecond,
-            ModConfigSpec.LongValue fluidPerSecond,
-            ModConfigSpec.LongValue energyPerTick,
+            Map<String, ModConfigSpec.LongValue> rates,
             ModConfigSpec.IntValue range,
             ModConfigSpec.BooleanValue crossDimension) {
+        /** Vazão do tipo na unidade da config ({@link ResourceType#ratePerTick()}); 0 = sem limite. */
+        public long rate(ResourceType type) {
+            return rates.get(type.rateKey()).get();
+        }
     }
 
     static {
@@ -48,13 +58,14 @@ public final class Config {
         builder.push("tiers");
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
-            TIERS.put(tier, new TierValues(
-                    builder.comment("Itens por segundo, por face e por tipo (0 = sem limite).")
-                            .defineInRange("itemsPerSecond", tier.defaultItemsPerSecond, 0L, Long.MAX_VALUE),
-                    builder.comment("Fluido e químico em mB por segundo (0 = sem limite).")
-                            .defineInRange("fluidPerSecond", tier.defaultFluidPerSecond, 0L, Long.MAX_VALUE),
-                    builder.comment("Energia em FE por tick (0 = sem limite).")
-                            .defineInRange("energyPerTick", tier.defaultEnergyPerTick, 0L, Long.MAX_VALUE),
+            Map<String, ModConfigSpec.LongValue> rates = new LinkedHashMap<>();
+            for (ResourceType type : ResourceType.values()) {
+                if (!rates.containsKey(type.rateKey())) {
+                    rates.put(type.rateKey(), builder.comment(RATE_COMMENTS.get(type.rateKey()))
+                            .defineInRange(type.rateKey(), type.defaultRate(tier.ordinal()), 0L, Long.MAX_VALUE));
+                }
+            }
+            TIERS.put(tier, new TierValues(Map.copyOf(rates),
                     builder.comment("Alcance em blocos (0 = a dimensão inteira).")
                             .defineInRange("range", tier.defaultRange, 0, Integer.MAX_VALUE),
                     builder.comment("Permite rotas entre dimensões.")

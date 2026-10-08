@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
@@ -187,5 +188,29 @@ public final class RouterConfigGameTests {
                 .thenExecute(() -> helper.setBlock(power, Blocks.REDSTONE_BLOCK))
                 .thenExecute(() -> helper.assertTrue(node.powered(), "sinal não voltou"))
                 .thenSucceed();
+    }
+
+    /** As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. */
+    @GameTest(template = "empty")
+    public static void savedKeysStayTheSame(GameTestHelper helper) {
+        UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "teste-chaves").id();
+        helper.setBlock(new BlockPos(0, 1, 0), Blocks.CHEST);
+        helper.setBlock(new BlockPos(0, 2, 0), router(Direction.UP));
+        RouterBlockEntity node = helper.getBlockEntity(new BlockPos(0, 2, 0));
+        node.setNetworkId(network);
+        node.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+
+        CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
+        Set<String> networks = tag.getCompound("networks").getAllKeys();
+        helper.assertTrue(networks.equals(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
+        helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
+
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);
+        helper.setBlock(new BlockPos(2, 2, 2), router(Direction.UP));
+        RouterBlockEntity copy = helper.getBlockEntity(new BlockPos(2, 2, 2));
+        copy.loadWithComponents(tag, helper.getLevel().registryAccess());
+        helper.assertTrue(network.equals(copy.networkId(ResourceType.ENERGY)), "rede de energia perdida");
+        helper.assertTrue(copy.face(ResourceType.FLUID, Direction.UP).mode() == PortMode.INSERT, "modo de fluido perdido");
+        helper.succeed();
     }
 }

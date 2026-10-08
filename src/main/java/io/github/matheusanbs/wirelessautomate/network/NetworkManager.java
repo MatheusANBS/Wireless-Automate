@@ -412,6 +412,7 @@ public final class NetworkManager {
         visitMachine = source.machinePos;
         int result;
         try {
+            // Sem default: um tipo novo no ResourceType não compila até ganhar o seu caso aqui.
             result = switch (source.type) {
                 case ITEM -> ItemTransfer.move(source, now);
                 case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;

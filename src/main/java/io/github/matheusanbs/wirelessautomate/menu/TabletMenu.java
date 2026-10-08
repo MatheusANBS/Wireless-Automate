@@ -90,8 +90,7 @@ public class TabletMenu extends AbstractContainerMenu {
     private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
-    private static final ResourceType[] TRANSFER_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY,
-            ResourceType.CHEMICAL};
+    private static final ResourceType[] TRANSFER_TYPES = ResourceType.values();
 
     /** Ações da tela sobre redes e grupos ({@code TabletActionPayload}). */
     public enum Action {

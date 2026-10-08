@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +36,7 @@ public final class RouterPreset {
             new RouterPreset(new FaceConfig[TYPES.length][SIDES.length], new UUID[TYPES.length]);
 
     private static final Codec<ResourceType> TYPE_CODEC =
-            keyCodec(TYPES, type -> type.name().toLowerCase(Locale.ROOT));
+            keyCodec(TYPES, ResourceType::key);
     private static final Codec<RelativeSide> SIDE_CODEC = keyCodec(SIDES, RelativeSide::key);
     /**
      * O codec da própria {@link FaceConfig}: mesmo formato do NBT da face (presets antigos continuam

@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import io.github.matheusanbs.wirelessautomate.bench.BenchCommand;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -49,9 +50,9 @@ public final class WaCommand {
     private static final Map<String, PortMode> MODES = new LinkedHashMap<>();
 
     static {
-        TYPES.put("item", ResourceType.ITEM);
-        TYPES.put("fluid", ResourceType.FLUID);
-        TYPES.put("energy", ResourceType.ENERGY);
+        for (ResourceType type : LoadedTypes.LIST) {
+            TYPES.put(type.key(), type);
+        }
         for (Direction direction : Direction.values()) {
             FACES.put(direction.getName(), direction);
         }

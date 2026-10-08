@@ -58,9 +58,7 @@ import org.jetbrains.annotations.Nullable;
  */
 final class NetworkRoutes {
     /** Tipos com rotas; químicos só com o Mekanism instalado. */
-    static final ResourceType[] TRANSFER_TYPES = Chemicals.LOADED
-            ? new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, ResourceType.CHEMICAL}
-            : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    static final ResourceType[] TRANSFER_TYPES = LoadedTypes.LIST.toArray(new ResourceType[0]);
     private static final ResourceType[] TYPES = ResourceType.values();
     /** Máscara com todos os tipos (bit = {@code 1 << ordinal}). */
     static final int ALL_TYPES = (1 << TYPES.length) - 1;
@@ -118,10 +116,6 @@ final class NetworkRoutes {
         return lists;
     }
 
-    static int bit(ResourceType type) {
-        return 1 << type.ordinal();
-    }
-
     /** Remonta os tipos sujos: origens, destinos e a ordem de entrega. {@code scratch} é uma lista reaproveitada. */
     void rebuild(List<Port> scratch) {
         int mask = dirtyTypes;
@@ -129,7 +123,7 @@ final class NetworkRoutes {
         if (!exists) {
             // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
             for (ResourceType type : TYPES) {
-                if ((mask & bit(type)) == 0) {
+                if ((mask & NetworkManager.typeBit(type)) == 0) {
                     continue;
                 }
                 sourcesOf[type.ordinal()].clear();
@@ -143,7 +137,7 @@ final class NetworkRoutes {
             return;
         }
         for (ResourceType type : TRANSFER_TYPES) {
-            if ((mask & bit(type)) != 0) {
+            if ((mask & NetworkManager.typeBit(type)) != 0) {
                 rebuild(type, scratch);
             }
         }
@@ -487,11 +481,8 @@ final class NetworkRoutes {
 
     /** Taxa do balde em unidades por segundo (0 = sem limite). */
     static long ratePerSecond(ResourceType type, Config.TierValues tier) {
-        return switch (type) {
-            case ITEM -> tier.itemsPerSecond().get();
-            case FLUID, CHEMICAL -> tier.fluidPerSecond().get();
-            case ENERGY -> RateLimiter.perSecondFromPerTick(tier.energyPerTick().get());
-        };
+        long value = tier.rate(type);
+        return type.ratePerTick() ? RateLimiter.perSecondFromPerTick(value) : value;
     }
 
     /** Fecha a medição do tick. */

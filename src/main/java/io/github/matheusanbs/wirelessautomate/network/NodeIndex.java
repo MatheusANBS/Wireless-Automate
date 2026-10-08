@@ -208,7 +208,7 @@ public final class NodeIndex extends SavedData {
             CompoundTag networksTag = new CompoundTag();
             for (ResourceType type : TYPES) {
                 if (networks[type.ordinal()] != null) {
-                    networksTag.putUUID(type.name().toLowerCase(Locale.ROOT), networks[type.ordinal()]);
+                    networksTag.putUUID(type.key(), networks[type.ordinal()]);
                 }
             }
             tag.put("networks", networksTag);
@@ -233,7 +233,7 @@ public final class NodeIndex extends SavedData {
                     .findFirst().orElse(RouterTier.BASIC);
             CompoundTag networksTag = tag.getCompound("networks");
             for (ResourceType type : TYPES) {
-                String typeKey = type.name().toLowerCase(Locale.ROOT);
+                String typeKey = type.key();
                 entry.networks[type.ordinal()] = networksTag.hasUUID(typeKey) ? networksTag.getUUID(typeKey) : null;
             }
             entry.roles = tag.getInt("roles");

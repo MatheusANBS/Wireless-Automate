@@ -44,6 +44,8 @@ Também tira roteadores da rede.
 | **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
 | **Abas** | Um botão colorido por tipo: clique para marcar ou desmarcar (marcado = borda e fundo na cor do tipo). **Todos** marca todos os tipos; com todos marcados, deixa só o primeiro. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
 
+Arraste a borda ou o canto para aumentar a tela; o mapa da área cresce.
+
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
   <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="basic" />

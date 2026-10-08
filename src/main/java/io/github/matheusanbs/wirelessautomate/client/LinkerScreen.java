@@ -40,10 +40,16 @@ import org.lwjgl.glfw.GLFW;
  * servidor (na captura de desenvolvimento, {@code preview}, muda só o estado local).
  */
 public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
-    private static final int W = 300;
-    private static final int H = 204;
+    /** Tamanho mínimo (o de antes de redimensionar) e margem da janela no máximo. */
+    private static final int MIN_W = 300;
+    private static final int MIN_H = 204;
+    private static final int WINDOW_MARGIN = 8;
+    private static final int GRIP = 7;
+    private static final int EDGE = 3;
+    /** Tamanho lembrado na sessão (as telas do jogo são recriadas a cada abertura). */
+    private static int savedW = MIN_W;
+    private static int savedH = MIN_H;
     private static final int X0 = 9;
-    private static final int X1 = W - 9;
     private static final int HEAD_Y = 8;
     private static final int SEP_Y = 26;
     private static final int BODY_Y = 31;
@@ -58,21 +64,20 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int LW = 144;
     private static final int LIST_Y = 42;
     private static final int ROW = 12;
-    /** Botões de linha criados (o máximo de linhas da lista). */
-    private static final int MAX_ROWS = 6;
+    /** Linhas da lista no tamanho mínimo, no máximo; cada ROW de altura extra soma uma linha. */
+    private static final int BASE_ROWS = 6;
     private static final int TYPE_H = 16;
     // coluna da direita: o corpo do modo
     private static final int RX = X0 + LW + 8;
-    private static final int RW = X1 - RX;
     private static final int MAP_H = 104;
-    private static final int CORNER_Y = BODY_Y + MAP_H + 4;
-    private static final int STATUS_Y = CORNER_Y + 21;
-    private static final int ACTION_Y = H - 9 - 16;
 
     /** Caixas das abas, na ordem dos botões (Químicos só aparece com o Mekanism). */
     private static final ResourceType[] TABS = ResourceType.values();
 
     private final boolean preview;
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
+    private int w = MIN_W;
+    private int h = MIN_H;
     private final List<FlatButton> buttons = new ArrayList<>();
     private final List<FlatButton> rowButtons = new ArrayList<>();
     private final List<FlatButton> tabButtons = new ArrayList<>();
@@ -95,8 +100,43 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title, boolean preview) {
         super(menu, inventory, title);
         this.preview = preview;
-        this.imageWidth = W;
-        this.imageHeight = H;
+        this.imageWidth = MIN_W;
+        this.imageHeight = MIN_H;
+    }
+
+    // tamanho: a largura extra vai para a coluna da direita, a altura para o mapa e a lista de redes
+
+    private int x1() {
+        return w - 9;
+    }
+
+    private int rw() {
+        return x1() - RX;
+    }
+
+    private int extraH() {
+        return h - MIN_H;
+    }
+
+    private int mapH() {
+        return MAP_H + extraH();
+    }
+
+    private int actionY() {
+        return h - 9 - 16;
+    }
+
+    private int maxW() {
+        return Math.max(MIN_W, width - WINDOW_MARGIN);
+    }
+
+    private int maxH() {
+        return Math.max(MIN_H, height - WINDOW_MARGIN);
+    }
+
+    /** Botões de linha criados: o máximo de linhas que a maior altura comporta. */
+    private int maxRows() {
+        return BASE_ROWS + (maxH() - MIN_H) / ROW;
     }
 
     private LinkerSnapshot snapshot() {
@@ -178,9 +218,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return (snapshot().available().types().size() + 1) / 2;
     }
 
-    /** Linhas da lista de redes: 6 com duas linhas de tipo, 5 com três. */
+    /** Linhas da lista de redes: 6 com duas linhas de tipo, 5 com três, mais uma por ROW de altura extra. */
     private int listRows() {
-        return Math.max(1, Math.min(MAX_ROWS, 8 - typeRows()));
+        return Math.max(1, Math.min(BASE_ROWS, 8 - typeRows()) + extraH() / ROW);
     }
 
     private int listH() {
@@ -208,6 +248,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     @Override
     protected void init() {
+        w = Math.max(MIN_W, Math.min(savedW, maxW()));
+        h = Math.max(MIN_H, Math.min(savedH, maxH()));
+        imageWidth = w;
+        imageHeight = h;
         super.init();
         buttons.clear();
         rowButtons.clear();
@@ -219,12 +263,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         LinkerMode[] modes = LinkerMode.values();
         for (int i = 0; i < modes.length; i++) {
             LinkerMode mode = modes[i];
-            add(new FlatButton(x + X1 - (modes.length - i) * (modeW + 2) + 2, y + HEAD_Y - 1, modeW, 15, modeName(mode),
+            add(new FlatButton(x + x1() - (modes.length - i) * (modeW + 2) + 2, y + HEAD_Y - 1, modeW, 15, modeName(mode),
                     (g, b, hovered) -> paintChoice(g, b, hovered, modeName(mode), snapshot().mode() == mode),
                     () -> setMode(mode)).tooltip(() -> tr("mode." + mode.getSerializedName() + ".tooltip")));
         }
 
-        for (int i = 0; i < MAX_ROWS; i++) {
+        for (int i = 0; i < maxRows(); i++) {
             int row = i;
             FlatButton button = add(new FlatButton(x + X0 + 1, y + LIST_Y + 2 + i * ROW, LW - 2, ROW, Component.empty(),
                     (g, b, hovered) -> paintRow(g, b, hovered, row), () -> chooseRow(row))
@@ -259,9 +303,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         allButton = add(new FlatButton(x + X0 + LW - 50, y + typeLabelY() - 3, 50, 12, tr("type.all"),
                 (g, b, hovered) -> paintAll(g, b, hovered), this::setAllTabs).tooltip(this::allTooltip));
 
-        linkButton = add(new FlatButton(x + RX, y + ACTION_Y, RW - 48, 16, tr("link.count", 0), this::paintLink,
+        linkButton = add(new FlatButton(x + RX, y + actionY(), rw() - 48, 16, tr("link.count", 0), this::paintLink,
                 this::link).tooltip(this::linkTooltip));
-        clearButton = add(new FlatButton(x + X1 - 46, y + ACTION_Y, 46, 16, tr("clear"),
+        clearButton = add(new FlatButton(x + x1() - 46, y + actionY(), 46, 16, tr("clear"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("clear"), b.active ? GuiPaint.FG : GuiPaint.DISABLED),
                 this::clear).tooltip(() -> tr("clear.tooltip")));
         refresh();
@@ -277,7 +321,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         LinkerSnapshot s = snapshot();
         int rows = rowCount();
         scroll = Math.max(0, Math.min(scroll, rows - listRows()));
-        for (int i = 0; i < MAX_ROWS; i++) {
+        for (int i = 0; i < rowButtons.size(); i++) {
             FlatButton row = rowButtons.get(i);
             int index = i + scroll;
             row.visible = index < rows;
@@ -286,7 +330,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                     : entry == null ? tr("network.unlink") : Component.literal(entry.name()));
         }
         // a lista encolhe quando os tipos precisam de mais linhas; os botões que passam dela somem
-        for (int i = listRows(); i < MAX_ROWS; i++) {
+        for (int i = listRows(); i < rowButtons.size(); i++) {
             rowButtons.get(i).visible = false;
         }
         int typeW = (LW - 2) / 2;
@@ -445,6 +489,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
+            return true;
+        }
         if (creating && !nameBox.isMouseOver(mouseX, mouseY) && !createButton.isMouseOver(mouseX, mouseY)) {
             finishCreate(false);
         }
@@ -455,6 +502,60 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             setFocused(nameBox);
         }
         return handled;
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (resizeHandle.dragging()) {
+            dragResize(mouseX, mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (resizeHandle.dragging()) {
+            resizeHandle.end();
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /**
+     * Redimensiona em torno do centro, como o roteador e o Tablet: a borda arrastada segue o mouse e
+     * a oposta se move igual. Largura e altura sempre pares.
+     */
+    private void dragResize(double mouseX, double mouseY) {
+        int newW = w;
+        int newH = h;
+        if (resizeHandle.changesWidth()) {
+            newW = Math.max(MIN_W, Math.min(maxW(), (int) Math.round(resizeHandle.wantedWidth(mouseX) / 2) * 2));
+        }
+        if (resizeHandle.changesHeight()) {
+            newH = Math.max(MIN_H, Math.min(maxH(), (int) Math.round(resizeHandle.wantedHeight(mouseY) / 2) * 2));
+        }
+        if (newW != w || newH != h) {
+            savedW = newW;
+            savedH = newH;
+            rebuild();
+        }
+    }
+
+    /**
+     * Refaz os widgets no tamanho lembrado. A rolagem e o modo ficam em campos; o campo de nome de
+     * rede nova é fechado (o texto digitado volta ao reabrir, como no Tablet).
+     */
+    private void rebuild() {
+        creating = false;
+        setFocused(null);
+        rebuildWidgets();
+    }
+
+    @Override
+    public void resize(net.minecraft.client.Minecraft minecraft, int width, int height) {
+        resizeHandle.end();
+        super.resize(minecraft, width, height);
     }
 
     @Override
@@ -512,6 +613,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 break;
             }
         }
+        if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
+            setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
+            return;
+        }
         // texto abreviado: a dica traz o texto inteiro, se nenhuma outra dica está no ar
         Component clipped = GuiText.clipAt(mouseX, mouseY);
         if (clipped != null) {
@@ -529,16 +634,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         LinkerSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.panel(g, x, y, W, H, ACCENT);
+        GuiPaint.panel(g, x, y, w, h, ACCENT);
 
         int titleW = font.width(title);
         GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
         Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
         int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
-        int headW = X1 - LinkerMode.values().length * 46 - 4 - headX;
+        int headW = x1() - LinkerMode.values().length * 46 - 4 - headX;
         GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? UNLINK : GuiPaint.MUTED);
-        g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
+        g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
         // rede ativa
         GuiPaint.text(g, font, tr("network.label"), x + X0, y + BODY_Y, GuiPaint.MUTED);
@@ -560,25 +665,26 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         GuiPaint.text(g, font, tr("type.label"), x + X0, y + typeLabelY(), GuiPaint.MUTED);
 
         // corpo do modo
-        g.fill(x + RX - 5, y + BODY_Y, x + RX - 4, y + H - 9, GuiPaint.LINE);
+        g.fill(x + RX - 5, y + BODY_Y, x + RX - 4, y + h - 9, GuiPaint.LINE);
         if (s.mode() == LinkerMode.SINGLE) {
             renderSingle(g, x + RX, y + BODY_Y);
         } else {
             renderArea(g, s, x + RX, y + BODY_Y, mouseX, mouseY);
         }
+        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), ACCENT);
     }
 
     private void renderSingle(GuiGraphics g, int x, int y) {
         int lineY = y;
         Component main = unlink() ? tr("single.unlink.body")
                 : tr("single.body", Component.literal(activeName().getString()).withColor(activeColor()));
-        lineY += GuiText.wrap(g, font, main, x, lineY, RW, 4, GuiPaint.FG);
+        lineY += GuiText.wrap(g, font, main, x, lineY, rw(), 4, GuiPaint.FG);
         lineY += 6;
         Component typeHint = unlink()
                 ? (allTabs() ? tr("single.unlink.all") : tr("single.unlink.tabs", tabsName()))
                 : (allTabs() ? tr("single.all") : tr("single.tabs", tabsName()));
         for (Component hint : List.of(typeHint, tr("single.toggle"), tr("single.open"))) {
-            lineY += GuiText.wrap(g, font, hint, x, lineY, RW, 3, GuiPaint.MUTED);
+            lineY += GuiText.wrap(g, font, hint, x, lineY, rw(), 3, GuiPaint.MUTED);
             lineY += 4;
         }
     }
@@ -625,11 +731,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     private void renderArea(GuiGraphics g, LinkerSnapshot s, int x, int y, int mouseX, int mouseY) {
-        int mapW = RW;
-        g.fillGradient(x + 1, y + 1, x + mapW - 1, y + MAP_H - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
-        GuiPaint.outline(g, x, y, mapW, MAP_H, GuiPaint.LINE);
-        MapView view = mapView(s, x, y, mapW, MAP_H);
-        g.enableScissor(x + 1, y + 1, x + mapW - 1, y + MAP_H - 1);
+        int mapW = rw();
+        int mh = mapH();
+        g.fillGradient(x + 1, y + 1, x + mapW - 1, y + mh - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
+        GuiPaint.outline(g, x, y, mapW, mh, GuiPaint.LINE);
+        MapView view = mapView(s, x, y, mapW, mh);
+        g.enableScissor(x + 1, y + 1, x + mapW - 1, y + mh - 1);
         if (s.first().isPresent()) {
             // grade dos chunks: um quadrado = 16 blocos (agrupa se ficar apertada)
             int step = 16;
@@ -637,12 +744,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 step *= 2;
             }
             double halfW = mapW / 2.0 / view.scale();
-            double halfH = MAP_H / 2.0 / view.scale();
+            double halfH = mh / 2.0 / view.scale();
             int fromX = Math.floorDiv((int) Math.floor(view.centerX() - halfW), step) * step;
             int fromZ = Math.floorDiv((int) Math.floor(view.centerZ() - halfH), step) * step;
             for (int wx = fromX; wx <= view.centerX() + halfW; wx += step) {
                 int sx = view.sx(wx);
-                g.fill(sx, y + 1, sx + 1, y + MAP_H - 1, 0xFF1F2731);
+                g.fill(sx, y + 1, sx + 1, y + mh - 1, 0xFF1F2731);
             }
             for (int wz = fromZ; wz <= view.centerZ() + halfH; wz += step) {
                 int sz = view.sz(wz);
@@ -676,7 +783,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         } else {
             Component hint = s.otherDimension() ? tr("problem.other_dimension") : tr("map.empty");
             List<FormattedCharSequence> lines = font.split(hint, mapW - 16);
-            int ty = y + MAP_H / 2 - lines.size() * 5;
+            int ty = y + mh / 2 - lines.size() * 5;
             for (FormattedCharSequence line : lines) {
                 g.drawString(font, line, x + (mapW - font.width(line)) / 2, ty, GuiPaint.MUTED, false);
                 ty += 10;
@@ -689,27 +796,27 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 step *= 2;
             }
             Component scaleText = tr("map.scale", step);
-            GuiPaint.textRight(g, font, scaleText, x + mapW - 3, y + MAP_H - 10, GuiPaint.DISABLED);
+            GuiPaint.textRight(g, font, scaleText, x + mapW - 3, y + mh - 10, GuiPaint.DISABLED);
         }
 
         // cantos
-        int cy = y + MAP_H + 4;
+        int cy = y + mh + 4;
         cornerLine(g, x, cy, tr("corner1"), s.first());
         cornerLine(g, x, cy + 10, tr("corner2"), s.second());
 
         // estado (contagem ou o que impede) e, embaixo, o detalhe ou o resultado do último Vincular
-        int sy = y + MAP_H + 25;
+        int sy = y + mh + 25;
         if (s.problem() != LinkerProblem.NONE) {
-            GuiText.wrap(g, font, status(s), x, sy, RW, 2, statusColor(s));
+            GuiText.wrap(g, font, status(s), x, sy, rw(), 2, statusColor(s));
             return;
         }
         // depois do Vincular, o resultado toma o lugar da contagem (que viraria "N já na rede")
         Component head = s.outcome().map(this::outcomeText).orElse(status(s));
-        GuiText.draw(g, font, head, x, sy, RW, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
+        GuiText.draw(g, font, head, x, sy, rw(), s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         Component detail = s.outcome().isPresent() ? outcomeDetail(s.outcome().get()) : detail(s);
         if (detail != null) {
             boolean unloaded = s.outcome().map(o -> o.unloadedChunks() > 0).orElse(s.unloadedChunks() > 0);
-            GuiText.draw(g, font, detail, x, sy + 11, RW, unloaded ? WARN : GuiPaint.MUTED);
+            GuiText.draw(g, font, detail, x, sy + 11, rw(), unloaded ? WARN : GuiPaint.MUTED);
         }
     }
 
@@ -955,6 +1062,18 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     void previewCancelCreate() {
         finishCreate(false);
+    }
+
+    /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */
+    public void previewResize(int width, int height) {
+        savedW = width;
+        savedH = height;
+        rebuild();
+    }
+
+    /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */
+    public int[] size() {
+        return new int[] {w, h};
     }
 
     int[] previewLinkCenter() {

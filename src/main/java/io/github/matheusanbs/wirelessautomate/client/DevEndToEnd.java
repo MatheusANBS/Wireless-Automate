@@ -2071,6 +2071,15 @@ public final class DevEndToEnd {
                 () -> serverLinker(stack -> LinkerItem.tabs(stack).isAll(LoadedTypes.LIST)),
                 () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(capture("8b-vinculador-chips"));
+        list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
+                () -> linkerScreen().previewResize(460, 300),
+                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 204,
+                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
+        list.add(capture("8d-vinculador-grande"));
+        list.add(new Step("Vinculador de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> linkerScreen().previewResize(300, 204),
+                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 204,
+                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
         list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
                 () -> {
                     // de Todos, desmarca as outras caixas (só aparecem os tipos disponíveis)

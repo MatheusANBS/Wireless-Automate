@@ -44,6 +44,8 @@ also takes routers out of their network.
 | **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
 | **Tabs** | One colored button per type: click to mark or unmark it (marked = border and tint in the type's color). **All** marks every type; when all are marked, it leaves only the first. Only the marked tabs change; the others stay as they are. At least one stays marked. |
 
+Drag the edge or the corner to make the screen bigger; the area map grows.
+
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
   <Block id="wirelessautomate:router" x="0" y="1" z="0" p:facing="up" p:tier="basic" />

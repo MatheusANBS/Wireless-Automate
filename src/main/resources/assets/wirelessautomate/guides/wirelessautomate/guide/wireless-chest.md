@@ -84,8 +84,9 @@ and export them from the filter screen.
 
 ## Break and carry
 
-Break the chest with a pickaxe: the item takes **all the contents and the filter** with it, and the
-tooltip shows the total and the types. Place it again and everything is there.
+Break the chest: the item takes **all the contents and the filter** with it, and the tooltip shows
+the total and the types. Place it again and everything is there. A full chest always becomes an
+item: in creative, without a pickaxe or in an explosion, nothing is lost.
 
 ## With other blocks
 

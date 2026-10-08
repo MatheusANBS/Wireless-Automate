@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
@@ -22,7 +23,9 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -30,6 +33,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -40,6 +45,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -398,6 +405,110 @@ public final class StorageGameTests {
         helper.assertTrue(helper.getLevel().getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, skip, helper.getLevel()).isEmpty(), "não pula tier");
         helper.succeed();
+    }
+
+    /**
+     * O bug do dono: quebrado no criativo, o Baú não dropava nada e o conteúdo ficava órfão no
+     * servidor. Agora ele solta o item com o conteúdo, como a caixa de shulker.
+     */
+    @GameTest(template = "empty")
+    public static void creativeBreakDropsTheContents(GameTestHelper helper) {
+        breakByPlayer(helper, GameType.CREATIVE, ItemStack.EMPTY, 1_234);
+    }
+
+    /** Sem a picareta no sobrevivência a loot table não roda; o conteúdo ainda vira item. */
+    @GameTest(template = "empty")
+    public static void breakWithoutToolDropsTheContents(GameTestHelper helper) {
+        breakByPlayer(helper, GameType.SURVIVAL, ItemStack.EMPTY, 2_345);
+    }
+
+    /** Com a picareta, só a loot table dropa: um item, não dois. */
+    @GameTest(template = "empty")
+    public static void breakWithPickaxeDropsOnce(GameTestHelper helper) {
+        breakByPlayer(helper, GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 3_456);
+    }
+
+    /** Explosão: o Baú cheio também vira item (a loot table não tem mais a condição de sobreviver). */
+    @GameTest(template = "empty")
+    public static void explosionDropsTheContents(GameTestHelper helper) {
+        storageChest(helper, A, RouterTier.BASIC).storage().insert(new ItemStack(Items.COBBLESTONE), 5_000, false);
+        BlockPos absolute = helper.absolutePos(A);
+        helper.getLevel().explode(null, absolute.getX() + 0.5, absolute.getY() + 0.5, absolute.getZ() + 0.5, 2.0F,
+                Level.ExplosionInteraction.BLOCK);
+        helper.assertBlockNotPresent(ModBlocks.STORAGE_CHEST.get(), A);
+        assertDroppedWith(helper, absolute, 5_000L);
+        helper.succeed();
+    }
+
+    /**
+     * {@code /wa storage recover}: um conteúdo órfão no servidor volta como item, e colocar o item
+     * traz o conteúdo de volta.
+     */
+    @GameTest(template = "empty")
+    public static void recoverCommandGivesTheContentsBack(GameTestHelper helper) {
+        StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.BASIC);
+        chest.storage().insert(new ItemStack(Items.DIAMOND), 777, false);
+        // Sai do mundo sem drop nenhum, como um /setblock: o conteúdo fica órfão no servidor.
+        helper.getLevel().setBlock(helper.absolutePos(A), Blocks.AIR.defaultBlockState(), 3);
+        UUID orphan = null;
+        for (Map.Entry<UUID, Tag> entry : StorageSavedData.get(helper.getLevel().getServer()).contents().entrySet()) {
+            if (entry.getValue() instanceof ListTag list && list.size() == 1
+                    && list.getCompound(0).getLong("count") == 777) {
+                orphan = entry.getKey();
+            }
+        }
+        helper.assertTrue(orphan != null, "o conteúdo ficou no servidor");
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getInventory().clearContent();
+        try {
+            helper.getLevel().getServer().getCommands().getDispatcher().execute("wa storage recover " + orphan,
+                    player.createCommandSourceStack().withPermission(2));
+        } catch (CommandSyntaxException e) {
+            throw new GameTestAssertException("o comando falhou: " + e.getMessage());
+        }
+        // Pelo item só: o entregue tem componentes (tier e conteúdo), que o findSlotMatchingItem compara.
+        ItemStack given = ItemStack.EMPTY;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (player.getInventory().getItem(i).is(ModItems.STORAGE_CHEST.get())) {
+                given = player.getInventory().getItem(i);
+            }
+        }
+        StorageContents contents = given.get(ModDataComponents.STORAGE_CONTENTS.get());
+        helper.assertTrue(contents != null && contents.id().equals(orphan) && contents.total() == 777,
+                "o item aponta para o conteúdo: " + given);
+        place(helper, given, B);
+        helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 777L, "os diamantes voltaram");
+        helper.succeed();
+    }
+
+    /**
+     * Um Baú com {@code total} pedregulhos quebrado por um jogador no modo e com a ferramenta dados:
+     * exatamente um item com o conteúdo no chão. O total é diferente em cada teste, porque os testes
+     * do lote rodam lado a lado e os drops de um vizinho podem cair perto.
+     */
+    @SuppressWarnings("removal")
+    private static void breakByPlayer(GameTestHelper helper, GameType mode, ItemStack tool, long total) {
+        storageChest(helper, A, RouterTier.ADVANCED).storage().insert(new ItemStack(Items.COBBLESTONE), total, false);
+        BlockPos absolute = helper.absolutePos(A);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.moveTo(Vec3.atCenterOf(absolute.above()));
+        player.setGameMode(mode);
+        player.setItemInHand(InteractionHand.MAIN_HAND, tool);
+        player.gameMode.destroyBlock(absolute);
+        helper.assertBlockNotPresent(ModBlocks.STORAGE_CHEST.get(), A);
+        assertDroppedWith(helper, absolute, total);
+        helper.succeed();
+    }
+
+    /** Exatamente um Baú no chão perto de {@code absolute} levando o conteúdo com esse total. */
+    private static void assertDroppedWith(GameTestHelper helper, BlockPos absolute, long total) {
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(4),
+                entity -> {
+                    StorageContents contents = entity.getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+                    return entity.getItem().is(ModItems.STORAGE_CHEST.get()) && contents != null && contents.total() == total;
+                });
+        helper.assertValueEqual(drops.size(), 1, "Baús no chão com " + total + " itens");
+        drops.forEach(ItemEntity::discard);
     }
 
     @SuppressWarnings("removal")

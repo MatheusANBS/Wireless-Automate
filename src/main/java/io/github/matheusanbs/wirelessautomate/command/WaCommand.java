@@ -38,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@code /wa}: profiler embutido ({@code profile}), gerência de redes ({@code network}) e
- * configuração de faces sem tela ({@code face}), usada em testes manuais antes das telas.
+ * configuração de faces sem tela ({@code face}), usada em testes manuais antes das telas, e o
+ * conteúdo dos Baús guardado no servidor ({@code storage}).
  */
 public final class WaCommand {
     public static final int MAX_NAME_LENGTH = 32;
@@ -105,6 +106,7 @@ public final class WaCommand {
                                                         .then(Commands.argument("priority", IntegerArgumentType.integer())
                                                                 .executes(context -> face(context,
                                                                         IntegerArgumentType.getInteger(context, "priority")))))))))
+                .then(StorageCommand.node())
                 .then(BenchCommand.node()));
     }
 

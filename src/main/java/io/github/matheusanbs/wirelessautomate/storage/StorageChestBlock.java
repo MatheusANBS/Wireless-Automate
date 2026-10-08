@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -97,6 +98,25 @@ public class StorageChestBlock extends BaseEntityBlock {
         return level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest
                 ? StorageMath.signal(chest.storage().total(), chest.capacity())
                 : 0;
+    }
+
+    /**
+     * Um Baú com conteúdo nunca some sem virar item, como a caixa de shulker: se a quebra não vai
+     * dropar nada (criativo, ou sem a ferramenta certa), o próprio bloco solta o item com o conteúdo.
+     * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui não se faz nada.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageChestBlockEntity chest
+                && !chest.storage().isEmpty()
+                && (player.isCreative() || !state.canHarvestBlock(level, pos, player))) {
+            ItemStack stack = StorageChestBlockItem.withTier((StorageChestBlockItem) asItem(), state.getValue(RouterBlock.TIER));
+            stack.applyComponents(chest.collectComponents());
+            ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
+            drop.setDefaultPickUpDelay();
+            level.addFreshEntity(drop);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     /**

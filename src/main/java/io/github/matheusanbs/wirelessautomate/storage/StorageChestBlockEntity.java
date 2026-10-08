@@ -174,8 +174,7 @@ public class StorageChestBlockEntity extends BlockEntity {
         if (contents == null || !(level instanceof ServerLevel server)) {
             return;
         }
-        ListTag items = StorageSavedData.get(server.getServer()).take(contents.id());
-        if (items != null) {
+        if (StorageSavedData.get(server.getServer()).take(contents.id()) instanceof ListTag items) {
             storage.load(items, server.registryAccess());
             storageId = contents.id();
             setChanged();

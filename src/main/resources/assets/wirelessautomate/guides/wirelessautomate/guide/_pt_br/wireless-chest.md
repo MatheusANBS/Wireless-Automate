@@ -82,8 +82,9 @@ importe e exporte pela tela do filtro.
 
 ## Quebrar e levar
 
-Quebre o Baú com uma picareta: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o
-total e os tipos. Coloque de novo e está tudo lá.
+Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
+Coloque de novo e está tudo lá. Cheio, ele sempre vira item: no criativo, sem picareta ou numa
+explosão, nada se perde.
 
 ## Com outros blocos
 

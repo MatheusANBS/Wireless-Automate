@@ -18,6 +18,7 @@ class ResourceTypeTest {
         assertEquals("fluid", ResourceType.FLUID.key());
         assertEquals("energy", ResourceType.ENERGY.key());
         assertEquals("chemical", ResourceType.CHEMICAL.key());
+        assertEquals("source", ResourceType.SOURCE.key());
         Set<String> keys = new HashSet<>();
         for (ResourceType type : ResourceType.values()) {
             assertTrue(keys.add(type.key()), "chave repetida: " + type.key());
@@ -28,7 +29,8 @@ class ResourceTypeTest {
     void byKeyFindsAndRejects() {
         assertSame(ResourceType.FLUID, ResourceType.byKey("fluid"));
         assertNull(ResourceType.byKey("FLUID"));
-        assertNull(ResourceType.byKey("source"));
+        assertSame(ResourceType.SOURCE, ResourceType.byKey("source"));
+        assertNull(ResourceType.byKey("mana"));
     }
 
     @Test
@@ -38,6 +40,7 @@ class ResourceTypeTest {
         assertFalse(ResourceType.ENERGY.filtered() || ResourceType.ENERGY.cards());
         assertTrue(ResourceType.CHEMICAL.filtered());
         assertFalse(ResourceType.CHEMICAL.cards());
+        assertFalse(ResourceType.SOURCE.filtered() || ResourceType.SOURCE.cards());
     }
 
     @Test
@@ -48,6 +51,10 @@ class ResourceTypeTest {
         assertEquals(4_000_000L, ResourceType.ENERGY.defaultRate(2));
         assertEquals(0L, ResourceType.ENERGY.defaultRate(3));
         assertEquals(ResourceType.FLUID.defaultRate(1), ResourceType.CHEMICAL.defaultRate(1));
+        assertEquals(1_000L, ResourceType.SOURCE.defaultRate(0));
+        assertEquals(16_000L, ResourceType.SOURCE.defaultRate(1));
+        assertEquals(256_000L, ResourceType.SOURCE.defaultRate(2));
+        assertEquals(0L, ResourceType.SOURCE.defaultRate(3));
     }
 
     @Test
@@ -58,12 +65,25 @@ class ResourceTypeTest {
         assertEquals("energyPerTick", ResourceType.ENERGY.rateKey());
         assertTrue(ResourceType.ENERGY.ratePerTick());
         assertFalse(ResourceType.ITEM.ratePerTick());
+        assertEquals("sourcePerSecond", ResourceType.SOURCE.rateKey());
+        assertFalse(ResourceType.SOURCE.ratePerTick());
     }
 
     @Test
     void availableDependsOnTheMods() {
         assertEquals(List.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY),
                 ResourceType.available(mod -> false));
-        assertEquals(List.of(ResourceType.values()), ResourceType.available(mod -> mod.equals("mekanism")));
+        assertEquals(List.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, ResourceType.CHEMICAL),
+                ResourceType.available(mod -> mod.equals("mekanism")));
+        assertEquals(List.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, ResourceType.SOURCE),
+                ResourceType.available(mod -> mod.equals("ars_nouveau")));
+        assertEquals(List.of(ResourceType.values()), ResourceType.available(mod -> true));
+        assertEquals("ars_nouveau", ResourceType.SOURCE.requiredMod());
+    }
+
+    @Test
+    void sourceIsLastSoSavedOrdinalsKeep() {
+        assertEquals(4, ResourceType.SOURCE.ordinal());
+        assertEquals(3, ResourceType.CHEMICAL.ordinal());
     }
 }

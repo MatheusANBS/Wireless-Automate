@@ -32,7 +32,8 @@ public final class Config {
     private static final Map<String, String> RATE_COMMENTS = Map.of(
             "itemsPerSecond", "Itens por segundo, por face e por tipo (0 = sem limite).",
             "fluidPerSecond", "Fluido e químico em mB por segundo (0 = sem limite).",
-            "energyPerTick", "Energia em FE por tick (0 = sem limite).");
+            "energyPerTick", "Energia em FE por tick (0 = sem limite).",
+            "sourcePerSecond", "Source por segundo, por face (Ars Nouveau; 0 = sem limite).");
 
     public record TierValues(
             Map<String, ModConfigSpec.LongValue> rates,

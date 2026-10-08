@@ -106,6 +106,7 @@ public final class RouterMenuGameTests {
         helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).slots(), -1, "baú sem tanque");
         helper.assertValueEqual(snapshot.face(ResourceType.ENERGY, Direction.UP).slots(), -1, "baú sem energia");
         helper.assertValueEqual(snapshot.face(ResourceType.CHEMICAL, Direction.UP).slots(), -1, "químicos");
+        helper.assertValueEqual(snapshot.face(ResourceType.SOURCE, Direction.UP).slots(), -1, "Source");
 
         // Rede de outro dono como rede atual: aparece no seletor, sem ser do jogador.
         router.setNetworkId(foreign.id());

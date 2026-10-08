@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class PasteTypesTest {
     private static final List<ResourceType> BASE = List.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY);
-    private static final List<ResourceType> WITH_CHEMICALS = List.of(ResourceType.values());
+    private static final List<ResourceType> WITH_CHEMICALS = List.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY, ResourceType.CHEMICAL);
 
     @Test
     void forwardSkipsUnavailable() {
@@ -49,5 +49,13 @@ class PasteTypesTest {
         assertArrayEquals(new ResourceType[] {null, ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY},
                 PasteTypes.cycle(BASE));
         assertEquals(5, PasteTypes.cycle(WITH_CHEMICALS).length);
+    }
+
+    @Test
+    void sourceComesAfterChemicals() {
+        List<ResourceType> all = List.of(ResourceType.values());
+        assertEquals(ResourceType.SOURCE, PasteTypes.next(ResourceType.CHEMICAL, 1, all));
+        assertNull(PasteTypes.next(ResourceType.SOURCE, 1, all));
+        assertEquals(ResourceType.SOURCE, PasteTypes.next(null, -1, all));
     }
 }

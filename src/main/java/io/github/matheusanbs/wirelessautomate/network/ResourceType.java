@@ -19,7 +19,9 @@ public enum ResourceType {
     FLUID("fluid", true, true, "fluidPerSecond", false, null, 32_000L, 512_000L, 8_000_000L, 0L),
     ENERGY("energy", false, false, "energyPerTick", true, null, 16_000L, 256_000L, 4_000_000L, 0L),
     /** Só existe com o Mekanism instalado. Divide a vazão com os fluidos e não tem cartões. */
-    CHEMICAL("chemical", true, false, "fluidPerSecond", false, "mekanism", 32_000L, 512_000L, 8_000_000L, 0L);
+    CHEMICAL("chemical", true, false, "fluidPerSecond", false, "mekanism", 32_000L, 512_000L, 8_000_000L, 0L),
+    /** Só existe com o Ars Nouveau instalado. Um valor só, como a energia: sem filtro e sem cartões. */
+    SOURCE("source", false, false, "sourcePerSecond", false, "ars_nouveau", 1_000L, 16_000L, 256_000L, 0L);
 
     private final String key;
     private final boolean filtered;

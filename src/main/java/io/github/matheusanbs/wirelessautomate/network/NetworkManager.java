@@ -423,6 +423,7 @@ public final class NetworkManager {
                 case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
                 case ENERGY -> ScalarTransfer.move(source, now, EnergyAccess.INSTANCE) ? MOVED : 0;
                 case CHEMICAL -> Chemicals.move(source, now) ? MOVED : 0;
+                case SOURCE -> Sources.move(source, now) ? MOVED : 0;
             };
         } finally {
             visitNode = null;

@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
@@ -396,6 +397,7 @@ public final class ConfiguratorGameTests {
                         source.setNetworkId(ResourceType.FLUID, fluids.id());
                         source.setNetworkId(ResourceType.ENERGY, energy.id());
                         source.setNetworkId(ResourceType.CHEMICAL, energy.id());
+                        source.setNetworkId(ResourceType.SOURCE, energy.id());
                         configureTarget(target, before.id());
                         RouterPreset targetBefore = RouterPreset.copyOf(target);
                         helper.assertTrue(use(player, source, true), "copiar não agiu");
@@ -406,7 +408,7 @@ public final class ConfiguratorGameTests {
                         assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
                         helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
-                                ResourceType.CHEMICAL}) {
+                                ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
                             helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
                         }
@@ -474,7 +476,7 @@ public final class ConfiguratorGameTests {
                         assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
                         helper.assertValueEqual(target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
-                                ResourceType.CHEMICAL}) {
+                                ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
                             helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
                         }
@@ -504,6 +506,9 @@ public final class ConfiguratorGameTests {
             if (Chemicals.LOADED) {
                 forward.add(ResourceType.CHEMICAL);
             }
+            if (Sources.LOADED) {
+                forward.add(ResourceType.SOURCE);
+            }
             forward.add(null);
             for (ResourceType expected : forward) {
                 helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
@@ -515,7 +520,8 @@ public final class ConfiguratorGameTests {
             helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(-1)),
                     "recusou voltar");
             helper.assertValueEqual(ConfiguratorItem.type(configurator),
-                    Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY, "voltar de Todos");
+                    Sources.LOADED ? ResourceType.SOURCE
+                            : Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY, "voltar de Todos");
             helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(0)),
                     "aceitou direção 0");
 

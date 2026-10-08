@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
@@ -107,6 +108,8 @@ public class RouterBlockEntity extends BlockEntity {
     private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
     /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
     private final BlockCapabilityCache<Object, @Nullable Direction>[] chemicalCaches = newCaches();
+    /** Source do Ars Nouveau; o handler fica como {@code Object} para esta classe não depender dele. */
+    private final BlockCapabilityCache<Object, @Nullable Direction>[] sourceCaches = newCaches();
     private @Nullable Direction cacheFacing;
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
@@ -589,6 +592,18 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * Source do Ars Nouveau ({@code ISourceCap}) pela face, ou {@code null} sem a capability ou sem o
+     * Ars. Devolvido como {@code Object}: só o código de {@code compat/arsnouveau} sabe o tipo.
+     */
+    @SuppressWarnings("unchecked")
+    public @Nullable Object arsSource(Direction machineFace) {
+        BlockCapability<?, @Nullable Direction> capability = Sources.capability();
+        return capability == null ? null
+                : capability(sourceCaches, (BlockCapability<Object, @Nullable Direction>) capability,
+                        ResourceType.SOURCE, machineFace);
+    }
+
+    /**
      * Devolve a capability pelo cache da face, criando o cache na primeira consulta. Se o roteador
      * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor. Cada cache avisa
      * a própria invalidação com o tipo e a face ({@link #capabilityInvalidated}).
@@ -634,6 +649,7 @@ public class RouterBlockEntity extends BlockEntity {
         Arrays.fill(fluidCaches, null);
         Arrays.fill(energyCaches, null);
         Arrays.fill(chemicalCaches, null);
+        Arrays.fill(sourceCaches, null);
         cacheFacing = null;
     }
 

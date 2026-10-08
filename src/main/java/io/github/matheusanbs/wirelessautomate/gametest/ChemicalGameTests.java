@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -200,7 +201,7 @@ public final class ChemicalGameTests {
         router.setNetworkId(before);
 
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), List.of(ResourceType.values()), "Todos");
+        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), LoadedTypes.LIST, "Todos");
         LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.CHEMICAL));
         List<ResourceType> tabs = LinkerItem.effectiveTabs(linker);
         helper.assertValueEqual(tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");

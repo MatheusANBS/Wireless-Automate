@@ -178,7 +178,7 @@ public record RouterSnapshot(
                 machineState, List.of(faces), router.chunkLoadState());
     }
 
-    /** Slots (itens), tanques (fluidos e químicos) ou 1 (energia) da face; {@code -1} sem a capability. */
+    /** Slots (itens), tanques (fluidos e químicos) ou 1 (energia e Source) da face; {@code -1} sem a capability. */
     private static int slots(RouterBlockEntity router, ResourceType type, Direction face) {
         return switch (type) {
             case ITEM -> {
@@ -197,6 +197,7 @@ public record RouterSnapshot(
                 Object chemicals = router.chemicals(face);
                 yield chemicals == null ? -1 : Chemicals.tanks(chemicals);
             }
+            case SOURCE -> router.arsSource(face) == null ? -1 : 1;
         };
     }
 

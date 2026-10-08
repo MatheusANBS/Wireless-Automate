@@ -20,6 +20,7 @@ public final class ResourceStyle {
             case FLUID -> 0xFF3D8BFF;
             case ENERGY -> 0xFFFFB020;
             case CHEMICAL -> 0xFFB45CFF;
+            case SOURCE -> 0xFFFF5CC8;
         };
     }
 
@@ -27,7 +28,7 @@ public final class ResourceStyle {
         return Component.translatable("gui.wirelessautomate.router.type." + type.key());
     }
 
-    /** Vazão já na unidade da tela (itens/s, mB/s ou B/s, FE/t). */
+    /** Vazão já na unidade da tela (itens/s, mB/s ou B/s, FE/t, Source/s). */
     public static Component rate(ResourceType type, long value) {
         String abbreviated = RateFormat.abbreviate(value);
         return switch (type) {
@@ -36,10 +37,11 @@ public final class ResourceStyle {
                     ? Component.translatable("gui.wirelessautomate.router.rate.buckets", RateFormat.abbreviate(value / 1000))
                     : Component.translatable("gui.wirelessautomate.router.rate.millibuckets", abbreviated);
             case ENERGY -> Component.translatable("gui.wirelessautomate.router.rate.energy", abbreviated);
+            case SOURCE -> Component.translatable("gui.wirelessautomate.router.rate.source", abbreviated);
         };
     }
 
-    /** O que a face oferece (slots, tanques, bateria). */
+    /** O que a face oferece (slots, tanques, bateria, Source). */
     public static Component access(ResourceType type, int slots) {
         String prefix = "gui.wirelessautomate.router.access.";
         return switch (type) {
@@ -47,6 +49,7 @@ public final class ResourceStyle {
             case FLUID, CHEMICAL -> slots == 1 ? Component.translatable(prefix + "tank")
                     : Component.translatable(prefix + "tanks", slots);
             case ENERGY -> Component.translatable(prefix + "energy");
+            case SOURCE -> Component.translatable(prefix + "source");
         };
     }
 

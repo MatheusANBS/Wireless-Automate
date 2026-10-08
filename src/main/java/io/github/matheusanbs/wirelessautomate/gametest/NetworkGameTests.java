@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -132,6 +133,9 @@ public final class NetworkGameTests {
             }
             if (!Chemicals.LOADED) {
                 helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos entraram sem o Mekanism");
+            }
+            if (!Sources.LOADED) {
+                helper.assertTrue(router.networkId(ResourceType.SOURCE) == null, "Source entrou sem o Ars Nouveau");
             }
             data.remove(active);
         } finally {

@@ -158,7 +158,10 @@ public final class SourceGameTests {
                 .thenSucceed();
     }
 
-    /** Destino cheio: nada sai da origem; esvaziado, o destino acorda e recebe. */
+    /**
+     * Destino cheio: nada sai da origem; esvaziado, o destino acorda e recebe. O Ars não avisa mudança de
+     * conteúdo no {@code setSource}, então o destino acorda pelo teto do sono, não por um evento.
+     */
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void fullJarSleepsAndWakes(GameTestHelper helper) {
         if (!enabled()) {
@@ -203,6 +206,7 @@ public final class SourceGameTests {
                 .thenIdle(20)
                 .thenExecute(() -> {
                     int moved = amount(helper, B);
+                    helper.assertTrue(moved >= 1_000, "o limitador travou, passou só " + moved);
                     // Um segundo de balde (1.000) + 20 ticks a 50 por tick (1.000), com folga de um tick.
                     helper.assertTrue(moved <= 2_050, "passou do limite do tier: " + moved);
                     helper.assertValueEqual(amount(helper, A) + moved, 10_000, "Source perdida ou criada");

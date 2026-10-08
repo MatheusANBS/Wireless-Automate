@@ -602,23 +602,34 @@ public final class DevEndToEnd {
                     () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                     () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         }
-        // No mínimo (300), com os 5 tipos do runClient (Mekanism e Ars), as abas cabem com o nome só na ativa.
+        // Com 5 tipos ou mais (Mekanism e Ars no runClient) as abas não cabem com todos os nomes no
+        // mínimo (300) nem em 420: só a ativa tem nome. Com menos tipos cabem em 420.
+        boolean manyTypes = LoadedTypes.LIST.size() >= 5;
+        TabLayout.Mode tabsAtMinimum = TabLayout.Mode.ACTIVE_NAME;
+        TabLayout.Mode tabsAtLarge = manyTypes ? TabLayout.Mode.ACTIVE_NAME : TabLayout.Mode.FULL;
         list.add(new Step("abas no tamanho mínimo", STEP_TIMEOUT_MS,
                 () -> { },
-                () -> routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME,
+                () -> routerScreen().tabMode() == tabsAtMinimum,
                 () -> "modo das abas " + routerScreen().tabMode()));
         list.add(capture("1b-roteador-abas"));
-        // Maior (420 x 300): com os 5 tipos do runClient (Mekanism e Ars) as abas ainda não cabem
-        // com todos os nomes, então o modo continua ACTIVE_NAME. A largura extra vai para o visor; a
-        // coluna da direita e o inventário vão junto com a borda direita.
+        // Maior (420 x 300): a largura extra vai para o visor; a coluna da direita e o inventário vão
+        // junto com a borda direita.
         list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(420, 300),
                 () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
-                        && routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME
+                        && routerScreen().tabMode() == tabsAtLarge
                         && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
                                 == routerScreen().size()[0] - 9 - 162 + 1,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
         list.add(capture("1c-roteador-grande"));
+        if (manyTypes) {
+            // Bem largo, com os 5 tipos, todos os nomes passam a caber.
+            list.add(new Step("roteador largo, abas com todos os nomes", STEP_TIMEOUT_MS,
+                    () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
+                    () -> routerScreen().tabMode() == TabLayout.Mode.FULL,
+                    () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
+            list.add(capture("1f-roteador-largo"));
+        }
         list.add(new Step("roteador de volta ao mínimo", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(300, 240),
                 () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240,

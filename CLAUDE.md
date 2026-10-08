@@ -10,6 +10,13 @@ Mod NeoForge 1.21.1 (Java 21) de transporte wireless de itens, fluidos, energia 
 
 Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o próximo passo e uma linha no histórico.
 
+## Skills do projeto (`.claude/skills/`)
+
+- `wa-feature`: feature, tela ou item novo, do mockup aprovado ao commit, com um subagente por tarefa.
+- `wa-mod-opcional`: integrar outro mod opcional (como Mekanism e Ars), sem quebrar o mod quando ele não está instalado.
+- `wa-release`: fechar uma versão (changelog separado e unificado, tag, release com o jar).
+- `wa-curseforge-imagens`: imagens da página do CurseForge pela vitrine e troca dos links na descrição.
+
 ## Mapa do código
 
 Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`

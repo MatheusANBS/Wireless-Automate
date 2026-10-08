@@ -49,10 +49,12 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 - **Abre com:** clique direito no roteador, ou à distância pelo Tablet.
 - **Cabeçalho:** nome do nó, vazão atual da aba selecionada e tier.
-- **Abas:** Itens, Fluidos, Energia e Químicos (Químicos só existe com Mekanism). Cada aba entra numa rede própria, e um ponto na cor da rede em cada aba mostra de relance quando estão em redes diferentes (vazado: sem rede).
-- **Rede da aba:** à direita das abas, o rótulo "Rede" e uma pílula com a rede da aba selecionada, na cor dela. Clicar abre a lista "Rede da aba Itens" (ou da aba atual) com as redes do jogador e "Sem rede"; escolher muda só aquela aba.
+- **Abas:** uma por tipo do registro (Itens, Fluidos, Energia e Químicos; Químicos só existe com Mekanism), cada uma com o ícone e a cor do tipo. Cada aba entra numa rede própria, e um ponto na cor da rede em cada aba mostra de relance quando estão em redes diferentes (vazado: sem rede). **Abas adaptáveis:** com espaço, nome inteiro em todas; mais apertado, o nome só na aba ativa; sem espaço, só o ícone (o nome aparece no tooltip).
+- **Redimensionável** pela borda direita, a de baixo e a alça do canto, de 300 × 240 até a janela menos 8 px, com o tamanho lembrado na sessão; a largura e a altura extras vão para o visor 3D e a linha das abas, e a coluna da direita e o inventário acompanham a borda. Nomes longos (de rede, de nó) são abreviados e mostram o texto inteiro no tooltip.
+- **Rede da aba:** à direita das abas, ocupando a largura que sobra, uma pílula com a rede da aba selecionada, na cor dela. Clicar abre a lista "Rede da aba Itens" (ou da aba atual) com as redes do jogador e "Sem rede"; escolher muda só aquela aba.
 - **Visor 3D:** a máquina conectada e o roteador, na posição em que ele foi colocado, com as faces da máquina tocáveis. Botões por face logo abaixo.
 - **Face selecionada:** nome e slots que ela acessa (na fornalha: entrada em cima, combustível dos lados, saída embaixo), modo Extrai, Insere, Armazém ou Nenhum, e o filtro resumido em uma linha com Editar. A dica do Armazém: recebe de quem extrai e entrega para quem insere; não troca com outro armazém.
+- **Aba sem filtro (Energia):** não mostra Editar; mostra "Sem filtro…" e a vazão do tier.
 - **Recolhido:** prioridade e redstone.
 - **Cartões e upgrade:** dois slots de Cartão de filtro por face e por tipo, abaixo da face selecionada; o slot do Upgrade de chunk loading fica no cabeçalho (é do roteador, não da face). Os upgrades de tier não usam slot: entram por clique ou na bancada.
 
@@ -73,7 +75,8 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 - **Abre com:** clique direito no ar segurando o Tablet, ou tecla de atalho.
 - **Lista:** busca, filtro por papel e Selecionar para mover vários nós de rede. Cada nó mostra status e etiquetas de papel (Extrai itens, Insere energia…).
 - **Mapa:** vista de cima com cores por status; tocar num ponto abre o nó.
-- **Estatísticas:** vazão por tipo, tempo do mod por tick, destinos cheios e chunks descarregados.
+- **Estatísticas:** um cartão por tipo (ícone, cor, vazão, origens e destinos), tempo do mod por tick, destinos cheios e chunks descarregados. Clicar num cartão abre a Lista só com os roteadores daquele tipo; o chip "Só …" na Lista (com ✕) tira o filtro.
+- **Redimensionável** como o roteador (mínimo 300 × 240, máximo a janela menos 8 px, tamanho lembrado na sessão); os cartões se redistribuem em colunas conforme a largura.
 - **Redes:** cor, membros e privacidade. Nova rede fica recolhida.
 - **Grupos:** várias redes de um sistema juntas, com pausar e retomar de uma vez.
 
@@ -81,7 +84,7 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 - **Abre com:** clique direito no ar. Shift + clique direito no ar alterna entre Único e Área.
 - Rede ativa: é nela que o Vinculador põe os roteadores (o primeiro vínculo cria uma, se o jogador não tiver). Roteador colocado não entra em rede nenhuma.
-- **Abas:** uma caixa por aba na tela (Itens, Fluidos, Energia e, com o Mekanism, Químicos); só as abas marcadas mudam. Pelo menos uma fica marcada (o servidor recusa desmarcar a última). Shift + roda do mouse com o Vinculador na mão percorre os atalhos Todos → Itens → Fluidos → Energia → Químicos (este só com o Mekanism) → Todos; uma combinação marcada na tela vai para Todos nos dois sentidos. A action bar e o tooltip mostram a seleção ("Todos" ou "Itens + Fluidos + Químicos"). Sem o Mekanism, a aba Químicos guardada no item é ignorada (o item continua com ela ao voltar para uma instância com o Mekanism). Itens antigos com o componente `linker_type` valem como aquela aba sozinha; a primeira troca grava `linker_tabs`.
+- **Abas:** uma caixa por tipo disponível, sem o quadradinho de marcar: marcada = borda e fundo na cor do tipo; o botão **Todos** marca ou desmarca todos de uma vez. A coluna da esquerda tem 144 px, e a lista de redes encolhe quando os tipos pedem mais linhas. Só as abas marcadas mudam. O botão de vincular diz só quantos roteadores ("Vincular 12"); as abas aparecem nas caixas e no tooltip. Pelo menos uma fica marcada (o servidor recusa desmarcar a última). Shift + roda do mouse com o Vinculador na mão percorre os atalhos Todos → Itens → Fluidos → Energia → Químicos (este só com o Mekanism) → Todos; uma combinação marcada na tela vai para Todos nos dois sentidos. A action bar e o tooltip mostram a seleção ("Todos" ou "Itens + Fluidos + Químicos"). Sem o Mekanism, a aba Químicos guardada no item é ignorada (o item continua com ela ao voltar para uma instância com o Mekanism). Itens antigos com o componente `linker_type` valem como aquela aba sozinha; a primeira troca grava `linker_tabs`.
 - **Desvincular:** a primeira linha da lista de redes é "Nenhuma (desvincular)" (componente `linker_unlink` no item, sem mexer na rede ativa do jogador). Com ela, os mesmos gestos tiram as abas marcadas da rede em vez de pôr ("Desvinculado: Itens + Fluidos"; na área, "12 roteadores desvinculados (Itens + Fluidos)") e nunca criam rede. Escolher ou criar uma rede sai do modo.
 - **Único:** clique direito num roteador põe as abas marcadas na rede ativa (ou as tira, desvinculando).
 - **Área:** Shift + clique em dois blocos marca os cantos; a tela mostra uma prévia de cima, quantos roteadores ficam dentro e o botão Vincular (Desvincular no modo desvincular).

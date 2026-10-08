@@ -62,6 +62,8 @@ o roteador.
 | **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
 | **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
 
+Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
+
 ## Modos da face
 
 | Modo | O que faz | Use para |

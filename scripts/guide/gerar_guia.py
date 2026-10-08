@@ -418,6 +418,8 @@ o roteador.
 | **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
 | **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
 
+Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
+
 ## Modos da face
 
 | Modo | O que faz | Use para |
@@ -495,6 +497,8 @@ behind it drops the router.
 | **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
 | **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
+
+Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
 
 ## Face modes
 
@@ -970,6 +974,8 @@ Também tira roteadores da rede.
 | **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
 | **Abas** | Uma caixa por aba. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
 
+Marque os tipos nas caixas; Todos marca ou desmarca todos.
+
 ''' + fill(SCENE_AREA, BOX='Área marcada: todos os roteadores carregados dentro dela entram na rede',
            OTHER='Também entra: para o Vinculador, a máquina não importa', OTHER_COLOR='#3fc36b') + '''
 
@@ -1023,6 +1029,8 @@ also takes routers out of their network.
 | **Network** | Click a network to make it active, or **+ New network** to create one. |
 | **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
 | **Tabs** | One checkbox per tab. Only the checked tabs change; the others stay as they are. At least one stays checked. |
+
+Tick the types in the boxes; All ticks or unticks every one.
 
 ''' + fill(SCENE_AREA, BOX='Marked area: every loaded router inside joins the network',
            OTHER='Joins too: for the Linker, the machine does not matter', OTHER_COLOR='#3fc36b') + '''
@@ -1175,6 +1183,8 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 
+A aba Estatísticas tem um cartão por tipo. Clique num cartão para ver na Lista só os roteadores daquele tipo; o chip "Só …" na Lista tira o filtro.
+
 ## Receita
 
 <RecipeFor id="wirelessautomate:network_tablet" />
@@ -1202,6 +1212,8 @@ An overview of all your networks, from anywhere.
 | **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
+
+The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
 
 ## Recipe
 

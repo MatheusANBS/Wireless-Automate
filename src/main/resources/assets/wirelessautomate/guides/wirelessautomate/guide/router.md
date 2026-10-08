@@ -62,6 +62,8 @@ behind it drops the router.
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
 | **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
 
+Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
+
 ## Face modes
 
 | Mode | What it does | Use it for |

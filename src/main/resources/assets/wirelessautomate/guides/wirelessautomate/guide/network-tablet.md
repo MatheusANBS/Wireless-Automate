@@ -33,6 +33,8 @@ An overview of all your networks, from anywhere.
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
 
+The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
+
 ## Recipe
 
 <RecipeFor id="wirelessautomate:network_tablet" />

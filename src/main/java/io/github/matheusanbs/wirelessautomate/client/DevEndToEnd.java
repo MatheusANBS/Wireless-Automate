@@ -617,6 +617,7 @@ public final class DevEndToEnd {
         tabletSteps(list);
         configuratorSteps(list);
         linkerAreaSteps(list);
+        portugueseSteps(list);
         storageChestSteps(list);
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
@@ -1840,6 +1841,139 @@ public final class DevEndToEnd {
         }, () -> file + ".png");
     }
 
+    // ------------------------------------------------------------------ português, nome longo
+
+    private static final String LONG_NETWORK = "Rede de teste com um nome bem comprido 40";
+    private static UUID longNetwork;
+
+    /**
+     * Volta em português com uma rede de nome longo: roteador (mínimo e máximo), Vinculador e Tablet
+     * (mínimo e máximo), com as capturas {@code *-pt-*} e, em cada tela, a conferência de que todo
+     * texto cortado tem o texto inteiro no tooltip.
+     */
+    private static void portugueseSteps(List<Step> list) {
+        list.add(language("pt_br"));
+        list.add(new Step("rede de nome longo no roteador B", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                longNetwork = NetworkSavedData.get(server).create(playerId, LONG_NETWORK).id();
+                NetworkSavedData.get(server).setActiveNetwork(playerId, longNetwork);
+                router(server, routerB).setNetworkId(ResourceType.ITEM, longNetwork);
+                // mão vazia: com o Vinculador na mão, o clique vincularia o roteador em vez de abrir a tela
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                return null;
+            });
+        }, () -> onServer(server -> longNetwork.equals(router(server, routerB).networkId(ResourceType.ITEM)))
+                && Minecraft.getInstance().player.getMainHandItem().isEmpty(),
+                () -> "rede " + longNetwork));
+
+        list.add(open("pt: abrir B", () -> routerB));
+        list.add(new Step("pt: roteador no mínimo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(300, 240),
+                () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240
+                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(longNetwork)),
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", rede "
+                        + routerScreen().getMenu().snapshot().network(ResourceType.ITEM)));
+        list.add(clipCheck("pt: roteador mínimo"));
+        list.add(capture("1d-roteador-pt-min"));
+        list.add(new Step("pt: roteador no máximo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(10_000, 10_000),
+                () -> routerScreen().size()[0] == routerScreen().width - 8 && routerScreen().size()[1] > 240,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+        list.add(clipCheck("pt: roteador máximo"));
+        list.add(capture("1e-roteador-pt-max"));
+        list.add(new Step("pt: roteador de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(300, 240),
+                () -> routerScreen().size()[0] == 300,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+        list.add(close("pt: fechar B"));
+
+        // Vinculador em modo Área, com três abas marcadas
+        list.add(new Step("pt: Vinculador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ItemStack wand = new ItemStack(ModItems.LINKER.get());
+            // modo Área com os dois roteadores dentro: o botão de vincular aparece
+            LinkerItem.setMode(wand, LinkerMode.AREA);
+            LinkerItem.setArea(wand, LinkerArea.firstCorner(net.minecraft.world.level.Level.OVERWORLD, areaCorner1)
+                    .withSecond(areaCorner2));
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                    .setItemInHand(InteractionHand.MAIN_HAND, wand);
+            return null;
+        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get())
+                && LinkerItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.AREA,
+                () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(new Step("pt: abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
+                && screen.getMenu().snapshot().active().equals(Optional.of(longNetwork)),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        // três abas (sem Químicos): o título "Abas: Itens + Fluidos + Energia" é o texto mais longo
+        list.add(new Step("pt: três abas", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.chemical")), "aba Químicos")),
+                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 3),
+                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
+        list.add(clipCheck("pt: Vinculador"));
+        list.add(capture("8c-vinculador-pt"));
+        list.add(close("pt: fechar o Vinculador"));
+
+        list.add(new Step("pt: Tablet na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                    .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.NETWORK_TABLET.get()));
+            return null;
+        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.NETWORK_TABLET.get()),
+                () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(new Step("pt: abrir o Tablet", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("pt: Tablet no mínimo, Lista", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300 && stepTicks >= 10,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        list.add(clipCheck("pt: Tablet Lista"));
+        list.add(new Step("pt: aba Estatísticas", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
+                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> "aba " + tabletScreen().currentTab()));
+        list.add(clipCheck("pt: Tablet mínimo"));
+        list.add(capture("7f-tablet-pt-min"));
+        list.add(new Step("pt: Tablet no máximo", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(10_000, 10_000),
+                () -> tabletScreen().size()[0] == tabletScreen().width - 8 && tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        list.add(clipCheck("pt: Tablet máximo"));
+        list.add(capture("7g-tablet-pt-max"));
+        list.add(new Step("pt: Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        list.add(close("pt: fechar o Tablet"));
+        list.add(language("en_us"));
+    }
+
+    /**
+     * Se algum texto foi cortado no último quadro, põe o mouse nele e confere que o tooltip tem o
+     * texto inteiro.
+     */
+    private static Step clipCheck(String name) {
+        return new Step(name + ": textos cortados com tooltip", STEP_TIMEOUT_MS, () -> {
+            int[] center = GuiText.firstClipCenter();
+            if (GuiText.clipCount() > 0 && center != null) {
+                moveMouse(center[0], center[1]);
+            }
+        }, () -> {
+            int[] center = GuiText.firstClipCenter();
+            return GuiText.clipCount() == 0 || (center != null && GuiText.clipAt(center[0], center[1]) != null);
+        }, () -> GuiText.clipCount() + " texto(s) cortado(s) sem tooltip");
+    }
+
     // ------------------------------------------------------------------ Vinculador por área
 
     private static final String AREA_NETWORK = "E2E Área";
@@ -1940,7 +2074,7 @@ public final class DevEndToEnd {
                         && linkerScreen().getMenu().snapshot().already() == 0,
                 () -> "abas na tela " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(new Step("Vincular", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count.types"), "Vincular")),
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count"), "Vincular")),
                 () -> onServer(server -> {
                     RouterBlockEntity a = router(server, routerA);
                     RouterBlockEntity b = router(server, routerB);

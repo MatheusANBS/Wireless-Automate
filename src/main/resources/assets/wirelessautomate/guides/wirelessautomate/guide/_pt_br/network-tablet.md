@@ -33,6 +33,8 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 
+A aba Estatísticas tem um cartão por tipo. Clique num cartão para ver na Lista só os roteadores daquele tipo; o chip "Só …" na Lista tira o filtro.
+
 ## Receita
 
 <RecipeFor id="wirelessautomate:network_tablet" />

@@ -809,13 +809,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 : tr("link.tooltip.tabs", toLink(), tabsName(), activeName());
     }
 
-    /** "Vincular 9" ou "Desvincular 9". */
+    /**
+     * "Vincular 9" ou "Desvincular 9". Quais abas entram aparece nas caixas e no tooltip: pôr o
+     * número delas aqui não cabe no botão (82 px) em português.
+     */
     private Component linkLabel() {
-        if (allTabs()) {
-            return tr(unlink() ? "unlink.count" : "link.count", toLink());
-        }
-        return tr(unlink() ? "unlink.count.types" : "link.count.types", toLink(),
-                snapshot().tabs().effective(snapshot().available().types()).size());
+        return tr(unlink() ? "unlink.count" : "link.count", toLink());
     }
 
     private Component tabTooltip(ResourceType t) {

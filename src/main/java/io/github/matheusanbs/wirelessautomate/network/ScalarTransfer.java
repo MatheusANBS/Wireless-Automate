@@ -1,38 +1,32 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
-import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
 import java.util.Arrays;
 import java.util.List;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * Move energia de uma origem para os destinos dela num único passe: simula a extração, pergunta
- * (simulando) quanto cada destino aceita, divide com {@link EnergySplit}, extrai de verdade o total
- * dividido e entrega. Extrair antes de entregar garante que nunca se cria energia: se a extração
- * real der menos, os primeiros da ordem recebem até acabar; o que um destino recusar depois de
- * aceitar na simulação volta para a origem, e o que nem ela aceitar se perde.
+ * Move um recurso de "um valor só" (energia, Source) de uma origem para os destinos dela num único
+ * passe: simula a extração, pergunta (simulando) quanto cada destino aceita, divide com
+ * {@link EnergySplit}, extrai de verdade o total dividido e entrega. Extrair antes de entregar
+ * garante que nunca se cria nada: se a extração real der menos, os primeiros da ordem recebem até
+ * acabar; o que um destino recusar depois de aceitar na simulação volta para a origem, e o que nem
+ * ela aceitar se perde.
  *
- * <p>Bateria do mod ({@link BulkEnergy}): o lado dela (origem ou destino) é em {@code long}, sem o
- * teto de {@link Integer#MAX_VALUE} FE por chamada do {@link IEnergyStorage}. Entre duas Baterias,
- * bilhões de FE passam por tick; com máquinas e cabos de outros mods, o lado deles continua em
- * {@code int}.
+ * <p>O recurso chega pelo {@link ScalarAccess}: {@link EnergyAccess} (a Bateria do mod em
+ * {@code long}, as outras máquinas em {@code int}) e o da Source ({@code compat/arsnouveau}).
  *
  * <p>Os vetores de trabalho são reaproveitados entre chamadas (só a thread do servidor usa).
  */
-final class EnergyTransfer {
+final class ScalarTransfer {
     private static long[] wants = new long[16];
     private static long[] shares = new long[16];
     private static int[] priorities = new int[16];
-    private static IEnergyStorage[] targets = new IEnergyStorage[16];
-    private static BulkEnergy[] bulkTargets = new BulkEnergy[16];
+    private static Object[] targets = new Object[16];
 
     /** Uma visita. Devolve {@code true} se moveu algo. */
-    static boolean move(Port source, long now) {
-        BulkEnergy bulk = source.node.bulkEnergy(source.face);
-        IEnergyStorage handler = bulk == null ? source.node.energy(source.face) : null;
+    static boolean move(Port source, long now, ScalarAccess access) {
+        Object handler = access.handler(source.node, source.face);
         RoundRobinOrder<Port> order = source.order;
-        if (bulk == null && (handler == null || !handler.canExtract()) || order == null) {
+        if (handler == null || !access.canExtract(handler) || order == null) {
             SourceSleep.nothingToMove(source, now);
             return false;
         }
@@ -45,13 +39,12 @@ final class EnergyTransfer {
             SourceSleep.untilDestinations(source, pass, now);
             return false;
         }
-        long offered = bulk != null ? bulk.extract(tokens, true)
-                : handler.extractEnergy((int) Math.min(tokens, Integer.MAX_VALUE), true);
+        long offered = access.extract(handler, tokens, true);
         if (offered <= 0) {
             SourceSleep.nothingToMove(source, now);
             return false;
         }
-        // Tem energia e há destino acordado: se dormir, foi esperando destino (motivo do sono).
+        // Tem o que dar e há destino acordado: se dormir, foi esperando destino (motivo do sono).
         source.offered = true;
         int count = pass.size();
         ensureCapacity(count);
@@ -60,38 +53,34 @@ final class EnergyTransfer {
             priorities[i] = destination.priority;
             wants[i] = 0;
             targets[i] = null;
-            bulkTargets[i] = null;
             if (destination.destinationBackoff.isSleeping(now)) {
                 continue;
             }
-            BulkEnergy bulkTarget = destination.node.bulkEnergy(destination.face);
-            IEnergyStorage target = bulkTarget == null ? destination.node.energy(destination.face) : null;
-            if (bulkTarget == null && target == null) {
+            Object target = access.handler(destination.node, destination.face);
+            if (target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
                 destination.sleepWithoutMachine(now);
                 continue;
             }
-            long accepts = bulkTarget != null ? bulkTarget.insert(offered, true)
-                    : target.canReceive() ? target.receiveEnergy((int) Math.min(offered, Integer.MAX_VALUE), true) : 0;
+            long accepts = access.canReceive(target) ? access.insert(target, offered, true) : 0;
             if (accepts <= 0) {
                 destination.destinationBackoff.sleep(now);
                 continue;
             }
             wants[i] = accepts;
             targets[i] = target;
-            bulkTargets[i] = bulkTarget;
         }
         long total = EnergySplit.split(offered, wants, priorities, count, shares);
         long delivered = 0;
         if (total > 0) {
-            long taken = extract(bulk, handler, total);
+            long taken = access.extract(handler, total, false);
             long left = taken;
             for (int i = 0; i < count && left > 0; i++) {
                 if (shares[i] <= 0) {
                     continue;
                 }
-                long received = receive(bulkTargets[i], targets[i], Math.min(shares[i], left));
+                long received = access.insert(targets[i], Math.min(shares[i], left), false);
                 if (received > 0) {
                     Port destination = pass.get(i);
                     destination.destinationBackoff.wake();
@@ -104,11 +93,10 @@ final class EnergyTransfer {
                 }
             }
             if (left > 0) {
-                receive(bulk, handler, left);
+                access.insert(handler, left, false);
             }
         }
         Arrays.fill(targets, 0, count, null);
-        Arrays.fill(bulkTargets, 0, count, null);
         if (delivered > 0) {
             source.node.addMoved(source.type, delivered);
             source.limiter.consume(delivered);
@@ -120,18 +108,6 @@ final class EnergyTransfer {
         return false;
     }
 
-    /** Extração real pelo lado que existir; o {@code int} do outro mod corta em {@link Integer#MAX_VALUE}. */
-    private static long extract(@Nullable BulkEnergy bulk, @Nullable IEnergyStorage handler, long amount) {
-        return bulk != null ? bulk.extract(amount, false)
-                : handler.extractEnergy((int) Math.min(amount, Integer.MAX_VALUE), false);
-    }
-
-    /** Entrega real pelo lado que existir; o {@code int} do outro mod corta em {@link Integer#MAX_VALUE}. */
-    private static long receive(@Nullable BulkEnergy bulk, @Nullable IEnergyStorage handler, long amount) {
-        return bulk != null ? bulk.insert(amount, false)
-                : handler.receiveEnergy((int) Math.min(amount, Integer.MAX_VALUE), false);
-    }
-
     private static void ensureCapacity(int count) {
         if (wants.length >= count) {
             return;
@@ -140,10 +116,9 @@ final class EnergyTransfer {
         wants = new long[size];
         shares = new long[size];
         priorities = new int[size];
-        targets = new IEnergyStorage[size];
-        bulkTargets = new BulkEnergy[size];
+        targets = new Object[size];
     }
 
-    private EnergyTransfer() {
+    private ScalarTransfer() {
     }
 }

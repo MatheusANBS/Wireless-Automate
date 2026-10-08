@@ -21,7 +21,7 @@ Leitura do código feita por quatro agentes (laço de transferência, rotas, fil
 | 6 | Slot com pilha grande (gaveta, bin, barril com upgrade) rende só 64 itens por visita: preso em ~1.280 itens/s em qualquer tier acima do Básico. | `network/ItemTransfer.java` (avança sempre de slot) | Repetir o mesmo slot enquanto houver saldo e itens, dentro do teto de tentativas. GameTest: 1 slot com 10.000 itens no Elite. | Baixo |
 | 7 | Fluidos e químicos nunca leem tanques acima do 16º e a origem dorme achando que está vazia. | `FluidTransfer`, `ChemicalTransfer` | Cursor de tanque, como o de slots. | Baixo |
 | 8 | Sem lote mínimo: o Básico faz ~20 entregas/s de ~25 itens em vez de ~8 de 64. | `ItemTransfer.move` | Esperar o saldo chegar a 64 (ou à vazão, se menor) antes de visitar, sem dormir. | Baixo (rajadas) |
-| 9 | Origem dorme com backoff próprio quando os destinos dormem, sem olhar quando eles acordam. | `ItemTransfer`, `FluidTransfer`, `EnergyTransfer`, `ChemicalTransfer`, `Backoff` | Dormir até o menor `wakeAt` dos destinos. | Baixo |
+| 9 | Origem dorme com backoff próprio quando os destinos dormem, sem olhar quando eles acordam. | `ItemTransfer`, `FluidTransfer`, `ScalarTransfer`, `ChemicalTransfer`, `Backoff` | Dormir até o menor `wakeAt` dos destinos. | Baixo |
 
 ## Onda 3: estoque e filtros
 

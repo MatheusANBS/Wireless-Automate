@@ -421,7 +421,7 @@ public final class NetworkManager {
             result = switch (source.type) {
                 case ITEM -> ItemTransfer.move(source, now);
                 case FLUID -> FluidTransfer.move(source, now) ? MOVED : 0;
-                case ENERGY -> EnergyTransfer.move(source, now) ? MOVED : 0;
+                case ENERGY -> ScalarTransfer.move(source, now, EnergyAccess.INSTANCE) ? MOVED : 0;
                 case CHEMICAL -> Chemicals.move(source, now) ? MOVED : 0;
             };
         } finally {

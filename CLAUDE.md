@@ -24,7 +24,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `block/RouterTier.java` | Enum com os valores padrão da tabela de tiers |
 | `network/NetworkManager.java` | Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento |
 | `network/NetworkRoutes.java`, `Port.java`, `NodePorts.java` | Rotas de uma rede: portas (nó, face, tipo) com vazão, cursor e sono que sobrevivem às remontagens |
-| `network/ItemTransfer.java`, `FluidTransfer.java`, `EnergyTransfer.java` | Uma visita de uma origem, por tipo de recurso |
+| `network/ItemTransfer.java`, `FluidTransfer.java`, `ScalarTransfer.java` | Uma visita de uma origem, por tipo de recurso (energia e Source pelo `ScalarTransfer`, com um `ScalarAccess` cada: `EnergyAccess` e o da Source) |
 | `network/NetworkSavedData.java`, `WaNetwork.java`, `WaGroup.java` | Redes, rede ativa por jogador e grupos de redes (só para organizar no Tablet, com pausar e retomar), salvos no overworld |
 | `network/FaceConfig.java`, `RelativeSide.java`, `RouterPreset.java` | Configuração de uma face (modo, prioridade, redstone), lados relativos ao `facing` e o preset copiável |
 | `network/TickBudget.java`, `RateLimiter.java`, `RoundRobinOrder.java`, `Backoff.java`, `EnergySplit.java`, `ReachBox.java`, `SourceCursor.java` | Lógica pura, testada por JUnit; `SourceSleep` (ao lado) faz a origem sem destino acordado dormir até o primeiro destino acordar e grava o motivo do sono (vazia × espera destino) (também `network/ResourceType.java`, `client/RateFormat.java`, `client/TabLayout.java`, `client/CardGrid.java`, `client/ResizeHandle.java`, `linker/LinkerBox.java`, `linker/LinkerTabs.java`, `filter/StockLimit.java` e `preset/PasteTypes.java`) |

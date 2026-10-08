@@ -270,29 +270,34 @@ public final class NetworkManager {
             int sourcesSleeping = 0;
             int destinationsSleeping = 0;
             int destinationsFull = 0;
+            List<NetworkStats.TypeCount> byType = new ArrayList<>(TYPES.length);
             for (ResourceType type : TYPES) {
                 List<Port> typeSources = network.sourcesOf[type.ordinal()];
                 List<Port> typeDestinations = network.destinationsOf[type.ordinal()];
+                int sleeping = 0;
                 sourceCount += typeSources.size();
                 destinationCount += typeDestinations.size();
                 for (Port port : typeSources) {
                     if (port.sourceBackoff.isSleeping(now)) {
                         sourcesSleeping++;
+                        sleeping++;
                     }
                 }
                 for (Port port : typeDestinations) {
                     if (port.destinationBackoff.isSleeping(now)) {
                         destinationsSleeping++;
+                        sleeping++;
                         if (NodeProbe.isFull(port, now)) {
                             destinationsFull++;
                         }
                     }
                 }
+                byType.add(new NetworkStats.TypeCount(typeSources.size(), typeDestinations.size(), sleeping));
             }
             result.add(new NetworkStats(network.id, network.members.size(), network.averageNanos,
                     network.lastNanos, network.opsLastSecond,
                     sourceCount - sourcesSleeping, sourcesSleeping,
-                    destinationCount - destinationsSleeping, destinationsSleeping, destinationsFull));
+                    destinationCount - destinationsSleeping, destinationsSleeping, destinationsFull, List.copyOf(byType)));
         }
         return result;
     }

@@ -501,6 +501,16 @@ public final class DevScreenshot {
                 new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
     }
 
+    /** Vazões de exemplo na ordem de {@link ResourceType#values()} (itens, fluidos, energia, químicos). */
+    private static List<TabletSnapshot.TypeStats> rates(long items, long fluids, long energy, long chemicals) {
+        long[] values = {items, fluids, energy, chemicals};
+        List<TabletSnapshot.TypeStats> types = new ArrayList<>();
+        for (ResourceType type : ResourceType.values()) {
+            types.add(new TabletSnapshot.TypeStats(type.ordinal() < values.length ? values[type.ordinal()] : 0, 0, 0, 0));
+        }
+        return List.copyOf(types);
+    }
+
     /** Nós do rascunho visual em volta do jogador em (0, 64, 0), com redes, um grupo e status variados. */
     private static TabletSnapshot sampleTablet() {
         UUID base = UUID.nameUUIDFromBytes("base".getBytes());
@@ -510,15 +520,15 @@ public final class DevScreenshot {
         UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
         List<TabletSnapshot.NetworkView> networks = List.of(
                 new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1, 1, 2,
-                        42_000, 61, 1_240, 0, 0, 0),
+                        42_000, 61, rates(1_240, 0, 0, 0)),
                 new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0, 0, 0,
-                        18_000, 20, 0, 48_000, 0, 0),
+                        18_000, 20, rates(0, 48_000, 0, 0)),
                 new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0, 0,
-                        0, 9_000, 20, 0, 0, 120_000, 0),
+                        0, 9_000, 20, rates(0, 0, 120_000, 0)),
                 new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0),
+                        0, 0, rates(0, 0, 0, 0)),
                 new TabletSnapshot.NetworkView(line, "Linha 5x", 0xA46CFF, "Dev", true, true, false, true, 8, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0));
+                        0, 0, rates(0, 0, 0, 0)));
         int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
         int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
         int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);

@@ -217,13 +217,13 @@ public final class TabletGameTests {
 
             // papel e busca
             helper.assertTrue(TabletPayloads.handleQuery(player, new TabletQueryPayload(70,
-                    new Query("", RoleFilter.INSERT, 0))), "consulta recusada");
+                    new Query("", RoleFilter.INSERT, Optional.empty(), 0))), "consulta recusada");
             menu.pollSnapshot();
             helper.assertFalse(listed(menu.snapshot(), key(mine)), "filtro por papel deixou passar");
-            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("propria", RoleFilter.EXTRACT, 0)));
+            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("propria", RoleFilter.EXTRACT, Optional.empty(), 0)));
             menu.pollSnapshot();
             helper.assertTrue(listed(menu.snapshot(), key(mine)), "busca pelo nome da rede");
-            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("nada-assim", RoleFilter.ALL, 0)));
+            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("nada-assim", RoleFilter.ALL, Optional.empty(), 0)));
             menu.pollSnapshot();
             helper.assertTrue(menu.snapshot().nodes().isEmpty(), "busca sem resultado trouxe nós");
             helper.assertFalse(TabletPayloads.handleQuery(player, new TabletQueryPayload(71, Query.DEFAULT)),
@@ -252,6 +252,32 @@ public final class TabletGameTests {
         }
     }
 
+    @GameTest(template = "empty")
+    public static void listFiltersByType(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        UUID network = data(helper).create(player.getUUID(), "teste-filtro-tipo").id();
+        RouterBlockEntity items = chestWithRouter(helper, A, network);
+        items.configureFace(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0, RedstoneMode.IGNORE);
+        RouterBlockEntity energy = chestWithRouter(helper, B, network);
+        energy.configureFace(ResourceType.ENERGY, Direction.UP, PortMode.INSERT, 0, RedstoneMode.IGNORE);
+        NodeIndex.placedBy(items, player.getUUID());
+        NodeIndex.placedBy(energy, player.getUUID());
+        TabletMenu menu = openTablet(player, 81);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(energy), "sem onLoad"))
+                .thenExecute(() -> {
+                    menu.setQuery(new Query("", RoleFilter.ALL, Optional.of(ResourceType.ENERGY), 0));
+                    TabletSnapshot s = fresh(menu);
+                    helper.assertTrue(listed(s, key(energy)), "nó de energia fora do filtro de energia");
+                    helper.assertFalse(listed(s, key(items)), "nó só de itens no filtro de energia");
+                    helper.assertTrue(s.query().type().equals(Optional.of(ResourceType.ENERGY)), "filtro perdido");
+                    helper.assertTrue(s.network(network).map(n -> n.types().size() == ResourceType.values().length)
+                            .orElse(false), "estatística sem um item por tipo");
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void forcedRebuildsAreLimitedPerPlayer(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
@@ -260,7 +286,7 @@ public final class TabletGameTests {
         int requests = TabletMenu.FORCED_PER_SECOND * 2;
         int built = 0;
         for (int i = 0; i < requests; i++) {
-            menu.setQuery(new Query("limite-" + i, RoleFilter.ALL, 0));
+            menu.setQuery(new Query("limite-" + i, RoleFilter.ALL, Optional.empty(), 0));
             menu.pollSnapshot();
             if (menu.snapshot().query().search().equals("limite-" + i)) {
                 built++;
@@ -271,7 +297,7 @@ public final class TabletGameTests {
 
         // Fechar e abrir de novo não devolve as fichas.
         TabletMenu again = openTablet(player, 79);
-        again.setQuery(new Query("reaberto", RoleFilter.ALL, 0));
+        again.setQuery(new Query("reaberto", RoleFilter.ALL, Optional.empty(), 0));
         again.pollSnapshot();
         helper.assertFalse(again.snapshot().query().search().equals("reaberto"), "reabrir zerou o limite");
 

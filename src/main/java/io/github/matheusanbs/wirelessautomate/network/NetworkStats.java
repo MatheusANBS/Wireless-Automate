@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -12,6 +13,7 @@ import java.util.UUID;
  * @param opsLastSecond entregas que moveram algo no último segundo completo
  * @param destinationsFull destinos dormindo depois de recusas seguidas (cheios, ver {@link NodeProbe}),
  *     contados entre os que dormem
+ * @param byType contagem por tipo, na ordem de {@link ResourceType#ordinal()}
  */
 public record NetworkStats(
         UUID id,
@@ -23,5 +25,10 @@ public record NetworkStats(
         int sourcesSleeping,
         int destinationsAwake,
         int destinationsSleeping,
-        int destinationsFull) {
+        int destinationsFull,
+        List<TypeCount> byType) {
+
+    /** Origens, destinos e portas dormindo de um tipo (índice = {@link ResourceType#ordinal()}). */
+    public record TypeCount(int sources, int destinations, int sleeping) {
+    }
 }

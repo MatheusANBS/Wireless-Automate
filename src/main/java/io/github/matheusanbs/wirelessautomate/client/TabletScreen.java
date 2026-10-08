@@ -541,7 +541,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void sendQuery() {
-        send(new TabletQueryPayload(menu.containerId, new Query(search, role, page)));
+        send(new TabletQueryPayload(menu.containerId, new Query(search, role, Optional.empty(), page)));
     }
 
     private Component roleText() {
@@ -1327,10 +1327,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int unloaded = 0;
         int paused = 0;
         for (NetworkView n : s.networks()) {
-            items += n.itemRate();
-            fluids += n.fluidRate();
-            energy += n.energyRate();
-            chemicals += n.chemicalRate();
+            items += n.type(ResourceType.ITEM).rate();
+            fluids += n.type(ResourceType.FLUID).rate();
+            energy += n.type(ResourceType.ENERGY).rate();
+            chemicals += n.type(ResourceType.CHEMICAL).rate();
             full += n.full();
             unloaded += n.unloaded();
             paused += n.paused() ? 1 : 0;
@@ -1369,11 +1369,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             GuiPaint.textRight(g, font, right, x + X1 - 5, cy + 4, GuiPaint.MUTED);
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(n.name()), X1 - X0 - 20 - font.width(right)),
                     x + X0 + 14, cy + 4, GuiPaint.FG);
-            MutableComponent rates = rate(ResourceType.ITEM, n.itemRate()).copy()
-                    .append(" · ").append(rate(ResourceType.FLUID, n.fluidRate()))
-                    .append(" · ").append(rate(ResourceType.ENERGY, n.energyRate()));
+            MutableComponent rates = rate(ResourceType.ITEM, n.type(ResourceType.ITEM).rate()).copy()
+                    .append(" · ").append(rate(ResourceType.FLUID, n.type(ResourceType.FLUID).rate()))
+                    .append(" · ").append(rate(ResourceType.ENERGY, n.type(ResourceType.ENERGY).rate()));
             if (Chemicals.LOADED) {
-                rates.append(" · ").append(rate(ResourceType.CHEMICAL, n.chemicalRate()));
+                rates.append(" · ").append(rate(ResourceType.CHEMICAL, n.type(ResourceType.CHEMICAL).rate()));
             }
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, rates, X1 - X0 - 10), x + X0 + 5, cy + 14, GuiPaint.MUTED);
             MutableComponent line = Component.empty();

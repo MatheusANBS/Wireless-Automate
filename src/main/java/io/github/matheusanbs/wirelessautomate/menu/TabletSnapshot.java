@@ -75,15 +75,23 @@ public record TabletSnapshot(
     }
 
     /** Busca (nome, máquina, rede ou coordenadas), papel e página. */
-    public record Query(String search, RoleFilter role, int page) {
-        public static final Query DEFAULT = new Query("", RoleFilter.ALL, 0);
+    public record Query(String search, RoleFilter role, Optional<ResourceType> type, int page) {
+        public static final Query DEFAULT = new Query("", RoleFilter.ALL, Optional.empty(), 0);
         public static final StreamCodec<RegistryFriendlyByteBuf, Query> STREAM_CODEC = StreamCodec.of(
                 (buf, q) -> {
                     buf.writeUtf(q.search, MAX_SEARCH);
                     buf.writeEnum(q.role);
+                    buf.writeVarInt(q.type().map(t -> t.ordinal() + 1).orElse(0));
                     buf.writeVarInt(q.page);
                 },
-                buf -> new Query(buf.readUtf(MAX_SEARCH), buf.readEnum(RoleFilter.class), buf.readVarInt()));
+                buf -> {
+                    String search = buf.readUtf(MAX_SEARCH);
+                    RoleFilter role = buf.readEnum(RoleFilter.class);
+                    int t = buf.readVarInt();
+                    Optional<ResourceType> type = t <= 0 || t > ResourceType.values().length
+                            ? Optional.empty() : Optional.of(ResourceType.values()[t - 1]);
+                    return new Query(search, role, type, buf.readVarInt());
+                });
 
         public Query {
             search = search.length() > MAX_SEARCH ? search.substring(0, MAX_SEARCH) : search;
@@ -102,7 +110,16 @@ public record TabletSnapshot(
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
             boolean isPublic, boolean paused, int nodes, int unloaded, int full, int sleeping, long averageNanos,
-            int opsPerSecond, long itemRate, long fluidRate, long energyRate, long chemicalRate) {
+            int opsPerSecond, List<TypeStats> types) {
+        /** Por {@link ResourceType#ordinal()}. */
+        public TypeStats type(ResourceType type) {
+            return type.ordinal() < types.size() ? types.get(type.ordinal()) : TypeStats.EMPTY;
+        }
+    }
+
+    /** Vazão e portas de um tipo numa rede; vazão na unidade da tela (itens/s, mB/s, FE/t). */
+    public record TypeStats(long rate, int sources, int destinations, int sleeping) {
+        public static final TypeStats EMPTY = new TypeStats(0, 0, 0, 0);
     }
 
     /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
@@ -200,10 +217,13 @@ public record TabletSnapshot(
             buf.writeVarInt(n.sleeping);
             buf.writeVarLong(n.averageNanos);
             buf.writeVarInt(n.opsPerSecond);
-            buf.writeVarLong(n.itemRate);
-            buf.writeVarLong(n.fluidRate);
-            buf.writeVarLong(n.energyRate);
-            buf.writeVarLong(n.chemicalRate);
+            buf.writeVarInt(n.types().size());
+            for (TypeStats t : n.types()) {
+                buf.writeVarLong(t.rate());
+                buf.writeVarInt(t.sources());
+                buf.writeVarInt(t.destinations());
+                buf.writeVarInt(t.sleeping());
+            }
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -249,10 +269,27 @@ public record TabletSnapshot(
         int networkCount = buf.readVarInt();
         List<NetworkView> networks = new ArrayList<>(networkCount);
         for (int i = 0; i < networkCount; i++) {
-            networks.add(new NetworkView(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readUtf(64),
-                    buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(),
-                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(),
-                    buf.readVarLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarLong()));
+            UUID id = buf.readUUID();
+            String name = buf.readUtf(64);
+            int color = buf.readInt();
+            String owner = buf.readUtf(64);
+            boolean owned = buf.readBoolean();
+            boolean manageable = buf.readBoolean();
+            boolean isPublic = buf.readBoolean();
+            boolean paused = buf.readBoolean();
+            int nodes = buf.readVarInt();
+            int unloaded = buf.readVarInt();
+            int full = buf.readVarInt();
+            int sleeping = buf.readVarInt();
+            long averageNanos = buf.readVarLong();
+            int opsPerSecond = buf.readVarInt();
+            int typeCount = buf.readVarInt();
+            List<TypeStats> types = new ArrayList<>(typeCount);
+            for (int t = 0; t < typeCount; t++) {
+                types.add(new TypeStats(buf.readVarLong(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt()));
+            }
+            networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
+                    unloaded, full, sleeping, averageNanos, opsPerSecond, List.copyOf(types)));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);

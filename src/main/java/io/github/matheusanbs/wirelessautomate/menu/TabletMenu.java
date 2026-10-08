@@ -377,7 +377,8 @@ public class TabletMenu extends AbstractContainerMenu {
                 }
             }
             countMembership(entry, totals, loaded);
-            if (!matchesRole(entry, loaded, moved, problems, data) || !matchesSearch(entry, networkNames)) {
+            if (!matchesRole(entry, loaded, moved, problems, data) || !matchesType(entry, query.type())
+                    || !matchesSearch(entry, networkNames)) {
                 continue;
             }
             matches.add(new Match(entry, loaded, moved, distance(key, here, center),
@@ -394,7 +395,7 @@ public class TabletMenu extends AbstractContainerMenu {
                 .thenComparing(m -> m.entry.name()));
         int pages = Math.max(1, (matches.size() + TabletSnapshot.PAGE_SIZE - 1) / TabletSnapshot.PAGE_SIZE);
         if (query.page() >= pages) {
-            query = new Query(query.search(), query.role(), pages - 1);
+            query = new Query(query.search(), query.role(), query.type(), pages - 1);
         }
         int from = query.page() * TabletSnapshot.PAGE_SIZE;
         List<NodeView> nodes = new ArrayList<>();
@@ -422,12 +423,19 @@ public class TabletMenu extends AbstractContainerMenu {
         totals.forEach((id, t) -> {
             WaNetwork network = data.network(id);
             NetworkStats s = stats.get(id);
-            long[] rates = networkRates.getOrDefault(id, new long[TRANSFER_TYPES.length]);
+            long[] rates = networkRates.getOrDefault(id, new long[ResourceType.values().length]);
+            List<TabletSnapshot.TypeStats> types = new ArrayList<>(rates.length);
+            for (ResourceType type : ResourceType.values()) {
+                NetworkStats.TypeCount count = s == null ? null : s.byType().get(type.ordinal());
+                types.add(count == null ? new TabletSnapshot.TypeStats(rates[type.ordinal()], 0, 0, 0)
+                        : new TabletSnapshot.TypeStats(rates[type.ordinal()], count.sources(), count.destinations(),
+                                count.sleeping()));
+            }
             networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
                     network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
                     t.nodes, t.unloaded, s == null ? 0 : s.destinationsFull(), s == null ? 0 : s.destinationsSleeping(),
                     s == null ? 0 : Math.round(s.averageNanos()), s == null ? 0 : s.opsLastSecond(),
-                    rates[0], rates[1], rates[2], rates[3]));
+                    List.copyOf(types)));
         });
         List<GroupView> groups = new ArrayList<>();
         for (WaGroup group : data.groups()) {
@@ -566,6 +574,16 @@ public class TabletMenu extends AbstractContainerMenu {
         };
     }
 
+    /** Sem tipo escolhido passa tudo; com tipo, só nós com algum papel (extrai, insere, armazém) nele. */
+    private static boolean matchesType(NodeIndex.Entry entry, Optional<ResourceType> type) {
+        if (type.isEmpty()) {
+            return true;
+        }
+        int mask = NodeIndex.role(type.get(), NodeIndex.EXTRACT) | NodeIndex.role(type.get(), NodeIndex.INSERT)
+                | NodeIndex.role(type.get(), NodeIndex.STORAGE);
+        return (entry.roles() & mask) != 0;
+    }
+
     /**
      * Cada palavra da busca precisa aparecer no nome, na máquina, nas coordenadas
      * ({@link NodeIndex.Entry#searchText()}) ou no nome de uma rede do nó.
@@ -658,14 +676,15 @@ public class TabletMenu extends AbstractContainerMenu {
         /** Movido desde a amostra anterior, na ordem de {@link #TRANSFER_TYPES}. */
         final long[] moved = new long[TRANSFER_TYPES.length];
 
-        /** Itens, mB de fluido e mB de químico por segundo, energia por tick. */
+        /** Por tipo, na unidade do registro: por segundo, ou por tick para a energia. */
         long[] rates(long elapsed) {
-            return new long[] {
-                (moved[0] * 20 + elapsed / 2) / elapsed,
-                (moved[1] * 20 + elapsed / 2) / elapsed,
-                (moved[2] + elapsed / 2) / elapsed,
-                (moved[3] * 20 + elapsed / 2) / elapsed
-            };
+            ResourceType[] types = ResourceType.values();
+            long[] rates = new long[types.length];
+            for (int t = 0; t < types.length; t++) {
+                long perTick = types[t].ratePerTick() ? moved[t] : moved[t] * 20;
+                rates[t] = (perTick + elapsed / 2) / elapsed;
+            }
+            return rates;
         }
     }
 

@@ -18,6 +18,7 @@ O dono não gosta de imagens montadas a partir de capturas soltas do e2e ("ficou
   - `showcaseStorage`: os cinco armazenamentos, cada um mandando para um cofre sob o piso, para o Tablet mostrar vazão de verdade.
   - `showcaseDisplay`: os itens em `item_display` com `billboard:"center"` e luz cheia, sobre pedestais.
   - `showcaseArcane`: o laboratório do Ars, com jarra criativa, Tanque, Apparatus e os quatro tiers do Tanque de Source.
+  - `showcaseTiers`: o salão dos tiers no fundo da casa, com os oito roteadores sobre o bloco do material de cada tier e o cartão flutuando em cima (tapete laranja sob os do Allthemodium; sem o mod, eles ficam de fora). Os tiers do ATM nas outras alas passam pelo `atm(tier, substituto)`.
   - `showcase()`: o roteiro de câmeras e telas. `showLook(nome, câmera xyz, alvo xyz, interface)` calcula o ângulo a partir da base.
 - `scripts/curseforge/gerar_imagens.py`:
   - a lista `DESTAQUES`, com arquivo, título, subtítulo, captura, recorte e um detalhe opcional no canto;

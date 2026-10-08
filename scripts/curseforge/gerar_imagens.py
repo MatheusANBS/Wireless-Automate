@@ -225,7 +225,7 @@ DESTAQUES = [
     # (arquivo, título, subtítulo, captura, recorte[, (captura do detalhe, recorte, largura)]) — as
     # capturas da vitrine têm 1280x800.
     ("feature-0-overview", "Everything wireless",
-     "An ore line, five storage blocks and an Ars Nouveau lab, linked without a single pipe.",
+     "An ore line, five storage blocks, a hall of tiers and an Ars lab, with no pipes.",
      VITRINE / "s0-casa.png", (90, 150, 1190, 770)),
     ("feature-1-network", "Connect machines without pipes",
      "Attach a router to any machine. Routers on the same network trade with each other.",
@@ -239,6 +239,9 @@ DESTAQUES = [
     ("feature-8-rules", "Property rules",
      "Any enchanted item, tools under 50% durability... and your inventory lights up.",
      VITRINE / "s5c-filtro-regra.png", (270, 120, 1010, 680)),
+    ("feature-15-tier-hall", "From iron to Unobtainium",
+     "Every tier on its own material. Allthemodium, Vibranium and Unobtainium with ATM10.",
+     VITRINE / "s15-tiers.png", (0, 200, 1280, 640)),
     ("feature-9-storage", "Storage of its own",
      "Wireless Chest, Tank, Battery, Chemical Tank and Source Tank: billions per operation.",
      VITRINE / "s9-armazenamentos.png", (0, 150, 1280, 610)),

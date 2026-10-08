@@ -32,7 +32,20 @@ Attached to a router on the **Chemicals** tab, a whole type moves at once.
 
 ## Capacity
 
-The same as the Tank: 1,000,000, 64,000,000 and 4,000,000,000 mB, and unlimited on Ultimate.
+The same as the [Tank](wireless-tank.md), in mB, all chemicals added up.
+
+| Tier | mB |
+| --- | --- |
+| **Basic** | 256,000 |
+| **Advanced** | 2,048,000 |
+| **Elite** | 16,384,000 |
+| **Emerald** | 131,072,000 |
+| **Allthemodium¹** | 1,048,576,000 |
+| **Vibranium¹** | 8,388,608,000 |
+| **Unobtainium¹** | 67,108,864,000 |
+| **Ultimate** | Unlimited |
+
+¹ Only with the Allthemodium mod.
 
 ## Mekanism containers
 

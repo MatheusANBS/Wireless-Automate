@@ -599,10 +599,10 @@ public final class StorageGameTests {
     public static void tankStoresFluidsByType(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.TANK, RouterTier.BASIC);
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 400_000), FluidAction.EXECUTE), 400_000,
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 100_000), FluidAction.EXECUTE), 100_000,
                 "água pela visão comum");
         helper.assertValueEqual(tank.storage().insert(new FluidStack(Fluids.LAVA, 1), capacity, false),
-                capacity - 400_000, "lava até a capacidade");
+                capacity - 100_000, "lava até a capacidade");
         helper.assertValueEqual(tank.storage().types(), 2, "dois fluidos");
         helper.assertValueEqual(tank.handler().getTanks(), 3, "um tanque por fluido + o vazio");
         helper.assertValueEqual(tank.handler().drain(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE).getAmount(),
@@ -730,13 +730,13 @@ public final class StorageGameTests {
     public static void sourceTankStoresAndShowsLevel(GameTestHelper helper) {
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC);
-        helper.assertValueEqual(capacity, 160_000L, "capacidade do Básico");
-        helper.assertValueEqual(tank.store().insert(80_000, false), 80_000L, "metade");
+        helper.assertValueEqual(capacity, 10_000L, "capacidade do Básico");
+        helper.assertValueEqual(tank.store().insert(5_000, false), 5_000L, "metade");
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
-        helper.assertValueEqual(tank.store().insert(999_999, false), 80_000L, "até a capacidade");
+        helper.assertValueEqual(tank.store().insert(999_999, false), 5_000L, "até a capacidade");
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10, "cheio");
         helper.assertValueEqual(tank.signal(), 15, "comparador cheio");
-        tank.store().extract(160_000, false);
+        tank.store().extract(10_000, false);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
         helper.succeed();
     }
@@ -750,14 +750,14 @@ public final class StorageGameTests {
         var capacity = Config.STORAGE_CAPACITY.get(StorageKind.SOURCE_TANK).get(RouterTier.BASIC);
         long original = capacity.get();
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
-        tank.store().insert(80_000, false);
+        tank.store().insert(5_000, false);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
         // O onLoad (que põe o tanque no conjunto) roda no tick seguinte à colocação.
         helper.startSequence()
                 .thenIdle(3)
                 .thenExecute(() -> {
                     try {
-                        capacity.set(1_600_000L);
+                        capacity.set(100_000L);
                         SourceTankLevels.refreshAll();
                         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
                     } finally {
@@ -774,7 +774,7 @@ public final class StorageGameTests {
     public static void sourceTankFixesWrongLevelOnLoad(GameTestHelper helper) {
         BlockPos abs = helper.absolutePos(A);
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
-        tank.store().insert(80_000, false);
+        tank.store().insert(5_000, false);
         // No mesmo tick da colocação (antes do onLoad): o conteúdo é de nível 5 e o bloco diz 9.
         helper.getLevel().setBlock(abs, helper.getLevel().getBlockState(abs).setValue(StorageSourceTankBlock.FILL, 9), 3);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 9, "nível errado forçado");
@@ -787,11 +787,12 @@ public final class StorageGameTests {
     @GameTest(template = "empty")
     public static void sourceTankUpgradeKeepsSourceAndRefreshesLevel(GameTestHelper helper) {
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
-        tank.store().insert(160_000, false);
+        tank.store().insert(10_000, false);
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED), "upgrade");
         StorageSourceTankBlockEntity upgraded = helper.getBlockEntity(A);
-        helper.assertValueEqual(upgraded.store().stored(), 160_000L, "Source depois do upgrade");
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
+        helper.assertValueEqual(upgraded.store().stored(), 10_000L, "Source depois do upgrade");
+        // 10.000 de 80.000 (um oitavo): nível 2, arredondado para cima.
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 2, "nível com a capacidade nova");
         helper.succeed();
     }
 
@@ -822,9 +823,9 @@ public final class StorageGameTests {
     @SuppressWarnings("removal")
     public static void batteryKeepsEnergyHoweverBroken(GameTestHelper helper) {
         Object[][] cases = {
-                {GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 3_000_000_001L},
-                {GameType.SURVIVAL, ItemStack.EMPTY, 3_000_000_002L},
-                {GameType.CREATIVE, ItemStack.EMPTY, 3_000_000_003L},
+                {GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 30_000_001L},
+                {GameType.SURVIVAL, ItemStack.EMPTY, 30_000_002L},
+                {GameType.CREATIVE, ItemStack.EMPTY, 30_000_003L},
         };
         for (Object[] c : cases) {
             long energy = (long) c[2];

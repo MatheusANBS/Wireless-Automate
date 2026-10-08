@@ -50,10 +50,16 @@ filtro: Source é uma só.
 
 | Tier | Source |
 | --- | --- |
-| **Básico** | 160.000 |
-| **Avançado** | 2.560.000 |
-| **Elite** | 40.960.000 |
+| **Básico** | 10.000 |
+| **Avançado** | 80.000 |
+| **Elite** | 640.000 |
+| **Esmeralda** | 5.120.000 |
+| **Allthemodium¹** | 40.960.000 |
+| **Vibranium¹** | 327.680.000 |
+| **Unobtainium¹** | 2.621.440.000 |
 | **Ultimate** | Sem limite |
+
+¹ Só com o mod Allthemodium.
 
 ## Em comum com o Baú
 

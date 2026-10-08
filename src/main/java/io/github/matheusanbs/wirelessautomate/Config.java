@@ -24,6 +24,10 @@ public final class Config {
     public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
+    /** Versão do balanceamento já aplicada a este arquivo (ver {@link #migrateBalance()}). */
+    public static final ModConfigSpec.IntValue BALANCE_VERSION;
+    /** 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026). */
+    public static final int CURRENT_BALANCE = 1;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -120,7 +124,68 @@ public final class Config {
                 .define("giveOnFirstJoin", true);
         builder.pop();
 
+        builder.push("migration");
+        BALANCE_VERSION = builder
+                .comment("Versão do balanceamento já aplicada (não mexa). Abaixo da atual, os valores de vazão, alcance e",
+                        "capacidade que ainda estão no padrão antigo passam para o novo na próxima carga; os que você mudou ficam.")
+                .defineInRange("balanceVersion", 0, 0, CURRENT_BALANCE);
+        builder.pop();
+
         SPEC = builder.build();
+    }
+
+    /** Padrões da escada de quatro tiers (×16), por tier antigo: Básico, Avançado e Elite (o Ultimate não mudou). */
+    private static final RouterTier[] OLD_TIERS = {RouterTier.BASIC, RouterTier.ADVANCED, RouterTier.ELITE};
+    private static final Map<String, long[]> OLD_RATES = Map.of(
+            "itemsPerSecond", new long[] {512L, 8_192L, 131_072L},
+            "fluidPerSecond", new long[] {32_000L, 512_000L, 8_000_000L},
+            "energyPerTick", new long[] {16_000L, 256_000L, 4_000_000L},
+            "sourcePerSecond", new long[] {1_000L, 16_000L, 256_000L});
+    private static final int[] OLD_RANGES = {128, 1_024, 0};
+    private static final Map<StorageKind, long[]> OLD_CAPACITY = Map.of(
+            StorageKind.CHEST, new long[] {262_144L, 16_777_216L, 1_073_741_824L},
+            StorageKind.TANK, new long[] {1_000_000L, 64_000_000L, 4_000_000_000L},
+            StorageKind.BATTERY, new long[] {16_000_000L, 1_000_000_000L, 64_000_000_000L},
+            StorageKind.CHEMICAL_TANK, new long[] {1_000_000L, 64_000_000L, 4_000_000_000L},
+            StorageKind.SOURCE_TANK, new long[] {160_000L, 2_560_000L, 40_960_000L});
+
+    /**
+     * Na primeira carga depois da 1.2, troca os valores que ainda estão no padrão antigo pelo novo (senão,
+     * num mundo que já existia, o Elite ficaria acima da Esmeralda); o que o dono do servidor mudou fica.
+     * Roda uma vez por arquivo, marcada em {@code migration.balanceVersion}. Devolve quantos valores mudaram.
+     */
+    public static int migrateBalance() {
+        if (BALANCE_VERSION.get() >= CURRENT_BALANCE) {
+            return 0;
+        }
+        int changed = 0;
+        for (int i = 0; i < OLD_TIERS.length; i++) {
+            RouterTier tier = OLD_TIERS[i];
+            TierValues values = TIERS.get(tier);
+            for (ResourceType type : ResourceType.values()) {
+                ModConfigSpec.LongValue rate = values.rates().get(type.rateKey());
+                long target = type.defaultRate(tier.ordinal());
+                if (rate.get() == OLD_RATES.get(type.rateKey())[i] && rate.get() != target) {
+                    rate.set(target);
+                    changed++;
+                }
+            }
+            if (values.range().get() == OLD_RANGES[i] && values.range().get() != tier.defaultRange) {
+                values.range().set(tier.defaultRange);
+                changed++;
+            }
+            for (StorageKind kind : StorageKind.values()) {
+                ModConfigSpec.LongValue capacity = STORAGE_CAPACITY.get(kind).get(tier);
+                long target = kind.defaultCapacity(tier);
+                if (capacity.get() == OLD_CAPACITY.get(kind)[i] && capacity.get() != target) {
+                    capacity.set(target);
+                    changed++;
+                }
+            }
+        }
+        BALANCE_VERSION.set(CURRENT_BALANCE);
+        SPEC.save();
+        return changed;
     }
 
     /** Capacidade do armazenamento no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */

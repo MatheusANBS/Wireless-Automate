@@ -42,10 +42,16 @@ Total de itens, todos os tipos somados. O tooltip do item mostra o valor do seu 
 
 | Tier | Itens |
 | --- | --- |
-| **Básico** | 262.144 |
-| **Avançado** | 16.777.216 |
-| **Elite** | 1.073.741.824 |
+| **Básico** | 32.768 |
+| **Avançado** | 262.144 |
+| **Elite** | 2.097.152 |
+| **Esmeralda** | 16.777.216 |
+| **Allthemodium¹** | 134.217.728 |
+| **Vibranium¹** | 1.073.741.824 |
+| **Unobtainium¹** | 8.589.934.592 |
 | **Ultimate** | Sem limite |
+
+¹ Só com o mod Allthemodium.
 
 Sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador, no mundo ou na
 bancada, **sem perder o conteúdo**.

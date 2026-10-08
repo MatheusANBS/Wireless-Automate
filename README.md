@@ -2,7 +2,7 @@
 
 Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-**Estado:** versão 1.1 (1.1.0 pronta para lançar; a última publicada é a 1.0.2). Baixe o jar na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), que tem também o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Também no CurseForge (projeto 1732160). Licença All Rights Reserved.
+**Estado:** versão 1.2 (1.2.0: tier Esmeralda, tiers do Allthemodium e escada rebalanceada). Baixe o jar na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), que tem também o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Também no CurseForge (projeto 1732160). Licença All Rights Reserved.
 
 ## Recursos
 
@@ -11,23 +11,29 @@ Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoFor
 - **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
 - **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada). A tela é redimensionável: ponha um item no inspetor para ver e marcar todas as tags dele, ou busque em todas as tags do jogo com a prévia dos itens.
 - **Regras por propriedade** (1.0): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
-- **Quatro tiers**, subidos com os Cartões de Upgrade Avançado, Elite e Ultimate (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada.
+- **Cinco tiers** (1.2; Básico, Avançado, Elite, Esmeralda e Ultimate), e **oito com o Allthemodium** (Allthemodium, Vibranium e Unobtainium entre a Esmeralda e o Ultimate), subidos com os Cartões de Upgrade (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada. No ATM10, o Cartão Ultimate pede fragmentos de ATM Star.
 - **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, nas abas marcadas (Itens, Fluidos, Energia e, com o Mekanism e o Ars Nouveau, Químicos e Source); em "Nenhuma (desvincular)", tira essas abas da rede.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo, Source incluída (Shift + roda do mouse).
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
 - **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.
-- **Baú Wireless** (1.0): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (262.144, 16.777.216, 1.073.741.824 itens e sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
-- **Tanque, Bateria e Tanque Químico Wireless** (1.0): o mesmo molde do Baú para fluidos (vários por tanque, até 4 bilhões de mB no Elite), energia (até 64 bilhões de FE no Elite) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
-- **Tanque de Source Wireless** (1.1, só com o Ars Nouveau): jarra fina com a coluna de vidro mostrando o nível, de 160.000 a 40.960.000 de Source (sem limite no Ultimate). Os Sourcelinks num raio de 5 blocos depositam nele e as máquinas do Ars por perto tiram dele como de uma Source Jar; entre dois tanques o roteador move tudo numa operação. Mesmos Cartões de Upgrade, leva o conteúdo ao quebrar, comparador e tela própria.
+- **Baú Wireless** (1.0): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (de 32.768 itens no Básico a 16.777.216 na Esmeralda e 8.589.934.592 no Unobtainium, sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
+- **Tanque, Bateria e Tanque Químico Wireless** (1.0): o mesmo molde do Baú para fluidos (vários por tanque, até 131 milhões de mB na Esmeralda), energia (até 512 milhões de FE na Esmeralda) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
+- **Tanque de Source Wireless** (1.1, só com o Ars Nouveau): jarra fina com a coluna de vidro mostrando o nível, de 10.000 a 5.120.000 de Source na escada vanilla (sem limite no Ultimate). Os Sourcelinks num raio de 5 blocos depositam nele e as máquinas do Ars por perto tiram dele como de uma Source Jar; entre dois tanques o roteador move tudo numa operação. Mesmos Cartões de Upgrade, leva o conteúdo ao quebrar, comparador e tela própria.
 - **Telas redimensionáveis** (1.1): roteador, Tablet e Vinculador mudam de tamanho pela borda e pelo canto; as abas do roteador se adaptam à largura e o texto que não cabe é abreviado, com o tooltip inteiro.
 - **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
-| Básico | 512 | 32.000 | 16.000 | 1.000 | 128 blocos |
-| Avançado | 8.192 | 512.000 | 256.000 | 16.000 | 1.024 blocos |
-| Elite | 131.072 | 8.000.000 | 4.000.000 | 256.000 | Dimensão inteira |
+| Básico | 32 | 2.000 | 1.000 | 100 | 64 blocos |
+| Avançado | 256 | 16.000 | 8.000 | 800 | 512 blocos |
+| Elite | 2.048 | 128.000 | 64.000 | 6.400 | Dimensão inteira |
+| Esmeralda | 16.384 | 1.024.000 | 512.000 | 51.200 | Entre dimensões |
+| Allthemodium¹ | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Entre dimensões |
+| Vibranium¹ | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Entre dimensões |
+| Unobtainium¹ | 8.388.608 | 524.288.000 | 262.144.000 | 26.214.400 | Entre dimensões |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões |
+
+¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
 
 A vazão vale por face e por tipo (`sourcePerSecond` é a da Source). Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`), assim como a capacidade dos armazenamentos por tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity` e `chemicalTankCapacity` e `sourceTankCapacity`).
 

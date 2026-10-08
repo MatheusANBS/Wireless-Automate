@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IAI",
+    "BCB",
+    "IAI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/unobtainium"
+    },
+    "A": {
+      "tag": "c:ingots/unobtainium_vibranium_alloy"
+    },
+    "B": {
+      "tag": "c:storage_blocks/unobtainium"
+    },
+    "C": {
+      "item": "wirelessautomate:tier_core_vibranium"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_unobtainium",
+    "count": 1
+  }
+}

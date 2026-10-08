@@ -20,7 +20,8 @@ import net.minecraft.world.entity.player.Inventory;
  * dica. Sem slots: o conteúdo entra e sai pelos roteadores e pelos cabos de outros mods.
  */
 public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMenu> {
-    private static final int W = 220;
+    /** Cabe "Tanque de Source Wireless" com a pílula do maior tier ("Allthemodium"), sem cortar. */
+    private static final int W = 240;
     private static final int H = 104;
     private static final int HINT_H = 34;
     private static final int HINT_LINES = 3;

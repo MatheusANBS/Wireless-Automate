@@ -1,0 +1,37 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthetweaks"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SDS",
+    "UCU",
+    "SUS"
+  ],
+  "key": {
+    "S": {
+      "item": "allthetweaks:atm_star_shard"
+    },
+    "D": {
+      "item": "minecraft:dragon_egg"
+    },
+    "U": {
+      "tag": "c:storage_blocks/unobtainium_allthemodium_alloy"
+    },
+    "C": {
+      "item": "wirelessautomate:tier_core_unobtainium"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:tier_core_ultimate",
+    "count": 1
+  }
+}

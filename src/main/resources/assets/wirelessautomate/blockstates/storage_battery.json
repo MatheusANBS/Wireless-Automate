@@ -9,6 +9,18 @@
     "tier=elite": {
       "model": "wirelessautomate:block/storage_battery_elite"
     },
+    "tier=emerald": {
+      "model": "wirelessautomate:block/storage_battery_emerald"
+    },
+    "tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_battery_allthemodium"
+    },
+    "tier=vibranium": {
+      "model": "wirelessautomate:block/storage_battery_vibranium"
+    },
+    "tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_battery_unobtainium"
+    },
     "tier=ultimate": {
       "model": "wirelessautomate:block/storage_battery_ultimate"
     }

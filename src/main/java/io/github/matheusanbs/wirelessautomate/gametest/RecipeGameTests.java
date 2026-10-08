@@ -85,13 +85,31 @@ public final class RecipeGameTests {
                         null, netherite, null),
                 ModItems.TIER_CORES.get(RouterTier.ELITE).get(), 1);
 
+        Item emerald = Items.EMERALD_BLOCK;
+        Item eye = Items.ENDER_EYE;
+        Item crying = Items.CRYING_OBSIDIAN;
+        assertCrafts(helper, "tier_core_emerald",
+                grid(emerald, eye, emerald,
+                        crying, ModItems.TIER_CORES.get(RouterTier.ELITE).get(), crying,
+                        emerald, eye, emerald),
+                ModItems.TIER_CORES.get(RouterTier.EMERALD).get(), 1);
+
+        // Sem o Allthemodium, o Ultimate pede o Cartão Esmeralda (a versão do ATM não carrega).
         Item block = Items.NETHERITE_BLOCK;
         Item echo = Items.ECHO_SHARD;
         assertCrafts(helper, "tier_core_ultimate",
                 grid(echo, Items.DRAGON_EGG, echo,
-                        block, ModItems.TIER_CORES.get(RouterTier.ELITE).get(), block,
+                        block, ModItems.TIER_CORES.get(RouterTier.EMERALD).get(), block,
                         echo, block, echo),
                 ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get(), 1);
+        helper.assertTrue(find(helper, grid(echo, Items.DRAGON_EGG, echo,
+                block, ModItems.TIER_CORES.get(RouterTier.ELITE).get(), block, echo, block, echo)).isEmpty(),
+                "Ultimate a partir do Elite");
+        for (String id : List.of("tier_core_allthemodium", "tier_core_vibranium", "tier_core_unobtainium",
+                "tier_core_ultimate_atm", "tier_core_ultimate_atm_star")) {
+            helper.assertTrue(helper.getLevel().getRecipeManager().byKey(WirelessAutomate.id(id)).isEmpty(),
+                    "receita do ATM carregou sem o mod: " + id);
+        }
 
         // Sem o núcleo anterior no centro não sai nada: a progressão é obrigatória.
         helper.assertTrue(find(helper, grid(null, Items.NETHER_STAR, null,
@@ -151,7 +169,13 @@ public final class RecipeGameTests {
         advancedCard.getItem().appendHoverText(advancedCard, Item.TooltipContext.EMPTY, lines,
                 net.minecraft.world.item.TooltipFlag.NORMAL);
         String text = lines.toString();
-        helper.assertTrue(text.contains("8,192") && text.contains("512") && text.contains("1,024"),
+        // Básico → Avançado: 32 → 256 itens/s e alcance de 64 → 512 blocos, na linha de cada um.
+        String items = Component.translatable("item.wirelessautomate.tier_core.items", "32", "256").getString();
+        String range = Component.translatable("item.wirelessautomate.tier_core.range",
+                Component.translatable("item.wirelessautomate.tier_core.range.blocks", "64"),
+                Component.translatable("item.wirelessautomate.tier_core.range.blocks", "512")).getString();
+        List<String> texts = lines.stream().map(Component::getString).toList();
+        helper.assertTrue(texts.contains(items) && texts.contains(range),
                 "tooltip sem os números do tier: " + text);
         helper.succeed();
     }

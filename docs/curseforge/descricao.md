@@ -35,20 +35,24 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 ![Property rules](https://media.forgecdn.net/attachments/2027/590/feature-8-rules-png.png)
 
-### Four tiers
+### Five tiers, eight with Allthemodium
 
-Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
+Upgrade Cards raise a router's throughput and range, one tier at a time: Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate Card takes **ATM Star shards**. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
 
-![Four tiers](https://media.forgecdn.net/attachments/2027/586/feature-4-tiers-png.png)
+![Tiers](https://media.forgecdn.net/attachments/2027/586/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
 | --- | --- | --- | --- | --- | --- |
-| Basic | 512 | 32,000 | 16,000 | 1,000 | 128 blocks |
-| Advanced | 8,192 | 512,000 | 256,000 | 16,000 | 1,024 blocks |
-| Elite | 131,072 | 8,000,000 | 4,000,000 | 256,000 | Whole dimension |
+| Basic | 32 | 2,000 | 1,000 | 100 | 64 blocks |
+| Advanced | 256 | 16,000 | 8,000 | 800 | 512 blocks |
+| Elite | 2,048 | 128,000 | 64,000 | 6,400 | Whole dimension |
+| Emerald | 16,384 | 1,024,000 | 512,000 | 51,200 | Every dimension |
+| Allthemodium¹ | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Every dimension |
+| Vibranium¹ | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Every dimension |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 262,144,000 | 26,214,400 | Every dimension |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
 
-*Per face and per resource type. Server owners can change every value in the config.*
+*Per face and per resource type. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
 ### Wireless storage
 
@@ -58,9 +62,13 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 | Tier | Chest (items) | Tank and Chemical Tank | Battery | Source Tank |
 | --- | --- | --- | --- | --- |
-| Basic | 262,144 | 1,000 B | 16M FE | 160,000 |
-| Advanced | 16,777,216 | 64,000 B | 1G FE | 2,560,000 |
-| Elite | 1,073,741,824 | 4,000,000 B | 64G FE | 40,960,000 |
+| Basic | 32,768 | 256 B | 1M FE | 10,000 |
+| Advanced | 262,144 | 2,048 B | 8M FE | 80,000 |
+| Elite | 2,097,152 | 16,384 B | 64M FE | 640,000 |
+| Emerald | 16,777,216 | 131,072 B | 512M FE | 5,120,000 |
+| Allthemodium¹ | 134,217,728 | 1,048,576 B | 4.1G FE | 40,960,000 |
+| Vibranium¹ | 1,073,741,824 | 8,388,608 B | 32.8G FE | 327,680,000 |
+| Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 262G FE | 2,621,440,000 |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited |
 
 - Upgrade with the same Upgrade Cards as the router, without losing the contents.
@@ -75,7 +83,7 @@ With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Rel
 
 ![Ars Nouveau Source](https://media.forgecdn.net/attachments/2027/593/feature-11-source-png.png)
 
-The **Wireless Source Tank** holds from 160,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
+The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
 
 ![Wireless Source Tank](https://media.forgecdn.net/attachments/2027/594/feature-12-source-tank-png.png)
 
@@ -115,7 +123,7 @@ Every player gets the guide book on their first join (it's also in the creative 
 
 Once the first router of a line is set up, copy it with the Configurator and paste on the rest.
 
-All recipes use vanilla items.
+Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
 
 ---
 
@@ -126,6 +134,7 @@ All recipes use vanilla items.
 | **Any mod with standard NeoForge storage** | Items, fluids and energy work with any machine, chest or tank that exposes NeoForge's standard item, fluid and energy handlers, which covers most tech and storage mods (tested with Sophisticated Storage and Mekanism). |
 | **Mekanism** (optional) | A **Chemicals** tab for gases, infuse types, pigments and slurries, and the Wireless Chemical Tank. Remember to enable the face in the Mekanism machine's side configuration. |
 | **Ars Nouveau** (optional) | A **Source** tab (Source Jars, Relays and the Imbuement Chamber connect straight to a router) and the **Wireless Source Tank**, which Ars machines use like a Source Jar. Needs Ars Nouveau 5.2 or newer. |
+| **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate Card takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; router and storage upgrades in the crafting table show in JEI. |
 | **GuideME** (optional) | The in-game guide book. |
 

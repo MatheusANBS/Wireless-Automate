@@ -17,6 +17,30 @@
       "predicate": {
         "wirelessautomate:tier": 3
       },
+      "model": "wirelessautomate:block/router_emerald"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 4
+      },
+      "model": "wirelessautomate:block/router_allthemodium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 5
+      },
+      "model": "wirelessautomate:block/router_vibranium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 6
+      },
+      "model": "wirelessautomate:block/router_unobtainium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 7
+      },
       "model": "wirelessautomate:block/router_ultimate"
     }
   ]

@@ -45,16 +45,28 @@ class ResourceTypeTest {
 
     @Test
     void defaultRatesMatchTheTierTable() {
-        assertEquals(512L, ResourceType.ITEM.defaultRate(0));
-        assertEquals(131_072L, ResourceType.ITEM.defaultRate(2));
-        assertEquals(512_000L, ResourceType.FLUID.defaultRate(1));
-        assertEquals(4_000_000L, ResourceType.ENERGY.defaultRate(2));
-        assertEquals(0L, ResourceType.ENERGY.defaultRate(3));
+        assertEquals(32L, ResourceType.ITEM.defaultRate(0));
+        assertEquals(2_048L, ResourceType.ITEM.defaultRate(2));
+        assertEquals(16_384L, ResourceType.ITEM.defaultRate(3));
+        assertEquals(8_388_608L, ResourceType.ITEM.defaultRate(6));
+        assertEquals(16_000L, ResourceType.FLUID.defaultRate(1));
+        assertEquals(64_000L, ResourceType.ENERGY.defaultRate(2));
+        assertEquals(262_144_000L, ResourceType.ENERGY.defaultRate(6));
+        assertEquals(0L, ResourceType.ENERGY.defaultRate(7));
         assertEquals(ResourceType.FLUID.defaultRate(1), ResourceType.CHEMICAL.defaultRate(1));
-        assertEquals(1_000L, ResourceType.SOURCE.defaultRate(0));
-        assertEquals(16_000L, ResourceType.SOURCE.defaultRate(1));
-        assertEquals(256_000L, ResourceType.SOURCE.defaultRate(2));
-        assertEquals(0L, ResourceType.SOURCE.defaultRate(3));
+        assertEquals(100L, ResourceType.SOURCE.defaultRate(0));
+        assertEquals(800L, ResourceType.SOURCE.defaultRate(1));
+        assertEquals(6_400L, ResourceType.SOURCE.defaultRate(2));
+        assertEquals(0L, ResourceType.SOURCE.defaultRate(7));
+    }
+
+    @Test
+    void eachTierMultipliesByEight() {
+        for (ResourceType type : ResourceType.values()) {
+            for (int tier = 1; tier < 7; tier++) {
+                assertEquals(type.defaultRate(tier - 1) * 8, type.defaultRate(tier), type + " no tier " + tier);
+            }
+        }
     }
 
     @Test

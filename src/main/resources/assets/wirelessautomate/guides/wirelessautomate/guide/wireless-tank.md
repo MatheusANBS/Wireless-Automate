@@ -36,10 +36,16 @@ Total in mB, all fluids added up.
 
 | Tier | mB |
 | --- | --- |
-| **Basic** | 1,000,000 |
-| **Advanced** | 64,000,000 |
-| **Elite** | 4,000,000,000 |
+| **Basic** | 256,000 |
+| **Advanced** | 2,048,000 |
+| **Elite** | 16,384,000 |
+| **Emerald** | 131,072,000 |
+| **Allthemodium¹** | 1,048,576,000 |
+| **Vibranium¹** | 8,388,608,000 |
+| **Unobtainium¹** | 67,108,864,000 |
 | **Ultimate** | Unlimited |
+
+¹ Only with the Allthemodium mod.
 
 ## Buckets and containers
 

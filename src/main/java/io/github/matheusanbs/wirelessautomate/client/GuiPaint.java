@@ -53,6 +53,10 @@ public final class GuiPaint {
             case BASIC -> 0xFFC9D2DB;
             case ADVANCED -> 0xFFF2C04A;
             case ELITE -> 0xFF45D6CC;
+            case EMERALD -> 0xFF2FDC62;
+            case ALLTHEMODIUM -> 0xFFFF8B04;
+            case VIBRANIUM -> 0xFF26DE88;
+            case UNOBTAINIUM -> 0xFFD152E3;
             case ULTIMATE -> 0xFFA46CFF;
         };
     }

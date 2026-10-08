@@ -49,10 +49,16 @@ filter: Source is one thing.
 
 | Tier | Source |
 | --- | --- |
-| **Basic** | 160,000 |
-| **Advanced** | 2,560,000 |
-| **Elite** | 40,960,000 |
+| **Basic** | 10,000 |
+| **Advanced** | 80,000 |
+| **Elite** | 640,000 |
+| **Emerald** | 5,120,000 |
+| **Allthemodium¹** | 40,960,000 |
+| **Vibranium¹** | 327,680,000 |
+| **Unobtainium¹** | 2,621,440,000 |
 | **Ultimate** | Unlimited |
+
+¹ Only with the Allthemodium mod.
 
 ## Shared with the Chest
 

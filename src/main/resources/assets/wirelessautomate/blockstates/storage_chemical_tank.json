@@ -9,6 +9,18 @@
     "tier=elite": {
       "model": "wirelessautomate:block/storage_chemical_tank_elite"
     },
+    "tier=emerald": {
+      "model": "wirelessautomate:block/storage_chemical_tank_emerald"
+    },
+    "tier=allthemodium": {
+      "model": "wirelessautomate:block/storage_chemical_tank_allthemodium"
+    },
+    "tier=vibranium": {
+      "model": "wirelessautomate:block/storage_chemical_tank_vibranium"
+    },
+    "tier=unobtainium": {
+      "model": "wirelessautomate:block/storage_chemical_tank_unobtainium"
+    },
     "tier=ultimate": {
       "model": "wirelessautomate:block/storage_chemical_tank_ultimate"
     }

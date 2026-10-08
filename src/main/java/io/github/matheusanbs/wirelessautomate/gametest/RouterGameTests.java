@@ -1,11 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -49,6 +52,69 @@ public final class RouterGameTests {
         helper.assertTrue(!RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ELITE), "pulou um tier");
         helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ADVANCED), "não subiu de tier");
         helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ADVANCED);
+        helper.succeed();
+    }
+
+    /** Sem o Allthemodium, a escada é Elite → Esmeralda → Ultimate; os tiers do ATM ficam de fora. */
+    @GameTest(template = "empty")
+    public static void withoutAllthemodiumEmeraldGoesToUltimate(GameTestHelper helper) {
+        helper.setBlock(MACHINE, Blocks.FURNACE);
+        helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        BlockPos router = helper.absolutePos(ROUTER);
+
+        helper.assertValueEqual(RouterTier.ELITE.next(), RouterTier.EMERALD, "depois do Elite");
+        helper.assertValueEqual(RouterTier.EMERALD.next(), RouterTier.ULTIMATE, "depois da Esmeralda");
+        helper.assertValueEqual(RouterTier.ULTIMATE.previous(), RouterTier.EMERALD, "antes do Ultimate");
+        helper.assertValueEqual(RouterTier.VIBRANIUM.next(), RouterTier.ULTIMATE, "bloco que ficou no Vibranium");
+        helper.assertFalse(RouterTier.ALLTHEMODIUM.loaded(), "Allthemodium carregado sem o mod");
+        helper.assertTrue(RouterTier.EMERALD.loaded(), "Esmeralda não carregada");
+
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.EMERALD), "Elite não subiu");
+        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ALLTHEMODIUM),
+                "subiu para um tier do ATM sem o mod");
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ULTIMATE),
+                "Esmeralda não subiu para o Ultimate");
+        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ULTIMATE);
+
+        // Entre dimensões começa na Esmeralda; o Elite fica na dimensão dele.
+        helper.assertTrue(Config.TIERS.get(RouterTier.EMERALD).crossDimension().get(), "Esmeralda sem entre dimensões");
+        helper.assertFalse(Config.TIERS.get(RouterTier.ELITE).crossDimension().get(), "Elite entre dimensões");
+        helper.succeed();
+    }
+
+    /**
+     * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
+     * que o dono mudou fica. Tudo síncrono, restaurado no finally.
+     */
+    @GameTest(template = "empty")
+    public static void configMigratesOldDefaults(GameTestHelper helper) {
+        var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
+        var advanced = Config.TIERS.get(RouterTier.ADVANCED).rates().get("itemsPerSecond");
+        var basicRange = Config.TIERS.get(RouterTier.BASIC).range();
+        var chest = Config.STORAGE_CAPACITY.get(StorageKind.CHEST).get(RouterTier.ELITE);
+        try {
+            elite.set(131_072L);
+            advanced.set(9_999L);
+            basicRange.set(128);
+            chest.set(1_073_741_824L);
+            Config.BALANCE_VERSION.set(0);
+            helper.assertTrue(Config.migrateBalance() >= 3, "nada migrou");
+            helper.assertValueEqual(elite.get(), 2_048L, "Elite itens/s");
+            helper.assertValueEqual(advanced.get(), 9_999L, "valor do dono mudou");
+            helper.assertValueEqual(basicRange.get(), 64, "alcance do Básico");
+            helper.assertValueEqual(chest.get(), 2_097_152L, "Baú Elite");
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+            elite.set(131_072L);
+            helper.assertValueEqual(Config.migrateBalance(), 0, "migrou duas vezes");
+        } finally {
+            elite.set(ResourceType.ITEM.defaultRate(RouterTier.ELITE.ordinal()));
+            advanced.set(ResourceType.ITEM.defaultRate(RouterTier.ADVANCED.ordinal()));
+            basicRange.set(RouterTier.BASIC.defaultRange);
+            chest.set(StorageKind.CHEST.defaultCapacity(RouterTier.ELITE));
+            Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
+            Config.SPEC.save();
+        }
         helper.succeed();
     }
 

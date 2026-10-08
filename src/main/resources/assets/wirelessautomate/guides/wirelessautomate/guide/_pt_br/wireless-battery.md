@@ -33,10 +33,16 @@ Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um
 
 | Tier | FE |
 | --- | --- |
-| **Básico** | 16.000.000 |
-| **Avançado** | 1.000.000.000 |
-| **Elite** | 64.000.000.000 |
+| **Básico** | 1.000.000 |
+| **Avançado** | 8.000.000 |
+| **Elite** | 64.000.000 |
+| **Esmeralda** | 512.000.000 |
+| **Allthemodium¹** | 4.096.000.000 |
+| **Vibranium¹** | 32.768.000.000 |
+| **Unobtainium¹** | 262.144.000.000 |
 | **Ultimate** | Sem limite |
+
+¹ Só com o mod Allthemodium.
 
 ## A tela
 

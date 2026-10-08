@@ -189,7 +189,8 @@ def tiers() -> Image.Image:
     x0 = rotulo_w
     # faixa "Allthemodium" sobre as três colunas do mod
     atm = [i for i, t in enumerate(TIERS) if t[3]]
-    ax0, ax1 = x0 + atm[0] * coluna + 4, x0 + (atm[-1] + 1) * coluna - 4
+    # a borda fica um pouco fora das colunas: "Allthemodium" ocupa quase a coluna inteira
+    ax0, ax1 = x0 + atm[0] * coluna - 8, x0 + (atm[-1] + 1) * coluna + 8
     d.rounded_rectangle([ax0, faixa + 22, ax1, faixa + 614], radius=10, fill=(26, 24, 20))
     sprites = capa.tex.gerar()
     for i, (tier, nome, cor, _) in enumerate(TIERS):
@@ -200,7 +201,7 @@ def tiers() -> Image.Image:
         escala = min(2, (coluna - 16) // arte.width)
         arte = arte.resize((arte.width * escala, arte.height * escala), Image.NEAREST)
         img.paste(arte, (cx - arte.width // 2, faixa + 190 - arte.height), arte)
-        d.text((cx, faixa + 204), nome, fill=cor, font=fonte(22 if len(nome) < 11 else 19), anchor="mt")
+        d.text((cx, faixa + 204), nome, fill=cor, font=fonte(22 if len(nome) < 11 else 18), anchor="mt")
     y = faixa + 256
     linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
     linhas.append(("Range", ALCANCE))

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -60,11 +61,16 @@ import org.lwjgl.glfw.GLFW;
  */
 public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
-    // Larga e baixa o bastante para caber na menor escala automática (320×240).
-    private static final int W = 300;
-    private static final int H = 240;
+    // O mínimo é largo e baixo o bastante para caber na menor escala automática (320×240); a tela
+    // cresce pela borda direita, pela de baixo e pelo canto, e o tamanho fica lembrado na sessão.
+    private static final int MIN_W = 300;
+    private static final int MIN_H = 240;
+    /** Alça do canto (lado, em px) e espessura das bordas que redimensionam. */
+    private static final int GRIP = 7;
+    private static final int EDGE = 3;
+    private static int savedW = MIN_W;
+    private static int savedH = MIN_H;
     private static final int X0 = 9;
-    private static final int X1 = W - 9;
     private static final int HEAD_Y = 8;
     private static final int PILL_H = 13;
     private static final int TAB_Y = 26;
@@ -77,30 +83,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int NET_MIN = 92;
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
-    // visor 3D e, logo abaixo, os botões das faces em duas fileiras (cada coluna é um eixo)
-    private static final int VIEW_W = 112;
+    // visor 3D (altura no tamanho mínimo; cresce com a tela) e, logo abaixo, os botões das faces em
+    // duas fileiras (cada coluna é um eixo)
     private static final int VIEW_H = 84;
-    private static final int FACE_W = 36;
     private static final int FACE_H = 18;
     private static final int FACE_GAP = 2;
-    private static final int FACES_Y = BODY_Y + VIEW_H + 3;
-    // coluna da face selecionada
-    private static final int RX = X0 + VIEW_W + 8;
-    private static final int RW = X1 - RX;
+    // coluna da face selecionada: largura fixa, presa à borda direita
+    private static final int RW = 162;
     private static final int MODE_Y = 74;
     private static final int MODE_W = (RW - 2) / 2;
     private static final int MODE_H = 18;
     private static final int FILTER_Y = 114;
-    /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_X}). */
-    private static final int CARD_BG_X = RouterMenu.CARD_X - 1;
+    /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_Y}). */
     private static final int CARD_BG_Y = RouterMenu.CARD_Y - 1;
     /** Slot do upgrade (o fundo), no canto direito do cabeçalho; o tier e a vazão ficam à esquerda dele. */
-    private static final int UPGRADE_BG_X = RouterMenu.UPGRADE_X - 1;
     private static final int UPGRADE_BG_Y = RouterMenu.UPGRADE_Y - 1;
-    /** Onde termina a pílula do tier: antes do slot do upgrade, com folga. */
-    private static final int HEAD_END = UPGRADE_BG_X - 4;
-    // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone
-    private static final int LX1 = X0 + VIEW_W;
+    // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone (alturas no tamanho mínimo)
     private static final int ADV_SEP_Y = 180;
     private static final int MORE_Y = 184;
     private static final int PRIO_Y = 199;
@@ -150,6 +148,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private final List<FlatButton> modeButtons = new ArrayList<>();
     private EditBox renameBox;
 
+    private int w = MIN_W;
+    private int h = MIN_H;
+    private @Nullable Resize resizing;
+    private double resizeCenterX;
+    private double resizeCenterY;
+    private double resizeGrabX;
+    private double resizeGrabY;
+
+    private enum Resize { WIDTH, HEIGHT, BOTH }
+
     public RouterScreen(RouterMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
     }
@@ -160,8 +168,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     public RouterScreen(RouterMenu menu, Inventory inventory, Component title, boolean preview) {
         super(menu, inventory, title);
         this.preview = preview;
-        this.imageWidth = W;
-        this.imageHeight = H;
+        this.imageWidth = MIN_W;
+        this.imageHeight = MIN_H;
         this.face = menu.snapshot().facing();
         types.addAll(LoadedTypes.LIST);
     }
@@ -269,6 +277,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     protected void init() {
+        w = Math.max(MIN_W, Math.min(savedW, maxW()));
+        h = Math.max(MIN_H, Math.min(savedH, maxH()));
+        imageWidth = w;
+        imageHeight = h;
         super.init();
         buttons.clear();
         tabButtons.clear();
@@ -306,18 +318,18 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                     networkScroll = 0;
                 }).tooltip(this::networkTooltip));
 
-        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, VIEW_W - 2, VIEW_H - 2);
+        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
         for (int i = 0; i < FACE_ORDER.length; i++) {
             Direction direction = FACE_ORDER[i];
-            faceButtons.put(direction, add(new FlatButton(x + X0 + (i % 3) * (FACE_W + FACE_GAP),
-                    y + FACES_Y + (i / 3) * (FACE_H + FACE_GAP), FACE_W, FACE_H, faceName(direction),
+            faceButtons.put(direction, add(new FlatButton(x + X0 + (i % 3) * (faceW() + FACE_GAP),
+                    y + facesY() + (i / 3) * (FACE_H + FACE_GAP), faceW(), FACE_H, faceName(direction),
                     (g, b, hovered) -> paintFace(g, b, hovered, direction), () -> face = direction)
                     .tooltip(() -> faceTooltip(direction))));
         }
 
         for (int i = 0; i < MODES.length; i++) {
             PortMode mode = MODES[i];
-            FlatButton button = add(new FlatButton(x + RX + (i % 2) * (MODE_W + 2), y + MODE_Y + (i / 2) * (MODE_H + 2),
+            FlatButton button = add(new FlatButton(x + rx() + (i % 2) * (MODE_W + 2), y + MODE_Y + (i / 2) * (MODE_H + 2),
                     MODE_W, MODE_H, modeName(mode), (g, b, hovered) -> paintMode(g, b, hovered, mode),
                     () -> sendFace(mode, view().priority(), view().redstone()))
                     .tooltip(() -> view().available() ? tr("mode." + mode.name().toLowerCase(Locale.ROOT) + ".tooltip")
@@ -329,19 +341,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), this::openFilter)
                 .tooltip(() -> tr("filter.edit.tooltip")));
 
-        moreButton = add(new FlatButton(x + X0, y + MORE_Y, 60, 12, tr("more"), this::paintMore,
+        moreButton = add(new FlatButton(x + X0, y + moreY(), 60, 12, tr("more"), this::paintMore,
                 () -> expanded = !expanded).tooltip(() -> tr("more.tooltip")));
 
-        prioMinus = add(new FlatButton(x + LX1 - 58, y + PRIO_Y, 14, ROW_H, tr("priority.decrease"),
+        prioMinus = add(new FlatButton(x + lx1() - 58, y + prioY(), 14, ROW_H, tr("priority.decrease"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("-")),
                 () -> changePriority(-1)).tooltip(() -> tr("priority.tooltip")));
-        prioPlus = add(new FlatButton(x + LX1 - 14, y + PRIO_Y, 14, ROW_H, tr("priority.increase"),
+        prioPlus = add(new FlatButton(x + lx1() - 14, y + prioY(), 14, ROW_H, tr("priority.increase"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("+")),
                 () -> changePriority(1)).tooltip(() -> tr("priority.tooltip")));
-        redstoneButton = add(new FlatButton(x + X0, y + REDSTONE_Y, VIEW_W, ROW_H, tr("redstone"),
+        redstoneButton = add(new FlatButton(x + X0, y + redstoneY(), viewW(), ROW_H, tr("redstone"),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, tr("redstone.narration", redstoneName(view().redstone()))),
                 this::cycleRedstone).tooltip(() -> tr("redstone.tooltip")));
 
+        // os slots do menu e o visor acompanham o tamanho da tela
+        menu.placeSlots(rx() + 1, w - 26, inventoryY());
+        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
         refresh();
     }
 
@@ -377,12 +392,81 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return tabMode;
     }
 
+    // ------------------------------------------------------------------ geometria (depende do tamanho)
+
     private int x1() {
-        return X1;
+        return w - 9;
     }
 
+    /** Coluna da direita: largura fixa ({@link #RW}), presa à borda direita. */
     private int rx() {
-        return RX;
+        return x1() - RW;
+    }
+
+    /** O visor fica com toda a largura e a altura extras. */
+    private int viewW() {
+        return rx() - 8 - X0;
+    }
+
+    private int viewH() {
+        return VIEW_H + (h - MIN_H);
+    }
+
+    /** Fim da coluna do visor. */
+    private int lx1() {
+        return X0 + viewW();
+    }
+
+    private int facesY() {
+        return BODY_Y + viewH() + 3;
+    }
+
+    private int faceW() {
+        return (viewW() - 2 * FACE_GAP) / 3;
+    }
+
+    private int advSepY() {
+        return ADV_SEP_Y + (h - MIN_H);
+    }
+
+    private int moreY() {
+        return MORE_Y + (h - MIN_H);
+    }
+
+    private int prioY() {
+        return PRIO_Y + (h - MIN_H);
+    }
+
+    private int redstoneY() {
+        return REDSTONE_Y + (h - MIN_H);
+    }
+
+    /** Topo do inventário do jogador (o canto do item), colado na borda de baixo. */
+    private int inventoryY() {
+        return RouterMenu.INVENTORY_Y + (h - MIN_H);
+    }
+
+    /** Fundo do primeiro slot de cartão (o item fica 1 px para dentro). */
+    private int cardBgX() {
+        return rx() + 1 - 1;
+    }
+
+    /** Fundo do slot do upgrade, no canto direito do cabeçalho. */
+    private int upgradeBgX() {
+        return w - 26 - 1;
+    }
+
+    /** Onde termina a pílula do tier: antes do slot do upgrade, com folga. */
+    private int headEnd() {
+        return upgradeBgX() - 4;
+    }
+
+    private int maxW() {
+        return Math.max(MIN_W, width - 8);
+    }
+
+    private int maxH() {
+        return Math.max(MIN_H, height - 8);
     }
 
     private FlatButton add(FlatButton button) {
@@ -395,7 +479,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         RouterSnapshot s = snapshot();
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
-        int rateX = leftPos + HEAD_END - tierW - 6 - font.width(rate());
+        int rateX = leftPos + headEnd() - tierW - 6 - font.width(rate());
 
         // seletor da rede com todo o espaço que sobra à direita das abas
         int tabsEnd = leftPos + X0;
@@ -626,6 +710,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        Resize edge = button == 0 && !networkListOpen ? resizeAt(mouseX, mouseY) : null;
+        if (edge != null) {
+            resizing = edge;
+            resizeCenterX = leftPos + w / 2.0;
+            resizeCenterY = topPos + h / 2.0;
+            resizeGrabX = leftPos + w - mouseX;
+            resizeGrabY = topPos + h - mouseY;
+            return true;
+        }
         if (networkListOpen) {
             int row = dropdownRowAt(mouseX, mouseY);
             if (row >= 0) {
@@ -653,6 +746,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (resizing != null) {
+            dragResize(mouseX, mouseY);
+            return true;
+        }
         // a tela de contêiner não repassa o arrasto aos filhos; o visor recebe direto
         if (machineView.mouseDragged(mouseX, mouseY, button)) {
             return true;
@@ -662,11 +759,71 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (resizing != null) {
+            resizing = null;
+            return true;
+        }
         // soltar fora do visor também encerra o giro
         if (machineView.mouseReleased(mouseX, mouseY, button)) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /** O que o mouse redimensiona ali, ou {@code null}: a alça do canto, a borda direita ou a de baixo. */
+    private @Nullable Resize resizeAt(double mouseX, double mouseY) {
+        int right = leftPos + w;
+        int bottom = topPos + h;
+        if (mouseX < leftPos || mouseY < topPos || mouseX >= right || mouseY >= bottom) {
+            return null;
+        }
+        if (mouseX >= right - GRIP && mouseY >= bottom - GRIP) {
+            return Resize.BOTH;
+        }
+        if (mouseX >= right - EDGE) {
+            return Resize.WIDTH;
+        }
+        return mouseY >= bottom - EDGE ? Resize.HEIGHT : null;
+    }
+
+    /**
+     * Redimensiona em torno do centro, como o filtro: a borda arrastada segue o mouse e a oposta se
+     * move igual, então o painel continua centralizado.
+     */
+    private void dragResize(double mouseX, double mouseY) {
+        int newW = w;
+        int newH = h;
+        if (resizing != Resize.HEIGHT) {
+            double wanted = 2 * (mouseX + resizeGrabX - resizeCenterX);
+            newW = Math.max(MIN_W, Math.min(maxW(), (int) Math.round(wanted / 2) * 2));
+        }
+        if (resizing != Resize.WIDTH) {
+            double wanted = 2 * (mouseY + resizeGrabY - resizeCenterY);
+            newH = Math.max(MIN_H, Math.min(maxH(), (int) Math.round(wanted / 2) * 2));
+        }
+        if (newW != w || newH != h) {
+            savedW = newW;
+            savedH = newH;
+            rebuild();
+        }
+    }
+
+    /**
+     * Refaz os widgets no tamanho lembrado: aba, face, lista de redes e "Mais" ficam em campos e
+     * sobrevivem; o nome em edição é fechado sem gravar.
+     */
+    private void rebuild() {
+        if (renaming) {
+            renaming = false;
+            setFocused(null);
+        }
+        rebuildWidgets();
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+        resizing = null;
+        super.resize(minecraft, width, height);
     }
 
     @Override
@@ -729,6 +886,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             }
             return;
         }
+        if (resizing != null || resizeAt(mouseX, mouseY) != null) {
+            setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
+            return;
+        }
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
                 Component tooltip = button.currentTooltip();
@@ -781,7 +942,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int x = leftPos;
         int y = topPos;
         int trim = tierColor();
-        GuiPaint.panel(g, x, y, W, H, trim);
+        GuiPaint.panel(g, x, y, w, h, trim);
 
         // cabeçalho
         if (renaming) {
@@ -789,7 +950,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
-        int tierX = x + HEAD_END - tierW;
+        int tierX = x + headEnd() - tierW;
         GuiPaint.pill(g, tierX, y + HEAD_Y, tierW, PILL_H, GuiPaint.PANEL, trim);
         GuiPaint.dot(g, tierX + 6, y + HEAD_Y + 4, trim);
         GuiPaint.text(g, font, tierText, tierX + 15, y + HEAD_Y + 3, GuiPaint.FG);
@@ -801,7 +962,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiText.draw(g, font, rate, tierX - 6 - rateW, y + HEAD_Y + 3, rateW, GuiPaint.MUTED);
 
         // slot do upgrade de chunk loading, no canto do cabeçalho, com a luz do estado (sobre o item)
-        int ux = x + UPGRADE_BG_X;
+        int ux = x + upgradeBgX();
         int uy = y + UPGRADE_BG_Y;
         GuiPaint.slot(g, ux, uy);
         ChunkLoadState chunkLoad = chunkLoadState();
@@ -823,8 +984,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         // visor 3D: máquina e roteador; com a lista de redes aberta, nada de realce sob o mouse
         int vx = x + X0;
         int vy = y + BODY_Y;
-        g.fillGradient(vx + 1, vy + 1, vx + VIEW_W - 1, vy + VIEW_H - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
-        GuiPaint.outline(g, vx, vy, VIEW_W, VIEW_H, GuiPaint.LINE);
+        int viewW = viewW();
+        int viewH = viewH();
+        g.fillGradient(vx + 1, vy + 1, vx + viewW - 1, vy + viewH - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
+        GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
         Direction buttonHovered = null;
         for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
             if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
@@ -835,11 +998,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 networkListOpen ? -1 : mouseX, networkListOpen ? -1 : mouseY);
         Direction pointed = machineView.hoveredFace();
         if (s.machineState().isAir()) {
-            GuiPaint.textCentered(g, font, tr("machine.none"), vx + VIEW_W / 2, vy + VIEW_H - 12, GuiPaint.MUTED);
+            GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
         } else if (pointed != null) {
             Component label = faceName(pointed);
-            g.fill(vx + 1, vy + VIEW_H - 13, vx + 7 + font.width(label), vy + VIEW_H - 1, 0xB011151B);
-            GuiPaint.text(g, font, label, vx + 4, vy + VIEW_H - 11, GuiPaint.FG);
+            g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, 0xB011151B);
+            GuiPaint.text(g, font, label, vx + 4, vy + viewH - 11, GuiPaint.FG);
         }
 
         // face selecionada
@@ -855,13 +1018,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (hasFilter()) {
             GuiText.draw(g, font, filterLabel(v), x + rx(), y + FILTER_Y + 3, RW - 44, GuiPaint.MUTED);
             for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
-                int sx = x + CARD_BG_X + i * 18;
+                int sx = x + cardBgX() + i * 18;
                 GuiPaint.slot(g, sx, y + CARD_BG_Y);
                 if (!menu.getSlot(i).hasItem()) {
                     ghostCard(g, sx + 1, y + CARD_BG_Y + 1);
                 }
             }
-            int textX = x + CARD_BG_X + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
+            int textX = x + cardBgX() + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
             GuiText.draw(g, font, filterSummary(v), textX, y + CARD_BG_Y + 5, x + x1() - textX, GuiPaint.FG);
         } else {
             int used = GuiText.wrap(g, font, tr("filter.untyped", typeName(type)), x + rx(), y + FILTER_Y + 3, RW, 2,
@@ -872,29 +1035,49 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
 
         // recolhido, embaixo das faces: prioridade e redstone
-        g.fill(x + X0, y + ADV_SEP_Y, x + LX1, y + ADV_SEP_Y + 1, GuiPaint.LINE);
+        g.fill(x + X0, y + advSepY(), x + lx1(), y + advSepY() + 1, GuiPaint.LINE);
         if (expanded) {
-            GuiText.draw(g, font, tr("priority"), x + X0, y + PRIO_Y + 3, VIEW_W - 60, GuiPaint.MUTED);
-            int boxX = x + LX1 - 43;
-            GuiPaint.box(g, boxX, y + PRIO_Y, 28, ROW_H, GuiPaint.INSET, GuiPaint.LINE);
+            GuiText.draw(g, font, tr("priority"), x + X0, y + prioY() + 3, viewW - 60, GuiPaint.MUTED);
+            int boxX = x + lx1() - 43;
+            GuiPaint.box(g, boxX, y + prioY(), 28, ROW_H, GuiPaint.INSET, GuiPaint.LINE);
             GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())), boxX + 14,
-                    y + PRIO_Y + 3, v.available() ? GuiPaint.FG : GuiPaint.DISABLED);
+                    y + prioY() + 3, v.available() ? GuiPaint.FG : GuiPaint.DISABLED);
         } else {
             // em duas linhas: a coluna é estreita para "Prioridade 0 · Com sinal"
             Component priority = tr("priority").copy().append(" " + v.priority());
             Component redstone = tr("redstone.narration", redstoneName(v.redstone()));
-            GuiText.draw(g, font, priority, x + X0, y + PRIO_Y + 1, VIEW_W, GuiPaint.MUTED);
-            GuiText.draw(g, font, redstone, x + X0, y + PRIO_Y + 12, VIEW_W, GuiPaint.MUTED);
+            GuiText.draw(g, font, priority, x + X0, y + prioY() + 1, viewW, GuiPaint.MUTED);
+            GuiText.draw(g, font, redstone, x + X0, y + prioY() + 12, viewW, GuiPaint.MUTED);
         }
 
-        // inventário do jogador
+        // inventário do jogador, na coluna da direita e colado na borda de baixo
+        int invX = x + rx() + 1;
+        int invY = y + inventoryY();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                GuiPaint.slot(g, x + RouterMenu.INVENTORY_X - 1 + col * 18, y + RouterMenu.INVENTORY_Y - 1 + row * 18);
+                GuiPaint.slot(g, invX - 1 + col * 18, invY - 1 + row * 18);
             }
         }
         for (int col = 0; col < 9; col++) {
-            GuiPaint.slot(g, x + RouterMenu.INVENTORY_X - 1 + col * 18, y + RouterMenu.INVENTORY_Y + 57);
+            GuiPaint.slot(g, invX - 1 + col * 18, invY + 57);
+        }
+
+        // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
+        Resize hover = resizing != null ? resizing : networkListOpen ? null : resizeAt(mouseX, mouseY);
+        int grip = hover != null ? trim : GuiPaint.BUTTON_HOVER_BORDER;
+        int gx = x + w - 4;
+        int gy = y + h - 4;
+        for (int i = 0; i < 3; i++) {
+            int d = 2 + i * 2;
+            for (int k = 0; k <= d; k += 2) {
+                g.fill(gx - d + k, gy - k, gx - d + k + 1, gy - k + 1, grip);
+            }
+        }
+        if (hover == Resize.WIDTH || hover == Resize.BOTH) {
+            g.fill(x + w - 3, y + 3, x + w - 2, y + h - 3, grip);
+        }
+        if (hover == Resize.HEIGHT || hover == Resize.BOTH) {
+            g.fill(x + 3, y + h - 3, x + w - 3, y + h - 2, grip);
         }
     }
 
@@ -1070,7 +1253,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private int dropdownX() {
-        return Math.min(networkButton.getX(), leftPos + X1 - dropdownWidth());
+        return Math.min(networkButton.getX(), leftPos + x1() - dropdownWidth());
     }
 
     private int dropdownY() {
@@ -1173,6 +1356,18 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox.setValue(draft);
     }
 
+    /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */
+    public void previewResize(int width, int height) {
+        savedW = width;
+        savedH = height;
+        rebuild();
+    }
+
+    /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */
+    public int[] size() {
+        return new int[] {w, h};
+    }
+
     void previewNetworkList(boolean open) {
         this.networkListOpen = open;
     }
@@ -1204,11 +1399,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     int[] previewCardSlotCenter(int slot) {
-        return new int[] {leftPos + RouterMenu.CARD_X + slot * 18 + 8, topPos + RouterMenu.CARD_Y + 8};
+        Slot s = menu.getSlot(slot);
+        return new int[] {leftPos + s.x + 8, topPos + s.y + 8};
     }
 
     int[] previewUpgradeSlotCenter() {
-        return new int[] {leftPos + RouterMenu.UPGRADE_X + 8, topPos + RouterMenu.UPGRADE_Y + 8};
+        Slot s = menu.getSlot(RouterMenu.UPGRADE_SLOT);
+        return new int[] {leftPos + s.x + 8, topPos + s.y + 8};
     }
 
     int[] previewEditFilterCenter() {

@@ -256,6 +256,7 @@
   "gui.wirelessautomate.filter.search.hint": "Search: name, #tag, @mod",
   "gui.wirelessautomate.filter.search.none": "No entry with that name",
   "gui.wirelessautomate.filter.resize.tooltip": "Drag to resize",
+  "gui.wirelessautomate.resize.tooltip": "Drag to resize",
   "gui.wirelessautomate.filter.tab.entry": "Entry",
   "gui.wirelessautomate.filter.tab.tags": "Tags",
   "gui.wirelessautomate.filter.tab.rule": "Rule",

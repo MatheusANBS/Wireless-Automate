@@ -595,6 +595,20 @@ public final class DevEndToEnd {
                 () -> routerScreen().tabMode() == TabLayout.Mode.ACTIVE_NAME,
                 () -> "modo das abas " + routerScreen().tabMode()));
         list.add(capture("1b-roteador-abas"));
+        // Maior: a largura extra vai para o visor e as abas; a coluna da direita e o inventário vão
+        // junto com a borda direita.
+        list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(420, 300),
+                () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
+                        && routerScreen().tabMode() == TabLayout.Mode.FULL
+                        && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
+                                == routerScreen().size()[0] - 9 - 162 + 1,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
+        list.add(capture("1c-roteador-grande"));
+        list.add(new Step("roteador de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(300, 240),
+                () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
         cardSteps(list);
         chunkUpgradeSteps(list);
         list.add(close("fechar B"));

@@ -62,7 +62,8 @@ public class RouterMenu extends AbstractContainerMenu {
     public static final int INVENTORY_X = 130;
     public static final int INVENTORY_Y = 157;
     public static final int CARD_SLOT_COUNT = RouterBlockEntity.CARD_SLOTS;
-    private static final int INVENTORY_START = CARD_SLOT_COUNT;
+    /** Primeiro slot do inventário do jogador (público para o e2e conferir o layout). */
+    public static final int INVENTORY_START = CARD_SLOT_COUNT;
     private static final int HOTBAR_START = INVENTORY_START + 27;
     private static final int SLOTS_END = HOTBAR_START + 9;
     /** Índice do slot do Upgrade de chunk loading, depois do inventário (os índices de antes não mudam). */
@@ -146,6 +147,33 @@ public class RouterMenu extends AbstractContainerMenu {
             addSlot(new Slot(inventory, col, INVENTORY_X + col * 18, INVENTORY_Y + 58));
         }
         addSlot(new UpgradeSlot(upgrade, UPGRADE_X, UPGRADE_Y));
+    }
+
+    /**
+     * Põe os slots no layout da tela (só no cliente, depois de redimensionar): cartões e inventário a
+     * partir de {@code rightX}, inventário com o topo em {@code inventoryY}, upgrade em {@code upgradeX}.
+     * A posição do {@link Slot} é final: cada slot é trocado por um igual, no mesmo índice.
+     */
+    public void placeSlots(int rightX, int upgradeX, int inventoryY) {
+        for (int i = 0; i < slots.size(); i++) {
+            Slot old = slots.get(i);
+            Slot moved;
+            if (old instanceof CardSlot) {
+                moved = new CardSlot(old.container, old.getContainerSlot(), rightX + old.getContainerSlot() * 18, CARD_Y);
+            } else if (old instanceof UpgradeSlot) {
+                moved = new UpgradeSlot(old.container, upgradeX, UPGRADE_Y);
+            } else {
+                int c = old.getContainerSlot();
+                int sx = rightX + (c % 9) * 18;
+                int sy = c < 9 ? inventoryY + 58 : inventoryY + (c / 9 - 1) * 18;
+                if (old.x == sx && old.y == sy) {
+                    continue;
+                }
+                moved = new Slot(old.container, c, sx, sy);
+            }
+            moved.index = old.index;
+            slots.set(i, moved);
+        }
     }
 
     /**

@@ -256,6 +256,7 @@
   "gui.wirelessautomate.filter.search.hint": "Buscar: nome, #tag, @mod",
   "gui.wirelessautomate.filter.search.none": "Nenhuma entrada com esse nome",
   "gui.wirelessautomate.filter.resize.tooltip": "Arraste para redimensionar",
+  "gui.wirelessautomate.resize.tooltip": "Arraste para redimensionar",
   "gui.wirelessautomate.filter.tab.entry": "Entrada",
   "gui.wirelessautomate.filter.tab.tags": "Tags",
   "gui.wirelessautomate.filter.tab.rule": "Regra",

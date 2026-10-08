@@ -10,7 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -70,10 +71,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Cor de destaque do Tablet (a do item). */
     static final int ACCENT = 0xFF45D6CC;
     private static final int DANGER = 0xFFE5534B;
-    private static final int W = 300;
-    private static final int H = 240;
+    // O mínimo é o tamanho de sempre; a tela cresce pela borda direita, pela de baixo e pelo canto, e
+    // o tamanho fica lembrado na sessão.
+    private static final int MIN_W = 300;
+    private static final int MIN_H = 240;
+    /** Alça do canto (lado, em px) e espessura das bordas que redimensionam. */
+    private static final int GRIP = 7;
+    private static final int EDGE = 3;
+    private static int savedW = MIN_W;
+    private static int savedH = MIN_H;
     private static final int X0 = 9;
-    private static final int X1 = W - 9;
     private static final int HEAD_Y = 8;
     private static final int TAB_Y = 26;
     private static final int TAB_H = 15;
@@ -83,26 +90,24 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     // lista
     private static final int LIST_Y = BODY_Y + 18;
     private static final int NODE_ROW = 22;
-    private static final int NODE_ROWS = 6;
-    private static final int ACTION_Y = LIST_Y + NODE_ROW * NODE_ROWS + 4;
-    private static final int PAGER_Y = ACTION_Y + 16;
     // mapa
     private static final int MAP_H = 136;
-    private static final int MAP_INFO_Y = BODY_Y + MAP_H + 4;
-    private static final int LEGEND_Y = MAP_INFO_Y + 20;
     // estatísticas
-    private static final int STATS_LIST_Y = BODY_Y + 62;
     private static final int STAT_CARD = 34;
+    /** 3 cartões por linha no tamanho mínimo, 5 numa linha a partir de 470 px. */
+    private static final int CARD_MIN_W = 86;
+    private static final int CARD_GAP = 4;
+    /** Nome, vazão e até duas linhas de detalhe (26 + 2 × 10 + 1). */
+    private static final int CARD_H = 47;
     // redes e grupos
     private static final int SIDE_W = 120;
     private static final int RX = X0 + SIDE_W + 8;
-    private static final int RW = X1 - RX;
     private static final int SIDE_BOTTOM = 200;
     private static final int NEW_Y = 203;
     private static final int NEW_BOX_Y = 217;
     private static final int SWATCH = 10;
 
-    enum Tab { LIST, MAP, STATS, NETWORKS, GROUPS }
+    public enum Tab { LIST, MAP, STATS, NETWORKS, GROUPS }
 
     /** O que o campo de nome está renomeando. */
     private enum Rename { NONE, NETWORK, GROUP }
@@ -126,6 +131,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private String search = "";
     private int searchTicks = -1;
     private RoleFilter role = RoleFilter.ALL;
+    /** Só os nós com este tipo (vem do clique num cartão das Estatísticas); vazio = todos. */
+    private Optional<ResourceType> typeFilter = Optional.empty();
     private int page;
     private int listScroll;
     private boolean multi;
@@ -139,6 +146,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private float mapZoom = 1f;
     // estatísticas
     private int statsScroll;
+    /** Retângulos dos cartões no último frame, para o clique e o tooltip. */
+    private final Map<ResourceType, int[]> cardRects = new EnumMap<>(ResourceType.class);
     // redes e grupos
     private @Nullable UUID selectedNetwork;
     private @Nullable UUID selectedGroup;
@@ -150,6 +159,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private Rename renaming = Rename.NONE;
     private long removeArmedUntil;
 
+    private int w = MIN_W;
+    private int h = MIN_H;
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
+
     public TabletScreen(TabletMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
     }
@@ -158,10 +171,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public TabletScreen(TabletMenu menu, Inventory inventory, Component title, boolean preview) {
         super(menu, inventory, title);
         this.preview = preview;
-        this.imageWidth = W;
-        this.imageHeight = H;
+        this.imageWidth = MIN_W;
+        this.imageHeight = MIN_H;
         this.search = menu.snapshot().query().search();
         this.role = menu.snapshot().query().role();
+        this.typeFilter = menu.snapshot().query().type();
         this.page = menu.snapshot().query().page();
         this.lastNoticeId = menu.snapshot().noticeId();
     }
@@ -179,16 +193,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** {@code key} com o número, ou {@code key.one} quando é 1. */
     static Component plural(String key, long count) {
         return tr(count == 1 ? key + ".one" : key, count);
-    }
-
-    /** Texto quebrado em até {@code maxLines} linhas de {@code width}; devolve a altura usada. */
-    private int wrapped(GuiGraphics g, Component text, int x, int y, int width, int maxLines, int color) {
-        List<net.minecraft.util.FormattedCharSequence> lines = font.split(text, width);
-        int count = Math.min(maxLines, lines.size());
-        for (int i = 0; i < count; i++) {
-            GuiPaint.text(g, font, lines.get(i), x, y + i * 10, color);
-        }
-        return count * 10;
     }
 
     static int statusColor(NodeStatus status) {
@@ -313,6 +317,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     protected void init() {
+        w = Math.max(MIN_W, Math.min(savedW, maxW()));
+        h = Math.max(MIN_H, Math.min(savedH, maxH()));
+        imageWidth = w;
+        imageHeight = h;
         super.init();
         buttons.clear();
         tabWidgets.clear();
@@ -348,30 +356,33 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         add(Tab.LIST, new FlatButton(x + X0 + 134, y + BODY_Y, 84, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, roleText()), () -> cycleRole(hasShiftDown() ? -1 : 1))
                 .tooltip(() -> tr("role.tooltip")));
-        add(Tab.LIST, new FlatButton(x + X1 - 60, y + BODY_Y, 60, ROW_H, tr("select"),
+        add(Tab.LIST, new FlatButton(x + x1() - 60, y + BODY_Y, 60, ROW_H, tr("select"),
                 (g, b, hovered) -> paintToggle(g, b, hovered, multi ? tr("select.done") : tr("select"), multi),
                 this::toggleMulti).tooltip(() -> tr("select.tooltip")));
         // barra de mover (só selecionando)
-        add(Tab.LIST, new FlatButton(x + X0 + 64, y + ACTION_Y, 86, ROW_H, Component.empty(),
+        add(Tab.LIST, new FlatButton(x + X0 + 64, y + actionY(), 86, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, moveTypeText()),
                 () -> moveType = Math.floorMod(moveType + 1 + (hasShiftDown() ? -1 : 1), MOVE_TYPES.length + 1) - 1)
                 .tooltip(() -> tr("move.type.tooltip")));
-        add(Tab.LIST, new FlatButton(x + X0 + 154, y + ACTION_Y, 82, ROW_H, Component.empty(),
+        add(Tab.LIST, new FlatButton(x + X0 + 154, y + actionY(), 82, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, networkName(effectiveMoveNetwork())),
                 () -> cycleMoveNetwork(hasShiftDown() ? -1 : 1)).tooltip(() -> tr("move.network.tooltip")));
-        add(Tab.LIST, new FlatButton(x + X1 - 44, y + ACTION_Y, 44, ROW_H, tr("move"),
+        add(Tab.LIST, new FlatButton(x + x1() - 44, y + actionY(), 44, ROW_H, tr("move"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("move")), this::moveSelected)
                 .tooltip(() -> tr("move.tooltip", selected.size())));
-        add(Tab.LIST, new FlatButton(x + X0 + 84, y + PAGER_Y, 34, ROW_H, tr("select.all"),
+        add(Tab.LIST, new FlatButton(x + X0 + 84, y + pagerY(), 34, ROW_H, tr("select.all"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("select.all")), this::selectPage)
                 .tooltip(() -> tr("select.all.tooltip")));
-        add(Tab.LIST, new FlatButton(x + X1 - 120, y + PAGER_Y, 14, ROW_H, tr("page.previous"),
+        add(Tab.LIST, new FlatButton(x + x1() - 120, y + pagerY(), 14, ROW_H, tr("page.previous"),
                 (g, b, hovered) -> paintText(g, b, hovered, Component.literal("‹")), () -> changePage(-1)));
-        add(Tab.LIST, new FlatButton(x + X1 - 14, y + PAGER_Y, 14, ROW_H, tr("page.next"),
+        add(Tab.LIST, new FlatButton(x + x1() - 14, y + pagerY(), 14, ROW_H, tr("page.next"),
                 (g, b, hovered) -> paintText(g, b, hovered, Component.literal("›")), () -> changePage(1)));
+        // "Só Energia ✕": o filtro de tipo que veio de um cartão das Estatísticas; clicar tira
+        add(Tab.LIST, new FlatButton(x + X0, y + pagerY(), 60, ROW_H, tr("list.type.tooltip"), this::paintTypeChip,
+                this::clearTypeFilter).tooltip(() -> tr("list.type.tooltip")));
 
         // Mapa
-        add(Tab.MAP, new FlatButton(x + X1 - 46, y + MAP_INFO_Y, 46, 16, tr("open"),
+        add(Tab.MAP, new FlatButton(x + x1() - 46, y + mapInfoY(), 46, 16, tr("open"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("open")), () -> {
                     if (mapSelected != null) {
                         openNode(mapSelected);
@@ -379,43 +390,43 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 }).tooltip(() -> tr("open.tooltip")));
 
         // Redes
-        add(Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 112, RW / 2 - 1, ROW_H, tr("private"),
+        add(Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 112, rw() / 2 - 1, ROW_H, tr("private"),
                 (g, b, hovered) -> paintSegment(g, b, hovered, tr("private"), isSelectedPublic() == Boolean.FALSE),
                 () -> setPublic(false)).tooltip(() -> tr("private.tooltip")));
-        add(Tab.NETWORKS, new FlatButton(x + RX + RW / 2 + 1, y + BODY_Y + 112, RW - RW / 2 - 1, ROW_H, tr("public"),
+        add(Tab.NETWORKS, new FlatButton(x + RX + rw() / 2 + 1, y + BODY_Y + 112, rw() - rw() / 2 - 1, ROW_H, tr("public"),
                 (g, b, hovered) -> paintSegment(g, b, hovered, tr("public"), isSelectedPublic() == Boolean.TRUE),
                 () -> setPublic(true)).tooltip(() -> tr("public.tooltip")));
-        add(Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 132, RW, ROW_H, tr("use"),
+        add(Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 132, rw(), ROW_H, tr("use"),
                 (g, b, hovered) -> paintText(g, b, hovered, isSelectedActive() ? tr("use.active") : tr("use")),
                 this::useNetwork).tooltip(() -> tr("use.tooltip")));
-        add(Tab.NETWORKS, new FlatButton(x + RX, y + NEW_BOX_Y, RW, ROW_H, tr("network.remove"),
+        add(Tab.NETWORKS, new FlatButton(x + RX, y + newBoxY(), rw(), ROW_H, tr("network.remove"),
                 (g, b, hovered) -> paintDanger(g, b, hovered, removeArmed() ? tr("remove.confirm") : tr("network.remove"),
                         removeArmed()), () -> removeSelected(Action.NETWORK_REMOVE, selectedNetwork))
                 .tooltip(() -> tr("network.remove.tooltip")));
         add(Tab.NETWORKS, newToggle(tr("network.new")));
-        add(Tab.NETWORKS, new FlatButton(x + X0 + SIDE_W - 40, y + NEW_BOX_Y, 40, ROW_H, tr("create"),
+        add(Tab.NETWORKS, new FlatButton(x + X0 + SIDE_W - 40, y + newBoxY(), 40, ROW_H, tr("create"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("create")), () -> create(Action.NETWORK_CREATE)));
 
         // Grupos
-        add(Tab.GROUPS, new FlatButton(x + RX, y + BODY_Y + 26, RW, 16, tr("group.pause"),
+        add(Tab.GROUPS, new FlatButton(x + RX, y + BODY_Y + 26, rw(), 16, tr("group.pause"),
                 (g, b, hovered) -> {
                     GroupView group = selectedGroupView();
                     paintPrimary(g, b, hovered, group != null && group.paused() ? tr("group.resume") : tr("group.pause"));
                 }, this::togglePause).tooltip(() -> tr("group.pause.tooltip")));
-        add(Tab.GROUPS, new FlatButton(x + RX, y + NEW_BOX_Y, RW, ROW_H, tr("group.remove"),
+        add(Tab.GROUPS, new FlatButton(x + RX, y + newBoxY(), rw(), ROW_H, tr("group.remove"),
                 (g, b, hovered) -> paintDanger(g, b, hovered, removeArmed() ? tr("remove.confirm") : tr("group.remove"),
                         removeArmed()), () -> removeSelected(Action.GROUP_REMOVE, selectedGroup))
                 .tooltip(() -> tr("group.remove.tooltip")));
         add(Tab.GROUPS, newToggle(tr("group.new")));
-        add(Tab.GROUPS, new FlatButton(x + X0 + SIDE_W - 40, y + NEW_BOX_Y, 40, ROW_H, tr("create"),
+        add(Tab.GROUPS, new FlatButton(x + X0 + SIDE_W - 40, y + newBoxY(), 40, ROW_H, tr("create"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("create")), () -> create(Action.GROUP_CREATE)));
 
-        newBox = new EditBox(font, x + X0 + 4, y + NEW_BOX_Y + 3, SIDE_W - 52, 9, tr("name"));
+        newBox = new EditBox(font, x + X0 + 4, y + newBoxY() + 3, SIDE_W - 52, 9, tr("name"));
         newBox.setBordered(false);
         newBox.setMaxLength(32);
         newBox.setTextColor(GuiPaint.FG);
         addRenderableWidget(newBox);
-        renameBox = new EditBox(font, x + RX + 4, y + BODY_Y + 3, RW - 8, 9, tr("rename"));
+        renameBox = new EditBox(font, x + RX + 4, y + BODY_Y + 3, rw() - 8, 9, tr("rename"));
         renameBox.setBordered(false);
         renameBox.setMaxLength(32);
         renameBox.setTextColor(GuiPaint.FG);
@@ -424,7 +435,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private FlatButton newToggle(Component label) {
-        return new FlatButton(leftPos + X0, topPos + NEW_Y, SIDE_W, 12, label,
+        return new FlatButton(leftPos + X0, topPos + newY(), SIDE_W, 12, label,
                 (g, b, hovered) -> paintMore(g, b, hovered, label), () -> {
                     newOpen = !newOpen;
                     newBox.setValue("");
@@ -458,13 +469,20 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         searchBox.visible = tab == Tab.LIST;
         List<FlatButton> list = tabWidgets.get(Tab.LIST);
-        // [papel, Selecionar, tipo, rede, Mover, Todos, ‹, ›]
+        // [papel, Selecionar, tipo, rede, Mover, Todos, ‹, ›, chip do tipo]
         for (int i = 2; i <= 5; i++) {
             list.get(i).visible = tab == Tab.LIST && multi;
         }
         list.get(4).active = !selected.isEmpty();
         list.get(6).active = page > 0;
         list.get(7).active = page + 1 < snapshot().pages();
+        // [8] o chip do tipo: só com filtro e fora do Selecionar (que usa a mesma linha)
+        FlatButton chip = list.get(8);
+        chip.visible = tab == Tab.LIST && !multi && typeFilter.isPresent();
+        if (typeFilter.isPresent()) {
+            int chipW = font.width(typeChipText(typeFilter.get())) + 10 + ResourceStyle.ICON + 3;
+            chip.setWidth(Math.min(chipW, chipMaxWidth()));
+        }
 
         tabWidgets.get(Tab.MAP).get(0).visible = tab == Tab.MAP && mapNode() != null;
 
@@ -519,7 +537,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (!moveNetworkChosen) {
             moveNetwork = s.activeNetwork();
         }
-        listScroll = Math.min(listScroll, Math.max(0, s.nodes().size() - NODE_ROWS));
+        listScroll = Math.min(listScroll, Math.max(0, s.nodes().size() - nodeRows()));
     }
 
     // ------------------------------------------------------------------ ações
@@ -533,6 +551,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private void switchTab(Tab t) {
         if (tab != t) {
             tab = t;
+            cardRects.clear();
             renaming = Rename.NONE;
             newOpen = false;
             removeArmedUntil = 0;
@@ -541,7 +560,23 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void sendQuery() {
-        send(new TabletQueryPayload(menu.containerId, new Query(search, role, Optional.empty(), page)));
+        send(new TabletQueryPayload(menu.containerId, new Query(search, role, typeFilter, page)));
+    }
+
+    private static Component typeChipText(ResourceType type) {
+        return tr("list.type", ResourceStyle.name(type));
+    }
+
+    /** O chip não passa do botão de página anterior ({@code x1() - 120}). */
+    private int chipMaxWidth() {
+        return x1() - 124 - X0;
+    }
+
+    private void clearTypeFilter() {
+        typeFilter = Optional.empty();
+        page = 0;
+        listScroll = 0;
+        sendQuery();
     }
 
     private Component roleText() {
@@ -735,11 +770,89 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     // ------------------------------------------------------------------ geometria
 
+    private int x1() {
+        return w - 9;
+    }
+
+    /** Linhas da lista: 6 no tamanho mínimo, mais uma a cada {@link #NODE_ROW} px de altura extra. */
+    private int nodeRows() {
+        return 6 + (h - MIN_H) / NODE_ROW;
+    }
+
+    private int actionY() {
+        return LIST_Y + NODE_ROW * nodeRows() + 4;
+    }
+
+    private int pagerY() {
+        return actionY() + 16;
+    }
+
+    private int mapH() {
+        return MAP_H + (h - MIN_H);
+    }
+
+    private int mapInfoY() {
+        return BODY_Y + mapH() + 4;
+    }
+
+    private int legendY() {
+        return mapInfoY() + 20;
+    }
+
+    private int rw() {
+        return x1() - RX;
+    }
+
+    private int sideBottom() {
+        return SIDE_BOTTOM + (h - MIN_H);
+    }
+
+    private int newY() {
+        return NEW_Y + (h - MIN_H);
+    }
+
+    private int newBoxY() {
+        return NEW_BOX_Y + (h - MIN_H);
+    }
+
+    /** Colunas da grade de cartões por tipo na largura atual. */
+    private int cardColumns() {
+        return CardGrid.columns(LoadedTypes.LIST.size(), x1() - X0, CARD_MIN_W, CARD_GAP);
+    }
+
+    /** Onde começam os cartões por tipo das Estatísticas (relativo ao topo). */
+    private static final int CARDS_Y = BODY_Y + 20;
+
+    /** Fim da grade de cartões (relativo ao topo): a linha dos avisos começa 2 px abaixo. */
+    private int cardsEnd() {
+        int cols = cardColumns();
+        int rows = (LoadedTypes.LIST.size() + cols - 1) / cols;
+        return CARDS_Y + rows * (CARD_H + CARD_GAP);
+    }
+
+    /** Onde começa a lista de redes das Estatísticas, depois dos cartões e dos avisos (relativo ao topo). */
+    private int statsListY() {
+        return cardsEnd() + 26;
+    }
+
+    /** Cartões de rede que cabem embaixo dos cartões por tipo. */
+    private int statsRows() {
+        return Math.max(0, (h - 8 - statsListY()) / STAT_CARD);
+    }
+
+    private int maxW() {
+        return Math.max(MIN_W, width - 8);
+    }
+
+    private int maxH() {
+        return Math.max(MIN_H, height - 8);
+    }
+
     /** Linha da lista de nós sob o mouse (índice no snapshot), ou -1. */
     private int nodeRowAt(double mouseX, double mouseY) {
         int x = leftPos + X0;
         int y = topPos + LIST_Y;
-        if (mouseX < x || mouseX >= leftPos + X1 || mouseY < y || mouseY >= y + NODE_ROW * NODE_ROWS) {
+        if (mouseX < x || mouseX >= leftPos + x1() || mouseY < y || mouseY >= y + NODE_ROW * nodeRows()) {
             return -1;
         }
         int index = (int) ((mouseY - y) / NODE_ROW) + listScroll;
@@ -755,7 +868,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private int mapW() {
-        return X1 - X0;
+        return x1() - X0;
     }
 
     /** Blocos por pixel: cabe o nó mais longe da página (mínimo 16 blocos), vezes o zoom. */
@@ -769,24 +882,24 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
         }
         far = Math.min(far, 4096);
-        return far / (MAP_H / 2.0 - 10) / mapZoom;
+        return far / (mapH() / 2.0 - 10) / mapZoom;
     }
 
     /** Ponto do nó no mapa (preso à borda se estiver fora); {@code [x, y, dentro]}. */
     private int[] mapPoint(NodeView node, double scale) {
         BlockPos center = snapshot().center();
         int cx = mapX0() + mapW() / 2;
-        int cy = mapY0() + MAP_H / 2;
+        int cy = mapY0() + mapH() / 2;
         double px = cx + (node.key().pos().getX() - center.getX()) / scale;
         double py = cy + (node.key().pos().getZ() - center.getZ()) / scale;
-        boolean inside = px >= mapX0() + 4 && px <= mapX0() + mapW() - 4 && py >= mapY0() + 4 && py <= mapY0() + MAP_H - 4;
+        boolean inside = px >= mapX0() + 4 && px <= mapX0() + mapW() - 4 && py >= mapY0() + 4 && py <= mapY0() + mapH() - 4;
         px = Mth.clamp(px, mapX0() + 4, mapX0() + mapW() - 4);
-        py = Mth.clamp(py, mapY0() + 4, mapY0() + MAP_H - 4);
+        py = Mth.clamp(py, mapY0() + 4, mapY0() + mapH() - 4);
         return new int[] {(int) Math.round(px), (int) Math.round(py), inside ? 1 : 0};
     }
 
     private boolean overMap(double mouseX, double mouseY) {
-        return mouseX >= mapX0() && mouseX < mapX0() + mapW() && mouseY >= mapY0() && mouseY < mapY0() + MAP_H;
+        return mouseX >= mapX0() && mouseX < mapX0() + mapW() && mouseY >= mapY0() && mouseY < mapY0() + mapH();
     }
 
     private @Nullable NodeView mapNodeAt(double mouseX, double mouseY) {
@@ -823,7 +936,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private int sideRows() {
-        return (SIDE_BOTTOM - BODY_Y) / ROW_H;
+        return (sideBottom() - BODY_Y) / ROW_H;
     }
 
     /** Linha da lista lateral (redes ou grupos) sob o mouse, ou -1. */
@@ -845,7 +958,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private int groupNetAt(double mouseX, double mouseY) {
         int x = leftPos + RX;
         int y = topPos + GROUP_NET_Y;
-        if (mouseX < x || mouseX >= x + RW || mouseY < y || mouseY >= y + GROUP_NET_ROWS * GROUP_NET_ROW) {
+        if (mouseX < x || mouseX >= x + rw() || mouseY < y || mouseY >= y + GROUP_NET_ROWS * GROUP_NET_ROW) {
             return -1;
         }
         int index = (int) ((mouseY - y) / GROUP_NET_ROW) + groupNetScroll;
@@ -868,7 +981,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private boolean overTitle(double mouseX, double mouseY) {
-        return mouseX >= leftPos + RX && mouseX < leftPos + X1 && mouseY >= topPos + BODY_Y
+        return mouseX >= leftPos + RX && mouseX < leftPos + x1() && mouseY >= topPos + BODY_Y
                 && mouseY < topPos + BODY_Y + ROW_H;
     }
 
@@ -876,6 +989,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
+            return true;
+        }
         // um snapshot pode ter chegado depois do último quadro: botões ativos e visíveis em dia
         refresh();
         if (renaming != Rename.NONE && !renameBox.isMouseOver(mouseX, mouseY)) {
@@ -971,23 +1087,93 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                     }
                 }
             }
-            default -> {
+            case STATS -> {
+                ResourceType card = cardAt(mouseX, mouseY);
+                if (card != null) {
+                    typeFilter = Optional.of(card);
+                    page = 0;
+                    listScroll = 0;
+                    switchTab(Tab.LIST);
+                    sendQuery();
+                    return true;
+                }
             }
         }
         return false;
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (resizeHandle.dragging()) {
+            dragResize(mouseX, mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (resizeHandle.dragging()) {
+            resizeHandle.end();
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /**
+     * Redimensiona em torno do centro, como o roteador: a borda arrastada segue o mouse e a oposta se
+     * move igual, então o painel continua centralizado. Largura e altura sempre pares.
+     */
+    private void dragResize(double mouseX, double mouseY) {
+        int newW = w;
+        int newH = h;
+        if (resizeHandle.changesWidth()) {
+            double wanted = resizeHandle.wantedWidth(mouseX);
+            newW = Math.max(MIN_W, Math.min(maxW(), (int) Math.round(wanted / 2) * 2));
+        }
+        if (resizeHandle.changesHeight()) {
+            double wanted = resizeHandle.wantedHeight(mouseY);
+            newH = Math.max(MIN_H, Math.min(maxH(), (int) Math.round(wanted / 2) * 2));
+        }
+        if (newW != w || newH != h) {
+            savedW = newW;
+            savedH = newH;
+            rebuild();
+        }
+    }
+
+    /**
+     * Refaz os widgets no tamanho lembrado: aba, filtros, seleção e rolagens ficam em campos e
+     * sobrevivem; o texto da nova rede ou grupo volta ao campo; o nome em edição é fechado sem gravar.
+     */
+    private void rebuild() {
+        String newText = newBox == null ? "" : newBox.getValue();
+        renaming = Rename.NONE;
+        setFocused(null);
+        // os cartões voltam no próximo quadro, já na nova grade
+        cardRects.clear();
+        rebuildWidgets();
+        newBox.setValue(newText);
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+        resizeHandle.end();
+        super.resize(minecraft, width, height);
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int step = -(int) Math.signum(scrollY);
         switch (tab) {
-            case LIST -> listScroll = Mth.clamp(listScroll + step, 0, Math.max(0, snapshot().nodes().size() - NODE_ROWS));
+            case LIST -> listScroll = Mth.clamp(listScroll + step, 0, Math.max(0, snapshot().nodes().size() - nodeRows()));
             case MAP -> {
                 if (overMap(mouseX, mouseY)) {
                     mapZoom = Mth.clamp(mapZoom * (scrollY > 0 ? 1.25f : 0.8f), 0.25f, 16f);
                 }
             }
-            case STATS -> statsScroll = Mth.clamp(statsScroll + step, 0, Math.max(0, snapshot().networks().size() - 3));
+            case STATS -> statsScroll = Mth.clamp(statsScroll + step, 0,
+                    Math.max(0, snapshot().networks().size() - statsRows()));
             case NETWORKS, GROUPS -> {
                 if (tab == Tab.GROUPS && mouseX >= leftPos + RX) {
                     groupNetScroll = Mth.clamp(groupNetScroll + step, 0,
@@ -1033,8 +1219,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         refresh();
+        GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         renderNotice(g);
+        if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
+            setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
+            return;
+        }
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
                 Component tooltip = button.currentTooltip();
@@ -1047,6 +1238,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         Component tooltip = bodyTooltip(mouseX, mouseY);
         if (tooltip != null) {
             setTooltipForNextRenderPass(tooltip);
+            return;
+        }
+        // texto abreviado: a dica traz o texto inteiro
+        Component clipped = GuiText.clipAt(mouseX, mouseY);
+        if (clipped != null) {
+            setTooltipForNextRenderPass(clipped);
         }
     }
 
@@ -1060,6 +1257,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             NodeView node = mapNodeAt(mouseX, mouseY);
             if (node != null) {
                 return nodeTooltip(node, false);
+            }
+        } else if (tab == Tab.STATS) {
+            ResourceType card = cardAt(mouseX, mouseY);
+            if (card != null) {
+                return tr("stats.card.tooltip", ResourceStyle.name(card));
             }
         } else if (tab == Tab.NETWORKS) {
             NetworkView network = selectedNetworkView();
@@ -1076,6 +1278,17 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
             if (group != null && group.manageable() && renaming == Rename.NONE && overTitle(mouseX, mouseY)) {
                 return tr("rename.tooltip");
+            }
+        }
+        return null;
+    }
+
+    /** O cartão por tipo sob o mouse no último frame, ou {@code null}. */
+    private @Nullable ResourceType cardAt(double mouseX, double mouseY) {
+        for (Map.Entry<ResourceType, int[]> e : cardRects.entrySet()) {
+            int[] r = e.getValue();
+            if (mouseX >= r[0] && mouseX < r[0] + r[2] && mouseY >= r[1] && mouseY < r[1] + r[3]) {
+                return e.getKey();
             }
         }
         return null;
@@ -1115,13 +1328,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             return;
         }
         // sobre o cabeçalho: embaixo cobriria botões
-        int width = Math.min(W - 20, font.width(noticeText) + 12);
-        int x = leftPos + X1 - width;
+        int width = Math.min(w - 20, font.width(noticeText) + 12);
+        int x = leftPos + x1() - width;
         int y = topPos + HEAD_Y - 2;
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
         GuiPaint.box(g, x, y, width, 16, GuiPaint.INSET, ACCENT);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, noticeText, width - 12), x + 6, y + 4, GuiPaint.FG);
+        GuiText.draw(g, font, noticeText, x + 6, y + 4, width - 12, GuiPaint.FG);
         g.pose().popPose();
     }
 
@@ -1135,12 +1348,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         TabletSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.panel(g, x, y, W, H, ACCENT);
+        GuiPaint.panel(g, x, y, w, h, ACCENT);
         GuiPaint.text(g, font, tr("title"), x + X0, y + HEAD_Y + 3, GuiPaint.FG);
         Component meta = plural("meta.nodes", s.totalNodes()).copy().append(" · ")
                 .append(plural("meta.networks", s.networks().size()));
-        GuiPaint.textRight(g, font, meta, x + X1, y + HEAD_Y + 3, GuiPaint.MUTED);
-        g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
+        int titleEnd = X0 + font.width(tr("title")) + 8;
+        int metaW = Math.min(font.width(meta), x1() - titleEnd);
+        GuiText.draw(g, font, meta, x + x1() - metaW, y + HEAD_Y + 3, metaW, GuiPaint.MUTED);
+        g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
         switch (tab) {
             case LIST -> renderList(g, mouseX, mouseY);
             case MAP -> renderMap(g, mouseX, mouseY);
@@ -1148,6 +1363,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             case NETWORKS -> renderNetworks(g, mouseX, mouseY);
             case GROUPS -> renderGroups(g, mouseX, mouseY);
         }
+        // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
+        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), ACCENT);
     }
 
     private void renderList(GuiGraphics g, int mouseX, int mouseY) {
@@ -1159,19 +1376,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         List<NodeView> nodes = s.nodes();
         if (nodes.isEmpty()) {
             GuiPaint.textCentered(g, font, s.totalNodes() == 0 ? tr("list.empty") : tr("list.no_match"),
-                    x + W / 2, y + LIST_Y + 40, GuiPaint.MUTED);
+                    x + w / 2, y + LIST_Y + 40, GuiPaint.MUTED);
         }
-        for (int i = 0; i < NODE_ROWS && i + listScroll < nodes.size(); i++) {
+        for (int i = 0; i < nodeRows() && i + listScroll < nodes.size(); i++) {
             int index = i + listScroll;
             NodeView node = nodes.get(index);
             int rx = x + X0;
             int ry = y + LIST_Y + i * NODE_ROW;
             boolean picked = selected.contains(node.key());
             if (index == hovered || picked) {
-                GuiPaint.box(g, rx, ry, X1 - X0, NODE_ROW - 1, GuiPaint.BUTTON,
+                GuiPaint.box(g, rx, ry, x1() - X0, NODE_ROW - 1, GuiPaint.BUTTON,
                         picked ? ACCENT : GuiPaint.BUTTON_HOVER_BORDER);
             } else if (i > 0) {
-                g.fill(rx + 2, ry - 1, x + X1 - 2, ry, GuiPaint.LINE);
+                g.fill(rx + 2, ry - 1, x + x1() - 2, ry, GuiPaint.LINE);
             }
             int cx = rx + 3;
             if (multi) {
@@ -1182,35 +1399,35 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             int textX = cx + 20;
             Component status = statusName(node.status());
             int statusW = font.width(status) + 9;
-            GuiPaint.dot(g, x + X1 - statusW - 2, ry + 4, statusColor(node.status()));
-            GuiPaint.text(g, font, status, x + X1 - statusW + 6, ry + 3, statusColor(node.status()));
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, nodeName(node), x + X1 - statusW - 8 - textX), textX, ry + 3,
-                    GuiPaint.FG);
+            GuiPaint.dot(g, x + x1() - statusW - 2, ry + 4, statusColor(node.status()));
+            GuiPaint.text(g, font, status, x + x1() - statusW + 6, ry + 3, statusColor(node.status()));
+            GuiText.draw(g, font, nodeName(node), textX, ry + 3, x + x1() - statusW - 8 - textX, GuiPaint.FG);
             MutableComponent line = coords(node).copy().withColor(GuiPaint.MUTED);
             for (Component label : roleLabels(node.roles())) {
                 line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
             }
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, line, x + X1 - 4 - textX), textX, ry + 12, GuiPaint.MUTED);
+            GuiText.draw(g, font, line, textX, ry + 12, x + x1() - 4 - textX, GuiPaint.MUTED);
         }
         if (listScroll > 0) {
-            GuiPaint.text(g, font, Component.literal("▲"), x + X1 - 8, y + LIST_Y - 9, GuiPaint.MUTED);
+            GuiPaint.text(g, font, Component.literal("▲"), x + x1() - 8, y + LIST_Y - 9, GuiPaint.MUTED);
         }
-        if (listScroll + NODE_ROWS < nodes.size()) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + X1 - 8, y + ACTION_Y - 4, GuiPaint.MUTED);
+        if (listScroll + nodeRows() < nodes.size()) {
+            GuiPaint.text(g, font, Component.literal("▼"), x + x1() - 8, y + actionY() - 4, GuiPaint.MUTED);
         }
 
         // barra de baixo: mover (selecionando) ou a dica; depois a seleção e as páginas
         if (multi) {
-            GuiPaint.text(g, font, tr("move.to"), x + X0, y + ACTION_Y + 3, GuiPaint.MUTED);
-            GuiPaint.text(g, font, plural("selected", selected.size()), x + X0, y + PAGER_Y + 3, GuiPaint.FG);
+            GuiPaint.text(g, font, tr("move.to"), x + X0, y + actionY() + 3, GuiPaint.MUTED);
+            GuiText.draw(g, font, plural("selected", selected.size()), x + X0, y + pagerY() + 3, 80, GuiPaint.FG);
         } else {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("list.hint"), X1 - X0), x + X0, y + ACTION_Y + 3,
-                    GuiPaint.DISABLED);
+            GuiText.draw(g, font, tr("list.hint"), x + X0, y + actionY() + 3, x1() - X0, GuiPaint.DISABLED);
         }
         int from = s.matchingNodes() == 0 ? 0 : s.query().page() * TabletSnapshot.PAGE_SIZE + 1;
         int to = Math.min(s.matchingNodes(), (s.query().page() + 1) * TabletSnapshot.PAGE_SIZE);
-        GuiPaint.textCentered(g, font, tr("page", from, to, s.matchingNodes()), x + X1 - 60, y + PAGER_Y + 3,
-                GuiPaint.MUTED);
+        // entre ‹ e ›, centrado
+        Component pageText = tr("page", from, to, s.matchingNodes());
+        int pageW = Math.min(font.width(pageText), 90);
+        GuiText.draw(g, font, pageText, x + x1() - 60 - pageW / 2, y + pagerY() + 3, pageW, GuiPaint.MUTED);
     }
 
     private void renderMap(GuiGraphics g, int mouseX, int mouseY) {
@@ -1218,8 +1435,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x0 = mapX0();
         int y0 = mapY0();
         int w = mapW();
-        g.fill(x0 + 1, y0 + 1, x0 + w - 1, y0 + MAP_H - 1, GuiPaint.INSET);
-        GuiPaint.outline(g, x0, y0, w, MAP_H, GuiPaint.LINE);
+        g.fill(x0 + 1, y0 + 1, x0 + w - 1, y0 + mapH() - 1, GuiPaint.INSET);
+        GuiPaint.outline(g, x0, y0, w, mapH(), GuiPaint.LINE);
         double scale = mapScale();
         // grade: o passo é uma potência de 2 em blocos que dê pelo menos 20 px
         int step = 1;
@@ -1228,19 +1445,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         BlockPos center = s.center();
         int cx = x0 + w / 2;
-        int cy = y0 + MAP_H / 2;
+        int cy = y0 + mapH() / 2;
         int gridColor = 0xFF1A2129;
         int startX = Math.floorDiv(center.getX() - (int) (w / 2 * scale), step) * step;
         for (int bx = startX; (bx - center.getX()) / scale < w / 2.0; bx += step) {
             int px = (int) Math.round(cx + (bx - center.getX()) / scale);
             if (px > x0 && px < x0 + w - 1) {
-                g.fill(px, y0 + 1, px + 1, y0 + MAP_H - 1, gridColor);
+                g.fill(px, y0 + 1, px + 1, y0 + mapH() - 1, gridColor);
             }
         }
-        int startZ = Math.floorDiv(center.getZ() - (int) (MAP_H / 2 * scale), step) * step;
-        for (int bz = startZ; (bz - center.getZ()) / scale < MAP_H / 2.0; bz += step) {
+        int startZ = Math.floorDiv(center.getZ() - (int) (mapH() / 2 * scale), step) * step;
+        for (int bz = startZ; (bz - center.getZ()) / scale < mapH() / 2.0; bz += step) {
             int py = (int) Math.round(cy + (bz - center.getZ()) / scale);
-            if (py > y0 && py < y0 + MAP_H - 1) {
+            if (py > y0 && py < y0 + mapH() - 1) {
                 g.fill(x0 + 1, py, x0 + w - 1, py + 1, gridColor);
             }
         }
@@ -1271,10 +1488,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
         }
         GuiPaint.textRight(g, font, tr("map.north"), x0 + w - 4, y0 + 4, GuiPaint.DISABLED);
-        GuiPaint.text(g, font, tr("map.scale", step), x0 + 4, y0 + MAP_H - 11, GuiPaint.DISABLED);
+        GuiText.draw(g, font, tr("map.scale", step), x0 + 4, y0 + mapH() - 11, w - 8, GuiPaint.DISABLED);
 
         // o nó escolhido ou a dica
-        int infoY = topPos + MAP_INFO_Y;
+        int infoY = topPos + mapInfoY();
         NodeView chosen = mapNode();
         if (chosen != null) {
             GuiPaint.box(g, x0, infoY, w - 50, 16, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
@@ -1283,15 +1500,15 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             GuiPaint.text(g, font, status, x0 + w - 56 - statusW, infoY + 4, statusColor(chosen.status()));
             MutableComponent text = nodeName(chosen).copy().append(Component.literal("  ")
                     .append(coords(chosen)).withColor(GuiPaint.MUTED));
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, text, w - 66 - statusW), x0 + 5, infoY + 4, GuiPaint.FG);
+            GuiText.draw(g, font, text, x0 + 5, infoY + 4, w - 66 - statusW, GuiPaint.FG);
         } else {
             Component hint = otherDimension > 0 ? tr("map.hint.other", otherDimension) : tr("map.hint");
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, hint, w), x0, infoY + 4, GuiPaint.DISABLED);
+            GuiText.draw(g, font, hint, x0, infoY + 4, w, GuiPaint.DISABLED);
         }
 
         // legenda
         int lx = x0;
-        int ly = topPos + LEGEND_Y;
+        int ly = topPos + legendY();
         for (NodeStatus status : NodeStatus.values()) {
             Component name = tr("legend." + status.name().toLowerCase(Locale.ROOT));
             int width = 8 + font.width(name) + 8;
@@ -1310,72 +1527,59 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos;
         int y = topPos;
         // tempo do mod por tick, com a barra do orçamento
-        GuiPaint.text(g, font, tr("stats.time"), x + X0, y + BODY_Y, GuiPaint.FG);
-        GuiPaint.textRight(g, font, tr("stats.time.value", decimal(s.modNanos() / 1e6), decimal(s.budgetNanos() / 1e6)),
-                x + X1, y + BODY_Y, GuiPaint.MUTED);
+        Component time = tr("stats.time.value", decimal(s.modNanos() / 1e6), decimal(s.budgetNanos() / 1e6));
+        int timeW = Math.min(font.width(time), (x1() - X0) / 2);
+        GuiText.draw(g, font, tr("stats.time"), x + X0, y + BODY_Y, x1() - X0 - timeW - 6, GuiPaint.FG);
+        GuiText.draw(g, font, time, x + x1() - timeW, y + BODY_Y, timeW, GuiPaint.MUTED);
         float used = s.budgetNanos() <= 0 ? 0 : Math.min(1f, s.modNanos() / (float) s.budgetNanos());
         int barColor = used < 0.6f ? 0xFF41C96B : used < 0.9f ? 0xFFFFB020 : 0xFFFF6B5E;
-        g.fill(x + X0, y + BODY_Y + 11, x + X1, y + BODY_Y + 15, GuiPaint.INSET);
-        g.fill(x + X0, y + BODY_Y + 11, x + X0 + Math.max(1, Math.round((X1 - X0) * used)), y + BODY_Y + 15, barColor);
+        g.fill(x + X0, y + BODY_Y + 11, x + x1(), y + BODY_Y + 15, GuiPaint.INSET);
+        g.fill(x + X0, y + BODY_Y + 11, x + X0 + Math.max(1, Math.round((x1() - X0) * used)), y + BODY_Y + 15, barColor);
 
-        // vazão por tipo, somando as redes visíveis
-        long items = 0;
-        long fluids = 0;
-        long energy = 0;
-        long chemicals = 0;
+        // um cartão por tipo, somando as redes visíveis
+        int after = renderTypeCards(g, y + CARDS_Y);
         int full = 0;
         int unloaded = 0;
         int paused = 0;
         for (NetworkView n : s.networks()) {
-            items += n.type(ResourceType.ITEM).rate();
-            fluids += n.type(ResourceType.FLUID).rate();
-            energy += n.type(ResourceType.ENERGY).rate();
-            chemicals += n.type(ResourceType.CHEMICAL).rate();
             full += n.full();
             unloaded += n.unloaded();
             paused += n.paused() ? 1 : 0;
-        }
-        // químicos só com o Mekanism: a quarta coluna aparece só com ele
-        int colW = (X1 - X0) / (Chemicals.LOADED ? 4 : 3);
-        statColumn(g, x + X0, y + BODY_Y + 20, colW, typeName(ResourceType.ITEM), rate(ResourceType.ITEM, items),
-                ResourceStyle.color(ResourceType.ITEM));
-        statColumn(g, x + X0 + colW, y + BODY_Y + 20, colW, typeName(ResourceType.FLUID), rate(ResourceType.FLUID, fluids),
-                ResourceStyle.color(ResourceType.FLUID));
-        statColumn(g, x + X0 + 2 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.ENERGY),
-                rate(ResourceType.ENERGY, energy), ResourceStyle.color(ResourceType.ENERGY));
-        if (Chemicals.LOADED) {
-            statColumn(g, x + X0 + 3 * colW, y + BODY_Y + 20, colW, typeName(ResourceType.CHEMICAL),
-                    rate(ResourceType.CHEMICAL, chemicals), ResourceStyle.color(ResourceType.CHEMICAL));
         }
         MutableComponent warnings = Component.empty();
         appendWarning(warnings, full, "stats.full", statusColor(NodeStatus.FULL));
         appendWarning(warnings, unloaded, "stats.unloaded", statusColor(NodeStatus.UNLOADED));
         appendWarning(warnings, paused, "stats.paused", statusColor(NodeStatus.PAUSED));
-        wrapped(g, warnings.getString().isEmpty() ? tr("stats.ok") : warnings, x + X0, y + BODY_Y + 40, X1 - X0, 2,
-                warnings.getString().isEmpty() ? statusColor(NodeStatus.ACTIVE) : GuiPaint.FG);
-        g.fill(x + X0, y + STATS_LIST_Y - 3, x + X1, y + STATS_LIST_Y - 2, GuiPaint.LINE);
+        boolean ok = warnings.getString().isEmpty();
+        GuiText.wrap(g, font, ok ? tr("stats.ok") : warnings, x + X0, after + 2, x1() - X0, 2,
+                ok ? statusColor(NodeStatus.ACTIVE) : GuiPaint.FG);
+        int listY = statsListY();
+        g.fill(x + X0, y + listY - 3, x + x1(), y + listY - 2, GuiPaint.LINE);
 
         List<NetworkView> networks = s.networks();
         if (networks.isEmpty()) {
-            GuiPaint.textCentered(g, font, tr("networks.empty"), x + W / 2, y + STATS_LIST_Y + 30, GuiPaint.MUTED);
+            GuiPaint.textCentered(g, font, tr("networks.empty"), x + w / 2, y + listY + 12, GuiPaint.MUTED);
         }
-        int rows = (H - 8 - STATS_LIST_Y) / STAT_CARD;
+        int rows = statsRows();
+        // nome, vazões e avisos de cada rede, dentro do cartão (a sombra da última linha não toca a borda)
         for (int i = 0; i < rows && i + statsScroll < networks.size(); i++) {
             NetworkView n = networks.get(i + statsScroll);
-            int cy = y + STATS_LIST_Y + i * STAT_CARD;
-            GuiPaint.box(g, x + X0, cy, X1 - X0, STAT_CARD - 3, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
-            GuiPaint.dot(g, x + X0 + 5, cy + 5, 0xFF000000 | n.color());
+            int cy = y + listY + i * STAT_CARD;
+            GuiPaint.box(g, x + X0, cy, x1() - X0, STAT_CARD - 3, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
+            GuiPaint.dot(g, x + X0 + 5, cy + 4, 0xFF000000 | n.color());
             Component right = tr("stats.network", plural("meta.nodes", n.nodes()), ms(n.averageNanos()), n.opsPerSecond());
-            GuiPaint.textRight(g, font, right, x + X1 - 5, cy + 4, GuiPaint.MUTED);
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(n.name()), X1 - X0 - 20 - font.width(right)),
-                    x + X0 + 14, cy + 4, GuiPaint.FG);
-            MutableComponent rates = rate(ResourceType.ITEM, n.type(ResourceType.ITEM).rate()).copy()
-                    .append(" · ").append(rate(ResourceType.FLUID, n.type(ResourceType.FLUID).rate()))
-                    .append(" · ").append(rate(ResourceType.ENERGY, n.type(ResourceType.ENERGY).rate()));
-            if (Chemicals.LOADED) {
-                rates.append(" · ").append(rate(ResourceType.CHEMICAL, n.type(ResourceType.CHEMICAL).rate()));
+            int rightW = Math.min(font.width(right), (x1() - X0) / 2);
+            GuiText.draw(g, font, right, x + x1() - 5 - rightW, cy + 3, rightW, GuiPaint.MUTED);
+            GuiText.draw(g, font, Component.literal(n.name()), x + X0 + 14, cy + 3, x1() - X0 - 24 - rightW,
+                    GuiPaint.FG);
+            MutableComponent rates = Component.empty();
+            for (ResourceType t : LoadedTypes.LIST) {
+                if (!rates.getSiblings().isEmpty()) {
+                    rates.append(" · ");
+                }
+                rates.append(rate(t, n.type(t).rate()));
             }
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, rates, X1 - X0 - 10), x + X0 + 5, cy + 14, GuiPaint.MUTED);
+            GuiText.draw(g, font, rates, x + X0 + 5, cy + 12, x1() - X0 - 10, GuiPaint.MUTED);
             MutableComponent line = Component.empty();
             if (n.paused()) {
                 appendPart(line, tr("status.paused").copy().withColor(statusColor(NodeStatus.PAUSED)));
@@ -1393,17 +1597,50 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             if (line.getSiblings().isEmpty()) {
                 line.append(tr("stats.network.ok").copy().withColor(GuiPaint.DISABLED));
             }
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, line, X1 - X0 - 10), x + X0 + 5, cy + 23, GuiPaint.FG);
+            GuiText.draw(g, font, line, x + X0 + 5, cy + 21, x1() - X0 - 10, GuiPaint.FG);
         }
         if (statsScroll + rows < networks.size()) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + X1 - 8, y + H - 12, GuiPaint.MUTED);
+            GuiPaint.text(g, font, Component.literal("▼"), x + x1() - 8, y + h - 12, GuiPaint.MUTED);
         }
     }
 
-    private void statColumn(GuiGraphics g, int x, int y, int width, Component label, Component value, int color) {
-        GuiPaint.dot(g, x, y + 1, color);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, label, width - 10), x + 8, y, GuiPaint.MUTED);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, value, width - 10), x + 8, y + 10, GuiPaint.FG);
+    /**
+     * Um cartão por tipo carregado: ícone e nome, vazão na cor do tipo e origens, destinos e
+     * dormindo. A grade quebra conforme a largura ({@link CardGrid}). Devolve onde a grade termina.
+     */
+    private int renderTypeCards(GuiGraphics g, int top) {
+        cardRects.clear();
+        List<ResourceType> shown = LoadedTypes.LIST;
+        int avail = x1() - X0;
+        int cols = cardColumns();
+        int cardW = (avail - CARD_GAP * (cols - 1)) / cols;
+        for (int i = 0; i < shown.size(); i++) {
+            ResourceType t = shown.get(i);
+            long rate = 0;
+            int sources = 0;
+            int destinations = 0;
+            int sleeping = 0;
+            for (NetworkView n : snapshot().networks()) {
+                TabletSnapshot.TypeStats s = n.type(t);
+                rate += s.rate();
+                sources += s.sources();
+                destinations += s.destinations();
+                sleeping += s.sleeping();
+            }
+            int cx = leftPos + X0 + (i % cols) * (cardW + CARD_GAP);
+            int cy = top + (i / cols) * (CARD_H + CARD_GAP);
+            GuiPaint.box(g, cx, cy, cardW, CARD_H, GuiPaint.INSET, GuiPaint.LINE);
+            g.fill(cx, cy, cx + cardW, cy + 1, ResourceStyle.color(t));
+            ResourceStyle.drawIcon(g, t, cx + 4, cy + 3);
+            GuiText.draw(g, font, ResourceStyle.name(t), cx + 16, cy + 4, cardW - 20, GuiPaint.FG);
+            GuiText.draw(g, font, ResourceStyle.rate(t, rate), cx + 4, cy + 15, cardW - 8, ResourceStyle.color(t));
+            Component detail = sleeping > 0 ? tr("stats.card.detail.sleeping", sources, destinations, sleeping)
+                    : tr("stats.card.detail", sources, destinations);
+            GuiText.wrap(g, font, detail, cx + 4, cy + 26, cardW - 8, 2, GuiPaint.MUTED);
+            cardRects.put(t, new int[] {cx, cy, cardW, CARD_H});
+        }
+        int rows = (shown.size() + cols - 1) / cols;
+        return top + rows * (CARD_H + CARD_GAP);
     }
 
     private void appendWarning(MutableComponent line, int count, String key, int color) {
@@ -1423,10 +1660,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             Component empty) {
         int x = leftPos + X0;
         int y = topPos + BODY_Y;
-        g.fill(x, y, x + SIDE_W, topPos + SIDE_BOTTOM, GuiPaint.INSET);
-        GuiPaint.outline(g, x, y, SIDE_W, SIDE_BOTTOM - BODY_Y, GuiPaint.LINE);
+        g.fill(x, y, x + SIDE_W, topPos + sideBottom(), GuiPaint.INSET);
+        GuiPaint.outline(g, x, y, SIDE_W, sideBottom() - BODY_Y, GuiPaint.LINE);
         if (count == 0) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, empty, SIDE_W - 8), x + 4, y + 5, GuiPaint.MUTED);
+            GuiText.draw(g, font, empty, x + 4, y + 5, SIDE_W - 8, GuiPaint.MUTED);
         }
         int hovered = sideRowAt(mouseX, mouseY, count);
         for (int i = 0; i < sideRows() && i + sideScroll < count; i++) {
@@ -1445,14 +1682,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 GuiPaint.textRight(g, font, row.mark, right, ry + 4, GuiPaint.MUTED);
                 right -= font.width(row.mark) + 3;
             }
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, row.name, right - (x + 14)), x + 14, ry + 4, GuiPaint.FG);
+            GuiText.draw(g, font, row.name, x + 14, ry + 4, right - (x + 14), GuiPaint.FG);
         }
         if (sideScroll + sideRows() < count) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + SIDE_W - 9, topPos + SIDE_BOTTOM - 10, GuiPaint.MUTED);
+            GuiPaint.text(g, font, Component.literal("▼"), x + SIDE_W - 9, topPos + sideBottom() - 10, GuiPaint.MUTED);
         }
         // nova rede ou grupo, recolhido
         if (newOpen) {
-            GuiPaint.box(g, x, topPos + NEW_BOX_Y, SIDE_W - 44, ROW_H, GuiPaint.INSET,
+            GuiPaint.box(g, x, topPos + newBoxY(), SIDE_W - 44, ROW_H, GuiPaint.INSET,
                     newBox.isFocused() ? ACCENT : GuiPaint.LINE);
         }
     }
@@ -1474,19 +1711,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int y = topPos;
         NetworkView n = selectedNetworkView();
         if (n == null) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.pick"), RW), x, y + BODY_Y + 3, GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("network.pick"), x, y + BODY_Y + 3, rw(), GuiPaint.MUTED);
             return;
         }
         titleRow(g, mouseX, mouseY, Component.literal(n.name()), 0xFF000000 | n.color(), n.manageable());
         Component owner = n.owned() ? tr("owner.you") : tr("owner", n.owner());
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, owner, RW), x, y + BODY_Y + 18, GuiPaint.MUTED);
+        GuiText.draw(g, font, owner, x, y + BODY_Y + 18, rw(), GuiPaint.MUTED);
         MutableComponent nodes = plural("meta.nodes", n.nodes()).copy();
         if (n.unloaded() > 0) {
             nodes.append(", ").append(plural("network.unloaded", n.unloaded()));
         }
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, nodes, RW), x, y + BODY_Y + 29, GuiPaint.MUTED);
+        GuiText.draw(g, font, nodes, x, y + BODY_Y + 29, rw(), GuiPaint.MUTED);
         Component members = n.isPublic() ? tr("members.public") : tr("members.private", n.owner());
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, members, RW), x, y + BODY_Y + 40, GuiPaint.MUTED);
+        GuiText.draw(g, font, members, x, y + BODY_Y + 40, rw(), GuiPaint.MUTED);
         if (n.manageable()) {
             GuiPaint.text(g, font, tr("color"), x, y + SWATCH_Y - 11, GuiPaint.FG);
             int[] palette = NetworkSavedData.palette();
@@ -1498,7 +1735,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
             GuiPaint.text(g, font, tr("privacy"), x, y + BODY_Y + 101, GuiPaint.FG);
         } else {
-            wrapped(g, tr("network.foreign"), x, y + SWATCH_Y, RW, 3, GuiPaint.DISABLED);
+            GuiText.wrap(g, font, tr("network.foreign"), x, y + SWATCH_Y, rw(), 3, GuiPaint.DISABLED);
         }
     }
 
@@ -1507,14 +1744,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos + RX;
         int y = topPos + BODY_Y;
         if (renaming != Rename.NONE) {
-            GuiPaint.box(g, x, y, RW, ROW_H, GuiPaint.INSET, ACCENT);
+            GuiPaint.box(g, x, y, rw(), ROW_H, GuiPaint.INSET, ACCENT);
             return;
         }
         boolean hovered = canRename && overTitle(mouseX, mouseY);
         GuiPaint.dot(g, x, y + 4, color);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, name, RW - 10), x + 9, y + 3, hovered ? ACCENT : GuiPaint.FG);
+        GuiText.draw(g, font, name, x + 9, y + 3, rw() - 10, hovered ? ACCENT : GuiPaint.FG);
         if (hovered) {
-            int width = Math.min(font.width(name), RW - 10);
+            int width = Math.min(font.width(name), rw() - 10);
             for (int i = 0; i < width; i += 2) {
                 g.fill(x + 9 + i, y + 12, x + 10 + i, y + 13, ACCENT);
             }
@@ -1535,7 +1772,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int y = topPos;
         GroupView group = selectedGroupView();
         if (group == null) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("group.pick"), RW), x, y + BODY_Y + 3, GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("group.pick"), x, y + BODY_Y + 3, rw(), GuiPaint.MUTED);
             return;
         }
         int color = group.paused() ? statusColor(NodeStatus.PAUSED) : statusColor(NodeStatus.ACTIVE);
@@ -1552,32 +1789,31 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 .append(plural("meta.networks", group.networks().size()).copy().withColor(GuiPaint.MUTED))
                 .append(Component.literal(" · ").withColor(GuiPaint.MUTED))
                 .append(plural("meta.nodes", nodes).copy().withColor(GuiPaint.MUTED));
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, summary, RW), x, y + BODY_Y + 15, GuiPaint.FG);
+        GuiText.draw(g, font, summary, x, y + BODY_Y + 15, rw(), GuiPaint.FG);
 
         GuiPaint.text(g, font, tr("group.networks"), x, y + GROUP_NET_Y - 11, GuiPaint.FG);
         List<NetworkView> networks = manageableNetworks();
         int hovered = group.manageable() ? groupNetAt(mouseX, mouseY) : -1;
         if (networks.isEmpty()) {
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("networks.empty"), RW), x, y + GROUP_NET_Y + 2,
-                    GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("networks.empty"), x, y + GROUP_NET_Y + 2, rw(), GuiPaint.MUTED);
         }
         for (int i = 0; i < GROUP_NET_ROWS && i + groupNetScroll < networks.size(); i++) {
             int index = i + groupNetScroll;
             NetworkView n = networks.get(index);
             int ry = y + GROUP_NET_Y + i * GROUP_NET_ROW;
             if (index == hovered) {
-                g.fill(x, ry, x + RW, ry + GROUP_NET_ROW, GuiPaint.BUTTON);
+                g.fill(x, ry, x + rw(), ry + GROUP_NET_ROW, GuiPaint.BUTTON);
             }
             GuiPaint.checkbox(g, x + 2, ry + 2, group.networks().contains(n.id()), ACCENT);
             GuiPaint.dot(g, x + 15, ry + 4, 0xFF000000 | n.color());
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(n.name()), RW - 26), x + 24, ry + 3,
+            GuiText.draw(g, font, Component.literal(n.name()), x + 24, ry + 3, rw() - 26,
                     group.manageable() ? GuiPaint.FG : GuiPaint.MUTED);
         }
         if (groupNetScroll + GROUP_NET_ROWS < networks.size()) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + RW - 8, y + GROUP_NET_Y + GROUP_NET_ROWS * GROUP_NET_ROW - 8,
+            GuiPaint.text(g, font, Component.literal("▼"), x + rw() - 8, y + GROUP_NET_Y + GROUP_NET_ROWS * GROUP_NET_ROW - 8,
                     GuiPaint.MUTED);
         }
-        wrapped(g, tr("group.hint"), x, y + NEW_Y - 10, RW, 2, GuiPaint.DISABLED);
+        GuiText.wrap(g, font, tr("group.hint"), x, y + newY() - 10, rw(), 2, GuiPaint.DISABLED);
     }
 
     // ------------------------------------------------------------------ pintura dos botões
@@ -1606,7 +1842,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private void paintCycle(GuiGraphics g, FlatButton b, boolean hovered, Component value) {
         int border = hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, value, b.getWidth() - 14), b.getX() + 4, b.getY() + 3, GuiPaint.FG);
+        GuiText.draw(g, font, value, b.getX() + 4, b.getY() + 3, b.getWidth() - 14, GuiPaint.FG);
         GuiPaint.arrowDown(g, b.getX() + b.getWidth() - 9, b.getY() + 6, hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
@@ -1639,6 +1875,21 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 3,
                 armed || hovered ? GuiPaint.mix(DANGER, 0xFFFFFFFF, 0.45f) : GuiPaint.FG);
+    }
+
+    /** Chip do filtro de tipo: ícone e "Só Energia ✕", na cor do tipo. */
+    private void paintTypeChip(GuiGraphics g, FlatButton b, boolean hovered) {
+        if (typeFilter.isEmpty()) {
+            return;
+        }
+        ResourceType type = typeFilter.get();
+        int color = ResourceStyle.color(type);
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.mix(GuiPaint.BUTTON, color, 0.18f),
+                hovered ? color : GuiPaint.BUTTON_BORDER);
+        ResourceStyle.drawIcon(g, type, b.getX() + 4, b.getY() + 3);
+        int textX = b.getX() + 4 + ResourceStyle.ICON + 3;
+        GuiText.draw(g, font, typeChipText(type), textX, b.getY() + 3, b.getX() + b.getWidth() - 4 - textX,
+                hovered ? GuiPaint.FG : GuiPaint.mix(color, 0xFFFFFFFF, 0.35f));
     }
 
     private void paintMore(GuiGraphics g, FlatButton b, boolean hovered, Component label) {
@@ -1683,12 +1934,34 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return tab;
     }
 
+    /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */
+    public void previewResize(int width, int height) {
+        savedW = width;
+        savedH = height;
+        rebuild();
+    }
+
+    /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */
+    public int[] size() {
+        return new int[] {w, h};
+    }
+
+    /** Centro do cartão do tipo nas Estatísticas (último frame), ou {@code null} se não aparece. */
+    public int @Nullable [] cardCenter(ResourceType type) {
+        int[] r = cardRects.get(type);
+        return r == null ? null : new int[] {r[0] + r[2] / 2, r[1] + r[3] / 2};
+    }
+
+    public Tab currentTab() {
+        return tab;
+    }
+
     /** Centro da linha do nó na lista (página atual, sem rolagem), ou {@code null} se ele não aparece. */
     int @Nullable [] nodeRowCenter(NodeKey key) {
         List<NodeView> nodes = snapshot().nodes();
-        for (int i = listScroll; i < Math.min(nodes.size(), listScroll + NODE_ROWS); i++) {
+        for (int i = listScroll; i < Math.min(nodes.size(), listScroll + nodeRows()); i++) {
             if (nodes.get(i).key().equals(key)) {
-                return new int[] {leftPos + W / 2, topPos + LIST_Y + (i - listScroll) * NODE_ROW + NODE_ROW / 2};
+                return new int[] {leftPos + w / 2, topPos + LIST_Y + (i - listScroll) * NODE_ROW + NODE_ROW / 2};
             }
         }
         return null;

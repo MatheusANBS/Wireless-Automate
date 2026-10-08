@@ -867,6 +867,34 @@ public final class DevEndToEnd {
         }, () -> "busca \"" + tabletScreen().getMenu().snapshot().query().search() + "\", nós "
                 + tabletScreen().getMenu().snapshot().nodes().stream().map(n -> n.key().pos().toShortString()).toList()));
         list.add(capture("7-tablet-lista"));
+        list.add(new Step("aba Estatísticas", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
+                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> "aba " + tabletScreen().currentTab()));
+        list.add(capture("7c-tablet-estatisticas"));
+        list.add(new Step("Tablet maior", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(470, 260),
+                () -> tabletScreen().size()[0] > 300 && tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        list.add(capture("7d-tablet-estatisticas-grande"));
+        list.add(new Step("cartão de energia filtra a Lista", STEP_TIMEOUT_MS,
+                () -> {
+                    int[] c = tabletScreen().cardCenter(ResourceType.ENERGY);
+                    click(tabletScreen(), c[0], c[1]);
+                },
+                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST
+                        && tabletScreen().getMenu().snapshot().query().type().equals(Optional.of(ResourceType.ENERGY)),
+                () -> "aba " + tabletScreen().currentTab() + ", consulta " + tabletScreen().getMenu().snapshot().query()));
+        list.add(capture("7e-tablet-lista-energia"));
+        list.add(new Step("Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        // o chip "Só Energia ✕" tira o filtro: os passos seguintes procuram B na Lista sem filtro de tipo
+        list.add(new Step("tirar o filtro de tipo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.list.type.tooltip"), "chip do tipo")),
+                () -> tabletScreen().getMenu().snapshot().query().type().isEmpty(),
+                () -> "consulta " + tabletScreen().getMenu().snapshot().query()));
 
         // os widgets da aba só aparecem no quadro seguinte, como para o jogador
         list.add(new Step("aba Grupos", STEP_TIMEOUT_MS,

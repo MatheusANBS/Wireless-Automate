@@ -245,6 +245,24 @@ public final class DevEndToEnd {
             // sem as dicas do tutorial no canto das capturas
             minecraft.getTutorial().setStep(TutorialSteps.NONE);
         }
+        if (ticks == 3) {
+            // no Windows a janela de 1280x800 sai menor e a escala 3 não deixa espaço para as
+            // telas crescerem: escolhe a maior escala que caiba, sem salvar as opções do usuário
+            var window = minecraft.getWindow();
+            int scale = 1;
+            for (int s = 3; s >= 1; s--) {
+                if (window.getHeight() / s >= 330 && window.getWidth() / s >= 480) {
+                    scale = s;
+                    break;
+                }
+            }
+            if (scale != minecraft.options.guiScale().get() || window.getGuiScale() != scale) {
+                minecraft.options.guiScale().set(scale);
+                minecraft.resizeDisplay();
+            }
+            WirelessAutomate.LOGGER.info("e2e: escala de GUI {} (janela {}x{})", scale, window.getWidth(),
+                    window.getHeight());
+        }
         try {
             switch (phase) {
                 case STARTING -> {

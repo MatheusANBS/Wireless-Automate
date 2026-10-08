@@ -367,6 +367,34 @@ public final class SourceGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Tanque Ultimate com o {@code int} cheio (mais que {@link Integer#MAX_VALUE}) não aparece para os
+     * Sourcelinks: eles calculam a vazão como máximo − guardado e passariam 0 para sempre. Com espaço no
+     * {@code int}, aparece. Um {@code setSource(Integer.MAX_VALUE)} nesse estado não derruba o conteúdo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void sourcelinksSkipTankFullAsInt(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.ULTIMATE).store().insert(3_000_000_000L, false);
+        BlockPos tankPos = helper.absolutePos(A);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(providerAt(helper, A), "sem provider do tanque"))
+                .thenExecute(() -> {
+                    List<BlockPos> full = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
+                    helper.assertTrue(!full.contains(tankPos), "o tanque com o int cheio aparece para os Sourcelinks");
+                    SourceTestSupport.set(helper.getLevel(), tankPos, Integer.MAX_VALUE);
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000_000_000L,
+                            "setSource(MAX) derrubou o conteúdo acima do int");
+                    tank(helper, A).store().extract(3_000_000_000L - 1_000_000L, false);
+                    List<BlockPos> room = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
+                    helper.assertTrue(room.contains(tankPos), "o tanque com 1.000.000 não aparece: " + room);
+                })
+                .thenSucceed();
+    }
+
     /** Quebrado o tanque, o provider dele deixa de valer. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void providerInvalidAfterBreak(GameTestHelper helper) {

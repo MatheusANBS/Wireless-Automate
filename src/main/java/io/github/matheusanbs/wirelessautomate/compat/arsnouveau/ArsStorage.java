@@ -38,6 +38,18 @@ public final class ArsStorage {
         SourceManager.INSTANCE.addInterface(level, new TankProvider(tank));
     }
 
+    /**
+     * O {@code setSource} do Ars. Com mais que {@link Integer#MAX_VALUE} guardado, o Ars só enxerga
+     * {@link Integer#MAX_VALUE}: um {@code setSource(getSource())} de terceiros derrubaria o conteúdo
+     * para o teto do {@code int}, então esse pedido é ignorado.
+     */
+    private static void setFromArs(ScalarStore store, int source) {
+        if (store.stored() > Integer.MAX_VALUE && source == Integer.MAX_VALUE) {
+            return;
+        }
+        store.replace(Math.max(0, source));
+    }
+
     private static int clamp(long value) {
         return (int) Math.min(Math.max(0, value), Integer.MAX_VALUE);
     }
@@ -91,7 +103,7 @@ public final class ArsStorage {
 
         @Override
         public void setSource(int source) {
-            store().replace(Math.max(0, source));
+            setFromArs(store(), source);
         }
 
         /** A capacidade é a do tier: não muda por aqui. */
@@ -149,10 +161,16 @@ public final class ArsStorage {
         }
 
         @Override public int getTransferRate() { return Integer.MAX_VALUE; }
-        @Override public boolean canAcceptSource() { return store().insert(1, true) > 0; }
+        /**
+         * Só aceita se a visão em {@code int} tem espaço: o Sourcelink calcula a vazão como
+         * {@code getMaxSource() − getSource()}, e com o {@code int} cheio passaria 0 para sempre.
+         */
+        @Override public boolean canAcceptSource() { return getSource() < getMaxSource() && store().insert(1, true) > 0; }
         @Override public int getSource() { return clamp(store().stored()); }
         @Override public int getMaxSource() { return maxSource(tank); }
-        @Override public int setSource(int source) { store().replace(Math.max(0, source)); return getSource(); }
+        @Override public int setSource(int source) { setFromArs(store(), source); return getSource(); }
+        /** Existe para o Ars 5.2 (abstrato lá, sem @Override para compilar com o 5.13); a capacidade é a do tier. */
+        public void setMaxSource(int max) { }
         /** Total novo relativo ao getSource() de antes (o Ars calcula o que passou como antes − depois). */
         @Override public int addSource(int source) {
             int before = getSource();

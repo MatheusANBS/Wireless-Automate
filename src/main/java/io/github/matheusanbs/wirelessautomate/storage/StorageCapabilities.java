@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -11,7 +12,8 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
  * NeoForge e a {@link BulkFluids} (para o roteador, em {@code long}). Bateria: a de energia do
  * NeoForge e a {@link BulkEnergy} (para o roteador, em {@code long}, sem o teto do {@code int}). Tanque
  * Químico: a do Mekanism, só com ele ({@code compat/mekanism}, pela ponte {@code Chemicals}). Tanque de
- * Source: a {@link BulkSource} (para o roteador, em {@code long}); a do Ars entra em {@code compat/arsnouveau}.
+ * Source: a {@link BulkSource} (para o roteador, em {@code long}) e a do Ars, só com ele ({@code compat/arsnouveau},
+ * pela ponte {@code Sources}).
  */
 public final class StorageCapabilities {
     public static void register(RegisterCapabilitiesEvent event) {
@@ -30,6 +32,7 @@ public final class StorageCapabilities {
         event.registerBlockEntity(BulkSource.BLOCK, ModBlockEntities.SOURCE_TANK.get(),
                 (tank, side) -> tank.store());
         Chemicals.registerStorage(event);
+        Sources.registerStorage(event);
     }
 
     private StorageCapabilities() {

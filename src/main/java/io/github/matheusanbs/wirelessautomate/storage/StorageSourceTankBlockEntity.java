@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +17,15 @@ import net.minecraft.world.level.block.state.BlockState;
 public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
     public StorageSourceTankBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SOURCE_TANK.get(), StorageKind.SOURCE_TANK, pos, state);
+    }
+
+    /** No servidor, entra no {@code SourceManager} do Ars (com ele): as máquinas dele tiram Source daqui. */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide) {
+            Sources.registerProvider(this);
+        }
     }
 
     @Override

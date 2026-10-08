@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
+import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import io.github.matheusanbs.wirelessautomate.storage.BulkFluids;
 import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
 import java.util.ArrayList;
@@ -104,6 +105,7 @@ public class RouterBlockEntity extends BlockEntity {
     private final BlockCapabilityCache<BulkItems, @Nullable Direction>[] bulkItemCaches = newCaches();
     private final BlockCapabilityCache<BulkEnergy, @Nullable Direction>[] bulkEnergyCaches = newCaches();
     private final BlockCapabilityCache<BulkFluids, @Nullable Direction>[] bulkFluidCaches = newCaches();
+    private final BlockCapabilityCache<BulkSource, @Nullable Direction>[] bulkSourceCaches = newCaches();
     private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
     private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
     /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
@@ -592,6 +594,15 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * Source em {@code long} (o Tanque de Source do mod) pela face, ou {@code null} se a máquina não
+     * tiver. O motor tenta esta antes de {@link #arsSource}: sem o teto de {@link Integer#MAX_VALUE} por
+     * chamada da capability do Ars.
+     */
+    public @Nullable BulkSource bulkSource(Direction machineFace) {
+        return capability(bulkSourceCaches, BulkSource.BLOCK, ResourceType.SOURCE, machineFace);
+    }
+
+    /**
      * Source do Ars Nouveau ({@code ISourceCap}) pela face, ou {@code null} sem a capability ou sem o
      * Ars. Devolvido como {@code Object}: só o código de {@code compat/arsnouveau} sabe o tipo.
      */
@@ -646,6 +657,7 @@ public class RouterBlockEntity extends BlockEntity {
         Arrays.fill(bulkItemCaches, null);
         Arrays.fill(bulkEnergyCaches, null);
         Arrays.fill(bulkFluidCaches, null);
+        Arrays.fill(bulkSourceCaches, null);
         Arrays.fill(fluidCaches, null);
         Arrays.fill(energyCaches, null);
         Arrays.fill(chemicalCaches, null);

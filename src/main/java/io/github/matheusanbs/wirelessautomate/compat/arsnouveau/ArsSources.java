@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.compat.arsnouveau;
 import com.hollingsworth.arsnouveau.api.source.ISourceCap;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.ScalarAccess;
+import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -20,31 +21,38 @@ public final class ArsSources {
     public static final BlockCapability<ISourceCap, @Nullable Direction> BLOCK = BlockCapability.createSided(
             ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source"), ISourceCap.class);
 
-    /** A Source para o laço de um valor só; a {@link ISourceCap} é em {@code int}: corta no teto dela. */
+    /**
+     * A Source para o laço de um valor só. O Tanque de Source do mod ({@link BulkSource}) vem primeiro: o
+     * lado dele é em {@code long}, e entre dois tanques bilhões passam numa visita. Com as jarras e
+     * máquinas do Ars, a {@link ISourceCap} é em {@code int}: corta no teto dela.
+     */
     public static final ScalarAccess ACCESS = new ScalarAccess() {
         @Override
         public @Nullable Object handler(RouterBlockEntity node, Direction machineFace) {
-            return node.arsSource(machineFace);
+            BulkSource bulk = node.bulkSource(machineFace);
+            return bulk != null ? bulk : node.arsSource(machineFace);
         }
 
         @Override
         public boolean canExtract(Object handler) {
-            return ((ISourceCap) handler).canExtract();
+            return handler instanceof BulkSource || ((ISourceCap) handler).canExtract();
         }
 
         @Override
         public boolean canReceive(Object handler) {
-            return ((ISourceCap) handler).canReceive();
+            return handler instanceof BulkSource || ((ISourceCap) handler).canReceive();
         }
 
         @Override
         public long extract(Object handler, long amount, boolean simulate) {
-            return ((ISourceCap) handler).extractSource(clamp(amount), simulate);
+            return handler instanceof BulkSource bulk ? bulk.extract(amount, simulate)
+                    : ((ISourceCap) handler).extractSource(clamp(amount), simulate);
         }
 
         @Override
         public long insert(Object handler, long amount, boolean simulate) {
-            return ((ISourceCap) handler).receiveSource(clamp(amount), simulate);
+            return handler instanceof BulkSource bulk ? bulk.insert(amount, simulate)
+                    : ((ISourceCap) handler).receiveSource(clamp(amount), simulate);
         }
     };
 

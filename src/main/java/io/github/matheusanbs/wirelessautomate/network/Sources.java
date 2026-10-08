@@ -1,9 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsSources;
+import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsStorage;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import net.minecraft.core.Direction;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -23,6 +26,20 @@ public final class Sources {
     /** Uma visita de uma origem de Source; sem o Ars não há portas de Source. */
     static boolean move(Port source, long now) {
         return LOADED && ScalarTransfer.move(source, now, ArsSources.ACCESS);
+    }
+
+    /** A capability do Ars no Tanque de Source; sem o Ars, nada. */
+    public static void registerStorage(RegisterCapabilitiesEvent event) {
+        if (LOADED) {
+            ArsStorage.register(event);
+        }
+    }
+
+    /** Põe o Tanque de Source no {@code SourceManager} do Ars (as máquinas dele tiram dali); sem o Ars, nada. */
+    public static void registerProvider(StorageSourceTankBlockEntity tank) {
+        if (LOADED) {
+            ArsStorage.registerProvider(tank);
+        }
     }
 
     private Sources() {

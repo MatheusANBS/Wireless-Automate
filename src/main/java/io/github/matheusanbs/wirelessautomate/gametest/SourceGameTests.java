@@ -8,6 +8,10 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -212,6 +216,200 @@ public final class SourceGameTests {
                     helper.assertValueEqual(amount(helper, A) + moved, 10_000, "Source perdida ou criada");
                 })
                 .thenSucceed();
+    }
+
+    // ---- Tanque de Source ----
+
+    /** Tanque de Source do tier em {@code pos}, sem roteador. */
+    private static StorageSourceTankBlockEntity placeTank(GameTestHelper helper, BlockPos pos, RouterTier tier) {
+        helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, tier));
+        return tank(helper, pos);
+    }
+
+    private static StorageSourceTankBlockEntity tank(GameTestHelper helper, BlockPos pos) {
+        return helper.getBlockEntity(pos);
+    }
+
+    /** Tanque de Source do tier em {@code pos}, com um roteador Ultimate em cima, na rede, no modo dado. */
+    private static RouterBlockEntity sourceTank(GameTestHelper helper, BlockPos pos, RouterTier tier, UUID network,
+            PortMode mode) {
+        placeTank(helper, pos, tier);
+        BlockPos routerPos = pos.above();
+        helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        router.setNetworkId(network);
+        router.setMode(ResourceType.SOURCE, Direction.UP, mode);
+        return router;
+    }
+
+    /** Uma posição a 2 blocos do tanque em {@code A} (dentro do raio 5 das máquinas do Ars), absoluta. */
+    private static BlockPos center(GameTestHelper helper) {
+        return helper.absolutePos(A.offset(2, 0, 0));
+    }
+
+    private static boolean providerAt(GameTestHelper helper, BlockPos pos) {
+        return SourceTestSupport.providerAt(helper.getLevel(), helper.absolutePos(pos));
+    }
+
+    /** Da jarra para o tanque pela rede. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void routerFillsTankFromJar(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-source-tanque");
+        RouterBlockEntity from = jar(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity to = sourceTank(helper, B, RouterTier.BASIC, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(from, to), "roteadores não registrados"))
+                .thenExecute(() -> set(helper, A, 5_000))
+                .thenWaitUntil(() -> {
+                    helper.assertValueEqual(tank(helper, B).store().stored(), 5_000L, "Source no tanque");
+                    helper.assertValueEqual(amount(helper, A), 0, "Source na jarra");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Entre dois tanques, bilhões numa visita: mais que {@link Integer#MAX_VALUE}, o que só o caminho
+     * bulk passa (a capability do Ars corta no {@code int}).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void twoTanksMoveBillionsInOneVisit(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-source-bilhoes");
+        RouterBlockEntity from = sourceTank(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity to = sourceTank(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+        tank(helper, A).store().insert(3_000_000_000L, false);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(from, to), "roteadores não registrados"))
+                .thenExecute(() -> {
+                    helper.assertTrue(from.bulkSource(Direction.UP) != null, "a origem não vê a BulkSource");
+                    helper.assertTrue(to.bulkSource(Direction.UP) != null, "o destino não vê a BulkSource");
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertValueEqual(tank(helper, B).store().stored(), 3_000_000_000L, "Source no destino");
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 0L, "Source na origem");
+                })
+                .thenSucceed();
+    }
+
+    /** As máquinas do Ars tiram do tanque pelo SourceManager; sem o bastante, o Ars devolve o que tirou. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void arsMachinesTakeFromTank(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.BASIC).store().insert(5_000, false);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(providerAt(helper, A), "sem provider do tanque"))
+                .thenExecute(() -> {
+                    helper.assertTrue(SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 2_000),
+                            "o Ars não tirou 2.000 do tanque");
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000L, "Source depois de tirar");
+                    helper.assertTrue(!SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 9_000),
+                            "o Ars tirou 9.000 de um tanque com 3.000");
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000L, "Source depois de devolver");
+                })
+                .thenSucceed();
+    }
+
+    /** Com mais que {@link Integer#MAX_VALUE} guardado, o Ars tira a quantia exata (o caso do int). */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void arsTakesExactAmountFromHugeTank(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.ULTIMATE).store().insert(3_000_000_000L, false);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(providerAt(helper, A), "sem provider do tanque"))
+                .thenExecute(() -> {
+                    helper.assertTrue(SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 1_000),
+                            "o Ars não tirou 1.000 do tanque");
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 2_999_999_000L, "Source depois de tirar");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Os Sourcelinks enxergam o tanque enquanto ele aceita Source. O {@code setSource} do Ars passa pelo
+     * {@code ScalarStore.replace}: limita à capacidade e avisa (o nível do bloco muda).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void sourcelinksSeeTank(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.BASIC);
+        BlockPos tankPos = helper.absolutePos(A);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(providerAt(helper, A), "sem provider do tanque"))
+                .thenExecute(() -> {
+                    List<BlockPos> empty = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
+                    helper.assertTrue(empty.contains(tankPos), "o tanque vazio não aceita Source: " + empty);
+                    SourceTestSupport.set(helper.getLevel(), tankPos, 200_000);
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 160_000L,
+                            "setSource limitado à capacidade");
+                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10,
+                            "nível depois do setSource");
+                    List<BlockPos> full = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
+                    helper.assertTrue(!full.contains(tankPos), "o tanque cheio ainda aceita Source");
+                })
+                .thenSucceed();
+    }
+
+    /** Quebrado o tanque, o provider dele deixa de valer. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void providerInvalidAfterBreak(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.BASIC);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(providerAt(helper, A), "sem provider do tanque"))
+                .thenExecute(() -> helper.setBlock(A, Blocks.AIR))
+                .thenIdle(1)
+                .thenExecute(() -> helper.assertTrue(!providerAt(helper, A), "provider válido sem o tanque"))
+                .thenSucceed();
+    }
+
+    /** A capability do Ars no tanque, em int: quantidade e capacidade cortadas no Integer.MAX_VALUE. */
+    @GameTest(template = "empty")
+    public static void tankHasSourceCapability(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        placeTank(helper, A, RouterTier.ULTIMATE).store().insert(3_000_000_000L, false);
+        helper.assertTrue(SourceTestSupport.hasSource(helper.getLevel(), helper.absolutePos(A)),
+                "tanque sem a capability ars_nouveau:source");
+        helper.assertValueEqual(SourceTestSupport.capacity(helper.getLevel(), helper.absolutePos(A)),
+                Integer.MAX_VALUE, "capacidade do Ultimate");
+        helper.assertValueEqual(amount(helper, A), Integer.MAX_VALUE, "quantidade acima do int");
+        helper.succeed();
+    }
+
+    /** A receita do tanque carrega com o Ars. */
+    @GameTest(template = "empty")
+    public static void sourceTankRecipeLoaded(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        helper.assertTrue(helper.getLevel().getRecipeManager()
+                .byKey(ResourceLocation.fromNamespaceAndPath("wirelessautomate", "storage_source_tank")).isPresent(),
+                "sem a receita do Tanque de Source");
+        helper.succeed();
     }
 
     private SourceGameTests() {

@@ -34,13 +34,17 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
 
     @Override
     public void setRemoved() {
-        SourceTankLevels.remove(this);
+        if (level != null && !level.isClientSide) {
+            SourceTankLevels.remove(this);
+        }
         super.setRemoved();
     }
 
     @Override
     public void onChunkUnloaded() {
-        SourceTankLevels.remove(this);
+        if (level != null && !level.isClientSide) {
+            SourceTankLevels.remove(this);
+        }
         super.onChunkUnloaded();
     }
 

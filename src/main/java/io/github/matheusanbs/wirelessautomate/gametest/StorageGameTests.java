@@ -756,29 +756,28 @@ public final class StorageGameTests {
         helper.startSequence()
                 .thenIdle(3)
                 .thenExecute(() -> {
-                    capacity.set(1_600_000L);
-                    SourceTankLevels.refreshAll();
-                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
-                    capacity.set(original);
-                    SourceTankLevels.refreshAll();
+                    try {
+                        capacity.set(1_600_000L);
+                        SourceTankLevels.refreshAll();
+                        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
+                    } finally {
+                        capacity.set(original);
+                        SourceTankLevels.refreshAll();
+                    }
                     helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível com a capacidade restaurada");
                 })
                 .thenSucceed();
-        // restaura mesmo se falhar: o teste seguinte lê a mesma config
-        helper.getLevel().getServer().tell(new net.minecraft.server.TickTask(helper.getLevel().getServer().getTickCount() + 40, () -> capacity.set(original)));
     }
 
-    /** Um bloco colocado com o nível errado (como um chunk salvo com outra capacidade) se corrige no tick seguinte à carga. */
+    /** Um bloco com o nível errado (como um chunk salvo com outra capacidade) se corrige pelo tick agendado no onLoad. */
     @GameTest(template = "empty")
     public static void sourceTankFixesWrongLevelOnLoad(GameTestHelper helper) {
         BlockPos abs = helper.absolutePos(A);
-        helper.setBlock(A, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
-                .setValue(RouterBlock.TIER, RouterTier.BASIC).setValue(StorageSourceTankBlock.FILL, 0));
-        StorageSourceTankBlockEntity tank = helper.getBlockEntity(A);
+        StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         tank.store().insert(80_000, false);
-        // Simula o estado salvo velho: o conteúdo está certo (nível 5) e o bloco diz 9; o tick agendado no onLoad corrige.
+        // No mesmo tick da colocação (antes do onLoad): o conteúdo é de nível 5 e o bloco diz 9.
         helper.getLevel().setBlock(abs, helper.getLevel().getBlockState(abs).setValue(StorageSourceTankBlock.FILL, 9), 3);
-        helper.getLevel().scheduleTick(abs, helper.getBlockState(A).getBlock(), 1);
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 9, "nível errado forçado");
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível corrigido"))
                 .thenSucceed();

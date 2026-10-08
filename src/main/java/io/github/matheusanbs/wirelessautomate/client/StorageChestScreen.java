@@ -19,6 +19,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -540,11 +541,13 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
         int trim = GuiPaint.tierColor(tier);
         GuiPaint.panel(g, x, y, imageWidth, imageHeight, trim);
 
-        // cabeçalho: nome e tier
-        GuiPaint.text(g, font, title, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
+        // cabeçalho: nome e tier, sem passar do botão Filtro (o nome é cortado com reticências)
         Component tierName = Component.translatable(tier.translationKey());
-        int pillX = x + X0 + font.width(title) + 6;
         int pillW = font.width(tierName) + 8;
+        int titleMax = Math.max(20, filterButton.getX() - 6 - (x + X0) - pillW - 6);
+        FormattedCharSequence titleText = GuiPaint.ellipsize(font, title, titleMax);
+        GuiPaint.text(g, font, titleText, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
+        int pillX = x + X0 + font.width(titleText) + 6;
         GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.INSET, trim);
         GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, trim);
 
@@ -575,9 +578,14 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
             g.fill(hx, hy, hx + 16, hy + 16, 0x50FFFFFF);
         }
         if (shown.isEmpty()) {
+            // Quebrado em linhas dentro da grade: na largura mínima a frase não cabe numa só.
             Component empty = view().types() == 0 ? tr("empty") : tr("no_match");
-            GuiPaint.textCentered(g, font, empty, x + GRID_X + cols * CELL / 2, y + GRID_Y + rows * CELL / 2 - 4,
-                    GuiPaint.MUTED);
+            List<FormattedCharSequence> lines = font.split(empty, cols * CELL - 8);
+            int lineY = y + GRID_Y + (rows * CELL - lines.size() * 10) / 2;
+            for (FormattedCharSequence line : lines) {
+                GuiPaint.text(g, font, line, x + GRID_X + (cols * CELL - font.width(line)) / 2, lineY, GuiPaint.MUTED);
+                lineY += 10;
+            }
         }
 
         // barra de rolagem
@@ -599,7 +607,9 @@ public class StorageChestScreen extends AbstractContainerScreen<StorageChestMenu
                 ? tr("usage.unlimited", RateFormat.abbreviate(header.total()), TierCoreItem.grouped(view().types()))
                 : tr("usage", RateFormat.abbreviate(header.total()), RateFormat.abbreviate(header.capacity()),
                         TierCoreItem.grouped(view().types()));
-        GuiPaint.text(g, font, usage, x + GRID_X - 1, y + usageY(), GuiPaint.MUTED);
+        // Cortada com reticências antes da porcentagem, se não couber.
+        int usageMax = barX() + 4 - GRID_X + 1 - (header.capacity() > 0 ? 30 : 0);
+        GuiPaint.text(g, font, GuiPaint.ellipsize(font, usage, usageMax), x + GRID_X - 1, y + usageY(), GuiPaint.MUTED);
         if (header.capacity() > 0) {
             Component percent = Component.literal(percent(header.total(), header.capacity()));
             GuiPaint.textRight(g, font, percent, x + barX() + 4, y + usageY(), GuiPaint.FG);

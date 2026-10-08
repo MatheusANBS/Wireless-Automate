@@ -634,25 +634,27 @@ public final class StorageGameTests {
     }
 
     /**
-     * Tanque → Tanque no Ultimate pelo roteador: 50 milhões de mB passam em poucos ticks (a API de
-     * fluido já passa até 2 bilhões por chamada), sem fluido criado nem perdido.
+     * Tanque → Tanque no Ultimate pelo roteador: 30 bilhões de mB passam em poucos ticks. Pela API de
+     * fluido do NeoForge ({@code int}) seriam no máximo 2,1 bilhões por tick, ou 15 ticks; entre
+     * Tanques o roteador usa o {@code BulkFluids}, em {@code long}. Sem fluido criado nem perdido.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void tankToTankMovesMillions(GameTestHelper helper) {
+    public static void tankToTankMovesBeyondInt(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-tanque-tanque");
-        storageTank(helper, A, RouterTier.ULTIMATE).storage().insert(new FluidStack(Fluids.WATER, 1), 50_000_000L, false);
+        long amount = 30_000_000_000L;
+        storageTank(helper, A, RouterTier.ULTIMATE).storage().insert(new FluidStack(Fluids.WATER, 1), amount, false);
         storageTank(helper, B, RouterTier.ULTIMATE);
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.INSERT);
         long[] started = new long[1];
         helper.onEachTick(() -> helper.assertValueEqual(fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER),
-                50_000_000L, "água"));
+                amount, "água"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenExecute(() -> started[0] = helper.getTick())
-                .thenWaitUntil(() -> helper.assertValueEqual(fluid(helper, B, Fluids.WATER), 50_000_000L, "água no destino"))
-                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 20,
-                        "levou " + (helper.getTick() - started[0]) + " ticks"))
+                .thenWaitUntil(() -> helper.assertValueEqual(fluid(helper, B, Fluids.WATER), amount, "água no destino"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
+                        "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
                 .thenSucceed();
     }
 
@@ -670,20 +672,26 @@ public final class StorageGameTests {
     }
 
     /**
-     * Bateria → Bateria no Ultimate pelo roteador: 5 bilhões de FE (mais que um {@code int}) passam
-     * em poucos ticks, sem energia criada nem perdida.
+     * Bateria → Bateria no Ultimate pelo roteador: 50 bilhões de FE passam em poucos ticks. Pela API
+     * de energia do NeoForge ({@code int}) seriam no máximo 2,1 bilhões por tick, ou 24 ticks; entre
+     * Baterias o roteador usa o {@code BulkEnergy}, em {@code long}. Sem energia criada nem perdida.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void batteryToBatteryMovesBillions(GameTestHelper helper) {
+    public static void batteryToBatteryMovesBeyondInt(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-bateria-bateria");
-        storageBattery(helper, A, RouterTier.ULTIMATE).store().insert(5_000_000_000L, false);
+        long amount = 50_000_000_000L;
+        storageBattery(helper, A, RouterTier.ULTIMATE).store().insert(amount, false);
         storageBattery(helper, B, RouterTier.ULTIMATE);
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.INSERT);
-        helper.onEachTick(() -> helper.assertValueEqual(energy(helper, A) + energy(helper, B), 5_000_000_000L, "energia"));
+        long[] started = new long[1];
+        helper.onEachTick(() -> helper.assertValueEqual(energy(helper, A) + energy(helper, B), amount, "energia"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> helper.assertValueEqual(energy(helper, B), 5_000_000_000L, "energia no destino"))
+                .thenExecute(() -> started[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(energy(helper, B), amount, "energia no destino"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
+                        "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
                 .thenSucceed();
     }
 

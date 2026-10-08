@@ -9,9 +9,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Conteúdo do Tanque: fluidos (fluido e componentes) com quantidade {@code long} em mB, quantos
- * fluidos diferentes couberem na capacidade. As regras estão no {@link KeyedStorage}.
+ * fluidos diferentes couberem na capacidade. As regras estão no {@link KeyedStorage}. É também a
+ * {@link BulkFluids} que o roteador usa.
  */
-public final class FluidStorage extends KeyedStorage<FluidStack> {
+public final class FluidStorage extends KeyedStorage<FluidStack> implements BulkFluids {
     /** Mesmo fluido e mesmos componentes, como o {@link FluidStack#isSameFluidSameComponents}. */
     public static final Hash.Strategy<FluidStack> FLUID_AND_COMPONENTS = new Hash.Strategy<>() {
         @Override
@@ -50,6 +51,7 @@ public final class FluidStorage extends KeyedStorage<FluidStack> {
     }
 
     /** Quanto há do fluido, com quaisquer componentes (O(tipos)). */
+    @Override
     public long countFluid(FluidStack key) {
         return countWhere(stored -> FluidStack.isSameFluid(stored, key));
     }

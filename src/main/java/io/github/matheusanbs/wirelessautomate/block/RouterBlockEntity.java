@@ -16,6 +16,8 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
+import io.github.matheusanbs.wirelessautomate.storage.BulkFluids;
 import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -100,6 +102,8 @@ public class RouterBlockEntity extends BlockEntity {
     /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
     private final BlockCapabilityCache<BulkItems, @Nullable Direction>[] bulkItemCaches = newCaches();
+    private final BlockCapabilityCache<BulkEnergy, @Nullable Direction>[] bulkEnergyCaches = newCaches();
+    private final BlockCapabilityCache<BulkFluids, @Nullable Direction>[] bulkFluidCaches = newCaches();
     private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
     private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
     /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
@@ -539,8 +543,24 @@ public class RouterBlockEntity extends BlockEntity {
         return capability(bulkItemCaches, BulkItems.BLOCK, ResourceType.ITEM, machineFace);
     }
 
+    /**
+     * Fluidos por tipo em {@code long} (o Tanque do mod) pela face, ou {@code null} se a máquina não
+     * tiver. O motor tenta esta antes de {@link #fluids}: sem o teto de {@link Integer#MAX_VALUE} mB.
+     */
+    public @Nullable BulkFluids bulkFluids(Direction machineFace) {
+        return capability(bulkFluidCaches, BulkFluids.BLOCK, ResourceType.FLUID, machineFace);
+    }
+
     public @Nullable IFluidHandler fluids(Direction machineFace) {
         return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, ResourceType.FLUID, machineFace);
+    }
+
+    /**
+     * Energia em {@code long} (a Bateria do mod) pela face, ou {@code null} se a máquina não tiver. O
+     * motor tenta esta antes de {@link #energy}: sem o teto de {@link Integer#MAX_VALUE} FE por chamada.
+     */
+    public @Nullable BulkEnergy bulkEnergy(Direction machineFace) {
+        return capability(bulkEnergyCaches, BulkEnergy.BLOCK, ResourceType.ENERGY, machineFace);
     }
 
     public @Nullable IEnergyStorage energy(Direction machineFace) {
@@ -601,6 +621,8 @@ public class RouterBlockEntity extends BlockEntity {
     private void clearCaches() {
         Arrays.fill(itemCaches, null);
         Arrays.fill(bulkItemCaches, null);
+        Arrays.fill(bulkEnergyCaches, null);
+        Arrays.fill(bulkFluidCaches, null);
         Arrays.fill(fluidCaches, null);
         Arrays.fill(energyCaches, null);
         Arrays.fill(chemicalCaches, null);

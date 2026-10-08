@@ -6,7 +6,7 @@ import java.util.function.LongSupplier;
  * Conteúdo da Bateria: energia em FE, {@code long}, até a capacidade do tier (lida a cada entrada;
  * {@code <= 0} é sem limite). Cada mudança real chama {@code onChange} e sobe a {@link #version()}.
  */
-public final class EnergyStore {
+public final class EnergyStore implements BulkEnergy {
     private final Runnable onChange;
     private final LongSupplier capacity;
     private long stored;
@@ -34,6 +34,7 @@ public final class EnergyStore {
     }
 
     /** Guarda até {@code amount}; devolve quanto coube. */
+    @Override
     public long insert(long amount, boolean simulate) {
         long accepted = StorageMath.accept(stored, capacity.getAsLong(), amount);
         if (accepted > 0 && !simulate) {
@@ -44,6 +45,7 @@ public final class EnergyStore {
     }
 
     /** Tira até {@code amount}; devolve quanto saiu. */
+    @Override
     public long extract(long amount, boolean simulate) {
         long taken = Math.max(0, Math.min(amount, stored));
         if (taken > 0 && !simulate) {

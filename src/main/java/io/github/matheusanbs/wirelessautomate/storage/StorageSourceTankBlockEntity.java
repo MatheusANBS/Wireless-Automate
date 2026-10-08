@@ -44,7 +44,8 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
         }
         int fill = StorageMath.fillLevel(store().stored(), capacity());
         if (state.getValue(StorageSourceTankBlock.FILL) != fill) {
-            level.setBlock(worldPosition, state.setValue(StorageSourceTankBlock.FILL, fill), Block.UPDATE_CLIENTS);
+            level.setBlock(worldPosition, state.setValue(StorageSourceTankBlock.FILL, fill),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE); // o formato não muda com o nível
         }
     }
 

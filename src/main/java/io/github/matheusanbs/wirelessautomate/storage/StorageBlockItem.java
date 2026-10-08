@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
 import net.minecraft.ChatFormatting;

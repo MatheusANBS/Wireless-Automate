@@ -106,7 +106,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import net.neoforged.neoforge.fluids.FluidStack;

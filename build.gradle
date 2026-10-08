@@ -1,3 +1,6 @@
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+
 plugins {
     id 'java-library'
     id 'idea'
@@ -335,6 +338,13 @@ tasks.matching { it.name == 'runGameTestServerSource' }.configureEach {
         sourceTestWorld.deleteDir()
     }
 }
+
+// Cada servidor ou cliente de dev usa ~3 GB, e o org.gradle.parallel poderia rodá-los juntos numa mesma
+// invocação. Este serviço tem uma vaga só: as tarefas que sobem o jogo rodam uma de cada vez.
+abstract class OneGame implements BuildService<BuildServiceParameters.None> {}
+def oneGame = gradle.sharedServices.registerIfAbsent('oneGame', OneGame) { maxParallelUsages = 1 }
+tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 'runGameTestServerSource', 'runClient', 'runBenchServer'] }
+        .configureEach { usesService(oneGame) }
 
 // O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
 // Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.

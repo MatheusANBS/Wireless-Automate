@@ -293,7 +293,9 @@ public final class SourceGameTests {
                     helper.assertTrue(from.bulkSource(Direction.UP) != null, "a origem não vê a BulkSource");
                     helper.assertTrue(to.bulkSource(Direction.UP) != null, "o destino não vê a BulkSource");
                 })
-                .thenWaitUntil(() -> {
+                // numa visita só: sem o caminho em bloco, a primeira leitura não vazia seria Integer.MAX_VALUE
+                .thenWaitUntil(() -> helper.assertTrue(tank(helper, B).store().stored() > 0, "nada chegou ao destino"))
+                .thenExecute(() -> {
                     helper.assertValueEqual(tank(helper, B).store().stored(), 3_000_000_000L, "Source no destino");
                     helper.assertValueEqual(tank(helper, A).store().stored(), 0L, "Source na origem");
                 })
@@ -370,7 +372,7 @@ public final class SourceGameTests {
     /**
      * Tanque Ultimate com o {@code int} cheio (mais que {@link Integer#MAX_VALUE}) não aparece para os
      * Sourcelinks: eles calculam a vazão como máximo − guardado e passariam 0 para sempre. Com espaço no
-     * {@code int}, aparece. Um {@code setSource(Integer.MAX_VALUE)} nesse estado não derruba o conteúdo.
+     * {@code int}, aparece. Um {@code setSource(Integer.MAX_VALUE)} nesse estado não derruba o conteúdo e um {@code setSource(MAX - 1000)} tira só 1.000.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void sourcelinksSkipTankFullAsInt(GameTestHelper helper) {
@@ -388,7 +390,11 @@ public final class SourceGameTests {
                     SourceTestSupport.set(helper.getLevel(), tankPos, Integer.MAX_VALUE);
                     helper.assertValueEqual(tank(helper, A).store().stored(), 3_000_000_000L,
                             "setSource(MAX) derrubou o conteúdo acima do int");
-                    tank(helper, A).store().extract(3_000_000_000L - 1_000_000L, false);
+                    // um setSource(getSource() - n) de terceiros tira só n, não derruba para o teto do int
+                    SourceTestSupport.set(helper.getLevel(), tankPos, Integer.MAX_VALUE - 1000);
+                    helper.assertValueEqual(tank(helper, A).store().stored(), 2_999_999_000L,
+                            "setSource(MAX - 1000) não tirou só 1000");
+                    tank(helper, A).store().extract(2_999_999_000L - 1_000_000L, false);
                     List<BlockPos> room = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(room.contains(tankPos), "o tanque com 1.000.000 não aparece: " + room);
                 })

@@ -39,15 +39,14 @@ public final class ArsStorage {
     }
 
     /**
-     * O {@code setSource} do Ars. Com mais que {@link Integer#MAX_VALUE} guardado, o Ars só enxerga
-     * {@link Integer#MAX_VALUE}: um {@code setSource(getSource())} de terceiros derrubaria o conteúdo
-     * para o teto do {@code int}, então esse pedido é ignorado.
+     * O {@code setSource} do Ars, tratado como delta sobre a visão em {@code int}: o Ars só enxerga
+     * {@link Integer#MAX_VALUE}, então um {@code setSource(getSource() - n)} de terceiros num tanque com
+     * mais que isso tira só {@code n} e não derruba o conteúdo para o teto do {@code int}. Abaixo do teto
+     * é o mesmo que trocar o valor; {@code setSource(getSource())} não muda nada.
      */
     private static void setFromArs(ScalarStore store, int source) {
-        if (store.stored() > Integer.MAX_VALUE && source == Integer.MAX_VALUE) {
-            return;
-        }
-        store.replace(Math.max(0, source));
+        long stored = store.stored();
+        store.replace(stored + ((long) Math.max(0, source) - clamp(stored)));
     }
 
     private static int clamp(long value) {
@@ -139,8 +138,8 @@ public final class ArsStorage {
 
         @Override
         public boolean isValid() {
-            Level level = tank.getLevel();
-            return !tank.isRemoved() && level != null && level.getBlockEntity(tank.getBlockPos()) == tank;
+            // trocar o block entity, quebrar e descarregar o chunk passam todos por setRemoved
+            return !tank.isRemoved() && tank.getLevel() != null;
         }
 
         @Override

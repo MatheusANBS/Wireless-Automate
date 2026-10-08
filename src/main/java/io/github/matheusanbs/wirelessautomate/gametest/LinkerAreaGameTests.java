@@ -300,6 +300,22 @@ public final class LinkerAreaGameTests {
         helper.succeed();
     }
 
+    /** "Todos" da tela: {@code SET_TABS} grava a máscara pedida, e um conjunto sem tipo disponível é recusado. */
+    @GameTest(template = "empty")
+    public static void setTabsMarksAllAvailable(GameTestHelper helper) {
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.FLUID));
+        ServerPlayer player = player(helper, linker);
+        player.containerMenu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
+                LinkerSnapshot.capture(player, linker, null));
+        helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
+                Optional.empty(), "", LinkerTabs.available(LoadedTypes.LIST).mask())), "recusou Todos");
+        helper.assertTrue(LinkerItem.tabs(linker).isAll(LoadedTypes.LIST), "Todos não marcou tudo");
+        helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
+                Optional.empty(), "", 0)), "aceitou conjunto vazio");
+        helper.assertTrue(LinkerItem.tabs(linker).isAll(LoadedTypes.LIST), "conjunto vazio mudou as abas");
+        helper.succeed();
+    }
+
     /**
      * Ações da tela: abas, modo, criar rede (nome vazio recusado, repetido só ativa) e limpar os
      * cantos; o menu manda um estado novo depois de cada uma. Sem o Vinculador na mão, nada vale.

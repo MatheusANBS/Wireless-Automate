@@ -27,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
@@ -1885,6 +1886,16 @@ public final class DevEndToEnd {
                     return areaNetwork.equals(onServer(server -> NetworkSavedData.get(server).activeNetwork(playerId)))
                             && linkerScreen().getMenu().snapshot().active().equals(Optional.of(areaNetwork));
                 }, () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
+        // de Todos, o botão deixa só a primeira aba; apertado de novo, marca tudo outra vez
+        list.add(new Step("Todos com tudo marcado deixa uma aba", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),
+                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 1),
+                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
+        list.add(new Step("Todos marca tudo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),
+                () -> serverLinker(stack -> LinkerItem.tabs(stack).isAll(LoadedTypes.LIST)),
+                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
+        list.add(capture("8b-vinculador-chips"));
         list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
                 () -> {
                     // de Todos, desmarca as outras caixas (só aparecem os tipos disponíveis)
@@ -1901,7 +1912,7 @@ public final class DevEndToEnd {
                         && linkerScreen().getMenu().snapshot().already() == 0,
                 () -> "abas na tela " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(new Step("Vincular", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count"), "Vincular")),
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count.types"), "Vincular")),
                 () -> onServer(server -> {
                     RouterBlockEntity a = router(server, routerA);
                     RouterBlockEntity b = router(server, routerB);

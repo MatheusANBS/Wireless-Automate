@@ -14,7 +14,6 @@ import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.gui.GuiGraphics;
@@ -59,11 +58,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int LW = 104;
     private static final int LIST_Y = 42;
     private static final int ROW = 12;
-    private static final int ROWS = 6;
-    private static final int LIST_H = ROWS * ROW + 4;
-    private static final int NEW_Y = LIST_Y + LIST_H + 4;
-    private static final int TYPE_LABEL_Y = NEW_Y + 20;
-    private static final int TYPE_Y = TYPE_LABEL_Y + 11;
+    /** Botões de linha criados (o máximo de linhas da lista). */
+    private static final int MAX_ROWS = 6;
     private static final int TYPE_H = 16;
     // coluna da direita: o corpo do modo
     private static final int RX = X0 + LW + 8;
@@ -88,6 +84,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private FlatButton createButton;
     private FlatButton linkButton;
     private FlatButton clearButton;
+    private FlatButton allButton;
     private EditBox nameBox;
 
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title) {
@@ -174,6 +171,34 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return index == 0 ? null : snapshot().networks().get(index - 1);
     }
 
+    // layout da coluna da esquerda: a lista encolhe quando os tipos precisam de mais linhas
+
+    /** Linhas de tipo (dois chips por linha) dos tipos disponíveis. */
+    private int typeRows() {
+        return (snapshot().available().types().size() + 1) / 2;
+    }
+
+    /** Linhas da lista de redes: 6 com duas linhas de tipo, 5 com três. */
+    private int listRows() {
+        return Math.max(1, Math.min(MAX_ROWS, 8 - typeRows()));
+    }
+
+    private int listH() {
+        return listRows() * ROW + 4;
+    }
+
+    private int newY() {
+        return LIST_Y + listH() + 4;
+    }
+
+    private int typeLabelY() {
+        return newY() + 20;
+    }
+
+    private int typeY() {
+        return typeLabelY() + 11;
+    }
+
     /** Roteadores que o Vincular mudaria. */
     private int toLink() {
         return snapshot().inside() - snapshot().already();
@@ -199,19 +224,19 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                     () -> setMode(mode)).tooltip(() -> tr("mode." + mode.getSerializedName() + ".tooltip")));
         }
 
-        for (int i = 0; i < ROWS; i++) {
+        for (int i = 0; i < MAX_ROWS; i++) {
             int row = i;
             FlatButton button = add(new FlatButton(x + X0 + 1, y + LIST_Y + 2 + i * ROW, LW - 2, ROW, Component.empty(),
                     (g, b, hovered) -> paintRow(g, b, hovered, row), () -> chooseRow(row))
                     .tooltip(() -> rowTooltip(row)));
             rowButtons.add(button);
         }
-        newButton = add(new FlatButton(x + X0, y + NEW_Y, LW, 14, tr("network.new"),
+        newButton = add(new FlatButton(x + X0, y + newY(), LW, 14, tr("network.new"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("network.new"), GuiPaint.FG), this::startCreate)
                 .tooltip(() -> tr("network.new.tooltip")));
-        createButton = add(new FlatButton(x + X0 + LW - 26, y + NEW_Y, 26, 14, tr("network.create"),
+        createButton = add(new FlatButton(x + X0 + LW - 26, y + newY(), 26, 14, tr("network.create"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("network.create"), GuiPaint.FG), () -> finishCreate(true)));
-        nameBox = new EditBox(font, x + X0 + 4, y + NEW_Y + 3, LW - 34, 9, tr("network.name"));
+        nameBox = new EditBox(font, x + X0 + 4, y + newY() + 3, LW - 34, 9, tr("network.name"));
         nameBox.setBordered(false);
         nameBox.setMaxLength(LinkerActionPayload.MAX_NAME_LENGTH);
         nameBox.setTextColor(GuiPaint.FG);
@@ -223,13 +248,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             setFocused(nameBox);
         }
 
+        // a posição dos chips e do Todos vem de refresh(), pela ordem entre os tipos disponíveis
         int typeW = (LW - 2) / 2;
         for (int i = 0; i < TABS.length; i++) {
             ResourceType t = TABS[i];
-            tabButtons.add(add(new FlatButton(x + X0 + (i % 2) * (typeW + 2), y + TYPE_Y + (i / 2) * (TYPE_H + 2), typeW,
-                    TYPE_H, typeName(t), (g, b, hovered) -> paintCheck(g, b, hovered, t), () -> toggleTab(t))
+            tabButtons.add(add(new FlatButton(x + X0, y + typeY(), typeW, TYPE_H, typeName(t),
+                    (g, b, hovered) -> paintCheck(g, b, hovered, t), () -> toggleTab(t))
                     .tooltip(() -> tabTooltip(t))));
         }
+        allButton = add(new FlatButton(x + X0 + LW - 50, y + typeLabelY() - 3, 50, 12, tr("type.all"),
+                (g, b, hovered) -> paintAll(g, b, hovered), this::setAllTabs).tooltip(this::allTooltip));
 
         linkButton = add(new FlatButton(x + RX, y + ACTION_Y, RW - 58, 16, tr("link.count", 0), this::paintLink,
                 this::link).tooltip(this::linkTooltip));
@@ -248,8 +276,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void refresh() {
         LinkerSnapshot s = snapshot();
         int rows = rowCount();
-        scroll = Math.max(0, Math.min(scroll, rows - ROWS));
-        for (int i = 0; i < ROWS; i++) {
+        scroll = Math.max(0, Math.min(scroll, rows - listRows()));
+        for (int i = 0; i < MAX_ROWS; i++) {
             FlatButton row = rowButtons.get(i);
             int index = i + scroll;
             row.visible = index < rows;
@@ -257,9 +285,25 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             row.setMessage(!row.visible ? Component.empty()
                     : entry == null ? tr("network.unlink") : Component.literal(entry.name()));
         }
-        for (int i = 0; i < TABS.length; i++) {
-            tabButtons.get(i).visible = s.available().contains(TABS[i]);
+        // a lista encolhe quando os tipos precisam de mais linhas; os botões que passam dela somem
+        for (int i = listRows(); i < MAX_ROWS; i++) {
+            rowButtons.get(i).visible = false;
         }
+        int typeW = (LW - 2) / 2;
+        int shown = 0;
+        for (int i = 0; i < TABS.length; i++) {
+            FlatButton chip = tabButtons.get(i);
+            chip.visible = s.available().contains(TABS[i]);
+            if (chip.visible) {
+                chip.setX(leftPos + X0 + (shown % 2) * (typeW + 2));
+                chip.setY(topPos + typeY() + (shown / 2) * (TYPE_H + 2));
+                shown++;
+            }
+        }
+        allButton.setY(topPos + typeLabelY() - 3);
+        newButton.setY(topPos + newY());
+        createButton.setY(topPos + newY());
+        nameBox.setY(topPos + newY() + 3);
         newButton.visible = !creating;
         createButton.visible = creating;
         createButton.active = !draft.strip().isEmpty();
@@ -305,6 +349,24 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             return;
         }
         send(Op.TOGGLE_TAB, Optional.empty(), "", t.ordinal());
+    }
+
+    /**
+     * "Todos": com todas as abas marcadas deixa só a primeira disponível (não dá para ficar sem
+     * nenhuma); senão marca todas as disponíveis.
+     */
+    private void setAllTabs() {
+        LinkerSnapshot s = snapshot();
+        List<ResourceType> available = s.available().types();
+        if (available.isEmpty()) {
+            return;
+        }
+        LinkerTabs next = allTabs() ? LinkerTabs.of(available.get(0)) : LinkerTabs.available(available);
+        if (preview) {
+            apply(with(s, s.active(), s.unlink(), next, s.mode()));
+            return;
+        }
+        send(Op.SET_TABS, Optional.empty(), "", next.mask());
     }
 
     private void chooseRow(int row) {
@@ -398,7 +460,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mouseX >= leftPos + X0 && mouseX < leftPos + X0 + LW && mouseY >= topPos + LIST_Y
-                && mouseY < topPos + LIST_Y + LIST_H) {
+                && mouseY < topPos + LIST_Y + listH()) {
             scroll -= (int) Math.signum(scrollY);
             refresh();
             return true;
@@ -438,15 +500,22 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         refresh();
+        GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
                 Component tooltip = button.currentTooltip();
                 if (tooltip != null) {
                     setTooltipForNextRenderPass(tooltip);
+                    return;
                 }
-                return;
+                break;
             }
+        }
+        // texto abreviado: a dica traz o texto inteiro, se nenhuma outra dica está no ar
+        Component clipped = GuiText.clipAt(mouseX, mouseY);
+        if (clipped != null) {
+            setTooltipForNextRenderPass(clipped);
         }
     }
 
@@ -462,34 +531,33 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         int y = topPos;
         GuiPaint.panel(g, x, y, W, H, ACCENT);
 
-        GuiPaint.text(g, font, title, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
+        int titleW = font.width(title);
+        GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
         Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
-        int headX = X0 + font.width(title) + 8;
+        int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
         int headW = X1 - LinkerMode.values().length * 46 - 4 - headX;
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, typeText, headW), x + headX, y + HEAD_Y + 3,
-                unlink() ? UNLINK : GuiPaint.MUTED);
+        GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? UNLINK : GuiPaint.MUTED);
         g.fill(x + X0, y + SEP_Y, x + X1, y + SEP_Y + 1, GuiPaint.LINE);
 
         // rede ativa
         GuiPaint.text(g, font, tr("network.label"), x + X0, y + BODY_Y, GuiPaint.MUTED);
-        GuiPaint.box(g, x + X0, y + LIST_Y, LW, LIST_H, GuiPaint.INSET, GuiPaint.LINE);
+        GuiPaint.box(g, x + X0, y + LIST_Y, LW, listH(), GuiPaint.INSET, GuiPaint.LINE);
         if (s.networks().isEmpty() && scroll == 0) {
             // embaixo da linha "Nenhuma (desvincular)"
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.empty"), LW - 10), x + X0 + 5,
-                    y + LIST_Y + 4 + ROW, GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("network.empty"), x + X0 + 5, y + LIST_Y + 4 + ROW, LW - 10, GuiPaint.MUTED);
         }
         if (scroll > 0) {
             GuiPaint.text(g, font, Component.literal("▲"), x + X0 + LW - 9, y + LIST_Y + 2, GuiPaint.MUTED);
         }
-        if (scroll + ROWS < rowCount()) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + X0 + LW - 9, y + LIST_Y + LIST_H - 10, GuiPaint.MUTED);
+        if (scroll + listRows() < rowCount()) {
+            GuiPaint.text(g, font, Component.literal("▼"), x + X0 + LW - 9, y + LIST_Y + listH() - 10, GuiPaint.MUTED);
         }
         if (creating) {
-            GuiPaint.box(g, x + X0, y + NEW_Y, LW - 28, 14, GuiPaint.INSET, ACCENT);
+            GuiPaint.box(g, x + X0, y + newY(), LW - 28, 14, GuiPaint.INSET, ACCENT);
         }
 
-        GuiPaint.text(g, font, tr("type.label"), x + X0, y + TYPE_LABEL_Y, GuiPaint.MUTED);
+        GuiPaint.text(g, font, tr("type.label"), x + X0, y + typeLabelY(), GuiPaint.MUTED);
 
         // corpo do modo
         g.fill(x + RX - 5, y + BODY_Y, x + RX - 4, y + H - 9, GuiPaint.LINE);
@@ -504,19 +572,13 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         int lineY = y;
         Component main = unlink() ? tr("single.unlink.body")
                 : tr("single.body", Component.literal(activeName().getString()).withColor(activeColor()));
-        for (FormattedCharSequence line : font.split(main, RW)) {
-            GuiPaint.text(g, font, line, x, lineY, GuiPaint.FG);
-            lineY += 10;
-        }
+        lineY += GuiText.wrap(g, font, main, x, lineY, RW, 4, GuiPaint.FG);
         lineY += 6;
         Component typeHint = unlink()
                 ? (allTabs() ? tr("single.unlink.all") : tr("single.unlink.tabs", tabsName()))
                 : (allTabs() ? tr("single.all") : tr("single.tabs", tabsName()));
         for (Component hint : List.of(typeHint, tr("single.toggle"), tr("single.open"))) {
-            for (FormattedCharSequence line : font.split(hint, RW)) {
-                GuiPaint.text(g, font, line, x, lineY, GuiPaint.MUTED);
-                lineY += 10;
-            }
+            lineY += GuiText.wrap(g, font, hint, x, lineY, RW, 3, GuiPaint.MUTED);
             lineY += 4;
         }
     }
@@ -638,19 +700,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         // estado (contagem ou o que impede) e, embaixo, o detalhe ou o resultado do último Vincular
         int sy = y + MAP_H + 25;
         if (s.problem() != LinkerProblem.NONE) {
-            List<FormattedCharSequence> lines = font.split(status(s), RW);
-            for (int i = 0; i < Math.min(2, lines.size()); i++) {
-                GuiPaint.text(g, font, lines.get(i), x, sy + i * 11, statusColor(s));
-            }
+            GuiText.wrap(g, font, status(s), x, sy, RW, 2, statusColor(s));
             return;
         }
         // depois do Vincular, o resultado toma o lugar da contagem (que viraria "N já na rede")
         Component head = s.outcome().map(this::outcomeText).orElse(status(s));
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, head, RW), x, sy, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
+        GuiText.draw(g, font, head, x, sy, RW, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         Component detail = s.outcome().isPresent() ? outcomeDetail(s.outcome().get()) : detail(s);
         if (detail != null) {
             boolean unloaded = s.outcome().map(o -> o.unloadedChunks() > 0).orElse(s.unloadedChunks() > 0);
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, detail, RW), x, sy + 11, unloaded ? WARN : GuiPaint.MUTED);
+            GuiText.draw(g, font, detail, x, sy + 11, RW, unloaded ? WARN : GuiPaint.MUTED);
         }
     }
 
@@ -752,7 +811,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     /** "Vincular 9" ou "Desvincular 9". */
     private Component linkLabel() {
-        return tr(unlink() ? "unlink.count" : "link.count", toLink());
+        if (allTabs()) {
+            return tr(unlink() ? "unlink.count" : "link.count", toLink());
+        }
+        return tr(unlink() ? "unlink.count.types" : "link.count.types", toLink(),
+                snapshot().tabs().effective(snapshot().available().types()).size());
     }
 
     private Component tabTooltip(ResourceType t) {
@@ -771,7 +834,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (index >= rowCount()) {
             return;
         }
-        int scrollSpace = rowCount() > ROWS ? 10 : 0;
+        int scrollSpace = rowCount() > listRows() ? 10 : 0;
         NetworkEntry entry = entryAt(index);
         if (entry == null) {
             // "Nenhuma (desvincular)": anel vazio na cor do modo
@@ -783,8 +846,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), UNLINK);
             }
             GuiPaint.outline(g, b.getX() + 5, b.getY() + 3, 6, 6, UNLINK);
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("network.unlink"), b.getWidth() - 18 - scrollSpace),
-                    b.getX() + 14, b.getY() + 2, selected ? GuiPaint.FG : GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("network.unlink"), b.getX() + 14, b.getY() + 2, b.getWidth() - 18 - scrollSpace,
+                    selected ? GuiPaint.FG : GuiPaint.MUTED);
             return;
         }
         boolean selected = !unlink() && Optional.of(entry.id()).equals(snapshot().active());
@@ -795,8 +858,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
         }
         GuiPaint.dot(g, b.getX() + 5, b.getY() + 3, 0xFF000000 | entry.color());
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(entry.name()), b.getWidth() - 18 - scrollSpace),
-                b.getX() + 14, b.getY() + 2, entry.owned() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
+        GuiText.draw(g, font, Component.literal(entry.name()), b.getX() + 14, b.getY() + 2,
+                b.getWidth() - 18 - scrollSpace,
+                entry.owned() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
     }
 
     private @Nullable Component rowTooltip(int row) {
@@ -830,20 +894,42 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
     }
 
-    /** Caixa de uma aba: quadrado marcado na cor do Vinculador e o nome. */
+    /** Chip de um tipo: caixa de marcar, ícone e nome; marcado, a borda fica na cor do tipo (ou do desvincular). */
     private void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
         boolean checked = snapshot().tabs().contains(t);
-        if (hovered) {
-            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
-        }
+        int border = checked ? (unlink() ? UNLINK : ResourceStyle.color(t))
+                : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
+                border);
         int bx = b.getX() + 3;
-        int by = b.getY() + (b.getHeight() - 9) / 2;
-        GuiPaint.box(g, bx, by, 9, 9, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        int by = b.getY() + (b.getHeight() - 7) / 2;
+        GuiPaint.box(g, bx, by, 7, 7, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         if (checked) {
-            g.fill(bx + 2, by + 2, bx + 7, by + 7, unlink() ? UNLINK : ACCENT);
+            g.fill(bx + 2, by + 2, bx + 5, by + 5, unlink() ? UNLINK : ACCENT);
         }
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, typeName(t), b.getWidth() - 17), bx + 13,
-                b.getY() + (b.getHeight() - 8) / 2, checked ? GuiPaint.FG : GuiPaint.MUTED);
+        int ix = bx + 7 + 3;
+        ResourceStyle.drawIcon(g, t, ix, b.getY() + (b.getHeight() - ResourceStyle.ICON) / 2);
+        int tx = ix + ResourceStyle.ICON + 3;
+        GuiText.draw(g, font, typeName(t), tx, b.getY() + (b.getHeight() - 8) / 2,
+                b.getX() + b.getWidth() - 3 - tx, checked ? GuiPaint.FG : GuiPaint.MUTED);
+    }
+
+    /** Todos: caixa de marcar, cheia quando todas as abas estão marcadas. */
+    private void paintAll(GuiGraphics g, FlatButton b, boolean hovered) {
+        boolean checked = allTabs();
+        int bx = b.getX() + 2;
+        int by = b.getY() + (b.getHeight() - 7) / 2;
+        GuiPaint.box(g, bx, by, 7, 7, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        if (checked) {
+            g.fill(bx + 2, by + 2, bx + 5, by + 5, unlink() ? UNLINK : ACCENT);
+        }
+        int tx = bx + 7 + 3;
+        GuiText.draw(g, font, tr("type.all"), tx, b.getY() + (b.getHeight() - 8) / 2, b.getX() + b.getWidth() - 2 - tx,
+                checked || hovered ? GuiPaint.FG : GuiPaint.MUTED);
+    }
+
+    private Component allTooltip() {
+        return allTabs() ? tr("type.all.tooltip.one") : tr("type.all.tooltip");
     }
 
     private void paintText(GuiGraphics g, FlatButton b, boolean hovered, Component text, int color) {

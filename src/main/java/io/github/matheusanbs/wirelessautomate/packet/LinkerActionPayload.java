@@ -35,7 +35,9 @@ public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network
         TOGGLE_TAB,
         SET_MODE,
         CLEAR_AREA,
-        LINK
+        LINK,
+        /** "Todos" na tela: grava a máscara de abas de {@code value} (recusa uma sem tipo disponível). */
+        SET_TABS
     }
 
     public static final Type<LinkerActionPayload> TYPE = new Type<>(WirelessAutomate.id("linker_action"));

@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -184,7 +185,7 @@ public final class LinkerAreaGameTests {
             markArea(helper, player);
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
-            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
+            for (ResourceType type : LoadedTypes.LIST) {
                 helper.assertValueEqual(a.networkId(type), active.id(), "aba " + type);
             }
         } finally {

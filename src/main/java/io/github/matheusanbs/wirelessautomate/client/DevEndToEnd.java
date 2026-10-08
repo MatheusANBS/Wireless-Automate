@@ -1849,12 +1849,12 @@ public final class DevEndToEnd {
                 }, () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
         list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
                 () -> {
-                    // de Todos, desmarca as outras caixas (Químicos só aparece com o Mekanism)
+                    // de Todos, desmarca as outras caixas (só aparecem os tipos disponíveis)
                     for (ResourceType type : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
                             ResourceType.CHEMICAL}) {
-                        if (type != ResourceType.CHEMICAL || linkerScreen().getMenu().snapshot().chemicals()) {
+                        if (linkerScreen().getMenu().snapshot().available().contains(type)) {
                             click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
-                                    + type.name().toLowerCase(java.util.Locale.ROOT))), "aba " + type));
+                                    + type.key())), "aba " + type));
                         }
                     }
                 },

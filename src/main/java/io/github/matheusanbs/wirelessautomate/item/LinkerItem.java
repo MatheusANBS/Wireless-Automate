@@ -8,7 +8,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.netty.buffer.ByteBuf;
@@ -55,12 +55,12 @@ public class LinkerItem extends Item {
      */
     public static final Codec<ResourceType> TYPE_CODEC = Codec.STRING.comapFlatMap(name -> {
         for (ResourceType type : ResourceType.values()) {
-            if (LinkerTabs.key(type).equals(name)) {
+            if (type.key().equals(name)) {
                 return DataResult.success(type);
             }
         }
         return DataResult.error(() -> "tipo de Vinculador desconhecido: " + name);
-    }, LinkerTabs::key);
+    }, ResourceType::key);
     public static final StreamCodec<RegistryFriendlyByteBuf, ResourceType> TYPE_STREAM_CODEC =
             NeoForgeStreamCodecs.enumCodec(ResourceType.class);
 
@@ -101,16 +101,16 @@ public class LinkerItem extends Item {
 
     /** As abas que valem agora (Químicos só com o Mekanism), na ordem das abas. */
     public static List<ResourceType> effectiveTabs(ItemStack stack) {
-        return tabs(stack).effective(Chemicals.LOADED);
+        return tabs(stack).effective(LoadedTypes.LIST);
     }
 
     /**
      * Shift + roda: avança ({@code direction > 0}) ou volta um atalho (Todos, Itens, Fluidos,
-     * Energia, Químicos com o Mekanism); uma combinação que não é atalho vai para Todos. Devolve as
+     * Energia, um tipo por mod presente); uma combinação que não é atalho vai para Todos. Devolve as
      * abas novas.
      */
     public static LinkerTabs cycleTabs(ItemStack stack, int direction) {
-        LinkerTabs next = tabs(stack).next(direction, Chemicals.LOADED);
+        LinkerTabs next = tabs(stack).next(direction, LoadedTypes.LIST);
         setTabs(stack, next);
         return next;
     }
@@ -119,15 +119,15 @@ public class LinkerItem extends Item {
     public static Component typeName(@Nullable ResourceType type) {
         return type == null
                 ? Component.translatable(KEY + "type.all")
-                : Component.translatable("gui.wirelessautomate.router.type." + LinkerTabs.key(type));
+                : Component.translatable("gui.wirelessautomate.router.type." + type.key());
     }
 
     /** "Todos", "Itens + Fluidos + Químicos" ou "nenhuma aba", pelas abas que valem agora. */
     public static Component tabsName(LinkerTabs tabs) {
-        if (tabs.isAll(Chemicals.LOADED)) {
+        if (tabs.isAll(LoadedTypes.LIST)) {
             return typeName(null);
         }
-        List<ResourceType> effective = tabs.effective(Chemicals.LOADED);
+        List<ResourceType> effective = tabs.effective(LoadedTypes.LIST);
         if (effective.isEmpty()) {
             return Component.translatable(KEY + "tabs.none");
         }

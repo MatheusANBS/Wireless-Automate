@@ -6,7 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
@@ -17,7 +17,6 @@ import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -69,12 +68,12 @@ public class ConfiguratorItem extends Item {
      */
     public static final Codec<ResourceType> TYPE_CODEC = Codec.STRING.comapFlatMap(name -> {
         for (ResourceType type : ResourceType.values()) {
-            if (key(type).equals(name)) {
+            if (type.key().equals(name)) {
                 return DataResult.success(type);
             }
         }
         return DataResult.error(() -> "tipo de Configurador desconhecido: " + name);
-    }, ConfiguratorItem::key);
+    }, ResourceType::key);
     public static final StreamCodec<RegistryFriendlyByteBuf, ResourceType> TYPE_STREAM_CODEC =
             NeoForgeStreamCodecs.enumCodec(ResourceType.class);
 
@@ -103,7 +102,7 @@ public class ConfiguratorItem extends Item {
      * Químicos (só com o Mekanism) → Todos. Devolve o tipo novo ({@code null} = todos).
      */
     public static @Nullable ResourceType cycleType(ItemStack stack, int direction) {
-        ResourceType next = PasteTypes.next(type(stack), direction, Chemicals.LOADED);
+        ResourceType next = PasteTypes.next(type(stack), direction, LoadedTypes.LIST);
         setType(stack, next);
         return next;
     }
@@ -116,10 +115,6 @@ public class ConfiguratorItem extends Item {
     /** "só a aba Fluidos", para juntar às mensagens de colar; {@code null} com Todos. */
     public static @Nullable Component onlyTab(@Nullable ResourceType type) {
         return type == null ? null : Component.translatable(KEY + "only_tab", typeName(type));
-    }
-
-    private static String key(ResourceType type) {
-        return type.name().toLowerCase(Locale.ROOT);
     }
 
     // ------------------------------------------------------------------ estado no item

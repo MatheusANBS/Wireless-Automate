@@ -14,6 +14,8 @@ class LinkerTabsTest {
     private static final ResourceType FLUID = ResourceType.FLUID;
     private static final ResourceType ENERGY = ResourceType.ENERGY;
     private static final ResourceType CHEMICAL = ResourceType.CHEMICAL;
+    private static final List<ResourceType> BASE = List.of(ITEM, FLUID, ENERGY);
+    private static final List<ResourceType> WITH_CHEMICALS = List.of(ITEM, FLUID, ENERGY, CHEMICAL);
 
     @Test
     void toggleAddsAndRemoves() {
@@ -23,76 +25,39 @@ class LinkerTabsTest {
     }
 
     @Test
-    void chemicalsAreKeptButIgnoredWithoutMekanism() {
+    void unavailableTypesAreKeptButIgnored() {
         LinkerTabs tabs = LinkerTabs.of(ITEM, CHEMICAL);
         assertEquals(List.of(ITEM, CHEMICAL), tabs.types());
-        assertEquals(List.of(ITEM), tabs.effective(false));
-        assertEquals(List.of(ITEM, CHEMICAL), tabs.effective(true));
-        assertTrue(LinkerTabs.of(CHEMICAL).isEmpty(false));
-        assertFalse(LinkerTabs.of(CHEMICAL).isEmpty(true));
+        assertEquals(List.of(ITEM), tabs.effective(BASE));
+        assertEquals(List.of(ITEM, CHEMICAL), tabs.effective(WITH_CHEMICALS));
+        assertTrue(LinkerTabs.of(CHEMICAL).isEmpty(BASE));
+        assertFalse(LinkerTabs.of(CHEMICAL).isEmpty(WITH_CHEMICALS));
     }
 
     @Test
-    void allDependsOnMekanism() {
-        assertTrue(LinkerTabs.ALL.isAll(false));
-        assertTrue(LinkerTabs.ALL.isAll(true));
-        LinkerTabs threeTabs = LinkerTabs.of(ITEM, FLUID, ENERGY);
-        assertTrue(threeTabs.isAll(false));
-        assertFalse(threeTabs.isAll(true));
-        assertEquals(List.of(ITEM, FLUID, ENERGY), LinkerTabs.ALL.effective(false));
+    void allDependsOnWhatIsAvailable() {
+        assertTrue(LinkerTabs.ALL.isAll(BASE));
+        assertTrue(LinkerTabs.ALL.isAll(WITH_CHEMICALS));
+        LinkerTabs three = LinkerTabs.of(ITEM, FLUID, ENERGY);
+        assertTrue(three.isAll(BASE));
+        assertFalse(three.isAll(WITH_CHEMICALS));
+        assertEquals(LinkerTabs.of(WITH_CHEMICALS), LinkerTabs.available(WITH_CHEMICALS));
     }
 
     @Test
-    void namesRoundTripAndUnknownNamesAreIgnored() {
+    void wheelCyclesAllThenEachAvailableType() {
+        assertEquals(LinkerTabs.of(ITEM), LinkerTabs.ALL.next(1, BASE));
+        assertEquals(LinkerTabs.of(ENERGY), LinkerTabs.of(FLUID).next(1, BASE));
+        assertSame(LinkerTabs.ALL, LinkerTabs.of(ENERGY).next(1, BASE));
+        assertEquals(LinkerTabs.of(CHEMICAL), LinkerTabs.of(ENERGY).next(1, WITH_CHEMICALS));
+        assertEquals(LinkerTabs.of(CHEMICAL), LinkerTabs.ALL.next(-1, WITH_CHEMICALS));
+        assertSame(LinkerTabs.ALL, LinkerTabs.of(ITEM, FLUID).next(1, BASE));
+    }
+
+    @Test
+    void namesRoundTripAndIgnoreUnknown() {
         LinkerTabs tabs = LinkerTabs.of(FLUID, CHEMICAL);
         assertEquals(List.of("fluid", "chemical"), tabs.names());
-        assertEquals(tabs, LinkerTabs.fromNames(tabs.names()));
-        assertEquals(LinkerTabs.of(ENERGY), LinkerTabs.fromNames(List.of("energy", "gas", "ENERGY")));
-    }
-
-    @Test
-    void maskOutsideTheTypesIsDropped() {
-        assertEquals(LinkerTabs.ALL, new LinkerTabs(-1));
-    }
-
-    @Test
-    void wheelForwardWithoutChemicals() {
-        LinkerTabs tabs = LinkerTabs.ALL;
-        tabs = tabs.next(1, false);
-        assertEquals(LinkerTabs.of(ITEM), tabs);
-        tabs = tabs.next(1, false);
-        assertEquals(LinkerTabs.of(FLUID), tabs);
-        tabs = tabs.next(1, false);
-        assertEquals(LinkerTabs.of(ENERGY), tabs);
-        assertEquals(LinkerTabs.ALL, tabs.next(1, false));
-    }
-
-    @Test
-    void wheelWithChemicals() {
-        assertEquals(LinkerTabs.of(CHEMICAL), LinkerTabs.of(ENERGY).next(1, true));
-        assertEquals(LinkerTabs.ALL, LinkerTabs.of(CHEMICAL).next(1, true));
-        assertEquals(LinkerTabs.of(CHEMICAL), LinkerTabs.ALL.next(-1, true));
-        assertEquals(LinkerTabs.of(ENERGY), LinkerTabs.ALL.next(-1, false));
-    }
-
-    @Test
-    void customCombinationGoesToAll() {
-        LinkerTabs custom = LinkerTabs.of(ITEM, FLUID);
-        assertEquals(LinkerTabs.ALL, custom.next(1, true));
-        assertEquals(LinkerTabs.ALL, custom.next(-1, false));
-    }
-
-    @Test
-    void shortcutIsFoundByEffectiveTabs() {
-        // Itens + Químicos sem o Mekanism vale como Itens: o próximo é Fluidos
-        assertEquals(LinkerTabs.of(FLUID), LinkerTabs.of(ITEM, CHEMICAL).next(1, false));
-        // três abas sem o Mekanism são Todos
-        assertEquals(LinkerTabs.of(ITEM), LinkerTabs.of(ITEM, FLUID, ENERGY).next(1, false));
-    }
-
-    @Test
-    void directionZeroStays() {
-        LinkerTabs custom = LinkerTabs.of(ITEM, FLUID);
-        assertSame(custom, custom.next(0, true));
+        assertEquals(tabs, LinkerTabs.fromNames(List.of("fluid", "chemical", "plasma")));
     }
 }

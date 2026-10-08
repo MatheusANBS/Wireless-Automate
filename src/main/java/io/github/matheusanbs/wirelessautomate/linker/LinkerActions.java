@@ -4,7 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -170,7 +170,7 @@ public final class LinkerActions {
             return false;
         }
         Component tabsName = LinkerItem.tabsName(tabs);
-        boolean all = tabs.isAll(Chemicals.LOADED);
+        boolean all = tabs.isAll(LoadedTypes.LIST);
         if (LinkerItem.unlink(stack)) {
             if (inTarget(router, types, null)) {
                 player.displayClientMessage(Component.translatable(KEY + "already_unlinked", tabsName), true);
@@ -253,7 +253,7 @@ public final class LinkerActions {
             text = Component.translatable(KEY + "area.unlinked", result.linked(), tabsName);
         } else {
             Component name = result.network() == null ? Component.empty() : result.network().displayName();
-            text = tabs.isAll(Chemicals.LOADED)
+            text = tabs.isAll(LoadedTypes.LIST)
                     ? Component.translatable(KEY + "area.linked", result.linked(), name)
                     : Component.translatable(KEY + "area.linked_tabs", result.linked(), name, tabsName);
         }
@@ -384,11 +384,11 @@ public final class LinkerActions {
             return false;
         }
         ResourceType type = ResourceType.values()[value];
-        if (type == ResourceType.CHEMICAL && !Chemicals.LOADED) {
+        if (!LoadedTypes.contains(type)) {
             return false;
         }
         LinkerTabs next = LinkerItem.tabs(stack).toggle(type);
-        if (next.isEmpty(Chemicals.LOADED)) {
+        if (next.isEmpty(LoadedTypes.LIST)) {
             return false;
         }
         LinkerItem.setTabs(stack, next);

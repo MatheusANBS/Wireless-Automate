@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -261,7 +262,7 @@ public final class TypeNetworkGameTests {
             linker.remove(ModDataComponents.LINKER_TYPE.get());
             helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
             use(player, ModItems.LINKER.get(), router, false);
-            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
+            for (ResourceType type : LoadedTypes.LIST) {
                 helper.assertValueEqual(router.networkId(type), active.id(), "Todos não vinculou " + type);
             }
         } finally {
@@ -284,7 +285,7 @@ public final class TypeNetworkGameTests {
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
             List<LinkerTabs> forward = new ArrayList<>();
-            for (ResourceType type : LinkerTabs.available(Chemicals.LOADED)) {
+            for (ResourceType type : LoadedTypes.LIST) {
                 forward.add(LinkerTabs.of(type));
             }
             forward.add(LinkerTabs.ALL);

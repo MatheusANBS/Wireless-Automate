@@ -4,19 +4,19 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Abas que o Vinculador vincula ou desvincula (lógica pura): um conjunto de {@link ResourceType}
- * guardado como máscara de bits pelo {@code ordinal}. Químicos podem estar no conjunto mesmo sem o
- * Mekanism (o item sobrevive à troca de instância); sem ele, {@link #effective(boolean)} os ignora.
+ * guardado como máscara de bits pelo {@code ordinal}. Um tipo pode estar no conjunto mesmo sem o mod
+ * dele (o item sobrevive à troca de instância); {@link #effective(List)} ignora os que não estão
+ * entre os tipos disponíveis.
  *
- * <p>"Todos" é {@link #ALL}, as quatro abas. Com o Mekanism ausente, um conjunto com Itens, Fluidos
- * e Energia também conta como Todos ({@link #isAll(boolean)}).
+ * <p>"Todos" é {@link #ALL}, todas as abas. Um conjunto com todos os tipos disponíveis também conta
+ * como Todos ({@link #isAll(List)}).
  *
- * <p>Atalhos da roda do mouse ({@link #next}): Todos → Itens → Fluidos → Energia → Químicos (só com
- * o Mekanism) → Todos. Uma combinação que não é atalho (por exemplo Itens + Fluidos) vai para Todos,
- * nos dois sentidos.
+ * <p>Atalhos da roda do mouse ({@link #next}): Todos e depois cada tipo disponível sozinho, na ordem
+ * do registro, e de volta a Todos. Uma combinação que não é atalho (por exemplo Itens + Fluidos) vai
+ * para Todos, nos dois sentidos.
  */
 public record LinkerTabs(int mask) {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -24,7 +24,7 @@ public record LinkerTabs(int mask) {
 
     /** Todas as abas. */
     public static final LinkerTabs ALL = new LinkerTabs(FULL);
-    /** Nenhuma aba (a tela não deixa chegar aqui, mas um item vindo de fora pode ter só Químicos). */
+    /** Nenhuma aba (a tela não deixa chegar aqui, mas um item vindo de fora pode ter só um tipo ausente). */
     public static final LinkerTabs NONE = new LinkerTabs(0);
 
     public LinkerTabs {
@@ -44,32 +44,27 @@ public record LinkerTabs(int mask) {
     }
 
     /**
-     * Do formato salvo (nomes em minúsculas, como {@code "item"}). Nomes desconhecidos são ignorados,
-     * para um item de outra versão não quebrar.
+     * Do formato salvo (as chaves dos tipos, como {@code "item"}). Nomes desconhecidos são
+     * ignorados, para um item de outra versão não quebrar.
      */
     public static LinkerTabs fromNames(Collection<String> names) {
         int mask = 0;
         for (String name : names) {
-            for (ResourceType type : TYPES) {
-                if (key(type).equals(name)) {
-                    mask |= bit(type);
-                }
+            ResourceType type = ResourceType.byKey(name);
+            if (type != null) {
+                mask |= bit(type);
             }
         }
         return new LinkerTabs(mask);
     }
 
-    /** Nomes em minúsculas, na ordem das abas. */
+    /** Chaves salvas, na ordem das abas. */
     public List<String> names() {
         List<String> names = new ArrayList<>();
         for (ResourceType type : types()) {
-            names.add(key(type));
+            names.add(type.key());
         }
         return names;
-    }
-
-    public static String key(ResourceType type) {
-        return type.name().toLowerCase(Locale.ROOT);
     }
 
     public boolean contains(ResourceType type) {
@@ -81,7 +76,7 @@ public record LinkerTabs(int mask) {
         return new LinkerTabs(mask ^ bit(type));
     }
 
-    /** Todas as abas guardadas, na ordem das abas (inclusive Químicos sem o Mekanism). */
+    /** Todas as abas guardadas, na ordem das abas (inclusive de tipos que esta instância não tem). */
     public List<ResourceType> types() {
         List<ResourceType> list = new ArrayList<>();
         for (ResourceType type : TYPES) {
@@ -92,38 +87,34 @@ public record LinkerTabs(int mask) {
         return list;
     }
 
-    /** As abas que valem agora: sem o Mekanism, Químicos ficam de fora. */
-    public List<ResourceType> effective(boolean chemicals) {
+    /** As abas que valem agora: as guardadas que existem nesta instância. */
+    public List<ResourceType> effective(List<ResourceType> available) {
         List<ResourceType> list = types();
-        if (!chemicals) {
-            list.remove(ResourceType.CHEMICAL);
-        }
+        list.retainAll(available);
         return list;
     }
 
-    /** Todas as abas que existem agora estão marcadas (é "Todos"). */
-    public boolean isAll(boolean chemicals) {
-        return effective(chemicals).size() == available(chemicals).length;
+    /** Todas as abas disponíveis estão marcadas (é "Todos"). */
+    public boolean isAll(List<ResourceType> available) {
+        return effective(available).size() == available.size();
     }
 
     /** Nenhuma aba que valha agora. */
-    public boolean isEmpty(boolean chemicals) {
-        return effective(chemicals).isEmpty();
+    public boolean isEmpty(List<ResourceType> available) {
+        return effective(available).isEmpty();
     }
 
-    /** As abas que existem: Químicos só com o Mekanism. */
-    public static ResourceType[] available(boolean chemicals) {
-        return chemicals ? TYPES.clone()
-                : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    /** Todas as disponíveis marcadas. */
+    public static LinkerTabs available(List<ResourceType> available) {
+        return of(available);
     }
 
-    /** Atalhos da roda, em ordem: Todos e depois cada aba sozinha. Cópia: pode mexer. */
-    public static LinkerTabs[] shortcuts(boolean chemicals) {
-        ResourceType[] available = available(chemicals);
-        LinkerTabs[] shortcuts = new LinkerTabs[available.length + 1];
+    /** Atalhos da roda, em ordem: Todos e depois cada aba disponível sozinha. Cópia: pode mexer. */
+    public static LinkerTabs[] shortcuts(List<ResourceType> available) {
+        LinkerTabs[] shortcuts = new LinkerTabs[available.size() + 1];
         shortcuts[0] = ALL;
-        for (int i = 0; i < available.length; i++) {
-            shortcuts[i + 1] = of(available[i]);
+        for (int i = 0; i < available.size(); i++) {
+            shortcuts[i + 1] = of(available.get(i));
         }
         return shortcuts;
     }
@@ -133,16 +124,16 @@ public record LinkerTabs(int mask) {
      * atalho atual é achado pelas abas que valem agora; uma combinação que não é atalho vai para
      * Todos. Direção 0 fica.
      */
-    public LinkerTabs next(int direction, boolean chemicals) {
+    public LinkerTabs next(int direction, List<ResourceType> available) {
         if (direction == 0) {
             return this;
         }
-        LinkerTabs[] shortcuts = shortcuts(chemicals);
+        LinkerTabs[] shortcuts = shortcuts(available);
         int index = -1;
-        if (isAll(chemicals)) {
+        if (isAll(available)) {
             index = 0;
         } else {
-            List<ResourceType> effective = effective(chemicals);
+            List<ResourceType> effective = effective(available);
             for (int i = 1; i < shortcuts.length; i++) {
                 if (effective.equals(shortcuts[i].types())) {
                     index = i;

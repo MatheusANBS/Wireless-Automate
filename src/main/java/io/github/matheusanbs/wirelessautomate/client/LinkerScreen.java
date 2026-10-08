@@ -125,20 +125,20 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     /** Todas as abas que existem estão marcadas. */
     private boolean allTabs() {
-        return snapshot().tabs().isAll(snapshot().chemicals());
+        return snapshot().tabs().isAll(snapshot().available().types());
     }
 
     /** "Todos" ou "Itens + Fluidos", pelas abas que valem. */
     private Component tabsName() {
-        return tabsName(snapshot().tabs(), snapshot().chemicals());
+        return tabsName(snapshot().tabs(), snapshot().available().types());
     }
 
-    private static Component tabsName(LinkerTabs tabs, boolean chemicals) {
-        if (tabs.isAll(chemicals)) {
+    private static Component tabsName(LinkerTabs tabs, List<ResourceType> available) {
+        if (tabs.isAll(available)) {
             return tr("type.all");
         }
         MutableComponent text = Component.empty();
-        List<ResourceType> effective = tabs.effective(chemicals);
+        List<ResourceType> effective = tabs.effective(available);
         for (int i = 0; i < effective.size(); i++) {
             if (i > 0) {
                 text.append(" + ");
@@ -258,7 +258,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                     : entry == null ? tr("network.unlink") : Component.literal(entry.name()));
         }
         for (int i = 0; i < TABS.length; i++) {
-            tabButtons.get(i).visible = TABS[i] != ResourceType.CHEMICAL || s.chemicals();
+            tabButtons.get(i).visible = s.available().contains(TABS[i]);
         }
         newButton.visible = !creating;
         createButton.visible = creating;
@@ -280,7 +280,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Cópia do estado com rede, desvincular, abas e modo trocados (só na captura de desenvolvimento). */
     private static LinkerSnapshot with(LinkerSnapshot s, Optional<UUID> active, boolean unlink, LinkerTabs tabs,
             LinkerMode mode) {
-        return new LinkerSnapshot(s.networks(), active, unlink, tabs, s.chemicals(), mode, s.first(), s.second(),
+        return new LinkerSnapshot(s.networks(), active, unlink, tabs, s.available(), mode, s.first(), s.second(),
                 s.otherDimension(), s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(),
                 s.maxVolume(), s.maxDistance(), Optional.empty());
     }
@@ -299,7 +299,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (preview) {
             LinkerSnapshot s = snapshot();
             LinkerTabs next = s.tabs().toggle(t);
-            if (!next.isEmpty(s.chemicals())) {
+            if (!next.isEmpty(s.available().types())) {
                 apply(with(s, s.active(), s.unlink(), next, s.mode()));
             }
             return;
@@ -345,7 +345,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void clear() {
         if (preview) {
             LinkerSnapshot s = snapshot();
-            apply(new LinkerSnapshot(s.networks(), s.active(), s.unlink(), s.tabs(), s.chemicals(), s.mode(),
+            apply(new LinkerSnapshot(s.networks(), s.active(), s.unlink(), s.tabs(), s.available(), s.mode(),
                     Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(), LinkerProblem.NO_AREA, s.maxVolume(),
                     s.maxDistance(), Optional.empty()));
             return;
@@ -712,7 +712,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     private Component outcomeText(Outcome o) {
         if (o.unlink()) {
-            return tr("outcome.unlinked", o.linked(), tabsName(o.tabs(), snapshot().chemicals()));
+            return tr("outcome.unlinked", o.linked(), tabsName(o.tabs(), snapshot().available().types()));
         }
         Component network = Component.literal(o.network()).withColor(0xFF000000 | o.color());
         return tr("outcome", o.linked(), network);
@@ -758,7 +758,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private Component tabTooltip(ResourceType t) {
         LinkerSnapshot s = snapshot();
         boolean checked = s.tabs().contains(t);
-        if (checked && s.tabs().toggle(t).isEmpty(s.chemicals())) {
+        if (checked && s.tabs().toggle(t).isEmpty(s.available().types())) {
             return tr("tab.last", typeName(t));
         }
         return tr(checked ? "tab.on" : "tab.off", typeName(t));

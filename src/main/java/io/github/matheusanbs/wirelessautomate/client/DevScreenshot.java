@@ -27,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
@@ -586,7 +587,7 @@ public final class DevScreenshot {
                     mouseX = mouseY = -1;
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
-                            s.chemicals(), s.mode(), s.first(), s.second(), false, s.inside(), s.inside(),
+                            s.available(), s.mode(), s.first(), s.second(), false, s.inside(), s.inside(),
                             s.unloadedChunks(),
                             s.routers().stream().map(d -> new RouterDot(d.x(), d.z(), 0xBA68C8, true)).toList(),
                             LinkerProblem.NONE, s.maxVolume(), s.maxDistance(),
@@ -596,28 +597,28 @@ public final class DevScreenshot {
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false,
-                            LinkerTabs.ALL, s.chemicals(), LinkerMode.SINGLE, s.first(), s.second(), false, s.inside(),
+                            LinkerTabs.ALL, s.available(), LinkerMode.SINGLE, s.first(), s.second(), false, s.inside(),
                             s.already(), s.unloadedChunks(), s.routers(), s.problem(), s.maxVolume(), s.maxDistance(),
                             Optional.empty()));
                 }, "l3-vinculador-unico"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
-                            s.chemicals(), s.mode(), Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(),
+                            s.available(), s.mode(), Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(),
                             LinkerProblem.NO_AREA,
                             s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l4-vinculador-sem-area"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
-                            s.chemicals(), s.mode(), s.first(), Optional.empty(), false, 0, 0, 0, List.of(),
+                            s.available(), s.mode(), s.first(), Optional.empty(), false, 0, 0, 0, List.of(),
                             LinkerProblem.INCOMPLETE,
                             s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l5-vinculador-canto1"),
                 new Step(() -> {
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), false, s.tabs(),
-                            s.chemicals(), s.mode(), s.first(), Optional.of(new BlockPos(300, 70, 200)), false, 0, 0, 0,
+                            s.available(), s.mode(), s.first(), Optional.of(new BlockPos(300, 70, 200)), false, 0, 0, 0,
                             List.of(),
                             LinkerProblem.TOO_BIG, s.maxVolume(), s.maxDistance(), Optional.empty()));
                 }, "l6-vinculador-grande"),
@@ -630,7 +631,8 @@ public final class DevScreenshot {
                     linkerScreen.previewCancelCreate();
                     LinkerSnapshot s = linkerSample();
                     linkerScreen.getMenu().applySnapshot(new LinkerSnapshot(s.networks(), s.active(), true,
-                            LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.CHEMICAL), true,
+                            LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID, ResourceType.CHEMICAL),
+                            LinkerTabs.available(LoadedTypes.LIST),
                             s.mode(), s.first(), s.second(), false, s.inside(), 2, s.unloadedChunks(),
                             s.routers().stream().map(d -> new RouterDot(d.x(), d.z(), d.color(), d.color() < 0))
                                     .toList(),
@@ -670,7 +672,8 @@ public final class DevScreenshot {
         dots.add(new RouterDot(16, 9, 0x3D8BFF, false));
         dots.add(new RouterDot(19, 11, 0x45D6CC, false));
         dots.add(new RouterDot(-7, 10, -1, false));
-        return new LinkerSnapshot(networks, Optional.of(line), false, LinkerTabs.of(ResourceType.ITEM), true,
+        return new LinkerSnapshot(networks, Optional.of(line), false, LinkerTabs.of(ResourceType.ITEM),
+                LinkerTabs.available(LoadedTypes.LIST),
                 LinkerMode.AREA,
                 Optional.of(new BlockPos(-8, 64, -6)), Optional.of(new BlockPos(21, 66, 13)), false, dots.size(), 5, 1,
                 List.copyOf(dots), LinkerProblem.NONE, 262_144, 64, Optional.empty());

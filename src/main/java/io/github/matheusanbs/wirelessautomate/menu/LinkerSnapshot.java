@@ -10,7 +10,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerScan;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  * @param active     rede ativa; vazia se ele não tem (o primeiro vínculo cria uma)
  * @param unlink     "Nenhuma (desvincular)" escolhida: os gestos tiram as abas da rede
  * @param tabs       abas marcadas no Vinculador
- * @param chemicals  o Mekanism está presente (a caixa Químicos aparece)
+ * @param available  os tipos que existem no servidor; a tela mostra um chip para cada
  * @param first      canto 1, se marcado na dimensão do jogador
  * @param second     canto 2, idem
  * @param otherDimension a área foi marcada noutra dimensão (os cantos não vêm)
@@ -51,7 +51,7 @@ public record LinkerSnapshot(
         Optional<UUID> active,
         boolean unlink,
         LinkerTabs tabs,
-        boolean chemicals,
+        LinkerTabs available,
         LinkerMode mode,
         Optional<BlockPos> first,
         Optional<BlockPos> second,
@@ -85,9 +85,9 @@ public record LinkerSnapshot(
             boolean unlink, String network, int color) {
     }
 
-    /** As abas que valem (Químicos só com o Mekanism), na ordem das abas. */
+    /** As abas que valem (só as dos tipos disponíveis), na ordem das abas. */
     public List<ResourceType> effectiveTabs() {
-        return tabs.effective(chemicals);
+        return tabs.effective(available.types());
     }
 
     public @Nullable LinkerBox box() {
@@ -157,7 +157,7 @@ public record LinkerSnapshot(
             }
         }
         return new LinkerSnapshot(List.copyOf(networks), Optional.ofNullable(active).map(WaNetwork::id),
-                unlink, tabs, Chemicals.LOADED, LinkerItem.mode(stack), first, second, otherDimension, inside, already,
+                unlink, tabs, LinkerTabs.available(LoadedTypes.LIST), LinkerItem.mode(stack), first, second, otherDimension, inside, already,
                 unloaded, List.copyOf(dots), problem, LinkerActions.maxVolume(), LinkerActions.maxDistance(),
                 Optional.ofNullable(outcome));
     }
@@ -176,7 +176,7 @@ public record LinkerSnapshot(
         buf.writeOptional(s.active, (b, id) -> b.writeUUID(id));
         buf.writeBoolean(s.unlink);
         buf.writeVarInt(s.tabs.mask());
-        buf.writeBoolean(s.chemicals);
+        buf.writeVarInt(s.available.mask());
         buf.writeEnum(s.mode);
         buf.writeOptional(s.first, (b, p) -> b.writeBlockPos(p));
         buf.writeOptional(s.second, (b, p) -> b.writeBlockPos(p));
@@ -215,7 +215,7 @@ public record LinkerSnapshot(
         Optional<UUID> active = buf.readOptional(b -> b.readUUID());
         boolean unlink = buf.readBoolean();
         LinkerTabs tabs = new LinkerTabs(buf.readVarInt());
-        boolean chemicals = buf.readBoolean();
+        LinkerTabs available = new LinkerTabs(buf.readVarInt());
         LinkerMode mode = buf.readEnum(LinkerMode.class);
         Optional<BlockPos> first = buf.readOptional(b -> b.readBlockPos());
         Optional<BlockPos> second = buf.readOptional(b -> b.readBlockPos());
@@ -236,7 +236,7 @@ public record LinkerSnapshot(
         int maxDistance = buf.readVarInt();
         Optional<Outcome> outcome = buf.readOptional(b -> new Outcome(b.readVarInt(), b.readVarInt(), b.readVarInt(),
                 b.readVarInt(), new LinkerTabs(b.readVarInt()), b.readBoolean(), b.readUtf(64), b.readInt()));
-        return new LinkerSnapshot(List.copyOf(networks), active, unlink, tabs, chemicals, mode, first, second, otherDimension, inside,
+        return new LinkerSnapshot(List.copyOf(networks), active, unlink, tabs, available, mode, first, second, otherDimension, inside,
                 already, unloaded, List.copyOf(dots), problem, maxVolume, maxDistance, outcome);
     }
 }

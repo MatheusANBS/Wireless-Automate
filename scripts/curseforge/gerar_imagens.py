@@ -7,7 +7,7 @@ O CurseForge não fixa tamanho para imagens da descrição; a regra é mostrar o
 jogo. Por isso as imagens de funções são capturas reais (a vitrine monta uma fábrica de exemplo)
 com uma faixa de título. O banner tem 1600x400 (4:1), legível na coluna da descrição.
 Textos em inglês: o público do CurseForge é internacional.
-Saída: docs/curseforge/banner.png e docs/curseforge/feature-*.png (.jpg quando o PNG passa dos 2 MB do CurseForge).
+Saída: docs/curseforge/banner.png e docs/curseforge/feature-*.png (com 256 cores quando passa dos 2 MB do CurseForge).
 """
 from __future__ import annotations
 
@@ -308,10 +308,13 @@ LIMITE = 2_000_000  # bytes: o CurseForge recusa imagens acima de 2 MB
 
 
 def salva(img: Image.Image, nome: str) -> str:
-    """Salva em PNG; se passar do limite do CurseForge, em JPEG na maior qualidade que caiba, sem subamostragem
-    de cor (a 98 não se vê diferença). Apaga a versão no outro formato, para não sobrar arquivo velho."""
+    """Salva em PNG. Se passar do limite do CurseForge, reduz para 256 cores (corte mediano), como o próprio
+    CurseForge faz com toda PNG que recebe; JPEG ele recomprime com qualidade baixa, então fica só como último
+    recurso. Apaga a versão no outro formato, para não sobrar arquivo velho."""
     png, jpg = SAIDA / f"{nome}.png", SAIDA / f"{nome}.jpg"
     img.save(png, optimize=True)
+    if png.stat().st_size > LIMITE:
+        img.quantize(256, method=Image.Quantize.MEDIANCUT).save(png, optimize=True)
     if png.stat().st_size <= LIMITE:
         jpg.unlink(missing_ok=True)
         return png.name

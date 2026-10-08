@@ -1091,15 +1091,23 @@ public final class DevEndToEnd {
     private static BlockPos showBase;
     private static final List<BlockPos> showRouters = new ArrayList<>();
     private static BlockPos showInput;
+    private static BlockPos showOutput;
     private static BlockPos showFurnace;
     private static final List<BlockPos> showStorage = new ArrayList<>();
+    private static BlockPos showSourceJar;
+    private static final List<BlockPos> showTanks = new ArrayList<>();
+
+    /** Metade da largura da casa (paredes em x = ±12) e as paredes norte e sul. */
+    private static final int HOUSE_X = 12;
+    private static final int HOUSE_NORTH = -18;
+    private static final int HOUSE_SOUTH = -2;
 
     /**
-     * Fotos da página do CurseForge: uma pequena fábrica (fornalhas acesas com roteadores dos quatro
-     * tiers e filtro de minérios, um baú de entrada cheio, um barril Armazém e um baú de saída), em
-     * redes com nomes de verdade. Fotografa a fábrica, a área do Vinculador, a tela do roteador com
-     * itens passando, o filtro, o Tablet e o guia. As imagens finais saem de
-     * scripts/curseforge/gerar_imagens.py.
+     * Fotos da página do CurseForge, numa casa de quartzo sem teto, de dia: a linha de fornalhas
+     * (oeste), a galeria dos cinco armazenamentos com fluxo de verdade para um cofre sob o piso
+     * (norte), a vitrine dos itens do mod em pedestais (centro) e o laboratório do Ars Nouveau com
+     * os quatro tiers do Tanque de Source (leste). Fotografa a casa inteira, cada ala e as telas. As
+     * imagens finais saem de scripts/curseforge/gerar_imagens.py.
      */
     private static List<Step> showcase() {
         List<Step> list = new ArrayList<>();
@@ -1107,9 +1115,13 @@ public final class DevEndToEnd {
                 () -> onServer(server -> showRouters.stream().allMatch(p -> NetworkManager.get().contains(router(server, p))))
                         && showRouters.stream().allMatch(DevEndToEnd::clientSees),
                 () -> showRouters.size() + " roteadores"));
-        // Vista de cima da fábrica, sem a interface.
-        list.add(showCamera("câmera na fábrica", 0, 3.4, -0.6, 180f, 40f));
-        list.add(wait("chunks e itens", 60));
+        // A casa inteira, de cima, vista do jardim.
+        list.add(showLook("câmera na casa", 0, 11, 1.5, 0, 0, -10.5, false));
+        list.add(wait("chunks e itens", 100));
+        list.add(capture("s0-casa"));
+        // A linha de fornalhas, da ala oeste.
+        list.add(showLook("câmera nas fornalhas", -5, 2.6, -7, -10.5, 0.6, -11.5, false));
+        list.add(wait("fornalhas", 20));
         list.add(capture("s1-fabrica"));
         // Vinculador na mão, em modo Área, com a fileira de fornalhas marcada.
         list.add(new Step("área do Vinculador", STEP_TIMEOUT_MS, () -> {
@@ -1118,14 +1130,28 @@ public final class DevEndToEnd {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
                 ItemStack linker = new ItemStack(ModItems.LINKER.get());
                 LinkerItem.setMode(linker, LinkerMode.AREA);
-                LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-5, 0, -5),
-                        java.util.Optional.of(showBase.offset(5, 1, -5))));
+                LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
+                        java.util.Optional.of(showBase.offset(-8, 1, -7))));
                 player.setItemInHand(InteractionHand.MAIN_HAND, linker);
                 return null;
             });
         }, () -> LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null, () -> "Vinculador na mão"));
         list.add(wait("contorno", 10));
         list.add(capture("s2-vinculador-area"));
+        // Com o Vinculador ainda na mão: a tela dele, com os chips de tipo.
+        list.add(new Step("abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.options.hideGui = false;
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen && screen.getMenu().snapshot().inside() > 0,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
+                () -> linkerScreen().previewResize(460, 300),
+                () -> linkerScreen().size()[0] > 300,
+                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
+        list.add(wait("tela do Vinculador", 5));
+        list.add(capture("s13-vinculador"));
+        list.add(close("fechar o Vinculador"));
         list.add(new Step("mão vazia e interface", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -1134,24 +1160,23 @@ public final class DevEndToEnd {
                 return null;
             });
         }, () -> Minecraft.getInstance().player.getMainHandItem().isEmpty(), () -> "mão"));
-        // Tela do baú de entrada, com a vazão aparecendo (o jogador vai para perto dele).
-        list.add(showCamera("perto da entrada", -3, 0, -6, 180f, 35f));
-        list.add(new Step("interface de volta", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
-                () -> true, () -> "interface"));
+        // Tela do baú de entrada, larga, com as cinco abas e a vazão aparecendo.
+        list.add(showLook("perto da entrada", -5.5, 0.5, -13, -8, 1, -13, true));
         list.add(new Step("repor os itens", STEP_TIMEOUT_MS, () -> onServer(server -> {
             refillShowcase(server.overworld());
             return null;
         }), () -> true, () -> "itens"));
         list.add(open("abrir a entrada", () -> showInput.above()));
+        list.add(new Step("roteador largo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
+                () -> routerScreen().size()[0] > 400, () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
         list.add(new Step("vazão na tela", 15_000, () -> {
         }, () -> routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()] > 0,
                 () -> "vazão " + routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()]));
         list.add(capture("s3-roteador"));
         list.add(close("fechar a entrada"));
         // Filtro da fornalha (face de cima, itens).
-        list.add(showCamera("perto da fornalha", 0, 0, -3, 180f, 35f));
-        list.add(new Step("interface de volta 2", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
-                () -> true, () -> "interface"));
+        list.add(showLook("perto da fornalha", -9.5, 0.5, -11, -11, 1, -11, true));
         list.add(open("abrir a fornalha", () -> showFurnace.above()));
         list.add(new Step("filtro da fornalha", STEP_TIMEOUT_MS, () -> {
             click(widget(byMessage(face(Direction.UP)), "face Cima"));
@@ -1188,20 +1213,59 @@ public final class DevEndToEnd {
         list.add(wait("inventário aceso", 5));
         list.add(capture("s5c-filtro-regra"));
         list.add(close("fechar o filtro"));
-        // Os quatro armazenamentos do mod, cheios, com roteadores.
-        list.add(showCamera("câmera nos armazenamentos", 13.5, 2.2, -1.2, 180f, 30f));
-        list.add(wait("armazenamentos", 40));
+        list.add(new Step("inventário vazio", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).getInventory().clearContent();
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getInventory().isEmpty(), () -> "inventário"));
+        // A vitrine dos itens, de perto.
+        list.add(showLook("câmera na vitrine", 0, 4.2, -5, 0, 0.8, -10.5, false));
+        list.add(wait("vitrine", 20));
+        list.add(capture("s14-vitrine"));
+        // A galeria dos armazenamentos.
+        list.add(showLook("câmera nos armazenamentos", 0, 3.2, -11, 0, 0.5, -16.5, false));
+        list.add(wait("armazenamentos", 20));
         list.add(capture("s9-armazenamentos"));
-        list.add(showCamera("perto do Baú", 11, 0, -3, 180f, 40f));
-        list.add(new Step("interface de volta 3", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
-                () -> true, () -> "interface"));
+        list.add(showLook("perto do Baú", -4, 0.5, -13.5, -4, 0.5, -16, true));
         list.add(new Step("abrir o Baú Wireless", STEP_TIMEOUT_MS, () -> useOn(showStorage.get(0)),
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen screen && screen.shownCount() > 20,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(wait("lista do Baú", 10));
         list.add(capture("s10-bau"));
         list.add(close("fechar o Baú"));
-        // Tablet: lista e mapa.
+        if (StorageKind.SOURCE_TANK.loaded()) {
+            // O laboratório do Ars: a Source da jarra criativa vai sem fio para o tanque e a jarra.
+            list.add(showLook("câmera no laboratório", 3.5, 3.4, -7, 9, 0.5, -13, false));
+            list.add(wait("laboratório", 20));
+            list.add(capture("s11-ars"));
+            list.add(showLook("perto da jarra", 9, 0.5, -14.5, 9, 1, -16, true));
+            list.add(open("abrir a jarra", () -> showSourceJar.above()));
+            list.add(new Step("roteador largo na jarra", STEP_TIMEOUT_MS,
+                    () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
+                    () -> routerScreen().size()[0] > 400, () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+            list.add(new Step("aba Source", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.source")), "aba Source")),
+                    () -> routerScreen().getMenu().selectedType() == ResourceType.SOURCE
+                            && routerScreen().getMenu().throughput()[ResourceType.SOURCE.ordinal()] > 0,
+                    () -> "aba " + routerScreen().getMenu().selectedType()));
+            list.add(wait("aba Source", 5));
+            list.add(capture("s11b-roteador-source"));
+            list.add(close("fechar a jarra"));
+            // Os quatro tiers do Tanque de Source, de dentro, com o jardim ao fundo.
+            list.add(showLook("câmera nos tanques", 8, 0.4, -8.6, 8, 0.5, -5, false));
+            list.add(wait("tanques", 20));
+            list.add(capture("s12-tanques"));
+            list.add(showLook("perto dos tanques", 9, 0.5, -7.5, 9, 0.5, -5, true));
+            list.add(new Step("abrir o Tanque de Source", STEP_TIMEOUT_MS, () -> useOn(showTanks.get(2)),
+                    () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received(),
+                    () -> "tela " + describe(Minecraft.getInstance().screen)));
+            list.add(wait("tela do tanque", 5));
+            list.add(capture("s12b-tanque-tela"));
+            list.add(close("fechar o tanque"));
+        }
+        // Tablet: lista, estatísticas (com o fluxo da galeria) e mapa.
         list.add(new Step("Tablet na mão (vitrine)", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {
@@ -1214,9 +1278,19 @@ public final class DevEndToEnd {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
         }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen
-                && screen.getMenu().snapshot().nodes().size() >= showRouters.size(),
+                && !screen.getMenu().snapshot().nodes().isEmpty(),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Tablet maior", STEP_TIMEOUT_MS,
+                () -> tabletScreen().previewResize(Math.min(560, tabletScreen().width - 8), 300),
+                () -> tabletScreen().size()[0] > 400,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(capture("s6-tablet-lista"));
+        list.add(new Step("aba Estatísticas", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
+                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> "aba " + tabletScreen().currentTab()));
+        list.add(wait("vazão nas estatísticas", 40));
+        list.add(capture("s6b-tablet-estatisticas"));
         list.add(new Step("aba Mapa", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.map")), "aba Mapa")),
                 () -> true, () -> "mapa"));
@@ -1234,27 +1308,37 @@ public final class DevEndToEnd {
         return list;
     }
 
-    /** Teleporta o jogador para um ponto relativo à base, olhando na direção dada, sem interface. */
-    private static Step showCamera(String name, double dx, double dy, double dz, float yaw, float pitch) {
+    /**
+     * Teleporta o jogador para {@code base + (cx, cy, cz)} (o pé; x e z no centro do bloco) olhando
+     * para {@code base + (tx, ty, tz)}; {@code gui} liga a interface.
+     */
+    private static Step showLook(String name, double cx, double cy, double cz, double tx, double ty, double tz, boolean gui) {
+        double[] cam = new double[3];
+        float[] ang = new float[2];
         return new Step(name, STEP_TIMEOUT_MS, () -> {
-            Minecraft.getInstance().options.hideGui = true;
-            UUID playerId = Minecraft.getInstance().player.getUUID();
-            // A rotação vai também para o cliente: o teleporte do servidor não a aplica na hora.
-            Minecraft.getInstance().player.setYRot(yaw);
-            Minecraft.getInstance().player.setXRot(pitch);
-            Minecraft.getInstance().player.yRotO = yaw;
-            Minecraft.getInstance().player.xRotO = pitch;
+            cam[0] = showBase.getX() + 0.5 + cx;
+            cam[1] = showBase.getY() + cy;
+            cam[2] = showBase.getZ() + 0.5 + cz;
+            double ex = tx - cx, ey = ty - (cy + 1.62), ez = tz - cz;
+            ang[0] = (float) Math.toDegrees(Math.atan2(-ex, ez));
+            ang[1] = (float) -Math.toDegrees(Math.atan2(ey, Math.sqrt(ex * ex + ez * ez)));
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.options.hideGui = !gui;
+            minecraft.player.setYRot(ang[0]);
+            minecraft.player.setXRot(ang[1]);
+            minecraft.player.yRotO = ang[0];
+            minecraft.player.xRotO = ang[1];
+            UUID playerId = minecraft.player.getUUID();
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
                 player.getAbilities().flying = true;
                 player.onUpdateAbilities();
-                player.teleportTo(player.serverLevel(), showBase.getX() + 0.5 + dx, showBase.getY() + dy,
-                        showBase.getZ() + 0.5 + dz, yaw, pitch);
+                player.teleportTo(player.serverLevel(), cam[0], cam[1], cam[2], ang[0], ang[1]);
                 return null;
             });
-        }, () -> Math.abs(Minecraft.getInstance().player.getXRot() - pitch) < 0.5f
-                && Minecraft.getInstance().player.position().distanceToSqr(showBase.getX() + 0.5 + dx, showBase.getY() + dy,
-                        showBase.getZ() + 0.5 + dz) < 0.5, () -> "câmera em " + Minecraft.getInstance().player.position());
+        }, () -> Math.abs(Minecraft.getInstance().player.getXRot() - ang[1]) < 0.5f
+                && Minecraft.getInstance().player.position().distanceToSqr(cam[0], cam[1], cam[2]) < 0.5,
+                () -> "câmera em " + Minecraft.getInstance().player.position());
     }
 
     private static Step wait(String name, int waitTicks) {
@@ -1268,87 +1352,263 @@ public final class DevEndToEnd {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
             showBase = player.blockPosition();
+            showRouters.clear();
+            showStorage.clear();
+            showTanks.clear();
+            showSourceJar = null;
             level.setDayTime(6000);
             NetworkSavedData data = NetworkSavedData.get(server);
             WaNetwork smelting = data.create(player.getUUID(), "Smelting Line");
             WaNetwork storage = data.create(player.getUUID(), "Storage");
+            WaNetwork arcane = StorageKind.SOURCE_TANK.loaded() ? data.create(player.getUUID(), "Arcane Lab") : null;
             data.create(player.getUUID(), "Base Power");
             data.setActiveNetwork(player.getUUID(), smelting.id());
-            // Piso de pedra lisa com borda e lanternas nos cantos, sob a fábrica.
-            for (int x = -7; x <= 7; x++) {
-                for (int z = -10; z <= -3; z++) {
-                    boolean edge = x == -7 || x == 7 || z == -10 || z == -3;
-                    level.setBlockAndUpdate(showBase.offset(x, -1, z),
-                            (edge ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_STONE).defaultBlockState());
-                }
-            }
-            for (int[] c : new int[][] {{-7, -10}, {7, -10}, {-7, -3}, {7, -3}}) {
-                level.setBlockAndUpdate(showBase.offset(c[0], 0, c[1]), Blocks.LANTERN.defaultBlockState());
-            }
-            // Fileira de fornalhas acesas, uma por tier (a do meio repete o Elite).
-            String[] tiers = {"basic", "advanced", "elite", "ultimate", "elite"};
-            Filter ores = new Filter(Filter.ListMode.WHITELIST, false, List.of(
-                    new FilterEntry.TagEntry(ResourceLocation.parse("c:ores"), 0),
-                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_IRON), 0),
-                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_GOLD), 0),
-                    new FilterEntry.ItemEntry(new ItemStack(Items.RAW_COPPER), 0),
-                    new FilterEntry.ItemEntry(new ItemStack(Items.ANCIENT_DEBRIS), 16)));
-            for (int i = 0; i < tiers.length; i++) {
-                BlockPos furnace = showBase.offset(-4 + 2 * i, 0, -5);
-                level.setBlockAndUpdate(furnace, Blocks.FURNACE.defaultBlockState()
-                        .setValue(net.minecraft.world.level.block.FurnaceBlock.FACING, Direction.SOUTH)
-                        .setValue(net.minecraft.world.level.block.FurnaceBlock.LIT, true));
-                placeShowRouter(server, level, furnace, tiers[i], "Furnace " + (i + 1), smelting.id());
-                RouterBlockEntity router = router(server, furnace.above());
-                router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                router.setFilter(ResourceType.ITEM, Direction.UP, ores);
-                router.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.EXTRACT);
-                if (i == 2) {
-                    showFurnace = furnace;
-                }
-            }
-            // Armazenamento: entrada cheia, buffer e saída.
-            showInput = showBase.offset(-3, 0, -8);
-            BlockPos buffer = showBase.offset(0, 0, -8);
-            BlockPos output = showBase.offset(3, 0, -8);
-            level.setBlockAndUpdate(showInput, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
-            level.setBlockAndUpdate(buffer, Blocks.BARREL.defaultBlockState()
-                    .setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP));
-            level.setBlockAndUpdate(output, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
-            placeShowRouter(server, level, showInput, "basic", "Ore Input", storage.id());
-            placeShowRouter(server, level, buffer, "elite", "Buffer", storage.id());
-            placeShowRouter(server, level, output, "advanced", "Output", storage.id());
-            router(server, showInput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-            router(server, buffer.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.BOTH);
-            router(server, output.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-            refillShowcase(level);
+            showcaseHouse(server, level);
+            showcaseSmelting(server, level, smelting.id());
             showcaseStorage(server, level, storage.id());
+            showcaseDisplay(server);
+            if (StorageKind.SOURCE_TANK.loaded()) {
+                showcaseArcane(server, level, arcane.id());
+            }
             return null;
         });
     }
 
+    /** Um bloco relativo à base, sem avisar os vizinhos (as conexões saem no {@link #settleShapes}). */
+    private static void put(ServerLevel level, int x, int y, int z, BlockState state) {
+        level.setBlock(showBase.offset(x, y, z), state, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+    }
+
+    /** Roda um comando como o servidor (blocos de outros mods com estado, entidades com NBT), sem saída. */
+    private static void command(MinecraftServer server, String command) {
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), command);
+    }
+
+    private static String at(int x, int y, int z) {
+        BlockPos pos = showBase.offset(x, y, z);
+        return pos.getX() + " " + pos.getY() + " " + pos.getZ();
+    }
+
+    private static BlockState leaves(net.minecraft.world.level.block.Block block) {
+        return block.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+    }
+
     /**
-     * Os quatro armazenamentos do mod numa fileira a leste da fábrica, num piso próprio: Baú
-     * Ultimate com dezenas de tipos e milhões de itens, Tanque, Bateria e Tanque Químico (com o
-     * Mekanism), cada um com um roteador em cima.
+     * A casa: piso de quartzo liso e calcita em xadrez com borda de ardósia polida, paredes de tijolo
+     * de quartzo com colunas e janelas, sem teto (a luz do dia entra toda), a parede sul baixa para a
+     * câmera ver por cima, lanternas no alto das colunas, um tapete sob a vitrine, plantas e, fora, um
+     * caminho com postes, cerca viva, flores e cerejeiras.
      */
-    private static void showcaseStorage(MinecraftServer server, ServerLevel level, UUID network) {
-        for (int x = 9; x <= 18; x++) {
-            for (int z = -7; z <= -2; z++) {
-                boolean edge = x == 9 || x == 18 || z == -7 || z == -2;
-                level.setBlockAndUpdate(showBase.offset(x, -1, z),
-                        (edge ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_STONE).defaultBlockState());
+    private static void showcaseHouse(MinecraftServer server, ServerLevel level) {
+        // Jardim: grama em volta, caminho até a porta e postes de luz.
+        for (int z = HOUSE_SOUTH + 1; z <= 9; z++) {
+            for (int x = -1; x <= 1; x++) {
+                put(level, x, -1, z, Blocks.DIRT_PATH.defaultBlockState());
             }
         }
-        StorageKind[] kinds = {StorageKind.CHEST, StorageKind.TANK, StorageKind.BATTERY, StorageKind.CHEMICAL_TANK};
-        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ADVANCED, RouterTier.ELITE};
-        String[] names = {"Main Storage", "Lava Tank", "Base Battery", "Hydrogen"};
-        showStorage.clear();
+        for (int[] post : new int[][] {{-3, 1}, {3, 1}, {-3, 6}, {3, 6}}) {
+            put(level, post[0], 0, post[1], Blocks.POLISHED_DEEPSLATE_WALL.defaultBlockState());
+            put(level, post[0], 1, post[1], Blocks.POLISHED_DEEPSLATE_WALL.defaultBlockState());
+            put(level, post[0], 2, post[1], Blocks.LANTERN.defaultBlockState());
+        }
+        for (int[] tree : new int[][] {{-17, -4}, {17, -4}, {-17, -16}, {17, -16}}) {
+            cherryTree(level, tree[0], tree[1]);
+        }
+        net.minecraft.world.level.block.Block[] flowers = {Blocks.ALLIUM, Blocks.OXEYE_DAISY, Blocks.CORNFLOWER,
+                Blocks.LILY_OF_THE_VALLEY, Blocks.PINK_TULIP};
+        for (int x = -HOUSE_X - 1; x <= HOUSE_X + 1; x++) {
+            for (int z = HOUSE_NORTH - 1; z <= HOUSE_SOUTH + 1; z++) {
+                boolean ring = x == -HOUSE_X - 1 || x == HOUSE_X + 1 || z == HOUSE_NORTH - 1 || z == HOUSE_SOUTH + 1;
+                if (!ring) {
+                    continue;
+                }
+                if (z == HOUSE_SOUTH + 1) {
+                    if (Math.abs(x) > 1) {
+                        put(level, x, 0, z, flowers[Math.floorMod(x * 7 + 3, flowers.length)].defaultBlockState());
+                    }
+                } else {
+                    put(level, x, 0, z, leaves(Math.floorMod(x + z, 3) == 0 ? Blocks.FLOWERING_AZALEA_LEAVES
+                            : Blocks.AZALEA_LEAVES));
+                }
+            }
+        }
+        // Piso.
+        for (int x = -HOUSE_X; x <= HOUSE_X; x++) {
+            for (int z = HOUSE_NORTH; z <= HOUSE_SOUTH; z++) {
+                boolean wall = Math.abs(x) == HOUSE_X || z == HOUSE_NORTH || z == HOUSE_SOUTH;
+                boolean border = Math.abs(x) == HOUSE_X - 1 || z == HOUSE_NORTH + 1 || z == HOUSE_SOUTH - 1;
+                BlockState floor = wall ? Blocks.QUARTZ_BRICKS.defaultBlockState()
+                        : border ? Blocks.POLISHED_DEEPSLATE.defaultBlockState()
+                        : Math.floorMod(x + z, 2) == 0 ? Blocks.SMOOTH_QUARTZ.defaultBlockState()
+                        : Blocks.CALCITE.defaultBlockState();
+                put(level, x, -1, z, floor);
+            }
+        }
+        // Entrada sem parede, com o piso do caminho.
+        for (int x = -1; x <= 1; x++) {
+            put(level, x, -1, HOUSE_SOUTH, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+            put(level, x, -1, HOUSE_SOUTH - 1, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+        }
+        // Paredes: colunas a cada 4 blocos; norte, leste e oeste com janelas, a sul baixa.
+        for (int x = -HOUSE_X; x <= HOUSE_X; x++) {
+            for (int z = HOUSE_NORTH; z <= HOUSE_SOUTH; z++) {
+                boolean onWall = Math.abs(x) == HOUSE_X || z == HOUSE_NORTH || z == HOUSE_SOUTH;
+                if (!onWall) {
+                    continue;
+                }
+                boolean south = z == HOUSE_SOUTH;
+                if (south && Math.abs(x) <= 1) {
+                    continue;
+                }
+                boolean pillar = (Math.abs(x) == HOUSE_X || z == HOUSE_NORTH || south)
+                        && Math.floorMod(x, 4) == 0 && Math.floorMod(z - HOUSE_NORTH, 4) == 0;
+                if (south) {
+                    if (pillar) {
+                        put(level, x, 0, z, Blocks.QUARTZ_PILLAR.defaultBlockState());
+                        put(level, x, 1, z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+                        put(level, x, 2, z, Blocks.LANTERN.defaultBlockState());
+                    } else {
+                        put(level, x, 0, z, Blocks.QUARTZ_BRICKS.defaultBlockState());
+                        put(level, x, 1, z, Blocks.SMOOTH_QUARTZ_SLAB.defaultBlockState());
+                    }
+                } else if (pillar) {
+                    for (int y = 0; y <= 3; y++) {
+                        put(level, x, y, z, Blocks.QUARTZ_PILLAR.defaultBlockState());
+                    }
+                    put(level, x, 4, z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+                    put(level, x, 5, z, Blocks.LANTERN.defaultBlockState());
+                } else {
+                    put(level, x, 0, z, Blocks.QUARTZ_BRICKS.defaultBlockState());
+                    put(level, x, 1, z, Blocks.GLASS_PANE.defaultBlockState());
+                    put(level, x, 2, z, Blocks.GLASS_PANE.defaultBlockState());
+                    put(level, x, 3, z, Blocks.QUARTZ_BRICKS.defaultBlockState());
+                    put(level, x, 4, z, Blocks.SMOOTH_QUARTZ_SLAB.defaultBlockState());
+                }
+            }
+        }
+        // Tapete sob a vitrine e pedestais de quartzo.
+        for (int x = -5; x <= 5; x++) {
+            for (int z = -13; z <= -8; z++) {
+                boolean edge = Math.abs(x) == 5 || z == -13 || z == -8;
+                put(level, x, 0, z, (edge ? Blocks.CYAN_CARPET : Blocks.LIGHT_GRAY_CARPET).defaultBlockState());
+            }
+        }
+        for (int x = -4; x <= 4; x += 2) {
+            for (int z : new int[] {-12, -9}) {
+                put(level, x, 0, z, Blocks.QUARTZ_PILLAR.defaultBlockState());
+            }
+        }
+        // Luz no piso nos cantos do tapete e plinto sob a galeria.
+        for (int[] light : new int[][] {{-6, -14}, {6, -14}, {-6, -7}, {6, -7}}) {
+            put(level, light[0], -1, light[1], Blocks.SEA_LANTERN.defaultBlockState());
+        }
+        for (int x = -5; x <= 5; x++) {
+            put(level, x, -1, -16, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+        }
+        // Bancos de quartzo junto à parede sul, dos dois lados da entrada (a leste só até os tanques).
+        for (int x = -9; x <= -4; x++) {
+            put(level, x, 0, HOUSE_SOUTH - 1, Blocks.QUARTZ_STAIRS.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.StairBlock.FACING, Direction.SOUTH));
+        }
+        // Plantas.
+        for (int[] pot : new int[][] {{-11, -17}, {-11, -3}, {-3, -3}, {3, -3}, {-6, -17}, {6, -17}, {-10, -3}, {-11, -5}}) {
+            put(level, pot[0], 0, pot[1], (Math.floorMod(pot[0] + pot[1], 2) == 0 ? Blocks.POTTED_FLOWERING_AZALEA
+                    : Blocks.POTTED_FERN).defaultBlockState());
+        }
+        settleShapes(level, -20, 20, -1, 8, HOUSE_NORTH - 6, 10);
+    }
+
+    /** Cerejeira simples: tronco de 4 e uma copa arredondada (folhas que não caem). */
+    private static void cherryTree(ServerLevel level, int x, int z) {
+        for (int y = 0; y <= 3; y++) {
+            put(level, x, y, z, Blocks.CHERRY_LOG.defaultBlockState());
+        }
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = 3; dy <= 6; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    double d = dx * dx + dz * dz + (dy - 4.5) * (dy - 4.5) * 2.2;
+                    if (d <= 9.5 && !(dx == 0 && dz == 0 && dy <= 3)) {
+                        put(level, x + dx, dy, z + dz, leaves(Blocks.CHERRY_LEAVES));
+                    }
+                }
+            }
+        }
+    }
+
+    /** Recalcula a forma dos blocos que se ligam aos vizinhos (vidros, muros) depois de montar. */
+    private static void settleShapes(ServerLevel level, int x0, int x1, int y0, int y1, int z0, int z1) {
+        for (int x = x0; x <= x1; x++) {
+            for (int y = y0; y <= y1; y++) {
+                for (int z = z0; z <= z1; z++) {
+                    BlockPos pos = showBase.offset(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    BlockState settled = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(state, level, pos);
+                    if (settled != state) {
+                        level.setBlock(pos, settled, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Ala oeste: cinco fornalhas acesas contra a parede, uma por tier (a do meio repete o Elite), com
+     * filtro de minérios e carvão, o baú de entrada cheio, um barril e o baú de saída.
+     */
+    private static void showcaseSmelting(MinecraftServer server, ServerLevel level, UUID network) {
+        String[] tiers = {"basic", "advanced", "elite", "ultimate", "elite"};
+        Filter ores = new Filter(Filter.ListMode.WHITELIST, false, List.of(
+                new FilterEntry.TagEntry(ResourceLocation.parse("c:ores"), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_IRON), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_GOLD), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_COPPER), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.ANCIENT_DEBRIS), 16)));
+        for (int i = 0; i < tiers.length; i++) {
+            BlockPos furnace = showBase.offset(-11, 0, -15 + 2 * i);
+            level.setBlockAndUpdate(furnace, Blocks.FURNACE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.FurnaceBlock.FACING, Direction.EAST)
+                    .setValue(net.minecraft.world.level.block.FurnaceBlock.LIT, true));
+            ((Container) level.getBlockEntity(furnace)).setItem(1, new ItemStack(Items.COAL_BLOCK, 64));
+            placeShowRouter(server, level, furnace, tiers[i], "Furnace " + (i + 1), network);
+            RouterBlockEntity router = router(server, furnace.above());
+            router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+            router.setFilter(ResourceType.ITEM, Direction.UP, ores);
+            router.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.EXTRACT);
+            if (i == 2) {
+                showFurnace = furnace;
+            }
+        }
+        showInput = showBase.offset(-8, 0, -13);
+        showOutput = showBase.offset(-8, 0, -9);
+        level.setBlockAndUpdate(showInput, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+        level.setBlockAndUpdate(showBase.offset(-8, 0, -11), Blocks.BARREL.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP));
+        level.setBlockAndUpdate(showOutput, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+        placeShowRouter(server, level, showInput, "basic", "Ore Input", network);
+        placeShowRouter(server, level, showOutput, "advanced", "Output", network);
+        router(server, showInput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        router(server, showOutput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        refillShowcase(level);
+    }
+
+    /**
+     * Ala norte: os armazenamentos do mod numa galeria (Baú Ultimate com dezenas de tipos e milhões de
+     * itens, Tanque, Bateria, Tanque Químico com o Mekanism e Tanque de Source com o Ars), cada um com
+     * um roteador Avançado que tira para um igual Ultimate sob o piso: o fluxo dura a sessão inteira e
+     * dá números de verdade ao Tablet.
+     */
+    private static void showcaseStorage(MinecraftServer server, ServerLevel level, UUID network) {
+        StorageKind[] kinds = StorageKind.values();
+        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ELITE};
+        String[] names = {"Main Storage", "Water Tank", "Base Battery", "Hydrogen", "Source Reserve"};
         for (int i = 0; i < kinds.length; i++) {
             if (!kinds[i].loaded()) {
                 continue;
             }
-            BlockPos pos = showBase.offset(11 + 2 * i, 0, -5);
+            BlockPos pos = showBase.offset(-4 + 2 * i, 0, -16);
             level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(kinds[i]).get().defaultBlockState()
                     .setValue(RouterBlock.TIER, tiers[i]));
             showStorage.add(pos);
@@ -1362,32 +1622,112 @@ public final class DevEndToEnd {
                             Items.GUNPOWDER, Items.ENDER_PEARL, Items.BLAZE_ROD, Items.SLIME_BALL, Items.WHEAT,
                             Items.CARROT, Items.POTATO, Items.SUGAR_CANE, Items.BAMBOO, Items.KELP, Items.CLAY_BALL,
                             Items.FLINT, Items.LEATHER, Items.FEATHER, Items.EGG, Items.APPLE, Items.TORCH};
-                    long amount = 12_600_000L;
+                    long amount = 126_000_000L;
                     for (Item item : items) {
                         chest.storage().insert(new ItemStack(item), amount, false);
-                        amount = Math.max(1, amount * 7 / 10);
+                        amount = Math.max(1, amount * 6 / 10);
                     }
                 }
                 case StorageTankBlockEntity tank -> {
+                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 2_400_000_000L, false);
                     tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
-                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 120_000_000L, false);
                 }
-                case StorageBatteryBlockEntity battery -> battery.store().insert(2_500_000_000L, false);
+                case StorageBatteryBlockEntity battery -> battery.store().insert(60_000_000_000L, false);
                 case StorageChemicalTankBlockEntity chemical ->
-                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 64_000_000L, false);
+                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 2_000_000_000L, false);
+                case StorageSourceTankBlockEntity source -> source.store().insert(40_000_000L, false);
                 default -> {
                 }
             }
-            placeShowRouter(server, level, pos, "ultimate", names[i], network);
-            RouterBlockEntity router = router(server, pos.above());
-            ResourceType type = switch (kinds[i]) {
-                case CHEST -> ResourceType.ITEM;
-                case TANK -> ResourceType.FLUID;
-                case BATTERY -> ResourceType.ENERGY;
-                case CHEMICAL_TANK -> ResourceType.CHEMICAL;
-                case SOURCE_TANK -> ResourceType.SOURCE;
-            };
-            router.setMode(type, Direction.UP, PortMode.BOTH);
+            ResourceType type = kinds[i].resource;
+            placeShowRouter(server, level, pos, "advanced", names[i], network);
+            router(server, pos.above()).setMode(type, Direction.UP, PortMode.EXTRACT);
+            // O cofre sob o piso, que recebe.
+            BlockPos vault = pos.below(3);
+            level.setBlockAndUpdate(vault, ModBlocks.STORAGE.get(kinds[i]).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+            placeShowRouter(server, level, vault, "ultimate", "Vault " + (i + 1), network);
+            router(server, vault.above()).setMode(type, Direction.UP, PortMode.INSERT);
+        }
+    }
+
+    /**
+     * Centro: a vitrine dos itens do mod, cada um flutuando sobre um pedestal de quartzo (entidades
+     * de exibição, sempre de frente para a câmera e com luz cheia).
+     */
+    private static void showcaseDisplay(MinecraftServer server) {
+        String guide = ModList.get().isLoaded("guideme")
+                ? "{id:\"guideme:guide\",count:1,components:{\"guideme:guide_id\":\"wirelessautomate:guide\"}}"
+                : "{id:\"wirelessautomate:router\",count:1}";
+        String[][] rows = {
+                {"{id:\"wirelessautomate:linker\",count:1}", "{id:\"wirelessautomate:configurator\",count:1}",
+                        "{id:\"wirelessautomate:network_tablet\",count:1}", "{id:\"wirelessautomate:filter_card\",count:1}",
+                        guide},
+                {"{id:\"wirelessautomate:tier_core_advanced\",count:1}", "{id:\"wirelessautomate:tier_core_elite\",count:1}",
+                        "{id:\"wirelessautomate:tier_core_ultimate\",count:1}",
+                        "{id:\"wirelessautomate:chunk_loader_upgrade\",count:1}", "{id:\"wirelessautomate:router\",count:1}"}};
+        int[] zs = {-12, -9};
+        for (int r = 0; r < rows.length; r++) {
+            for (int i = 0; i < rows[r].length; i++) {
+                BlockPos pos = showBase.offset(-4 + 2 * i, 1, zs[r]);
+                command(server, String.format(java.util.Locale.ROOT,
+                        "summon minecraft:item_display %.2f %.2f %.2f {item:%s,billboard:\"center\","
+                                + "brightness:{sky:15,block:15},transformation:{left_rotation:[0f,0f,0f,1f],"
+                                + "right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[0.8f,0.8f,0.8f]}}",
+                        pos.getX() + 0.5, pos.getY() + 0.45, pos.getZ() + 0.5, rows[r][i]));
+            }
+        }
+    }
+
+    /**
+     * Ala leste, com o Ars: piso de pedra de Source, um Enchanting Apparatus com quatro pedestais,
+     * Sourcelinks, uma Source Jar criativa cujo roteador manda a Source sem fio para um Tanque de
+     * Source e uma Source Jar, e os quatro tiers do Tanque de Source (vazio, 25%, 60% e cheio) junto à
+     * parede sul.
+     */
+    private static void showcaseArcane(MinecraftServer server, ServerLevel level, UUID network) {
+        command(server, "fill " + at(6, -1, -17) + " " + at(10, -1, -6) + " ars_nouveau:smooth_sourcestone_large_bricks");
+        command(server, "setblock " + at(9, 0, -11) + " ars_nouveau:arcane_core");
+        command(server, "setblock " + at(9, 1, -11) + " ars_nouveau:enchanting_apparatus[facing=up]");
+        for (int[] p : new int[][] {{7, -11}, {11, -11}, {9, -13}, {9, -9}}) {
+            command(server, "setblock " + at(p[0], 0, p[1]) + " ars_nouveau:arcane_pedestal[facing=up]");
+        }
+        command(server, "setblock " + at(11, 0, -14) + " ars_nouveau:volcanic_sourcelink");
+        command(server, "setblock " + at(11, 0, -8) + " ars_nouveau:agronomic_sourcelink");
+        command(server, "setblock " + at(6, 0, -14) + " ars_nouveau:mycelial_sourcelink");
+        for (int[] c : new int[][] {{11, -17}, {6, -6}, {11, -6}}) {
+            put(level, c[0], 0, c[1], Blocks.PURPLE_CANDLE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.CandleBlock.CANDLES, 3)
+                    .setValue(net.minecraft.world.level.block.CandleBlock.LIT, true));
+        }
+        put(level, 7, 0, -14, Blocks.AMETHYST_BLOCK.defaultBlockState());
+        put(level, 7, 1, -14, Blocks.AMETHYST_CLUSTER.defaultBlockState());
+        // Jarra criativa (origem), Tanque de Source e uma Source Jar (destinos) na rede do laboratório.
+        BlockPos tank = showBase.offset(7, 0, -16);
+        showSourceJar = showBase.offset(9, 0, -16);
+        BlockPos jar = showBase.offset(11, 0, -16);
+        level.setBlockAndUpdate(tank, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        command(server, "setblock " + at(9, 0, -16) + " ars_nouveau:creative_source_jar");
+        command(server, "setblock " + at(11, 0, -16) + " ars_nouveau:source_jar");
+        placeShowRouter(server, level, showSourceJar, "advanced", "Source Supply", network);
+        placeShowRouter(server, level, tank, "advanced", "Apparatus Tank", network);
+        placeShowRouter(server, level, jar, "basic", "Source Jar", network);
+        router(server, showSourceJar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.EXTRACT);
+        router(server, tank.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
+        router(server, jar.above()).setMode(ResourceType.SOURCE, Direction.UP, PortMode.INSERT);
+        // Os quatro tiers, sem roteador, cada um num nível.
+        RouterTier[] tiers = RouterTier.values();
+        long[] contents = {0L, 640_000L, 24_576_000L, 3_000_000_000L};
+        for (int i = 0; i < 4; i++) {
+            // Vistos de dentro (olhando para o sul), o Básico fica à esquerda.
+            BlockPos pos = showBase.offset(11 - 2 * i, 0, -5);
+            level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, tiers[i]));
+            if (contents[i] > 0) {
+                ((StorageSourceTankBlockEntity) level.getBlockEntity(pos)).store().insert(contents[i], false);
+            }
+            showTanks.add(pos);
         }
     }
 
@@ -1423,15 +1763,13 @@ public final class DevEndToEnd {
         player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_SWORD));
     }
 
-    /** Entrada cheia e destinos vazios, para a tela mostrar itens passando. */
+    /** Entrada cheia de minério e saída vazia, para a tela mostrar itens passando. */
     private static void refillShowcase(ServerLevel level) {
-        for (BlockPos pos : List.of(showBase.offset(0, 0, -8), showBase.offset(3, 0, -8))) {
-            ((Container) level.getBlockEntity(pos)).clearContent();
-        }
+        ((Container) level.getBlockEntity(showOutput)).clearContent();
         Container input = (Container) level.getBlockEntity(showInput);
         for (int slot = 0; slot < input.getContainerSize(); slot++) {
-            input.setItem(slot, new ItemStack(slot % 3 == 0 ? Items.COBBLESTONE : slot % 3 == 1 ? Items.IRON_INGOT
-                    : Items.REDSTONE, 64));
+            input.setItem(slot, new ItemStack(slot % 3 == 0 ? Items.RAW_IRON : slot % 3 == 1 ? Items.RAW_GOLD
+                    : Items.RAW_COPPER, 64));
         }
     }
 

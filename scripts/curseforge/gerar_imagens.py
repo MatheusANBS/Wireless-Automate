@@ -116,7 +116,7 @@ def banner() -> Image.Image:
     assert x + largura_pixel(titulo, px) < w - 40, "título passa da borda"
     escreve_pixel(img, titulo, x, 92, px, CIANO_CLARO, sombra=(8, 40, 44))
     d = ImageDraw.Draw(img)
-    d.text((x + 4, 92 + 7 * px + 34), "Wireless items, fluids, energy and Mekanism chemicals.",
+    d.text((x + 4, 92 + 7 * px + 34), "Wireless items, fluids, energy, chemicals and Source.",
            fill=TEXTO, font=fonte(40))
     d.text((x + 4, 92 + 7 * px + 90), "No pipes. Light on TPS. Built for big modpacks.",
            fill=MUTED, font=fonte(32))
@@ -125,10 +125,18 @@ def banner() -> Image.Image:
 
 # ------------------------------------------------------------------ imagens de função
 
-def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tuple[int, int, int, int]) -> Image.Image:
+def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tuple[int, int, int, int],
+             detalhe: tuple[Path, tuple[int, int, int, int], int] | None = None) -> Image.Image:
+    """Captura com faixa de título; {@code detalhe} (captura, recorte, largura) entra no canto de baixo à direita."""
     foto = Image.open(origem).convert("RGB").crop(recorte)
     largura = 1280
     foto = foto.resize((largura - 48, round((largura - 48) * foto.height / foto.width)), Image.LANCZOS)
+    if detalhe is not None:
+        tela = Image.open(detalhe[0]).convert("RGB").crop(detalhe[1])
+        tela = tela.resize((detalhe[2], round(detalhe[2] * tela.height / tela.width)), Image.LANCZOS)
+        x, y = foto.width - tela.width - 18, foto.height - tela.height - 18
+        ImageDraw.Draw(foto).rectangle([x - 3, y - 3, x + tela.width + 2, y + tela.height + 2], fill=(46, 64, 82))
+        foto.paste(tela, (x, y))
     faixa = 150
     img = Image.new("RGB", (largura, faixa + foto.height + 24), FUNDO)
     d = ImageDraw.Draw(img)
@@ -136,6 +144,7 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
     d.rectangle([0, faixa - 4, largura, faixa - 1], fill=CIANO)
     px = 6
     escreve_pixel(img, titulo, 32, 34, px, CIANO_CLARO, sombra=(8, 40, 44))
+    assert d.textlength(subtitulo, font=fonte(30)) < largura - 60, f"subtítulo de {nome} passa da borda"
     d.text((34, 34 + 7 * px + 24), subtitulo, fill=TEXTO, font=fonte(30))
     # Moldura de 3 px em volta da captura.
     x0, y0 = 24, faixa + 8
@@ -145,18 +154,19 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
 
 
 TIERS = [
-    # (tier, nome, cor do nome, itens/s, mB/s, FE/t, alcance) — os padrões de RouterTier.
-    ("basic", "Basic", (200, 204, 210), "512", "32,000", "16,000", "128 blocks"),
-    ("advanced", "Advanced", (226, 179, 71), "8,192", "512,000", "256,000", "1,024 blocks"),
-    ("elite", "Elite", (69, 214, 204), "131,072", "8,000,000", "4,000,000", "Whole dimension"),
-    ("ultimate", "Ultimate", (164, 108, 255), "Unlimited", "Unlimited", "Unlimited", "Every dimension"),
+    # (tier, nome, cor do nome, itens/s, mB/s, FE/t, Source/s, alcance) — os padrões de RouterTier
+    # e do ResourceType (os químicos dividem a vazão com os fluidos).
+    ("basic", "Basic", (200, 204, 210), "512", "32,000", "16,000", "1,000", "128 blocks"),
+    ("advanced", "Advanced", (226, 179, 71), "8,192", "512,000", "256,000", "16,000", "1,024 blocks"),
+    ("elite", "Elite", (69, 214, 204), "131,072", "8,000,000", "4,000,000", "256,000", "Whole dimension"),
+    ("ultimate", "Ultimate", (164, 108, 255), "Unlimited", "Unlimited", "Unlimited", "Unlimited", "Every dimension"),
 ]
 
 
 def tiers() -> Image.Image:
     """Os quatro roteadores (texturas do mod, LEDs acesos) com a vazão e o alcance de cada um."""
     largura, faixa = 1280, 150
-    img = Image.new("RGB", (largura, faixa + 560), FUNDO)
+    img = Image.new("RGB", (largura, faixa + 650), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
     d.rectangle([0, faixa - 4, largura, faixa - 1], fill=CIANO)
@@ -165,7 +175,7 @@ def tiers() -> Image.Image:
            fill=TEXTO, font=fonte(30))
     sprites = capa.tex.gerar()
     coluna = largura // 4
-    rotulos = ("Items/s", "Fluid (mB/s)", "Energy (FE/t)", "Range")
+    rotulos = ("Items/s", "Fluid & chemicals (mB/s)", "Energy (FE/t)", "Source/s", "Range")
     for i, (tier, nome, cor, *valores) in enumerate(TIERS):
         sprites[f"block/router_{tier}_front"] = capa.acende_leds(sprites[f"block/router_{tier}_front"])
         arte = capa.tex.roteador_montado(tier, sprites, s=3)
@@ -180,17 +190,22 @@ def tiers() -> Image.Image:
             d.text((cx, y + 26), valor, fill=TEXTO, font=fonte(28), anchor="mt")
             y += 62
         if i:
-            d.line([(i * coluna, faixa + 30), (i * coluna, faixa + 530)], fill=(36, 50, 64), width=2)
+            d.line([(i * coluna, faixa + 30), (i * coluna, faixa + 592)], fill=(36, 50, 64), width=2)
     return img
 
 
 DESTAQUES = [
+    # (arquivo, título, subtítulo, captura, recorte[, (captura do detalhe, recorte, largura)]) — as
+    # capturas da vitrine têm 1280x800.
+    ("feature-0-overview", "Everything wireless",
+     "An ore line, five storage blocks and an Ars Nouveau lab, linked without a single pipe.",
+     VITRINE / "s0-casa.png", (90, 150, 1190, 770)),
     ("feature-1-network", "Connect machines without pipes",
      "Attach a router to any machine. Routers on the same network trade with each other.",
-     VITRINE / "s1-fabrica.png", (60, 250, 1220, 620)),
+     VITRINE / "s1-fabrica.png", (0, 120, 1280, 800)),
     ("feature-2-router", "Configure every face",
-     "Pick a face on the 3D model and set it to Extract, Insert or Storage, per resource type.",
-     VITRINE / "s3-roteador.png", (180, 30, 1100, 770)),
+     "Pick a face on the 3D model and set it per resource type, on up to five tabs.",
+     VITRINE / "s3-roteador.png", (30, 90, 1250, 710)),
     ("feature-3-filters", "Tags in one click",
      "Put any item in the inspector to see and check all its tags, or search every tag in the game.",
      VITRINE / "s5b-filtro-tags.png", (270, 120, 1010, 680)),
@@ -198,17 +213,29 @@ DESTAQUES = [
      "Any enchanted item, tools under 50% durability... and your inventory lights up.",
      VITRINE / "s5c-filtro-regra.png", (270, 120, 1010, 680)),
     ("feature-9-storage", "Storage of its own",
-     "Wireless Chest, Tank, Battery and Chemical Tank: billions per operation between them.",
-     VITRINE / "s9-armazenamentos.png", (230, 250, 1110, 640)),
+     "Wireless Chest, Tank, Battery, Chemical Tank and Source Tank: billions per operation.",
+     VITRINE / "s9-armazenamentos.png", (0, 150, 1280, 610)),
     ("feature-10-chest", "Wireless Chest",
      "Unlimited item types in a searchable, resizable list. Keeps everything when broken.",
-     VITRINE / "s10-bau.png", (365, 140, 910, 660)),
+     VITRINE / "s10-bau.png", (360, 130, 920, 670)),
+    ("feature-11-source", "Ars Nouveau Source",
+     "A Source tab on every router: jars, relays and tanks trade Source wirelessly.",
+     VITRINE / "s11-ars.png", (0, 100, 1280, 800)),
+    ("feature-12-source-tank", "Wireless Source Tank",
+     "A slim jar that shows its level. Sourcelinks fill it, Ars machines draw from it.",
+     VITRINE / "s12-tanques.png", (200, 170, 1080, 720), (VITRINE / "s12b-tanque-tela.png", (418, 258, 862, 542), 430)),
+    ("feature-14-toolkit", "The toolkit",
+     "Linker, Configurator, Tablet, Filter Card, Upgrade Cards and the guide book.",
+     VITRINE / "s14-vitrine.png", (100, 120, 1180, 660)),
     ("feature-5-area", "Link whole areas at once",
      "The Linker and the Configurator work on a marked area: one click for a whole factory.",
-     VITRINE / "s2-vinculador-area.png", (60, 250, 1220, 620)),
+     VITRINE / "s2-vinculador-area.png", (0, 120, 1280, 800)),
+    ("feature-13-linker", "Linker by type",
+     "Check the tabs to link: only Items, or Energy and Source, or everything at once.",
+     VITRINE / "s13-vinculador.png", (170, 90, 1110, 710)),
     ("feature-6-tablet", "Network Tablet",
-     "Every router of every network, from anywhere: search, map, stats and groups.",
-     VITRINE / "s6-tablet-lista.png", (180, 30, 1100, 770)),
+     "Every router, from anywhere: live stats per resource type, a map and groups.",
+     VITRINE / "s6b-tablet-estatisticas.png", (70, 90, 1210, 710)),
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
      E2E / "guia-getting-started.png", (300, 40, 1270, 568)),
@@ -220,11 +247,12 @@ def main() -> None:
     banner().save(SAIDA / "banner.png")
     tiers().save(SAIDA / "feature-4-tiers.png")
     feitos = ["banner.png", "feature-4-tiers.png"]
-    for nome, titulo, sub, origem, recorte in DESTAQUES:
-        if not origem.exists():
-            print(f"pulando {nome}: falta {origem.relative_to(RAIZ)}")
+    for nome, titulo, sub, origem, recorte, *detalhe in DESTAQUES:
+        faltam = [p for p in [origem] + [d[0] for d in detalhe] if not p.exists()]
+        if faltam:
+            print(f"pulando {nome}: falta {faltam[0].relative_to(RAIZ)}")
             continue
-        destaque(nome, titulo, sub, origem, recorte).save(SAIDA / f"{nome}.png")
+        destaque(nome, titulo, sub, origem, recorte, *detalhe).save(SAIDA / f"{nome}.png")
         feitos.append(f"{nome}.png")
     print("gerados:", ", ".join(feitos))
 

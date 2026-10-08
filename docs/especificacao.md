@@ -58,11 +58,15 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 ### Filtro
 
-- **Abre com:** Editar no roteador, ou clique direito no ar segurando um Cartão de filtro.
+- **Abre com:** Editar no roteador, o botão Filtro dos armazenamentos, ou clique direito no ar segurando um Cartão de filtro.
+- **Janela redimensionável** pelas bordas e pela alça do canto, em torno do centro (como a do Baú), com o tamanho lembrado na sessão.
 - Lista branca ou negra e, para itens, ignorar ou exigir componentes iguais.
-- Grade de entradas sem limite, com rolagem. Tocar numa entrada mostra a quantidade de estoque e Remover.
-- Sem abas: Shift + clique num item do inventário do jogador adiciona; com o JEI, arrastar ou Shift + clique na lista dele adiciona mesmo sem ter o item.
-- **Recolhido:** regras por tag (`#c:ores`) ou mod (`@mekanism`).
+- **À esquerda:** as entradas em lista (ícone, nome, tipo, estoque), sem limite e com busca por nome, `#tag` ou `@mod`; embaixo, o inventário do jogador (Shift + clique adiciona o item exato; com o JEI, arrastar para a lista ou Shift + clique na lista dele adiciona mesmo sem ter o item).
+- **À direita, quatro abas:**
+  - **Entrada:** a selecionada, com o que ela pega (os itens da tag ou do mod), o estoque, Remover, e Ver tags (item) ou Editar (regra).
+  - **Tags:** o inspetor (um item no slot, pelo cursor, pelo JEI, por Ver tags ou por Ctrl + clique no inventário, mostra todas as tags dele para marcar, mais o mod) e a busca em todas as tags do jogo, com quantos itens cada uma pega e a prévia dos itens sob o mouse; `@texto` busca mods. Nos químicos, que não têm tags, vira Adicionar: id do químico ou `@mod`.
+  - **Regra** (só itens): monta uma regra por propriedade; o inventário acende no que ela pega antes de adicionar.
+  - **Mais:** Cartão de Filtro (importar e exportar), componentes e Limpar.
 
 ### Tablet de rede
 
@@ -108,10 +112,12 @@ Cada face da máquina, para cada tipo, tem um filtro embutido sem limite de entr
 | Exato | Lingote de ferro, água | Itens, fluidos, químicos |
 | Tag | `#c:ingots`, `#c:ores` | Itens, fluidos |
 | Mod | `@mekanism` | Itens, fluidos, químicos |
+| Regra por propriedade | Qualquer item encantado | Itens |
 
-- **Adicionar:** Shift + clique num item do inventário, ou clique no JEI mesmo sem ter o item. Arrastar do JEI para um slot também funciona. Duplicados são ignorados.
+- **Adicionar:** Shift + clique num item do inventário, ou clique no JEI mesmo sem ter o item. Arrastar do JEI para a lista também funciona. Tags e mods pelo inspetor ou pela busca, várias de uma vez. Duplicados são ignorados.
+- **Regra por propriedade:** pega o item que cumpre **todas** as condições marcadas, cada uma com tanto faz, sim ou não: encantado (inclusive livro), danificado, renomeado, com poção, empilhável e com conteúdo (caixa de shulker, bundle); mais um encantamento com nível mínimo (no item ou no livro), a durabilidade restante (≥ ou < uma porcentagem) e o "só em" (uma tag ou mod: encantado + `#c:armors` = só armadura encantada). Aceita estoque e lista negra como qualquer entrada, e é editável depois.
 - **Tamanho:** sem limite na tela, com rolagem. Um teto interno de 4.096 entradas protege o dado salvo e o pacote de rede.
-- **Custo:** o filtro é compilado em conjuntos de hash, então conferir um item custa o mesmo com 9 ou com milhares de entradas.
+- **Custo:** o filtro é compilado em conjuntos de hash, então conferir um item custa o mesmo com 9 ou com milhares de entradas. As regras por propriedade não cabem num mapa: são perguntadas em ordem, só as que vêm antes da melhor resposta dos mapas, então o custo cresce com o número de regras (poucas, na prática).
 - **Modo:** lista branca ou negra, por filtro.
 - **Componentes:** ignorar (picareta encantada = picareta) ou exigir iguais.
 - **Estoque:** ao inserir, aceitar só até N no destino; ao extrair, manter sempre N na origem.
@@ -285,6 +291,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Roteador direcional com itens, fluidos e energia, configurado por face da máquina
 - [x] Redes, rede ativa, prioridade, round-robin e redstone
 - [x] Filtros sem limite (inventário, JEI, tags, mod, estoque) e cartões
+- [x] Filtro v2 (0.2): tela em lista redimensionável, inspetor e busca de tags e regras por propriedade
 - [x] Tiers e Cartões de Upgrade
 - [x] Configurador como pincel e Vinculador modo Único
 - [x] Profiler embutido e benchmark com Sophisticated Storage

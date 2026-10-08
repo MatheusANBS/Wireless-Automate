@@ -21,6 +21,8 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,7 +49,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "6";
+    public static final String VERSION = "7";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -73,6 +75,8 @@ public final class ModPayloads {
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
+        registrar.playToServer(FilterEntriesPayload.TYPE, FilterEntriesPayload.STREAM_CODEC,
+                (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
         registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
@@ -358,6 +362,55 @@ public final class ModPayloads {
         }
         target.setFilter(target.filter().withEntry(entry));
         return true;
+    }
+
+    /**
+     * Tags, mods e regras montadas na tela (inspetor, busca, montador de regra): acrescenta as
+     * entradas ou troca uma ({@link FilterEntriesPayload}). Cada uma precisa valer para o tipo do
+     * filtro: tag em itens e fluidos, regra só em itens, mod em todos. As novas entram sem estoque.
+     * Devolve se o pacote foi aceito; uma entrada inválida recusa o pacote inteiro.
+     */
+    public static boolean handleFilterEntries(@Nullable ServerPlayer player, FilterEntriesPayload payload) {
+        FilterMenu menu = player != null && player.containerMenu instanceof FilterMenu m
+                && m.containerId == payload.containerId() ? m : null;
+        if (menu == null || menu.target() == null || !menu.stillValid(player) || payload.entries().isEmpty()) {
+            return false;
+        }
+        FilterTarget target = menu.target();
+        List<FilterEntry> entries = new ArrayList<>(payload.entries().size());
+        for (FilterEntry entry : payload.entries()) {
+            FilterEntry valid = validRule(target.type(), entry);
+            if (valid == null) {
+                return false;
+            }
+            entries.add(valid);
+        }
+        Filter filter = target.filter();
+        if (payload.replace() < 0) {
+            target.setFilter(filter.withEntries(entries));
+            return true;
+        }
+        if (entries.size() != 1 || !validIndex(filter, payload.replace())) {
+            return false;
+        }
+        target.setFilter(filter.withReplaced(payload.replace(), entries.getFirst()));
+        return true;
+    }
+
+    /** A entrada normalizada (sem estoque) se ela é uma tag, mod ou regra que vale para {@code type}. */
+    private static @Nullable FilterEntry validRule(ResourceType type, FilterEntry entry) {
+        return switch (entry) {
+            case FilterEntry.TagEntry e when type == ResourceType.ITEM || type == ResourceType.FLUID -> {
+                ResourceLocation tag = parseTag(e.tag().toString());
+                yield tag == null ? null : new FilterEntry.TagEntry(tag, 0);
+            }
+            case FilterEntry.ModEntry e -> {
+                String mod = parseMod(e.modId());
+                yield mod == null ? null : new FilterEntry.ModEntry(mod, 0);
+            }
+            case FilterEntry.RuleEntry e when type == ResourceType.ITEM && e.rule().isValid() -> new FilterEntry.RuleEntry(e.rule(), 0);
+            default -> null;
+        };
     }
 
     /** {@code c:ingots} ou {@code #c:ingots}, em minúsculas; {@code null} se não for um id válido. */

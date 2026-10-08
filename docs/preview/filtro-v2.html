@@ -1,0 +1,690 @@
+<title>Filtro v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: as duas telas do jogo lado a lado (empilham no estreito), escala em "pixels de GUI" via --u; paleta do GuiPaint */
+:root {
+  --u: 2px;
+  --page: #0E1217;
+  --page-fg: #D5DDE5;
+  --page-mu: #8B98A6;
+  --panel: #1B2129;
+  --bevel-l: #3A4452;
+  --bevel-d: #0C0F13;
+  --inset: #11151B;
+  --line: #2A3340;
+  --btn: #1C242D;
+  --btn-b: #2A3542;
+  --btn-hb: #56606F;
+  --fg: #E8EDF2;
+  --mu: #93A0AE;
+  --dis: #5B6675;
+  --dark: #0D1116;
+  --ac: #45D6CC;
+  --ac-bg: #143230;
+  --danger: #E5534B;
+  --enchant: #A46CFF;
+  --gold: #F2C04A;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+@media (min-width: 1500px) { :root { --u: 2.5px } }
+@media (max-width: 600px) { :root { --u: calc((100vw - 40px) / 256) } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; padding: 0 16px; }
+.wrap { max-width: 1340px; margin: 0 auto; padding-block: 28px 48px; }
+header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; margin-bottom: 6px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 30px; letter-spacing: .02em; color: var(--ac); margin: 0; text-wrap: balance }
+.status { font-family: var(--pix); font-size: 14px; color: var(--gold); border: 1px solid #5a4a20; padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 70ch; margin: 0 0 24px }
+.stage { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start }
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+figcaption { font-size: 14px; color: var(--page-mu); max-width: calc(var(--u) * 256) }
+figcaption b { color: var(--page-fg); font-weight: 700 }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; margin-top: 36px }
+.notes h2 { font-family: var(--pix); font-weight: 500; font-size: 18px; color: var(--fg); margin: 0 0 8px }
+.notes ul { margin: 0; padding-left: 18px; color: var(--page-mu) }
+.notes li { margin-bottom: 6px }
+.notes li b { color: var(--page-fg) }
+code { font-family: var(--pix); color: var(--ac); font-size: .95em }
+
+.gui { position: relative; width: calc(var(--u) * 256); height: calc(var(--u) * 232); background: var(--panel);
+  border: var(--u) solid var(--ac); box-shadow: 0 0 0 var(--u) var(--bevel-d), 0 0 0 calc(var(--u) * 2) var(--bevel-l);
+  font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--fg); user-select: none; flex: none }
+.gui.flash { animation: flash .6s ease-out }
+@keyframes flash { from { box-shadow: 0 0 0 var(--u) var(--bevel-d), 0 0 0 calc(var(--u) * 6) var(--ac) } }
+.a { position: absolute }
+.t { position: absolute; white-space: nowrap }
+.mu { color: var(--mu) } .dis { color: var(--dis) } .acc { color: var(--ac) } .red { color: var(--danger) }
+button.a { font: inherit; color: var(--fg); background: var(--btn); border: var(--u) solid var(--btn-b); padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2) }
+button.a:hover { border-color: var(--btn-hb) }
+button.a:focus-visible, .row:focus-visible, .slot:focus-visible { outline: var(--u) solid var(--gold); outline-offset: 0 }
+button.a.on { background: var(--ac); border-color: var(--ac); color: var(--dark) }
+button.a.ghost { background: transparent; border-color: transparent; justify-content: flex-start; color: var(--mu) }
+button.a.ghost:hover { color: var(--fg) }
+.box { background: var(--inset); border: var(--u) solid var(--line) }
+.cell { position: absolute; background: var(--inset); border: var(--u) solid var(--line) }
+.slot { position: absolute; width: calc(var(--u) * 18); height: calc(var(--u) * 18); background: var(--inset);
+  border: var(--u) solid var(--line); padding: 0; cursor: pointer }
+.slot.sel { border-color: var(--ac); background: var(--ac-bg) }
+.slot.hit { border-color: var(--ac); background: var(--ac-bg) }
+.slot.dim .spr { opacity: .28 }
+.spr { position: absolute; left: var(--u); top: var(--u); width: calc(var(--u) * 16); height: calc(var(--u) * 16); image-rendering: pixelated; background-size: 100% 100% }
+.spr.glint::after { content: ""; position: absolute; inset: 0; -webkit-mask: var(--m) 0 0 / 100% 100%; mask: var(--m) 0 0 / 100% 100%;
+  background: linear-gradient(115deg, transparent 30%, rgba(190, 120, 255, .65) 45%, transparent 60%) 0 0 / 300% 100%; animation: glint 2.6s linear infinite }
+@media (prefers-reduced-motion: reduce) { .spr.glint::after { animation: none; background-position: 50% 0 } .gui.flash { animation: none } }
+@keyframes glint { from { background-position: 150% 0 } to { background-position: -150% 0 } }
+.qty { position: absolute; right: 0; bottom: calc(var(--u) * -1); color: #fff; text-shadow: var(--u) var(--u) 0 #3f3f3f; font-size: calc(var(--u) * 8) }
+.badge-tag { position: absolute; left: 0; top: calc(var(--u) * -1); color: var(--ac); text-shadow: var(--u) var(--u) 0 #000 }
+.badge-prop { position: absolute; left: var(--u); top: var(--u); width: calc(var(--u) * 4); height: calc(var(--u) * 4); background: var(--enchant);
+  transform: rotate(45deg); box-shadow: 0 0 0 calc(var(--u) * .7) #1a0d33 }
+.ck { position: absolute; width: calc(var(--u) * 8); height: calc(var(--u) * 8); border: var(--u) solid var(--mu); background: var(--inset) }
+.ck.on { background: var(--ac); border-color: var(--ac) }
+.ck.on::after { content: ""; position: absolute; left: calc(var(--u) * 1.5); top: calc(var(--u) * 0); width: calc(var(--u) * 2); height: calc(var(--u) * 4);
+  border: solid var(--dark); border-width: 0 var(--u) var(--u) 0; transform: rotate(40deg) }
+.row { position: absolute; left: 0; right: 0; height: calc(var(--u) * 12); cursor: pointer; background: transparent; border: 0; padding: 0; font: inherit; color: var(--mu); text-align: left }
+.row:hover { background: #18202a }
+.row.sel { background: #1d2a33 }
+.row.on { color: var(--fg) }
+.wraptext { position: absolute; white-space: normal; line-height: calc(var(--u) * 10) }
+.field { position: absolute; font: inherit; color: var(--fg); background: #000; border: var(--u) solid var(--btn-hb); padding: 0 calc(var(--u) * 3); outline: none }
+.field:focus { border-color: var(--ac) }
+.field::placeholder { color: var(--dis) }
+.sb { position: absolute; background: var(--inset) }
+.sb i { position: absolute; left: 0; right: 0; background: var(--btn-hb) }
+#tip { position: fixed; z-index: 10; pointer-events: none; font-family: var(--pix); font-size: 16px; line-height: 20px; background: rgba(16, 0, 16, .94);
+  border: 2px solid #2b0f5c; outline: 2px solid rgba(16, 0, 16, .94); padding: 3px 7px; max-width: 320px }
+#tip .n { color: #fff } #tip .n.ench { color: #55FFFF } #tip .n.named { font-style: italic }
+#tip .g { color: #A8A8A8 } #tip .ok { color: var(--ac) } #tip .no { color: var(--danger) }
+.toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--u) * -14); white-space: nowrap; color: var(--gold); font-size: calc(var(--u) * 7) }
+
+/* ---- filtro v2 */
+.gui2 { position: relative; background: var(--panel); border: var(--u) solid var(--ac);
+  box-shadow: 0 0 0 var(--u) var(--bevel-d), 0 0 0 calc(var(--u) * 2) var(--bevel-l);
+  font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--fg); user-select: none; flex: none }
+.gui2 .abs, .gui2 .t { position: absolute }
+.gui2 .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.gui2 .tab { position: absolute; font: inherit; color: var(--mu); background: transparent; border: var(--u) solid var(--btn-b); border-bottom: 0; cursor: pointer; padding: 0 }
+.gui2 .tab.on { color: var(--dark); background: var(--ac); border-color: var(--ac) }
+.gui2 .tab:hover:not(.on) { color: var(--fg) }
+.gui2 button.a { position: absolute }
+.gui2 button.a:disabled { color: var(--dis); cursor: default; border-color: var(--line) }
+.gui2 button.a.danger { color: var(--danger) }
+.gui2 .erow { position: absolute; cursor: pointer }
+.gui2 .erow:hover { background: #18202a }
+.gui2 .erow.sel { background: #1d2a33; box-shadow: inset calc(var(--u) * 1) 0 0 var(--ac) }
+.gui2 .trow { position: absolute; cursor: pointer }
+.gui2 .trow:hover, .gui2 .trow.hov { background: #18202a }
+.gui2 .tri { position: absolute; display: flex }
+.gui2 .tri button { font: inherit; font-size: calc(var(--u) * 7); color: var(--mu); background: var(--btn); border: var(--u) solid var(--btn-b); padding: 0; cursor: pointer; margin-left: calc(var(--u) * -1) }
+.gui2 .tri button.on { background: var(--ac); border-color: var(--ac); color: var(--dark); position: relative }
+.gui2 .tri button.on.no { background: var(--danger); border-color: var(--danger); color: #fff }
+.gui2 .grip { position: absolute; right: 0; bottom: 0; width: calc(var(--u) * 7); height: calc(var(--u) * 7); cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--btn-hb) 50%, var(--btn-hb) 62%, transparent 62%, transparent 75%, var(--btn-hb) 75%, var(--btn-hb) 87%, transparent 87%) }
+.gui2 .edge-r { position: absolute; top: 0; bottom: calc(var(--u) * 7); right: calc(var(--u) * -2); width: calc(var(--u) * 4); cursor: ew-resize }
+.gui2 .edge-b { position: absolute; left: 0; right: calc(var(--u) * 7); bottom: calc(var(--u) * -2); height: calc(var(--u) * 4); cursor: ns-resize }
+.gui2 .chip { position: absolute; color: var(--enchant) }
+.gui2 .slot.match { border-color: var(--ac); background: var(--ac-bg) }
+.gui2 .slot.dim .spr { opacity: .3 }
+.gui2 .tagbadge { position: absolute; left: 0; top: calc(var(--u) * -1); color: var(--ac); text-shadow: var(--u) var(--u) 0 #000; font-size: calc(var(--u) * 8) }
+.gui2 .modbadge { position: absolute; left: 0; top: calc(var(--u) * -1); color: var(--gold); text-shadow: var(--u) var(--u) 0 #000; font-size: calc(var(--u) * 8) }
+.gui2 .rule-ico { position: absolute; left: calc(var(--u) * 4); top: calc(var(--u) * 4); width: calc(var(--u) * 8); height: calc(var(--u) * 8); background: var(--enchant);
+  transform: rotate(45deg); box-shadow: 0 0 0 var(--u) #1a0d33, inset calc(var(--u) * 2) calc(var(--u) * 2) 0 rgba(255,255,255,.25) }
+.gui2 .field { font-size: calc(var(--u) * 8) }
+.gui2 .bar { position: absolute; background: var(--inset) }
+.gui2 .bar i { position: absolute; left: 0; right: 0; background: var(--btn-hb) }
+.cursor-item { position: fixed; z-index: 20; pointer-events: none; width: calc(var(--u) * 16); height: calc(var(--u) * 16) }
+.cursor-item .spr { left: 0; top: 0 }
+.stage2 { display: flex; justify-content: center; align-items: center; min-height: calc(var(--u) * 360); padding: 24px 0;
+  background: radial-gradient(ellipse at center, #1a222b 0%, var(--page) 70%); border: 1px solid #1d252f }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--page-mu); margin: 10px 0 0 }
+.legend b { color: var(--page-fg) }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Filtro v2</h1>
+    <span class="status">Maquete · aguardando aprovação</span>
+  </header>
+  <p class="lede">A tela nova do filtro, na escala do jogo e com a paleta do mod. Tudo aqui funciona: troque as abas, clique num item do inventário para pegá-lo e clique com ele no slot do inspetor, marque tags, monte uma regra e arraste a alça do canto para redimensionar (a janela fica centralizada). Números de itens por tag são ilustrativos.</p>
+
+  <div class="stage2" id="stage"><div class="gui2" id="g" aria-label="Tela de filtro"></div></div>
+  <div class="legend">
+    <span><b>#</b> tag</span><span><b style="color:var(--gold)">@</b> mod</span><span><b style="color:var(--enchant)">◆</b> regra</span>
+    <span><b>Shift + clique</b> no inventário: adiciona o item exato</span><span><b>Clique</b>: pega o item (para o inspetor)</span>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Lista de entradas</h2>
+      <ul>
+        <li><b>Uma linha por entrada</b>, com ícone, nome, tipo e estoque. A busca acha por nome, <code>#tag</code> ou <code>@mod</code>.</li>
+        <li>Continua sem limite prático (4.096 entradas), lista branca ou negra, e componentes como hoje.</li>
+        <li>A janela cresce como a do Baú: mais largura alonga os nomes, mais altura mostra mais linhas e mais tags.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Tags</h2>
+      <ul>
+        <li><b>Inspetor</b>: clique no slot com um item no cursor (ou arraste do JEI, ou selecione um item na lista). Aparecem todas as tags dele para marcar.</li>
+        <li><b>Busca</b>: digite parte do nome para ver todas as tags do jogo com quantos itens cada uma pega.</li>
+        <li><b>Prévia</b>: passe o mouse numa tag para ver os itens dela na faixa de baixo.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Regras</h2>
+      <ul>
+        <li>Cada condição tem <b>— / Sim / Não</b>; a regra pega o item que cumpre <b>todas</b> as marcadas.</li>
+        <li><b>Só em</b> limita a uma tag ou mod: Encantado + <code>#c:armors</code> = só armadura encantada.</li>
+        <li>O inventário acende o que a regra pega, antes de adicionar. Regra aceita estoque como qualquer entrada.</li>
+        <li>Livro encantado conta como <b>Encantado</b>; para separar, use Só em ou a lista negra.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+<div id="tip" hidden></div>
+<div class="cursor-item" id="cur" hidden></div>
+<script>
+/* ---------------------------------------------------------------- sprites */
+const PAL = {
+  O: "#0b1412", H: "#6b4a2b", h: "#8a6338",
+  B: "#33d6c4", L: "#c9fff7", D: "#1d8f86",
+  C: "#8a2b3a", c: "#5a1a26", G: "#e8c04a", P: "#ede6d6",
+  R: "#e0405a", W: "#c8d8e8", r: "#a02a40",
+  Y: "#f2d24a", y: "#c99a1a", s: "#fff6b0",
+  M: "#7a8694", m: "#4a5462", E: "#45e07a", e: "#2c9a50",
+  g: "#808080", k: "#5e5e5e", l: "#a0a0a0", v: "#2fae5f"
+};
+const MAPS = {
+  sword: ["..............OO",".............OLO","............OLBO","...........OLBO.","..........OLBO..",".........OLBO...","........OLBO....","...OO..OLBO.....","...ODOOLBO......","....ODLBO.......",".....ODO........","....OHODO.......","...OHO.ODO......",".OOHO...OO......","OBHO............","OOO............."],
+  pick: ["................","....OOOOOO......","...OBBBBLLO.....","....OOOOBBLO....","........OBBLO...",".......OHOBBO...","......OHO.OBO...",".....OHO..OBO...","....OHO...OBO...","...OHO.....OO...","..OHO...........",".OHO............","OHO.............","OO..............","................","................"],
+  book: ["................","..OOOOOOOOOOO...","..OCCCCCCCCPO...","..OCCCCCCCCPPO..","..OCCGGGGCCPPO..","..OCCCCCCCCPPO..","..OCCGGGGCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OCCCCCCCCPPO..","..OccccccccccO..","...OOOOOOOOOOO..","................","................"],
+  potion: ["................","......OOOO......","......OWWO......",".......OO.......","......OWWO......",".....OWRRWO.....","....ORRRRRRO....","...ORLRRRRRRO...","...ORLRRRRRRO...","...ORRRRRRRRO...","...ORRRRRRRrO...","....ORRRRRrO....",".....OOOOOO.....","................","................","................"],
+  gem: ["................","................","....OOOOOOOO....","...OLLBBBBBBO...","..OLLBBBBBBBBO..",".OBBBBBBBBBBBBO.","..OBBBBBBBBBDO..","...OBBBBBBBDO...","....OBBBBBDO....",".....OBBBDO.....","......OBDO......",".......OO.......","................","................","................","................"],
+  ingot: ["................","................","................","................",".....OOOOOOOO...","....OssssssYO...","...OsYYYYYYYYO..","..OYYYYYYYYYyO..",".OYYYYYYYYYyO...",".OyyyyyyyyyO....","..OOOOOOOOOO....","................","................","................","................","................"],
+  cell: ["................",".....OOOOOO.....",".....OMMMMO.....","....OOOOOOOO....","....OMmmmmMO....","....OmEEEEmO....","....OmEEEEmO....","....OmmmmmmO....","....OmEEEEmO....","....OmEEEEmO....","....OmmmmmmO....","....OmeeeemO....","....OmeeeemO....","....OOOOOOOO....","................","................"]
+};
+const HALF = {
+  chest: ["........",".OOOO...","OBBBBO..","OBLBBBOO","OBLBBBBB","OOLBBBBB",".OOBBBBB","..OBLBBB","..OBLBBB","..OBLBBB","..OBBBBB","..OBBBBB","..ODDDDD","..OOOOOO","........","........"],
+  helm: ["........","........","........","...OOOOO","..OBBBBB",".OBLBBBB",".OBLBBBB",".OBBBBBB",".OBBBOOO",".OBBO...",".OBBO...",".ODDO...",".OOOO...","........","........","........"]
+};
+for (const [k, h] of Object.entries(HALF)) MAPS[k] = h.map(r => r + [...r].reverse().join(""));
+function noise(seed, speck) {
+  let x = seed; const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
+  return Array.from({ length: 16 }, (_, y) => Array.from({ length: 16 }, (_, i) => {
+    if (y === 0 || y === 15 || i === 0 || i === 15) return "k";
+    const v = rnd(); if (speck && v > .86) return "v"; return v < .3 ? "k" : v < .75 ? "g" : "l";
+  }).join(""));
+}
+MAPS.cobble = noise(7, false); MAPS.ore = noise(3, true);
+const SPR = {};
+for (const [k, rows] of Object.entries(MAPS)) {
+  const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d");
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== ".") { g.fillStyle = PAL[ch] || "#f0f"; g.fillRect(x, y, 1, 1) } }));
+  SPR[k] = c.toDataURL();
+}
+function sprite(k, glint) {
+  const u = SPR[k]; return `<span class="spr${glint ? " glint" : ""}" style="background-image:url(${u});--m:url(${u})"></span>`;
+}
+
+
+/* ---------------------------------------------------------------- sprites extras */
+function addSprite(k, rows) {
+  const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d");
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== ".") { g.fillStyle = PAL[ch] || "#f0f"; g.fillRect(x, y, 1, 1) } }));
+  SPR[k] = c.toDataURL();
+}
+Object.assign(PAL, { U: "#9a5ad8", u: "#6a3aa0", V: "#c9a0ff" });
+addSprite("box", ["................","..OOOOOOOOOOOO..",".OVVVVVVVVVVVVO.",".OUUUUUUUUUUUUO.",".OOOOOOOOOOOOOO.",".OUUUUUUUUUUUUO.",".OUUUUOOOOUUUUO.",".OUUUUOVVOUUUUO.",".OUUUUOOOOUUUUO.",".OUUUUUUUUUUUUO.",".OUUUUUUUUUUUUO.",".OuuuuuuuuuuuuO.",".OuuuuuuuuuuuuO.",".OOOOOOOOOOOOOO.","................","................"]);
+
+/* ---------------------------------------------------------------- dados */
+const ROMAN = ["", "I", "II", "III", "IV", "V"];
+const ENCH = { fortune: "Fortuna", silk_touch: "Toque de seda", mending: "Remendo", protection: "Proteção", sharpness: "Afiação", efficiency: "Eficiência", unbreaking: "Inquebrável" };
+const ENCH_MAX = { fortune: 3, silk_touch: 1, mending: 1, protection: 4, sharpness: 5, efficiency: 5, unbreaking: 3 };
+const ENCH_KEYS = Object.keys(ENCH);
+
+/* tags: id -> [sprites dos itens, quantos itens] */
+const TAGDB = {
+  "c:gems": [["gem"], 14], "c:gems/diamond": [["gem"], 1], "minecraft:beacon_payment_items": [["gem", "ingot"], 5],
+  "c:ingots": [["ingot"], 38], "c:ingots/gold": [["ingot"], 1], "minecraft:piglin_loved": [["ingot", "gem"], 27],
+  "c:cobblestones": [["cobble"], 4], "c:cobblestones/normal": [["cobble"], 1], "minecraft:stone_tool_materials": [["cobble"], 3],
+  "minecraft:stone_crafting_materials": [["cobble"], 3], "c:ores": [["ore"], 61], "c:ores/emerald": [["ore"], 2],
+  "c:tools": [["pick", "sword"], 214], "c:tools/mining_tool": [["pick"], 31], "minecraft:pickaxes": [["pick"], 6],
+  "minecraft:swords": [["sword"], 6], "c:tools/melee_weapon": [["sword"], 44],
+  "minecraft:enchantable/mining": [["pick"], 30], "minecraft:enchantable/durability": [["pick", "sword", "chest", "helm"], 96],
+  "minecraft:enchantable/weapon": [["sword"], 12], "minecraft:enchantable/sword": [["sword"], 6],
+  "c:armors": [["chest", "helm"], 88], "minecraft:chest_armor": [["chest"], 6], "minecraft:head_armor": [["helm"], 7],
+  "minecraft:trimmable_armor": [["chest", "helm"], 24], "minecraft:enchantable/armor": [["chest", "helm"], 26],
+  "minecraft:bookshelf_books": [["book"], 4], "minecraft:lectern_books": [["book"], 2], "c:potions": [["potion"], 4],
+  "c:shulker_boxes": [["box"], 17], "minecraft:shulker_boxes": [["box"], 17], "mekanism:energy_cells": [["cell"], 4]
+};
+const MOD_ICON = { minecraft: "gem", mekanism: "cell", wirelessautomate: "box" };
+const MOD_COUNT = { minecraft: 1385, mekanism: 482, wirelessautomate: 31 };
+
+const it = (s, n, o = {}) => Object.assign({ s, n, q: 1, mod: "minecraft", tags: [] }, o);
+const INV = [
+  it("sword", "Espada de diamante", { e: { sharpness: 5, mending: 1 }, max: 1561, tags: ["minecraft:swords", "c:tools/melee_weapon", "c:tools", "minecraft:enchantable/weapon", "minecraft:enchantable/sword", "minecraft:enchantable/durability"] }),
+  it("chest", "Peitoral de diamante", { e: { protection: 4 }, max: 528, d: 50, tags: ["c:armors", "minecraft:chest_armor", "minecraft:trimmable_armor", "minecraft:enchantable/armor", "minecraft:enchantable/durability"] }),
+  it("pick", "Picareta da Mina", { e: { fortune: 3, mending: 1 }, max: 1561, d: 1200, nm: 1, tags: ["minecraft:pickaxes", "c:tools/mining_tool", "c:tools", "minecraft:enchantable/mining", "minecraft:enchantable/durability"] }),
+  it("pick", "Picareta de diamante", { max: 1561, d: 200, tags: ["minecraft:pickaxes", "c:tools/mining_tool", "c:tools", "minecraft:enchantable/mining", "minecraft:enchantable/durability"] }),
+  it("chest", "Peitoral de diamante", { max: 528, tags: ["c:armors", "minecraft:chest_armor", "minecraft:trimmable_armor", "minecraft:enchantable/armor", "minecraft:enchantable/durability"] }),
+  it("book", "Livro encantado", { e: { fortune: 3 }, tags: ["minecraft:bookshelf_books"] }),
+  it("helm", "Capacete do Zé", { e: { protection: 4, unbreaking: 3 }, max: 363, d: 300, nm: 1, tags: ["c:armors", "minecraft:head_armor", "minecraft:trimmable_armor", "minecraft:enchantable/armor", "minecraft:enchantable/durability"] }),
+  it("gem", "Diamante", { q: 12, st: 1, tags: ["c:gems", "c:gems/diamond", "minecraft:beacon_payment_items"] }),
+  it("cobble", "Pedregulho", { q: 64, st: 1, tags: ["c:cobblestones", "c:cobblestones/normal", "minecraft:stone_tool_materials", "minecraft:stone_crafting_materials"] }),
+  it("ore", "Minério de esmeralda", { q: 7, st: 1, tags: ["c:ores", "c:ores/emerald"] }),
+  it("cell", "Célula de energia", { mod: "mekanism", tags: ["mekanism:energy_cells"] }),
+  it("potion", "Poção de cura", { pot: 1, tags: ["c:potions"] }),
+  it("ingot", "Lingote de ouro", { q: 9, st: 1, tags: ["c:ingots", "c:ingots/gold", "minecraft:piglin_loved", "minecraft:beacon_payment_items"] }),
+  it("box", "Caixa de shulker", { cont: 1, tags: ["c:shulker_boxes", "minecraft:shulker_boxes"] }),
+  it("pick", "Picareta de diamante", { e: { silk_touch: 1 }, max: 1561, tags: ["minecraft:pickaxes", "c:tools/mining_tool", "c:tools", "minecraft:enchantable/mining", "minecraft:enchantable/durability"] }),
+  null, null, null, null, null, null, null, null, null, null, null,
+  it("sword", "Espada de diamante", { e: { sharpness: 3 }, max: 1561, d: 1200, tags: ["minecraft:swords", "c:tools/melee_weapon", "c:tools", "minecraft:enchantable/weapon", "minecraft:enchantable/sword", "minecraft:enchantable/durability"] }),
+  it("box", "Caixa de shulker", { tags: ["c:shulker_boxes", "minecraft:shulker_boxes"] }),
+  null, it("cobble", "Pedregulho", { q: 64, st: 1, tags: ["c:cobblestones", "c:cobblestones/normal", "minecraft:stone_tool_materials", "minecraft:stone_crafting_materials"] }),
+  null, null, it("ingot", "Lingote de ouro", { q: 3, st: 1, tags: ["c:ingots", "c:ingots/gold", "minecraft:piglin_loved", "minecraft:beacon_payment_items"] }), null, null
+];
+const enchanted = x => !!(x && x.e && Object.keys(x.e).length);
+
+/* condições com — / Sim / Não, na ordem da tela */
+const CONDS = [
+  { k: "ench", n: "Encantado", test: enchanted },
+  { k: "dmg", n: "Danificado", test: x => (x.d || 0) > 0 },
+  { k: "name", n: "Renomeado", test: x => !!x.nm },
+  { k: "pot", n: "Com efeito de poção", test: x => !!x.pot },
+  { k: "st", n: "Empilhável", test: x => !!x.st },
+  { k: "cont", n: "Com conteúdo", test: x => !!x.cont }
+];
+
+/* ---------------------------------------------------------------- estado */
+const S = {
+  w: 344, h: 252, list: "white", comps: false,
+  entries: [
+    { t: "item", it: INV[7], stock: 0 },
+    { t: "tag", id: "c:ingots", stock: 256 },
+    { t: "mod", id: "mekanism", stock: 0 },
+    { t: "rule", r: { c: { ench: "yes" }, ench: null, dur: null, scope: "#c:armors" }, stock: 0 },
+    { t: "tag", id: "c:ores", stock: 0 },
+    { t: "rule", r: { c: { dmg: "yes" }, ench: null, dur: { op: "lt", pct: 25 }, scope: "" }, stock: 0 }
+  ],
+  sel: 1, search: "", scroll: 0, tab: "tags",
+  inspect: INV[2], tagSearch: "", checked: new Set(["minecraft:pickaxes"]), hoverTag: null, tagScroll: 0,
+  rule: { c: { ench: "yes" }, ench: null, dur: null, scope: "#c:tools" }, editing: -1,
+  cursor: null, focus: null, toast: ""
+};
+
+/* ---------------------------------------------------------------- regras */
+function ruleMatch(r, x) {
+  if (!x) return false;
+  for (const c of CONDS) {
+    const v = r.c[c.k];
+    if (v === "yes" && !c.test(x)) return false;
+    if (v === "no" && c.test(x)) return false;
+  }
+  if (r.ench && ((x.e && x.e[r.ench.e]) || 0) < r.ench.lv) return false;
+  if (r.dur) {
+    if (!x.max) return false;
+    const pct = 100 * (x.max - (x.d || 0)) / x.max;
+    if (r.dur.op === "ge" ? pct < r.dur.pct : pct >= r.dur.pct) return false;
+  }
+  const sc = r.scope.trim();
+  if (sc.startsWith("#") && !x.tags.includes(sc.slice(1))) return false;
+  if (sc.startsWith("@") && x.mod !== sc.slice(1)) return false;
+  return true;
+}
+function ruleText(r) {
+  const parts = [];
+  for (const c of CONDS) {
+    if (r.c[c.k] === "yes") parts.push(c.n);
+    if (r.c[c.k] === "no") parts.push("Não " + c.n.toLowerCase());
+  }
+  if (r.ench) parts.push(`${ENCH[r.ench.e]} ≥ ${ROMAN[r.ench.lv]}`);
+  if (r.dur) parts.push(`Durabilidade ${r.dur.op === "ge" ? "≥" : "<"} ${r.dur.pct}%`);
+  let s = parts.length ? parts.join(" · ") : "Qualquer item";
+  if (r.scope.trim()) s += " em " + r.scope.trim();
+  return s;
+}
+const ruleEmpty = r => !CONDS.some(c => r.c[c.k]) && !r.ench && !r.dur && !r.scope.trim();
+function entryMatches(e, x) {
+  if (!x) return false;
+  if (e.t === "item") return e.it.s === x.s && e.it.n.split(" ")[0] === x.n.split(" ")[0];
+  if (e.t === "tag") return x.tags.includes(e.id);
+  if (e.t === "mod") return x.mod === e.id;
+  return ruleMatch(e.r, x);
+}
+function entryName(e) {
+  if (e.t === "item") return e.it.n;
+  if (e.t === "tag") return "#" + e.id;
+  if (e.t === "mod") return "@" + e.id;
+  return ruleText(e.r);
+}
+function entrySub(e) {
+  if (e.t === "item") return "Item exato";
+  if (e.t === "tag") return `Tag · ${(TAGDB[e.id] || [[], 0])[1]} itens`;
+  if (e.t === "mod") return `Mod · ${MOD_COUNT[e.id] || 0} itens`;
+  return "Regra";
+}
+const fmt = n => n.toLocaleString("pt-BR");
+
+/* ---------------------------------------------------------------- desenho */
+const U = n => `calc(var(--u) * ${n})`;
+const box = (x, y, w, h) => `left:${U(x)};top:${U(y)};width:${U(w)};height:${U(h)}`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const text = (x, y, s, cls = "", w = null) => `<span class="t ${cls}" style="left:${U(x)};top:${U(y)}${w ? `;width:${U(w)}` : ""}">${esc(s)}</span>`;
+const btn = (x, y, w, h, label, act, cls = "", dis = false) => `<button class="a ${cls}" style="${box(x, y, w, h)}" data-act="${act}"${dis ? " disabled" : ""}>${esc(label)}</button>`;
+function icon(e) {
+  if (e.t === "item") return sprite(e.it.s, enchanted(e.it));
+  if (e.t === "tag") { const k = (TAGDB[e.id] || [["gem"]])[0][Math.floor(Date.now() / 1000) % (TAGDB[e.id] || [["gem"]])[0].length]; return sprite(k) + `<span class="tagbadge">#</span>`; }
+  if (e.t === "mod") return sprite(MOD_ICON[e.id] || "gem") + `<span class="modbadge">@</span>`;
+  return `<span class="rule-ico"></span>`;
+}
+
+const PW = 158;
+function filtered() {
+  const q = S.search.trim().toLowerCase();
+  return S.entries.map((e, i) => [e, i]).filter(([e]) => !q || entryName(e).toLowerCase().includes(q));
+}
+
+function render() {
+  const { w: W, h: H } = S;
+  const g = document.getElementById("g");
+  g.style.width = U(W); g.style.height = U(H);
+  const LW = W - 8 - PW - 6 - 8;
+  const P0 = W - 8 - PW;
+  const invY = H - 8 - 76;
+  let o = "";
+  // cabeçalho
+  o += text(8, 7, "Filtro");
+  o += btn(W - 8 - 34, 4, 34, 13, "Voltar", "noop");
+  o += `<span class="t mu" style="right:${U(8 + 34 + 6)};top:${U(7)}">Cima · Itens</span>`;
+  o += btn(8, 21, 44, 13, "Branca", "white", S.list === "white" ? "on" : "");
+  o += btn(51, 21, 44, 13, "Negra", "black", S.list === "black" ? "on" : "");
+  o += `<span class="ck${S.comps ? " on" : ""}" style="left:${U(102)};top:${U(23)}" data-act="comps"></span>` + `<span class="t" style="left:${U(113)};top:${U(24)};cursor:pointer" data-act="comps">Componentes</span>`;
+  // lista de entradas
+  const rows = filtered();
+  o += text(8, 39, `Entradas · ${S.entries.length}`, "mu");
+  o += `<input class="field" id="esearch" placeholder="Buscar: nome, #tag, @mod" style="${box(8, 49, LW, 12)}" value="${esc(S.search)}">`;
+  const listY = 64, listH = invY - 12 - listY, RH = 18;
+  const vis = Math.max(1, Math.floor(listH / RH));
+  S.scroll = Math.max(0, Math.min(S.scroll, rows.length - vis));
+  o += `<div class="box abs" style="${box(8, listY - 1, LW, vis * RH + 2)}"></div>`;
+  rows.slice(S.scroll, S.scroll + vis).forEach(([e, i], k) => {
+    const y = listY + k * RH;
+    o += `<div class="erow${S.sel === i ? " sel" : ""}" style="${box(9, y, LW - 6, RH)}" data-act="sel:${i}">`;
+    o += `<span class="abs" style="${box(1, 1, 16, 16)}">${icon(e)}</span>`;
+    const stock = e.stock ? `≥ ${fmt(e.stock)}` : "";
+    const sw = stock ? stock.length * 5 + 6 : 0;
+    o += `<span class="t ${e.t === "rule" ? "" : ""}" style="left:${U(21)};top:${U(1)};width:${U(LW - 30 - sw)};${e.t === "rule" ? "color:#d8c4ff" : ""}">${esc(entryName(e))}</span>`;
+    o += `<span class="t mu" style="left:${U(21)};top:${U(10)};width:${U(LW - 30)};font-size:${U(7)}">${esc(entrySub(e))}</span>`;
+    if (stock) o += `<span class="t acc" style="right:${U(3)};top:${U(1)}">${esc(stock)}</span>`;
+    o += `</div>`;
+  });
+  if (!rows.length) o += text(14, listY + 6, S.entries.length ? "Nada com esse nome." : "Vazio: passa tudo.", "dis");
+  if (rows.length > vis) {
+    const th = Math.max(6, (vis * RH) * vis / rows.length), ty = (vis * RH - th) * S.scroll / (rows.length - vis);
+    o += `<div class="bar" style="${box(8 + LW - 4, listY, 3, vis * RH)}"><i style="top:${U(ty)};height:${U(th)}"></i></div>`;
+  }
+  // inventário
+  o += text(8, invY - 10, "Inventário · Shift + clique adiciona", "mu");
+  const ruleLive = S.tab === "rule" && !ruleEmpty(S.rule);
+  INV.forEach((x, i) => {
+    const r = i < 27 ? Math.floor(i / 9) : 3, c = i % 9;
+    const y = invY + r * 18 + (r === 3 ? 4 : 0);
+    let cls = "slot";
+    if (ruleLive) cls += x && ruleMatch(S.rule, x) ? " match" : " dim";
+    else if (S.tab === "entry" && S.sel >= 0 && x && entryMatches(S.entries[S.sel], x)) cls += " match";
+    const hidden = S.cursor && S.cursor.i === i;
+    o += `<button class="${cls}" style="left:${U(8 + c * 18)};top:${U(y)}" data-act="inv:${i}" data-tip="${i}">${x && !hidden ? sprite(x.s, enchanted(x)) + (x.q > 1 ? `<span class="qty">${x.q}</span>` : "") : ""}</button>`;
+  });
+  // painel da direita
+  const tabs = [["entry", "Entrada"], ["tags", "Tags"], ["rule", "Regra"], ["more", "Mais"]];
+  const tw = PW / 4;
+  tabs.forEach(([k, n], i) => { o += `<button class="tab${S.tab === k ? " on" : ""}" style="${box(P0 + i * tw, 37, tw + (i < 3 ? 1 : 0), 13)}" data-act="tab:${k}">${n}</button>`; });
+  o += `<div class="box abs" style="${box(P0, 50, PW, H - 8 - 50)}"></div>`;
+  const X = P0 + 5, IW = PW - 10, BOT = H - 8 - 5;
+  if (S.tab === "entry") o += panelEntry(X, IW, BOT);
+  if (S.tab === "tags") o += panelTags(X, IW, BOT);
+  if (S.tab === "rule") o += panelRule(X, IW, BOT);
+  if (S.tab === "more") o += panelMore(X, IW, BOT);
+  if (S.toast) o += `<span class="t" style="left:50%;transform:translateX(-50%);bottom:${U(-14)};color:var(--gold);font-size:${U(7)}">${esc(S.toast)}</span>`;
+  o += `<span class="edge-r" data-drag="r"></span><span class="edge-b" data-drag="b"></span><span class="grip" data-drag="rb"></span>`;
+  const focusId = document.activeElement && document.activeElement.id, caret = focusId ? document.activeElement.selectionStart : 0;
+  g.innerHTML = o;
+  if (focusId) { const f = document.getElementById(focusId); if (f) { f.focus(); f.setSelectionRange(caret, caret) } }
+}
+
+function panelEntry(X, IW, BOT) {
+  let o = "";
+  const e = S.entries[S.sel];
+  if (!e) return text(X, 58, "Selecione uma entrada.", "mu") + `<span class="wraptext dis" style="left:${U(X)};top:${U(72)};width:${U(IW)};font-size:${U(7)}">Shift + clique no inventário adiciona o item exato. Tags e regras ficam nas abas ao lado.</span>`;
+  o += `<span class="slot" style="left:${U(X)};top:${U(56)};pointer-events:none">${icon(e)}</span>`;
+  o += `<span class="wraptext" style="left:${U(X + 22)};top:${U(56)};width:${U(IW - 22)};max-height:${U(20)};overflow:hidden;${e.t === "rule" ? "color:#d8c4ff" : ""}">${esc(entryName(e))}</span>`;
+  o += text(X, 79, entrySub(e), "mu", IW);
+  let y = 91;
+  if (e.t === "tag" || e.t === "mod") {
+    const ks = e.t === "tag" ? (TAGDB[e.id] || [[]])[0] : [MOD_ICON[e.id]];
+    const n = e.t === "tag" ? TAGDB[e.id][1] : MOD_COUNT[e.id];
+    o += text(X, y, "Itens que pega", "dis"); y += 10;
+    const per = Math.floor(IW / 18), show = Math.min(per * 2, n);
+    for (let i = 0; i < show; i++) o += `<span class="abs" style="${box(X + (i % per) * 18 + 1, y + Math.floor(i / per) * 18 + 1, 16, 16)}">${sprite(ks[i % ks.length])}</span>`;
+    if (n > show) o += text(X, y + 38, `+ ${fmt(n - show)} itens`, "dis");
+  } else if (e.t === "item") {
+    o += text(X, y, `${e.it.tags.length} tags · ${S.comps ? "componentes iguais" : "componentes ignorados"}`, "dis", IW);
+  } else {
+    const inv = INV.filter(x => ruleMatch(e.r, x)).length;
+    o += text(X, y, `Pega ${inv} pilhas do seu inventário`, "acc", IW);
+  }
+  o += text(X, BOT - 46, S.list === "white" ? "Estoque (0 = sem limite)" : "Estoque: só na lista branca", "mu", IW);
+  o += `<input class="field" id="stock" style="${box(X, BOT - 36, IW, 12)}" value="${e.stock || ""}" placeholder="0"${S.list === "white" ? "" : " disabled"}>`;
+  const half = (IW - 3) / 2;
+  o += btn(X, BOT - 14, half, 14, "Remover", "remove", "danger");
+  if (e.t === "item") o += btn(X + half + 3, BOT - 14, half, 14, "Ver tags", "seetags");
+  else if (e.t === "rule") o += btn(X + half + 3, BOT - 14, half, 14, "Editar", "edit");
+  else o += btn(X + half + 3, BOT - 14, half, 14, "Ver tags", "noop", "", true);
+  return o;
+}
+
+function tagList() {
+  if (S.tagSearch.trim()) {
+    const q = S.tagSearch.trim().toLowerCase().replace(/^#/, "");
+    return Object.keys(TAGDB).filter(t => t.includes(q)).sort((a, b) => TAGDB[b][1] - TAGDB[a][1]);
+  }
+  return S.inspect ? S.inspect.tags : [];
+}
+function panelTags(X, IW, BOT) {
+  let o = "";
+  const x = S.inspect;
+  o += `<button class="slot${S.cursor ? " sel" : ""}" style="left:${U(X)};top:${U(56)}" data-act="inspect">${x ? sprite(x.s, enchanted(x)) : ""}</button>`;
+  o += text(X + 22, 57, x ? x.n : "Inspecionar item", x && x.nm ? "" : "", IW - 22);
+  o += text(X + 22, 67, x ? `${x.tags.length} tags` : "Clique aqui com um item", "mu", IW - 22);
+  if (x) o += `<button class="a ghost" style="${box(X + IW - 9, 56, 9, 9)}" data-act="uninspect" title="Limpar">×</button>`;
+  o += `<input class="field" id="tsearch" placeholder="Buscar tag em todo o jogo" style="${box(X, 79, IW, 12)}" value="${esc(S.tagSearch)}">`;
+  const list = tagList();
+  const top = 94, RH = 11, previewY = BOT - 14 - 4 - 28;
+  const vis = Math.max(1, Math.floor((previewY - 2 - top) / RH));
+  S.tagScroll = Math.max(0, Math.min(S.tagScroll, list.length - vis));
+  if (!list.length) o += `<span class="wraptext dis" style="left:${U(X)};top:${U(top + 2)};width:${U(IW)};font-size:${U(7)}">${S.tagSearch.trim() ? "Nenhuma tag com esse nome." : "Coloque um item no slot acima (clique com ele no cursor, arraste do JEI ou escolha um item na lista) ou busque pelo nome."}</span>`;
+  list.slice(S.tagScroll, S.tagScroll + vis).forEach((t, k) => {
+    const y = top + k * RH, on = S.checked.has(t), had = S.entries.some(e => e.t === "tag" && e.id === t);
+    o += `<div class="trow${S.hoverTag === t ? " hov" : ""}" style="${box(X - 2, y, IW + 4, RH)}" data-act="check:${t}" data-tag="${t}">`;
+    o += `<span class="ck${on || had ? " on" : ""}" style="left:${U(2)};top:${U(1)};${had ? "opacity:.45" : ""}"></span>`;
+    const cnt = fmt(TAGDB[t] ? TAGDB[t][1] : 0), cw = cnt.length * 5 + 4;
+    o += `<span class="t${had ? " dis" : ""}" style="left:${U(13)};top:${U(2)};width:${U(IW - 14 - cw)}">#${esc(t)}</span>`;
+    o += `<span class="t dis" style="right:${U(2)};top:${U(2)}">${cnt}</span></div>`;
+  });
+  if (list.length > vis) {
+    const th = Math.max(5, vis * RH * vis / list.length), ty = (vis * RH - th) * S.tagScroll / (list.length - vis);
+    o += `<div class="bar" style="${box(X + IW + 1, top, 2, vis * RH)}"><i style="top:${U(ty)};height:${U(th)}"></i></div>`;
+  }
+  // prévia
+  o += `<div class="abs" style="${box(X - 2, previewY - 1, IW + 4, 1)};background:var(--line)"></div>`;
+  const pv = S.hoverTag || [...S.checked].at(-1);
+  if (pv && TAGDB[pv]) {
+    o += text(X, previewY + 2, `#${pv}`, "acc", IW - 30);
+    o += `<span class="t dis" style="right:${U(PW - IW - 5 + 8 + 0)};top:${U(previewY + 2)}"></span>`;
+    const ks = TAGDB[pv][0], n = TAGDB[pv][1], per = Math.floor(IW / 17);
+    for (let i = 0; i < Math.min(per, n); i++) o += `<span class="abs" style="${box(X + i * 17, previewY + 11, 16, 16)}">${sprite(ks[i % ks.length])}</span>`;
+  } else o += text(X, previewY + 8, "Passe o mouse numa tag para ver os itens", "dis", IW);
+  const n = [...S.checked].filter(t => !S.entries.some(e => e.t === "tag" && e.id === t)).length;
+  o += btn(X, BOT - 14, IW, 14, n ? `Adicionar ${n} ${n === 1 ? "tag" : "tags"}` : "Marque as tags", "addtags", n ? "on" : "", !n);
+  return o;
+}
+
+function panelRule(X, IW, BOT) {
+  let o = "";
+  const r = S.rule;
+  o += text(X, 56, S.editing >= 0 ? "Editando regra" : "Nova regra", "", IW - 40);
+  let y = 67;
+  for (const c of CONDS) {
+    const v = r.c[c.k] || "";
+    o += text(X, y + 2, c.n, v ? "" : "mu", IW - 58);
+    o += `<span class="tri" style="left:${U(X + IW - 54)};top:${U(y)}">` +
+      [["", "—"], ["yes", "Sim"], ["no", "Não"]].map(([k, n]) => `<button class="${v === k ? "on" + (k === "no" ? " no" : "") : ""}" style="width:${U(19)};height:${U(11)}" data-act="cond:${c.k}:${k}">${n}</button>`).join("") + `</span>`;
+    y += 12;
+  }
+  y += 3;
+  // encantamento específico
+  o += `<span class="ck${r.ench ? " on" : ""}" style="left:${U(X)};top:${U(y + 1)}" data-act="ench"></span>`;
+  o += `<span class="t${r.ench ? "" : " mu"}" style="left:${U(X + 11)};top:${U(y + 2)};cursor:pointer" data-act="ench">Encantamento</span>`;
+  if (r.ench) {
+    y += 12;
+    o += btn(X + 11, y, 9, 11, "‹", "ench-prev");
+    o += `<span class="t" style="left:${U(X + 22)};top:${U(y + 2)};width:${U(IW - 22 - 36)};text-align:center">${esc(ENCH[r.ench.e])}</span>`;
+    o += btn(X + IW - 34, y, 9, 11, "›", "ench-next");
+    o += btn(X + IW - 23, y, 23, 11, "≥ " + ROMAN[r.ench.lv], "ench-lv");
+  } else o += `<span class="t dis" style="right:${U(13)};top:${U(y + 2)}">qualquer</span>`;
+  y += 14;
+  // durabilidade
+  o += text(X, y + 2, "Durabilidade", r.dur ? "" : "mu");
+  o += `<span class="tri" style="left:${U(X + 62)};top:${U(y)}">` + [["", "—"], ["ge", "≥"], ["lt", "<"]].map(([k, n]) =>
+    `<button class="${(r.dur ? r.dur.op : "") === k ? "on" : ""}" style="width:${U(13)};height:${U(11)}" data-act="dur:${k}">${n}</button>`).join("") + `</span>`;
+  if (r.dur) o += btn(X + IW - 28, y, 28, 11, r.dur.pct + "%", "dur-pct");
+  y += 15;
+  o += text(X, y + 2, "Só em", r.scope ? "" : "mu");
+  o += `<input class="field" id="scope" placeholder="#tag ou @mod" style="${box(X + 30, y, IW - 30, 12)}" value="${esc(r.scope)}">`;
+  y += 16;
+  const n = INV.filter(x => ruleMatch(r, x)).length;
+  o += `<span class="wraptext${ruleEmpty(r) ? " dis" : " acc"}" style="left:${U(X)};top:${U(y)};width:${U(IW)};font-size:${U(7)};line-height:${U(9)}">${ruleEmpty(r) ? "Marque ao menos uma condição." : esc(ruleText(r)) + `<br><span style="color:var(--mu)">Pega ${n} ${n === 1 ? "pilha" : "pilhas"} do inventário (acesas)</span>`}</span>`;
+  const half = (IW - 3) / 2;
+  o += btn(X, BOT - 14, half, 14, S.editing >= 0 ? "Cancelar" : "Limpar", "rule-reset");
+  o += btn(X + half + 3, BOT - 14, half, 14, S.editing >= 0 ? "Salvar" : "Adicionar", "rule-add", ruleEmpty(r) ? "" : "on", ruleEmpty(r));
+  return o;
+}
+
+function panelMore(X, IW, BOT) {
+  let o = "";
+  o += text(X, 57, "Cartão de Filtro", "");
+  o += `<span class="wraptext mu" style="left:${U(X)};top:${U(68)};width:${U(IW)};font-size:${U(7)};line-height:${U(9)}">Com um cartão na mão: Importar copia o filtro do cartão para cá; Exportar grava este filtro nele.</span>`;
+  const half = (IW - 3) / 2;
+  o += btn(X, 96, half, 14, "Importar", "noop", "", true);
+  o += btn(X + half + 3, 96, half, 14, "Exportar", "noop", "", true);
+  o += text(X, 120, "Componentes", "");
+  o += `<span class="wraptext mu" style="left:${U(X)};top:${U(131)};width:${U(IW)};font-size:${U(7)};line-height:${U(9)}">Marcado, um item exato só casa com o mesmo nome, encantamentos e dados. Tags, mods e regras não mudam.</span>`;
+  o += btn(X, BOT - 14, IW, 14, S.clearArm ? "Clique de novo para limpar" : "Limpar tudo", "clear", "danger", !S.entries.length);
+  return o;
+}
+
+/* ---------------------------------------------------------------- ações */
+let toastT;
+function toast(s) { S.toast = s; clearTimeout(toastT); toastT = setTimeout(() => { S.toast = ""; render() }, 1800) }
+function add(e) {
+  const same = S.entries.findIndex(o => o.t === e.t && entryName(o) === entryName(e));
+  if (same >= 0) { S.sel = same; toast("Já está no filtro"); return }
+  S.entries.push(e); S.sel = S.entries.length - 1; S.scroll = 1e9;
+}
+const g = document.getElementById("g");
+g.addEventListener("click", ev => {
+  const el = ev.target.closest("[data-act]"); if (!el || el.disabled) return;
+  const [a, b, c] = el.dataset.act.split(":").length > 2 && el.dataset.act.startsWith("check") ? ["check", el.dataset.act.slice(6)] : el.dataset.act.split(":");
+  if (a === "inv") {
+    const i = +b, x = INV[i];
+    if (ev.shiftKey) { if (x) { add({ t: "item", it: x, stock: 0 }); toast("Adicionado: " + x.n) } }
+    else if (S.cursor) S.cursor = null;
+    else if (x) S.cursor = { i, x };
+    moveCursor(ev);
+  } else if (S.cursor && a !== "inspect") { S.cursor = null }
+  if (a === "white" || a === "black") S.list = a;
+  if (a === "comps") S.comps = !S.comps;
+  if (a === "sel") { S.sel = +b; if (S.tab === "tags" || S.tab === "more") S.tab = "entry" }
+  if (a === "tab") { S.tab = b; S.clearArm = false }
+  if (a === "inspect") { if (S.cursor) { S.inspect = S.cursor.x; S.cursor = null; S.tagSearch = ""; S.checked.clear(); S.tagScroll = 0 } }
+  if (a === "uninspect") { S.inspect = null; S.checked.clear() }
+  if (a === "check") { const t = b; if (S.entries.some(e => e.t === "tag" && e.id === t)) toast("Já está no filtro"); else S.checked.has(t) ? S.checked.delete(t) : S.checked.add(t) }
+  if (a === "addtags") { const n = [...S.checked]; n.forEach(t => add({ t: "tag", id: t, stock: 0 })); S.checked.clear(); toast(`${n.length} ${n.length === 1 ? "tag adicionada" : "tags adicionadas"}`) }
+  if (a === "remove") { S.entries.splice(S.sel, 1); S.sel = Math.min(S.sel, S.entries.length - 1) }
+  if (a === "seetags") { S.inspect = S.entries[S.sel].it; S.tab = "tags"; S.tagSearch = ""; S.checked.clear(); S.tagScroll = 0 }
+  if (a === "edit") { const e = S.entries[S.sel]; S.rule = JSON.parse(JSON.stringify(e.r)); S.editing = S.sel; S.tab = "rule" }
+  if (a === "cond") S.rule.c[b] = c || undefined;
+  if (a === "ench") S.rule.ench = S.rule.ench ? null : { e: "fortune", lv: 3 };
+  if (a === "ench-prev" || a === "ench-next") { const k = ENCH_KEYS.indexOf(S.rule.ench.e), n = ENCH_KEYS[(k + (a === "ench-next" ? 1 : ENCH_KEYS.length - 1)) % ENCH_KEYS.length]; S.rule.ench = { e: n, lv: Math.min(S.rule.ench.lv, ENCH_MAX[n]) } }
+  if (a === "ench-lv") S.rule.ench.lv = S.rule.ench.lv % ENCH_MAX[S.rule.ench.e] + 1;
+  if (a === "dur") S.rule.dur = b ? { op: b, pct: S.rule.dur ? S.rule.dur.pct : 50 } : null;
+  if (a === "dur-pct") S.rule.dur.pct = S.rule.dur.pct >= 90 ? 10 : S.rule.dur.pct + 10;
+  if (a === "rule-reset") { S.rule = { c: {}, ench: null, dur: null, scope: "" }; S.editing = -1 }
+  if (a === "rule-add") {
+    const r = JSON.parse(JSON.stringify(S.rule));
+    if (S.editing >= 0) { S.entries[S.editing].r = r; S.sel = S.editing; toast("Regra salva") } else { add({ t: "rule", r, stock: 0 }); toast("Regra adicionada") }
+    S.editing = -1; S.tab = "entry";
+  }
+  if (a === "clear") { if (S.clearArm) { S.entries = []; S.sel = -1; S.clearArm = false } else { S.clearArm = true; setTimeout(() => { S.clearArm = false; render() }, 3000) } }
+  render();
+});
+g.addEventListener("input", ev => {
+  const id = ev.target.id;
+  if (id === "esearch") { S.search = ev.target.value; S.scroll = 0 }
+  if (id === "tsearch") { S.tagSearch = ev.target.value; S.tagScroll = 0 }
+  if (id === "scope") S.rule.scope = ev.target.value;
+  if (id === "stock") { const v = parseInt(ev.target.value.replace(/\D/g, "")) || 0; S.entries[S.sel].stock = v }
+  render();
+});
+g.addEventListener("wheel", ev => {
+  const inTags = ev.target.closest("[data-tag]");
+  if (inTags || (S.tab === "tags" && ev.target.closest(".trow"))) S.tagScroll += Math.sign(ev.deltaY);
+  else if (ev.target.closest(".erow")) S.scroll += Math.sign(ev.deltaY);
+  else return;
+  ev.preventDefault(); render();
+}, { passive: false });
+g.addEventListener("mouseover", ev => {
+  const t = ev.target.closest("[data-tag]"); const nt = t ? t.dataset.tag : null;
+  if (nt !== S.hoverTag && (nt || S.tab === "tags")) { S.hoverTag = nt; render() }
+});
+/* redimensionar em torno do centro: a borda puxada segue o mouse, a oposta se move igual */
+let drag = null;
+g.addEventListener("mousedown", ev => {
+  const d = ev.target.closest("[data-drag]"); if (!d) return;
+  const u = g.getBoundingClientRect().width / S.w;
+  drag = { k: d.dataset.drag, x: ev.clientX, y: ev.clientY, w: S.w, h: S.h, u }; ev.preventDefault();
+});
+addEventListener("mousemove", ev => {
+  moveCursor(ev);
+  if (!drag) return;
+  if (drag.k.includes("r")) S.w = Math.round(Math.max(344, Math.min(560, drag.w + 2 * (ev.clientX - drag.x) / drag.u)));
+  if (drag.k.includes("b")) S.h = Math.round(Math.max(252, Math.min(360, drag.h + 2 * (ev.clientY - drag.y) / drag.u)));
+  render();
+});
+addEventListener("mouseup", () => { drag = null });
+function moveCursor(ev) {
+  const c = document.getElementById("cur");
+  if (!S.cursor) { c.hidden = true; return }
+  c.hidden = false; c.innerHTML = sprite(S.cursor.x.s, enchanted(S.cursor.x));
+  const u = g.getBoundingClientRect().width / S.w;
+  c.style.left = (ev.clientX - 8 * u) + "px"; c.style.top = (ev.clientY - 8 * u) + "px";
+}
+/* tooltip do inventário */
+const tip = document.getElementById("tip");
+g.addEventListener("mousemove", ev => {
+  const s = ev.target.closest("[data-tip]"); const x = s && INV[+s.dataset.tip];
+  if (!x || S.cursor) { tip.hidden = true; return }
+  let h = `<div class="n${enchanted(x) ? " ench" : ""}${x.nm ? " named" : ""}">${esc(x.n)}</div>`;
+  for (const [k, lv] of Object.entries(x.e || {})) h += `<div class="g">${ENCH[k]}${ENCH_MAX[k] > 1 ? " " + ROMAN[lv] : ""}</div>`;
+  if (x.d) h += `<div class="g">Durabilidade: ${x.max - x.d} / ${x.max}</div>`;
+  if (S.tab === "rule" && !ruleEmpty(S.rule)) h += ruleMatch(S.rule, x) ? `<div class="ok">✔ a regra pega</div>` : `<div class="no">✘ a regra não pega</div>`;
+  tip.innerHTML = h; tip.hidden = false; tip.style.left = ev.clientX + 14 + "px"; tip.style.top = ev.clientY - 10 + "px";
+});
+g.addEventListener("mouseleave", () => { tip.hidden = true });
+render();
+setInterval(() => { if (!drag && document.activeElement.tagName !== "INPUT") render() }, 1000);
+</script>

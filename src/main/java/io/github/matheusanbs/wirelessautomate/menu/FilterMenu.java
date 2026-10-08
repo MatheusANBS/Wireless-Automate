@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * e só se ela de fato ficou diferente da última enviada.
  */
 public class FilterMenu extends AbstractContainerMenu {
-    /** Posição do inventário do jogador na tela (canto do primeiro slot da mochila). */
+    /** Posição inicial do inventário do jogador (a tela o move ao redimensionar, {@link #placeInventory}). */
     public static final int INVENTORY_X = 48;
     public static final int INVENTORY_Y = 148;
     public static final int SLOT_COUNT = 36;
@@ -76,6 +76,26 @@ public class FilterMenu extends AbstractContainerMenu {
         }
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(inventory, col, INVENTORY_X + col * 18, INVENTORY_Y + 58));
+        }
+    }
+
+    /**
+     * Cliente: muda o inventário do jogador de lugar (a tela de filtro é redimensionável). Como no
+     * {@link StorageListMenu#placeInventory}: o {@link Slot} guarda a posição como {@code final}, então
+     * cada slot é trocado por um igual na posição nova; o servidor não usa a posição.
+     */
+    public void placeInventory(int x, int y) {
+        for (int i = 0; i < slots.size(); i++) {
+            Slot old = slots.get(i);
+            int containerSlot = old.getContainerSlot();
+            int sx = x + (containerSlot % 9) * 18;
+            int sy = containerSlot < 9 ? y + 58 : y + (containerSlot / 9 - 1) * 18;
+            if (old.x == sx && old.y == sy) {
+                continue;
+            }
+            Slot moved = new Slot(old.container, containerSlot, sx, sy);
+            moved.index = old.index;
+            slots.set(i, moved);
         }
     }
 

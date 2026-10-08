@@ -64,6 +64,7 @@ abstract class CompiledMatcher<K> {
                     tagIndexes.add(i);
                 }
                 case FilterEntry.ModEntry mod -> mods.putIfAbsent(mod.modId(), i);
+                case FilterEntry.RuleEntry rule -> applies = addRule(rule, i);
                 default -> {
                     K key = exactKey(entry);
                     if (key == null) {
@@ -96,6 +97,11 @@ abstract class CompiledMatcher<K> {
             }
         }
         return map;
+    }
+
+    /** Guarda uma regra por propriedade; devolve se ela vale para este tipo (só itens). */
+    boolean addRule(FilterEntry.RuleEntry rule, int index) {
+        return false;
     }
 
     /** Chave de uma entrada exata deste tipo, ou {@code null} se a entrada for de outro tipo. */

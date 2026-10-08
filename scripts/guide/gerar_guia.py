@@ -738,22 +738,56 @@ Na origem, o filtro decide o que **sai**; no destino, o que **entra**.
 | **Exato** | Lingote de ferro, água, hidrogênio | Sim | Sim | Sim |
 | **Tag** | `#c:ingots`, `#c:ores` | Sim | Sim | Não |
 | **Mod** | `@mekanism` | Sim | Sim | Sim |
+| **Regra** | Qualquer item encantado | Sim | Não | Não |
+
+## A tela
+
+À esquerda ficam as entradas, uma por linha, com a busca em cima e o seu inventário embaixo. À
+direita, quatro abas. A janela cresce pelas bordas e pela alça do canto, como a do Baú.
+
+| Aba | Para quê |
+| --- | --- |
+| **Entrada** | A entrada selecionada: o que ela pega, o estoque, Remover e, num item, **Ver tags**. |
+| **Tags** | Achar e marcar tags e mods (ver abaixo). Nos químicos, vira **Adicionar**: id ou `@mod`. |
+| **Regra** | Montar uma regra por propriedade (só itens). |
+| **Mais** | Cartão de Filtro, componentes e Limpar. |
 
 ## Como adicionar
 
 | Jeito | Como |
 | --- | --- |
 | **Inventário** | Shift + clique no item (para fluidos e químicos, num balde ou tanque cheio). |
-| **JEI** | Arraste da lista para a grade, ou Shift + clique na lista. Não precisa ter o item. |
-| **Digitando** | Em **Mais**: `#tag`, `@mod` ou, nos químicos, o id (`mekanism:hydrogen`). |
+| **JEI** | Arraste da lista do JEI para a lista de entradas, ou Shift + clique nele. Não precisa ter o item. |
+| **Tags de um item** | Na aba **Tags**, clique no slot do inspetor com o item no cursor (ele continua com você), ou Ctrl + clique no item do inventário. Marque as tags e clique em **Adicionar**. |
+| **Buscando** | Na aba **Tags**, digite parte do nome (`ingots`) para ver todas as tags do jogo, ou `@` para mods. Passe o mouse numa linha para ver os itens dela. |
+
+## Regras por propriedade
+
+Uma regra pega o item pelo que ele **é**, não por qual item é. Cada condição tem **- / Sim / Não**,
+e a regra pega o item que cumpre **todas** as marcadas. O inventário acende no que ela pega antes
+de você adicionar.
+
+| Condição | Exemplo |
+| --- | --- |
+| **Encantado** | Qualquer item com encantamento, inclusive livro encantado. |
+| **Danificado** | Com algum desgaste. **Não** = intacto. |
+| **Renomeado** | Com nome dado na bigorna. |
+| **Com poção** | Poções, flechas com efeito. |
+| **Empilhável** | **Não** = ferramentas, armaduras e o que fica sozinho no slot. |
+| **Com conteúdo** | Caixa de shulker ou bundle com algo dentro. |
+| **Encantamento** | Um encantamento com nível mínimo: Fortuna ≥ III. |
+| **Durabilidade** | Restante ≥ ou < uma porcentagem: < 25% manda para o reparo. |
+| **Só em** | Limita a uma tag ou mod: Encantado + `#c:armors` = só armadura encantada. |
+
+Para editar uma regra, selecione-a na lista e clique em **Editar**.
 
 ## Opções
 
 | Opção | O que faz |
 | --- | --- |
 | **Lista branca / negra** | Inverte o filtro. |
-| **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. |
-| **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Clique numa entrada para definir. |
+| **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. Para pegar só os encantados, use uma regra. |
+| **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Selecione a entrada para definir. |
 
 ''', front('Filters', 'minecraft:hopper', 5) + '''
 # Filters
@@ -779,22 +813,56 @@ At the source, the filter decides what **leaves**; at the destination, what **en
 | **Exact** | Iron ingot, water, hydrogen | Yes | Yes | Yes |
 | **Tag** | `#c:ingots`, `#c:ores` | Yes | Yes | No |
 | **Mod** | `@mekanism` | Yes | Yes | Yes |
+| **Rule** | Any enchanted item | Yes | No | No |
+
+## The screen
+
+The entries are on the left, one per row, with the search on top and your inventory below. On the
+right, four tabs. The window grows from its edges and the corner grip, like the Chest's.
+
+| Tab | What for |
+| --- | --- |
+| **Entry** | The selected entry: what it matches, stock, Remove and, on an item, **See tags**. |
+| **Tags** | Find and check tags and mods (see below). For chemicals it becomes **Add**: id or `@mod`. |
+| **Rule** | Build a property rule (items only). |
+| **More** | Filter Card, components and Clear. |
 
 ## How to add
 
 | Way | How |
 | --- | --- |
 | **Inventory** | Shift + click the item (for fluids and chemicals, a full bucket or tank). |
-| **JEI** | Drag from the list onto the grid, or Shift + click in the list. You don't need the item. |
-| **Typing** | Under **More**: `#tag`, `@mod` or, for chemicals, the id (`mekanism:hydrogen`). |
+| **JEI** | Drag from the JEI list onto the entry list, or Shift + click it. You don't need the item. |
+| **An item's tags** | In the **Tags** tab, click the inspector slot with the item on the cursor (you keep it), or Ctrl + click the item in your inventory. Check the tags and click **Add**. |
+| **Searching** | In the **Tags** tab, type part of the name (`ingots`) to see every tag in the game, or `@` for mods. Hover a row to see its items. |
+
+## Property rules
+
+A rule matches an item by what it **is**, not by which item it is. Each condition has
+**- / Yes / No**, and the rule matches items that meet **all** the set ones. Your inventory lights up
+on what it matches before you add it.
+
+| Condition | Example |
+| --- | --- |
+| **Enchanted** | Any item with an enchantment, enchanted books included. |
+| **Damaged** | Has some wear. **No** = undamaged. |
+| **Renamed** | Named on an anvil. |
+| **Has potion** | Potions, tipped arrows. |
+| **Stackable** | **No** = tools, armor and anything that sits alone in a slot. |
+| **Has contents** | A shulker box or bundle with something inside. |
+| **Enchantment** | One enchantment with a minimum level: Fortune ≥ III. |
+| **Durability** | Remaining ≥ or < a percentage: < 25% sends it to repair. |
+| **Only in** | Limits it to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. |
+
+To edit a rule, select it in the list and click **Edit**.
 
 ## Options
 
 | Option | What it does |
 | --- | --- |
 | **Whitelist / blacklist** | Inverts the filter. |
-| **Components** (items) | Ignore: enchanted pickaxe = pickaxe. Require: only identical. |
-| **Stock** | At a destination, accept only up to N. At a source, always keep N. Click an entry to set it. |
+| **Components** (items) | Ignore: enchanted pickaxe = pickaxe. Require: only identical. To match only enchanted ones, use a rule. |
+| **Stock** | At a destination, accept only up to N. At a source, always keep N. Select the entry to set it. |
 
 ''')
 
@@ -823,7 +891,7 @@ Um filtro completo num item, para reaproveitar em várias faces. Vale para itens
 | --- | --- |
 | Clique direito no ar | Edita o filtro do cartão. |
 | Shift + clique direito no ar (cartão vazio) | Alterna entre itens e fluidos. |
-| Tela de filtro da face, em **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
+| Tela de filtro da face, na aba **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
 | Bancada: cartão configurado + cartões vazios | Cópias iguais (o original volta). |
 
 ## Receita

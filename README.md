@@ -9,7 +9,8 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 - **Roteador Wireless:** preso a qualquer face de uma máquina, acessa todas as faces dela.
 - **Redes por aba:** cada aba do roteador (Itens, Fluidos, Energia, Químicos) entra na sua própria rede; tudo do mesmo tipo na mesma rede troca entre si.
 - **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
-- **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada).
+- **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada). A tela é redimensionável: ponha um item no inspetor para ver e marcar todas as tags dele, ou busque em todas as tags do jogo com a prévia dos itens.
+- **Regras por propriedade** (0.2): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
 - **Quatro tiers**, subidos com os Cartões de Upgrade Avançado, Elite e Ultimate (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada.
 - **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, nas abas marcadas (Itens, Fluidos, Energia e, com o Mekanism, Químicos); em "Nenhuma (desvincular)", tira essas abas da rede.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo (Shift + roda do mouse).
@@ -33,7 +34,7 @@ A vazão vale por face e por tipo. Os valores ficam na config do servidor (`conf
 | Mod | O que traz |
 | --- | --- |
 | Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod, e o Tanque Químico Wireless |
-| JEI | Arrastar e Shift + clique para os filtros, e a receita de upgrade na bancada (roteador e armazenamentos) |
+| JEI | Arrastar e Shift + clique para os filtros (e para o inspetor de tags), e a receita de upgrade na bancada (roteador e armazenamentos) |
 | GuideME | O livro-guia, em inglês e português |
 
 Sem um deles, a parte correspondente não carrega e o resto funciona normal.

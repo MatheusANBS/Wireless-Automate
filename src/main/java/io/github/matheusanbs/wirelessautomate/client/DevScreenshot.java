@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.filter.ItemRule;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.FluidEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ModEntry;
@@ -247,8 +248,26 @@ public final class DevScreenshot {
                 }, "f2-filtro-itens"),
                 new Step(() -> {
                     mouseX = mouseY = -1;
-                    filterScreen.previewMore(true, "#c:ores");
-                }, "f3-filtro-mais"),
+                    filterScreen.previewInspect(new ItemStack(Items.IRON_PICKAXE));
+                    filterScreen.previewCheck(0);
+                    filterScreen.previewCheck(2);
+                    int[] center = filterScreen.candidateCenter(2);
+                    mouseX = center[0];
+                    mouseY = center[1];
+                }, "f3-filtro-tags"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen.previewTagSearch("ingots");
+                }, "f3b-filtro-busca"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen.previewRule(ItemRule.EMPTY.withFlag(ItemRule.Property.DAMAGED, true)
+                            .withDurability(Optional.of(new ItemRule.Durability(false, 50))).withScope("#minecraft:pickaxes"));
+                }, "f3c-filtro-regra"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen.previewTab(FilterScreen.Tab.MORE);
+                }, "f3d-filtro-mais"),
                 new Step(() -> {
                     mouseX = mouseY = -1;
                     filterScreen = filterScreen(fluidFilter(), Direction.NORTH);
@@ -275,7 +294,8 @@ public final class DevScreenshot {
         ItemStack[] items = {new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.COAL, 23),
                 new ItemStack(Items.WATER_BUCKET), new ItemStack(Items.REDSTONE, 41), new ItemStack(Items.DIAMOND, 7),
                 new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.LAVA_BUCKET), new ItemStack(Items.COBBLESTONE, 64),
-                new ItemStack(Items.IRON_PICKAXE), new ItemStack(Items.TORCH, 50)};
+                damaged(Items.IRON_PICKAXE, 200), new ItemStack(Items.TORCH, 50), damaged(Items.DIAMOND_PICKAXE, 1400),
+                new ItemStack(Items.GOLDEN_PICKAXE)};
         for (int i = 0; i < items.length; i++) {
             inventory.setItem(i < 5 ? i : 9 + i, items[i]);
         }
@@ -288,6 +308,12 @@ public final class DevScreenshot {
         return created;
     }
 
+    private static ItemStack damaged(net.minecraft.world.item.Item item, int damage) {
+        ItemStack stack = new ItemStack(item);
+        stack.setDamageValue(damage);
+        return stack;
+    }
+
     private static Filter itemFilter(Filter.ListMode mode) {
         List<FilterEntry> entries = new ArrayList<>();
         entries.add(new ItemEntry(new ItemStack(Items.IRON_INGOT), 0));
@@ -295,6 +321,7 @@ public final class DevScreenshot {
         entries.add(new ItemEntry(new ItemStack(Items.COAL), 64));
         entries.add(new TagEntry(ResourceLocation.parse("c:ingots"), 0));
         entries.add(new ModEntry("mekanism", 0));
+        entries.add(new FilterEntry.RuleEntry(ItemRule.EMPTY.withFlag(ItemRule.Property.ENCHANTED, true).withScope("#c:armors"), 0));
         ItemStack[] more = {new ItemStack(Items.COPPER_INGOT), new ItemStack(Items.REDSTONE), new ItemStack(Items.DIAMOND),
                 new ItemStack(Items.EMERALD), new ItemStack(Items.LAPIS_LAZULI), new ItemStack(Items.QUARTZ),
                 new ItemStack(Items.RAW_IRON), new ItemStack(Items.RAW_GOLD), new ItemStack(Items.RAW_COPPER),

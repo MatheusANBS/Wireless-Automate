@@ -159,7 +159,7 @@ public class FilterCardItem extends Item {
         tooltip.add(Component.translatable(KEY + "tooltip.router").withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    /** Nome curto de uma entrada: o item, fluido ou químico, {@code #tag} ou {@code @mod}, com o estoque. */
+    /** Nome curto de uma entrada: o item, fluido ou químico, {@code #tag}, {@code @mod} ou a regra, com o estoque. */
     public static Component describe(FilterEntry entry) {
         Component name = switch (entry) {
             case FilterEntry.ItemEntry e -> e.stack().getHoverName();
@@ -167,6 +167,7 @@ public class FilterCardItem extends Item {
             case FilterEntry.TagEntry e -> Component.literal("#" + e.tag());
             case FilterEntry.ModEntry e -> Component.literal("@" + e.modId());
             case FilterEntry.ChemicalEntry e -> Chemicals.name(e.chemical());
+            case FilterEntry.RuleEntry e -> e.rule().describe();
         };
         return entry.stock() > 0 ? Component.translatable(KEY + "tooltip.stock", name, entry.stock()) : name;
     }

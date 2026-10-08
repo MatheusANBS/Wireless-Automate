@@ -81,6 +81,44 @@ public final class Filter {
         return new Filter(listMode, matchComponents, list);
     }
 
+    /** Acrescenta várias no fim, na ordem; duplicados e o que passar do teto são ignorados. */
+    public Filter withEntries(List<FilterEntry> added) {
+        List<FilterEntry> list = new ArrayList<>(entries);
+        for (FilterEntry entry : added) {
+            if (list.size() >= MAX_ENTRIES) {
+                break;
+            }
+            boolean duplicate = false;
+            for (FilterEntry existing : list) {
+                if (existing.sameTarget(entry)) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                list.add(entry);
+            }
+        }
+        return list.size() == entries.size() ? this : new Filter(listMode, matchComponents, list);
+    }
+
+    /**
+     * Troca a entrada {@code index} (editar uma regra), mantendo o estoque dela. Índice inválido, ou
+     * um alvo que já existe em outra posição, devolve {@code this}.
+     */
+    public Filter withReplaced(int index, FilterEntry entry) {
+        if (index < 0 || index >= entries.size()) {
+            return this;
+        }
+        int existing = indexOf(entry);
+        if (existing >= 0 && existing != index) {
+            return this;
+        }
+        List<FilterEntry> list = new ArrayList<>(entries);
+        list.set(index, entry.withStock(entries.get(index).stock()));
+        return new Filter(listMode, matchComponents, list);
+    }
+
     public Filter withoutEntry(int index) {
         if (index < 0 || index >= entries.size()) {
             return this;

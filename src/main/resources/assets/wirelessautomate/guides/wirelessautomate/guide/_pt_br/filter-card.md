@@ -30,7 +30,7 @@ Um filtro completo num item, para reaproveitar em várias faces. Vale para itens
 | --- | --- |
 | Clique direito no ar | Edita o filtro do cartão. |
 | Shift + clique direito no ar (cartão vazio) | Alterna entre itens e fluidos. |
-| Tela de filtro da face, em **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
+| Tela de filtro da face, na aba **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
 | Bancada: cartão configurado + cartões vazios | Cópias iguais (o original volta). |
 
 ## Receita

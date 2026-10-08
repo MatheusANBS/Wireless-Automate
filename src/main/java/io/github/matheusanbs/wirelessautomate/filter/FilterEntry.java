@@ -10,7 +10,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
- * Uma entrada de filtro: exata (item ou fluido, com componentes; químico do Mekanism pelo id), tag ou mod. {@code stock} é o
+ * Uma entrada de filtro: exata (item ou fluido, com componentes; químico do Mekanism pelo id), tag, mod
+ * ou regra de item por propriedade ({@link ItemRule}). {@code stock} é o
  * estoque da especificação (0 = sem estoque): ao inserir, aceitar só até N no destino; ao extrair,
  * manter sempre N na origem. Imutável. Duas entradas são duplicadas se {@link #sameTarget} for verdadeiro.
  */
@@ -159,6 +160,28 @@ public sealed interface FilterEntry {
         }
     }
 
+    /** Regra de item por propriedade ("qualquer item encantado"); só vale em filtros de itens. */
+    record RuleEntry(ItemRule rule, long stock) implements FilterEntry {
+        public RuleEntry {
+            stock = Math.max(0, stock);
+        }
+
+        @Override
+        public FilterEntry withStock(long stock) {
+            return new RuleEntry(rule, stock);
+        }
+
+        @Override
+        public boolean sameTarget(FilterEntry other) {
+            return other instanceof RuleEntry o && rule.equals(o.rule);
+        }
+
+        @Override
+        public String kind() {
+            return "rule";
+        }
+    }
+
     Codec<Long> STOCK = Codec.LONG;
 
     MapCodec<ItemEntry> ITEM_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -177,12 +200,17 @@ public sealed interface FilterEntry {
             Codec.STRING.fieldOf("mod").forGetter(ModEntry::modId),
             STOCK.optionalFieldOf("stock", 0L).forGetter(ModEntry::stock)).apply(i, ModEntry::new));
 
+    MapCodec<RuleEntry> RULE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            ItemRule.CODEC.fieldOf("rule").forGetter(RuleEntry::rule),
+            STOCK.optionalFieldOf("stock", 0L).forGetter(RuleEntry::stock)).apply(i, RuleEntry::new));
+
     Codec<FilterEntry> CODEC = Codec.STRING.dispatch("kind", FilterEntry::kind, kind -> switch (kind) {
         case "item" -> ITEM_CODEC;
         case "fluid" -> FLUID_CODEC;
         case "tag" -> TAG_CODEC;
         case "mod" -> MOD_CODEC;
         case "chemical" -> CHEMICAL_CODEC;
+        case "rule" -> RULE_CODEC;
         default -> throw new IllegalArgumentException("Tipo de entrada de filtro desconhecido: " + kind);
     });
 
@@ -210,6 +238,10 @@ public sealed interface FilterEntry {
                 buf.writeByte(4);
                 buf.writeResourceLocation(e.chemical());
             }
+            case RuleEntry e -> {
+                buf.writeByte(5);
+                ItemRule.STREAM_CODEC.encode(buf, e.rule());
+            }
         }
         buf.writeVarLong(entry.stock());
     }
@@ -222,6 +254,7 @@ public sealed interface FilterEntry {
             case 2 -> new TagEntry(buf.readResourceLocation(), buf.readVarLong());
             case 3 -> new ModEntry(buf.readUtf(64), buf.readVarLong());
             case 4 -> new ChemicalEntry(buf.readResourceLocation(), buf.readVarLong());
+            case 5 -> new RuleEntry(ItemRule.STREAM_CODEC.decode(buf), buf.readVarLong());
             default -> throw new IllegalArgumentException("Tipo de entrada de filtro desconhecido: " + kind);
         };
     }

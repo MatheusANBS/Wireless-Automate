@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.filter.ItemRule;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
@@ -49,6 +50,8 @@ import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -455,28 +458,78 @@ public final class DevEndToEnd {
                         && screen.getMenu().view().router().equals(Optional.of(routerB))
                         && screen.getMenu().view().face().equals(Optional.of(Direction.UP)),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
-        // os widgets de "Mais" só aparecem no quadro seguinte, como para o jogador
-        list.add(new Step("abrir Mais do filtro", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.more")), "Mais do filtro")),
-                () -> find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add"))) != null,
-                () -> "Adicionar visível"));
-        list.add(new Step("digitar a regra", STEP_TIMEOUT_MS, () -> type(TAG_RULE), () -> {
-            AbstractWidget add = find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add")));
-            return add != null && add.active;
-        }, () -> "Adicionar ativo com \"" + TAG_RULE + "\""));
-        list.add(new Step("regra por tag", STEP_TIMEOUT_MS, () -> {
-            click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add")), "Adicionar"));
-        }, () -> onServer(server -> hasTag(router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().entries()))
-                && Minecraft.getInstance().screen instanceof FilterScreen screen
-                && hasTag(screen.getMenu().view().filter().entries()),
+        // os widgets de uma aba só aparecem no quadro seguinte, como para o jogador
+        list.add(new Step("filtro: aba Tags", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.tags")), "aba Tags")),
+                () -> filterScreen().tab() == FilterScreen.Tab.TAGS && filterScreen().tagSearchBox().isFocused(),
+                () -> "aba " + filterScreen().tab()));
+        list.add(new Step("filtro: buscar a tag", STEP_TIMEOUT_MS, () -> type(TAG_RULE.substring(3)),
+                () -> filterScreen().candidateLabels().contains(TAG_RULE),
+                () -> "linhas " + filterScreen().candidateLabels()));
+        list.add(new Step("filtro: marcar a tag", STEP_TIMEOUT_MS, () -> {
+            int index = filterScreen().candidateLabels().indexOf(TAG_RULE);
+            int[] row = filterScreen().candidateCenter(index);
+            click(Minecraft.getInstance().screen, row[0], row[1]);
+        }, () -> filterScreen().checkedLabels().equals(List.of(TAG_RULE))
+                && find(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action"))) instanceof AbstractWidget add
+                && add.active,
+                () -> "marcadas " + filterScreen().checkedLabels()));
+        list.add(new Step("filtro: adicionar a tag", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action")), "Adicionar")),
+                () -> onServer(server -> hasTag(router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().entries()))
+                        && hasTag(filterScreen().getMenu().view().filter().entries()),
                 () -> "filtro no servidor: " + onServer(server -> router(server, routerB)
                         .face(ResourceType.ITEM, Direction.UP).filter().entries().toString())));
         list.add(capture("4-filtro"));
+        list.add(new Step("filtro: inspecionar uma picareta", STEP_TIMEOUT_MS,
+                () -> filterScreen().inspect(new ItemStack(Items.DIAMOND_PICKAXE)),
+                () -> filterScreen().candidateLabels().contains("#minecraft:pickaxes")
+                        && filterScreen().candidateLabels().contains("@minecraft"),
+                () -> "tags " + filterScreen().candidateLabels()));
+        list.add(capture("4b-filtro-inspetor"));
+        list.add(new Step("filtro: aba Regra", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.rule")), "aba Regra")),
+                () -> filterScreen().tab() == FilterScreen.Tab.RULE
+                        && find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.yes"))) != null,
+                () -> "aba " + filterScreen().tab()));
+        list.add(new Step("filtro: regra Encantado em picaretas", STEP_TIMEOUT_MS, () -> {
+            // o primeiro "Sim" é o de Encantado (as condições vêm na ordem da tela)
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.yes")), "Sim de Encantado"));
+            EditBox scope = filterScreen().scopeBox();
+            click(Minecraft.getInstance().screen, scope.getX() + 4, scope.getY() + 3);
+            type("#minecraft:pickaxes");
+        }, () -> {
+            AbstractWidget add = find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add")));
+            return add != null && add.active;
+        }, () -> "Adicionar regra ativo"));
+        list.add(capture("4c-filtro-regra"));
+        list.add(new Step("filtro: adicionar a regra", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add")), "Adicionar regra")),
+                () -> onServer(server -> hasPickaxeRule(router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter()))
+                        && filterScreen().tab() == FilterScreen.Tab.ENTRY,
+                () -> "filtro no servidor: " + onServer(server -> router(server, routerB)
+                        .face(ResourceType.ITEM, Direction.UP).filter().entries().toString())));
+        int[] filterSize = new int[2];
+        list.add(new Step("filtro: aumentar a janela", STEP_TIMEOUT_MS, () -> {
+            filterSize[0] = filterScreen().panelWidth();
+            filterSize[1] = filterScreen().panelHeight();
+            dragGrip(filterScreen(), 40, 36);
+        }, () -> filterScreen().panelWidth() > filterSize[0] && filterScreen().panelHeight() > filterSize[1]
+                && filterScreen().inventoryFollows() && centered(filterScreen()),
+                () -> "tamanho " + filterScreen().panelWidth() + "x" + filterScreen().panelHeight()));
+        list.add(capture("4d-filtro-maior"));
+        list.add(new Step("filtro: tamanho de volta", STEP_TIMEOUT_MS,
+                // a janela cresce dos dois lados (fica no centro): metade da diferença em cada borda
+                () -> dragGrip(filterScreen(), (filterSize[0] - filterScreen().panelWidth()) / 2,
+                        (filterSize[1] - filterScreen().panelHeight()) / 2),
+                () -> filterScreen().panelWidth() == filterSize[0] && filterScreen().panelHeight() == filterSize[1]
+                        && filterScreen().inventoryFollows() && centered(filterScreen()),
+                () -> "tamanho " + filterScreen().panelWidth() + "x" + filterScreen().panelHeight()));
         list.add(new Step("voltar ao roteador", STEP_TIMEOUT_MS,
                 () -> click(widget(byTooltip(Component.translatable("gui.wirelessautomate.filter.back.tooltip")), "Voltar")),
                 () -> Minecraft.getInstance().screen instanceof RouterScreen screen
                         && screen.getMenu().snapshot().pos().equals(routerB)
-                        && screen.getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).filterSize() == 1,
+                        && screen.getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).filterSize() == 2,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
 
         list.add(new Step("renomear", STEP_TIMEOUT_MS, () -> {
@@ -1739,6 +1792,40 @@ public final class DevEndToEnd {
 
     private static Component mode(PortMode mode) {
         return Component.translatable("gui.wirelessautomate.router.mode." + mode.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    /**
+     * O filtro tem a regra "Encantado só em #minecraft:pickaxes", e ela sozinha não pega a picareta
+     * comum nem o livro encantado (fora da tag).
+     */
+    private static boolean hasPickaxeRule(Filter filter) {
+        List<FilterEntry> rules = filter.entries().stream().filter(e -> e instanceof FilterEntry.RuleEntry r
+                && Boolean.TRUE.equals(r.rule().flag(ItemRule.Property.ENCHANTED))
+                && r.rule().scope().equals("#minecraft:pickaxes")).toList();
+        Filter only = new Filter(Filter.ListMode.WHITELIST, false, rules);
+        return !rules.isEmpty() && !only.testItem(new ItemStack(Items.DIAMOND_PICKAXE))
+                && !only.testItem(new ItemStack(Items.ENCHANTED_BOOK));
+    }
+
+    private static FilterScreen filterScreen() throws StepFailure {
+        if (Minecraft.getInstance().screen instanceof FilterScreen screen) {
+            return screen;
+        }
+        throw new StepFailure("tela " + describe(Minecraft.getInstance().screen));
+    }
+
+    /** O painel está no centro da janela do jogo. */
+    private static boolean centered(AbstractContainerScreen<?> screen) {
+        return Math.abs(screen.getGuiLeft() + screen.getXSize() / 2 - screen.width / 2) <= 1
+                && Math.abs(screen.getGuiTop() + screen.getYSize() / 2 - screen.height / 2) <= 1;
+    }
+
+    /** Arrasta a alça de redimensionar da tela de filtro como o mouse. */
+    private static void dragGrip(FilterScreen screen, int dx, int dy) {
+        int[] grip = screen.gripPoint();
+        screen.mouseClicked(grip[0], grip[1], 0);
+        screen.mouseDragged(grip[0] + dx, grip[1] + dy, 0, dx, dy);
+        screen.mouseReleased(grip[0] + dx, grip[1] + dy, 0);
     }
 
     private static boolean hasTag(List<FilterEntry> entries) {

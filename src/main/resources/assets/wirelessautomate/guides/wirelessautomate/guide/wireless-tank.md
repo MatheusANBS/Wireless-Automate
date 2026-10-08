@@ -64,6 +64,7 @@ gets in, and an entry's **stock** means "store up to N mB".
 - **Breaking:** the item takes the contents and the filter, and the tooltip shows the total. A full one always becomes an item (in creative, without a pickaxe or in an explosion).
 - **Comparator:** the signal rises with how full it is.
 - **Other mods** see it as a regular tank.
+- **Faces:** all six are the same. It doesn't push or pull by itself: the router moves things, or another mod's cable or pipe. A machine just placed against it gets nothing.
 
 ## Recipe
 

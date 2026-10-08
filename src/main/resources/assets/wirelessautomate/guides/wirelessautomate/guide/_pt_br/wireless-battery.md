@@ -50,6 +50,7 @@ A Bateria não tem filtro: energia é uma só.
 - **Quebrar:** o item leva o conteúdo, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
 - **Comparador:** o sinal sobe com a ocupação.
 - **Outros mods** o veem como uma bateria comum.
+- **Faces:** as seis são iguais. Ele não empurra nem puxa sozinho: quem move é o roteador, ou um cabo ou cano de outro mod. Uma máquina só encostada nele não recebe nada.
 
 ## Receita
 

@@ -51,6 +51,7 @@ O botão **Filtro** abre a tela de filtros de químicos (por químico ou por mod
 - **Quebrar:** o item leva o conteúdo e o filtro, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
 - **Comparador:** o sinal sobe com a ocupação.
 - **Outros mods** o veem como um tanque de químicos comum.
+- **Faces:** as seis são iguais. Ele não empurra nem puxa sozinho: quem move é o roteador, ou um cabo ou cano de outro mod. Uma máquina só encostada nele não recebe nada.
 
 ## Receita
 

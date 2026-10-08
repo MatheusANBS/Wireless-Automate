@@ -1396,6 +1396,7 @@ COMMON_PT = '''
 - **Quebrar:** o item leva o conteúdo{FILTER_PT}, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
 - **Comparador:** o sinal sobe com a ocupação.
 - **Outros mods** o veem como {WHAT_PT} comum.
+- **Faces:** as seis são iguais. Ele não empurra nem puxa sozinho: quem move é o roteador, ou um cabo ou cano de outro mod. Uma máquina só encostada nele não recebe nada.
 '''
 COMMON_EN = '''
 ## Shared with the Chest
@@ -1404,6 +1405,7 @@ COMMON_EN = '''
 - **Breaking:** the item takes the contents{FILTER_EN}, and the tooltip shows the total. A full one always becomes an item (in creative, without a pickaxe or in an explosion).
 - **Comparator:** the signal rises with how full it is.
 - **Other mods** see it as a regular {WHAT_EN}.
+- **Faces:** all six are the same. It doesn't push or pull by itself: the router moves things, or another mod's cable or pipe. A machine just placed against it gets nothing.
 '''
 
 page('wireless-tank.md', front('Tanque Wireless', 'wirelessautomate:storage_tank', 12,

@@ -68,7 +68,7 @@ public class TierCoreItem extends Item {
         }
         tooltip.add(line("range", range(from), range(tier)));
         for (StorageKind kind : StorageKind.values()) {
-            if (kind != StorageKind.CHEMICAL_TANK || Chemicals.LOADED) {
+            if (kind.loaded()) {
                 tooltip.add(line(kind.id, capacity(kind, from), capacity(kind, tier)));
             }
         }

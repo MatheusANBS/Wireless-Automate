@@ -61,7 +61,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
                     new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
                             RouterBlockItem.withTier(ModItems.ROUTER.get(), next), ingredients)));
             for (StorageKind kind : StorageKind.values()) {
-                if (kind == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+                if (!kind.loaded()) {
                     continue;
                 }
                 Item item = ModItems.STORAGE.get(kind).get();

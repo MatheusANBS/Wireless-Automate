@@ -41,4 +41,22 @@ class StorageMathTest {
         assertEquals(1, StorageMath.signal(12_000_000L, 0));
         assertEquals(0, StorageMath.signal(0, 0));
     }
+
+    @Test
+    void fillLevelGoesFromEmptyToFull() {
+        assertEquals(0, StorageMath.fillLevel(0, 160_000));
+        assertEquals(1, StorageMath.fillLevel(1, 160_000));
+        assertEquals(1, StorageMath.fillLevel(16_000, 160_000));
+        assertEquals(2, StorageMath.fillLevel(16_001, 160_000));
+        assertEquals(5, StorageMath.fillLevel(80_000, 160_000));
+        assertEquals(10, StorageMath.fillLevel(160_000, 160_000));
+        assertEquals(10, StorageMath.fillLevel(999_999, 160_000));
+    }
+
+    @Test
+    void fillLevelWithoutLimitIsFullWithAnything() {
+        assertEquals(0, StorageMath.fillLevel(0, 0));
+        assertEquals(10, StorageMath.fillLevel(1, 0));
+        assertEquals(10, StorageMath.fillLevel(Long.MAX_VALUE, 0));
+    }
 }

@@ -41,14 +41,14 @@ public final class ListKind<K> {
         return copy.apply(key);
     }
 
-    /** A lista de um armazenamento por tipo (o Baú, os Tanques); a Bateria não tem. */
+    /** A lista de um armazenamento por tipo (o Baú, os Tanques); a Bateria e o Tanque de Source não têm. */
     @SuppressWarnings("unchecked")
     public static <K> ListKind<K> of(StorageKind kind) {
         return (ListKind<K>) switch (kind) {
             case CHEST -> ITEMS;
             case TANK -> FLUIDS;
             case CHEMICAL_TANK -> CHEMICALS;
-            case BATTERY -> throw new IllegalArgumentException("A Bateria não tem lista");
+            case BATTERY, SOURCE_TANK -> throw new IllegalArgumentException(kind + " não tem lista");
         };
     }
 }

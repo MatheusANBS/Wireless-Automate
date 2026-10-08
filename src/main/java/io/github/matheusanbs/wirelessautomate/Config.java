@@ -102,6 +102,7 @@ public final class Config {
                 case TANK -> "Capacidade do Tanque por tier, em mB (todos os fluidos somados; 0 = sem limite).";
                 case BATTERY -> "Capacidade da Bateria por tier, em FE (0 = sem limite).";
                 case CHEMICAL_TANK -> "Capacidade do Tanque Químico por tier, em mB (todos os químicos somados; 0 = sem limite).";
+                case SOURCE_TANK -> "Capacidade do Tanque de Source por tier, em Source (0 = sem limite).";
             });
             builder.push(kind.configKey);
             Map<RouterTier, ModConfigSpec.LongValue> byTier = new EnumMap<>(RouterTier.class);

@@ -1339,7 +1339,7 @@ public final class DevEndToEnd {
         String[] names = {"Main Storage", "Lava Tank", "Base Battery", "Hydrogen"};
         showStorage.clear();
         for (int i = 0; i < kinds.length; i++) {
-            if (kinds[i] == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+            if (!kinds[i].loaded()) {
                 continue;
             }
             BlockPos pos = showBase.offset(11 + 2 * i, 0, -5);
@@ -1379,6 +1379,7 @@ public final class DevEndToEnd {
                 case TANK -> ResourceType.FLUID;
                 case BATTERY -> ResourceType.ENERGY;
                 case CHEMICAL_TANK -> ResourceType.CHEMICAL;
+                case SOURCE_TANK -> ResourceType.SOURCE;
             };
             router.setMode(type, Direction.UP, PortMode.BOTH);
         }

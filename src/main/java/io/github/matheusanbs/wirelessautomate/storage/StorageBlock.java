@@ -28,7 +28,7 @@ import net.neoforged.neoforge.fluids.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Bloco de armazenamento do mod: Baú, Tanque, Bateria ou Tanque Químico ({@link StorageKind}), com
+ * Bloco de armazenamento do mod: Baú, Tanque, Bateria, Tanque Químico ou Tanque de Source ({@link StorageKind}), com
  * a capacidade do tier ({@link RouterBlock#TIER}, a mesma propriedade do roteador). Sobe de tier
  * com os mesmos Cartões de Upgrade, sem perder o conteúdo. Clique direito abre a tela; no Tanque, um
  * balde (ou outro recipiente de fluido) na mão enche ou esvazia direto.
@@ -75,6 +75,7 @@ public class StorageBlock extends BaseEntityBlock {
             case TANK -> new StorageTankBlockEntity(pos, state);
             case BATTERY -> new StorageBatteryBlockEntity(pos, state);
             case CHEMICAL_TANK -> new StorageChemicalTankBlockEntity(pos, state);
+            case SOURCE_TANK -> new StorageSourceTankBlockEntity(pos, state);
         };
     }
 
@@ -188,6 +189,9 @@ public class StorageBlock extends BaseEntityBlock {
         }
         if (!level.isClientSide) {
             level.setBlockAndUpdate(pos, state.setValue(RouterBlock.TIER, target));
+            if (level.getBlockEntity(pos) instanceof StorageSourceTankBlockEntity tank) {
+                tank.refreshFill();
+            }
         }
         return true;
     }

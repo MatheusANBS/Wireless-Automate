@@ -27,6 +27,8 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +76,7 @@ import org.jetbrains.annotations.Nullable;
 public final class StorageGameTests {
     private static final BlockPos A = new BlockPos(0, 1, 0);
     private static final BlockPos B = new BlockPos(2, 1, 2);
+    private static final BlockPos C = new BlockPos(0, 1, 2);
     private static final int CONTAINER_ID = 77;
 
     private static UUID newNetwork(GameTestHelper helper, String name) {
@@ -575,6 +578,11 @@ public final class StorageGameTests {
         return helper.getBlockEntity(pos);
     }
 
+    private static StorageSourceTankBlockEntity storageSourceTank(GameTestHelper helper, BlockPos pos, RouterTier tier) {
+        helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
+        return helper.getBlockEntity(pos);
+    }
+
     private static long fluid(GameTestHelper helper, BlockPos pos, net.minecraft.world.level.material.Fluid fluid) {
         StorageTankBlockEntity tank = helper.getBlockEntity(pos);
         return tank.storage().count(new FluidStack(fluid, 1));
@@ -713,6 +721,53 @@ public final class StorageGameTests {
         place(helper, battery, B, StorageKind.BATTERY);
         helper.assertValueEqual(fluid(helper, A, Fluids.LAVA), 7_654_321L, "a lava voltou");
         helper.assertValueEqual(energy(helper, B), 9_876_543L, "a energia voltou");
+        helper.succeed();
+    }
+
+    /** Tanque de Source: guarda em long até a capacidade, e o nível do bloco acompanha o conteúdo. */
+    @GameTest(template = "empty")
+    public static void sourceTankStoresAndShowsLevel(GameTestHelper helper) {
+        StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
+        long capacity = Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC);
+        helper.assertValueEqual(capacity, 160_000L, "capacidade do Básico");
+        helper.assertValueEqual(tank.store().insert(80_000, false), 80_000L, "metade");
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
+        helper.assertValueEqual(tank.store().insert(999_999, false), 80_000L, "até a capacidade");
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10, "cheio");
+        helper.assertValueEqual(tank.signal(), 15, "comparador cheio");
+        tank.store().extract(160_000, false);
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
+        helper.succeed();
+    }
+
+    /** Upgrade de tier com Source dentro: o conteúdo fica e o nível é recalculado pela capacidade nova. */
+    @GameTest(template = "empty")
+    public static void sourceTankUpgradeKeepsSourceAndRefreshesLevel(GameTestHelper helper) {
+        StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
+        tank.store().insert(160_000, false);
+        helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED), "upgrade");
+        StorageSourceTankBlockEntity upgraded = helper.getBlockEntity(A);
+        helper.assertValueEqual(upgraded.store().stored(), 160_000L, "Source depois do upgrade");
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
+        helper.succeed();
+    }
+
+    /** Tanque de Source Ultimate (sem limite) quebrado cheio: o item leva a Source e o tier, e o nível volta ao colocar. */
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void sourceTankKeepsSourceWhenBroken(GameTestHelper helper) {
+        long source = 3_000_000_001L;
+        storageSourceTank(helper, C, RouterTier.ULTIMATE).store().insert(source, false);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.CREATIVE);
+        player.moveTo(Vec3.atCenterOf(helper.absolutePos(C).above()));
+        player.gameMode.destroyBlock(helper.absolutePos(C));
+        ItemStack item = pickUp(helper, C, StorageKind.SOURCE_TANK, source);
+        helper.assertValueEqual(StorageBlockItem.tierOf(item), RouterTier.ULTIMATE, "tier no item");
+        place(helper, item, C, StorageKind.SOURCE_TANK);
+        StorageSourceTankBlockEntity placed = helper.getBlockEntity(C);
+        helper.assertValueEqual(placed.store().stored(), source, "a Source voltou");
+        helper.assertValueEqual(helper.getBlockState(C).getValue(StorageSourceTankBlock.FILL), 10, "nível do bloco recolocado");
         helper.succeed();
     }
 

@@ -38,6 +38,20 @@ public final class StorageMath {
         return 1 + (int) (14.0 * total / capacity);
     }
 
+    /**
+     * Nível mostrado pelo Tanque de Source, de 0 (vazio) a 10 (cheio): com qualquer conteúdo, pelo
+     * menos 1, arredondado para cima. Sem limite, 10 com qualquer coisa.
+     */
+    public static int fillLevel(long stored, long capacity) {
+        if (stored <= 0) {
+            return 0;
+        }
+        if (capacity <= 0 || stored >= capacity) {
+            return 10;
+        }
+        return Math.max(1, (int) Math.ceil(10.0 * stored / capacity));
+    }
+
     private StorageMath() {
     }
 }

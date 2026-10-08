@@ -31,8 +31,8 @@ public final class ModCreativeTabs {
                             }
                         }
                         for (StorageKind kind : StorageKind.values()) {
-                            // O Tanque Químico só aparece com o Mekanism (sem ele não troca nada).
-                            if (kind == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+                            // Os armazenamentos de outros mods (Químico, Source) só aparecem com eles.
+                            if (!kind.loaded()) {
                                 continue;
                             }
                             for (RouterTier tier : RouterTier.values()) {

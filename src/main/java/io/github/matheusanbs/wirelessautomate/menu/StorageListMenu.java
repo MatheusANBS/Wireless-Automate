@@ -329,7 +329,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         return switch (menu.kind.storage) {
             case CHEST -> menu.handleItems(player, payload.action(), key.map(ItemStack.class::cast).orElse(ItemStack.EMPTY));
             case TANK, CHEMICAL_TANK -> menu.handleContainers(player, payload.action(), key.orElse(null));
-            case BATTERY -> false;
+            case BATTERY, SOURCE_TANK -> false;
         };
     }
 

@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.world.level.block.SoundType;
@@ -23,17 +24,23 @@ public final class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .noOcclusion());
 
-    /** Armazenamentos do mod (Baú, Tanque, Bateria, Tanque Químico), com tiers. */
+    /** Armazenamentos do mod (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source), com tiers. */
     public static final Map<StorageKind, DeferredBlock<StorageBlock>> STORAGE = new EnumMap<>(StorageKind.class);
 
     static {
         for (StorageKind kind : StorageKind.values()) {
-            STORAGE.put(kind, BLOCKS.registerBlock(kind.id, props -> new StorageBlock(kind, props),
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .strength(3.0F, 6.0F)
-                            .sound(SoundType.METAL)
-                            .requiresCorrectToolForDrops()));
+            BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(3.0F, 6.0F)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops();
+            if (kind == StorageKind.SOURCE_TANK) {
+                // Forma fina (o modelo não preenche o cubo): sem oclusão.
+                properties = properties.noOcclusion();
+            }
+            STORAGE.put(kind, BLOCKS.registerBlock(kind.id,
+                    props -> kind == StorageKind.SOURCE_TANK ? new StorageSourceTankBlock(kind, props) : new StorageBlock(kind, props),
+                    properties));
         }
     }
 

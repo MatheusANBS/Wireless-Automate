@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -30,6 +31,9 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<StorageChemicalTankBlockEntity>> CHEMICAL_TANK =
             BLOCK_ENTITY_TYPES.register("storage_chemical_tank", () -> BlockEntityType.Builder.of(
                     StorageChemicalTankBlockEntity::new, ModBlocks.STORAGE.get(StorageKind.CHEMICAL_TANK).get()).build(null));
+    public static final Supplier<BlockEntityType<StorageSourceTankBlockEntity>> SOURCE_TANK =
+            BLOCK_ENTITY_TYPES.register("storage_source_tank", () -> BlockEntityType.Builder.of(
+                    StorageSourceTankBlockEntity::new, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get()).build(null));
 
     private ModBlockEntities() {
     }

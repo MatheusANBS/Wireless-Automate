@@ -62,8 +62,8 @@ public class StorageBlockItem extends BlockItem {
         if (stack.has(ModDataComponents.STORAGE_FILTER.get())) {
             tooltip.add(Component.translatable("block.wirelessautomate.storage.filtered").withStyle(ChatFormatting.DARK_AQUA));
         }
-        if (kind == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
-            tooltip.add(Component.translatable("block.wirelessautomate.storage_chemical_tank.needs_mekanism")
+        if (!kind.loaded()) {
+            tooltip.add(Component.translatable("block.wirelessautomate." + kind.id + ".needs_mod")
                     .withStyle(ChatFormatting.RED));
         }
     }

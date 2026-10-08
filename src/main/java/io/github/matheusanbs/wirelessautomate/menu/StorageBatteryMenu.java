@@ -2,7 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.packet.BatteryStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
-import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.ScalarStorageBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class StorageBatteryMenu extends AbstractContainerMenu {
     private final BlockPos pos;
-    private final @Nullable StorageBatteryBlockEntity battery;
+    private final @Nullable ScalarStorageBlockEntity battery;
     private final @Nullable ServerPlayer viewer;
     private long sentStored = -1;
     private long sentCapacity = -1;
@@ -36,7 +36,7 @@ public class StorageBatteryMenu extends AbstractContainerMenu {
     private boolean received;
 
     /** Servidor. */
-    public StorageBatteryMenu(int containerId, Inventory inventory, StorageBatteryBlockEntity battery) {
+    public StorageBatteryMenu(int containerId, Inventory inventory, ScalarStorageBlockEntity battery) {
         super(ModMenus.STORAGE_BATTERY.get(), containerId);
         this.pos = battery.getBlockPos();
         this.battery = battery;
@@ -56,7 +56,7 @@ public class StorageBatteryMenu extends AbstractContainerMenu {
         this.viewer = null;
     }
 
-    public static void open(ServerPlayer player, StorageBatteryBlockEntity battery) {
+    public static void open(ServerPlayer player, ScalarStorageBlockEntity battery) {
         player.openMenu(new SimpleMenuProvider(
                         (containerId, inventory, p) -> new StorageBatteryMenu(containerId, inventory, battery),
                         battery.getBlockState().getBlock().getName()),

@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wirelessautomate:storage_source_tank",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "wirelessautomate:storage_source_tank",
+              "properties": [
+                "tier"
+              ]
+            },
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "wirelessautomate:storage_contents",
+                "wirelessautomate:storage_filter"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wirelessautomate:blocks/storage_source_tank"
+}

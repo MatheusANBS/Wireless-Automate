@@ -8,9 +8,9 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * capacidade aparecem cortados nesse teto para quem lê (medidores de outros mods).
  */
 public final class EnergyStoreHandler implements IEnergyStorage {
-    private final EnergyStore store;
+    private final ScalarStore store;
 
-    public EnergyStoreHandler(EnergyStore store) {
+    public EnergyStoreHandler(ScalarStore store) {
         this.store = store;
     }
 

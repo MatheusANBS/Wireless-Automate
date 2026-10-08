@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ars_nouveau"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "IGI",
+    "GTG",
+    "IGI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "G": {
+      "item": "ars_nouveau:source_gem"
+    },
+    "T": {
+      "item": "wirelessautomate:storage_tank"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:storage_source_tank",
+    "count": 1
+  }
+}

@@ -3,16 +3,16 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import java.util.function.LongSupplier;
 
 /**
- * Conteúdo da Bateria: energia em FE, {@code long}, até a capacidade do tier (lida a cada entrada;
+ * Conteúdo de um valor só (a energia da Bateria, a Source do Tanque de Source), em {@code long}, até a capacidade do tier (lida a cada entrada;
  * {@code <= 0} é sem limite). Cada mudança real chama {@code onChange} e sobe a {@link #version()}.
  */
-public final class EnergyStore implements BulkEnergy {
+public final class ScalarStore implements BulkEnergy, BulkSource {
     private final Runnable onChange;
     private final LongSupplier capacity;
     private long stored;
     private int version;
 
-    public EnergyStore(Runnable onChange, LongSupplier capacity) {
+    public ScalarStore(Runnable onChange, LongSupplier capacity) {
         this.onChange = onChange;
         this.capacity = capacity;
     }
@@ -59,6 +59,16 @@ public final class EnergyStore implements BulkEnergy {
     public void set(long value) {
         stored = Math.max(0, value);
         version++;
+    }
+
+    /** Troca o valor (limitado a zero e à capacidade) e avisa, como uma mudança real. Para o {@code setSource} do Ars. */
+    public void replace(long value) {
+        long limit = capacity.getAsLong() <= 0 ? Long.MAX_VALUE : capacity.getAsLong();
+        long next = Math.max(0, Math.min(value, limit));
+        if (next != stored) {
+            stored = next;
+            changed();
+        }
     }
 
     private void changed() {

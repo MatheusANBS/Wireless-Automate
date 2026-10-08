@@ -55,7 +55,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int UNLINK = 0xFFE5534B;
 
     // coluna da esquerda: redes e tipo
-    private static final int LW = 104;
+    private static final int LW = 144;
     private static final int LIST_Y = 42;
     private static final int ROW = 12;
     /** Botões de linha criados (o máximo de linhas da lista). */
@@ -259,9 +259,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         allButton = add(new FlatButton(x + X0 + LW - 50, y + typeLabelY() - 3, 50, 12, tr("type.all"),
                 (g, b, hovered) -> paintAll(g, b, hovered), this::setAllTabs).tooltip(this::allTooltip));
 
-        linkButton = add(new FlatButton(x + RX, y + ACTION_Y, RW - 58, 16, tr("link.count", 0), this::paintLink,
+        linkButton = add(new FlatButton(x + RX, y + ACTION_Y, RW - 48, 16, tr("link.count", 0), this::paintLink,
                 this::link).tooltip(this::linkTooltip));
-        clearButton = add(new FlatButton(x + X1 - 56, y + ACTION_Y, 56, 16, tr("clear"),
+        clearButton = add(new FlatButton(x + X1 - 46, y + ACTION_Y, 46, 16, tr("clear"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("clear"), b.active ? GuiPaint.FG : GuiPaint.DISABLED),
                 this::clear).tooltip(() -> tr("clear.tooltip")));
         refresh();
@@ -894,37 +894,28 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
     }
 
-    /** Chip de um tipo: caixa de marcar, ícone e nome; marcado, a borda fica na cor do tipo (ou do desvincular). */
+    /** Chip de um tipo: ícone e nome; marcado, borda e fundo na cor do tipo (ou do desvincular). */
     private void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
         boolean checked = snapshot().tabs().contains(t);
-        int border = checked ? (unlink() ? UNLINK : ResourceStyle.color(t))
-                : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
-                border);
-        int bx = b.getX() + 3;
-        int by = b.getY() + (b.getHeight() - 7) / 2;
-        GuiPaint.box(g, bx, by, 7, 7, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        if (checked) {
-            g.fill(bx + 2, by + 2, bx + 5, by + 5, unlink() ? UNLINK : ACCENT);
-        }
-        int ix = bx + 7 + 3;
+        int color = unlink() ? UNLINK : ResourceStyle.color(t);
+        int border = checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        int fill = checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
+        int ix = b.getX() + 5;
         ResourceStyle.drawIcon(g, t, ix, b.getY() + (b.getHeight() - ResourceStyle.ICON) / 2);
-        int tx = ix + ResourceStyle.ICON + 3;
+        int tx = ix + ResourceStyle.ICON + 4;
         GuiText.draw(g, font, typeName(t), tx, b.getY() + (b.getHeight() - 8) / 2,
                 b.getX() + b.getWidth() - 3 - tx, checked ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
-    /** Todos: caixa de marcar, cheia quando todas as abas estão marcadas. */
+    /** Todos: botão de texto, na cor do Vinculador quando todas as abas estão marcadas. */
     private void paintAll(GuiGraphics g, FlatButton b, boolean hovered) {
         boolean checked = allTabs();
-        int bx = b.getX() + 2;
-        int by = b.getY() + (b.getHeight() - 7) / 2;
-        GuiPaint.box(g, bx, by, 7, 7, GuiPaint.INSET, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        if (checked) {
-            g.fill(bx + 2, by + 2, bx + 5, by + 5, unlink() ? UNLINK : ACCENT);
-        }
-        int tx = bx + 7 + 3;
-        GuiText.draw(g, font, tr("type.all"), tx, b.getY() + (b.getHeight() - 8) / 2, b.getX() + b.getWidth() - 2 - tx,
+        int color = unlink() ? UNLINK : ACCENT;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
+                checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
+                checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        GuiText.draw(g, font, tr("type.all"), b.getX() + 4, b.getY() + (b.getHeight() - 8) / 2, b.getWidth() - 8,
                 checked || hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
@@ -950,7 +941,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.INSET, GuiPaint.LINE);
         }
         Component text = linkLabel();
-        GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 4,
+        int textW = Math.min(font.width(text), b.getWidth() - 6);
+        GuiText.draw(g, font, text, b.getX() + (b.getWidth() - textW) / 2, b.getY() + 4, textW,
                 b.active ? GuiPaint.DARK_TEXT : GuiPaint.DISABLED);
     }
 

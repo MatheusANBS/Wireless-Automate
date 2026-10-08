@@ -380,16 +380,6 @@ public final class LinkerActions {
      * Marca ou desmarca uma aba ({@code value} = {@code ordinal} do tipo). Químicos só com o
      * Mekanism; desmarcar a última aba que vale é recusado.
      */
-    /** "Todos" na tela: grava a máscara pedida, se ela tiver algum tipo disponível. */
-    private static boolean setTabs(ItemStack stack, int mask) {
-        LinkerTabs next = new LinkerTabs(mask);
-        if (next.isEmpty(LoadedTypes.LIST)) {
-            return false;
-        }
-        LinkerItem.setTabs(stack, next);
-        return true;
-    }
-
     private static boolean toggleTab(ItemStack stack, int value) {
         if (value < 0 || value >= ResourceType.values().length) {
             return false;
@@ -399,6 +389,19 @@ public final class LinkerActions {
             return false;
         }
         LinkerTabs next = LinkerItem.tabs(stack).toggle(type);
+        if (next.isEmpty(LoadedTypes.LIST)) {
+            return false;
+        }
+        LinkerItem.setTabs(stack, next);
+        return true;
+    }
+
+    /**
+     * "Todos" na tela: grava a máscara pedida só com os tipos disponíveis (bits de tipos ausentes são
+     * descartados); se não sobra nenhum, recusa.
+     */
+    private static boolean setTabs(ItemStack stack, int mask) {
+        LinkerTabs next = new LinkerTabs(mask & LinkerTabs.available(LoadedTypes.LIST).mask());
         if (next.isEmpty(LoadedTypes.LIST)) {
             return false;
         }

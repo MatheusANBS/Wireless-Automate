@@ -313,6 +313,16 @@ public final class LinkerAreaGameTests {
         helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
                 Optional.empty(), "", 0)), "aceitou conjunto vazio");
         helper.assertTrue(LinkerItem.tabs(linker).isAll(LoadedTypes.LIST), "conjunto vazio mudou as abas");
+        // bits fora dos tipos disponíveis (inclusive lixo) não são gravados
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.FLUID));
+        int garbage = ~LinkerTabs.available(LoadedTypes.LIST).mask() | LinkerTabs.of(ResourceType.ITEM).mask();
+        helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
+                Optional.empty(), "", garbage)), "recusou máscara com um tipo disponível");
+        helper.assertValueEqual(LinkerItem.tabs(linker).mask() & ~LinkerTabs.available(LoadedTypes.LIST).mask(), 0,
+                "gravou bits de tipos indisponíveis");
+        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), List.of(ResourceType.ITEM), "abas depois do lixo");
+        helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
+                Optional.empty(), "", ~LinkerTabs.available(LoadedTypes.LIST).mask())), "aceitou só bits indisponíveis");
         helper.succeed();
     }
 

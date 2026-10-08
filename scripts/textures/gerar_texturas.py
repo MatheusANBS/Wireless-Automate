@@ -863,11 +863,11 @@ def metal_lado(t: str, tampa: bool = False) -> Image.Image:
     for x in range(16):
         for y in range(16):
             img.putpixel((x, y), rgb(casco["2"] if (x + y) % 7 else casco["3"]))
-    if tampa:  # tampa: y 13..15 -> v 0..2 (linha 2 = borda de baixo)
+    if tampa:  # tampa: y 11..13 -> v 2..4 (linha 4 = borda de baixo, a que o modelo mostra: tampa de y=11)
         for x in range(16):
-            img.putpixel((x, 0), rgb(casco["4"]))
-            img.putpixel((x, 1), rgb(casco["2"]))
-            img.putpixel((x, 2), tc["3"])
+            img.putpixel((x, 2), rgb(casco["4"]))
+            img.putpixel((x, 3), rgb(casco["2"]))
+            img.putpixel((x, 4), tc["3"])
     else:  # base: y 0..2 -> v 13..15 (linha 13 = borda de cima)
         for x in range(16):
             img.putpixel((x, 13), tc["3"])
@@ -920,12 +920,13 @@ def trilho(t: str) -> Image.Image:
 def vidro() -> Image.Image:
     v = PALETAS["vidro_tanque"]
     img = _nova()
-    for y in (4, 5, 6, 9):
-        img.putpixel((6, y), rgb(v["V"] if y < 6 else v["v"]))
-    img.putpixel((7, 4), rgb(v["v"]))
-    img.putpixel((9, 10), rgb(v["v"]))
+    # o vidro vai de y=2 a y=11 (linhas 5..13): a borda de cima e o reflexo ficam 2 linhas abaixo de antes
+    for y in (6, 7, 8, 11):
+        img.putpixel((6, y), rgb(v["V"] if y < 8 else v["v"]))
+    img.putpixel((7, 6), rgb(v["v"]))
+    img.putpixel((9, 12), rgb(v["v"]))
     for x in range(5, 11):
-        img.putpixel((x, 3), rgb(v["e"]))
+        img.putpixel((x, 5), rgb(v["e"]))
     return img
 
 
@@ -968,7 +969,7 @@ def pescoco(t: str) -> Image.Image:
     tc = _tier(t)
     img = _nova(casco["3"])
     for x in range(16):
-        img.putpixel((x, 1), tc["4"] if x % 2 else rgb(casco["4"]))
+        img.putpixel((x, 3), tc["4"] if x % 2 else rgb(casco["4"]))  # pescoço em y=12 -> linha 3
     return img
 
 
@@ -992,7 +993,7 @@ def sprites_tanque_source() -> dict[str, Image.Image]:
 
 def altura_source(fill: int) -> int:
     """Topo (em pixels do bloco) da Source no nível 1..10; meio pixel arredonda para cima."""
-    return 2 + max(1, (fill * 22 + 10) // 20)  # round-half-up de fill * 11 / 10, em inteiros
+    return 2 + max(1, (fill * 18 + 10) // 20)  # round-half-up de fill * 9 / 10, em inteiros
 
 
 def elementos_tanque_source(fill: int) -> list[dict]:
@@ -1011,19 +1012,19 @@ def elementos_tanque_source(fill: int) -> list[dict]:
             "faces": {**lat("base_side"), "up": {"texture": "#base_top"},
                       "down": {"texture": "#base_top", "cullface": "down"}}}
     els = [base,
-           trilho_el([4, 2, 4], [5, 13, 5]), trilho_el([11, 2, 4], [12, 13, 5]),
-           trilho_el([4, 2, 11], [5, 13, 12]), trilho_el([11, 2, 11], [12, 13, 12])]
+           trilho_el([4, 2, 4], [5, 11, 5]), trilho_el([11, 2, 4], [12, 11, 5]),
+           trilho_el([4, 2, 11], [5, 11, 12]), trilho_el([11, 2, 11], [12, 11, 12])]
     if fill > 0:
         els.append({"from": [5, 2, 5], "to": [11, altura_source(fill), 11],
                     "faces": {**lat("source"), "up": {"texture": "#surface"}}})
     els += [
-        {"from": [4, 2, 4], "to": [12, 13, 12], "faces": lat("glass")},
-        {"from": [3, 13, 3], "to": [13, 14, 13],
+        {"from": [4, 2, 4], "to": [12, 11, 12], "faces": lat("glass")},
+        {"from": [3, 11, 3], "to": [13, 12, 13],
          "faces": {**lat("cap_side"), "up": {"texture": "#cap_top"}, "down": {"texture": "#base_top"}}},
-        {"from": [5, 14, 5], "to": [11, 15, 11], "faces": {**lat("neck"), "up": {"texture": "#cap_top"}}},
-        {"from": [7, 15, 7], "to": [9, 18, 9],
-         # y vai até 18, fora do bloco: o uv automático sairia da textura (v < 0) e a gema ficaria preta;
-         # por isso o uv é explícito (uma faixa 2x3 das laterais e um quadrado 2x2 em cima e embaixo).
+        {"from": [5, 12, 5], "to": [11, 13, 11], "faces": {**lat("neck"), "up": {"texture": "#cap_top"}}},
+        {"from": [7, 13, 7], "to": [9, 16, 9],
+         # uv explícito (uma faixa 2x3 das laterais, as linhas 13..15, e um quadrado 2x2 em cima e embaixo),
+         # para a gema ficar com o mesmo desenho aprovado; o uv automático pegaria as linhas 0..2.
          "faces": {**{f: {"texture": "#gem", "uv": [7, 13, 9, 16]} for f in laterais},
                    "up": {"texture": "#gem", "uv": [7, 7, 9, 9]},
                    "down": {"texture": "#gem", "uv": [7, 7, 9, 9]}}},
@@ -1089,6 +1090,11 @@ def tanque_source_montado(t: str, fill: int, sprites: dict[str, Image.Image], s:
     def sh(c, f):
         return (int(c[0] * f), int(c[1] * f), int(c[2] * f), 255)
 
+    def lin(el, cara, y):
+        """Linha da textura do pixel de altura y: a do uv explícito (v inicial no topo) ou 15 - y."""
+        uv = el["faces"][cara].get("uv")
+        return (uv[1] + el["to"][1] - 1 - y) % 16 if uv else (15 - y) % 16
+
     # Só as faces que se veem (sul, leste e cima), na ordem dos elementos (os de trás primeiro).
     for el in elementos_tanque_source(fill):
         (x0, y0, z0), (x1, y1, z1) = el["from"], el["to"]
@@ -1096,13 +1102,13 @@ def tanque_source_montado(t: str, fill: int, sprites: dict[str, Image.Image], s:
         if "south" in f:
             for x in range(x0, x1):
                 for y in range(y0, y1):
-                    c = f["south"].getpixel((x % 16, (15 - y) % 16))
+                    c = f["south"].getpixel((x % 16, lin(el, "south", y)))
                     if c[3]:
                         quad([(x, y + 1, z1), (x + 1, y + 1, z1), (x + 1, y, z1), (x, y, z1)], sh(c, 0.84))
         if "east" in f:
             for z in range(z0, z1):
                 for y in range(y0, y1):
-                    c = f["east"].getpixel(((15 - z) % 16, (15 - y) % 16))
+                    c = f["east"].getpixel(((15 - z) % 16, lin(el, "east", y)))
                     if c[3]:
                         quad([(x1, y + 1, z + 1), (x1, y + 1, z), (x1, y, z), (x1, y, z + 1)], sh(c, 0.66))
         if "up" in f:

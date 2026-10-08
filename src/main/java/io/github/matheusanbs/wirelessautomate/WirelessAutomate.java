@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
+import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
@@ -55,10 +56,12 @@ public final class WirelessAutomate {
 
     private static void onServerTick(ServerTickEvent.Post event) {
         NetworkManager.get().tick(event.getServer());
+        SourceTankLevels.tick();
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {
         NetworkManager.reset();
+        SourceTankLevels.reset();
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {

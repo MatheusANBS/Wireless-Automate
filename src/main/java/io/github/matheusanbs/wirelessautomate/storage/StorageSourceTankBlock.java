@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -27,13 +29,13 @@ public class StorageSourceTankBlock extends StorageBlock {
     /** Nível do conteúdo: 0 vazio, 10 cheio. */
     public static final IntegerProperty FILL = IntegerProperty.create("fill", 0, 10);
 
-    /** Base 10 × 2, corpo e tampa 8 × 12 e 10 × 1, pescoço e gema (o modelo do gerar_texturas.py). */
+    /** Base 10 × 2, corpo 8 × 9, tampa 10 × 1, pescoço e gema, até o topo do bloco (o modelo do gerar_texturas.py). */
     private static final VoxelShape SHAPE = Shapes.or(
             Block.box(3, 0, 3, 13, 2, 13),
-            Block.box(4, 2, 4, 12, 13, 12),
-            Block.box(3, 13, 3, 13, 14, 13),
-            Block.box(5, 14, 5, 11, 15, 11),
-            Block.box(7, 15, 7, 9, 18, 9));
+            Block.box(4, 2, 4, 12, 11, 12),
+            Block.box(3, 11, 3, 13, 12, 13),
+            Block.box(5, 12, 5, 11, 13, 11),
+            Block.box(7, 13, 7, 9, 16, 9));
 
     public StorageSourceTankBlock(StorageKind kind, Properties properties) {
         super(kind, properties);
@@ -49,6 +51,14 @@ public class StorageSourceTankBlock extends StorageBlock {
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
         builder.add(FILL);
+    }
+
+    /** O tick agendado no carregamento do block entity: corrige o nível se a capacidade mudou. */
+    @Override
+    protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (level.getBlockEntity(pos) instanceof StorageSourceTankBlockEntity tank) {
+            tank.refreshFill();
+        }
     }
 
     @Override

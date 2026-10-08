@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -17,6 +18,7 @@ public final class ConfigReloadListener {
         if (event.getConfig().getSpec() == Config.SPEC) {
             // Pode vir da thread que observa o arquivo: só marca, o tick remonta.
             NetworkManager.configChanged();
+            SourceTankLevels.configChanged(); // os níveis dos Tanques de Source seguem a capacidade da config
         }
     }
 

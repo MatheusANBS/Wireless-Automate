@@ -27,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
@@ -738,6 +739,49 @@ public final class StorageGameTests {
         tank.store().extract(160_000, false);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
         helper.succeed();
+    }
+
+    /**
+     * A capacidade do tier muda na config com o jogo rodando: o nível do tanque carregado se corrige pelo
+     * mesmo caminho que o listener da recarga usa, e volta quando a capacidade é restaurada.
+     */
+    @GameTest(template = "empty")
+    public static void sourceTankLevelFollowsConfigReload(GameTestHelper helper) {
+        var capacity = Config.STORAGE_CAPACITY.get(StorageKind.SOURCE_TANK).get(RouterTier.BASIC);
+        long original = capacity.get();
+        StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
+        tank.store().insert(80_000, false);
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
+        // O onLoad (que põe o tanque no conjunto) roda no tick seguinte à colocação.
+        helper.startSequence()
+                .thenIdle(3)
+                .thenExecute(() -> {
+                    capacity.set(1_600_000L);
+                    SourceTankLevels.refreshAll();
+                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
+                    capacity.set(original);
+                    SourceTankLevels.refreshAll();
+                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível com a capacidade restaurada");
+                })
+                .thenSucceed();
+        // restaura mesmo se falhar: o teste seguinte lê a mesma config
+        helper.getLevel().getServer().tell(new net.minecraft.server.TickTask(helper.getLevel().getServer().getTickCount() + 40, () -> capacity.set(original)));
+    }
+
+    /** Um bloco colocado com o nível errado (como um chunk salvo com outra capacidade) se corrige no tick seguinte à carga. */
+    @GameTest(template = "empty")
+    public static void sourceTankFixesWrongLevelOnLoad(GameTestHelper helper) {
+        BlockPos abs = helper.absolutePos(A);
+        helper.setBlock(A, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.BASIC).setValue(StorageSourceTankBlock.FILL, 0));
+        StorageSourceTankBlockEntity tank = helper.getBlockEntity(A);
+        tank.store().insert(80_000, false);
+        // Simula o estado salvo velho: o conteúdo está certo (nível 5) e o bloco diz 9; o tick agendado no onLoad corrige.
+        helper.getLevel().setBlock(abs, helper.getLevel().getBlockState(abs).setValue(StorageSourceTankBlock.FILL, 9), 3);
+        helper.getLevel().scheduleTick(abs, helper.getBlockState(A).getBlock(), 1);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível corrigido"))
+                .thenSucceed();
     }
 
     /** Upgrade de tier com Source dentro: o conteúdo fica e o nível é recalculado pela capacidade nova. */

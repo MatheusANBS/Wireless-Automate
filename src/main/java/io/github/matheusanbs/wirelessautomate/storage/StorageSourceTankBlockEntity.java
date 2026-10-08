@@ -25,7 +25,23 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
         super.onLoad();
         if (level != null && !level.isClientSide) {
             Sources.registerProvider(this);
+            SourceTankLevels.add(this);
+            // O nível pode estar velho (a capacidade do tier mudou na config com o chunk descarregado):
+            // confere no tick seguinte, sem mexer no bloco durante a carga do chunk.
+            level.scheduleTick(worldPosition, getBlockState().getBlock(), 1);
         }
+    }
+
+    @Override
+    public void setRemoved() {
+        SourceTankLevels.remove(this);
+        super.setRemoved();
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        SourceTankLevels.remove(this);
+        super.onChunkUnloaded();
     }
 
     @Override

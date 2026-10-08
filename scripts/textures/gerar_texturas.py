@@ -1022,7 +1022,11 @@ def elementos_tanque_source(fill: int) -> list[dict]:
          "faces": {**lat("cap_side"), "up": {"texture": "#cap_top"}, "down": {"texture": "#base_top"}}},
         {"from": [5, 14, 5], "to": [11, 15, 11], "faces": {**lat("neck"), "up": {"texture": "#cap_top"}}},
         {"from": [7, 15, 7], "to": [9, 18, 9],
-         "faces": {**lat("gem"), "up": {"texture": "#gem"}, "down": {"texture": "#gem"}}},
+         # y vai até 18, fora do bloco: o uv automático sairia da textura (v < 0) e a gema ficaria preta;
+         # por isso o uv é explícito (uma faixa 2x3 das laterais e um quadrado 2x2 em cima e embaixo).
+         "faces": {**{f: {"texture": "#gem", "uv": [7, 13, 9, 16]} for f in laterais},
+                   "up": {"texture": "#gem", "uv": [7, 7, 9, 9]},
+                   "down": {"texture": "#gem", "uv": [7, 7, 9, 9]}}},
     ]
     return els
 

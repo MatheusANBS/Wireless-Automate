@@ -102,6 +102,10 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import net.minecraft.world.level.block.state.BlockState;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
@@ -643,6 +647,9 @@ public final class DevEndToEnd {
         linkerAreaSteps(list);
         portugueseSteps(list);
         storageChestSteps(list);
+        if (StorageKind.SOURCE_TANK.loaded()) {
+            sourceTankSteps(list);
+        }
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
         }
@@ -1657,6 +1664,112 @@ public final class DevEndToEnd {
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bateria-1-tela"));
         list.add(close("Bateria: fechar"));
+    }
+
+    /**
+     * Tanque de Source no mundo: os quatro tiers lado a lado com níveis diferentes (vazio, 25%, 60%, cheio),
+     * a vista de perto, o contorno de seleção com a mira num deles e os itens na mão e na barra.
+     */
+    private static void sourceTankSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        BlockPos[] tanks = new BlockPos[4];
+        BlockPos[] origin = new BlockPos[1];
+        list.add(new Step("Tanque de Source: preparar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            origin[0] = player.blockPosition();
+            RouterTier[] tiers = RouterTier.values();
+            long[] contents = {0L, 640_000L, 24_576_000L, 3_000_000_000L};
+            for (int i = 0; i < 4; i++) {
+                tanks[i] = origin[0].offset(-3 + 2 * i, 0, 4);
+                level.setBlockAndUpdate(tanks[i], ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                        .setValue(RouterBlock.TIER, tiers[i]));
+                if (contents[i] > 0) {
+                    ((StorageSourceTankBlockEntity) level.getBlockEntity(tanks[i])).store().insert(contents[i], false);
+                }
+            }
+            for (int i = 0; i < 4; i++) {
+                player.getInventory().setItem(i, StorageBlockItem.withTier(
+                        ModItems.STORAGE.get(StorageKind.SOURCE_TANK).get(), tiers[i]));
+            }
+            return null;
+        }), () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.level == null) {
+                return false;
+            }
+            int[] expected = {0, 3, 6, 10};
+            for (int i = 0; i < 4; i++) {
+                BlockState state = minecraft.level.getBlockState(tanks[i]);
+                if (!(state.getBlock() instanceof StorageSourceTankBlock)
+                        || state.getValue(StorageSourceTankBlock.FILL) != expected[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }, () -> "tanques no cliente com os níveis 0, 3, 6 e 10"));
+        list.add(sourceCamera("Tanque de Source: câmera geral", () -> origin[0], -2.0, 0, 0.3, 1.5, false, 0));
+        list.add(wait("chunk do tanque", 20));
+        list.add(capture("tanque-source-mundo"));
+        list.add(sourceCamera("Tanque de Source: câmera de perto", () -> origin[0], 0.5, 0.6, 2.0, 1.5, false, 0));
+        list.add(wait("tanque de perto", 10));
+        list.add(capture("tanque-source-perto"));
+        // Mira no tanque Elite, com a interface (mira e barra) e o item do Avançado na mão.
+        list.add(sourceCamera("Tanque de Source: mira", () -> origin[0], 1.5, 0.4, 2.4, 2, true, 1));
+        list.add(new Step("Tanque de Source: a mira está no tanque Elite", STEP_TIMEOUT_MS, () -> {
+        }, () -> Minecraft.getInstance().hitResult instanceof BlockHitResult hit && hit.getBlockPos().equals(tanks[2]),
+                () -> "mira em " + Minecraft.getInstance().hitResult));
+        list.add(wait("contorno", 10));
+        list.add(capture("tanque-source-contorno"));
+        list.add(new Step("Tanque de Source: limpar", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = false;
+            onServer(server -> {
+                for (int i = 0; i < 4; i++) {
+                    server.getPlayerList().getPlayer(playerId).getInventory().setItem(i, ItemStack.EMPTY);
+                    server.overworld().setBlockAndUpdate(tanks[i], Blocks.AIR.defaultBlockState());
+                }
+                return null;
+            });
+        }, () -> true, () -> ""));
+    }
+
+    /**
+     * Câmera do jogador em {@code origem + (dx, dy, dz)}, olhando o tanque de índice {@code tanque}
+     * (o olho fica 1,62 acima do pé); {@code gui} liga a interface e {@code slot} escolhe a barra.
+     */
+    private static Step sourceCamera(String name, java.util.function.Supplier<BlockPos> origin, double dx, double dy,
+                                     double dz, double tanque, boolean gui, int slot) {
+        double[] cam = new double[3];
+        float[] ang = new float[2];
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            BlockPos base = origin.get();
+            // alvo: o centro do tanque de índice `tanque` (x = -3 + 2i, z = 4) e, de perto, só a altura do meio
+            double tx = base.getX() + 0.5 + (-3 + 2 * tanque), ty = base.getY() + 0.6, tz = base.getZ() + 4.5;
+            cam[0] = base.getX() + 0.5 + dx;
+            cam[1] = base.getY() + dy;
+            cam[2] = base.getZ() + 0.5 + dz;
+            double ex = tx - cam[0], ey = ty - (cam[1] + 1.62), ez = tz - cam[2];
+            ang[0] = (float) (Math.toDegrees(Math.atan2(-ex, ez)));
+            ang[1] = (float) (-Math.toDegrees(Math.atan2(ey, Math.sqrt(ex * ex + ez * ez))));
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.options.hideGui = !gui;
+            minecraft.player.getInventory().selected = slot;
+            minecraft.player.setYRot(ang[0]);
+            minecraft.player.setXRot(ang[1]);
+            minecraft.player.yRotO = ang[0];
+            minecraft.player.xRotO = ang[1];
+            UUID playerId = minecraft.player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.getAbilities().flying = true;
+                player.onUpdateAbilities();
+                player.getInventory().selected = slot;
+                player.teleportTo(player.serverLevel(), cam[0], cam[1], cam[2], ang[0], ang[1]);
+                return null;
+            });
+        }, () -> Math.abs(Minecraft.getInstance().player.getXRot() - ang[1]) < 0.5f
+                && Minecraft.getInstance().player.position().distanceToSqr(cam[0], cam[1], cam[2]) < 0.5,
+                () -> "câmera em " + Minecraft.getInstance().player.position());
     }
 
     /** Arrasta a alça de redimensionar do Baú como o mouse: aperta, arrasta {@code dx, dy} e solta. */

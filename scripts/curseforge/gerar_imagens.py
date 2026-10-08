@@ -7,7 +7,7 @@ O CurseForge não fixa tamanho para imagens da descrição; a regra é mostrar o
 jogo. Por isso as imagens de funções são capturas reais (a vitrine monta uma fábrica de exemplo)
 com uma faixa de título. O banner tem 1600x400 (4:1), legível na coluna da descrição.
 Textos em inglês: o público do CurseForge é internacional.
-Saída: docs/curseforge/banner.png e docs/curseforge/feature-*.png.
+Saída: docs/curseforge/banner.png e docs/curseforge/feature-*.png (.jpg quando o PNG passa dos 2 MB do CurseForge).
 """
 from __future__ import annotations
 
@@ -304,18 +304,34 @@ DESTAQUES = [
 ]
 
 
+LIMITE = 2_000_000  # bytes: o CurseForge recusa imagens acima de 2 MB
+
+
+def salva(img: Image.Image, nome: str) -> str:
+    """Salva em PNG; se passar do limite do CurseForge, em JPEG na maior qualidade que caiba, sem subamostragem
+    de cor (a 98 não se vê diferença). Apaga a versão no outro formato, para não sobrar arquivo velho."""
+    png, jpg = SAIDA / f"{nome}.png", SAIDA / f"{nome}.jpg"
+    img.save(png, optimize=True)
+    if png.stat().st_size <= LIMITE:
+        jpg.unlink(missing_ok=True)
+        return png.name
+    png.unlink()
+    for qualidade in range(98, 79, -2):
+        img.save(jpg, quality=qualidade, subsampling=0, optimize=True)
+        if jpg.stat().st_size <= LIMITE:
+            return jpg.name
+    raise SystemExit(f"{nome} passa de {LIMITE} bytes mesmo em JPEG")
+
+
 def main() -> None:
     SAIDA.mkdir(parents=True, exist_ok=True)
-    banner().save(SAIDA / "banner.png")
-    tiers().save(SAIDA / "feature-4-tiers.png")
-    feitos = ["banner.png", "feature-4-tiers.png"]
+    feitos = [salva(banner(), "banner"), salva(tiers(), "feature-4-tiers")]
     for nome, titulo, sub, origem, recorte, *detalhe in DESTAQUES:
         faltam = [p for p in [origem] + [d[0] for d in detalhe] if not p.exists()]
         if faltam:
             print(f"pulando {nome}: falta {faltam[0].relative_to(RAIZ)}")
             continue
-        destaque(nome, titulo, sub, origem, recorte, *detalhe).save(SAIDA / f"{nome}.png")
-        feitos.append(f"{nome}.png")
+        feitos.append(salva(destaque(nome, titulo, sub, origem, recorte, *detalhe), nome))
     print("gerados:", ", ".join(feitos))
 
 

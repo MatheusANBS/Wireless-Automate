@@ -23,6 +23,7 @@ partículas de quebra (o modelo nunca lê essa área).
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -32,6 +33,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 ASSETS = RAIZ / "src/main/resources/assets/wirelessautomate/textures"
 FOLHA = RAIZ / "docs/preview/folha-de-sprites.png"
 VITRINE = RAIZ / "docs/preview/armazenamento-preview.png"
+MODELOS = RAIZ / "src/main/resources/assets/wirelessautomate"
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +107,13 @@ PALETAS: dict[str, dict[str, str]] = {
               "Q": "#a3a3a3", "q": "#6e6e6e", "A": "#ffe88a", "a": "#d9a032",
               "D": "#a6fff6", "d": "#2fbfb3", "E": "#ff5a4a", "e": "#a51b12", "l": "#1b2027"},
     "branco": {"W": "#ffffff"},
+
+    # Tanque de Source: só a cor da Source e a da gema vêm do Ars Nouveau (as texturas são
+    # desenhadas aqui; os PNGs dele não são usados). O vidro é nosso.
+    "source_tanque": {"hi": "#d9a6f5", "top": "#b36de0", "a": "#9b4dc6", "b": "#9345be", "c": "#843aae",
+                      "deep": "#6b2f8f", "sp": "#ea8ef3", "w": "#fdd9f1"},
+    "source_gema": {"A": "#f3c2fa", "B": "#ea8ef3", "C": "#b36de0", "D": "#8a55d3", "E": "#6b197d", "W": "#fffbe8"},
+    "vidro_tanque": {"V": "#e6f6f7", "v": "#b9dde3", "e": "#7fb3c0"},
 }
 
 TIERS_ROTEADOR = ["basic", "advanced", "elite", "ultimate"]
@@ -836,6 +845,271 @@ def icone_tipo(grade: list[str], leg: dict[str, tuple[int, int, int, int]]) -> I
     return pinta(grade, leg)
 
 
+# --- Tanque de Source (modelo fino de jarra, com a Source visível por dentro do vidro) ---
+
+def _nova(cor: str | None = None) -> Image.Image:
+    return Image.new("RGBA", (16, 16), rgb(cor) if cor else (0, 0, 0, 0))
+
+
+def _tier(t: str) -> dict[str, tuple[int, int, int, int]]:
+    return {k: rgb(v) for k, v in PALETAS[f"roteador_{t}"].items()}
+
+
+def metal_lado(t: str, tampa: bool = False) -> Image.Image:
+    """Metal escuro com costura e o filete na cor do tier (em cima na base, embaixo na tampa)."""
+    casco = PALETAS["casco"]
+    img = _nova(casco["2"])
+    tc = _tier(t)
+    for x in range(16):
+        for y in range(16):
+            img.putpixel((x, y), rgb(casco["2"] if (x + y) % 7 else casco["3"]))
+    if tampa:  # tampa: y 13..15 -> v 0..2 (linha 2 = borda de baixo)
+        for x in range(16):
+            img.putpixel((x, 0), rgb(casco["4"]))
+            img.putpixel((x, 1), rgb(casco["2"]))
+            img.putpixel((x, 2), tc["3"])
+    else:  # base: y 0..2 -> v 13..15 (linha 13 = borda de cima)
+        for x in range(16):
+            img.putpixel((x, 13), tc["3"])
+            img.putpixel((x, 14), rgb(casco["2"]))
+            img.putpixel((x, 15), rgb(casco["0"]))
+        for x in (5, 10):  # parafusos
+            img.putpixel((x, 14), rgb(casco["4"]))
+    return img
+
+
+def metal_topo(t: str, tampa: bool = False) -> Image.Image:
+    casco = PALETAS["casco"]
+    img = _nova(casco["2"])
+    tc = _tier(t)
+    for x in range(3, 13):
+        img.putpixel((x, 3), tc["4"])
+        img.putpixel((x, 12), tc["1"])
+    for y in range(3, 13):
+        img.putpixel((3, y), tc["3"])
+        img.putpixel((12, y), tc["1"])
+    if tampa:
+        # arcos wireless pequenos e o anel da gema
+        for (x, y, c) in ((5, 5, "4"), (6, 4, "4"), (9, 4, "3"), (10, 5, "2"),
+                          (5, 10, "2"), (6, 11, "1"), (9, 11, "1"), (10, 10, "0")):
+            img.putpixel((x, y), tc[c])
+        for x in range(6, 10):
+            for y in range(6, 10):
+                img.putpixel((x, y), rgb(casco["0"] if 7 <= x <= 8 and 7 <= y <= 8 else casco["4"]))
+    return img
+
+
+def trilho_leste() -> Image.Image:
+    casco = PALETAS["casco"]
+    img = _nova(casco["1"])
+    for y in range(16):
+        img.putpixel((7, y), rgb(casco["2"]))
+    return img
+
+
+def trilho(t: str) -> Image.Image:
+    casco = PALETAS["casco"]
+    tc = _tier(t)
+    img = _nova()
+    for y in range(16):
+        for x in range(16):
+            img.putpixel((x, y), tc["3"] if x in (4, 11) else rgb(casco["1"]))
+    return img
+
+
+def vidro() -> Image.Image:
+    v = PALETAS["vidro_tanque"]
+    img = _nova()
+    for y in (4, 5, 6, 9):
+        img.putpixel((6, y), rgb(v["V"] if y < 6 else v["v"]))
+    img.putpixel((7, 4), rgb(v["v"]))
+    img.putpixel((9, 10), rgb(v["v"]))
+    for x in range(5, 11):
+        img.putpixel((x, 3), rgb(v["e"]))
+    return img
+
+
+def liquido() -> Image.Image:
+    src = PALETAS["source_tanque"]
+    img = _nova()
+    for y in range(16):
+        for x in range(16):
+            base = src["a"] if (x * 3 + y * 5) % 4 else src["b"]
+            if y >= 13:
+                base = src["c"] if y == 13 else src["deep"]
+            img.putpixel((x, y), rgb(base))
+    for x, y in ((6, 4), (9, 7), (7, 10), (8, 2), (10, 11), (6, 8)):
+        img.putpixel((x, y), rgb(src["sp"]))
+    img.putpixel((7, 6), rgb(src["w"]))
+    return img
+
+
+def superficie() -> Image.Image:
+    src = PALETAS["source_tanque"]
+    img = _nova(src["top"])
+    for x, y in ((5, 6), (8, 9), (10, 5), (6, 10), (9, 7)):
+        img.putpixel((x, y), rgb(src["hi"]))
+    img.putpixel((7, 7), rgb(src["w"]))
+    return img
+
+
+def gema() -> Image.Image:
+    g = PALETAS["source_gema"]
+    img = _nova()
+    pad = ["ABBW", "BBCA", "CCDB", "DDEC", "EDDC"]
+    for y in range(16):
+        for x in range(16):
+            img.putpixel((x, y), rgb(g[pad[(y + x // 2) % 5][(x + y) % 4]]))
+    return img
+
+
+def pescoco(t: str) -> Image.Image:
+    casco = PALETAS["casco"]
+    tc = _tier(t)
+    img = _nova(casco["3"])
+    for x in range(16):
+        img.putpixel((x, 1), tc["4"] if x % 2 else rgb(casco["4"]))
+    return img
+
+
+def sprites_tanque_source() -> dict[str, Image.Image]:
+    sprites: dict[str, Image.Image] = {}
+    for t in TIERS_ROTEADOR:
+        p = f"block/storage_source_tank_{t}"
+        sprites[f"{p}_base_side"] = metal_lado(t)
+        sprites[f"{p}_base_top"] = metal_topo(t)
+        sprites[f"{p}_cap_side"] = metal_lado(t, tampa=True)
+        sprites[f"{p}_cap_top"] = metal_topo(t, tampa=True)
+        sprites[f"{p}_rail"] = trilho(t)
+        sprites[f"{p}_neck"] = pescoco(t)
+    sprites["block/storage_source_tank_rail_side"] = trilho_leste()
+    sprites["block/storage_source_tank_glass"] = vidro()
+    sprites["block/storage_source_tank_source"] = liquido()
+    sprites["block/storage_source_tank_surface"] = superficie()
+    sprites["block/storage_source_tank_gem"] = gema()
+    return sprites
+
+
+def altura_source(fill: int) -> int:
+    """Topo (em pixels do bloco) da Source no nível 1..10; meio pixel arredonda para cima."""
+    return 2 + max(1, (fill * 22 + 10) // 20)  # round-half-up de fill * 11 / 10, em inteiros
+
+
+def elementos_tanque_source(fill: int) -> list[dict]:
+    """Os elementos do modelo, sem uv (o jogo calcula pela posição, como a prévia desenha)."""
+    laterais = ("north", "south", "east", "west")
+
+    def lat(tex: str) -> dict[str, dict]:
+        return {f: {"texture": "#" + tex} for f in laterais}
+
+    def trilho_el(de: list[int], ate: list[int]) -> dict:
+        return {"from": de, "to": ate,
+                "faces": {"north": {"texture": "#rail"}, "south": {"texture": "#rail"},
+                          "east": {"texture": "#rail_side"}, "west": {"texture": "#rail_side"}}}
+
+    base = {"from": [3, 0, 3], "to": [13, 2, 13],
+            "faces": {**lat("base_side"), "up": {"texture": "#base_top"},
+                      "down": {"texture": "#base_top", "cullface": "down"}}}
+    els = [base,
+           trilho_el([4, 2, 4], [5, 13, 5]), trilho_el([11, 2, 4], [12, 13, 5]),
+           trilho_el([4, 2, 11], [5, 13, 12]), trilho_el([11, 2, 11], [12, 13, 12])]
+    if fill > 0:
+        els.append({"from": [5, 2, 5], "to": [11, altura_source(fill), 11],
+                    "faces": {**lat("source"), "up": {"texture": "#surface"}}})
+    els += [
+        {"from": [4, 2, 4], "to": [12, 13, 12], "faces": lat("glass")},
+        {"from": [3, 13, 3], "to": [13, 14, 13],
+         "faces": {**lat("cap_side"), "up": {"texture": "#cap_top"}, "down": {"texture": "#base_top"}}},
+        {"from": [5, 14, 5], "to": [11, 15, 11], "faces": {**lat("neck"), "up": {"texture": "#cap_top"}}},
+        {"from": [7, 15, 7], "to": [9, 18, 9],
+         "faces": {**lat("gem"), "up": {"texture": "#gem"}, "down": {"texture": "#gem"}}},
+    ]
+    return els
+
+
+def _grava_json(destino: Path, dados: dict) -> None:
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(json.dumps(dados, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+
+
+def modelos_tanque_source() -> None:
+    """Grava os 44 modelos (tier x nível), o blockstate e o modelo do item do Tanque de Source."""
+    variantes: dict[str, dict] = {}
+    comum = "wirelessautomate:block/storage_source_tank"
+    for t in TIERS_ROTEADOR:
+        pre = f"{comum}_{t}"
+        texturas = {"particle": f"{pre}_base_side", "base_side": f"{pre}_base_side",
+                    "base_top": f"{pre}_base_top", "cap_side": f"{pre}_cap_side", "cap_top": f"{pre}_cap_top",
+                    "rail": f"{pre}_rail", "neck": f"{pre}_neck", "rail_side": f"{comum}_rail_side",
+                    "glass": f"{comum}_glass", "source": f"{comum}_source", "surface": f"{comum}_surface",
+                    "gem": f"{comum}_gem"}
+        for fill in range(11):
+            nome = f"storage_source_tank_{t}_{fill}"
+            _grava_json(MODELOS / f"models/block/{nome}.json", {
+                "parent": "minecraft:block/block",
+                "render_type": "minecraft:cutout",
+                "ambientocclusion": False,
+                "textures": texturas,
+                "elements": elementos_tanque_source(fill),
+            })
+            variantes[f"fill={fill},tier={t}"] = {"model": f"wirelessautomate:block/{nome}"}
+    _grava_json(MODELOS / "blockstates/storage_source_tank.json", {"variants": variantes})
+    _grava_json(MODELOS / "models/item/storage_source_tank.json", {
+        "parent": f"{comum}_basic_6",
+        "overrides": [{"predicate": {"wirelessautomate:tier": n}, "model": f"{comum}_{t}_6"}
+                      for n, t in enumerate(TIERS_ROTEADOR[1:], start=1)],
+    })
+
+
+def tanque_source_montado(t: str, fill: int, sprites: dict[str, Image.Image], s: int = 9) -> Image.Image:
+    """Prévia do tanque em projeção isométrica, desenhada a partir dos mesmos elementos do modelo."""
+    pre = f"block/storage_source_tank_{t}"
+    comum = "block/storage_source_tank"
+    tex = {"base_side": sprites[f"{pre}_base_side"], "base_top": sprites[f"{pre}_base_top"],
+           "cap_side": sprites[f"{pre}_cap_side"], "cap_top": sprites[f"{pre}_cap_top"],
+           "rail": sprites[f"{pre}_rail"], "neck": sprites[f"{pre}_neck"],
+           "rail_side": sprites[f"{comum}_rail_side"], "glass": sprites[f"{comum}_glass"],
+           "source": sprites[f"{comum}_source"], "surface": sprites[f"{comum}_surface"],
+           "gem": sprites[f"{comum}_gem"]}
+    W, H = 24 * s, 34 * s
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    cx0, cy0 = W // 2, 21 * s
+
+    def pp(x, y, z):
+        return (cx0 + (x - z) * s, cy0 + (x + z - 16) * s // 2 - y * s)
+
+    def quad(pts, cor):
+        d.polygon([pp(*p) for p in pts], fill=cor[:3])
+
+    def sh(c, f):
+        return (int(c[0] * f), int(c[1] * f), int(c[2] * f), 255)
+
+    # Só as faces que se veem (sul, leste e cima), na ordem dos elementos (os de trás primeiro).
+    for el in elementos_tanque_source(fill):
+        (x0, y0, z0), (x1, y1, z1) = el["from"], el["to"]
+        f = {nome: tex[cara["texture"][1:]] for nome, cara in el["faces"].items()}
+        if "south" in f:
+            for x in range(x0, x1):
+                for y in range(y0, y1):
+                    c = f["south"].getpixel((x % 16, (15 - y) % 16))
+                    if c[3]:
+                        quad([(x, y + 1, z1), (x + 1, y + 1, z1), (x + 1, y, z1), (x, y, z1)], sh(c, 0.84))
+        if "east" in f:
+            for z in range(z0, z1):
+                for y in range(y0, y1):
+                    c = f["east"].getpixel(((15 - z) % 16, (15 - y) % 16))
+                    if c[3]:
+                        quad([(x1, y + 1, z + 1), (x1, y + 1, z), (x1, y, z), (x1, y, z + 1)], sh(c, 0.66))
+        if "up" in f:
+            for x in range(x0, x1):
+                for z in range(z0, z1):
+                    c = f["up"].getpixel((x % 16, z % 16))
+                    if c[3]:
+                        quad([(x, y1, z), (x + 1, y1, z), (x + 1, y1, z + 1), (x, y1, z + 1)], c)
+    return img
+
+
 def gerar() -> dict[str, Image.Image]:
     sprites: dict[str, Image.Image] = {}
     sprites["item/configurator"] = configurador()
@@ -863,6 +1137,7 @@ def gerar() -> dict[str, Image.Image]:
     sprites["gui/port_none"] = porta_nenhum()
     for nome, (grade, leg) in ICONES_TIPO.items():
         sprites[f"gui/type/{nome}"] = icone_tipo(grade, leg)
+    sprites.update(sprites_tanque_source())
     for nome, img in sprites.items():
         assert img.size == (16, 16), nome
         alfas = set(img.getchannel("A").tobytes())
@@ -977,8 +1252,11 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
              for n in ARMAZENAMENTOS for t in TIERS_ROTEADOR]
     por_linha = largura // (cubos[0][1].width + gap)
     alt_cubos = -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
+    tanques = [(t, tanque_source_montado(t, 6, sprites)) for t in TIERS_ROTEADOR]
+    niveis = [(n, tanque_source_montado("elite", n, sprites, s=6)) for n in (0, 2, 5, 8, 10)]
+    alt_tanques = 20 + tanques[0][1].height + rotulo + gap + 20 + niveis[0][1].height + rotulo + gap
     altura = (margem + sum(20 + celula + rotulo + gap for _ in linhas) + 20 + alt_montado + rotulo + 40 + 64
-              + alt_cubos)
+              + alt_cubos + alt_tanques)
     out = Image.new("RGBA", (largura, altura), fundo + (255,))
     d = ImageDraw.Draw(out)
     y = margem
@@ -1016,6 +1294,21 @@ def folha(sprites: dict[str, Image.Image]) -> Image.Image:
         cy = y + (i // por_linha) * (cubo.height + rotulo + gap)
         out.alpha_composite(cubo, (cx, cy))
         d.text((cx + 10, cy + cubo.height + 2), nome, fill=texto, font=fonte)
+    y += -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
+    out.info["cubos_fim"] = y - 20
+    d.text((margem, y), "Tanque de Source (nivel 6 em cada tier)", fill=texto, font=fonte)
+    y += 20
+    for i, (t, im) in enumerate(tanques):
+        x = margem + i * (im.width + gap)
+        out.alpha_composite(im, (x, y))
+        d.text((x + 10, y + im.height + 2), t, fill=texto, font=fonte)
+    y += tanques[0][1].height + rotulo + gap
+    d.text((margem, y), "Tanque de Source, Elite, niveis 0, 2, 5, 8 e 10", fill=texto, font=fonte)
+    y += 20
+    for i, (n, im) in enumerate(niveis):
+        x = margem + i * (im.width + gap)
+        out.alpha_composite(im, (x, y))
+        d.text((x + 10, y + im.height + 2), f"nivel {n}", fill=texto, font=fonte)
     return out
 
 
@@ -1023,6 +1316,7 @@ def main() -> None:
     so_folha = "--so-folha" in sys.argv
     sprites = gerar()
     if not so_folha:
+        modelos_tanque_source()
         for nome, img in sprites.items():
             destino = ASSETS / f"{nome}.png"
             destino.parent.mkdir(parents=True, exist_ok=True)
@@ -1031,7 +1325,7 @@ def main() -> None:
     imagem = folha(sprites).convert("RGB")
     imagem.save(FOLHA)
     # Recorte dos cubos de armazenamento montados, para julgar o conjunto sem a folha inteira.
-    imagem.crop((0, imagem.info["cubos_y"] - 8, imagem.width, imagem.height)).save(VITRINE)
+    imagem.crop((0, imagem.info["cubos_y"] - 8, imagem.width, imagem.info["cubos_fim"])).save(VITRINE)
     print(f"{len(sprites)} sprites{' (não gravados)' if so_folha else ''}; folha em {FOLHA.relative_to(RAIZ)}")
 
 

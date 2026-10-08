@@ -1,0 +1,136 @@
+{
+  "variants": {
+    "fill=0,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_0"
+    },
+    "fill=1,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_1"
+    },
+    "fill=2,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_2"
+    },
+    "fill=3,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_3"
+    },
+    "fill=4,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_4"
+    },
+    "fill=5,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_5"
+    },
+    "fill=6,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_6"
+    },
+    "fill=7,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_7"
+    },
+    "fill=8,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_8"
+    },
+    "fill=9,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_9"
+    },
+    "fill=10,tier=basic": {
+      "model": "wirelessautomate:block/storage_source_tank_basic_10"
+    },
+    "fill=0,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_0"
+    },
+    "fill=1,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_1"
+    },
+    "fill=2,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_2"
+    },
+    "fill=3,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_3"
+    },
+    "fill=4,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_4"
+    },
+    "fill=5,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_5"
+    },
+    "fill=6,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_6"
+    },
+    "fill=7,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_7"
+    },
+    "fill=8,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_8"
+    },
+    "fill=9,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_9"
+    },
+    "fill=10,tier=advanced": {
+      "model": "wirelessautomate:block/storage_source_tank_advanced_10"
+    },
+    "fill=0,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_0"
+    },
+    "fill=1,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_1"
+    },
+    "fill=2,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_2"
+    },
+    "fill=3,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_3"
+    },
+    "fill=4,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_4"
+    },
+    "fill=5,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_5"
+    },
+    "fill=6,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_6"
+    },
+    "fill=7,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_7"
+    },
+    "fill=8,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_8"
+    },
+    "fill=9,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_9"
+    },
+    "fill=10,tier=elite": {
+      "model": "wirelessautomate:block/storage_source_tank_elite_10"
+    },
+    "fill=0,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_0"
+    },
+    "fill=1,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_1"
+    },
+    "fill=2,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_2"
+    },
+    "fill=3,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_3"
+    },
+    "fill=4,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_4"
+    },
+    "fill=5,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_5"
+    },
+    "fill=6,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_6"
+    },
+    "fill=7,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_7"
+    },
+    "fill=8,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_8"
+    },
+    "fill=9,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_9"
+    },
+    "fill=10,tier=ultimate": {
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_10"
+    }
+  }
+}

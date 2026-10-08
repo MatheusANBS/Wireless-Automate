@@ -1,0 +1,23 @@
+{
+  "parent": "wirelessautomate:block/storage_source_tank_basic_6",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/storage_source_tank_advanced_6"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/storage_source_tank_elite_6"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/storage_source_tank_ultimate_6"
+    }
+  ]
+}

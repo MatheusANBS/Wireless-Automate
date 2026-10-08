@@ -2,41 +2,55 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
-import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Tela da Bateria: o tier, uma barra grande com a energia guardada, o valor e a porcentagem, e a
- * variação por tick (carregando, descarregando ou estável), medida entre dois estados do servidor.
- * Sem slots: a energia entra e sai pelos roteadores e pelos cabos de outros mods.
+ * Tela de um valor só (Bateria e Tanque de Source): o tier, uma barra grande com o que está guardado,
+ * o valor e a porcentagem, e a variação (por tick na Bateria, por segundo no Tanque de Source;
+ * enchendo, esvaziando ou parado), medida entre dois estados do servidor. O tanque ainda traz uma
+ * dica. Sem slots: o conteúdo entra e sai pelos roteadores e pelos cabos de outros mods.
  */
-public class StorageBatteryScreen extends AbstractContainerScreen<StorageBatteryMenu> {
+public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMenu> {
     private static final int W = 220;
     private static final int H = 104;
+    private static final int HINT_H = 26;
     private static final int X0 = 10;
     private static final int HEAD_Y = 8;
     private static final int BAR_Y = 30;
     private static final int BAR_H = 22;
-    private static final int ENERGY = 0xFFFFD34D;
-    private static final int ENERGY_DARK = 0xFFC8901C;
     private static final int CHARGING = 0xFF5BD47A;
     private static final int DRAINING = 0xFFE5734B;
+    private static final int ENERGY = 0xFFFFD34D;
+    private static final int ENERGY_DARK = 0xFFC8901C;
+    private static final int SOURCE = 0xFF9749C2;
+    private static final int SOURCE_DARK = 0xFF6B2F8F;
+    private static final int SOURCE_LIGHT = 0xFFEA8EF3;
 
-    public StorageBatteryScreen(StorageBatteryMenu menu, Inventory inventory, Component title) {
+    public StorageScalarScreen(StorageScalarMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         this.imageWidth = W;
-        this.imageHeight = H;
+        this.imageHeight = menu.kind() == StorageKind.SOURCE_TANK ? H + HINT_H : H;
     }
 
-    private static MutableComponent tr(String key, Object... args) {
-        return Component.translatable("gui.wirelessautomate.battery." + key, args);
+    private boolean source() {
+        return menu.kind() == StorageKind.SOURCE_TANK;
+    }
+
+    private MutableComponent tr(String key, Object... args) {
+        return Component.translatable("gui.wirelessautomate." + (source() ? "source_tank." : "battery.") + key, args);
+    }
+
+    private int height() {
+        return source() ? H + HINT_H : H;
     }
 
     private RouterTier tier() {
@@ -71,14 +85,14 @@ public class StorageBatteryScreen extends AbstractContainerScreen<StorageBattery
         int y = topPos;
         RouterTier tier = tier();
         int trim = GuiPaint.tierColor(tier);
-        GuiPaint.panel(g, x, y, W, H, trim);
+        GuiPaint.panel(g, x, y, W, height(), trim);
 
         // cabeçalho: nome e tier (o nome cortado com reticências se não couber)
         Component tierName = Component.translatable(tier.translationKey());
         int pillW = font.width(tierName) + 8;
-        FormattedCharSequence titleText = GuiPaint.ellipsize(font, title, W - 2 * X0 - pillW - 6);
-        GuiPaint.text(g, font, titleText, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
-        int pillX = x + X0 + font.width(titleText) + 6;
+        int titleW = Math.min(font.width(title), W - 2 * X0 - pillW - 6);
+        GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
+        int pillX = x + X0 + titleW + 6;
         GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.INSET, trim);
         GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, trim);
 
@@ -87,14 +101,17 @@ public class StorageBatteryScreen extends AbstractContainerScreen<StorageBattery
         int barW = W - 2 * X0;
         int barY = y + BAR_Y;
         GuiPaint.box(g, barX - 1, barY - 1, barW + 2, BAR_H + 2, GuiPaint.INSET, trim);
+        int bar = source() ? SOURCE : ENERGY;
+        int barDark = source() ? SOURCE_DARK : ENERGY_DARK;
+        int barLight = source() ? SOURCE_LIGHT : GuiPaint.mix(ENERGY, 0xFFFFFFFF, 0.5f);
         long stored = menu.stored();
         long capacity = menu.capacity();
         int filled = capacity <= 0 ? (stored > 0 ? barW : 0)
                 : (int) Math.min(barW, Math.round((double) barW * stored / capacity));
         if (filled > 0) {
-            g.fill(barX, barY, barX + filled, barY + BAR_H, ENERGY_DARK);
-            g.fill(barX, barY, barX + filled, barY + BAR_H - 4, ENERGY);
-            g.fill(barX, barY, barX + filled, barY + 2, GuiPaint.mix(ENERGY, 0xFFFFFFFF, 0.5f));
+            g.fill(barX, barY, barX + filled, barY + BAR_H, barDark);
+            g.fill(barX, barY, barX + filled, barY + BAR_H - 4, bar);
+            g.fill(barX, barY, barX + filled, barY + 2, barLight);
         }
         for (int i = 1; i < 10; i++) {
             int tx = barX + barW * i / 10;
@@ -105,19 +122,27 @@ public class StorageBatteryScreen extends AbstractContainerScreen<StorageBattery
         Component amount = !menu.received() ? tr("loading")
                 : capacity <= 0 ? tr("amount.unlimited", RateFormat.abbreviate(stored))
                 : tr("amount", RateFormat.abbreviate(stored), RateFormat.abbreviate(capacity));
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, amount, barW - 40), barX, barY + BAR_H + 6, GuiPaint.FG);
+        GuiText.draw(g, font, amount, barX, barY + BAR_H + 6, barW - 40, GuiPaint.FG);
         if (capacity > 0 && menu.received()) {
             GuiPaint.textRight(g, font, Component.literal(percent(stored, capacity)), barX + barW, barY + BAR_H + 6, trim);
         }
 
-        // variação por tick
-        long rate = menu.rate();
+        // variação: por tick na Bateria, por segundo no Tanque de Source
+        long rate = source() ? menu.rate() * 20 : menu.rate();
         Component flow = rate > 0 ? tr("charging", RateFormat.abbreviate(rate))
                 : rate < 0 ? tr("draining", RateFormat.abbreviate(-rate))
                 : tr("idle");
         int color = rate > 0 ? CHARGING : rate < 0 ? DRAINING : GuiPaint.MUTED;
         GuiPaint.dot(g, barX, barY + BAR_H + 20, color);
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, flow, barW - 10), barX + 9, barY + BAR_H + 19, GuiPaint.MUTED);
+        GuiText.draw(g, font, flow, barX + 9, barY + BAR_H + 19, barW - 10, GuiPaint.MUTED);
+
+        // dica do tanque: um filete e o texto em até duas linhas, com o ícone da Source
+        if (source()) {
+            int ruleY = y + H - 12;
+            g.fill(barX, ruleY, barX + barW, ruleY + 1, GuiPaint.LINE);
+            ResourceStyle.drawIcon(g, ResourceType.SOURCE, barX, ruleY + 6);
+            GuiText.wrap(g, font, tr("hint"), barX + 13, ruleY + 6, barW - 13, 2, GuiPaint.MUTED);
+        }
     }
 
     private static String percent(long stored, long capacity) {

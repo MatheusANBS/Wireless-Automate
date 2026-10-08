@@ -14,7 +14,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
@@ -86,11 +86,11 @@ public final class ModPayloads {
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
                 (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
-        // Telas dos armazenamentos (handlers no StorageListMenu e no StorageBatteryMenu).
+        // Telas dos armazenamentos (handlers no StorageListMenu e no StorageScalarMenu).
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
                 (payload, context) -> StorageListMenu.handle(serverPlayer(context), payload));
-        registrar.playToClient(BatteryStatePayload.TYPE, BatteryStatePayload.STREAM_CODEC, StorageBatteryMenu::onState);
+        registrar.playToClient(ScalarStatePayload.TYPE, ScalarStatePayload.STREAM_CODEC, StorageScalarMenu::onState);
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
     }

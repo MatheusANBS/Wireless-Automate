@@ -1659,11 +1659,55 @@ public final class DevEndToEnd {
         list.add(capture("tanque-1-tela"));
         list.add(close("Tanque: fechar"));
         list.add(new Step("Bateria: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(more[1]),
-                () -> Minecraft.getInstance().screen instanceof StorageBatteryScreen screen && screen.getMenu().received()
+                () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received()
                         && screen.getMenu().stored() == 640_000_000L,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bateria-1-tela"));
         list.add(close("Bateria: fechar"));
+        if (StorageKind.SOURCE_TANK.loaded()) {
+            scalarSourceSteps(list, () -> more[1].offset(2, 0, 0));
+        }
+    }
+
+    /**
+     * A tela de um valor só do Tanque de Source (Avançado, 1.640.000 de Source): em inglês e, depois de
+     * trocar o idioma, em português, as duas com a conferência dos textos cortados. A variação fica em
+     * "Parado" (o tanque não se mexe).
+     */
+    private static void scalarSourceSteps(List<Step> list, java.util.function.Supplier<BlockPos> where) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        BlockPos[] at = new BlockPos[1];
+        list.add(new Step("Tanque de Source (tela): preparar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            BlockPos pos = at[0] = where.get();
+            ServerLevel level = server.getPlayerList().getPlayer(playerId).serverLevel();
+            level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+            ((StorageSourceTankBlockEntity) level.getBlockEntity(pos)).store().insert(1_640_000L, false);
+            return null;
+        }), () -> Minecraft.getInstance().level != null
+                && Minecraft.getInstance().level.getBlockState(at[0]).getBlock() instanceof StorageSourceTankBlock,
+                () -> "bloco no cliente"));
+        for (String code : new String[] {"en_us", "pt_br"}) {
+            String suffix = code.equals("pt_br") ? "-pt" : "";
+            String label = code.equals("pt_br") ? "pt: " : "";
+            if (code.equals("pt_br")) {
+                list.add(language("pt_br"));
+            }
+            list.add(new Step(label + "Tanque de Source: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(at[0]),
+                    () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received()
+                            && screen.getMenu().kind() == StorageKind.SOURCE_TANK && screen.getMenu().stored() == 1_640_000L,
+                    () -> "tela " + describe(Minecraft.getInstance().screen)));
+            list.add(clipCheck(label + "tanque de Source"));
+            list.add(capture("tanque-source-1-tela" + suffix));
+            list.add(close(label + "Tanque de Source: fechar"));
+            if (code.equals("pt_br")) {
+                list.add(language("en_us"));
+            }
+        }
+        list.add(new Step("Tanque de Source (tela): limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.overworld().setBlockAndUpdate(at[0], Blocks.AIR.defaultBlockState());
+            return null;
+        }), () -> true, () -> ""));
     }
 
     /**

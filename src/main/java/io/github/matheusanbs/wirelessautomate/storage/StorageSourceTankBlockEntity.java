@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -62,6 +62,6 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
 
     @Override
     public void open(ServerPlayer player) {
-        StorageBatteryMenu.open(player, this);
+        StorageScalarMenu.open(player, this);
     }
 }

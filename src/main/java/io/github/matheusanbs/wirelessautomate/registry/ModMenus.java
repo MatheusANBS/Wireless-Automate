@@ -4,7 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import java.util.function.Supplier;
@@ -31,8 +31,8 @@ public final class ModMenus {
     /** Tela em lista do Baú e dos Tanques (o tipo vem no buffer de abertura). */
     public static final Supplier<MenuType<StorageListMenu<?>>> STORAGE_LIST =
             MENU_TYPES.register("storage_list", () -> IMenuTypeExtension.create(StorageListMenu::fromNetwork));
-    public static final Supplier<MenuType<StorageBatteryMenu>> STORAGE_BATTERY =
-            MENU_TYPES.register("storage_battery", () -> IMenuTypeExtension.create(StorageBatteryMenu::new));
+    public static final Supplier<MenuType<StorageScalarMenu>> STORAGE_SCALAR =
+            MENU_TYPES.register("storage_scalar", () -> IMenuTypeExtension.create(StorageScalarMenu::new));
 
     private ModMenus() {
     }

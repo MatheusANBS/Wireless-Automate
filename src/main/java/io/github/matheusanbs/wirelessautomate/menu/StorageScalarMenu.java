@@ -1,8 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
-import io.github.matheusanbs.wirelessautomate.packet.BatteryStatePayload;
+import io.github.matheusanbs.wirelessautomate.packet.ScalarStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.storage.ScalarStorageBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,12 +17,13 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu da tela da Bateria: sem slots, só o estado (energia e capacidade), mandado pelo
- * {@link BatteryStatePayload} quando muda, no máximo a cada {@link StorageListMenu#SYNC_INTERVAL}
+ * Menu da tela de um valor só (Bateria e Tanque de Source): sem slots, só o estado (quantidade e capacidade), mandado pelo
+ * {@link ScalarStatePayload} quando muda, no máximo a cada {@link StorageListMenu#SYNC_INTERVAL}
  * ticks, e só com a tela aberta.
  */
-public class StorageBatteryMenu extends AbstractContainerMenu {
+public class StorageScalarMenu extends AbstractContainerMenu {
     private final BlockPos pos;
+    private final StorageKind kind;
     private final @Nullable ScalarStorageBlockEntity battery;
     private final @Nullable ServerPlayer viewer;
     private long sentStored = -1;
@@ -36,35 +38,44 @@ public class StorageBatteryMenu extends AbstractContainerMenu {
     private boolean received;
 
     /** Servidor. */
-    public StorageBatteryMenu(int containerId, Inventory inventory, ScalarStorageBlockEntity battery) {
-        super(ModMenus.STORAGE_BATTERY.get(), containerId);
+    public StorageScalarMenu(int containerId, Inventory inventory, ScalarStorageBlockEntity battery) {
+        super(ModMenus.STORAGE_SCALAR.get(), containerId);
         this.pos = battery.getBlockPos();
+        this.kind = battery.kind();
         this.battery = battery;
         this.viewer = inventory.player instanceof ServerPlayer player ? player : null;
     }
 
     /** Cliente. */
-    public StorageBatteryMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, BlockPos.STREAM_CODEC.decode(buf));
+    public StorageScalarMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
+        this(containerId, BlockPos.STREAM_CODEC.decode(buf), buf.readEnum(StorageKind.class));
     }
 
     /** Cliente (e a captura de tela de desenvolvimento). */
-    public StorageBatteryMenu(int containerId, BlockPos pos) {
-        super(ModMenus.STORAGE_BATTERY.get(), containerId);
+    public StorageScalarMenu(int containerId, BlockPos pos, StorageKind kind) {
+        super(ModMenus.STORAGE_SCALAR.get(), containerId);
         this.pos = pos;
+        this.kind = kind;
         this.battery = null;
         this.viewer = null;
     }
 
     public static void open(ServerPlayer player, ScalarStorageBlockEntity battery) {
         player.openMenu(new SimpleMenuProvider(
-                        (containerId, inventory, p) -> new StorageBatteryMenu(containerId, inventory, battery),
+                        (containerId, inventory, p) -> new StorageScalarMenu(containerId, inventory, battery),
                         battery.getBlockState().getBlock().getName()),
-                buf -> BlockPos.STREAM_CODEC.encode(buf, battery.getBlockPos()));
+                buf -> {
+                    BlockPos.STREAM_CODEC.encode(buf, battery.getBlockPos());
+                    buf.writeEnum(battery.kind());
+                });
     }
 
     public BlockPos pos() {
         return pos;
+    }
+
+    public StorageKind kind() {
+        return kind;
     }
 
     public long stored() {
@@ -124,15 +135,15 @@ public class StorageBatteryMenu extends AbstractContainerMenu {
         sentStored = value;
         sentCapacity = cap;
         lastSync = now;
-        BatteryStatePayload payload = new BatteryStatePayload(containerId, value, cap, now);
+        ScalarStatePayload payload = new ScalarStatePayload(containerId, value, cap, now);
         if (viewer.connection != null && viewer.connection.hasChannel(payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
         }
     }
 
     /** Cliente: um pacote do servidor. */
-    public static void onState(BatteryStatePayload payload, IPayloadContext context) {
-        if (context.player().containerMenu instanceof StorageBatteryMenu menu && menu.containerId == payload.containerId()) {
+    public static void onState(ScalarStatePayload payload, IPayloadContext context) {
+        if (context.player().containerMenu instanceof StorageScalarMenu menu && menu.containerId == payload.containerId()) {
             menu.apply(payload.stored(), payload.capacity(), payload.tick());
         }
     }

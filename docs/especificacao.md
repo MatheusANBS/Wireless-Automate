@@ -291,7 +291,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Roteador direcional com itens, fluidos e energia, configurado por face da máquina
 - [x] Redes, rede ativa, prioridade, round-robin e redstone
 - [x] Filtros sem limite (inventário, JEI, tags, mod, estoque) e cartões
-- [x] Filtro v2 (0.2): tela em lista redimensionável, inspetor e busca de tags e regras por propriedade
+- [x] Filtro v2 (1.0): tela em lista redimensionável, inspetor e busca de tags e regras por propriedade
 - [x] Tiers e Cartões de Upgrade
 - [x] Configurador como pincel e Vinculador modo Único
 - [x] Profiler embutido e benchmark com Sophisticated Storage

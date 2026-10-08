@@ -2,7 +2,7 @@
 
 Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-**Estado:** versão 0.1.0 publicada no CurseForge (projeto 1732160). Licença All Rights Reserved.
+**Estado:** versão 1.0.0 pronta (no CurseForge, projeto 1732160, está a 0.1.0). Licença All Rights Reserved.
 
 ## Recursos
 
@@ -10,14 +10,14 @@ Transporte wireless de itens, fluidos, energia e químicos para **NeoForge 1.21.
 - **Redes por aba:** cada aba do roteador (Itens, Fluidos, Energia, Químicos) entra na sua própria rede; tudo do mesmo tipo na mesma rede troca entre si.
 - **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
 - **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada). A tela é redimensionável: ponha um item no inspetor para ver e marcar todas as tags dele, ou busque em todas as tags do jogo com a prévia dos itens.
-- **Regras por propriedade** (0.2): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
+- **Regras por propriedade** (1.0): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
 - **Quatro tiers**, subidos com os Cartões de Upgrade Avançado, Elite e Ultimate (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada.
 - **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, nas abas marcadas (Itens, Fluidos, Energia e, com o Mekanism, Químicos); em "Nenhuma (desvincular)", tira essas abas da rede.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo (Shift + roda do mouse).
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
 - **Tablet de Rede:** lista, mapa, estatísticas, redes e grupos à distância, e abre a tela do roteador de longe.
-- **Baú Wireless** (0.2): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (262.144, 16.777.216, 1.073.741.824 itens e sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
-- **Tanque, Bateria e Tanque Químico Wireless** (0.2): o mesmo molde do Baú para fluidos (vários por tanque, até 4 bilhões de mB no Elite), energia (até 64 bilhões de FE no Elite) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
+- **Baú Wireless** (1.0): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (262.144, 16.777.216, 1.073.741.824 itens e sem limite no Ultimate), subida com os mesmos Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod`) e ordenação, filtro de entrada (o estoque vira "guardar até N") e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum.
+- **Tanque, Bateria e Tanque Químico Wireless** (1.0): o mesmo molde do Baú para fluidos (vários por tanque, até 4 bilhões de mB no Elite), energia (até 64 bilhões de FE no Elite) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
 - **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |

@@ -1,6 +1,6 @@
 ![Wireless Automate](https://media.forgecdn.net/attachments/2023/182/banner-png.png)
 
-**Wireless Automate** moves items, fluids, energy and Mekanism chemicals between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far.
+**Wireless Automate** moves items, fluids, energy and Mekanism chemicals between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far. It also brings **storage blocks of its own** that move billions per operation, and filters that pick tags in one click or match **any enchanted item**.
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
@@ -21,7 +21,16 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or blacklist, with **stock limits** ("keep 64 in the source", "accept up to 16 in the destination"). Add entries by Shift + clicking your inventory or by dragging from **JEI**. Filter Cards carry a whole filter to reuse on other faces.
 
-![Unlimited filters](https://media.forgecdn.net/attachments/2023/185/feature-3-filters-png.png)
+- **Tag inspector:** put any item in the inspector and every tag it has shows up, ready to check and add. Or search every tag in the game, with how many items each one matches and a preview.
+- A resizable window with the entries in a searchable list.
+
+![Tags in one click](feature-3-filters.png)
+
+### Property rules
+
+Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (Fortune ≥ III) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
+
+![Property rules](feature-8-rules.png)
 
 ### Four tiers
 
@@ -38,6 +47,25 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 *Per face and per resource type. Server owners can change every value in the config.*
 
+### Wireless storage
+
+![Storage of its own](feature-9-storage.png)
+
+Four storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with Mekanism, the **Wireless Chemical Tank**. Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery.
+
+| Tier | Chest (items) | Tank and Chemical Tank | Battery |
+| --- | --- | --- | --- |
+| Basic | 262,144 | 1,000 B | 16M FE |
+| Advanced | 16,777,216 | 64,000 B | 1G FE |
+| Elite | 1,073,741,824 | 4,000,000 B | 64G FE |
+| Ultimate | Unlimited | Unlimited | Unlimited |
+
+- Upgrade with the same Upgrade Cards as the router, without losing the contents.
+- **Break it and the contents go with the item**, like a shulker box, tier included.
+- Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
+
+![Wireless Chest](feature-10-chest.png)
+
 ### Tools for big builds
 
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2023/187/feature-5-area-png.png)
@@ -50,7 +78,7 @@ Upgrade Cards raise a router's throughput and range, one tier at a time. Upgrade
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2023/188/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
+Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (items, fluids, energy and chemicals), and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 
 ### Built-in guide book
 
@@ -79,8 +107,8 @@ All recipes use vanilla items.
 | Mod | What you get |
 | --- | --- |
 | **Any mod with standard NeoForge storage** | Items, fluids and energy work with any machine, chest or tank that exposes NeoForge's standard item, fluid and energy handlers, which covers most tech and storage mods (tested with Sophisticated Storage and Mekanism). |
-| **Mekanism** (optional) | A **Chemicals** tab for gases, infuse types, pigments and slurries. Remember to enable the face in the Mekanism machine's side configuration. |
-| **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters, without having the item; the router upgrade in the crafting table shows in JEI. |
+| **Mekanism** (optional) | A **Chemicals** tab for gases, infuse types, pigments and slurries, and the Wireless Chemical Tank. Remember to enable the face in the Mekanism machine's side configuration. |
+| **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; router and storage upgrades in the crafting table show in JEI. |
 | **GuideME** (optional) | The in-game guide book. |
 
 ## Performance

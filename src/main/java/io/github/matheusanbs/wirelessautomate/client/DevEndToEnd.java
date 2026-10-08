@@ -101,6 +101,8 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -992,6 +994,7 @@ public final class DevEndToEnd {
     private static final List<BlockPos> showRouters = new ArrayList<>();
     private static BlockPos showInput;
     private static BlockPos showFurnace;
+    private static final List<BlockPos> showStorage = new ArrayList<>();
 
     /**
      * Fotos da página do CurseForge: uma pequena fábrica (fornalhas acesas com roteadores dos quatro
@@ -1056,11 +1059,50 @@ public final class DevEndToEnd {
             click(widget(byMessage(face(Direction.UP)), "face Cima"));
         }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit"))) != null, () -> "Editar"));
         list.add(capture("s4-roteador-fornalha"));
-        list.add(new Step("abrir o filtro", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar")),
-                () -> Minecraft.getInstance().screen instanceof FilterScreen, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("abrir o filtro", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                showcaseInventory(server, server.getPlayerList().getPlayer(playerId));
+                return null;
+            });
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar"));
+        }, () -> Minecraft.getInstance().screen instanceof FilterScreen, () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("s5-filtro"));
+        list.add(new Step("filtro: tags do minério de ferro", STEP_TIMEOUT_MS, () -> {
+            FilterScreen screen = filterScreen();
+            screen.previewInspect(new ItemStack(Items.RAW_IRON));
+            List<String> labels = screen.candidateLabels();
+            for (String label : List.of("#c:raw_materials", "#c:raw_materials/iron")) {
+                if (labels.contains(label)) {
+                    screen.previewCheck(labels.indexOf(label));
+                }
+            }
+            int[] row = screen.candidateCenter(Math.max(0, labels.indexOf("#c:raw_materials")));
+            moveMouse(row[0], row[1]);
+        }, () -> filterScreen().tab() == FilterScreen.Tab.TAGS, () -> "aba " + filterScreen().tab()));
+        list.add(wait("prévia da tag", 5));
+        list.add(capture("s5b-filtro-tags"));
+        list.add(new Step("filtro: regra de reparo", STEP_TIMEOUT_MS, () -> {
+            filterScreen().previewRule(ItemRule.EMPTY.withFlag(ItemRule.Property.ENCHANTED, true)
+                    .withDurability(java.util.Optional.of(new ItemRule.Durability(false, 50))));
+            moveMouse(0, 0);
+        }, () -> filterScreen().tab() == FilterScreen.Tab.RULE, () -> "aba " + filterScreen().tab()));
+        list.add(wait("inventário aceso", 5));
+        list.add(capture("s5c-filtro-regra"));
         list.add(close("fechar o filtro"));
+        // Os quatro armazenamentos do mod, cheios, com roteadores.
+        list.add(showCamera("câmera nos armazenamentos", 13.5, 2.2, -1.2, 180f, 30f));
+        list.add(wait("armazenamentos", 40));
+        list.add(capture("s9-armazenamentos"));
+        list.add(showCamera("perto do Baú", 11, 0, -3, 180f, 40f));
+        list.add(new Step("interface de volta 3", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
+                () -> true, () -> "interface"));
+        list.add(new Step("abrir o Baú Wireless", STEP_TIMEOUT_MS, () -> useOn(showStorage.get(0)),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen screen && screen.shownCount() > 20,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(wait("lista do Baú", 10));
+        list.add(capture("s10-bau"));
+        list.add(close("fechar o Baú"));
         // Tablet: lista e mapa.
         list.add(new Step("Tablet na mão (vitrine)", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -1182,8 +1224,104 @@ public final class DevEndToEnd {
             router(server, buffer.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.BOTH);
             router(server, output.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
             refillShowcase(level);
+            showcaseStorage(server, level, storage.id());
             return null;
         });
+    }
+
+    /**
+     * Os quatro armazenamentos do mod numa fileira a leste da fábrica, num piso próprio: Baú
+     * Ultimate com dezenas de tipos e milhões de itens, Tanque, Bateria e Tanque Químico (com o
+     * Mekanism), cada um com um roteador em cima.
+     */
+    private static void showcaseStorage(MinecraftServer server, ServerLevel level, UUID network) {
+        for (int x = 9; x <= 18; x++) {
+            for (int z = -7; z <= -2; z++) {
+                boolean edge = x == 9 || x == 18 || z == -7 || z == -2;
+                level.setBlockAndUpdate(showBase.offset(x, -1, z),
+                        (edge ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_STONE).defaultBlockState());
+            }
+        }
+        StorageKind[] kinds = {StorageKind.CHEST, StorageKind.TANK, StorageKind.BATTERY, StorageKind.CHEMICAL_TANK};
+        RouterTier[] tiers = {RouterTier.ULTIMATE, RouterTier.ELITE, RouterTier.ADVANCED, RouterTier.ELITE};
+        String[] names = {"Main Storage", "Lava Tank", "Base Battery", "Hydrogen"};
+        showStorage.clear();
+        for (int i = 0; i < kinds.length; i++) {
+            if (kinds[i] == StorageKind.CHEMICAL_TANK && !Chemicals.LOADED) {
+                continue;
+            }
+            BlockPos pos = showBase.offset(11 + 2 * i, 0, -5);
+            level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(kinds[i]).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, tiers[i]));
+            showStorage.add(pos);
+            switch (level.getBlockEntity(pos)) {
+                case StorageChestBlockEntity chest -> {
+                    Item[] items = {Items.COBBLESTONE, Items.IRON_INGOT, Items.GOLD_INGOT, Items.COPPER_INGOT, Items.DIAMOND,
+                            Items.EMERALD, Items.REDSTONE, Items.LAPIS_LAZULI, Items.COAL, Items.QUARTZ, Items.OAK_LOG,
+                            Items.SPRUCE_LOG, Items.BIRCH_LOG, Items.DIRT, Items.SAND, Items.GRAVEL, Items.GLASS,
+                            Items.RAW_IRON, Items.RAW_GOLD, Items.RAW_COPPER, Items.NETHERITE_INGOT, Items.ANCIENT_DEBRIS,
+                            Items.OBSIDIAN, Items.GLOWSTONE_DUST, Items.AMETHYST_SHARD, Items.BONE, Items.STRING,
+                            Items.GUNPOWDER, Items.ENDER_PEARL, Items.BLAZE_ROD, Items.SLIME_BALL, Items.WHEAT,
+                            Items.CARROT, Items.POTATO, Items.SUGAR_CANE, Items.BAMBOO, Items.KELP, Items.CLAY_BALL,
+                            Items.FLINT, Items.LEATHER, Items.FEATHER, Items.EGG, Items.APPLE, Items.TORCH};
+                    long amount = 12_600_000L;
+                    for (Item item : items) {
+                        chest.storage().insert(new ItemStack(item), amount, false);
+                        amount = Math.max(1, amount * 7 / 10);
+                    }
+                }
+                case StorageTankBlockEntity tank -> {
+                    tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
+                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 120_000_000L, false);
+                }
+                case StorageBatteryBlockEntity battery -> battery.store().insert(2_500_000_000L, false);
+                case StorageChemicalTankBlockEntity chemical ->
+                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 64_000_000L, false);
+                default -> {
+                }
+            }
+            placeShowRouter(server, level, pos, "ultimate", names[i], network);
+            RouterBlockEntity router = router(server, pos.above());
+            ResourceType type = switch (kinds[i]) {
+                case CHEST -> ResourceType.ITEM;
+                case TANK -> ResourceType.FLUID;
+                case BATTERY -> ResourceType.ENERGY;
+                case CHEMICAL_TANK -> ResourceType.CHEMICAL;
+            };
+            router.setMode(type, Direction.UP, PortMode.BOTH);
+        }
+    }
+
+    /**
+     * Inventário de exemplo para as fotos do filtro: ferramentas encantadas gastas e novas, uma
+     * comum gasta, livro encantado e minérios, para a regra "Encantado + durabilidade < 50%" acender
+     * só as que vão para o reparo.
+     */
+    private static void showcaseInventory(MinecraftServer server, ServerPlayer player) {
+        var enchantments = server.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        ItemStack wornPick = new ItemStack(Items.DIAMOND_PICKAXE);
+        wornPick.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE), 3);
+        wornPick.setDamageValue(1300);
+        ItemStack newPick = new ItemStack(Items.DIAMOND_PICKAXE);
+        newPick.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY), 5);
+        ItemStack wornSword = new ItemStack(Items.NETHERITE_SWORD);
+        wornSword.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS), 5);
+        wornSword.setDamageValue(1500);
+        ItemStack plainWorn = new ItemStack(Items.IRON_PICKAXE);
+        plainWorn.setDamageValue(200);
+        ItemStack wornChest = new ItemStack(Items.DIAMOND_CHESTPLATE);
+        wornChest.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.PROTECTION), 4);
+        wornChest.setDamageValue(400);
+        ItemStack[] items = {wornPick, newPick, wornSword, plainWorn, wornChest,
+                net.minecraft.world.item.EnchantedBookItem.createForEnchantment(new net.minecraft.world.item.enchantment.EnchantmentInstance(
+                        enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.MENDING), 1)),
+                new ItemStack(Items.RAW_IRON, 48), new ItemStack(Items.RAW_GOLD, 23), new ItemStack(Items.COAL, 64),
+                new ItemStack(Items.IRON_ORE, 12), new ItemStack(Items.DEEPSLATE_DIAMOND_ORE, 3), new ItemStack(Items.TORCH, 40)};
+        player.getInventory().clearContent();
+        for (int i = 0; i < items.length; i++) {
+            player.getInventory().setItem(9 + i, items[i]);
+        }
+        player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_SWORD));
     }
 
     /** Entrada cheia e destinos vazios, para a tela mostrar itens passando. */
@@ -1619,7 +1757,14 @@ public final class DevEndToEnd {
 
     /** Alguns quadros depois (mouse fora da tela, sem dicas), salva a captura. */
     private static Step capture(String file) {
-        return new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+        return new Step("captura " + file, STEP_TIMEOUT_MS, () -> {
+            moveMouse(0, 0);
+            if (SHOWCASE != null) {
+                // vitrine: sem avisos de conquista nem mensagens do chat por cima das telas
+                Minecraft.getInstance().getToasts().clear();
+                Minecraft.getInstance().gui.getChat().clearMessages(false);
+            }
+        }, () -> {
             if (stepTicks < 6) {
                 return false;
             }

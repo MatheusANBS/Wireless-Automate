@@ -32,12 +32,14 @@ Sem partículas de item nem animação no bloco: o modelo fica fixo (decisão do
 
 Quatro tiers com escala agressiva, no estilo ATM. Os tiers diferem só em vazão, alcance e dimensões; filtros não têm limite de slots em nenhum tier.
 
-| Tier | Itens/s | Fluido e químico/s | Energia | Alcance |
-| --- | --- | --- | --- | --- |
-| Básico | 512 | 32.000 mB | 16.000 FE/t | 128 blocos |
-| Avançado | 8.192 | 512.000 mB | 256.000 FE/t | 1.024 blocos |
-| Elite | 131.072 | 8.000.000 mB | 4.000.000 FE/t | Dimensão inteira |
-| Ultimate | Sem limite | Sem limite | Sem limite | Entre dimensões |
+| Tier | Itens/s | Fluido e químico/s | Energia | Source/s | Alcance |
+| --- | --- | --- | --- | --- | --- |
+| Básico | 512 | 32.000 mB | 16.000 FE/t | 1.000 | 128 blocos |
+| Avançado | 8.192 | 512.000 mB | 256.000 FE/t | 16.000 | 1.024 blocos |
+| Elite | 131.072 | 8.000.000 mB | 4.000.000 FE/t | 256.000 | Dimensão inteira |
+| Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões |
+
+A Source (Ars Nouveau) é opcional: sem filtro e sem cartões, como a energia; a vazão é a chave `sourcePerSecond` da config.
 
 A vazão vale por face e por tipo. Os números ficam no arquivo de config do servidor, para o modpack ajustar. No Ultimate, o único limite é o orçamento de TPS.
 
@@ -174,13 +176,14 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 | --- | --- | --- | --- |
 | Qualquer inventário, tanque ou máquina | Capabilities de item, fluido e energia do NeoForge | Compatibilidade geral | Nenhuma |
 | Químicos do Mekanism | API de químicos do Mekanism | Suporte a gases e afins | Opcional |
+| Source do Ars Nouveau | Capability `ars_nouveau:source` (só em `compat/arsnouveau`) | Aba Source: jarras, relays e máquinas do Ars | Opcional |
 | AE2 (planejado) | Armazenamento por chave e quantidade `long` | Uma chamada move milhões de itens | Opcional |
 | Refined Storage 2 (planejado) | API de armazenamento por recurso | Mesmo ganho do AE2 | Opcional |
 | Sophisticated Storage (planejado) | Handler de itens com cache de slots | Varredura incremental de baús grandes | Nenhuma |
 | JEI | Ingredientes fantasmas e a receita de upgrade na bancada | Arrastar e clicar para os filtros | Opcional |
 | GuideME | Livro-guia data-driven | Guia no jogo, em inglês e português | Opcional |
 
-Hoje existem as capabilities do NeoForge, os químicos do Mekanism, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
+Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
 ## Armazenamento do mod (planejado, 0.2)
 
@@ -303,6 +306,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 **v2, escala e integrações**
 
 - [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
+- [x] Source do Ars Nouveau (aba Source, sem filtro e sem cartões, vazão por tier)
 - [x] Tablet: lista, mapa, estatísticas, redes e grupos
 - [x] Configurador colando em área (mesma máquina) e Vinculador modo Área
 - [ ] Atalhos para AE2 e Refined Storage 2

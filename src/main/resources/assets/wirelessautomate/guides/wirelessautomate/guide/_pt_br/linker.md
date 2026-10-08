@@ -23,7 +23,7 @@ Também tira roteadores da rede.
 | | |
 | --- | --- |
 | **Modos** | Único e Área. |
-| **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. Marque quantas quiser. |
+| **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 
 ## Comandos
@@ -33,7 +33,7 @@ Também tira roteadores da rede.
 | Clique num roteador | Põe as abas marcadas do roteador na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas abas da rede. |
 | Clique no ar | Abre a tela: rede, abas, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
 | Shift + clique no ar | Alterna entre **Único** e **Área**. |
-| Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism). Uma combinação marcada na tela volta para **Todos**. |
+| Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism), Source (com o Ars Nouveau). Uma combinação marcada na tela volta para **Todos**. |
 | Shift + clique em dois blocos (Área) | Marca os cantos da área. |
 
 ## Na tela

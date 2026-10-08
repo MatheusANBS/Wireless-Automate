@@ -25,13 +25,13 @@ Ultimate. The router's configuration (faces, filters, networks) is kept.
 ## What each card raises
 
 Per face and per type. The card's tooltip shows your server's values. Chemicals use the fluid
-limit.
+limit. Source only with Ars Nouveau.
 
-| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
-| --- | --- | --- | --- | --- |
-| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Advanced** | 512 → **8,192** | 32,000 → **512,000** | 16,000 → **256,000** | 128 → **1,024 blocks** |
-| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 1,024 → **the whole dimension** |
-| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | **every dimension** |
+| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
+| --- | --- | --- | --- | --- | --- |
+| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Advanced** | 512 → **8,192** | 32,000 → **512,000** | 16,000 → **256,000** | 1,000 → **16,000** | 128 → **1,024 blocks** |
+| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 16,000 → **256,000** | 1,024 → **the whole dimension** |
+| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | 256,000 → **unlimited** | **every dimension** |
 
 Each step multiplies throughput by 16. Range and dimensions follow the **sender's** tier.
 

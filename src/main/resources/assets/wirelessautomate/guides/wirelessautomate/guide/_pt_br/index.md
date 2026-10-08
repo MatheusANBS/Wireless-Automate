@@ -9,7 +9,7 @@ navigation:
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
 
-Transporte **sem fios** de itens, fluidos, energia e químicos do Mekanism. Prenda um roteador em
+Transporte **sem fios** de itens, fluidos, energia, químicos do Mekanism e Source do Ars Nouveau. Prenda um roteador em
 cada máquina, diga o que cada face dela faz e pronto: todos os roteadores da mesma rede trocam
 recursos entre si, sem canos.
 

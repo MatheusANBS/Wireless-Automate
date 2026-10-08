@@ -25,7 +25,7 @@ machine face does.
 | --- | --- |
 | **Attaches to** | Any face of any block (it needs a block behind it). |
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
-| **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals. |
+| **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
@@ -56,7 +56,7 @@ behind it drops the router.
 
 | Step | How |
 | --- | --- |
-| **1. Pick the type** | Click the tab: Items, Fluids, Energy or Chemicals. |
+| **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
 | **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
 | **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
@@ -94,12 +94,14 @@ Drag the right edge, the bottom edge or the corner to make the screen bigger; th
 Throughput is **per face and per type**, counted at the sender. Chemicals use the fluid limit.
 Your server may use different values: the upgrade card's tooltip shows yours.
 
-| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
-| --- | --- | --- | --- | --- |
-| **Basic** | 512 | 32,000 | 16,000 | 128 blocks |
-| **Advanced** | 8,192 | 512,000 | 256,000 | 1,024 blocks |
-| **Elite** | 131,072 | 8,000,000 | 4,000,000 | The whole dimension |
-| **Ultimate** | Unlimited | Unlimited | Unlimited | Every dimension |
+| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
+| --- | --- | --- | --- | --- | --- |
+| **Basic** | 512 | 32,000 | 16,000 | 1,000 | 128 blocks |
+| **Advanced** | 8,192 | 512,000 | 256,000 | 16,000 | 1,024 blocks |
+| **Elite** | 131,072 | 8,000,000 | 4,000,000 | 256,000 | The whole dimension |
+| **Ultimate** | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
+
+Source only with Ars Nouveau.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />

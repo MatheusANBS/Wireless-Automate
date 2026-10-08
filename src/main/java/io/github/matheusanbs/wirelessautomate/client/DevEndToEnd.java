@@ -1695,7 +1695,7 @@ public final class DevEndToEnd {
     /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals",
+            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source",
             "troubleshooting", "recipes");
 
     /**

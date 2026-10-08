@@ -24,7 +24,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
-| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia ou Químicos (com o Mekanism). |
+| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). |
 
 ## Comandos
 

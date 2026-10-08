@@ -23,7 +23,7 @@ also takes routers out of their network.
 | | |
 | --- | --- |
 | **Modes** | Single and Area. |
-| **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals. Check as many as you like. |
+| **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Network** | One of your networks, or **None (unlink)**. |
 
 ## Actions
@@ -33,7 +33,7 @@ also takes routers out of their network.
 | Click a router | Puts the router's checked tabs in the active network (creates one if you have none). On **None (unlink)**, takes those tabs out of their network. |
 | Click the air | Opens the screen: network, tabs, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
 | Shift + click the air | Switches between **Single** and **Area**. |
-| Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism). A combination checked on the screen goes back to **All**. |
+| Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism), Source (with Ars Nouveau). A combination checked on the screen goes back to **All**. |
 | Shift + click two blocks (Area) | Marks the area corners. |
 
 ## On the screen

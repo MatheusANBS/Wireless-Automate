@@ -9,7 +9,7 @@ navigation:
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
 
-**Wireless** transport of items, fluids, energy and Mekanism chemicals. Attach a router to each
+**Wireless** transport of items, fluids, energy, Mekanism chemicals and Ars Nouveau Source. Attach a router to each
 machine, say what each of its faces does and you're done: every router on the same network trades
 resources with the others, with no pipes.
 

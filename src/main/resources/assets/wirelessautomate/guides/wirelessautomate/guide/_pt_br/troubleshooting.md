@@ -3,7 +3,7 @@ navigation:
   title: Problemas comuns
   icon: minecraft:barrier
   parent: index.md
-  position: 16
+  position: 17
 ---
 
 

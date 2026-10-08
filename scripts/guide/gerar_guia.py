@@ -165,18 +165,22 @@ SCENE_AREA = '''<GameScene zoom="3" interactive={true}>
 # ------------------------------------------------------------------ textos repetidos
 
 TIER_TABLE = {
-    'pt': '''| Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
-| --- | --- | --- | --- | --- |
-| **Básico** | 512 | 32.000 | 16.000 | 128 blocos |
-| **Avançado** | 8.192 | 512.000 | 256.000 | 1.024 blocos |
-| **Elite** | 131.072 | 8.000.000 | 4.000.000 | A dimensão inteira |
-| **Ultimate** | Sem limite | Sem limite | Sem limite | Todas as dimensões |''',
-    'en': '''| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
-| --- | --- | --- | --- | --- |
-| **Basic** | 512 | 32,000 | 16,000 | 128 blocks |
-| **Advanced** | 8,192 | 512,000 | 256,000 | 1,024 blocks |
-| **Elite** | 131,072 | 8,000,000 | 4,000,000 | The whole dimension |
-| **Ultimate** | Unlimited | Unlimited | Unlimited | Every dimension |''',
+    'pt': '''| Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
+| --- | --- | --- | --- | --- | --- |
+| **Básico** | 512 | 32.000 | 16.000 | 1.000 | 128 blocos |
+| **Avançado** | 8.192 | 512.000 | 256.000 | 16.000 | 1.024 blocos |
+| **Elite** | 131.072 | 8.000.000 | 4.000.000 | 256.000 | A dimensão inteira |
+| **Ultimate** | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões |
+
+Source só com o Ars Nouveau.''',
+    'en': '''| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
+| --- | --- | --- | --- | --- | --- |
+| **Basic** | 512 | 32,000 | 16,000 | 1,000 | 128 blocks |
+| **Advanced** | 8,192 | 512,000 | 256,000 | 16,000 | 1,024 blocks |
+| **Elite** | 131,072 | 8,000,000 | 4,000,000 | 256,000 | The whole dimension |
+| **Ultimate** | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
+
+Source only with Ars Nouveau.''',
 }
 
 PAGES = []
@@ -194,7 +198,7 @@ page('index.md', front('Wireless Automate', 'wirelessautomate:router', parent=No
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
 
-Transporte **sem fios** de itens, fluidos, energia e químicos do Mekanism. Prenda um roteador em
+Transporte **sem fios** de itens, fluidos, energia, químicos do Mekanism e Source do Ars Nouveau. Prenda um roteador em
 cada máquina, diga o que cada face dela faz e pronto: todos os roteadores da mesma rede trocam
 recursos entre si, sem canos.
 
@@ -247,7 +251,7 @@ inventário ou no JEI, segure **G** para abrir a página dele.
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
 
-**Wireless** transport of items, fluids, energy and Mekanism chemicals. Attach a router to each
+**Wireless** transport of items, fluids, energy, Mekanism chemicals and Ars Nouveau Source. Attach a router to each
 machine, say what each of its faces does and you're done: every router on the same network trades
 resources with the others, with no pipes.
 
@@ -392,7 +396,7 @@ máquina faz.
 | --- | --- |
 | **Prende em** | Qualquer face de qualquer bloco (precisa de um bloco atrás). |
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
-| **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. |
+| **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
 | **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
@@ -412,7 +416,7 @@ o roteador.
 
 | Passo | Como |
 | --- | --- |
-| **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia ou Químicos. |
+| **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
 | **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões C N L B S O (Cima, Norte, Leste, Baixo, Sul, Oeste). |
 | **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
 | **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
@@ -472,7 +476,7 @@ machine face does.
 | --- | --- |
 | **Attaches to** | Any face of any block (it needs a block behind it). |
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
-| **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals. |
+| **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
@@ -492,7 +496,7 @@ behind it drops the router.
 
 | Step | How |
 | --- | --- |
-| **1. Pick the type** | Click the tab: Items, Fluids, Energy or Chemicals. |
+| **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
 | **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
 | **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
@@ -556,13 +560,13 @@ A configuração do roteador (faces, filtros, redes) não se perde.
 ## O que cada cartão aumenta
 
 Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor. Químicos usam o
-limite de fluido.
+limite de fluido. Source só com o Ars Nouveau.
 
-| Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Alcance |
-| --- | --- | --- | --- | --- |
-| ''' + item('tier_core_advanced') + ''' **Avançado** | 512 → **8.192** | 32.000 → **512.000** | 16.000 → **256.000** | 128 → **1.024 blocos** |
-| ''' + item('tier_core_elite') + ''' **Elite** | 8.192 → **131.072** | 512.000 → **8.000.000** | 256.000 → **4.000.000** | 1.024 → **a dimensão inteira** |
-| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | **todas as dimensões** |
+| Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
+| --- | --- | --- | --- | --- | --- |
+| ''' + item('tier_core_advanced') + ''' **Avançado** | 512 → **8.192** | 32.000 → **512.000** | 16.000 → **256.000** | 1.000 → **16.000** | 128 → **1.024 blocos** |
+| ''' + item('tier_core_elite') + ''' **Elite** | 8.192 → **131.072** | 512.000 → **8.000.000** | 256.000 → **4.000.000** | 16.000 → **256.000** | 1.024 → **a dimensão inteira** |
+| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131.072 → **sem limite** | 8.000.000 → **sem limite** | 4.000.000 → **sem limite** | 256.000 → **sem limite** | **todas as dimensões** |
 
 Cada passo multiplica a vazão por 16. Alcance e dimensões contam pelo tier de quem **envia**.
 
@@ -600,13 +604,13 @@ Ultimate. The router's configuration (faces, filters, networks) is kept.
 ## What each card raises
 
 Per face and per type. The card's tooltip shows your server's values. Chemicals use the fluid
-limit.
+limit. Source only with Ars Nouveau.
 
-| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Range |
-| --- | --- | --- | --- | --- |
-| ''' + item('tier_core_advanced') + ''' **Advanced** | 512 → **8,192** | 32,000 → **512,000** | 16,000 → **256,000** | 128 → **1,024 blocks** |
-| ''' + item('tier_core_elite') + ''' **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 1,024 → **the whole dimension** |
-| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | **every dimension** |
+| Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
+| --- | --- | --- | --- | --- | --- |
+| ''' + item('tier_core_advanced') + ''' **Advanced** | 512 → **8,192** | 32,000 → **512,000** | 16,000 → **256,000** | 1,000 → **16,000** | 128 → **1,024 blocks** |
+| ''' + item('tier_core_elite') + ''' **Elite** | 8,192 → **131,072** | 512,000 → **8,000,000** | 256,000 → **4,000,000** | 16,000 → **256,000** | 1,024 → **the whole dimension** |
+| ''' + item('tier_core_ultimate') + ''' **Ultimate** | 131,072 → **unlimited** | 8,000,000 → **unlimited** | 4,000,000 → **unlimited** | 256,000 → **unlimited** | **every dimension** |
 
 Each step multiplies throughput by 16. Range and dimensions follow the **sender's** tier.
 
@@ -953,7 +957,7 @@ Também tira roteadores da rede.
 | | |
 | --- | --- |
 | **Modos** | Único e Área. |
-| **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos. Marque quantas quiser. |
+| **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 
 ## Comandos
@@ -963,7 +967,7 @@ Também tira roteadores da rede.
 | Clique num roteador | Põe as abas marcadas do roteador na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas abas da rede. |
 | Clique no ar | Abre a tela: rede, abas, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
 | Shift + clique no ar | Alterna entre **Único** e **Área**. |
-| Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism). Uma combinação marcada na tela volta para **Todos**. |
+| Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism), Source (com o Ars Nouveau). Uma combinação marcada na tela volta para **Todos**. |
 | Shift + clique em dois blocos (Área) | Marca os cantos da área. |
 
 ## Na tela
@@ -1009,7 +1013,7 @@ also takes routers out of their network.
 | | |
 | --- | --- |
 | **Modes** | Single and Area. |
-| **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals. Check as many as you like. |
+| **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Network** | One of your networks, or **None (unlink)**. |
 
 ## Actions
@@ -1019,7 +1023,7 @@ also takes routers out of their network.
 | Click a router | Puts the router's checked tabs in the active network (creates one if you have none). On **None (unlink)**, takes those tabs out of their network. |
 | Click the air | Opens the screen: network, tabs, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
 | Shift + click the air | Switches between **Single** and **Area**. |
-| Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism). A combination checked on the screen goes back to **All**. |
+| Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism), Source (with Ars Nouveau). A combination checked on the screen goes back to **All**. |
 | Shift + click two blocks (Area) | Marks the area corners. |
 
 ## On the screen
@@ -1071,7 +1075,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 | **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão) e Área. |
-| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia ou Químicos (com o Mekanism). |
+| **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). |
 
 ## Comandos
 
@@ -1120,7 +1124,7 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 | **Copies** | Faces, filters, priorities, redstone and each tab's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default) and Area. |
-| **Pasted type** | All (default), Items, Fluids, Energy or Chemicals (with Mekanism). |
+| **Pasted type** | All (default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). |
 
 ## Actions
 
@@ -1783,9 +1787,64 @@ unavailable.
 ''')
 
 # =====================================================================================
+# Source (Ars Nouveau)
+# =====================================================================================
+page('source.md', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 16) + '''
+# Source do Ars Nouveau
+
+Com o **Ars Nouveau** instalado, o roteador ganha a aba **Source**. Sem o Ars, a aba não aparece e
+o resto do mod funciona igual.
+
+## O que funciona
+
+| Recurso | Source |
+| --- | --- |
+| Modo, prioridade e redstone por face | Sim, como nas outras abas. |
+| Rede própria na aba | Sim. |
+| Vinculador e Configurador | Sim: o chip **Source** e o atalho na roda do mouse. |
+| Vazão | Por tier: Básico 1.000/s, Avançado 16.000/s, Elite 256.000/s, Ultimate sem limite. |
+| Filtro e Cartão de Filtro | Não: a Source não tem tipos, como a energia. |
+
+## Exemplo: Source dos Sourcelinks até o Enchanting Apparatus
+
+| Passo | O que fazer |
+| --- | --- |
+| **1** | Perto dos Sourcelinks, uma **Source Jar** com um roteador em cima, na aba **Source**, em **Extrair**. |
+| **2** | Perto do Enchanting Apparatus (ou de qualquer máquina do Ars), outra Source Jar com um roteador em **Inserir**, na mesma rede. |
+| **3** | Os Sourcelinks enchem a primeira jarra; o roteador leva a Source para a segunda, e a máquina tira dela. |
+
+O roteador também liga direto nos Relays do Ars e na Imbuement Chamber.
+''', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 16) + '''
+# Ars Nouveau Source
+
+With **Ars Nouveau** installed, the router gets a **Source** tab. Without Ars, the tab doesn't show
+and the rest of the mod works the same.
+
+## What works
+
+| Feature | Source |
+| --- | --- |
+| Mode, priority and redstone per face | Yes, like the other tabs. |
+| Its own network on the tab | Yes. |
+| Linker and Configurator | Yes: the **Source** chip and the mouse wheel shortcut. |
+| Throughput | Per tier: Basic 1,000/s, Advanced 16,000/s, Elite 256,000/s, Ultimate unlimited. |
+| Filter and Filter Card | No: Source has no types, like energy. |
+
+## Example: Source from the Sourcelinks to the Enchanting Apparatus
+
+| Step | What to do |
+| --- | --- |
+| **1** | Near the Sourcelinks, a **Source Jar** with a router on it, on the **Source** tab, set to **Extract**. |
+| **2** | Near the Enchanting Apparatus (or any Ars machine), another Source Jar with a router set to **Insert**, on the same network. |
+| **3** | The Sourcelinks fill the first jar; the router carries the Source to the second, and the machine draws from it. |
+
+The router also connects straight to Ars Relays and the Imbuement Chamber.
+''')
+
+# =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 16) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 17) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -1806,7 +1865,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
 cada rede está movendo e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 16) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 17) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -1847,7 +1906,7 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 17) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 18) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
@@ -1859,7 +1918,7 @@ Todas com itens vanilla, na bancada.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 17) + '''
+''', front('All recipes', 'minecraft:crafting_table', 18) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.

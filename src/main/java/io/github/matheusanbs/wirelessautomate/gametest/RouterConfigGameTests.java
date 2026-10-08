@@ -202,7 +202,7 @@ public final class RouterConfigGameTests {
 
         CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
         Set<String> networks = tag.getCompound("networks").getAllKeys();
-        helper.assertTrue(networks.equals(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
+        helper.assertTrue(networks.containsAll(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
         helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
 
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);

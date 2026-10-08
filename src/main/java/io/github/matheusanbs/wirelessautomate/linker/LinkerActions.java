@@ -392,7 +392,7 @@ public final class LinkerActions {
         if (next.isEmpty(LoadedTypes.LIST)) {
             return false;
         }
-        LinkerItem.setTabs(stack, next);
+        LinkerItem.setTabs(stack, normalize(next));
         return true;
     }
 
@@ -405,7 +405,12 @@ public final class LinkerActions {
         if (next.isEmpty(LoadedTypes.LIST)) {
             return false;
         }
-        LinkerItem.setTabs(stack, next);
+        LinkerItem.setTabs(stack, normalize(next));
         return true;
+    }
+
+    /** Todos os tipos disponíveis marcados é "Todos" (guarda ALL), para valer também para tipos futuros. */
+    private static LinkerTabs normalize(LinkerTabs tabs) {
+        return tabs.isAll(LoadedTypes.LIST) ? LinkerTabs.ALL : tabs;
     }
 }

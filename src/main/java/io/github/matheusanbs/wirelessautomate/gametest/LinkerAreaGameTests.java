@@ -310,6 +310,7 @@ public final class LinkerAreaGameTests {
         helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
                 Optional.empty(), "", LinkerTabs.available(LoadedTypes.LIST).mask())), "recusou Todos");
         helper.assertTrue(LinkerItem.tabs(linker).isAll(LoadedTypes.LIST), "Todos não marcou tudo");
+        helper.assertTrue(LinkerItem.tabs(linker).equals(LinkerTabs.ALL), "Todos não ficou guardado como ALL");
         helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
                 Optional.empty(), "", 0)), "aceitou conjunto vazio");
         helper.assertTrue(LinkerItem.tabs(linker).isAll(LoadedTypes.LIST), "conjunto vazio mudou as abas");

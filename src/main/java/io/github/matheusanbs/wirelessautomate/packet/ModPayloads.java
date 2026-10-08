@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageBatteryMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -139,7 +140,7 @@ public final class ModPayloads {
     /** Configura uma face. Recusa químicos sem o Mekanism e limita a prioridade. */
     public static boolean handleSetFace(@Nullable ServerPlayer player, SetFacePayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || (payload.resource() == ResourceType.CHEMICAL && !Chemicals.LOADED)) {
+        if (router == null || !LoadedTypes.contains(payload.resource())) {
             return false;
         }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);

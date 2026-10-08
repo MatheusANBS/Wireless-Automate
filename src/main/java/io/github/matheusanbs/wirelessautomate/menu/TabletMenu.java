@@ -9,7 +9,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -716,7 +716,7 @@ public class TabletMenu extends AbstractContainerMenu {
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
         if (viewer == null || keys.isEmpty() || keys.size() > MAX_MOVE
-                || type.filter(t -> t == ResourceType.CHEMICAL && !Chemicals.LOADED).isPresent()) {
+                || type.filter(t -> !LoadedTypes.contains(t)).isPresent()) {
             return -1;
         }
         MinecraftServer server = viewer.server;

@@ -620,7 +620,7 @@ public class RouterMenu extends AbstractContainerMenu {
             long total = router.moved(type);
             long delta = total - sampleTotals[i];
             sampleTotals[i] = total;
-            long rate = type == ResourceType.ENERGY
+            long rate = type.ratePerTick()
                     ? (delta + elapsed / 2) / elapsed
                     : (delta * 20 + elapsed / 2) / elapsed;
             if (rate != sentThroughput[i]) {

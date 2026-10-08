@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -27,7 +28,7 @@ public final class Config {
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
 
-    /** Comentário de cada chave de vazão, na ordem em que aparecem no arquivo. */
+    /** Comentário de cada chave de vazão (a ordem no arquivo vem do enum {@link ResourceType}, não deste mapa). */
     private static final Map<String, String> RATE_COMMENTS = Map.of(
             "itemsPerSecond", "Itens por segundo, por face e por tipo (0 = sem limite).",
             "fluidPerSecond", "Fluido e químico em mB por segundo (0 = sem limite).",
@@ -61,7 +62,7 @@ public final class Config {
             Map<String, ModConfigSpec.LongValue> rates = new LinkedHashMap<>();
             for (ResourceType type : ResourceType.values()) {
                 if (!rates.containsKey(type.rateKey())) {
-                    rates.put(type.rateKey(), builder.comment(RATE_COMMENTS.get(type.rateKey()))
+                    rates.put(type.rateKey(), builder.comment(Objects.requireNonNull(RATE_COMMENTS.get(type.rateKey()), "sem comentário para a vazão " + type.rateKey()))
                             .defineInRange(type.rateKey(), type.defaultRate(tier.ordinal()), 0L, Long.MAX_VALUE));
                 }
             }

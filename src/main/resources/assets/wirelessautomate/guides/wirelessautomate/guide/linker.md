@@ -42,7 +42,7 @@ also takes routers out of their network.
 | --- | --- |
 | **Network** | Click a network to make it active, or **+ New network** to create one. |
 | **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
-| **Tabs** | One colored button per type: click to mark or unmark it (marked = border and tint in the type's color). **All** marks every type. Only the marked tabs change; the others stay as they are. At least one stays marked. |
+| **Tabs** | One colored button per type: click to mark or unmark it (marked = border and tint in the type's color). **All** marks every type; when all are marked, it leaves only the first. Only the marked tabs change; the others stay as they are. At least one stays marked. |
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />

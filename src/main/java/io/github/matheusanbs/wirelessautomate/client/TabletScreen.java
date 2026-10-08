@@ -114,7 +114,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private static final RoleFilter[] ROLE_FILTERS = RoleFilter.values();
     /** Tipos que o Mover oferece, depois de "Todas as abas". */
-    private static final ResourceType[] MOVE_TYPES = {ResourceType.ITEM, ResourceType.FLUID, ResourceType.ENERGY};
+    private static final List<ResourceType> MOVE_TYPES = LoadedTypes.LIST;
 
     private final boolean preview;
     private final List<FlatButton> buttons = new ArrayList<>();
@@ -211,7 +211,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private static Component typeWord(ResourceType type) {
-        return tr("type." + type.name().toLowerCase(Locale.ROOT));
+        return tr("type." + type.key());
     }
 
     private static Component typeName(ResourceType type) {
@@ -362,7 +362,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         // barra de mover (só selecionando)
         add(Tab.LIST, new FlatButton(x + X0 + 64, y + actionY(), 86, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, moveTypeText()),
-                () -> moveType = Math.floorMod(moveType + 1 + (hasShiftDown() ? -1 : 1), MOVE_TYPES.length + 1) - 1)
+                () -> moveType = Math.floorMod(moveType + 1 + (hasShiftDown() ? -1 : 1), MOVE_TYPES.size() + 1) - 1)
                 .tooltip(() -> tr("move.type.tooltip")));
         add(Tab.LIST, new FlatButton(x + X0 + 154, y + actionY(), 82, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, networkName(effectiveMoveNetwork())),
@@ -617,7 +617,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private Component moveTypeText() {
-        return moveType < 0 ? tr("move.type.all") : typeName(MOVE_TYPES[moveType]);
+        return moveType < 0 ? tr("move.type.all") : typeName(MOVE_TYPES.get(moveType));
     }
 
     private Optional<UUID> effectiveMoveNetwork() {
@@ -648,7 +648,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             keys = keys.subList(0, TabletMenu.MAX_MOVE);
         }
         send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys),
-                moveType < 0 ? Optional.empty() : Optional.of(MOVE_TYPES[moveType]), effectiveMoveNetwork()));
+                moveType < 0 ? Optional.empty() : Optional.of(MOVE_TYPES.get(moveType)), effectiveMoveNetwork()));
         selected.clear();
         multi = false;
     }

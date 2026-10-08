@@ -1,6 +1,6 @@
 """Gera o banner e as imagens da descrição do projeto no CurseForge.
 
-    WA_SHOWCASE=run/showcase ./gradlew runClient    # fotos da vitrine (DevEndToEnd, modo WA_SHOWCASE)
+    WA_SHOWCASE=run/showcase ./gradlew runClient    # fotos da vitrine (DevEndToEnd, modo WA_SHOWCASE), 3840x2400
     WA_E2E=run/e2e ./gradlew runClient               # capturas do guia (opcional: guia-*.png)
     python scripts/curseforge/gerar_imagens.py
 
@@ -125,30 +125,62 @@ def banner() -> Image.Image:
 
 # ------------------------------------------------------------------ imagens de função
 
+LARGURA = 1920  # largura das imagens de função; o layout foi desenhado em 1280 e cresce por E
+E = LARGURA / 1280
+
+
+def u(v: float) -> int:
+    """Medida do layout de 1280 px na largura final."""
+    return round(v * E)
+
+
+def recorta(origem: Path, recorte: tuple[int, int, int, int]) -> Image.Image:
+    """Recorte em coordenadas de 1280x800; a vitrine fotografa em 1280x800 vezes WA_SHOWCASE_SCALE."""
+    foto = Image.open(origem).convert("RGB")
+    f = foto.width / 1280
+    return foto.crop(tuple(round(v * f) for v in recorte))
+
+
+def ajusta(foto: Image.Image, largura: int) -> Image.Image:
+    """Leva a foto à largura sem borrar: reduz com LANCZOS; para ampliar, primeiro dobra os pixels
+    (NEAREST, inteiro, as texturas e a fonte do jogo são pixel art) e depois reduz."""
+    if foto.width < largura:
+        n = -(-largura // foto.width)
+        foto = foto.resize((foto.width * n, foto.height * n), Image.NEAREST)
+    if foto.width == largura:
+        return foto
+    return foto.resize((largura, round(largura * foto.height / foto.width)), Image.LANCZOS)
+
+
 def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tuple[int, int, int, int],
              detalhe: tuple[Path, tuple[int, int, int, int], int] | None = None) -> Image.Image:
-    """Captura com faixa de título; {@code detalhe} (captura, recorte, largura) entra no canto de baixo à direita."""
-    foto = Image.open(origem).convert("RGB").crop(recorte)
-    largura = 1280
-    foto = foto.resize((largura - 48, round((largura - 48) * foto.height / foto.width)), Image.LANCZOS)
+    """Captura com faixa de título; {@code detalhe} (captura, recorte, largura em 1280) entra no canto de baixo
+    à direita. Uma captura um pouco menor que a área fica no tamanho nativo, centrada."""
+    largura = LARGURA
+    foto = recorta(origem, recorte)
+    area = largura - u(48)
+    if foto.width > area or foto.width < area * 0.85:
+        foto = ajusta(foto, area)
     if detalhe is not None:
-        tela = Image.open(detalhe[0]).convert("RGB").crop(detalhe[1])
-        tela = tela.resize((detalhe[2], round(detalhe[2] * tela.height / tela.width)), Image.LANCZOS)
-        x, y = foto.width - tela.width - 18, foto.height - tela.height - 18
-        ImageDraw.Draw(foto).rectangle([x - 3, y - 3, x + tela.width + 2, y + tela.height + 2], fill=(46, 64, 82))
+        tela = ajusta(recorta(detalhe[0], detalhe[1]), u(detalhe[2]))
+        x, y = foto.width - tela.width - u(18), foto.height - tela.height - u(18)
+        b = u(3)
+        ImageDraw.Draw(foto).rectangle([x - b, y - b, x + tela.width + b - 1, y + tela.height + b - 1],
+                                       fill=(46, 64, 82))
         foto.paste(tela, (x, y))
-    faixa = 150
-    img = Image.new("RGB", (largura, faixa + foto.height + 24), FUNDO)
+    faixa = u(150)
+    img = Image.new("RGB", (largura, faixa + foto.height + u(24)), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
-    d.rectangle([0, faixa - 4, largura, faixa - 1], fill=CIANO)
-    px = 6
-    escreve_pixel(img, titulo, 32, 34, px, CIANO_CLARO, sombra=(8, 40, 44))
-    assert d.textlength(subtitulo, font=fonte(30)) < largura - 60, f"subtítulo de {nome} passa da borda"
-    d.text((34, 34 + 7 * px + 24), subtitulo, fill=TEXTO, font=fonte(30))
-    # Moldura de 3 px em volta da captura.
-    x0, y0 = 24, faixa + 8
-    d.rectangle([x0 - 3, y0 - 3, x0 + foto.width + 2, y0 + foto.height + 2], fill=(46, 64, 82))
+    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=CIANO)
+    px = u(6)
+    escreve_pixel(img, titulo, u(32), u(34), px, CIANO_CLARO, sombra=(8, 40, 44))
+    assert d.textlength(subtitulo, font=fonte(u(30))) < largura - u(60), f"subtítulo de {nome} passa da borda"
+    d.text((u(34), u(34) + 7 * px + u(24)), subtitulo, fill=TEXTO, font=fonte(u(30)))
+    # Moldura de 3 px (no layout de 1280) em volta da captura, centrada.
+    x0, y0 = (largura - foto.width) // 2, faixa + u(8)
+    b = u(3)
+    d.rectangle([x0 - b, y0 - b, x0 + foto.width + b - 1, y0 + foto.height + b - 1], fill=(46, 64, 82))
     img.paste(foto, (x0, y0))
     return img
 
@@ -223,8 +255,8 @@ def tiers() -> Image.Image:
 
 
 DESTAQUES = [
-    # (arquivo, título, subtítulo, captura, recorte[, (captura do detalhe, recorte, largura)]) — as
-    # capturas da vitrine têm 1280x800.
+    # (arquivo, título, subtítulo, captura, recorte[, (captura do detalhe, recorte, largura)]) — recortes
+    # em coordenadas de 1280x800, qualquer que seja o tamanho da captura.
     ("feature-0-overview", "Everything wireless",
      "An ore line, five storage blocks, a hall of tiers and an Ars lab, with no pipes.",
      VITRINE / "s0-casa.png", (90, 150, 1190, 770)),
@@ -233,13 +265,13 @@ DESTAQUES = [
      VITRINE / "s1-fabrica.png", (0, 120, 1280, 800)),
     ("feature-2-router", "Configure every face",
      "Pick a face on the 3D model and set it per resource type, on up to five tabs.",
-     VITRINE / "s3-roteador.png", (30, 90, 1250, 710)),
+     VITRINE / "s3-roteador.png", (20, 80, 1260, 720)),
     ("feature-3-filters", "Tags in one click",
      "Put any item in the inspector to see and check all its tags, or search every tag in the game.",
-     VITRINE / "s5b-filtro-tags.png", (270, 120, 1010, 680)),
+     VITRINE / "s5b-filtro-tags.png", (272, 118, 1008, 680)),
     ("feature-8-rules", "Property rules",
      "Any enchanted item, tools under 50% durability... and your inventory lights up.",
-     VITRINE / "s5c-filtro-regra.png", (270, 120, 1010, 680)),
+     VITRINE / "s5c-filtro-regra.png", (272, 118, 1008, 680)),
     ("feature-15-tier-hall", "From iron to Unobtainium",
      "Every tier on its own material. Allthemodium, Vibranium and Unobtainium with ATM10.",
      VITRINE / "s15-tiers.png", (0, 200, 1280, 640)),
@@ -248,13 +280,13 @@ DESTAQUES = [
      VITRINE / "s9-armazenamentos.png", (0, 150, 1280, 610)),
     ("feature-10-chest", "Wireless Chest",
      "Unlimited item types in a searchable, resizable list. Keeps everything when broken.",
-     VITRINE / "s10-bau.png", (360, 130, 920, 670)),
+     VITRINE / "s10-bau.png", (330, 110, 940, 690)),
     ("feature-11-source", "Ars Nouveau Source",
      "A Source tab on every router: jars, relays and tanks trade Source wirelessly.",
      VITRINE / "s11-ars.png", (0, 100, 1280, 800)),
     ("feature-12-source-tank", "Wireless Source Tank",
      "A slim jar that shows its level. Sourcelinks fill it, Ars machines draw from it.",
-     VITRINE / "s12-tanques.png", (200, 170, 1080, 720), (VITRINE / "s12b-tanque-tela.png", (418, 258, 862, 542), 430)),
+     VITRINE / "s12-tanques.png", (200, 170, 1080, 720), (VITRINE / "s12b-tanque-tela.png", (398, 260, 882, 540), 430)),
     ("feature-14-toolkit", "The toolkit",
      "Linker, Configurator, Tablet, Filter Card, Upgrade Cards and the guide book.",
      VITRINE / "s14-vitrine.png", (100, 120, 1180, 660)),
@@ -263,10 +295,10 @@ DESTAQUES = [
      VITRINE / "s2-vinculador-area.png", (0, 120, 1280, 800)),
     ("feature-13-linker", "Linker by type",
      "Check the tabs to link: only Items, or Energy and Source, or everything at once.",
-     VITRINE / "s13-vinculador.png", (170, 90, 1110, 710)),
+     VITRINE / "s13-vinculador.png", (164, 84, 1116, 716)),
     ("feature-6-tablet", "Network Tablet",
      "Every router, from anywhere: live stats per resource type, a map and groups.",
-     VITRINE / "s6b-tablet-estatisticas.png", (70, 90, 1210, 710)),
+     VITRINE / "s6b-tablet-estatisticas.png", (60, 80, 1222, 720)),
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
      E2E / "guia-getting-started.png", (300, 40, 1270, 568)),

@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (8/10/2026): etapa 2 (Tanque de Source Wireless) pronta no branch `etapa-0-registro-de-tipos`, rumo à 1.1.0; a 1.0.2 segue no `main` e no CurseForge (ID 1732160).** Build com 120 JUnit e 157 + 7 + 15 GameTests (comuns, químicos e Source) passando.
+**Etapa atual (8/10/2026): 1.1.0 pronta para lançar (jar gerado; falta push, tag, release e CurseForge), no branch `etapa-0-registro-de-tipos`; a 1.0.2 segue no `main` e no CurseForge (ID 1732160).** Build com 120 JUnit e 157 + 7 + 15 GameTests (comuns, químicos e Source) passando.
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI, AE2/RS2 e o balanceamento das receitas.
 
@@ -42,7 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-1. **Fechamento da 1.1.0:** `mod_description`, README, changelog, CurseForge, jar e release `v1.1.0`.
+1. **Publicar a 1.1.0** (o dono decide): merge do branch no `main`, push, tag `v1.1.0`, release no GitHub com o jar de `build/libs/wirelessautomate-1.1.0.jar` e o `docs/curseforge/changelog-1.1.0.md`, e upload no CurseForge com o changelog unificado (`changelog-curseforge-1.1.0.md`) e o Ars Nouveau como dependência opcional.
 2. Acompanhar a moderação da 1.0.2 no CurseForge (ID 1732160) e o retorno de quem usa com o Mekanism.
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
 4. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
@@ -96,6 +96,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-08 | **Fechamento da 1.1.0** (preparação local, sem push nem tag): `mod_version=1.1.0` e descrição do mod com a Source, changelog `changelog-1.1.0.md` e o unificado renomeado para `changelog-curseforge-1.1.0.md`, descrição do CurseForge e README com a Source, o Tanque de Source, as telas redimensionáveis e a `runGameTestServerSource`. Jar gerado e `neoforge.mods.toml` conferido. |
 | 2026-10-08 | Ajustes do Tanque de Source (pedido do dono): jarra 2 px mais baixa (a gema termina no topo do bloco; texturas redesenhadas nas linhas novas) e nível que se corrige sozinho (tick agendado no `onLoad` e `SourceTankLevels` na recarga da config). 157 + 7 + 15 GameTests, e2e OK. |
 | 2026-10-08 | **Etapa 2** (Tanque de Source Wireless): armazenamento de Source em `long` com capacidade por tier, atalho `BulkSource` no roteador, integração com os Sourcelinks e as máquinas do Ars (`ArsStorage`), nível visível no bloco (jarra com 16 px de altura; o nível se corrige sozinho ao carregar e quando a config muda), tela própria, receita, texturas por script e página no guia (pt e en). Cores novas: Source roxo do Ars e Químicos verde. 155 + 7 + 15 GameTests. |
 | 2026-10-08 | **Etapa 1** (aba Source do Ars Nouveau): `ResourceType.SOURCE`, `compat/arsnouveau/ArsSources`, ponte `Sources`, `ScalarTransfer` genérico para energia e Source, Ars opcional no build, no `runClient` e na run `gameTestServerSource` (6 GameTests), Source no tooltip dos Cartões de Upgrade, página `source` no guia (nos dois idiomas, com a coluna Source/s nas tabelas de tier) e e2e com cinco tipos. |

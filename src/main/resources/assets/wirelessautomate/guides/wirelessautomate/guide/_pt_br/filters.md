@@ -67,7 +67,7 @@ de você adicionar.
 | **Com poção** | Poções, flechas com efeito. |
 | **Empilhável** | **Não** = ferramentas, armaduras e o que fica sozinho no slot. |
 | **Com conteúdo** | Caixa de shulker ou bundle com algo dentro. |
-| **Encantamento** | Um encantamento com nível mínimo: Fortuna ≥ III. |
+| **Encantamento** | Um encantamento com nível mínimo: Fortuna ≥ III. Digite o nome ou o id e escolha na lista; nível de 1 a 255. |
 | **Durabilidade** | Restante ≥ ou < uma porcentagem: < 25% manda para o reparo. |
 | **Só em** | Limita a uma tag ou mod: Encantado + `#c:armors` = só armadura encantada. |
 

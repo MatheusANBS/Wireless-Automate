@@ -25,6 +25,7 @@ máquina faz.
 | --- | --- |
 | **Prende em** | Qualquer face de qualquer bloco (precisa de um bloco atrás). |
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
+| **Gira com** | Shift + clique direito com a mão vazia: gira o roteador 90°. A configuração das faces não muda. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
 | **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |

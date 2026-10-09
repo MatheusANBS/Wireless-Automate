@@ -467,6 +467,7 @@ máquina faz.
 | --- | --- |
 | **Prende em** | Qualquer face de qualquer bloco (precisa de um bloco atrás). |
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
+| **Gira com** | Shift + clique direito com a mão vazia: gira o roteador 90°. A configuração das faces não muda. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
 | **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
@@ -548,6 +549,7 @@ machine face does.
 | --- | --- |
 | **Attaches to** | Any face of any block (it needs a block behind it). |
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
+| **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
@@ -864,7 +866,7 @@ de você adicionar.
 | **Com poção** | Poções, flechas com efeito. |
 | **Empilhável** | **Não** = ferramentas, armaduras e o que fica sozinho no slot. |
 | **Com conteúdo** | Caixa de shulker ou bundle com algo dentro. |
-| **Encantamento** | Um encantamento com nível mínimo: Fortuna ≥ III. |
+| **Encantamento** | Um encantamento com nível mínimo: Fortuna ≥ III. Digite o nome ou o id e escolha na lista; nível de 1 a 255. |
 | **Durabilidade** | Restante ≥ ou < uma porcentagem: < 25% manda para o reparo. |
 | **Só em** | Limita a uma tag ou mod: Encantado + `#c:armors` = só armadura encantada. |
 
@@ -939,7 +941,7 @@ on what it matches before you add it.
 | **Has potion** | Potions, tipped arrows. |
 | **Stackable** | **No** = tools, armor and anything that sits alone in a slot. |
 | **Has contents** | A shulker box or bundle with something inside. |
-| **Enchantment** | One enchantment with a minimum level: Fortune ≥ III. |
+| **Enchantment** | One enchantment with a minimum level: Fortune ≥ III. Type the name or the id and pick it from the list; level from 1 to 255. |
 | **Durability** | Remaining ≥ or < a percentage: < 25% sends it to repair. |
 | **Only in** | Limits it to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. |
 

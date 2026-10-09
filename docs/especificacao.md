@@ -18,7 +18,7 @@ O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de fi
 
 | Componente | Tipo | Função |
 | --- | --- | --- |
-| Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
+| Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Shift + clique direito com as mãos vazias gira o roteador 90° em torno do eixo da face (horário para quem olha a face de frente); a configuração das faces da máquina não muda. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
 | Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Sobem o roteador um tier, sem pular tiers: clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
 | Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área presos à mesma máquina. |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
@@ -55,7 +55,7 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 ### Roteador
 
-- **Abre com:** clique direito no roteador, ou à distância pelo Tablet.
+- **Abre com:** clique direito no roteador, ou à distância pelo Tablet. Shift + clique com as mãos vazias gira o roteador em vez de abrir a tela.
 - **Cabeçalho:** nome do nó, vazão atual da aba selecionada e tier.
 - **Abas:** uma por tipo do registro (Itens, Fluidos, Energia e Químicos; Químicos só existe com Mekanism), cada uma com o ícone e a cor do tipo. Cada aba entra numa rede própria, e um ponto na cor da rede em cada aba mostra de relance quando estão em redes diferentes (vazado: sem rede). **Abas adaptáveis:** com espaço, nome inteiro em todas; mais apertado, o nome só na aba ativa; sem espaço, só o ícone (o nome aparece no tooltip).
 - **Redimensionável** pela borda direita, a de baixo e a alça do canto, de 300 × 240 até a janela menos 8 px, com o tamanho lembrado na sessão; a largura e a altura extras vão para o visor 3D e a linha das abas, e a coluna da direita e o inventário acompanham a borda. Nomes longos (de rede, de nó) são abreviados e mostram o texto inteiro no tooltip.
@@ -75,7 +75,7 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 - **À direita, quatro abas:**
   - **Entrada:** a selecionada, com o que ela pega (os itens da tag ou do mod), o estoque, Remover, e Ver tags (item) ou Editar (regra).
   - **Tags:** o inspetor (um item no slot, pelo cursor, pelo JEI, por Ver tags ou por Ctrl + clique no inventário, mostra todas as tags dele para marcar, mais o mod) e a busca em todas as tags do jogo, com quantos itens cada uma pega e a prévia dos itens sob o mouse; `@texto` busca mods. Nos químicos, que não têm tags, vira Adicionar: id do químico ou `@mod`.
-  - **Regra** (só itens): monta uma regra por propriedade; o inventário acende no que ela pega antes de adicionar.
+  - **Regra** (só itens): monta uma regra por propriedade; o inventário acende no que ela pega antes de adicionar. O encantamento é um campo de texto: digita o nome ou o id (sem diferença de acento ou maiúscula) e escolhe numa lista de sugestões de todos os encantamentos do jogo; o nível mínimo é digitado, de 1 a 255 (romanos até X, algarismos depois).
   - **Mais:** Cartão de Filtro (importar e exportar), componentes e Limpar.
 
 ### Tablet de rede
@@ -127,7 +127,7 @@ Cada face da máquina, para cada tipo, tem um filtro embutido sem limite de entr
 | Regra por propriedade | Qualquer item encantado | Itens |
 
 - **Adicionar:** Shift + clique num item do inventário, ou clique no JEI mesmo sem ter o item. Arrastar do JEI para a lista também funciona. Tags e mods pelo inspetor ou pela busca, várias de uma vez. Duplicados são ignorados.
-- **Regra por propriedade:** pega o item que cumpre **todas** as condições marcadas, cada uma com tanto faz, sim ou não: encantado (inclusive livro), danificado, renomeado, com poção, empilhável e com conteúdo (caixa de shulker, bundle); mais um encantamento com nível mínimo (no item ou no livro), a durabilidade restante (≥ ou < uma porcentagem) e o "só em" (uma tag ou mod: encantado + `#c:armors` = só armadura encantada). Aceita estoque e lista negra como qualquer entrada, e é editável depois.
+- **Regra por propriedade:** pega o item que cumpre **todas** as condições marcadas, cada uma com tanto faz, sim ou não: encantado (inclusive livro), danificado, renomeado, com poção, empilhável e com conteúdo (caixa de shulker, bundle); mais um encantamento com nível mínimo de 1 a 255 (no item ou no livro; escolhido pelo nome ou pelo id), a durabilidade restante (≥ ou < uma porcentagem) e o "só em" (uma tag ou mod: encantado + `#c:armors` = só armadura encantada). Aceita estoque e lista negra como qualquer entrada, e é editável depois.
 - **Tamanho:** sem limite na tela, com rolagem. Um teto interno de 4.096 entradas protege o dado salvo e o pacote de rede.
 - **Custo:** o filtro é compilado em conjuntos de hash, então conferir um item custa o mesmo com 9 ou com milhares de entradas. As regras por propriedade não cabem num mapa: são perguntadas em ordem, só as que vêm antes da melhor resposta dos mapas, então o custo cresce com o número de regras (poucas, na prática).
 - **Modo:** lista branca ou negra, por filtro.

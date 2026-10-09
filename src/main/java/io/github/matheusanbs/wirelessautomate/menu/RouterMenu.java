@@ -444,7 +444,7 @@ public class RouterMenu extends AbstractContainerMenu {
      */
     private final class RouterCards implements Container {
         private RelativeSide side() {
-            return RelativeSide.fromAbsolute(router.facing(), selectedFace);
+            return RelativeSide.fromAbsolute(router.facing(), router.spin(), selectedFace);
         }
 
         private boolean usable() {

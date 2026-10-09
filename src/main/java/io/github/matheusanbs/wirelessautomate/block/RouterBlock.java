@@ -8,10 +8,13 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -37,6 +40,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -44,16 +48,21 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Roteador Wireless. Gruda na face da máquina onde foi colocado: {@link #FACING} é essa face,
- * então a máquina fica em {@code pos.relative(facing.getOpposite())}.
+ * então a máquina fica em {@code pos.relative(facing.getOpposite())}. {@link #SPIN} é o giro de 90° em
+ * torno do eixo dessa face (Shift + clique com as mãos vazias), só visual: a configuração de cada face
+ * absoluta da máquina não muda (ver {@link RelativeSide}).
  */
 public class RouterBlock extends BaseEntityBlock {
     public static final MapCodec<RouterBlock> CODEC = simpleCodec(RouterBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
     public static final EnumProperty<RouterTier> TIER = EnumProperty.create("tier", RouterTier.class);
+    /** Giro em torno do eixo do {@link #FACING}, 0 a 3; nasce em 0, a posição de antes do giro existir. */
+    public static final IntegerProperty SPIN = IntegerProperty.create("spin", 0, RelativeSide.SPINS - 1);
 
     public RouterBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(TIER, RouterTier.BASIC));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(SPIN, 0)
+                .setValue(TIER, RouterTier.BASIC));
     }
 
     @Override
@@ -63,7 +72,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, TIER);
+        builder.add(FACING, SPIN, TIER);
     }
 
     @Override
@@ -121,7 +130,8 @@ public class RouterBlock extends BaseEntityBlock {
     /**
      * Itens que agem no roteador pelo próprio {@code useOn} (Vinculador, Configurador e núcleos de
      * tier) pulam a interação do bloco; senão o clique abriria a tela e o item não rodaria. Com
-     * qualquer outro item, segue para {@link #useWithoutItem}, que abre a tela.
+     * qualquer outro item, segue para {@link #useWithoutItem}, que abre a tela. Com Shift e um item
+     * na mão o vanilla nem chama a interação do bloco: o giro é só com as mãos vazias.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -133,10 +143,24 @@ public class RouterBlock extends BaseEntityBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    /** Clique direito abre a tela do roteador. */
+    /**
+     * Clique direito abre a tela do roteador. Com Shift (o vanilla só chega aqui com Shift quando as
+     * duas mãos estão vazias) gira o roteador 90° em torno da face onde está preso, se o jogador pode
+     * mexer no bloco; senão não faz nada.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hitResult) {
+        if (player.isSecondaryUseActive()) {
+            if (!player.mayBuild() || !level.mayInteract(player, pos)) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
+                router.spinTo((state.getValue(SPIN) + 1) % RelativeSide.SPINS);
+                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             RouterMenu.open(serverPlayer, router);
@@ -186,14 +210,33 @@ public class RouterBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    /**
+     * Estruturas: gira o {@code facing} e escolhe o {@code spin} que leva o lado {@link RelativeSide#TOP}
+     * para a direção girada, para o roteador inteiro girar junto.
+     */
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
-        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+        Direction top = RelativeSide.TOP.toAbsolute(state.getValue(FACING), state.getValue(SPIN));
+        return withTop(state, rotation.rotate(state.getValue(FACING)), rotation.rotate(top));
     }
 
+    /** Mesma regra do {@link #rotate}: o espelho não preserva a lateralidade, manter o {@code TOP} basta. */
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
-        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+        Direction top = RelativeSide.TOP.toAbsolute(state.getValue(FACING), state.getValue(SPIN));
+        return withTop(state, mirror.mirror(state.getValue(FACING)), mirror.mirror(top));
+    }
+
+    /** O estado com {@code facing} e o giro em que {@code TOP} fica em {@code top}; sem nenhum, mantém o giro. */
+    private static BlockState withTop(BlockState state, Direction facing, Direction top) {
+        int spin = state.getValue(SPIN);
+        for (int candidate = 0; candidate < RelativeSide.SPINS; candidate++) {
+            if (RelativeSide.TOP.toAbsolute(facing, candidate) == top) {
+                spin = candidate;
+                break;
+            }
+        }
+        return state.setValue(FACING, facing).setValue(SPIN, spin);
     }
 
     @Override

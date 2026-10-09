@@ -264,6 +264,42 @@ public class RouterBlockEntity extends BlockEntity {
         return getBlockState().getValue(RouterBlock.FACING);
     }
 
+    /** Giro do roteador em torno do eixo da face onde está preso (0 a 3, de 90° cada). */
+    public int spin() {
+        return getBlockState().getValue(RouterBlock.SPIN);
+    }
+
+    /**
+     * Gira o roteador para {@code newSpin} (0 a 3) sem mudar a configuração de nenhuma face absoluta
+     * da máquina: como ela é salva por {@link RelativeSide}, faces e cartões de todos os tipos trocam
+     * de lado relativo antes do estado novo. Só no servidor; o {@link #setBlockState} avisa o motor.
+     */
+    public void spinTo(int newSpin) {
+        int oldSpin = spin();
+        if (level == null || level.isClientSide || newSpin == oldSpin) {
+            return;
+        }
+        Direction facing = facing();
+        int[] target = new int[SIDES.length];
+        for (RelativeSide side : SIDES) {
+            target[side.ordinal()] = RelativeSide.fromAbsolute(facing, newSpin, side.toAbsolute(facing, oldSpin)).ordinal();
+        }
+        for (FaceConfig[] row : faces) {
+            FaceConfig[] old = row.clone();
+            for (int i = 0; i < old.length; i++) {
+                row[target[i]] = old[i];
+            }
+        }
+        for (ItemStack[][] byType : cards) {
+            ItemStack[][] old = byType.clone();
+            for (int i = 0; i < old.length; i++) {
+                byType[target[i]] = old[i];
+            }
+        }
+        setChanged();
+        level.setBlock(worldPosition, getBlockState().setValue(RouterBlock.SPIN, newSpin), Block.UPDATE_ALL);
+    }
+
     /** Posição da máquina onde o roteador está preso. */
     public BlockPos machinePos() {
         return RouterBlock.attachedPos(getBlockState(), worldPosition);
@@ -271,7 +307,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Configuração da face {@code machineFace} (absoluta) da máquina para {@code type}. Nunca nula. */
     public FaceConfig face(ResourceType type, Direction machineFace) {
-        return face(type, RelativeSide.fromAbsolute(facing(), machineFace));
+        return face(type, RelativeSide.fromAbsolute(facing(), spin(), machineFace));
     }
 
     /** Configuração pelo lado relativo ao {@code facing}, como presets a guardam. Nunca nula. */
@@ -380,7 +416,7 @@ public class RouterBlockEntity extends BlockEntity {
             return 0;
         }
         int count = 0;
-        for (ItemStack stack : cards[index][RelativeSide.fromAbsolute(facing(), machineFace).ordinal()]) {
+        for (ItemStack stack : cards[index][RelativeSide.fromAbsolute(facing(), spin(), machineFace).ordinal()]) {
             if (!stack.isEmpty()) {
                 count++;
             }
@@ -393,7 +429,7 @@ public class RouterBlockEntity extends BlockEntity {
      * slots. Chamado pelo motor na montagem das rotas, não por tick; sem cartões não aloca.
      */
     public FilterSet filterSet(ResourceType type, Direction machineFace) {
-        RelativeSide side = RelativeSide.fromAbsolute(facing(), machineFace);
+        RelativeSide side = RelativeSide.fromAbsolute(facing(), spin(), machineFace);
         Filter embedded = face(type, side).filter();
         int index = cardIndex(type);
         if (index < 0) {
@@ -715,9 +751,13 @@ public class RouterBlockEntity extends BlockEntity {
     public void setBlockState(BlockState state) {
         Direction oldFacing = facing();
         RouterTier oldTier = tier();
+        int oldSpin = spin();
         super.setBlockState(state);
         boolean rotated = facing() != oldFacing;
-        if (rotated || tier() != oldTier) {
+        // Girado no próprio eixo (spin): a máquina fica no lugar, então os caches valem; como o
+        // upgrade de tier, só as rotas e a tela precisam saber.
+        boolean changed = rotated || tier() != oldTier || spin() != oldSpin;
+        if (changed) {
             changeVersion++;
         }
         if (rotated) {
@@ -729,8 +769,8 @@ public class RouterBlockEntity extends BlockEntity {
                 RouterChunkLoader.get().update(this);
             }
         }
-        // Upgrade de tier muda vazão e alcance das rotas.
-        if ((rotated || tier() != oldTier) && level != null && !level.isClientSide) {
+        // Upgrade de tier muda vazão e alcance das rotas; o giro muda o lado relativo de cada face.
+        if (changed && level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
             NodeIndex.track(this);
         }

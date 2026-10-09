@@ -684,7 +684,7 @@ public final class DevEndToEnd {
      * faria; confere no roteador e no conjunto de filtros que o motor usa.
      */
     private static void cardSteps(List<Step> list) {
-        RelativeSide north = RelativeSide.fromAbsolute(Direction.UP, Direction.NORTH);
+        RelativeSide north = RelativeSide.fromAbsolute(Direction.UP, 0, Direction.NORTH);
         list.add(new Step("cartão no inventário", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {

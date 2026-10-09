@@ -150,3 +150,7 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 
 - Minecraft **1.21.1**
 - **NeoForge** 21.1.251 or newer (works with All the Mods 10)
+
+## Source code
+
+The source code is on GitHub: [github.com/MatheusANBS/Wireless-Automate](https://github.com/MatheusANBS/Wireless-Automate). It is published for reference only (All Rights Reserved). Bug reports and suggestions are welcome as issues there.

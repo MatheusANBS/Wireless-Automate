@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (9/10/2026): 1.3.0: giro do roteador e encantamento por nome. Shift + clique direito com as mãos vazias gira o roteador 90° em torno da face onde está preso, sem mudar a configuração das faces; na aba Regra do filtro, o encantamento é escolhido pelo nome ou pelo id numa lista de sugestões, com nível de 1 a 255. Versão 1.3.0 com changelog separado e unificado (`docs/curseforge/changelog-1.3.0.md`), descrição e README em dia.** Build com 141 JUnit e 165 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK.
+**Etapa atual (9/10/2026): 1.4.0: upgrade direto de tier e JEI por tier. O Cartão de Upgrade sobe roteador ou armazenamento de qualquer tier abaixo direto para o dele (no clique e na bancada), com tooltip só do tier de destino; o JEI lista cada tier separado, com uma receita de upgrade por par de tiers. Sugestão do jogador taccio3 no CurseForge. Versão 1.4.0 com changelog separado e unificado (`docs/curseforge/changelog-1.4.0.md`), descrição e README em dia.** Build com 145 JUnit e 165 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK.
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI e AE2/RS2.
 
@@ -43,7 +43,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 ## Próximo passo
 
 0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.
-1. **Upgrade direto e JEI por tier** (ramo `upgrade-direto`, sugestão do taccio3 no CurseForge): conferir no jogo a aba do mod no JEI (cada tier separado, receitas de upgrade de todos os tiers abaixo) e o tooltip novo dos cartões; depois fechar a versão com a `wa-release` e responder o comentário.
+1. Responder o comentário do taccio3 no CurseForge (texto pronto na conversa de 9/10/2026) e subir o jar da 1.4.0.
 1b. Testar num ATM10 real: receitas do ATM no JEI (com o fragmento de ATM Star), tooltip dos cartões, cores, e a migração da config num servidor que já tinha a 1.1. Sem teste automático: Allthemodium sem o All The Tweaks (a terceira versão do Ultimate).
 2. Acompanhar o retorno de quem usa, principalmente com o Mekanism. O projeto foi aprovado no CurseForge em 9/10/2026: [página do mod](https://www.curseforge.com/minecraft/mc-mods/wireless-automate).
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
@@ -98,6 +98,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-09 | Fechamento da 1.4.0: o dono conferiu no jogo o JEI e o tooltip; `mod_version` 1.4.0, changelog separado e unificado, descrição e README; merge do `upgrade-direto` no `main`, tag `v1.4.0` e release no GitHub com o jar. |
 | 2026-10-09 | Upgrade direto de tier (ramo `upgrade-direto`, subagentes nas tarefas 1 e 2): o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, no clique e na bancada (`TierLadder.canUpgrade`, `RouterTier.canUpgradeTo`); tooltip só com o tier de destino; JEI com o tier como subtipo (antes só mostrava o Básico) e uma receita de upgrade por par de tiers; guia e especificação. 145 JUnit e 165 + 7 + 15 + 2 GameTests passando; sem e2e (nenhuma tela ou payload mudou). |
 | 2026-10-09 | **Mod aprovado no CurseForge** (ID 1732160), no ar em https://www.curseforge.com/minecraft/mc-mods/wireless-automate. Os sete arquivos (0.1.0, 1.0.0, 1.0.1, 1.0.2, 1.1.0, 1.2.0 e 1.3.0) aprovados; a 1.2.0 e a 1.3.0 enviadas pelo dono. |
 | 2026-10-09 | Publicação local da 1.3.0: `./gradlew build runGameTestServer` no `main` (165 GameTests passando, jar `wirelessautomate-1.3.0.jar`), tag `v1.3.0` enviada e release no GitHub com o jar. O ramo `ccr-bff97a99-ovni89` já não existia; o CI não rodou por bloqueio de cobrança da conta no GitHub Actions. |

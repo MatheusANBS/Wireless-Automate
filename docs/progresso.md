@@ -99,6 +99,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-09 | Repositório preparado para ficar público: `LICENSE` (All Rights Reserved), README revisado (resumo em inglês, caminho certo da config do servidor, Allthemodium nas integrações e nos comandos) e histórico reescrito sem atribuição de IA (autor único, sem `Co-Authored-By`/`Claude-Session`; `CLAUDE.md` e skills já pedem commits assim). As tags precisam ser recriadas nos commits novos fora da nuvem. |
 | 2026-10-09 | Intenção e plano do benchmark comparativo em `docs/benchmark-comparativo.md` (a fazer numa sessão local). |
 | 2026-10-09 | Na mesma 1.4.0, a pedido do dono: atalhos do JEI (R, U, A) na lista do Baú, do Tanque e do Tanque Químico (`StorageListScreen.ingredientAt` e um `IGuiContainerHandler` no plugin; o químico vira `ChemicalStack` pela ponte `Chemicals.ingredient`). Tag `v1.4.0` movida para o commit novo e o jar da release trocado. |
 | 2026-10-09 | Fechamento da 1.4.0: o dono conferiu no jogo o JEI e o tooltip; `mod_version` 1.4.0, changelog separado e unificado, descrição e README; merge do `upgrade-direto` no `main`, tag `v1.4.0` e release no GitHub com o jar. |

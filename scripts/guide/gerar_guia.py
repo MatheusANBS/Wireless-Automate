@@ -627,10 +627,11 @@ page('upgrade-cards.md', front('Cartões de Upgrade', 'wirelessautomate:tier_cor
 ''' + CARD_IMAGES + '''
 </Row>
 
-Todo roteador nasce **Básico**. Cada cartão sobe **um** tier: Básico → Avançado → Elite →
-Esmeralda → Ultimate. Com o mod **Allthemodium**, entram três degraus entre a Esmeralda e o
-Ultimate: Allthemodium → Vibranium → Unobtainium. A configuração do roteador (faces, filtros, redes)
-não se perde.
+Todo roteador nasce **Básico**. A escada é Básico → Avançado → Elite → Esmeralda → Ultimate. Com
+o mod **Allthemodium**, entram três degraus entre a Esmeralda e o Ultimate: Allthemodium → Vibranium
+→ Unobtainium. Cada cartão leva o roteador direto ao tier dele, de **qualquer tier abaixo**: um
+roteador Básico com o Cartão Esmeralda vira Esmeralda. A configuração do roteador (faces, filtros,
+redes) não se perde.
 
 ## O que cada cartão aumenta
 
@@ -645,10 +646,11 @@ Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de q
 
 | Onde | Como |
 | --- | --- |
-| **No mundo** | Clique com o cartão do tier seguinte num roteador já colocado. |
-| **Na bancada** | Um roteador + o cartão do tier seguinte, em qualquer posição. O nome do roteador continua. |
+| **No mundo** | Clique com o cartão do tier desejado num roteador já colocado. |
+| **Na bancada** | Um roteador + o cartão do tier desejado, em qualquer posição. O nome do roteador continua. |
 
-Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
+O cartão só sobe: não aceita um roteador do mesmo tier ou de um tier acima dele. Como cada cartão leva o
+anterior na receita, ir direto ao tier final é o caminho mais barato.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
 [Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e
@@ -675,10 +677,11 @@ O JEI mostra as receitas do seu pack.
 ''' + CARD_IMAGES + '''
 </Row>
 
-Every router starts as **Basic**. Each card raises **one** tier: Basic → Advanced → Elite →
-Emerald → Ultimate. With the **Allthemodium** mod, three steps go between Emerald and Ultimate:
-Allthemodium → Vibranium → Unobtainium. The router's configuration (faces, filters, networks) is
-kept.
+Every router starts as **Basic**. The ladder is Basic → Advanced → Elite → Emerald → Ultimate.
+With the **Allthemodium** mod, three steps go between Emerald and Ultimate: Allthemodium →
+Vibranium → Unobtainium. Each card takes the router straight to its tier from **any lower tier**: a
+Basic router with the Emerald Card becomes Emerald. The router's configuration (faces, filters,
+networks) is kept.
 
 ## What each card raises
 
@@ -693,10 +696,11 @@ Each step multiplies throughput by 8. Range and dimensions follow the **sender's
 
 | Where | How |
 | --- | --- |
-| **In the world** | Use the next tier's card on a placed router. |
-| **In a crafting table** | A router + the next tier's card, in any slots. The router's name is kept. |
+| **In the world** | Use the card of the tier you want on a placed router. |
+| **In a crafting table** | A router + the card of the tier you want, in any slots. The router's name is kept. |
 
-Tiers can't be skipped: a Basic router won't take the Elite card.
+Cards only go up: they won't take a router of the same tier or a higher one. Since each card takes the
+previous one in its recipe, going straight to the final tier is the cheapest path.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
 [Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and
@@ -2074,7 +2078,7 @@ Todas com itens vanilla, na bancada.
 
 | Também na bancada | Como |
 | --- | --- |
-| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source) + o cartão do tier seguinte, em qualquer posição. |
+| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source) + o cartão de um tier acima, em qualquer posição. |
 | **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios: o original volta. |
 | **Este guia** | Livro + redstone. |
 
@@ -2086,7 +2090,7 @@ All of them with vanilla items, in a crafting table.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the next tier's card, in any slots. |
+| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the card of any higher tier, in any slots. |
 | **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
 | **This guide** | Book + redstone. |
 

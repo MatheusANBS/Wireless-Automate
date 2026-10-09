@@ -27,10 +27,11 @@ item_ids:
   <ItemImage id="wirelessautomate:tier_core_ultimate" scale="2" />
 </Row>
 
-Todo roteador nasce **Básico**. Cada cartão sobe **um** tier: Básico → Avançado → Elite →
-Esmeralda → Ultimate. Com o mod **Allthemodium**, entram três degraus entre a Esmeralda e o
-Ultimate: Allthemodium → Vibranium → Unobtainium. A configuração do roteador (faces, filtros, redes)
-não se perde.
+Todo roteador nasce **Básico**. A escada é Básico → Avançado → Elite → Esmeralda → Ultimate. Com
+o mod **Allthemodium**, entram três degraus entre a Esmeralda e o Ultimate: Allthemodium → Vibranium
+→ Unobtainium. Cada cartão leva o roteador direto ao tier dele, de **qualquer tier abaixo**: um
+roteador Básico com o Cartão Esmeralda vira Esmeralda. A configuração do roteador (faces, filtros,
+redes) não se perde.
 
 ## O que cada cartão aumenta
 
@@ -55,10 +56,11 @@ Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de q
 
 | Onde | Como |
 | --- | --- |
-| **No mundo** | Clique com o cartão do tier seguinte num roteador já colocado. |
-| **Na bancada** | Um roteador + o cartão do tier seguinte, em qualquer posição. O nome do roteador continua. |
+| **No mundo** | Clique com o cartão do tier desejado num roteador já colocado. |
+| **Na bancada** | Um roteador + o cartão do tier desejado, em qualquer posição. O nome do roteador continua. |
 
-Não dá para pular tier: um roteador Básico não aceita o cartão Elite.
+O cartão só sobe: não aceita um roteador do mesmo tier ou de um tier acima dele. Como cada cartão leva o
+anterior na receita, ir direto ao tier final é o caminho mais barato.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
 [Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e

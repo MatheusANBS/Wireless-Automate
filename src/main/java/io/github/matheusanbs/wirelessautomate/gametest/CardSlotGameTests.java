@@ -65,7 +65,7 @@ public final class CardSlotGameTests {
     }
 
     private static RelativeSide side(RouterBlockEntity router, Direction face) {
-        return RelativeSide.fromAbsolute(router.facing(), face);
+        return RelativeSide.fromAbsolute(router.facing(), router.spin(), face);
     }
 
     private static ItemStack card(ResourceType type, Filter filter) {

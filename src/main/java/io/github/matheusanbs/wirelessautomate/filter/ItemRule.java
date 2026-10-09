@@ -226,7 +226,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             }
         }
         enchantment.ifPresent(e -> part(text, Component.translatable(TEXT + "text.enchantment", enchantmentName(e.id()),
-                Component.translatable("enchantment.level." + e.minLevel()))));
+                levelName(e.minLevel()))));
         durability.ifPresent(d -> part(text, Component.translatable(
                 TEXT + (d.atLeast() ? "text.durability.at_least" : "text.durability.below"), d.percent())));
         if (text.getSiblings().isEmpty()) {
@@ -241,6 +241,13 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
     /** Nome traduzido de um encantamento pelo id ({@code enchantment.minecraft.fortune}), sem o registro. */
     public static Component enchantmentName(ResourceLocation id) {
         return Component.translatable(Util.makeDescriptionId("enchantment", id));
+    }
+
+    /** O nível em romanos até X ({@code enchantment.level.N} do jogo) e em algarismos daí em diante. */
+    public static Component levelName(int level) {
+        return level >= 1 && level <= 10
+                ? Component.translatable("enchantment.level." + level)
+                : Component.literal(String.valueOf(level));
     }
 
     private static final String TEXT = "gui.wirelessautomate.filter.rule.";

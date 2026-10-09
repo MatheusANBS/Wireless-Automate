@@ -69,12 +69,12 @@ public final class LinkerActions {
     }
 
     public static long maxVolume() {
-        return Config.LINKER_MAX_AREA_VOLUME.get();
+        return Config.read(Config.LINKER_MAX_AREA_VOLUME);
     }
 
     /** Distância máxima até a área; 0 = sem limite. */
     public static int maxDistance() {
-        return Config.LINKER_MAX_DISTANCE.get();
+        return Config.read(Config.LINKER_MAX_DISTANCE);
     }
 
     /** Canto 1 se não há área (ou ela está completa, ou é de outra dimensão); senão, o canto 2. */

@@ -67,7 +67,7 @@ on what it matches before you add it.
 | **Has potion** | Potions, tipped arrows. |
 | **Stackable** | **No** = tools, armor and anything that sits alone in a slot. |
 | **Has contents** | A shulker box or bundle with something inside. |
-| **Enchantment** | One enchantment with a minimum level: Fortune ≥ III. |
+| **Enchantment** | One enchantment with a minimum level: Fortune ≥ III. Type the name or the id and pick it from the list; level from 1 to 255. |
 | **Durability** | Remaining ≥ or < a percentage: < 25% sends it to repair. |
 | **Only in** | Limits it to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. |
 

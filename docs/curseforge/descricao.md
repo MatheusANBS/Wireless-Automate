@@ -12,7 +12,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ![Connect machines without pipes](https://media.forgecdn.net/attachments/2028/252/feature-1-network-png.png)
 
-- **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on.
+- **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
 - **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). Each resource tab of a router can join a different network, so a furnace's items can go to your ore line while its energy comes from your base grid.
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
@@ -31,7 +31,7 @@ Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or bl
 
 ### Property rules
 
-Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (Fortune ≥ III) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
+Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (type its name and pick from the suggestions, any level from 1 to 255: Fortune ≥ III, Efficiency ≥ 37) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
 
 ![Property rules](https://media.forgecdn.net/attachments/2028/259/feature-8-rules-png.png)
 

@@ -434,14 +434,15 @@ final class NetworkRoutes {
     private Port[] readPorts(NodePorts member, ResourceType type) {
         RouterBlockEntity node = member.node;
         boolean powered = node.powered();
-        // O facing sai do blockstate: lido uma vez por nó, e não uma por face.
+        // O facing e o giro saem do blockstate: lidos uma vez por nó, e não uma por face.
         Direction facing = node.facing();
+        int spin = node.spin();
         Port[] active = NO_PORTS;
         int count = 0;
         RouterTier tier = null;
         BlockPos machine = null;
         for (Direction face : DIRECTIONS) {
-            FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, face));
+            FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, spin, face));
             if (!config.isActive(powered)) {
                 continue;
             }

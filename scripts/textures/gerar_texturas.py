@@ -1068,7 +1068,7 @@ def modelos_tiers() -> None:
     """Modelos de bloco, blockstates e modelos de item do roteador, dos armazenamentos e dos cartões, por tier.
 
     O modelo do roteador (elementos e UVs) vem do router_basic.json, que é o molde escrito à mão; os outros
-    tiers só trocam as texturas.
+    tiers só trocam as texturas. Cada tier tem ainda os filhos router_<tier>_spin1..3 (o giro do estado spin).
     """
     molde = (MODELOS / "models/block/router_basic.json").read_text(encoding="utf-8")
     variantes: dict[str, dict] = {}
@@ -1076,8 +1076,18 @@ def modelos_tiers() -> None:
         if t != "basic":
             destino = MODELOS / f"models/block/router_{t}.json"
             destino.write_text(molde.replace("router_basic_", f"router_{t}_"), encoding="utf-8", newline="\n")
+        for spin in range(1, 4):
+            # Giro (spin) em torno de Y antes da rotação do blockstate, pela transformação raiz do NeoForge.
+            # O ângulo é negativo porque o y positivo gira no sentido anti-horário visto de cima; o spin
+            # gira no horário (norte -> leste), a convenção do RelativeSide e do "y" do blockstate.
+            _grava_json(MODELOS / f"models/block/router_{t}_spin{spin}.json", {
+                "parent": f"wirelessautomate:block/router_{t}",
+                "transform": {"origin": "center", "rotation": {"y": -90 * spin}},
+            })
         for face, rot in ROTACOES_ROTEADOR.items():
-            variantes[f"facing={face},tier={t}"] = {"model": f"wirelessautomate:block/router_{t}", **rot}
+            for spin in range(4):
+                modelo = f"wirelessautomate:block/router_{t}" + (f"_spin{spin}" if spin else "")
+                variantes[f"facing={face},spin={spin},tier={t}"] = {"model": modelo, **rot}
     _grava_json(MODELOS / "blockstates/router.json", {"variants": variantes})
     _grava_json(MODELOS / "models/item/router.json", {
         "parent": "wirelessautomate:block/router_basic",

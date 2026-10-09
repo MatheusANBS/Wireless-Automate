@@ -1,0 +1,9 @@
+{
+  "parent": "wirelessautomate:block/router_advanced",
+  "transform": {
+    "origin": "center",
+    "rotation": {
+      "y": -90
+    }
+  }
+}

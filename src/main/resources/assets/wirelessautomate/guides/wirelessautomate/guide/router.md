@@ -25,6 +25,7 @@ machine face does.
 | --- | --- |
 | **Attaches to** | Any face of any block (it needs a block behind it). |
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
+| **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |

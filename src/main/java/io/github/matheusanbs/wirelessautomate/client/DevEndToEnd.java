@@ -126,7 +126,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
  *   <li>clique direito no roteador A ({@code gameMode.useItemOn}, mão vazia), face Cima, Extrai;</li>
  *   <li>fecha, abre o roteador B, Insere; espera as pedras chegarem ao baú B;</li>
  *   <li>reabre A (a vazão é contada na origem), põe mais 64 pedras e espera a vazão aparecer na tela;</li>
- *   <li>Editar abre o filtro; uma regra por tag pelo campo de texto; Voltar;</li>
+ *   <li>Editar abre o filtro; na aba Regra, o encantamento pelo nome (digita {@code prot}, Enter, nível 37);
+ *       uma regra por tag pelo campo de texto; Voltar;</li>
  *   <li>renomeia o nó e troca a rede da aba Itens pelo seletor na linha das abas; depois troca só a
  *       da aba Energia e confere que a de Itens e a de Fluidos não mudaram;</li>
  *   <li>põe um Cartão de Filtro num slot da face Norte pela tela (pega no inventário, solta no slot);</li>
@@ -255,6 +256,10 @@ public final class DevEndToEnd {
             minecraft.options.onboardAccessibility = false;
             // sem as dicas do tutorial no canto das capturas
             minecraft.getTutorial().setStep(TutorialSteps.NONE);
+        }
+        if (minecraft.screen instanceof net.minecraft.client.gui.screens.AccessibilityOnboardingScreen) {
+            // sem options.txt o jogo abre a tela de acessibilidade, e a flag acima chega tarde: troca pela de título
+            minecraft.setScreen(new TitleScreen(true));
         }
         if (SHOWCASE_SCALE > 1 && ticks >= 3) {
             // a janela pode mudar de tamanho depois (o GLFW avisa atrasado): reimpõe o framebuffer grande
@@ -538,6 +543,72 @@ public final class DevEndToEnd {
                 () -> filterScreen().tab() == FilterScreen.Tab.RULE
                         && find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.yes"))) != null,
                 () -> "aba " + filterScreen().tab()));
+        // encantamento por nome: sugestões pelo nome traduzido do registro, Enter escolhe, nível digitado
+        Predicate<AbstractWidget> enchantToggle = w -> w instanceof FlatButton
+                && w.getMessage().equals(Component.translatable("gui.wirelessautomate.filter.rule.enchantment"));
+        list.add(new Step("filtro: marcar Encantamento", STEP_TIMEOUT_MS,
+                () -> click(widget(enchantToggle, "Encantamento")),
+                () -> filterScreen().ruleDraft().enchantment().isPresent() && filterScreen().enchantBox().visible,
+                () -> "rascunho " + filterScreen().ruleDraft()));
+        list.add(new Step("filtro: focar o encantamento lista todos", STEP_TIMEOUT_MS, () -> {
+            EditBox box = filterScreen().enchantBox();
+            click(Minecraft.getInstance().screen, box.getX() + 4, box.getY() + 3);
+        }, () -> filterScreen().suggestionLabels().size() > 5,
+                () -> "sugestões " + filterScreen().suggestionLabels()));
+        list.add(capture("filtro-regra-lista"));
+        list.add(new Step("filtro: digitar prot no encantamento", STEP_TIMEOUT_MS, () -> type("prot"), () -> filterScreen().enchantBox().getValue().equals("prot")
+                && filterScreen().suggestionLabels().contains(enchantmentName(
+                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION)),
+                () -> "campo '" + filterScreen().enchantBox().getValue() + "', sugestões " + filterScreen().suggestionLabels()));
+        list.add(capture("filtro-regra-sugestoes"));
+        list.add(clipCheck("filtro: sugestões"));
+        list.add(new Step("filtro: escolher com Enter", STEP_TIMEOUT_MS,
+                () -> filterScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
+                () -> filterScreen().ruleDraft().enchantment()
+                        .map(e -> e.id().equals(net.minecraft.world.item.enchantment.Enchantments.PROTECTION.location()))
+                        .orElse(false)
+                        && filterScreen().suggestionLabels().isEmpty()
+                        && filterScreen().enchantBox().getValue().equals(enchantmentName(
+                                net.minecraft.world.item.enchantment.Enchantments.PROTECTION)),
+                () -> "rascunho " + filterScreen().ruleDraft() + ", campo '" + filterScreen().enchantBox().getValue() + "'"));
+        list.add(new Step("filtro: nível 37", STEP_TIMEOUT_MS, () -> {
+            EditBox level = filterScreen().levelBox();
+            click(Minecraft.getInstance().screen, level.getX() + 4, level.getY() + 3);
+            type("37");
+        }, () -> filterScreen().ruleDraft().enchantment()
+                .map(e -> e.minLevel() == 37
+                        && e.id().equals(net.minecraft.world.item.enchantment.Enchantments.PROTECTION.location()))
+                .orElse(false) && filterScreen().levelBox().getValue().equals("37"),
+                () -> "rascunho " + filterScreen().ruleDraft() + ", nível '" + filterScreen().levelBox().getValue() + "'"));
+        list.add(capture("filtro-regra-nivel"));
+        list.add(clipCheck("filtro: regra com nível"));
+        list.add(new Step("filtro: encantamento e nível inválidos", STEP_TIMEOUT_MS, () -> {
+            EditBox box = filterScreen().enchantBox();
+            click(Minecraft.getInstance().screen, box.getX() + 4, box.getY() + 3);
+            type("zzz");
+            EditBox level = filterScreen().levelBox();
+            click(Minecraft.getInstance().screen, level.getX() + 4, level.getY() + 3);
+            type("0");
+            click(Minecraft.getInstance().screen, box.getX() + 4, box.getY() + 3);
+            type("zzz");
+        }, () -> filterScreen().suggestionLabels().isEmpty() && filterScreen().enchantBox().getValue().equals("zzz")
+                && filterScreen().levelBox().getValue().equals("0")
+                && find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add"))) instanceof AbstractWidget add
+                && !add.active,
+                () -> "campo '" + filterScreen().enchantBox().getValue() + "', nível '" + filterScreen().levelBox().getValue()
+                        + "', sugestões " + filterScreen().suggestionLabels()));
+        list.add(capture("filtro-regra-invalido"));
+        list.add(new Step("filtro: Esc volta o encantamento", STEP_TIMEOUT_MS,
+                () -> filterScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen
+                        && filterScreen().enchantBox().getValue().equals(enchantmentName(
+                                net.minecraft.world.item.enchantment.Enchantments.PROTECTION))
+                        && filterScreen().ruleDraft().enchantment().map(e -> e.minLevel() == 37).orElse(false),
+                () -> "campo '" + filterScreen().enchantBox().getValue() + "', rascunho " + filterScreen().ruleDraft()));
+        list.add(new Step("filtro: desmarcar Encantamento", STEP_TIMEOUT_MS,
+                () -> click(widget(enchantToggle, "Encantamento")),
+                () -> filterScreen().ruleDraft().enchantment().isEmpty() && !filterScreen().enchantBox().visible,
+                () -> "rascunho " + filterScreen().ruleDraft()));
         list.add(new Step("filtro: regra Encantado em picaretas", STEP_TIMEOUT_MS, () -> {
             // o primeiro "Sim" é o de Encantado (as condições vêm na ordem da tela)
             click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.yes")), "Sim de Encantado"));
@@ -684,7 +755,7 @@ public final class DevEndToEnd {
      * faria; confere no roteador e no conjunto de filtros que o motor usa.
      */
     private static void cardSteps(List<Step> list) {
-        RelativeSide north = RelativeSide.fromAbsolute(Direction.UP, Direction.NORTH);
+        RelativeSide north = RelativeSide.fromAbsolute(Direction.UP, 0, Direction.NORTH);
         list.add(new Step("cartão no inventário", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {
@@ -2316,6 +2387,40 @@ public final class DevEndToEnd {
         list.add(language("en_us"));
     }
 
+    /** Teto de capturas por página do guia (a primeira e as rolagens). */
+    private static final int GUIDE_MAX_PARTS = 10;
+    /** Se a última rolagem do guia andou; parada no fim, as capturas seguintes da página ficam de fora. */
+    private static boolean guideScrolled;
+
+    /**
+     * Rola o documento do guia uma tela para baixo pela barra de rolagem do GuideME (por reflexão: o
+     * GuideME é opcional) e diz se a rolagem mudou. A roda do mouse no meio da janela cai no menu da
+     * esquerda, conforme a escala, e não rolava a página.
+     */
+    private static boolean scrollGuide() {
+        Screen screen = Minecraft.getInstance().screen;
+        if (screen == null) {
+            return false;
+        }
+        for (var child : screen.children()) {
+            if (!child.getClass().getSimpleName().equals("GuideScrollbar")
+                    || !(child instanceof net.minecraft.client.gui.components.AbstractWidget bar)) {
+                continue;
+            }
+            try {
+                var get = child.getClass().getMethod("getScrollAmount");
+                var set = child.getClass().getMethod("setScrollAmount", int.class);
+                int before = (int) get.invoke(child);
+                set.invoke(child, before + Math.max(20, bar.getHeight() * 9 / 10));
+                return (int) get.invoke(child) != before;
+            } catch (ReflectiveOperationException e) {
+                WirelessAutomate.LOGGER.warn("E2E: não deu para rolar o guia", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
     private static void guidePages(List<Step> list, String suffix) {
         for (String page : GUIDE_PAGES) {
             list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
@@ -2324,16 +2429,21 @@ public final class DevEndToEnd {
                             && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
             list.add(capture("guia-" + page + suffix));
-            // O resto da página: rola e captura de novo (as páginas longas passam de uma tela).
-            for (int part = 2; part <= 4; part++) {
-                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> {
-                    Minecraft minecraft = Minecraft.getInstance();
-                    Screen screen = minecraft.screen;
-                    if (screen != null) {
-                        screen.mouseScrolled(screen.width / 2.0, screen.height / 2.0, 0, -20);
+            // O resto da página: rola uma tela por vez e captura, até a rolagem não mudar mais (o fim).
+            for (int part = 2; part <= GUIDE_MAX_PARTS; part++) {
+                String file = "guia-" + page + suffix + "-" + part;
+                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> guideScrolled = scrollGuide(),
+                        () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
+                list.add(new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+                    if (!guideScrolled) {
+                        return true;
                     }
-                }, () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
-                list.add(capture("guia-" + page + suffix + "-" + part));
+                    if (stepTicks < 6) {
+                        return false;
+                    }
+                    capture(Minecraft.getInstance(), file);
+                    return true;
+                }, () -> file + ".png"));
             }
         }
         list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
@@ -2591,6 +2701,12 @@ public final class DevEndToEnd {
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(close("pt: fechar o Tablet"));
         list.add(language("en_us"));
+    }
+
+    /** Nome traduzido de um encantamento, pelo registro do mundo do cliente. */
+    private static String enchantmentName(net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> key) {
+        return Minecraft.getInstance().level.registryAccess().registryOrThrow(Registries.ENCHANTMENT)
+                .getHolderOrThrow(key).value().description().getString();
     }
 
     /**

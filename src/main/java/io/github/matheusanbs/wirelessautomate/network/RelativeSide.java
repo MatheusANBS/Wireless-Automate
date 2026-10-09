@@ -4,14 +4,17 @@ import java.util.Locale;
 import net.minecraft.core.Direction;
 
 /**
- * Face da máquina em relação ao {@code facing} do roteador. A configuração por face é salva assim,
- * para que presets e blocos girados funcionem com o roteador virado para qualquer lado.
+ * Face da máquina em relação ao {@code facing} e ao giro ({@code spin}) do roteador. A configuração
+ * por face é salva assim, para que presets e blocos girados funcionem com o roteador virado para
+ * qualquer lado.
  *
  * <p>Os nomes são de quem olha de fora para a face {@link #FRONT}, com {@link #TOP} para cima na
- * visão. Com o roteador numa lateral da máquina, {@link #TOP} é para cima e {@link #LEFT} e
- * {@link #RIGHT} são a esquerda e a direita de quem olha. A conversão aplica a mesma rotação do
- * blockstate (a do para-raios: {@code up} sem rotação, {@code down} x=180, laterais x=90 + y) às
- * direções do caso {@code facing=up}, em que {@link #TOP} é para onde apontam os LEDs (sul).
+ * visão. Com o roteador numa lateral da máquina e sem giro, {@link #TOP} é para cima e {@link #LEFT}
+ * e {@link #RIGHT} são a esquerda e a direita de quem olha. A conversão parte das direções do caso
+ * {@code facing=up} sem giro, em que {@link #TOP} é para onde apontam os LEDs (sul): primeiro o
+ * {@code spin} as gira em torno de Y no sentido horário visto de cima ({@link Direction#getClockWise()}),
+ * {@code spin} vezes; depois aplica a mesma rotação do blockstate (a do para-raios: {@code up} sem
+ * rotação, {@code down} x=180, laterais x=90 + y). Com {@code spin=0} o resultado é o de antes do giro.
  */
 public enum RelativeSide {
     /** A face onde o roteador está preso (igual ao {@code facing}). */
@@ -25,24 +28,30 @@ public enum RelativeSide {
     LEFT(Direction.EAST),
     RIGHT(Direction.WEST);
 
+    /** Giros possíveis do roteador (0 a 3, de 90° cada). */
+    public static final int SPINS = 4;
+
     private static final RelativeSide[] VALUES = values();
     private static final Direction[] DIRECTIONS = Direction.values();
-    /** [facing][lado relativo] → face absoluta. */
-    private static final Direction[][] TO_ABSOLUTE = new Direction[DIRECTIONS.length][VALUES.length];
-    /** [facing][face absoluta] → lado relativo. */
-    private static final RelativeSide[][] FROM_ABSOLUTE = new RelativeSide[DIRECTIONS.length][DIRECTIONS.length];
+    /** [facing][spin][lado relativo] → face absoluta. */
+    private static final Direction[][][] TO_ABSOLUTE = new Direction[DIRECTIONS.length][SPINS][VALUES.length];
+    /** [facing][spin][face absoluta] → lado relativo. */
+    private static final RelativeSide[][][] FROM_ABSOLUTE =
+            new RelativeSide[DIRECTIONS.length][SPINS][DIRECTIONS.length];
 
     static {
         for (Direction facing : DIRECTIONS) {
-            for (RelativeSide side : VALUES) {
-                Direction absolute = rotate(side.whenUp, facing);
-                TO_ABSOLUTE[facing.ordinal()][side.ordinal()] = absolute;
-                FROM_ABSOLUTE[facing.ordinal()][absolute.ordinal()] = side;
+            for (int spin = 0; spin < SPINS; spin++) {
+                for (RelativeSide side : VALUES) {
+                    Direction absolute = rotate(spin(side.whenUp, spin), facing);
+                    TO_ABSOLUTE[facing.ordinal()][spin][side.ordinal()] = absolute;
+                    FROM_ABSOLUTE[facing.ordinal()][spin][absolute.ordinal()] = side;
+                }
             }
         }
     }
 
-    /** Face absoluta com o roteador em {@code facing=up}, sem rotação de modelo. */
+    /** Face absoluta com o roteador em {@code facing=up}, sem giro nem rotação de modelo. */
     private final Direction whenUp;
     private final String key = name().toLowerCase(Locale.ROOT);
 
@@ -55,16 +64,25 @@ public enum RelativeSide {
         return key;
     }
 
-    public Direction toAbsolute(Direction facing) {
-        return TO_ABSOLUTE[facing.ordinal()][ordinal()];
+    /** Face absoluta deste lado com o roteador em {@code facing} e girado {@code spin} vezes (0 a 3). */
+    public Direction toAbsolute(Direction facing, int spin) {
+        return TO_ABSOLUTE[facing.ordinal()][spin][ordinal()];
     }
 
-    public static Direction toAbsolute(Direction facing, RelativeSide side) {
-        return side.toAbsolute(facing);
+    public static Direction toAbsolute(Direction facing, int spin, RelativeSide side) {
+        return side.toAbsolute(facing, spin);
     }
 
-    public static RelativeSide fromAbsolute(Direction facing, Direction absolute) {
-        return FROM_ABSOLUTE[facing.ordinal()][absolute.ordinal()];
+    public static RelativeSide fromAbsolute(Direction facing, int spin, Direction absolute) {
+        return FROM_ABSOLUTE[facing.ordinal()][spin][absolute.ordinal()];
+    }
+
+    /** Giro em torno de Y, horário visto de cima, {@code spin} vezes; cima e baixo ficam. */
+    private static Direction spin(Direction dir, int spin) {
+        for (int i = 0; i < spin; i++) {
+            dir = dir.getAxis() == Direction.Axis.Y ? dir : dir.getClockWise();
+        }
+        return dir;
     }
 
     /** Rotação do blockstate para {@code facing}: primeiro x, depois y (como em RouterShapes). */
@@ -83,10 +101,7 @@ public enum RelativeSide {
         for (int i = 0; i < xSteps; i++) {
             dir = rotateX(dir);
         }
-        for (int i = 0; i < ySteps; i++) {
-            dir = dir.getAxis() == Direction.Axis.Y ? dir : dir.getClockWise();
-        }
-        return dir;
+        return spin(dir, ySteps);
     }
 
     /** x=90 do modelo: cima vira norte, norte vira baixo, baixo vira sul e sul vira cima. */

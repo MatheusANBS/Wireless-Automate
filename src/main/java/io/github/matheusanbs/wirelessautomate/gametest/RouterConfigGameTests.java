@@ -18,11 +18,16 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -103,15 +108,18 @@ public final class RouterConfigGameTests {
     @GameTest(template = "empty")
     public static void relativeSidesFollowModelRotation(GameTestHelper helper) {
         for (Direction facing : Direction.values()) {
-            Set<Direction> seen = EnumSet.noneOf(Direction.class);
-            for (RelativeSide side : RelativeSide.values()) {
-                Direction absolute = RelativeSide.toAbsolute(facing, side);
-                seen.add(absolute);
-                helper.assertValueEqual(RelativeSide.fromAbsolute(facing, absolute), side, facing + " " + side);
+            for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
+                String where = facing + " spin " + spin;
+                Set<Direction> seen = EnumSet.noneOf(Direction.class);
+                for (RelativeSide side : RelativeSide.values()) {
+                    Direction absolute = RelativeSide.toAbsolute(facing, spin, side);
+                    seen.add(absolute);
+                    helper.assertValueEqual(RelativeSide.fromAbsolute(facing, spin, absolute), side, where + " " + side);
+                }
+                helper.assertValueEqual(seen.size(), 6, "não é bijeção para " + where);
+                helper.assertValueEqual(RelativeSide.FRONT.toAbsolute(facing, spin), facing, "FRONT com " + where);
+                helper.assertValueEqual(RelativeSide.BACK.toAbsolute(facing, spin), facing.getOpposite(), "BACK com " + where);
             }
-            helper.assertValueEqual(seen.size(), 6, "não é bijeção para " + facing);
-            helper.assertValueEqual(RelativeSide.FRONT.toAbsolute(facing), facing, "FRONT");
-            helper.assertValueEqual(RelativeSide.BACK.toAbsolute(facing), facing.getOpposite(), "BACK");
         }
 
         // Rotação do blockstate (x depois y) aplicada às direções do caso facing=up.
@@ -123,10 +131,10 @@ public final class RouterConfigGameTests {
                 Direction.EAST, new Direction[] {Direction.UP, Direction.SOUTH},
                 Direction.WEST, new Direction[] {Direction.UP, Direction.NORTH});
         topLeft.forEach((facing, expected) -> {
-            helper.assertValueEqual(RelativeSide.TOP.toAbsolute(facing), expected[0], "TOP com " + facing);
-            helper.assertValueEqual(RelativeSide.LEFT.toAbsolute(facing), expected[1], "LEFT com " + facing);
-            helper.assertValueEqual(RelativeSide.BOTTOM.toAbsolute(facing), expected[0].getOpposite(), "BOTTOM");
-            helper.assertValueEqual(RelativeSide.RIGHT.toAbsolute(facing), expected[1].getOpposite(), "RIGHT");
+            helper.assertValueEqual(RelativeSide.TOP.toAbsolute(facing, 0), expected[0], "TOP com " + facing);
+            helper.assertValueEqual(RelativeSide.LEFT.toAbsolute(facing, 0), expected[1], "LEFT com " + facing);
+            helper.assertValueEqual(RelativeSide.BOTTOM.toAbsolute(facing, 0), expected[0].getOpposite(), "BOTTOM");
+            helper.assertValueEqual(RelativeSide.RIGHT.toAbsolute(facing, 0), expected[1].getOpposite(), "RIGHT");
         });
 
         // A mesma configuração salva vale em relação ao facing de cada roteador.
@@ -141,6 +149,100 @@ public final class RouterConfigGameTests {
         helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.EXTRACT, "FRONT girada");
         helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT, "TOP girada");
         helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "sobrou na face antiga");
+        helper.succeed();
+    }
+
+    /** Giro com facing=up: horário visto de cima, então os LEDs (TOP) vão de sul para oeste. */
+    @GameTest(template = "empty")
+    public static void spinTurnsClockwiseSeenFromOutside(GameTestHelper helper) {
+        Direction[] tops = {Direction.SOUTH, Direction.WEST, Direction.NORTH, Direction.EAST};
+        for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
+            helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.UP, spin), tops[spin], "TOP com spin " + spin);
+        }
+        helper.assertValueEqual(RelativeSide.LEFT.toAbsolute(Direction.UP, 1), Direction.SOUTH, "LEFT com spin 1");
+        // Numa parede (facing=north, olhando para sul): TOP sai de cima e vai para a direita de quem olha.
+        helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.NORTH, 1), Direction.WEST, "TOP na parede");
+        helper.succeed();
+    }
+
+    /** Se o ponto (em pixels, dentro do bloco) cai em alguma caixa da forma do estado. */
+    private static boolean shapeHas(BlockState state, double x, double y, double z) {
+        Vec3 point = new Vec3(x / 16, y / 16, z / 16);
+        return state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs().stream()
+                .anyMatch(box -> box.contains(point));
+    }
+
+    /** Colisão com facing=up e spin 1: a antena do norte (x 1,5..3,5, z 2,5..4,5) vai para o leste. */
+    @GameTest(template = "empty")
+    public static void shapeFollowsSpin(GameTestHelper helper) {
+        BlockState spin0 = router(Direction.UP);
+        BlockState spin1 = spin0.setValue(RouterBlock.SPIN, 1);
+        helper.assertTrue(shapeHas(spin0, 2.5, 10, 3.5), "antena no norte com spin 0");
+        helper.assertTrue(shapeHas(spin1, 12.5, 10, 2.5), "antena girada para x 11,5..13,5, z 1,5..3,5");
+        helper.assertFalse(shapeHas(spin1, 2.5, 10, 3.5), "antena ainda no lugar do spin 0");
+        helper.succeed();
+    }
+
+    /**
+     * Para os 24 (facing, spin), a forma bate com o {@link RelativeSide}: as antenas saem do corpo para o
+     * FRONT, encostadas no lado BOTTOM (o oposto dos LEDs), uma de cada lado do eixo LEFT/RIGHT.
+     */
+    @GameTest(template = "empty")
+    public static void shapeMatchesRelativeSides(GameTestHelper helper) {
+        for (Direction facing : Direction.values()) {
+            for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
+                BlockState state = router(facing).setValue(RouterBlock.SPIN, spin);
+                Vec3i front = RelativeSide.FRONT.toAbsolute(facing, spin).getNormal();
+                Vec3i bottom = RelativeSide.BOTTOM.toAbsolute(facing, spin).getNormal();
+                Vec3i left = RelativeSide.LEFT.toAbsolute(facing, spin).getNormal();
+                String where = facing + " spin " + spin;
+                for (int lado : new int[] {-1, 1}) {
+                    // Centro das antenas do caso up/spin 0: (2,5 ou 13,5; 11; 3,5) = centro + 3 FRONT + 4,5 BOTTOM ± 5,5.
+                    double[] antena = point(front, 3, bottom, 4.5, left, 5.5 * lado);
+                    double[] espelho = point(front, 3, bottom, -4.5, left, 5.5 * lado);
+                    helper.assertTrue(shapeHas(state, antena[0], antena[1], antena[2]), "antena com " + where);
+                    helper.assertFalse(shapeHas(state, espelho[0], espelho[1], espelho[2]), "antena do lado TOP com " + where);
+                }
+            }
+        }
+        helper.succeed();
+    }
+
+    /** Centro do bloco (8, 8, 8) somado a {@code a·da + b·db + c·dc}, em pixels. */
+    private static double[] point(Vec3i da, double a, Vec3i db, double b, Vec3i dc, double c) {
+        return new double[] {
+                8 + a * da.getX() + b * db.getX() + c * dc.getX(),
+                8 + a * da.getY() + b * db.getY() + c * dc.getY(),
+                8 + a * da.getZ() + b * db.getZ() + c * dc.getZ()};
+    }
+
+    /** Estruturas: girar o roteador leva o TOP junto, escolhendo o spin. */
+    @GameTest(template = "empty")
+    public static void rotateKeepsTopWithStructure(GameTestHelper helper) {
+        BlockState up = router(Direction.UP);
+        BlockState turned = up.rotate(Rotation.CLOCKWISE_90);
+        helper.assertValueEqual(turned.getValue(RouterBlock.FACING), Direction.UP, "facing");
+        helper.assertValueEqual(turned.getValue(RouterBlock.SPIN), 1, "spin");
+        helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.UP, turned.getValue(RouterBlock.SPIN)),
+                Rotation.CLOCKWISE_90.rotate(Direction.SOUTH), "TOP girado");
+        for (Direction facing : Direction.values()) {
+            for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
+                BlockState state = router(facing).setValue(RouterBlock.SPIN, spin);
+                Direction top = RelativeSide.TOP.toAbsolute(facing, spin);
+                for (Rotation rotation : Rotation.values()) {
+                    BlockState rotated = state.rotate(rotation);
+                    helper.assertValueEqual(rotated.getValue(RouterBlock.FACING), rotation.rotate(facing), "facing " + rotation);
+                    helper.assertValueEqual(RelativeSide.TOP.toAbsolute(rotated.getValue(RouterBlock.FACING),
+                            rotated.getValue(RouterBlock.SPIN)), rotation.rotate(top), facing + " " + spin + " " + rotation);
+                }
+                for (Mirror mirror : Mirror.values()) {
+                    BlockState mirrored = state.mirror(mirror);
+                    helper.assertValueEqual(mirrored.getValue(RouterBlock.FACING), mirror.mirror(facing), "facing " + mirror);
+                    helper.assertValueEqual(RelativeSide.TOP.toAbsolute(mirrored.getValue(RouterBlock.FACING),
+                            mirrored.getValue(RouterBlock.SPIN)), mirror.mirror(top), facing + " " + spin + " " + mirror);
+                }
+            }
+        }
         helper.succeed();
     }
 

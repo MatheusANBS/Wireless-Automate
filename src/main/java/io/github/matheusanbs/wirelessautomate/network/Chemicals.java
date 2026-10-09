@@ -46,6 +46,11 @@ public final class Chemicals {
         return LOADED ? MekanismChemicals.ingredientId(ingredient) : Optional.empty();
     }
 
+    /** O químico como ingrediente do JEI ({@code ChemicalStack}), ou {@code null} (sem o Mekanism ou sem o químico). */
+    public static @Nullable Object ingredient(ResourceLocation id) {
+        return LOADED ? MekanismChemicals.ingredient(id) : null;
+    }
+
     /** Existe um químico com esse id (sempre falso sem o Mekanism). */
     public static boolean exists(ResourceLocation id) {
         return LOADED && MekanismChemicals.exists(id);

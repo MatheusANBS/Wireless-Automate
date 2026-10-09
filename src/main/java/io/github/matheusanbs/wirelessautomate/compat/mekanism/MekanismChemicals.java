@@ -66,6 +66,12 @@ public final class MekanismChemicals {
         return ingredient instanceof ChemicalStack stack && !stack.isEmpty() ? Optional.of(id(stack)) : Optional.empty();
     }
 
+    /** O químico como ingrediente do JEI ({@link ChemicalStack} de 1.000 mB), ou {@code null} se ele não existe. */
+    public static @Nullable Object ingredient(ResourceLocation id) {
+        Chemical chemical = chemical(id);
+        return chemical == null ? null : new ChemicalStack(chemical, 1_000);
+    }
+
     /** Existe um químico registrado com esse id (o vazio não conta). */
     public static boolean exists(ResourceLocation id) {
         return !id.equals(MekanismAPI.EMPTY_CHEMICAL_KEY.location()) && MekanismAPI.CHEMICAL_REGISTRY.containsKey(id);

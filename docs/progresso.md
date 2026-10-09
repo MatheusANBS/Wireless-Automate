@@ -98,6 +98,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-09 | Na mesma 1.4.0, a pedido do dono: atalhos do JEI (R, U, A) na lista do Baú, do Tanque e do Tanque Químico (`StorageListScreen.ingredientAt` e um `IGuiContainerHandler` no plugin; o químico vira `ChemicalStack` pela ponte `Chemicals.ingredient`). Tag `v1.4.0` movida para o commit novo e o jar da release trocado. |
 | 2026-10-09 | Fechamento da 1.4.0: o dono conferiu no jogo o JEI e o tooltip; `mod_version` 1.4.0, changelog separado e unificado, descrição e README; merge do `upgrade-direto` no `main`, tag `v1.4.0` e release no GitHub com o jar. |
 | 2026-10-09 | Upgrade direto de tier (ramo `upgrade-direto`, subagentes nas tarefas 1 e 2): o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, no clique e na bancada (`TierLadder.canUpgrade`, `RouterTier.canUpgradeTo`); tooltip só com o tier de destino; JEI com o tier como subtipo (antes só mostrava o Básico) e uma receita de upgrade por par de tiers; guia e especificação. 145 JUnit e 165 + 7 + 15 + 2 GameTests passando; sem e2e (nenhuma tela ou payload mudou). |
 | 2026-10-09 | **Mod aprovado no CurseForge** (ID 1732160), no ar em https://www.curseforge.com/minecraft/mc-mods/wireless-automate. Os sete arquivos (0.1.0, 1.0.0, 1.0.1, 1.0.2, 1.1.0, 1.2.0 e 1.3.0) aprovados; a 1.2.0 e a 1.3.0 enviadas pelo dono. |

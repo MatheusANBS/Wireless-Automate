@@ -2008,6 +2008,14 @@ public final class DevEndToEnd {
         list.add(new Step("Baú: busca", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue("diam"),
                 () -> chestScreen().shownCount() == 1, () -> "na lista " + chestScreen().shownCount()));
         list.add(capture("bau-2-busca"));
+        list.add(new Step("Baú: ingrediente do JEI sob o mouse", STEP_TIMEOUT_MS, () -> { }, () -> {
+            int[] cell = chestScreen().cellCenter(0);
+            StorageListScreen.Hovered hovered = chestScreen().ingredientAt(cell[0], cell[1]);
+            return hovered != null && hovered.ingredient() instanceof ItemStack stack && stack.is(Items.DIAMOND);
+        }, () -> {
+            int[] cell = chestScreen().cellCenter(0);
+            return "sob o mouse " + chestScreen().ingredientAt(cell[0], cell[1]);
+        }));
         list.add(new Step("Baú: pegar uma pilha pelo clique", STEP_TIMEOUT_MS, () -> {
             int[] cell = chestScreen().cellCenter(0);
             click(chestScreen(), cell[0], cell[1]);
@@ -2160,6 +2168,14 @@ public final class DevEndToEnd {
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen screen && screen.getMenu().view().types() == 2,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("tanque-1-tela"));
+        list.add(new Step("Tanque: ingrediente do JEI sob o mouse", STEP_TIMEOUT_MS, () -> { }, () -> {
+            if (!(Minecraft.getInstance().screen instanceof StorageListScreen screen)) {
+                return false;
+            }
+            int[] cell = screen.cellCenter(0);
+            StorageListScreen.Hovered hovered = screen.ingredientAt(cell[0], cell[1]);
+            return hovered != null && hovered.ingredient() instanceof FluidStack;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(close("Tanque: fechar"));
         list.add(new Step("Bateria: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(more[1]),
                 () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received()

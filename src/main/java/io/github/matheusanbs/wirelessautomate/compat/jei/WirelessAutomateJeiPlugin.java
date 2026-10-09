@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.compat.jei;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -20,6 +21,10 @@ import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
+import mezz.jei.api.gui.builder.IClickableIngredientFactory;
+import mezz.jei.api.runtime.IClickableIngredient;
+import mezz.jei.api.runtime.IIngredientManager;
+import java.util.Optional;
 import net.minecraft.core.NonNullList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.ResourceLocation;
@@ -116,6 +121,20 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(FilterScreen.class, new FilterGhostHandler());
+        // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...).
+        IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
+        registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {
+            @Override
+            public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(
+                    IClickableIngredientFactory factory, StorageListScreen screen, double mouseX, double mouseY) {
+                StorageListScreen.Hovered hovered = screen.ingredientAt(mouseX, mouseY);
+                if (hovered == null) {
+                    return Optional.empty();
+                }
+                return ingredients.createTypedIngredient(hovered.ingredient(), true)
+                        .flatMap(typed -> factory.createBuilder(typed).buildWithArea(hovered.x(), hovered.y(), 16, 16));
+            }
+        });
         registration.addGuiContainerHandler(FilterScreen.class, new IGuiContainerHandler<FilterScreen>() {
             @Override
             public List<Rect2i> getGuiExtraAreas(FilterScreen screen) {

@@ -14,6 +14,7 @@ Wireless Automate 1.4: Upgrade Cards jump straight to their tier, and JEI shows 
 
 - Routers and all storages now show up in JEI once per tier, like in the creative tab. Before, only the Basic version was listed.
 - Every upgrade combination appears as a crafting-table recipe, from each lower tier to the card's tier.
+- JEI shortcuts now work in the Wireless Chest, Tank and Chemical Tank lists: hover an item, fluid or chemical and press R (recipes), U (uses) or A (bookmark), or click with JEI's mouse buttons.
 
 **Other changes**
 

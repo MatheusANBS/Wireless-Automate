@@ -411,6 +411,31 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         return index < shown.size() ? shown.get(index) : null;
     }
 
+    /** Um tipo da lista como ingrediente, com o canto da célula dele (para o JEI). */
+    public record Hovered(Object ingredient, int x, int y) {
+    }
+
+    /**
+     * O tipo sob o mouse como ingrediente do JEI (item, fluido ou {@code ChemicalStack}), para os atalhos dele
+     * (receita, usos, favoritar) funcionarem na lista; {@code null} fora da grade ou num químico que não existe.
+     */
+    public @Nullable Hovered ingredientAt(double mouseX, double mouseY) {
+        Object key = keyAt(mouseX, mouseY);
+        Object ingredient = switch (key) {
+            case null -> null;
+            case ItemStack stack -> stack.copyWithCount(1);
+            case FluidStack fluid -> fluid.copyWithAmount(1_000);
+            case ResourceLocation id -> Chemicals.ingredient(id);
+            default -> null;
+        };
+        if (ingredient == null) {
+            return null;
+        }
+        int col = (int) Math.floor((mouseX - leftPos - GRID_X + 1) / CELL);
+        int row = (int) Math.floor((mouseY - topPos - GRID_Y + 1) / CELL);
+        return new Hovered(ingredient, leftPos + GRID_X + col * CELL, topPos + GRID_Y + row * CELL);
+    }
+
     private boolean inGrid(double mouseX, double mouseY) {
         return mouseX >= leftPos + GRID_X - 1 && mouseX < leftPos + GRID_X - 1 + cols * CELL
                 && mouseY >= topPos + GRID_Y - 1 && mouseY < topPos + GRID_Y - 1 + rows * CELL;

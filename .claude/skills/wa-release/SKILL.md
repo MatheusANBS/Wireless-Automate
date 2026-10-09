@@ -32,7 +32,7 @@ Se a release e os dois changelogs da versão atual já existem e o que mudou des
    - por fim, "**Compatibility note:**" (protocolo, mundos antigos, NeoForge mínimo, mods opcionais).
    Use `docs/curseforge/changelog-1.1.0.md` como modelo.
 3. **Changelog unificado:** `docs/curseforge/changelog-curseforge-<versão>.md`. Renomeie o da versão anterior com `git mv changelog-curseforge-<anterior>.md changelog-curseforge-<nova>.md` e acrescente no topo `## <versão>` com o mesmo texto do separado. Fica um arquivo só, com todas as versões, a mais nova em cima.
-4. **`docs/curseforge/descricao.md` e `README.md`:** o que a versão acrescenta (tabelas de tiers e capacidades, linha de compatibilidade). Confira cada número no código (`ResourceType`, `StorageKind`, `RouterTier`). Não invente.
+4. **`docs/curseforge/descricao.md`, `README.md` e `README.en.md` (a versão em inglês, sempre igual à portuguesa):** o que a versão acrescenta (tabelas de tiers e capacidades, linha de compatibilidade). Confira cada número no código (`ResourceType`, `StorageKind`, `RouterTier`). Não invente.
 5. **`docs/progresso.md`:** estado, próximo passo e linha no histórico.
 
 ## Verificação

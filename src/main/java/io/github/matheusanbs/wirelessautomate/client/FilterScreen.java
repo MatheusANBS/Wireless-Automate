@@ -2187,8 +2187,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         for (Property property : Property.values()) {
             int ry = y + COND_Y + property.ordinal() * COND_ROW;
             boolean set = draft.flag(property) != null;
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("rule.prop." + property.getSerializedName()), IW - 3 * TRI_W - 4),
-                    x, ry + 1, set ? GuiPaint.FG : GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("rule.prop." + property.getSerializedName()), x, ry + 1, IW - 3 * TRI_W - 4,
+                    set ? GuiPaint.FG : GuiPaint.MUTED);
         }
         int ry = y + COND_Y + Property.values().length * COND_ROW + 3;
         if (draft.enchantment().isPresent()) {
@@ -2205,7 +2205,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             GuiPaint.textRight(g, font, tr("rule.any"), x + IW, ry + 2, GuiPaint.DISABLED);
         }
         ry += COND_ROW + 3;
-        GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("rule.durability"), IW - 28 - 4 - 3 * 14 - 2), x, ry + 1,
+        GuiText.draw(g, font, tr("rule.durability"), x, ry + 1, IW - 28 - 4 - 3 * 14 - 2,
                 draft.durability().isPresent() ? GuiPaint.FG : GuiPaint.MUTED);
         ry += COND_ROW + 3;
         GuiPaint.text(g, font, tr("rule.scope"), x, ry + 3, draft.scope().isEmpty() ? GuiPaint.MUTED : GuiPaint.FG);
@@ -2218,20 +2218,20 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             // a lista de sugestões cobre o resumo: sem pedaços de texto saindo por baixo dela
             return;
         }
+        // o resumo passa pelo GuiText: o que não cabe é abreviado e a dica mostra o texto inteiro
         if (draft.isEmpty()) {
-            wrapped(g, tr("rule.empty"), x, ry, IW, (limit - ry) / 10, GuiPaint.DISABLED);
+            GuiText.wrap(g, font, tr("rule.empty"), x, ry, IW, (limit - ry) / 10, GuiPaint.DISABLED);
         } else if (!draft.validScope()) {
-            wrapped(g, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
         } else if (!enchantFieldValid()) {
-            wrapped(g, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
         } else if (!levelFieldValid()) {
-            wrapped(g, tr("rule.level.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.level.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
         } else {
-            int lines = wrapped(g, ruleText(draft), x, ry, IW, Math.max(1, (limit - ry) / 10 - 1), RULE_TEXT);
+            int used = GuiText.wrap(g, font, ruleText(draft), x, ry, IW, Math.max(1, (limit - ry) / 10 - 1), RULE_TEXT);
             int n = inventoryMatches(draftPredicate());
-            if (ry + lines * 10 + 10 <= limit) {
-                GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("rule.inventory", n), IW), x, ry + lines * 10, GuiPaint.MUTED);
-            }
+            // quebra nas linhas que sobram até os botões; o que ainda não couber vai para a dica
+            GuiText.wrap(g, font, tr("rule.inventory", n), x, ry + used, IW, (limit - ry - used) / 10, GuiPaint.MUTED);
         }
     }
 
@@ -2277,8 +2277,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     /**
-     * Nome e id de uma sugestão entre {@code left} e {@code right}: o nome tem a vez, o id fica com o
-     * resto (abreviado pelo {@link GuiText}; a dica da linha mostra os dois inteiros).
+     * Nome e id de uma sugestão entre {@code left} e {@code right}: o nome tem a vez, e o id só aparece
+     * quando cabe inteiro ao lado dele (id pela metade não ajuda; a dica da linha mostra os dois).
      */
     private void renderSuggestionText(GuiGraphics g, Holder<Enchantment> holder, String query, int left, int ty, int right) {
         String name = enchantName(holder);
@@ -2304,9 +2304,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             GuiText.draw(g, font, Component.literal(name), left, ty, nameSpace, GuiPaint.FG);
         }
         int idSpace = avail - nameSpace - gap;
-        if (!id.isEmpty() && idSpace >= 16) {
-            int w = Math.min(idW, idSpace);
-            GuiText.draw(g, font, Component.literal(id), right - w, ty, w, GuiPaint.DISABLED);
+        if (!id.isEmpty() && idW <= idSpace) {
+            GuiPaint.text(g, font, Component.literal(id), right - idW, ty, GuiPaint.DISABLED);
         }
     }
 

@@ -589,8 +589,16 @@ public final class DevScreenshot {
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
             @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status) {
-        List<Optional<UUID>> networks = List.of(Optional.ofNullable(items), Optional.ofNullable(fluids),
-                Optional.ofNullable(energy), Optional.empty());
+        // uma rede por tipo do registro (Itens, Fluidos e Energia; os outros sem rede)
+        List<Optional<UUID>> networks = new java.util.ArrayList<>();
+        for (ResourceType type : ResourceType.values()) {
+            networks.add(Optional.ofNullable(switch (type) {
+                case ITEM -> items;
+                case FLUID -> fluids;
+                case ENERGY -> energy;
+                default -> null;
+            }));
+        }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
                 new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status);
     }

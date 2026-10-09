@@ -43,10 +43,21 @@ public final class Config {
             Map<String, ModConfigSpec.LongValue> rates,
             ModConfigSpec.IntValue range,
             ModConfigSpec.BooleanValue crossDimension) {
-        /** Vazão do tipo na unidade da config ({@link ResourceType#ratePerTick()}); 0 = sem limite. */
+        /**
+         * Vazão do tipo na unidade da config ({@link ResourceType#ratePerTick()}); 0 = sem limite. O
+         * padrão do tier enquanto a config do servidor não carregou (tela fora de um mundo).
+         */
         public long rate(ResourceType type) {
-            return rates.get(type.rateKey()).get();
+            return read(rates.get(type.rateKey()));
         }
+    }
+
+    /**
+     * O valor da config do servidor, ou o padrão enquanto ela não carregou: no cliente fora de um
+     * mundo (tela de título, modo de capturas) o {@code get()} lança {@link IllegalStateException}.
+     */
+    public static <T> T read(ModConfigSpec.ConfigValue<T> value) {
+        return SPEC.isLoaded() ? value.get() : value.getDefault();
     }
 
     static {

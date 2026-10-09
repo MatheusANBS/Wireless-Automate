@@ -2387,6 +2387,40 @@ public final class DevEndToEnd {
         list.add(language("en_us"));
     }
 
+    /** Teto de capturas por página do guia (a primeira e as rolagens). */
+    private static final int GUIDE_MAX_PARTS = 10;
+    /** Se a última rolagem do guia andou; parada no fim, as capturas seguintes da página ficam de fora. */
+    private static boolean guideScrolled;
+
+    /**
+     * Rola o documento do guia uma tela para baixo pela barra de rolagem do GuideME (por reflexão: o
+     * GuideME é opcional) e diz se a rolagem mudou. A roda do mouse no meio da janela cai no menu da
+     * esquerda, conforme a escala, e não rolava a página.
+     */
+    private static boolean scrollGuide() {
+        Screen screen = Minecraft.getInstance().screen;
+        if (screen == null) {
+            return false;
+        }
+        for (var child : screen.children()) {
+            if (!child.getClass().getSimpleName().equals("GuideScrollbar")
+                    || !(child instanceof net.minecraft.client.gui.components.AbstractWidget bar)) {
+                continue;
+            }
+            try {
+                var get = child.getClass().getMethod("getScrollAmount");
+                var set = child.getClass().getMethod("setScrollAmount", int.class);
+                int before = (int) get.invoke(child);
+                set.invoke(child, before + Math.max(20, bar.getHeight() * 9 / 10));
+                return (int) get.invoke(child) != before;
+            } catch (ReflectiveOperationException e) {
+                WirelessAutomate.LOGGER.warn("E2E: não deu para rolar o guia", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
     private static void guidePages(List<Step> list, String suffix) {
         for (String page : GUIDE_PAGES) {
             list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
@@ -2395,16 +2429,21 @@ public final class DevEndToEnd {
                             && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
                     () -> "tela " + describe(Minecraft.getInstance().screen)));
             list.add(capture("guia-" + page + suffix));
-            // O resto da página: rola e captura de novo (as páginas longas passam de uma tela).
-            for (int part = 2; part <= 4; part++) {
-                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> {
-                    Minecraft minecraft = Minecraft.getInstance();
-                    Screen screen = minecraft.screen;
-                    if (screen != null) {
-                        screen.mouseScrolled(screen.width / 2.0, screen.height / 2.0, 0, -20);
+            // O resto da página: rola uma tela por vez e captura, até a rolagem não mudar mais (o fim).
+            for (int part = 2; part <= GUIDE_MAX_PARTS; part++) {
+                String file = "guia-" + page + suffix + "-" + part;
+                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> guideScrolled = scrollGuide(),
+                        () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
+                list.add(new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+                    if (!guideScrolled) {
+                        return true;
                     }
-                }, () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
-                list.add(capture("guia-" + page + suffix + "-" + part));
+                    if (stepTicks < 6) {
+                        return false;
+                    }
+                    capture(Minecraft.getInstance(), file);
+                    return true;
+                }, () -> file + ".png"));
             }
         }
         list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),

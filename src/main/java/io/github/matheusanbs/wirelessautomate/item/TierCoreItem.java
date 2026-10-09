@@ -105,9 +105,7 @@ public class TierCoreItem extends Item {
 
     /** Vazão do tier pela config (padrão se ela ainda não carregou); 0 = sem limite. */
     private static Component rate(RouterTier tier, Stat stat) {
-        Config.TierValues values = Config.TIERS.get(tier);
-        boolean loaded = Config.SPEC.isLoaded();
-        long value = loaded ? values.rate(stat.type) : stat.type.defaultRate(tier.ordinal());
+        long value = Config.TIERS.get(tier).rate(stat.type);
         return value <= 0 ? Component.translatable(KEY + "unlimited") : Component.literal(grouped(value));
     }
 
@@ -128,9 +126,8 @@ public class TierCoreItem extends Item {
 
     private static Component range(RouterTier tier) {
         Config.TierValues values = Config.TIERS.get(tier);
-        boolean loaded = Config.SPEC.isLoaded();
-        boolean cross = loaded ? values.crossDimension().get() : tier.defaultCrossDimension;
-        int range = loaded ? values.range().get() : tier.defaultRange;
+        boolean cross = Config.read(values.crossDimension());
+        int range = Config.read(values.range());
         if (cross) {
             return Component.translatable(KEY + "range.all_dimensions");
         }

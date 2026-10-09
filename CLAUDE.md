@@ -64,7 +64,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 
 Recursos em `src/main/resources/`:
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
-- `assets/wirelessautomate/guideme_guides/guide.json` e `guides/wirelessautomate/guide/`: o livro-guia do GuideME (opcional, sem código), páginas em inglês na pasta e em português em `_pt_br/`, geradas por `scripts/guide/gerar_guia.py`. O guia é para o jogador: só como operar (nada de config, ms/tick ou detalhes internos). Mantenha as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página nos dois idiomas, rola e salva `guia-<página>[-pt][-2|-3].png` quando o GuideME está presente.
+- `assets/wirelessautomate/guideme_guides/guide.json` e `guides/wirelessautomate/guide/`: o livro-guia do GuideME (opcional, sem código), páginas em inglês na pasta e em português em `_pt_br/`, geradas por `scripts/guide/gerar_guia.py`. O guia é para o jogador: só como operar (nada de config, ms/tick ou detalhes internos). Mantenha as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página nos dois idiomas, rola até o fim (pela barra do GuideME) e salva `guia-<página>[-pt][-N].png` quando o GuideME está presente.
 - `data/`: loot table, receita, tags e `wirelessautomate/structure/empty.nbt` (estrutura 3×3×3 vazia dos GameTests).
 - `src/main/templates/META-INF/neoforge.mods.toml`: preenchido pelo Gradle a partir do `gradle.properties`.
 

@@ -35,6 +35,7 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -52,6 +53,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -128,6 +130,13 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private static final int COND_Y = BOX_Y + 17;
     private static final int COND_ROW = 11;
     private static final int TRI_W = 20;
+    /** Campo do nível mínimo (3 dígitos), à direita do encantamento. */
+    private static final int LEVEL_W = 28;
+    /** Lista de sugestões do encantamento: até 5 linhas de 12 px e a linha "+N". */
+    private static final int SUGGEST_ROWS = 5;
+    private static final int SUGGEST_ROW = 12;
+    private static final int SUGGEST_MORE_H = 11;
+    private static final ItemStack BOOK = new ItemStack(Items.ENCHANTED_BOOK);
 
     private static final int ACCENT = 0xFF45D6CC;
     private static final int DANGER = 0xFFE5534B;
@@ -193,6 +202,15 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private @Nullable ItemRule compiledFor;
     private Predicate<ItemStack> compiled = stack -> false;
     private @Nullable List<Holder<Enchantment>> enchantments;
+    /** Texto do campo de nível (sobrevive ao {@code init} de um redimensionamento, mesmo inválido). */
+    private String levelText = "1";
+    /** Lista de sugestões aberta por cima das linhas de baixo. */
+    private boolean suggesting;
+    private List<Holder<Enchantment>> suggestions = List.of();
+    private int suggestSel;
+    private int suggestTop;
+    /** Texto posto pela própria tela no campo do encantamento: não abre a lista. */
+    private boolean syncingFields;
 
     // seleção: o que acende no inventário
     private @Nullable FilterEntry highlightFor;
@@ -211,9 +229,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private FlatButton addTagsButton;
     private final FlatButton[][] triButtons = new FlatButton[Property.values().length][3];
     private FlatButton enchantToggle;
-    private FlatButton enchantPrev;
-    private FlatButton enchantNext;
-    private FlatButton enchantLevel;
     private final FlatButton[] durabilityButtons = new FlatButton[3];
     private FlatButton durabilityPercent;
     private FlatButton ruleResetButton;
@@ -225,6 +240,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private EditBox stockBox;
     private EditBox tagSearchBox;
     private EditBox scopeBox;
+    private EditBox enchantBox;
+    private EditBox levelBox;
     private String searchDraft = "";
     /** Campo que recebe o foco depois do clique (a tela o daria ao botão clicado). */
     private @Nullable EditBox focusAfterClick;
@@ -534,13 +551,15 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         enchantToggle = add(new FlatButton(0, 0, 70, COND_ROW, tr("rule.enchantment"),
                 (g, b, hovered) -> paintCheck(g, b, hovered, tr("rule.enchantment"), draft.enchantment().isPresent()),
                 this::toggleEnchantment).tooltip(() -> tr("rule.enchantment.tooltip")));
-        enchantPrev = add(new FlatButton(0, 0, 9, COND_ROW, Component.literal("<"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("<"), false), () -> cycleEnchantment(-1)));
-        enchantNext = add(new FlatButton(0, 0, 9, COND_ROW, Component.literal(">"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal(">"), false), () -> cycleEnchantment(1)));
-        enchantLevel = add(new FlatButton(0, 0, 26, COND_ROW, tr("rule.level"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, levelLabel(), false), () -> stepLevel(1))
-                .tooltip(() -> tr("rule.level.tooltip")));
+        suggesting = false;
+        enchantBox = box(tr("rule.enchantment"), 256, enchantDisplay(), value -> {
+            if (!syncingFields) {
+                openSuggestions();
+            }
+        });
+        enchantBox.setHint(tr("rule.enchantment.hint").copy().withColor(GuiPaint.DISABLED));
+        levelBox = box(tr("rule.level"), 3, levelText, this::typedLevel);
+        levelBox.setFilter(value -> value.chars().allMatch(c -> c >= '0' && c <= '9'));
         for (int v = 0; v < 3; v++) {
             int mode = v;
             Component label = Component.literal(v == 0 ? "-" : v == 1 ? "≥" : "<");
@@ -560,6 +579,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         ruleAddButton = add(new FlatButton(0, 0, 40, BTN_H, tr("rule.add"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, editing >= 0 ? tr("rule.save") : tr("rule.add")),
                 this::submitRule).tooltip(() -> !draft.validScope() ? tr("rule.scope.invalid")
+                        : !enchantFieldValid() ? tr("rule.enchantment.invalid")
+                        : !levelFieldValid() ? tr("rule.level.invalid")
                         : draft.isEmpty() ? tr("rule.empty") : null));
 
         // aba Mais
@@ -692,12 +713,17 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         enchantToggle.setPosition(px, ry);
         enchantToggle.setWidth(IW);
         boolean enchant = rule && draft.enchantment().isPresent();
-        enchantPrev.visible = enchantNext.visible = enchantLevel.visible = enchant;
+        enchantBox.visible = levelBox.visible = enchant;
+        if (!enchant) {
+            suggesting = false;
+        }
         if (enchant) {
             ry += COND_ROW + 1;
-            enchantPrev.setPosition(px + 10, ry);
-            enchantNext.setPosition(px + IW - 26 - 3 - 9, ry);
-            enchantLevel.setPosition(px + IW - 26, ry);
+            enchantBox.setPosition(px + 4, ry + 2);
+            enchantBox.setWidth(enchantFieldW() - 8);
+            levelBox.setPosition(px + IW - LEVEL_W + 4, ry + 2);
+            levelBox.setWidth(LEVEL_W - 8);
+            ry += FIELD_H - COND_ROW;
         }
         ry += COND_ROW + 3;
         for (int v = 0; v < 3; v++) {
@@ -716,7 +742,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         ruleResetButton.setWidth(half);
         ruleAddButton.setPosition(px + IW - half, bottom - BTN_H);
         ruleAddButton.setWidth(half);
-        ruleAddButton.active = draft.isValid();
+        ruleAddButton.active = draft.isValid() && enchantFieldValid() && levelFieldValid();
 
         // Mais
         boolean more = tab == Tab.MORE;
@@ -734,7 +760,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private int scopeRowY() {
         int ry = COND_Y + Property.values().length * COND_ROW + 3;
         if (draft.enchantment().isPresent()) {
-            ry += COND_ROW + 1;
+            ry += FIELD_H + 1;
         }
         return ry + 2 * (COND_ROW + 3);
     }
@@ -933,6 +959,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (selected instanceof RuleEntry rule) {
             editing = selectedIndex;
             setDraft(rule.rule());
+            syncEnchantFields();
             scopeBox.setValue(rule.rule().scope());
             openTab(Tab.RULE);
         }
@@ -1160,7 +1187,33 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private void setDraft(ItemRule rule) {
+        boolean enchantChanged = !draft.enchantment().equals(rule.enchantment());
         draft = rule;
+        if (enchantChanged) {
+            syncEnchantFields();
+        }
+    }
+
+    /** Os campos de encantamento e de nível mostram o que está no rascunho (fecha a lista). */
+    private void syncEnchantFields() {
+        if (enchantBox == null || levelBox == null) {
+            return;
+        }
+        suggesting = false;
+        setEnchantText(enchantDisplay());
+        int level = draft.enchantment().map(ItemRule.Enchant::minLevel).orElse(1);
+        if (EnchantSearch.parseLevel(levelBox.getValue()).orElse(-1) != level) {
+            levelBox.setValue(Integer.toString(level));
+        }
+    }
+
+    private void setEnchantText(String text) {
+        syncingFields = true;
+        try {
+            enchantBox.setValue(text);
+        } finally {
+            syncingFields = false;
+        }
     }
 
     private Predicate<ItemStack> draftPredicate() {
@@ -1212,30 +1265,165 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(first.unwrapKey().orElseThrow().location(), 1))));
     }
 
-    private void cycleEnchantment(int direction) {
-        List<Holder<Enchantment>> list = enchantments();
-        if (list.isEmpty() || draft.enchantment().isEmpty()) {
-            return;
-        }
-        int index = list.indexOf(draftEnchantment());
-        int next = Math.floorMod(index + direction, list.size());
-        Holder<Enchantment> holder = list.get(next);
-        int level = Math.min(draft.enchantment().get().minLevel(), holder.value().getMaxLevel());
-        setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(holder.unwrapKey().orElseThrow().location(), level))));
+    private static String enchantName(Holder<Enchantment> holder) {
+        return holder.value().description().getString();
     }
 
-    private void stepLevel(int direction) {
+    private static String enchantId(Holder<Enchantment> holder) {
+        return holder.unwrapKey().map(k -> k.location().toString()).orElse("");
+    }
+
+    /** O nome do encantamento escolhido (ou o id, se ele não está no registro); vazio sem encantamento. */
+    private String enchantDisplay() {
+        if (draft.enchantment().isEmpty()) {
+            return "";
+        }
+        Holder<Enchantment> holder = draftEnchantment();
+        return holder != null ? enchantName(holder) : draft.enchantment().get().id().toString();
+    }
+
+    /** O texto do campo é o do encantamento escolhido. */
+    private boolean enchantFieldValid() {
+        return draft.enchantment().isEmpty() || enchantBox == null || enchantBox.getValue().equals(enchantDisplay());
+    }
+
+    /** O nível digitado vale (1 a 255). */
+    private boolean levelFieldValid() {
+        return draft.enchantment().isEmpty() || levelBox == null || EnchantSearch.parseLevel(levelBox.getValue()).isPresent();
+    }
+
+    /** Largura da moldura do campo do encantamento: o painel menos o "≥" e o campo do nível. */
+    private int enchantFieldW() {
+        return IW - LEVEL_W - font.width("≥") - 6;
+    }
+
+    /** Abre (ou refaz) a lista pelo texto do campo; igual ao escolhido (ou vazio) lista todos. */
+    private void openSuggestions() {
+        if (draft.enchantment().isEmpty() || enchantBox == null) {
+            suggesting = false;
+            return;
+        }
+        String text = enchantBox.getValue();
+        String query = text.equals(enchantDisplay()) ? "" : text;
+        suggestions = EnchantSearch.search(enchantments(), FilterScreen::enchantName, FilterScreen::enchantId, query);
+        suggestSel = 0;
+        suggestTop = 0;
+        suggesting = !suggestions.isEmpty();
+    }
+
+    /** Fecha a lista sem escolher: o texto volta ao encantamento escolhido. */
+    private void closeSuggestions() {
+        suggesting = false;
+        if (enchantBox != null && !enchantBox.getValue().equals(enchantDisplay())) {
+            setEnchantText(enchantDisplay());
+        }
+    }
+
+    private void pickSuggestion(Holder<Enchantment> holder) {
+        int level = draft.enchantment().map(ItemRule.Enchant::minLevel).orElse(1);
+        ResourceLocation id = holder.unwrapKey().orElseThrow().location();
+        setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(id, level))));
+        suggesting = false;
+        setEnchantText(enchantDisplay());
+    }
+
+    private void moveSuggestion(int direction) {
+        suggestSel = Math.max(0, Math.min(suggestions.size() - 1, suggestSel + direction));
+        if (suggestSel < suggestTop) {
+            suggestTop = suggestSel;
+        } else if (suggestSel >= suggestTop + SUGGEST_ROWS) {
+            suggestTop = suggestSel - SUGGEST_ROWS + 1;
+        }
+    }
+
+    /** Nível digitado: só um valor de 1 a 255 vai para o rascunho. */
+    private void typedLevel(String value) {
+        levelText = value;
+        EnchantSearch.parseLevel(value).ifPresent(level -> draft.enchantment().ifPresent(e -> {
+            if (e.minLevel() != level) {
+                setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(e.id(), level))));
+            }
+        }));
+    }
+
+    /** Roda do mouse no nível: soma {@code delta} ao valor do campo (ou ao do rascunho, se o campo não vale). */
+    private void stepLevel(int delta) {
         draft.enchantment().ifPresent(e -> {
-            Holder<Enchantment> holder = draftEnchantment();
-            int max = holder == null ? ItemRule.Enchant.MAX_LEVEL : Math.max(1, holder.value().getMaxLevel());
-            int level = Math.floorMod(e.minLevel() - 1 + direction, max) + 1;
-            setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(e.id(), level))));
+            int current = EnchantSearch.parseLevel(levelBox.getValue()).orElse(e.minLevel());
+            levelBox.setValue(Integer.toString(EnchantSearch.stepLevel(current, delta)));
         });
     }
 
-    private Component levelLabel() {
-        int level = draft.enchantment().map(ItemRule.Enchant::minLevel).orElse(1);
-        return Component.literal("≥ ").append(ItemRule.levelName(level));
+    private static void selectAll(EditBox box) {
+        box.moveCursorToEnd(false);
+        box.setHighlightPos(0);
+    }
+
+    @Override
+    public void setFocused(@Nullable GuiEventListener listener) {
+        GuiEventListener before = getFocused();
+        super.setFocused(listener);
+        if (before == listener) {
+            return;
+        }
+        if (before != null && before == enchantBox) {
+            closeSuggestions();
+        }
+        if (listener != null && listener == enchantBox) {
+            selectAll(enchantBox);
+            openSuggestions();
+        } else if (listener != null && listener == levelBox) {
+            selectAll(levelBox);
+        }
+    }
+
+    // lista de sugestões (por cima das linhas de baixo)
+
+    private int suggestX() {
+        return leftPos + ix();
+    }
+
+    private int suggestY() {
+        return enchantBox.getY() - 2 + FIELD_H - 1;
+    }
+
+    private int suggestVisible() {
+        return Math.min(SUGGEST_ROWS, suggestions.size());
+    }
+
+    private int suggestH() {
+        return suggestVisible() * SUGGEST_ROW + 2 + (suggestions.size() > SUGGEST_ROWS ? SUGGEST_MORE_H : 0);
+    }
+
+    private boolean suggestionsShown() {
+        return suggesting && tab == Tab.RULE && enchantBox.visible && !suggestions.isEmpty();
+    }
+
+    private boolean overSuggestions(double mouseX, double mouseY) {
+        return suggestionsShown() && mouseX >= suggestX() && mouseX < suggestX() + IW
+                && mouseY >= suggestY() && mouseY < suggestY() + suggestH();
+    }
+
+    /** Índice (na lista inteira) da sugestão sob o mouse, ou −1. */
+    private int suggestionAt(double mouseX, double mouseY) {
+        if (!overSuggestions(mouseX, mouseY)) {
+            return -1;
+        }
+        int row = (int) Math.floor((mouseY - suggestY() - 1) / SUGGEST_ROW);
+        return row >= 0 && row < suggestVisible() ? suggestTop + row : -1;
+    }
+
+    /** Moldura do campo do encantamento ou do nível sob o mouse (para a roda e as dicas). */
+    private boolean overEnchantField(double mouseX, double mouseY) {
+        int x = leftPos + ix();
+        int y = enchantBox.getY() - 2;
+        return enchantBox.visible && mouseX >= x && mouseX < x + enchantFieldW() && mouseY >= y && mouseY < y + FIELD_H;
+    }
+
+    private boolean overLevelField(double mouseX, double mouseY) {
+        int x = leftPos + ix() + IW - LEVEL_W;
+        int y = levelBox.getY() - 2;
+        return levelBox.visible && mouseX >= x && mouseX < x + LEVEL_W && mouseY >= y && mouseY < y + FIELD_H;
     }
 
     /** 0 = tanto faz, 1 = pelo menos, 2 = abaixo de. */
@@ -1260,11 +1448,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private void resetRule() {
         editing = -1;
         setDraft(ItemRule.EMPTY);
+        syncEnchantFields();
         scopeBox.setValue("");
     }
 
     private void submitRule() {
-        if (!draft.isValid()) {
+        if (!draft.isValid() || !enchantFieldValid() || !levelFieldValid()) {
             return;
         }
         RuleEntry entry = new RuleEntry(draft, 0);
@@ -1272,6 +1461,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         sendEntries(editing, List.of(entry));
         editing = -1;
         setDraft(ItemRule.EMPTY);
+        syncEnchantFields();
         scopeBox.setValue("");
         tab = Tab.ENTRY;
         unfocus();
@@ -1410,6 +1600,19 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             commitStock();
             unfocus();
         }
+        // lista de sugestões aberta: o clique nela escolhe e não vaza para os widgets de baixo
+        if (suggestionsShown()) {
+            if (overSuggestions(mouseX, mouseY)) {
+                int index = suggestionAt(mouseX, mouseY);
+                if (index >= 0 && button == 0) {
+                    pickSuggestion(suggestions.get(index));
+                }
+                return true;
+            }
+            if (!enchantBox.isMouseOver(mouseX, mouseY)) {
+                closeSuggestions();
+            }
+        }
         if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
             return true;
         }
@@ -1456,15 +1659,15 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (button == 1 && tab == Tab.RULE) {
-            // botão direito volta: nível, porcentagem
-            if (enchantLevel.visible && enchantLevel.isMouseOver(mouseX, mouseY)) {
-                stepLevel(-1);
-                return true;
-            }
+            // botão direito volta a porcentagem
             if (durabilityPercent.visible && durabilityPercent.isMouseOver(mouseX, mouseY)) {
                 stepPercent(-10);
                 return true;
             }
+        }
+        // clicar no campo do encantamento já focado reabre a lista
+        if (getFocused() == enchantBox && enchantBox.isMouseOver(mouseX, mouseY) && !suggesting) {
+            openSuggestions();
         }
         // a tela dá o foco ao botão clicado; os campos ficam com ele só quando clicados
         if (focusAfterClick != null) {
@@ -1507,6 +1710,10 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int step = (int) -Math.signum(scrollY);
+        if (overSuggestions(mouseX, mouseY)) {
+            suggestTop = Math.max(0, Math.min(suggestions.size() - SUGGEST_ROWS, suggestTop + step));
+            return true;
+        }
         if (overList(mouseX, mouseY)) {
             scroll = Math.max(0, Math.min(maxScroll(), scroll + step));
             return true;
@@ -1515,11 +1722,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             candScroll = Math.max(0, Math.min(maxCandScroll(), candScroll + step));
             return true;
         }
-        if (tab == Tab.RULE && draft.enchantment().isPresent() && enchantRowContains(mouseX, mouseY)) {
-            if (enchantLevel.isMouseOver(mouseX, mouseY)) {
-                stepLevel(-step);
-            } else {
-                cycleEnchantment(step);
+        if (tab == Tab.RULE && overLevelField(mouseX, mouseY)) {
+            // Shift + roda vira roda horizontal em alguns sistemas
+            double amount = scrollY != 0 ? scrollY : scrollX;
+            if (amount != 0) {
+                stepLevel((int) Math.signum(amount) * (hasShiftDown() ? 10 : 1));
             }
             return true;
         }
@@ -1530,15 +1737,28 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    private boolean enchantRowContains(double mouseX, double mouseY) {
-        return mouseX >= enchantPrev.getX() && mouseX < enchantLevel.getX() + enchantLevel.getWidth()
-                && mouseY >= enchantPrev.getY() && mouseY < enchantPrev.getY() + COND_ROW;
-    }
-
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (getFocused() instanceof EditBox box && box.isFocused()) {
             boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
+            boolean arrow = keyCode == GLFW.GLFW_KEY_UP || keyCode == GLFW.GLFW_KEY_DOWN;
+            if (box == enchantBox && suggestionsShown()) {
+                if (arrow) {
+                    moveSuggestion(keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1);
+                    return true;
+                }
+                if (enter || keyCode == GLFW.GLFW_KEY_TAB) {
+                    pickSuggestion(suggestions.get(suggestSel));
+                    return true;
+                }
+                if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                    closeSuggestions();
+                    return true;
+                }
+            } else if (box == enchantBox && arrow) {
+                openSuggestions();
+                return true;
+            }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 if (box == stockBox) {
                     stockBox.setValue(stockText());
@@ -1588,10 +1808,31 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             rebuildCandidates();
         }
         refresh();
+        GuiText.beginFrame();
         hoveredCandidate = candidateAt(mouseX, mouseY);
         super.render(g, mouseX, mouseY, partialTick);
+        renderSuggestions(g, mouseX, mouseY);
         if (resizeHandle.dragging()) {
             return;
+        }
+        if (overSuggestions(mouseX, mouseY)) {
+            int index = suggestionAt(mouseX, mouseY);
+            if (index >= 0) {
+                Holder<Enchantment> holder = suggestions.get(index);
+                setTooltipForNextRenderPass(List.of(Component.literal(enchantName(holder)).getVisualOrderText(),
+                        Component.literal(enchantId(holder)).withColor(GuiPaint.DISABLED).getVisualOrderText()));
+            }
+            return;
+        }
+        if (tab == Tab.RULE && !suggestionsShown()) {
+            if (overEnchantField(mouseX, mouseY)) {
+                setTooltipForNextRenderPass(font.split(tr("rule.enchantment.field.tooltip"), 220));
+                return;
+            }
+            if (overLevelField(mouseX, mouseY)) {
+                setTooltipForNextRenderPass(font.split(tr("rule.level.tooltip"), 220));
+                return;
+            }
         }
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
@@ -1630,6 +1871,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (JEI && mouseX >= leftPos + X0 && mouseX < leftPos + X0 + listW()
                 && mouseY >= topPos + invTop() - 11 && mouseY < topPos + invTop() - 1) {
             setTooltipForNextRenderPass(font.split(tr("jei.tooltip." + (isChemical() ? "chemical" : isFluid() ? "fluid" : "item")), 200));
+            return;
+        }
+        Component clipped = GuiText.clipAt(mouseX, mouseY);
+        if (clipped != null && hoveredSlot == null) {
+            setTooltipForNextRenderPass(font.split(clipped, 220));
             return;
         }
         renderTooltip(g, mouseX, mouseY);
@@ -1947,13 +2193,14 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int ry = y + COND_Y + Property.values().length * COND_ROW + 3;
         if (draft.enchantment().isPresent()) {
             ry += COND_ROW + 1;
-            Holder<Enchantment> holder = draftEnchantment();
-            Component name = holder != null ? holder.value().description()
-                    : Component.literal(draft.enchantment().get().id().toString());
-            int left = enchantPrev.getX() + 9 + 2;
-            int right = enchantNext.getX() - 2;
-            FormattedCharSequence text = GuiPaint.ellipsize(font, name, right - left);
-            GuiPaint.text(g, font, text, (left + right - font.width(text)) / 2, ry + 2, GuiPaint.FG);
+            boolean nameOk = enchantFieldValid() || suggestionsShown();
+            int nameBorder = !nameOk ? DANGER : enchantBox.isFocused() ? trim : GuiPaint.LINE;
+            GuiPaint.box(g, x, ry, enchantFieldW(), FIELD_H, GuiPaint.PANEL, nameBorder);
+            int levelX = x + IW - LEVEL_W;
+            GuiPaint.text(g, font, Component.literal("≥"), levelX - 3 - font.width("≥"), ry + 2, GuiPaint.MUTED);
+            int levelBorder = !levelFieldValid() ? DANGER : levelBox.isFocused() ? trim : GuiPaint.LINE;
+            GuiPaint.box(g, levelX, ry, LEVEL_W, FIELD_H, GuiPaint.PANEL, levelBorder);
+            ry += FIELD_H - COND_ROW;
         } else {
             GuiPaint.textRight(g, font, tr("rule.any"), x + IW, ry + 2, GuiPaint.DISABLED);
         }
@@ -1967,16 +2214,99 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         GuiPaint.box(g, scopeX, ry, x + IW - scopeX, FIELD_H, GuiPaint.PANEL, border);
         ry += FIELD_H + 5;
         int limit = y + innerBottom() - BTN_H - 3;
+        if (suggestionsShown()) {
+            // a lista de sugestões cobre o resumo: sem pedaços de texto saindo por baixo dela
+            return;
+        }
         if (draft.isEmpty()) {
             wrapped(g, tr("rule.empty"), x, ry, IW, (limit - ry) / 10, GuiPaint.DISABLED);
         } else if (!draft.validScope()) {
             wrapped(g, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+        } else if (!enchantFieldValid()) {
+            wrapped(g, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+        } else if (!levelFieldValid()) {
+            wrapped(g, tr("rule.level.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
         } else {
             int lines = wrapped(g, ruleText(draft), x, ry, IW, Math.max(1, (limit - ry) / 10 - 1), RULE_TEXT);
             int n = inventoryMatches(draftPredicate());
             if (ry + lines * 10 + 10 <= limit) {
                 GuiPaint.text(g, font, GuiPaint.ellipsize(font, tr("rule.inventory", n), IW), x, ry + lines * 10, GuiPaint.MUTED);
             }
+        }
+    }
+
+    /**
+     * A lista de sugestões do encantamento, por cima de tudo (depois dos widgets): livro, nome (o
+     * trecho digitado em destaque) e o id em cinza; "+N" quando sobram.
+     */
+    private void renderSuggestions(GuiGraphics g, int mouseX, int mouseY) {
+        if (!suggestionsShown()) {
+            return;
+        }
+        int x = suggestX();
+        int y = suggestY();
+        int h = suggestH();
+        String query = enchantBox.getValue().equals(enchantDisplay()) ? "" : EnchantSearch.fold(enchantBox.getValue().strip());
+        int hover = suggestionAt(mouseX, mouseY);
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 400);
+        g.fill(x + 1, y + h, x + IW + 1, y + h + 2, GuiPaint.BEVEL_DARK);
+        GuiPaint.box(g, x, y, IW, h, GuiPaint.INSET, trim);
+        for (int i = 0; i < suggestVisible(); i++) {
+            int index = suggestTop + i;
+            Holder<Enchantment> holder = suggestions.get(index);
+            int ry = y + 1 + i * SUGGEST_ROW;
+            if (index == suggestSel) {
+                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, GuiPaint.mix(GuiPaint.INSET, trim, 0.22f));
+            } else if (index == hover) {
+                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, HOVER_ROW);
+            }
+            g.pose().pushPose();
+            g.pose().translate(x + 3, ry + 1, 0);
+            g.pose().scale(0.625f, 0.625f, 1);
+            g.renderFakeItem(BOOK, 0, 0);
+            g.pose().popPose();
+            renderSuggestionText(g, holder, query, x + 16, ry + 2, x + IW - 4);
+        }
+        int more = suggestions.size() - suggestVisible();
+        if (more > 0) {
+            GuiText.draw(g, font, tr("rule.enchantment.more", more), x + 4, y + 1 + suggestVisible() * SUGGEST_ROW + 1,
+                    IW - 8, GuiPaint.DISABLED);
+        }
+        g.pose().popPose();
+    }
+
+    /**
+     * Nome e id de uma sugestão entre {@code left} e {@code right}: o nome tem a vez, o id fica com o
+     * resto (abreviado pelo {@link GuiText}; a dica da linha mostra os dois inteiros).
+     */
+    private void renderSuggestionText(GuiGraphics g, Holder<Enchantment> holder, String query, int left, int ty, int right) {
+        String name = enchantName(holder);
+        ResourceLocation key = holder.unwrapKey().map(k -> k.location()).orElse(null);
+        // os do jogo sem o "minecraft:", que não diz nada; os dos mods com o id inteiro
+        String id = key == null ? "" : key.getNamespace().equals("minecraft") ? key.getPath() : key.toString();
+        int avail = right - left;
+        int nameW = font.width(name);
+        int idW = font.width(id);
+        int gap = 6;
+        int nameSpace = Math.min(nameW, avail);
+        String folded = EnchantSearch.fold(name);
+        int at = query.isEmpty() || folded.length() != name.length() ? -1 : folded.indexOf(query);
+        if (at >= 0 && nameW <= nameSpace) {
+            int end = at + query.length();
+            int cx = left;
+            GuiPaint.text(g, font, Component.literal(name.substring(0, at)), cx, ty, GuiPaint.FG);
+            cx += font.width(name.substring(0, at));
+            GuiPaint.text(g, font, Component.literal(name.substring(at, end)), cx, ty, ACCENT);
+            cx += font.width(name.substring(at, end));
+            GuiPaint.text(g, font, Component.literal(name.substring(end)), cx, ty, GuiPaint.FG);
+        } else {
+            GuiText.draw(g, font, Component.literal(name), left, ty, nameSpace, GuiPaint.FG);
+        }
+        int idSpace = avail - nameSpace - gap;
+        if (!id.isEmpty() && idSpace >= 16) {
+            int w = Math.min(idW, idSpace);
+            GuiText.draw(g, font, Component.literal(id), right - w, ty, w, GuiPaint.DISABLED);
         }
     }
 
@@ -2405,6 +2735,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     void previewRule(ItemRule rule) {
         openTab(Tab.RULE);
         setDraft(rule);
+        syncEnchantFields();
         scopeBox.setValue(rule.scope());
     }
 
@@ -2422,6 +2753,23 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     EditBox scopeBox() {
         return scopeBox;
+    }
+
+    EditBox enchantBox() {
+        return enchantBox;
+    }
+
+    EditBox levelBox() {
+        return levelBox;
+    }
+
+    /** Nomes das sugestões da lista aberta (todas, não só as cinco à vista); vazia com a lista fechada. */
+    List<String> suggestionLabels() {
+        return suggestionsShown() ? suggestions.stream().map(FilterScreen::enchantName).toList() : List.of();
+    }
+
+    ItemRule ruleDraft() {
+        return draft;
     }
 
     /** Linhas da aba Tags (rótulos), para o teste de ponta a ponta. */

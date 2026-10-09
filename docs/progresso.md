@@ -42,6 +42,13 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
+0. **Terminar a publicação da 1.3.0** (pendente desde 9/10/2026). O código, a versão (`mod_version=1.3.0`), os changelogs e a descrição já estão no `main` (merge `90446e0`). A sessão na nuvem não conseguiu enviar a tag (HTTP 403 da política de rede) nem criar a release (sem `gh` autenticado). Falta, numa sessão local:
+   1. `git checkout main && git pull`, depois `./gradlew build` (gera `build/libs/wirelessautomate-1.3.0.jar`; apague jars de outras versões em `build/libs/`).
+   2. `git tag v1.3.0 && git push origin v1.3.0` (no commit atual do `main`; a tag não existe no GitHub).
+   3. `gh release create v1.3.0 build/libs/wirelessautomate-1.3.0.jar --title "Wireless Automate 1.3.0" --notes-file docs/curseforge/changelog-1.3.0.md` e conferir com `gh release view v1.3.0`.
+   4. O dono sobe o mesmo jar no CurseForge com o texto de `changelog-1.3.0.md` (servidor e clientes precisam da 1.3, porque o blockstate do roteador mudou).
+   5. Depois, com o ok do dono, apagar o ramo `ccr-bff97a99-ovni89` (local e remoto); tudo dele já está no `main`.
+   A vitrine e as imagens do CurseForge não precisam ser refeitas (o roteador nasce como antes e a imagem das regras mostra o Encantamento desmarcado).
 1. **Subir a 1.2.0 no CurseForge** (o dono): o jar `build/libs/wirelessautomate-1.2.0.jar`, o changelog unificado (`changelog-curseforge-1.2.0.md`) e o Allthemodium como dependência opcional.
 1b. Testar num ATM10 real: receitas do ATM no JEI (com o fragmento de ATM Star), tooltip dos cartões, cores, e a migração da config num servidor que já tinha a 1.1. Sem teste automático: Allthemodium sem o All The Tweaks (a terceira versão do Ultimate).
 2. Acompanhar a moderação da 1.0.2 no CurseForge (ID 1732160) e o retorno de quem usa com o Mekanism.

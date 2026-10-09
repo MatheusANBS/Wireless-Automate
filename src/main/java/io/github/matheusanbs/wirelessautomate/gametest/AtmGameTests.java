@@ -60,8 +60,15 @@ public final class AtmGameTests {
                 .setValue(RouterBlock.TIER, RouterTier.EMERALD));
         BlockPos router = helper.absolutePos(ROUTER);
         BlockPos chest = helper.absolutePos(STORAGE);
-        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ULTIMATE),
-                "pulou os tiers do ATM");
+        // Um segundo roteador Esmeralda pula os tiers do ATM direto para o Ultimate.
+        BlockPos machine2 = new BlockPos(2, 1, 2);
+        BlockPos router2Rel = new BlockPos(2, 2, 2);
+        helper.setBlock(machine2, Blocks.FURNACE);
+        helper.setBlock(router2Rel, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.EMERALD));
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(router2Rel), RouterTier.ULTIMATE),
+                "não pulou os tiers do ATM");
+        helper.assertBlockProperty(router2Rel, RouterBlock.TIER, RouterTier.ULTIMATE);
         for (RouterTier target : List.of(RouterTier.ALLTHEMODIUM, RouterTier.VIBRANIUM, RouterTier.UNOBTAINIUM,
                 RouterTier.ULTIMATE)) {
             helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, target), "roteador não subiu: " + target);

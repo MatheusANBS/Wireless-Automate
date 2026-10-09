@@ -27,10 +27,11 @@ item_ids:
   <ItemImage id="wirelessautomate:tier_core_ultimate" scale="2" />
 </Row>
 
-Every router starts as **Basic**. Each card raises **one** tier: Basic → Advanced → Elite →
-Emerald → Ultimate. With the **Allthemodium** mod, three steps go between Emerald and Ultimate:
-Allthemodium → Vibranium → Unobtainium. The router's configuration (faces, filters, networks) is
-kept.
+Every router starts as **Basic**. The ladder is Basic → Advanced → Elite → Emerald → Ultimate.
+With the **Allthemodium** mod, three steps go between Emerald and Ultimate: Allthemodium →
+Vibranium → Unobtainium. Each card takes the router straight to its tier from **any lower tier**: a
+Basic router with the Emerald Card becomes Emerald. The router's configuration (faces, filters,
+networks) is kept.
 
 ## What each card raises
 
@@ -55,10 +56,11 @@ Each step multiplies throughput by 8. Range and dimensions follow the **sender's
 
 | Where | How |
 | --- | --- |
-| **In the world** | Use the next tier's card on a placed router. |
-| **In a crafting table** | A router + the next tier's card, in any slots. The router's name is kept. |
+| **In the world** | Use the card of the tier you want on a placed router. |
+| **In a crafting table** | A router + the card of the tier you want, in any slots. The router's name is kept. |
 
-Tiers can't be skipped: a Basic router won't take the Elite card.
+Cards only go up: they won't take a router of the same tier or a higher one. Since each card takes the
+previous one in its recipe, going straight to the final tier is the cheapest path.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
 [Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and

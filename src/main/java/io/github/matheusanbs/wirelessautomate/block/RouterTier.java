@@ -66,6 +66,11 @@ public enum RouterTier implements StringRepresentable {
         return i < 0 ? null : values()[i];
     }
 
+    /** O cartão do tier {@code target} sobe um bloco deste tier: {@code target} está acima e carregado. */
+    public boolean canUpgradeTo(RouterTier target) {
+        return TierLadder.canUpgrade(REQUIRED_MODS, ordinal(), target.ordinal(), RouterTier::modLoaded);
+    }
+
     public String translationKey() {
         return "tier.wirelessautomate." + name;
     }

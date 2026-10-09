@@ -13,7 +13,7 @@ All of them with vanilla items, in a crafting table.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the next tier's card, in any slots. |
+| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the card of any higher tier, in any slots. |
 | **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
 | **This guide** | Book + redstone. |
 

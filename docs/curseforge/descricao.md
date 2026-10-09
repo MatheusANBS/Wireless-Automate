@@ -37,7 +37,7 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 ### Five tiers, eight with Allthemodium
 
-Upgrade Cards raise a router's throughput and range, one tier at a time: Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate Card takes **ATM Star shards**. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
+Upgrade Cards raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate, and each card takes a router from **any lower tier** straight to its own (a Basic router + the Emerald Card is an Emerald router). With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate Card takes **ATM Star shards**. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
 
 ![Eight tiers](https://media.forgecdn.net/attachments/2028/255/feature-4-tiers-png.png)
 

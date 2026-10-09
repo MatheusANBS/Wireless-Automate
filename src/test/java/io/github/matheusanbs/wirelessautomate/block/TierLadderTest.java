@@ -46,4 +46,29 @@ class TierLadderTest {
         assertFalse(TierLadder.loaded("allthemodium", WITHOUT));
         assertTrue(TierLadder.loaded("allthemodium", WITH));
     }
+
+    @Test
+    void canUpgradeJumpsAnyNumberOfStepsUp() {
+        assertTrue(TierLadder.canUpgrade(MODS, 0, 1, WITH));
+        assertTrue(TierLadder.canUpgrade(MODS, 0, 7, WITH));
+        assertTrue(TierLadder.canUpgrade(MODS, 2, 5, WITH));
+    }
+
+    @Test
+    void canUpgradeNeverGoesDownOrStays() {
+        assertFalse(TierLadder.canUpgrade(MODS, 2, 1, WITH));
+        assertFalse(TierLadder.canUpgrade(MODS, 7, 0, WITH));
+        assertFalse(TierLadder.canUpgrade(MODS, 2, 2, WITH));
+    }
+
+    @Test
+    void canUpgradeRefusesATargetWhoseModIsMissing() {
+        assertFalse(TierLadder.canUpgrade(MODS, 0, 5, WITHOUT));
+        assertTrue(TierLadder.canUpgrade(MODS, 0, 3, WITHOUT));
+    }
+
+    @Test
+    void canUpgradeFromATierWhoseModLeft() {
+        assertTrue(TierLadder.canUpgrade(MODS, 5, 7, WITHOUT));
+    }
 }

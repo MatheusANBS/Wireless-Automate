@@ -44,14 +44,18 @@ public final class RouterGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void tierCoreUpgradesOneTierAtATime(GameTestHelper helper) {
+    public static void tierCoreJumpsToAnyHigherTier(GameTestHelper helper) {
         helper.setBlock(MACHINE, Blocks.FURNACE);
         helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
         BlockPos router = helper.absolutePos(ROUTER);
 
-        helper.assertTrue(!RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ELITE), "pulou um tier");
-        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ADVANCED), "não subiu de tier");
-        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ADVANCED);
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ELITE), "Básico não pulou para o Elite");
+        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ELITE);
+        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ADVANCED), "desceu de tier");
+        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ELITE), "reaplicou o mesmo tier");
+        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ELITE);
+        helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router, RouterTier.ULTIMATE), "Elite não pulou para o Ultimate");
+        helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ULTIMATE);
         helper.succeed();
     }
 

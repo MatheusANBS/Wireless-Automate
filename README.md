@@ -2,7 +2,7 @@
 
 Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-**Estado:** versão 1.3 (1.3.0: giro do roteador com Shift + clique e encantamento por nome, com nível até 255). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Licença All Rights Reserved.
+**Estado:** versão 1.4 (1.4.0: o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, e o JEI mostra cada tier). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Licença All Rights Reserved.
 
 ## Recursos
 
@@ -11,7 +11,7 @@ Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoFor
 - **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
 - **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, limite de estoque, e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada). A tela é redimensionável: ponha um item no inspetor para ver e marcar todas as tags dele, ou busque em todas as tags do jogo com a prévia dos itens.
 - **Regras por propriedade** (1.0): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo (1.3: digitado pelo nome, com sugestões, e nível de 1 a 255) ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
-- **Cinco tiers** (1.2; Básico, Avançado, Elite, Esmeralda e Ultimate), e **oito com o Allthemodium** (Allthemodium, Vibranium e Unobtainium entre a Esmeralda e o Ultimate), subidos com os Cartões de Upgrade (não há cartão Básico, o roteador já nasce Básico), clicando no roteador colocado ou juntando os dois na bancada. No ATM10, o Cartão Ultimate pede fragmentos de ATM Star.
+- **Cinco tiers** (1.2; Básico, Avançado, Elite, Esmeralda e Ultimate), e **oito com o Allthemodium** (Allthemodium, Vibranium e Unobtainium entre a Esmeralda e o Ultimate), subidos com os Cartões de Upgrade (não há cartão Básico, o roteador já nasce Básico; desde a 1.4, cada cartão sobe de qualquer tier abaixo direto para o dele), clicando no roteador colocado ou juntando os dois na bancada. No ATM10, o Cartão Ultimate pede fragmentos de ATM Star.
 - **Vinculador:** escolhe a rede ativa e põe roteadores nela, um a um ou por área, nas abas marcadas (Itens, Fluidos, Energia e, com o Mekanism e o Ars Nouveau, Químicos e Source); em "Nenhuma (desvincular)", tira essas abas da rede.
 - **Configurador:** copia a configuração de um roteador e cola em outro, ou em todos os de uma área presos ao mesmo tipo de máquina; todas as abas ou só um tipo, Source incluída (Shift + roda do mouse).
 - **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.

@@ -19,7 +19,7 @@ O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de fi
 | Componente | Tipo | Função |
 | --- | --- | --- |
 | Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Shift + clique direito com as mãos vazias gira o roteador 90° em torno do eixo da face (horário para quem olha a face de frente); a configuração das faces da máquina não muda. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
-| Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Sobem o roteador um tier, sem pular tiers: clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
+| Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Levam o roteador ao tier do cartão, de qualquer tier abaixo (`RouterTier.canUpgradeTo`): clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
 | Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área presos à mesma máquina. |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Escolhe a rede ativa e coloca roteadores nela, um a um ou por área. |
@@ -198,7 +198,7 @@ Motivação: no teste do dono (8/10/2026), 12 milhões de pedregulhos entre dois
 Decisões do dono (8/10/2026):
 
 - **Cinco blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia), Tanque Químico (só com o Mekanism, pela ponte `Chemicals`) e Tanque de Source (só com o Ars Nouveau, pela ponte `Sources`).
-- **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Esmeralda → [Allthemodium → Vibranium → Unobtainium] → Ultimate, sem pular e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
+- **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Esmeralda → [Allthemodium → Vibranium → Unobtainium] → Ultimate, de qualquer tier abaixo direto para o do cartão e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
 - **Tipos ilimitados:** o limite é só a quantidade total do tier.
 - **Tela em lista com busca** (estilo terminal do AE2), redimensionável pelas bordas e pela alça do canto, sempre centralizada: grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
 - **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
@@ -281,7 +281,7 @@ O Sophisticated Storage é o banco de testes: baús com centenas de slots e slot
 
 ## Receitas e progressão
 
-As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodium usam as tags `c:` dele e só carregam com o mod (`neoforge:conditions`). Todas ficam em data packs (`data/wirelessautomate/recipe/`), então o modpack pode trocar tudo sem mexer no código. O roteador nasce Básico; os tiers seguintes vêm dos Cartões de Upgrade, um de cada vez.
+As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodium usam as tags `c:` dele e só carregam com o mod (`neoforge:conditions`). Todas ficam em data packs (`data/wirelessautomate/recipe/`), então o modpack pode trocar tudo sem mexer no código. O roteador nasce Básico; os tiers seguintes vêm dos Cartões de Upgrade. Cada cartão leva o anterior na receita e sobe de qualquer tier abaixo direto para o dele, então chegar a um tier custa exatamente uma escada de cartões (decisão do dono, 9/10/2026, a partir de uma sugestão no CurseForge; ver `docs/superpowers/specs/2026-10-09-upgrade-direto-design.md`).
 
 | Item | Receita |
 | --- | --- |
@@ -293,7 +293,7 @@ As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodi
 | Cartão de Upgrade Vibranium (com o mod) | Lingotes de Vibranium nos cantos, liga Vibranium-Allthemodium em cima e embaixo, blocos dos lados, Cartão Allthemodium no centro |
 | Cartão de Upgrade Unobtainium (com o mod) | Lingotes de Unobtainium nos cantos, liga Unobtainium-Vibranium em cima e embaixo, blocos dos lados, Cartão Vibranium no centro |
 | Cartão de Upgrade Ultimate | Sem o Allthemodium: ovo do dragão em cima, Cartão Esmeralda no centro, três blocos de netherita e quatro fragmentos de eco. Com o Allthemodium: a mesma, com o Cartão Unobtainium. No ATM10 (Allthemodium + All The Tweaks): fragmentos de ATM Star nos cantos, ovo do dragão em cima, blocos de liga Unobtainium-Allthemodium e o Cartão Unobtainium |
-| Upgrade do roteador na bancada | Roteador + Cartão de Upgrade do tier seguinte, sem forma (também no JEI) |
+| Upgrade do roteador na bancada | Roteador + Cartão de Upgrade de qualquer tier acima, sem forma (também no JEI, uma receita por par de tiers) |
 | Cartão de filtro (2) | Papel, redstone e comparador (`PRP` / `PCP`) |
 | Cópia de Cartão de filtro | Cartão configurado + cartão vazio, sem forma = dois iguais |
 | Upgrade de chunk loading | Olho de ender e diamante cercados de obsidiana, com duas redstones |

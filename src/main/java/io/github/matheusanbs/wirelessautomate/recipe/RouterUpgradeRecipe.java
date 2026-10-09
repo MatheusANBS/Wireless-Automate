@@ -18,9 +18,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um núcleo do tier
- * seguinte ao dele (Básico + Avançado, Avançado + Elite, Elite + Ultimate), como o clique com o
- * núcleo no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
+ * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um cartão de um tier
+ * acima do item (Básico + Esmeralda vale, como Avançado + Elite), como o clique com o
+ * cartão no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
  * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um armazenamento cheio),
  * no tier novo. Os dois guardam o tier no {@code block_state}, com a mesma propriedade.
  */
@@ -47,7 +47,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
                 return ItemStack.EMPTY;
             }
         }
-        if (router.isEmpty() || core == null || RouterBlockItem.tierOf(router).next() != core) {
+        if (router.isEmpty() || core == null || !RouterBlockItem.tierOf(router).canUpgradeTo(core)) {
             return ItemStack.EMPTY;
         }
         ItemStack result = router.copyWithCount(1);

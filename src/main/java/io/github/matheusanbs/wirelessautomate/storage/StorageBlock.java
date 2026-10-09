@@ -181,10 +181,10 @@ public class StorageBlock extends BaseEntityBlock {
         return StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
     }
 
-    /** Sobe o armazenamento em {@code pos} para {@code target}, se for exatamente o tier seguinte. */
+    /** Sobe o armazenamento em {@code pos} para {@code target}, se {@code target} estiver acima e carregado. */
     public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof StorageBlock) || state.getValue(RouterBlock.TIER).next() != target) {
+        if (!(state.getBlock() instanceof StorageBlock) || !state.getValue(RouterBlock.TIER).canUpgradeTo(target)) {
             return false;
         }
         if (!level.isClientSide) {

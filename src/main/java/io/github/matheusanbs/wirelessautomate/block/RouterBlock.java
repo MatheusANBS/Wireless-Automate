@@ -266,7 +266,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof RouterBlock) || state.getValue(TIER).next() != target) {
+        if (!(state.getBlock() instanceof RouterBlock) || !state.getValue(TIER).canUpgradeTo(target)) {
             return false;
         }
         if (!level.isClientSide) {

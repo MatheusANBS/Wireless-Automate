@@ -121,34 +121,41 @@ public final class RecipeGameTests {
         helper.succeed();
     }
 
-    /** Roteador + núcleo do tier seguinte, em qualquer posição da grade, sobe um tier; o resto não casa. */
+    /** Roteador + núcleo de um tier acima, em qualquer posição da grade, sobe direto para ele; o resto não casa. */
     @GameTest(template = "empty")
     public static void routerUpgradeRecipe(GameTestHelper helper) {
         RouterTier[] tiers = RouterTier.values();
         for (RouterTier tier : tiers) {
-            RouterTier next = tier.next();
-            if (next == null) {
-                continue;
+            for (RouterTier next : tiers) {
+                if (!tier.loaded() || !next.loaded() || !tier.canUpgradeTo(next)
+                        || !ModItems.TIER_CORES.containsKey(next)) {
+                    continue;
+                }
+                ItemStack router = RouterBlockItem.withTier(ModItems.ROUTER.get(), tier);
+                router.set(DataComponents.CUSTOM_NAME, Component.literal("Fornalha 1"));
+                CraftingInput input = CraftingInput.of(3, 3, Arrays.asList(ItemStack.EMPTY, router, ItemStack.EMPTY,
+                        ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
+                        new ItemStack(ModItems.TIER_CORES.get(next).get()), ItemStack.EMPTY, ItemStack.EMPTY));
+                RecipeHolder<CraftingRecipe> holder = find(helper, input)
+                        .orElseThrow(() -> new GameTestAssertException("sem upgrade de " + tier));
+                helper.assertValueEqual(holder.id(), WirelessAutomate.id("router_upgrade"), "receita");
+                ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
+                helper.assertTrue(out.is(ModItems.ROUTER.get()), "resultado: " + out);
+                helper.assertValueEqual(out.getCount(), 1, "quantidade");
+                helper.assertValueEqual(RouterBlockItem.tierOf(out), next, "tier de " + tier);
+                helper.assertValueEqual(out.getHoverName().getString(), "Fornalha 1", "nome perdido");
             }
-            ItemStack router = RouterBlockItem.withTier(ModItems.ROUTER.get(), tier);
-            router.set(DataComponents.CUSTOM_NAME, Component.literal("Fornalha 1"));
-            CraftingInput input = CraftingInput.of(3, 3, Arrays.asList(ItemStack.EMPTY, router, ItemStack.EMPTY,
-                    ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
-                    new ItemStack(ModItems.TIER_CORES.get(next).get()), ItemStack.EMPTY, ItemStack.EMPTY));
-            RecipeHolder<CraftingRecipe> holder = find(helper, input)
-                    .orElseThrow(() -> new GameTestAssertException("sem upgrade de " + tier));
-            helper.assertValueEqual(holder.id(), WirelessAutomate.id("router_upgrade"), "receita");
-            ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
-            helper.assertTrue(out.is(ModItems.ROUTER.get()), "resultado: " + out);
-            helper.assertValueEqual(out.getCount(), 1, "quantidade");
-            helper.assertValueEqual(RouterBlockItem.tierOf(out), next, "tier de " + tier);
-            helper.assertValueEqual(out.getHoverName().getString(), "Fornalha 1", "nome perdido");
         }
         ItemStack basic = RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.BASIC);
         ItemStack elite = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ELITE).get());
         ItemStack advanced = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get());
-        // Pular tier, roteador Ultimate, dois núcleos, dois roteadores ou só o roteador: nada.
-        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(basic, elite))).isEmpty(), "pulou tier");
+        // Pular tier sobe; descer, repetir o tier, roteador Ultimate, dois núcleos, dois roteadores ou só o roteador: nada.
+        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(basic, elite))).isPresent(), "não pulou tier");
+        ItemStack eliteRouter = RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ELITE);
+        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(eliteRouter, advanced))).isEmpty(), "desceu tier");
+        helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(
+                RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ADVANCED), advanced.copy()))).isEmpty(),
+                "mesmo tier");
         helper.assertTrue(find(helper, CraftingInput.of(2, 1, List.of(
                 RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ULTIMATE),
                 new ItemStack(ModItems.TIER_CORES.get(RouterTier.ULTIMATE).get())))).isEmpty(), "Ultimate subiu");
@@ -169,10 +176,9 @@ public final class RecipeGameTests {
         advancedCard.getItem().appendHoverText(advancedCard, Item.TooltipContext.EMPTY, lines,
                 net.minecraft.world.item.TooltipFlag.NORMAL);
         String text = lines.toString();
-        // Básico → Avançado: 32 → 256 itens/s e alcance de 64 → 512 blocos, na linha de cada um.
-        String items = Component.translatable("item.wirelessautomate.tier_core.items", "32", "256").getString();
+        // Só os valores do tier do cartão (a origem varia): 256 itens/s e alcance de 512 blocos.
+        String items = Component.translatable("item.wirelessautomate.tier_core.items", "256").getString();
         String range = Component.translatable("item.wirelessautomate.tier_core.range",
-                Component.translatable("item.wirelessautomate.tier_core.range.blocks", "64"),
                 Component.translatable("item.wirelessautomate.tier_core.range.blocks", "512")).getString();
         List<String> texts = lines.stream().map(Component::getString).toList();
         helper.assertTrue(texts.contains(items) && texts.contains(range),

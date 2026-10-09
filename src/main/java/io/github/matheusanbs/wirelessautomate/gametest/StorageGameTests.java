@@ -159,8 +159,8 @@ public final class StorageGameTests {
         helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 1, true), 0L, "cheio aceita nada");
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED),
                 "upgrade para Avançado");
-        helper.assertFalse(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ULTIMATE),
-                "não pula tier");
+        helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ULTIMATE),
+                "pula para o Ultimate");
         StorageChestBlockEntity upgraded = helper.getBlockEntity(A);
         helper.assertTrue(upgraded == chest, "o block entity é o mesmo");
         helper.assertValueEqual(upgraded.storage().total(), basic, "conteúdo mantido");
@@ -404,7 +404,7 @@ public final class StorageGameTests {
                 .thenSucceed();
     }
 
-    /** Baú + Cartão de Upgrade do tier seguinte na bancada: sobe o tier e mantém a referência ao conteúdo. */
+    /** Baú + Cartão de Upgrade de um tier acima na bancada: sobe o tier e mantém a referência ao conteúdo. */
     @GameTest(template = "empty")
     public static void chestUpgradeRecipe(GameTestHelper helper) {
         ItemStack chest = StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(), RouterTier.BASIC);
@@ -421,7 +421,11 @@ public final class StorageGameTests {
         CraftingInput skip = CraftingInput.of(2, 1,
                 List.of(chest, new ItemStack(ModItems.TIER_CORES.get(RouterTier.ELITE).get())));
         helper.assertTrue(helper.getLevel().getRecipeManager()
-                .getRecipeFor(RecipeType.CRAFTING, skip, helper.getLevel()).isEmpty(), "não pula tier");
+                .getRecipeFor(RecipeType.CRAFTING, skip, helper.getLevel()).isPresent(), "pula tier");
+        CraftingInput down = CraftingInput.of(2, 1, List.of(StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(),
+                RouterTier.ELITE), new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get())));
+        helper.assertTrue(helper.getLevel().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, down, helper.getLevel()).isEmpty(), "desceu tier");
         helper.succeed();
     }
 

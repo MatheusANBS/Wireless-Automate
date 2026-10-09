@@ -22,8 +22,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 
 /**
- * Cartão de upgrade de tier: clique no roteador (ou num armazenamento) para subir de tier no lugar, sem perder a
- * configuração (ou junte os dois na bancada, {@code RouterUpgradeRecipe}). O tooltip mostra o que
+ * Cartão de upgrade de tier: clique no roteador (ou num armazenamento) de qualquer tier abaixo para levá-lo ao tier do
+ * cartão no lugar, sem perder a configuração (ou junte os dois na bancada, {@code RouterUpgradeRecipe}). O tooltip mostra o que
  * ele aumenta, com os valores da config do servidor (sincronizada com o cliente) ou os padrões.
  */
 public class TierCoreItem extends Item {
@@ -62,22 +62,21 @@ public class TierCoreItem extends Item {
         if (!tier.loaded()) {
             tooltip.add(Component.translatable(KEY + "requires").withStyle(ChatFormatting.RED));
         }
-        RouterTier from = tier.previous();
-        if (from == null) {
+        if (tier.previous() == null) {
             return;
         }
-        tooltip.add(Component.translatable(KEY + "upgrades", Component.translatable(from.translationKey()),
-                Component.translatable(tier.translationKey())).withStyle(ChatFormatting.GRAY));
-        tooltip.add(line("items", rate(from, Stat.ITEMS), rate(tier, Stat.ITEMS)));
-        tooltip.add(line("fluids", rate(from, Stat.FLUID), rate(tier, Stat.FLUID)));
-        tooltip.add(line("energy", rate(from, Stat.ENERGY), rate(tier, Stat.ENERGY)));
+        tooltip.add(Component.translatable(KEY + "upgrades", Component.translatable(tier.translationKey()))
+                .withStyle(ChatFormatting.GRAY));
+        tooltip.add(line("items", rate(tier, Stat.ITEMS)));
+        tooltip.add(line("fluids", rate(tier, Stat.FLUID)));
+        tooltip.add(line("energy", rate(tier, Stat.ENERGY)));
         if (Sources.LOADED) {
-            tooltip.add(line("source", rate(from, Stat.SOURCE), rate(tier, Stat.SOURCE)));
+            tooltip.add(line("source", rate(tier, Stat.SOURCE)));
         }
-        tooltip.add(line("range", range(from), range(tier)));
+        tooltip.add(line("range", range(tier)));
         for (StorageKind kind : StorageKind.values()) {
             if (kind.loaded()) {
-                tooltip.add(line(kind.id, capacity(kind, from), capacity(kind, tier)));
+                tooltip.add(line(kind.id, capacity(kind, tier)));
             }
         }
         tooltip.add(Component.translatable(KEY + "use").withStyle(ChatFormatting.DARK_GRAY));
@@ -98,9 +97,9 @@ public class TierCoreItem extends Item {
         }
     }
 
-    private static Component line(String key, Component before, Component after) {
-        return Component.translatable(KEY + key, before.copy().withStyle(ChatFormatting.GRAY),
-                after.copy().withStyle(ChatFormatting.AQUA)).withStyle(ChatFormatting.DARK_AQUA);
+    private static Component line(String key, Component value) {
+        return Component.translatable(KEY + key, value.copy().withStyle(ChatFormatting.AQUA))
+                .withStyle(ChatFormatting.DARK_AQUA);
     }
 
     /** Vazão do tier pela config (padrão se ela ainda não carregou); 0 = sem limite. */

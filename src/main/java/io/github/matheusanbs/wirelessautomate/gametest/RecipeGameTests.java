@@ -176,10 +176,9 @@ public final class RecipeGameTests {
         advancedCard.getItem().appendHoverText(advancedCard, Item.TooltipContext.EMPTY, lines,
                 net.minecraft.world.item.TooltipFlag.NORMAL);
         String text = lines.toString();
-        // Básico → Avançado: 32 → 256 itens/s e alcance de 64 → 512 blocos, na linha de cada um.
-        String items = Component.translatable("item.wirelessautomate.tier_core.items", "32", "256").getString();
+        // Só os valores do tier do cartão (a origem varia): 256 itens/s e alcance de 512 blocos.
+        String items = Component.translatable("item.wirelessautomate.tier_core.items", "256").getString();
         String range = Component.translatable("item.wirelessautomate.tier_core.range",
-                Component.translatable("item.wirelessautomate.tier_core.range.blocks", "64"),
                 Component.translatable("item.wirelessautomate.tier_core.range.blocks", "512")).getString();
         List<String> texts = lines.stream().map(Component::getString).toList();
         helper.assertTrue(texts.contains(items) && texts.contains(range),

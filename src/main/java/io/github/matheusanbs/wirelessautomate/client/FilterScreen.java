@@ -1235,7 +1235,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     private Component levelLabel() {
         int level = draft.enchantment().map(ItemRule.Enchant::minLevel).orElse(1);
-        return Component.literal("≥ ").append(Component.translatable("enchantment.level." + level));
+        return Component.literal("≥ ").append(ItemRule.levelName(level));
     }
 
     /** 0 = tanto faz, 1 = pelo menos, 2 = abaixo de. */

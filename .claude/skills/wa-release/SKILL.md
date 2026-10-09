@@ -50,7 +50,7 @@ Pergunte como integrar, com "Merge no main + release (Recomendado)" primeiro. De
 
 ```bash
 git checkout main && git merge --no-ff <ramo>        # ou já no main
-git commit ...                                       # "X.Y.Z: versão, changelog, ..." + Co-Authored-By
+git commit ...                                       # "X.Y.Z: versão, changelog, ..."
 git push origin main
 git tag vX.Y.Z && git push origin vX.Y.Z
 gh release create vX.Y.Z build/libs/wirelessautomate-X.Y.Z.jar \

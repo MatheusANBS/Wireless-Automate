@@ -24,7 +24,6 @@
 - Performance: nada de tick por bloco; o tanque não faz tick; o estado `fill` só muda quando o nível muda; a tela só sincroniza com ela aberta.
 - `ModPayloads.VERSION` continua `"8"` (a 1.1.0 ainda não saiu; o payload da tela muda de nome nesta etapa, junto com o resto da 1.1.0).
 - Antes de cada commit: `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource` (Git Bash, na raiz). Nas tarefas de tela, também o e2e: `WA_E2E="$PWD/run/e2e" ./gradlew runClient` (resultado em `run/e2e/result.txt` = `OK`; confira que o `guiScale` de `run/options.txt` não mudou). Nunca dois jogos ao mesmo tempo.
-- Commits terminam com a linha `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 **Ajustes em relação à spec (decididos pelo dono no mockup):**
 1. Modelo de peças fino (base, trilhos, coluna de vidro, tampa, pescoço e gema), com nível visível, em vez de um cubo com painel.
@@ -88,9 +87,7 @@ Expected: tudo passa. Abra `run/e2e/1d-roteador-aba-source.png` e a captura das 
 
 ```bash
 git add -A src/main scripts/textures docs CLAUDE.md
-git commit -m "Etapa 2: Source no roxo do Ars e Químicos no verde do Tanque Químico
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: Source no roxo do Ars e Químicos no verde do Tanque Químico"
 ```
 
 ---
@@ -393,9 +390,7 @@ Expected: tudo passa; a run comum com 155 GameTests (152 + 3). O log do cliente 
 
 ```bash
 git add -A src/main src/test
-git commit -m "Etapa 2: Tanque de Source como armazenamento (conteúdo, nível, registros e dados)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: Tanque de Source como armazenamento (conteúdo, nível, registros e dados)"
 ```
 
 ---
@@ -466,9 +461,7 @@ Expected: tudo passa.
 
 ```bash
 git add -A scripts/textures src/main/resources/assets docs/preview
-git commit -m "Etapa 2: texturas e modelo fino do Tanque de Source, com o nível visível
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: texturas e modelo fino do Tanque de Source, com o nível visível"
 ```
 
 ---
@@ -552,9 +545,7 @@ Se `twoTanksMoveBillionsInOneVisit` falhar, confira primeiro se o roteador pegou
 
 ```bash
 git add -A src/main
-git commit -m "Etapa 2: Tanque de Source para o Ars (capability, SourceManager) e caminho bulk no roteador
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: Tanque de Source para o Ars (capability, SourceManager) e caminho bulk no roteador"
 ```
 
 ---
@@ -616,9 +607,7 @@ Expected: tudo passa; `run/e2e/result.txt` = `OK`. Abra `bateria-1-tela.png` (ig
 
 ```bash
 git add -A src/main
-git commit -m "Etapa 2: tela de um valor só para a Bateria e o Tanque de Source
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: tela de um valor só para a Bateria e o Tanque de Source"
 ```
 
 ---
@@ -658,7 +647,5 @@ Expected: tudo passa; `result.txt` = `OK`; `guia-wireless-source-tank.png` e `gu
 
 ```bash
 git add -A scripts/guide src/main/resources/assets/wirelessautomate/guides src/main/java/io/github/matheusanbs/wirelessautomate/client/DevEndToEnd.java CLAUDE.md docs/especificacao.md docs/progresso.md
-git commit -m "Etapa 2: página do Tanque de Source no guia e documentação
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 2: página do Tanque de Source no guia e documentação"
 ```

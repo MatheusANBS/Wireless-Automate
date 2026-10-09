@@ -2,7 +2,9 @@
 
 Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
 
-**Estado:** versão 1.4 (1.4.0: o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, e o JEI mostra cada tier). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10). Licença All Rights Reserved.
+> **In English:** wireless transport of items, fluids, energy, Mekanism chemicals and Ars Nouveau Source for NeoForge 1.21.1, built for ATM10. One central manager, no per-block ticking and a per-tick time budget. Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate); the in-game guide (GuideME) is available in English. The source is published for reference only (All Rights Reserved, see [LICENSE](LICENSE)).
+
+**Estado:** versão 1.4 (1.4.0: o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, e o JEI mostra cada tier). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.251 ou mais novo (roda no ATM10).
 
 ## Recursos
 
@@ -35,7 +37,7 @@ Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoFor
 
 ¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
 
-A vazão vale por face e por tipo (`sourcePerSecond` é a da Source). Os valores ficam na config do servidor (`config/wirelessautomate-server.toml`), assim como a capacidade dos armazenamentos por tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity` e `chemicalTankCapacity` e `sourceTankCapacity`).
+A vazão vale por face e por tipo (`sourcePerSecond` é a da Source). Os valores ficam na config do servidor (`<mundo>/serverconfig/wirelessautomate-server.toml`; num modpack, o padrão vai em `defaultconfigs/`), assim como o alcance, a capacidade dos armazenamentos por tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity`, `chemicalTankCapacity` e `sourceTankCapacity`), o chunk loading e o tamanho da área do Vinculador. A capacidade conta o total guardado, sem limite de tipos diferentes.
 
 ## Integrações opcionais
 
@@ -43,6 +45,7 @@ A vazão vale por face e por tipo (`sourcePerSecond` é a da Source). Os valores
 | --- | --- |
 | Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod, e o Tanque Químico Wireless |
 | Ars Nouveau (5.2 ou mais novo) | Source: aba Source no roteador (Source Jars, Relays e Imbuement Chamber ligam direto) e o Tanque de Source Wireless |
+| Allthemodium (All The Tweaks opcional) | Os tiers Allthemodium, Vibranium e Unobtainium, e no ATM10 a receita do Cartão Ultimate com fragmentos de ATM Star |
 | JEI | Arrastar e Shift + clique para os filtros (e para o inspetor de tags), e a receita de upgrade na bancada (roteador e armazenamentos) |
 | GuideME | O livro-guia, em inglês e português |
 
@@ -64,12 +67,13 @@ O script instala o que faltar (JDK 21, git, curl, unzip) e roda o primeiro build
 | `./gradlew runGameTestServer` | GameTests num servidor sem tela (sem o Mekanism); falha se algum teste falhar |
 | `./gradlew runGameTestServerChemicals` | GameTests de químicos, num servidor com o Mekanism |
 | `./gradlew runGameTestServerSource` | GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) |
-| `./gradlew runClient` | Cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios) e GuideME, para testar à mão |
+| `./gradlew runGameTestServerAllthemodium` | GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib |
+| `./gradlew runClient` | Cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks e GuideME, para testar à mão |
 | `./gradlew runData` | Geradores de dados, saída em `src/generated/resources/` |
 | `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (precisa de Xvfb) |
 | `./scripts/bench.sh <cenários>` | Benchmark num servidor dedicado com Sophisticated Storage (ver `docs/benchmark.md`) |
 
-O CI (`.github/workflows/build.yml`) roda `build`, `runGameTestServer`, `runGameTestServerChemicals` e `runGameTestServerSource` a cada push e pull request.
+O CI (`.github/workflows/build.yml`) roda `build`, `runGameTestServer`, `runGameTestServerChemicals`, `runGameTestServerSource` e `runGameTestServerAllthemodium` a cada push e pull request.
 
 ## Organização
 
@@ -81,3 +85,7 @@ O mapa do código-fonte fica no [`CLAUDE.md`](CLAUDE.md) ("Mapa do código").
 - `docs/pacote-de-design.md`: sprites e modelo do roteador.
 - `docs/curseforge/`: descrição, capa, banner e imagens da página do CurseForge.
 - `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (gera as texturas), `guide/` (gera as páginas do guia) e `curseforge/` (gera as imagens do CurseForge).
+
+## Licença
+
+All Rights Reserved: o código e os recursos estão aqui para consulta, sem permissão para copiar, modificar ou redistribuir (ver [`LICENSE`](LICENSE)). Para sugestões e bugs, abra uma issue.

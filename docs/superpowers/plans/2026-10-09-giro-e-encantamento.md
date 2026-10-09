@@ -15,11 +15,7 @@
 - Todo texto variável de tela passa por `GuiText` (o e2e confere `GuiText.clipCount()==0`).
 - Não mexa em `run/options.txt`. Um jogo (build com GameTest, cliente, e2e) por vez; compile antes (`./gradlew compileJava`) e, com `BUILD FAILED`, conserte em vez de esperar.
 - Verificação antes de cada commit: `./gradlew build runGameTestServer` no mínimo; na tarefa final, `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` e o e2e (`./scripts/e2e.sh`, `run/e2e/result.txt` = `OK`).
-- Commits no ramo atual, terminando com:
-  ```
-  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-  Claude-Session: https://claude.ai/code/session_012FCgSWCBGW94vyPMuHVfGz
-  ```
+- Commits no ramo atual.
   Não faça push.
 
 ## Tarefas

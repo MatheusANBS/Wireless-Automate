@@ -24,7 +24,7 @@ E sempre estas regras do projeto:
 - nunca rode dois jogos ao mesmo tempo;
 - não mexa em `run/options.txt`;
 - verifique com `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource` (e o e2e se mexeu em tela);
-- termine cada commit com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- commits sem linhas de atribuição (nada de `Co-Authored-By` ou `Claude-Session`).
 
 Não cole o histórico das tarefas anteriores no pedido. O subagente precisa da tarefa dele, das interfaces que toca e das restrições, nada mais.
 

@@ -24,7 +24,6 @@
 - Performance: nada de tick por bloco; capability só por `BlockCapabilityCache`; nada de sincronizar o cliente com a tela fechada.
 - `ModPayloads.VERSION` continua `"8"` (nenhum payload muda de formato nesta etapa).
 - Antes de cada commit: `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource` (Git Bash, na raiz). Nas tarefas que mexem em tela, também o e2e: `WA_E2E="$PWD/run/e2e" ./gradlew runClient` (resultado em `run/e2e/result.txt`, que deve dizer `OK`). Não rode dois jogos ao mesmo tempo (memória).
-- Commits terminam com a linha `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 **Ajuste em relação à spec:** a spec previa um `network/SourceTransfer.java` com tipos do Ars, "no molde do `EnergyTransfer`". Copiar o laço da energia duplicaria ~100 linhas. Em vez disso, a Tarefa 2 transforma o `EnergyTransfer` num laço genérico (`ScalarTransfer`) que fala com o recurso por uma interface (`ScalarAccess`); a energia e a Source são duas implementações. Com isso os tipos do Ars ficam só em `compat/arsnouveau/` (o `network/` não importa nada do Ars), e a etapa 2 só acrescenta o lado "bulk" (`long`) do Tanque de Source na implementação da Source.
 
@@ -248,9 +247,7 @@ Também confira que o cliente sobe com o Ars: `./gradlew runClient`, espere o me
 
 ```bash
 git add gradle.properties build.gradle src/main/templates/META-INF/neoforge.mods.toml .github/workflows/build.yml src/main/resources/data/wirelessautomate_source src/main/java/io/github/matheusanbs/wirelessautomate/gametest/SourceGameTests.java
-git commit -m "Etapa 1: Ars Nouveau opcional no build, no runClient e numa run de GameTests própria
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 1: Ars Nouveau opcional no build, no runClient e numa run de GameTests própria"
 ```
 
 ---
@@ -503,9 +500,7 @@ Expected: tudo passa, com o mesmo número de GameTests de antes (a refatoração
 
 ```bash
 git add -A src/main/java/io/github/matheusanbs/wirelessautomate/network CLAUDE.md
-git commit -m "Etapa 1: transferência de energia num laço genérico de um valor só (ScalarTransfer)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 1: transferência de energia num laço genérico de um valor só (ScalarTransfer)"
 ```
 
 ---
@@ -1004,9 +999,7 @@ Se um teste de Source falhar por tempo (o roteador dormindo antes de a jarra gan
 
 ```bash
 git add -A src/main/java src/test/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Etapa 1: Source do Ars Nouveau no registro, no motor e no roteador, com GameTests
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 1: Source do Ars Nouveau no registro, no motor e no roteador, com GameTests"
 ```
 
 ---
@@ -1079,9 +1072,7 @@ Expected: tudo passa; `run/e2e/result.txt` = `OK`. Abra as capturas `1b-roteador
 
 ```bash
 git add -A src/main/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Etapa 1: Source no tooltip dos Cartões de Upgrade e e2e com cinco tipos
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 1: Source no tooltip dos Cartões de Upgrade e e2e com cinco tipos"
 ```
 
 ---
@@ -1157,7 +1148,5 @@ Expected: tudo passa; `run/e2e/result.txt` = `OK`; capturas `guia-source.png` e 
 
 ```bash
 git add -A scripts/guide src/main/resources/assets/wirelessautomate/guides src/main/java/io/github/matheusanbs/wirelessautomate/client/DevEndToEnd.java CLAUDE.md docs/especificacao.md docs/progresso.md
-git commit -m "Etapa 1: página Source no guia e documentação
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 1: página Source no guia e documentação"
 ```

@@ -23,7 +23,6 @@
 - Tamanho mínimo do roteador e do Tablet: 300 × 240 (o de hoje); máximo: a janela menos 8 px. A largura extra do roteador vai só para o visor 3D e a linha das abas.
 - Nenhum texto variável desenhado sem `GuiText` nas telas tocadas; texto abreviado sempre tem tooltip com o texto inteiro.
 - Antes de cada commit: `./gradlew build runGameTestServer runGameTestServerChemicals` (Git Bash, na raiz). Nas tarefas de tela, também o e2e: no Windows, `WA_E2E="$PWD/run/e2e" ./gradlew runClient` (a janela abre e o roteiro roda sozinho; resultado em `run/e2e/result.txt`, que deve dizer `OK`). Não rode dois jogos ao mesmo tempo (memória).
-- Commits terminam com a linha `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 **Ajuste em relação à spec:** a spec dizia que o despacho da transferência viraria "um campo por tipo". Isso faria o `ResourceType` carregar `ItemTransfer` (classes do Minecraft) e quebraria o JUnit. Fica um `switch` exaustivo, sem `default`, em `NetworkManager.visit`: um tipo novo não compila até ganhar o seu caso, que é a garantia que a spec queria.
 
@@ -278,9 +277,7 @@ Esperado: 6 testes PASS.
 
 ```bash
 git add src/main/java/io/github/matheusanbs/wirelessautomate/network/ResourceType.java src/main/java/io/github/matheusanbs/wirelessautomate/network/LoadedTypes.java src/test/java/io/github/matheusanbs/wirelessautomate/network/ResourceTypeTest.java
-git commit -m "Registro de tipos: dados de cada ResourceType e LoadedTypes
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Registro de tipos: dados de cada ResourceType e LoadedTypes"
 ```
 
 ---
@@ -577,9 +574,7 @@ Esperado: `BUILD SUCCESSFUL`, "All 149 required tests passed" e "All 7 required 
 
 ```bash
 git add -A src/main/java src/test/java
-git commit -m "Vinculador e Configurador pela lista de tipos disponíveis
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Vinculador e Configurador pela lista de tipos disponíveis"
 ```
 
 ---
@@ -763,9 +758,7 @@ Esperado: `BUILD SUCCESSFUL`, 150 + 7 GameTests passando. Abra `run/config/wirel
 
 ```bash
 git add -A src/main/java
-git commit -m "Vazão, chaves salvas e cartões lidos do registro de tipos
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Vazão, chaves salvas e cartões lidos do registro de tipos"
 ```
 
 ---
@@ -953,9 +946,7 @@ Esperado: tudo passando. Depois, `WA_E2E="$PWD/run/e2e" ./gradlew runClient` e `
 
 ```bash
 git add scripts/textures/gerar_texturas.py docs/preview src/main/resources/assets/wirelessautomate/textures/gui/type src/main/resources/assets/wirelessautomate/lang src/main/java
-git commit -m "Ícones e estilo por tipo de recurso (ResourceStyle)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Ícones e estilo por tipo de recurso (ResourceStyle)"
 ```
 
 ---
@@ -1152,9 +1143,7 @@ Esperado: 151 + 7 GameTests passando, inclusive `listfiltersbytype`.
 
 ```bash
 git add -A src/main/java
-git commit -m "Tablet: estatística por tipo e filtro por tipo na Lista (protocolo 8)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Tablet: estatística por tipo e filtro por tipo na Lista (protocolo 8)"
 ```
 
 ---
@@ -1425,9 +1414,7 @@ Esperado: todos os JUnit passando (inclusive os 7 novos).
 
 ```bash
 git add src/main/java/io/github/matheusanbs/wirelessautomate/client/TabLayout.java src/main/java/io/github/matheusanbs/wirelessautomate/client/CardGrid.java src/main/java/io/github/matheusanbs/wirelessautomate/client/GuiText.java src/test/java/io/github/matheusanbs/wirelessautomate/client
-git commit -m "Layout das abas, grade de cartões e texto que cabe (GuiText)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Layout das abas, grade de cartões e texto que cabe (GuiText)"
 ```
 
 ---
@@ -1592,9 +1579,7 @@ Esperado: tudo passando; `run/e2e/result.txt` = `OK`; em `run/e2e/1b-roteador-ab
 
 ```bash
 git add -A src/main/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Roteador: abas adaptáveis, seletor de rede maior e vazão do tier em abas sem filtro
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Roteador: abas adaptáveis, seletor de rede maior e vazão do tier em abas sem filtro"
 ```
 
 ---
@@ -1784,9 +1769,7 @@ Esperado: tudo passando; `1c-roteador-grande.png` com o visor 3D maior, a coluna
 
 ```bash
 git add -A src/main/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Roteador redimensionável pela borda e pelo canto
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Roteador redimensionável pela borda e pelo canto"
 ```
 
 ---
@@ -1877,9 +1860,7 @@ Esperado: tudo passando; `8b-vinculador-chips.png` com 4 chips (ícone, nome, bo
 
 ```bash
 git add -A src/main/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Vinculador: chips de tipo pelo registro e botão Todos
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Vinculador: chips de tipo pelo registro e botão Todos"
 ```
 
 ---
@@ -2065,9 +2046,7 @@ Esperado: tudo passando; `7c` com 3 cartões na primeira linha e 1 na segunda (4
 
 ```bash
 git add -A src/main/java src/main/resources/assets/wirelessautomate/lang
-git commit -m "Tablet: cartões por tipo, clique filtra a Lista e tela redimensionável
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Tablet: cartões por tipo, clique filtra a Lista e tela redimensionável"
 ```
 
 ---
@@ -2111,7 +2090,5 @@ Esperado: `BUILD SUCCESSFUL`, 151 + 7 GameTests, todos os JUnit, `result.txt` = 
 
 ```bash
 git add -A scripts/guide src/main docs CLAUDE.md
-git commit -m "Etapa 0: e2e em português, guia e documentação do registro e das telas
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Etapa 0: e2e em português, guia e documentação do registro e das telas"
 ```

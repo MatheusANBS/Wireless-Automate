@@ -18,7 +18,6 @@
 - `ModPayloads.VERSION` não muda.
 - GameTests: os do mesmo lote rodam em paralelo; teste pertinência, não contagem; template `"empty"`.
 - Antes de cada commit: `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` (Git Bash, na raiz). Compile antes (`./gradlew compileJava`); com `BUILD FAILED`, conserte em vez de esperar. Nunca rode dois jogos ao mesmo tempo. Não mexa em `run/options.txt`.
-- Commits terminam com a linha `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Mapa de arquivos
 

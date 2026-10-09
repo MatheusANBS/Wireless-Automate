@@ -42,8 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-0. **Subir a 1.3.0 no CurseForge** (o dono): o jar `build/libs/wirelessautomate-1.3.0.jar` (também anexado à [release v1.3.0 no GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/tag/v1.3.0)) com o texto de `docs/curseforge/changelog-1.3.0.md`. Servidor e clientes precisam da 1.3, porque o blockstate do roteador mudou. O CI do GitHub não roda desde o merge da 1.3.0: os jobs são recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; o dono precisa resolver em Billing & plans.
-1. **Subir a 1.2.0 no CurseForge** (o dono): o jar `build/libs/wirelessautomate-1.2.0.jar`, o changelog unificado (`changelog-curseforge-1.2.0.md`) e o Allthemodium como dependência opcional.
+0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.
 1b. Testar num ATM10 real: receitas do ATM no JEI (com o fragmento de ATM Star), tooltip dos cartões, cores, e a migração da config num servidor que já tinha a 1.1. Sem teste automático: Allthemodium sem o All The Tweaks (a terceira versão do Ultimate).
 2. Acompanhar o retorno de quem usa, principalmente com o Mekanism. O projeto foi aprovado no CurseForge em 9/10/2026: [página do mod](https://www.curseforge.com/minecraft/mc-mods/wireless-automate).
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
@@ -98,7 +97,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
-| 2026-10-09 | **Mod aprovado no CurseForge** (ID 1732160), no ar em https://www.curseforge.com/minecraft/mc-mods/wireless-automate. |
+| 2026-10-09 | **Mod aprovado no CurseForge** (ID 1732160), no ar em https://www.curseforge.com/minecraft/mc-mods/wireless-automate. Os sete arquivos (0.1.0, 1.0.0, 1.0.1, 1.0.2, 1.1.0, 1.2.0 e 1.3.0) aprovados; a 1.2.0 e a 1.3.0 enviadas pelo dono. |
 | 2026-10-09 | Publicação local da 1.3.0: `./gradlew build runGameTestServer` no `main` (165 GameTests passando, jar `wirelessautomate-1.3.0.jar`), tag `v1.3.0` enviada e release no GitHub com o jar. O ramo `ccr-bff97a99-ovni89` já não existia; o CI não rodou por bloqueio de cobrança da conta no GitHub Actions. |
 | 2026-10-09 | Release 1.3.0: `mod_version`, changelog `changelog-1.3.0.md` e o unificado `changelog-curseforge-1.3.0.md`, descrição do CurseForge e README com o giro e o encantamento por nome. |
 | 2026-10-09 | Ajustes: as sugestões de encantamento mostram o id só quando ele cabe inteiro (a dica da linha tem os dois); o resumo da aba Regra (inclusive "Combina com N pilhas") e os rótulos das condições passam pelo `GuiText`; `Config.read` devolve o padrão quando a config do servidor não carregou (o modo de capturas completo não cai mais na tela do roteador; o Tablet de exemplo ganhou uma rede por tipo) e o e2e rola o guia pela barra do GuideME até o fim de cada página (a roda no meio da janela não rolava nada). 141 JUnit, 165 GameTests, e2e OK, 48 capturas. |

@@ -202,7 +202,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return RouterShapes.get(state.getValue(FACING));
+        return RouterShapes.get(state.getValue(FACING), state.getValue(SPIN));
     }
 
     @Override

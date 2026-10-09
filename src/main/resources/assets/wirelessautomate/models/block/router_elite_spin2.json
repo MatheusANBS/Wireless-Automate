@@ -1,0 +1,9 @@
+{
+  "parent": "wirelessautomate:block/router_elite",
+  "transform": {
+    "origin": "center",
+    "rotation": {
+      "y": -180
+    }
+  }
+}

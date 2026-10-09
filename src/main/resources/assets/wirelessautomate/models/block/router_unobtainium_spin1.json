@@ -1,0 +1,9 @@
+{
+  "parent": "wirelessautomate:block/router_unobtainium",
+  "transform": {
+    "origin": "center",
+    "rotation": {
+      "y": -90
+    }
+  }
+}

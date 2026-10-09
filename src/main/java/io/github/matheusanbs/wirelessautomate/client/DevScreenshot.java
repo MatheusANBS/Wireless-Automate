@@ -1,8 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -33,6 +38,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,8 +52,14 @@ import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -56,14 +68,18 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -78,10 +94,13 @@ import org.lwjgl.opengl.GL11;
  * Na tela de título desenha uma {@link RouterScreen} com um snapshot de exemplo (fornalha com Itens
  * na rede "Linha 5x", Fluidos sem rede e Energia na "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com
  * {@code setScreen} porque, sem mundo, o {@code tick} de uma tela de contêiner falha sem jogador.
+ * Com {@code WA_SCREENSHOT_ONLY=giro} tira só a galeria do giro do roteador ({@code giro-parede}).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevScreenshot {
     private static final String OUTPUT = System.getenv("WA_SCREENSHOT");
+    /** Prefixo opcional ({@code WA_SCREENSHOT_ONLY=giro}): só as capturas cujo nome começa com ele. */
+    private static final String ONLY = System.getenv("WA_SCREENSHOT_ONLY");
     /** Tiques entre um estado e a captura dele (vários quadros desenhados no meio). */
     private static final int STEP_TICKS = 10;
     /** Rede de nome comprido do exemplo. */
@@ -164,8 +183,10 @@ public final class DevScreenshot {
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps())
-            .flatMap(List::stream).toList();
+                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps())
+            .flatMap(List::stream)
+            .filter(step -> ONLY == null || step.file().startsWith(ONLY))
+            .toList();
 
     /**
      * Visor 3D: a fornalha com o roteador em cima em dois ângulos, com uma face selecionada e o
@@ -689,6 +710,71 @@ public final class DevScreenshot {
                 List.copyOf(dots), LinkerProblem.NONE, 262_144, 64, Optional.empty());
     }
 
+    // ------------------------------------------------------------------ giro do roteador
+
+    /** Com {@code true}, a tela de título mostra a galeria do giro em vez das telas. */
+    private static boolean spinGallery = ONLY != null && ONLY.startsWith("giro");
+
+    /** Galeria do giro: roteadores com spin 0 a 3 numa parede e no chão, com o contorno da colisão. */
+    private static List<Step> spinSteps() {
+        return List.of(new Step(() -> {
+            linkerScreen = null;
+            tabletScreen = null;
+            filterScreen = null;
+            mouseX = mouseY = -1;
+            spinGallery = true;
+        }, "giro-parede"));
+    }
+
+    /**
+     * Linha de cima: {@code facing=north} (preso numa parede ao sul), vista do norte; o giro deve andar no
+     * sentido horário de quem olha (spin 1 com os LEDs à direita, o oeste). Linha de baixo: {@code facing=up}
+     * no chão, vista do sul e de cima; spin 1 com os LEDs à esquerda (oeste). Em preto, o contorno da colisão.
+     */
+    private static void renderSpinGallery(GuiGraphics g, int width, int height) {
+        g.fill(0, 0, width, height, 0xFF2A2F38);
+        var font = Minecraft.getInstance().font;
+        g.drawString(font, "Parede: facing=north, visto do norte (oeste à direita)", 12, 6, 0xFFFFFF);
+        g.drawString(font, "Chão: facing=up, visto do sul (oeste à esquerda)", 12, height / 2 + 6, 0xFFFFFF);
+        float size = Math.min(width / 7f, height / 5.5f);
+        for (int row = 0; row < 2; row++) {
+            Direction facing = row == 0 ? Direction.NORTH : Direction.UP;
+            float yaw = row == 0 ? 180 : 0;
+            float pitch = row == 0 ? 15 : 35;
+            float cy = height * (row == 0 ? 0.24f : 0.74f);
+            for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
+                float cx = width * (spin + 1) / 5f;
+                int labelY = (int) (cy + size * 0.95f);
+                g.drawCenteredString(font, "spin " + spin, (int) cx, labelY, 0xFFE0E0E0);
+                g.drawCenteredString(font, "TOP " + RelativeSide.TOP.toAbsolute(facing, spin).getSerializedName(),
+                        (int) cx, labelY + 10, 0xFFA0A0A0);
+                BlockState state = ModBlocks.ROUTER.get().defaultBlockState()
+                        .setValue(RouterBlock.FACING, facing)
+                        .setValue(RouterBlock.SPIN, spin)
+                        .setValue(RouterBlock.TIER, RouterTier.ELITE);
+                g.flush();
+                PoseStack pose = g.pose();
+                pose.pushPose();
+                pose.translate(cx, cy, 150);
+                pose.scale(size, -size, size);
+                pose.mulPose(Axis.XP.rotationDegrees(pitch));
+                pose.mulPose(Axis.YP.rotationDegrees(yaw));
+                pose.translate(-0.5f, -0.5f, -0.5f);
+                MultiBufferSource.BufferSource buffers = g.bufferSource();
+                Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, pose, buffers,
+                        LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                buffers.endBatch();
+                VertexConsumer lines = buffers.getBuffer(RenderType.lines());
+                for (AABB box : state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs()) {
+                    LevelRenderer.renderLineBox(pose, lines, box, 0f, 0f, 0f, 1f);
+                }
+                buffers.endBatch();
+                pose.popPose();
+            }
+        }
+        Lighting.setupFor3DItems();
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -697,6 +783,12 @@ public final class DevScreenshot {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
+        if (spinGallery) {
+            event.getGuiGraphics().flush();
+            RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+            renderSpinGallery(event.getGuiGraphics(), title.width, title.height);
+            return;
+        }
         if (screen == null) {
             RouterMenu menu = new RouterMenu(0, new Inventory(null), sample());
             menu.applyThroughput(new long[] {1_240, 0, 0, 0});
@@ -737,8 +829,14 @@ public final class DevScreenshot {
         ticks++;
         if (ticks == 1) {
             minecraft.getWindow().setWindowed(1280, 800);
+            // sem options.txt o jogo abre a tela de acessibilidade no lugar da de título (como no e2e)
+            minecraft.options.onboardAccessibility = false;
         }
-        if (screen == null || ticks < 60 || ticks % STEP_TICKS != 0) {
+        if (minecraft.screen instanceof AccessibilityOnboardingScreen) {
+            // a flag acima chega tarde quando a tela já foi escolhida: troca pela de título
+            minecraft.setScreen(new TitleScreen(true));
+        }
+        if (screen == null && !spinGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
             return;
         }
         int step = (ticks - 60) / STEP_TICKS;

@@ -7,8 +7,10 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Formas de colisão do roteador para cada {@code facing}, rotacionadas com a mesma convenção do
- * blockstate (a do para-raios): {@code up} sem rotação, {@code down} x=180, laterais x=90 e y pela direção.
+ * Formas de colisão do roteador para cada {@code facing} e {@code spin}. As caixas do caso {@code up} giram
+ * primeiro pelo {@code spin} em torno de Y (sentido horário visto de cima, norte para leste, como o
+ * {@link io.github.matheusanbs.wirelessautomate.network.RelativeSide}) e depois pela rotação do blockstate
+ * (a do para-raios): {@code up} sem rotação, {@code down} x=180, laterais x=90 e y pela direção.
  */
 final class RouterShapes {
     /** Caixas do modelo com o roteador virado para cima, em pixels: corpo e duas antenas. */
@@ -18,19 +20,23 @@ final class RouterShapes {
             {12.5, 6, 2.5, 14.5, 16, 4.5},
     };
 
-    private static final Map<Direction, VoxelShape> SHAPES = new EnumMap<>(Direction.class);
+    private static final Map<Direction, VoxelShape[]> SHAPES = new EnumMap<>(Direction.class);
 
     static {
         for (Direction facing : Direction.values()) {
-            SHAPES.put(facing, build(facing));
+            VoxelShape[] porSpin = new VoxelShape[4];
+            for (int spin = 0; spin < 4; spin++) {
+                porSpin[spin] = build(facing, spin);
+            }
+            SHAPES.put(facing, porSpin);
         }
     }
 
-    static VoxelShape get(Direction facing) {
-        return SHAPES.get(facing);
+    static VoxelShape get(Direction facing, int spin) {
+        return SHAPES.get(facing)[spin & 3];
     }
 
-    private static VoxelShape build(Direction facing) {
+    private static VoxelShape build(Direction facing, int spin) {
         int xRot = switch (facing) {
             case UP -> 0;
             case DOWN -> 180;
@@ -44,8 +50,8 @@ final class RouterShapes {
         };
         VoxelShape shape = Shapes.empty();
         for (double[] box : UP_BOXES) {
-            double[] a = rotate(box[0], box[1], box[2], xRot, yRot);
-            double[] b = rotate(box[3], box[4], box[5], xRot, yRot);
+            double[] a = rotate(box[0], box[1], box[2], spin, xRot, yRot);
+            double[] b = rotate(box[3], box[4], box[5], spin, xRot, yRot);
             shape = Shapes.or(shape, net.minecraft.world.level.block.Block.box(
                     Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]),
                     Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])));
@@ -53,7 +59,14 @@ final class RouterShapes {
         return shape;
     }
 
-    private static double[] rotate(double x, double y, double z, int xRot, int yRot) {
+    private static double[] rotate(double x, double y, double z, int spin, int xRot, int yRot) {
+        // O giro: o mesmo passo do y abaixo (norte -> leste), aplicado antes do x.
+        for (int i = 0; i < spin; i++) {
+            double nx = 16 - z;
+            double nz = x;
+            x = nx;
+            z = nz;
+        }
         for (int i = 0; i < xRot / 90; i++) {
             double ny = z;
             double nz = 16 - y;

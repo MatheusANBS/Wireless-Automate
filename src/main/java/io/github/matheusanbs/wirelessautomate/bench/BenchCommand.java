@@ -43,7 +43,15 @@ public final class BenchCommand {
                                                         .executes(context -> run(context,
                                                                 IntegerArgumentType.getInteger(context, "n"),
                                                                 IntegerArgumentType.getInteger(context, "reps"),
-                                                                BenchStorage.byId(StringArgumentType.getString(context, "storage")))))))))
+                                                                BenchStorage.byId(StringArgumentType.getString(context, "storage"))))
+                                                        .then(Commands.argument("transport", StringArgumentType.word())
+                                                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                                        Arrays.stream(BenchTransport.values()).map(t -> t.id), builder))
+                                                                .executes(context -> run(context,
+                                                                        IntegerArgumentType.getInteger(context, "n"),
+                                                                        IntegerArgumentType.getInteger(context, "reps"),
+                                                                        BenchStorage.byId(StringArgumentType.getString(context, "storage")),
+                                                                        BenchTransport.byId(StringArgumentType.getString(context, "transport"))))))))))
                 .then(Commands.literal("stop")
                         .executes(context -> {
                             BenchRunner.stop();
@@ -60,7 +68,16 @@ public final class BenchCommand {
     }
 
     private static int run(CommandContext<CommandSourceStack> context, Integer nodes, int reps, BenchStorage storage) {
+        return run(context, nodes, reps, storage, BenchTransport.WA);
+    }
+
+    private static int run(CommandContext<CommandSourceStack> context, Integer nodes, int reps, BenchStorage storage,
+            BenchTransport transport) {
         CommandSourceStack source = context.getSource();
+        if (transport == null) {
+            source.sendFailure(Component.literal("Transporte desconhecido: use wa, wa-full, ln, ln-rr ou ln-async."));
+            return 0;
+        }
         BenchScenario scenario = BenchScenario.byId(StringArgumentType.getString(context, "scenario"));
         if (scenario == null) {
             source.sendFailure(Component.literal("Cenário desconhecido. Opções: "
@@ -71,7 +88,7 @@ public final class BenchCommand {
             source.sendFailure(Component.literal("Armazenamento desconhecido: use vanilla ou soph."));
             return 0;
         }
-        String problem = BenchRunner.problem(scenario, storage);
+        String problem = BenchRunner.problem(scenario, storage, transport);
         if (problem != null) {
             source.sendFailure(Component.literal(problem));
             return 0;
@@ -80,7 +97,7 @@ public final class BenchCommand {
             source.sendFailure(Component.literal("Já há um benchmark rodando: " + BenchRunner.status()));
             return 0;
         }
-        BenchRun.Job job = new BenchRun.Job(scenario, nodes == null ? scenario.defaultNodes : nodes, reps, storage);
+        BenchRun.Job job = new BenchRun.Job(scenario, nodes == null ? scenario.defaultNodes : nodes, reps, storage, transport);
         Path file = Path.of("wirelessautomate-bench", LocalDateTime.now().format(FILE_TIME) + "-" + scenario.id + ".md");
         file.getParent().toFile().mkdirs();
         BenchRunner.submit(List.of(job), line -> source.sendSuccess(() -> Component.literal(line), false), file);

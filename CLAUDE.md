@@ -48,7 +48,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`
 | `recipe/` | `FilterCardCopyRecipe` (cartão configurado + vazio = dois iguais) e `RouterUpgradeRecipe` (roteador + Cartão de Upgrade do tier seguinte na bancada, também no JEI) |
 | `compat/jei/` | Plugin opcional do JEI; nada fora desse pacote referencia o JEI |
 | `compat/mekanism/`, `network/Chemicals.java`, `network/ChemicalTransfer.java` | Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism |
-| `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh` |
+| `bench/` | `/wa bench` e o modo automático do `scripts/bench.sh`; o benchmark comparativo com o Logistics Network (`BenchTransport`, o adaptador `LogisticsNetworkBench`, só por reflexão, e `LnChannelPlan`, puro com JUnit; ver `docs/benchmark-logistics-network.md`) |
 | `compat/arsnouveau/`, `network/Sources.java` | Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouveau:source` e o `ScalarAccess` da Source). O resto do mod passa pela ponte `Sources` (`Sources.LOADED`), sem tipos do Ars. `ArsStorage` dá ao Tanque de Source a capability `ISourceCap` (roteador e Relays) e o provider no `SourceManager` do Ars (Sourcelinks a 5 blocos depositam, máquinas do Ars tiram); a visão `int` é limitada a `Integer.MAX_VALUE` |
 | `command/WaCommand.java` | `/wa profile`, `/wa network ...`, `/wa face ...` (os tipos são os do registro, inclusive `chemical` com o Mekanism), `/wa bench ...` e `/wa storage list` e `recover` (`StorageCommand`: devolve como item o conteúdo de um armazenamento que sumiu, no tier gravado) |
 | `menu/RouterMenu.java`, `RouterSnapshot.java`, `RemoteRouterMenu.java` | Menu da tela do roteador (slots de cartão da face selecionada e o do upgrade de chunk loading), o snapshot que o servidor manda só com a tela aberta e a mesma tela aberta à distância pelo Tablet |
@@ -83,6 +83,7 @@ Recursos em `src/main/resources/`:
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; alguns minutos, com as capturas do guia; força a escala 2 da interface quando a janela é pequena e faz uma volta em pt_br com rede de nome longo, conferindo o tooltip dos textos cortados)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
+./scripts/bench.sh comparativo # o mesmo contra o Logistics Network (baixa o jar dele para run/bench-ln, fora do git; ver docs/benchmark-logistics-network.md)
 ```
 
 Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os GameTests.

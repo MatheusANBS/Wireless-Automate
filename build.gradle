@@ -214,6 +214,11 @@ dependencies {
 var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     from configurations.benchMods
     into layout.projectDirectory.dir('run/bench/mods')
+    // O jar do Logistics Network (benchmark comparativo, All Rights Reserved): o scripts/bench.sh põe e
+    // tira, só na máquina local. Nunca vira dependência do build.
+    preserve {
+        include 'LogisticsNetworks-*.jar'
+    }
 }
 
 // run/mods do cliente: troca as versões dos mods acima quando mudam e preserva o que o dono

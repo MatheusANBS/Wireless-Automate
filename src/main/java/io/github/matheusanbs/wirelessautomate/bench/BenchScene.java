@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -23,6 +24,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -47,6 +49,12 @@ import org.jetbrains.annotations.Nullable;
  * forçados. Cada nó é uma máquina com um roteador em cima (facing UP), configurado pela face
  * {@link Direction#UP} da máquina. Os roteadores nascem sem rede (linha de base) e entram numa rede
  * nova em {@link #attach}.
+ *
+ * <p>No benchmark comparativo ({@link BenchTransport#logisticsNetwork()}), a máquina recebe um nó do
+ * Logistics Network no lugar do roteador ({@link LogisticsNetworkBench}), com o canal 0 pelo lado de
+ * cima e a vazão do tier do cenário ({@link LnChannelPlan}). A contagem neutra ({@link #delivered},
+ * {@link #extractedBySource}) olha só os inventários: o que chegou aos destinos e o que saiu de cada
+ * origem, sem perguntar a nenhum dos dois mods.
  */
 final class BenchScene {
     static final BlockPos ORIGIN = new BlockPos(20_000, 200, 20_000);
@@ -67,7 +75,17 @@ final class BenchScene {
     final ServerLevel level;
     final BenchScenario scenario;
     final BenchStorage storage;
+    final BenchTransport transport;
     final List<Node> nodes = new ArrayList<>();
+    /** Nós do Logistics Network, na ordem de {@link #nodes} (vazia com o Wireless Automate). */
+    private final List<Entity> lnNodes = new ArrayList<>();
+    private final List<UUID> lnNetworks = new ArrayList<>();
+    /** Redes do Wireless Automate da cena ({@link #network} é a primeira). */
+    private final List<UUID> networks = new ArrayList<>();
+    /** Itens postos em cada origem pelo benchmark (enchimento e reenchimentos), na ordem de {@link #nodes}. */
+    private long[] refilled = new long[0];
+    /** Itens tirados dos destinos pelo reenchimento (esvaziar), somados. */
+    private long destinationCleared;
     private final List<BlockPos> extraBlocks = new ArrayList<>();
     /** Blocos de redstone que ligam e desligam ({@link BenchScenario#REDSTONE}), um acima de cada roteador. */
     private final List<BlockPos> clocks = new ArrayList<>();
@@ -81,10 +99,11 @@ final class BenchScene {
     private BlockPos min = ORIGIN;
     private BlockPos max = ORIGIN;
 
-    BenchScene(ServerLevel level, BenchScenario scenario, BenchStorage storage, int count) {
+    BenchScene(ServerLevel level, BenchScenario scenario, BenchStorage storage, BenchTransport transport, int count) {
         this.level = level;
         this.scenario = scenario;
         this.storage = storage;
+        this.transport = transport;
         List<Item> items = stackableItems();
         sourceItems = new ArrayList<>();
         junkItems = new ArrayList<>();
@@ -129,12 +148,13 @@ final class BenchScene {
                     kind = source ? Machine.ENERGY_SOURCE : Machine.ENERGY_SINK;
                 }
             }
-            if (scenario == BenchScenario.BIG_STACK) {
+            if (scenario == BenchScenario.BIG_STACK || scenario == BenchScenario.INFINITE) {
                 kind = source ? Machine.STACK_SOURCE : Machine.ITEM_SINK;
             }
             nodes.add(new Node(i, machine, machine.above(), type, source, kind));
         }
         max = ORIGIN.offset(side * width, scenario == BenchScenario.REDSTONE ? 2 : 1, (count + side - 1) / side);
+        refilled = new long[count];
     }
 
     /** Põe máquinas e roteadores, enche as máquinas e configura as faces. Os roteadores ficam sem rede. */
@@ -144,6 +164,10 @@ final class BenchScene {
                 level.setChunkForced(cx, cz, true);
                 forcedChunks.add(ChunkPos.asLong(cx, cz));
             }
+        }
+        if (transport.logisticsNetwork()) {
+            buildLogisticsNetwork();
+            return;
         }
         BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP)
@@ -156,6 +180,40 @@ final class BenchScene {
                 configure(node, entity);
             }
         }
+    }
+
+    /** As máquinas e um nó do Logistics Network em cada, sem rede, na vazão do tier do cenário. */
+    private void buildLogisticsNetwork() {
+        LogisticsNetworkBench ln = LogisticsNetworkBench.get();
+        LnChannelPlan plan = lnPlan(scenario);
+        for (Node node : nodes) {
+            placeMachine(node);
+            fill(node);
+        }
+        for (Node node : nodes) {
+            String type;
+            int batch;
+            if (node.type() == ResourceType.FLUID) {
+                type = "fluid";
+                batch = plan.fluid();
+            } else if (node.type() == ResourceType.ENERGY) {
+                type = "energy";
+                batch = plan.energy();
+            } else {
+                type = "item";
+                batch = plan.items();
+            }
+            lnNodes.add(ln.place(level, node.machine(), OWNER,
+                    new LogisticsNetworkBench.Channel(type, node.source(), batch, transport.lnDistribution()),
+                    plan.upgrade()));
+        }
+    }
+
+    /** A configuração do canal do Logistics Network com a vazão do tier do cenário (config do servidor). */
+    static LnChannelPlan lnPlan(BenchScenario scenario) {
+        Config.TierValues tier = Config.TIERS.get(scenario.tier);
+        return LnChannelPlan.forRates(tier.rate(ResourceType.ITEM), tier.rate(ResourceType.FLUID),
+                tier.rate(ResourceType.ENERGY));
     }
 
     private void placeMachine(Node node) {
@@ -216,16 +274,29 @@ final class BenchScene {
         return new Filter(Filter.ListMode.WHITELIST, false, entries);
     }
 
-    /** Põe os roteadores numa rede nova. */
+    /**
+     * Põe os roteadores (ou os nós do Logistics Network) em redes novas: uma só com todos, ou uma por par
+     * de origem e destino vizinhos ({@link BenchScenario#PAIRS}).
+     */
     void attach() {
-        network = NetworkSavedData.get(level.getServer())
-                .create(OWNER, "bench-" + scenario.id + "-" + level.getGameTime()).id();
-        for (Node node : nodes) {
-            RouterBlockEntity router = router(node);
-            if (router != null) {
-                router.setNetworkId(network);
+        int group = scenario == BenchScenario.PAIRS ? 2 : nodes.size();
+        for (int start = 0; start < nodes.size(); start += group) {
+            int end = Math.min(nodes.size(), start + group);
+            String name = "bench-" + scenario.id + "-" + level.getGameTime() + "-" + start / group;
+            if (transport.logisticsNetwork()) {
+                lnNetworks.add(LogisticsNetworkBench.get().attach(level, name, OWNER, lnNodes.subList(start, end)));
+                continue;
+            }
+            UUID id = NetworkSavedData.get(level.getServer()).create(OWNER, name).id();
+            networks.add(id);
+            for (Node node : nodes.subList(start, end)) {
+                RouterBlockEntity router = router(node);
+                if (router != null) {
+                    router.setNetworkId(id);
+                }
             }
         }
+        network = networks.isEmpty() ? null : networks.get(0);
     }
 
     /**
@@ -260,8 +331,9 @@ final class BenchScene {
         clockOn = !clockOn;
         BlockState state = (clockOn ? Blocks.REDSTONE_BLOCK : Blocks.AIR).defaultBlockState();
         if (clocks.isEmpty()) {
+            // Encostado na peça que transporta: em cima do roteador, ou em cima da máquina com o nó.
             for (Node node : nodes) {
-                clocks.add(node.router().above());
+                clocks.add(transport.logisticsNetwork() ? node.machine().above() : node.router().above());
             }
         }
         for (BlockPos pos : clocks) {
@@ -275,6 +347,9 @@ final class BenchScene {
 
     /** Todos os roteadores já se registraram no gerenciador (o {@code onLoad} roda no tick seguinte). */
     boolean registered() {
+        if (transport.logisticsNetwork()) {
+            return lnNodes.size() == nodes.size() && lnNodes.stream().allMatch(Entity::isAlive);
+        }
         NetworkManager manager = NetworkManager.get();
         for (Node node : nodes) {
             RouterBlockEntity router = router(node);
@@ -314,6 +389,54 @@ final class BenchScene {
         return result;
     }
 
+    /**
+     * Contagem neutra: unidades que chegaram aos destinos até agora (itens nos destinos mais os já
+     * tirados pelo reenchimento, mais o que os ralos de teste receberam; fluido e energia só nos ralos).
+     * Use a diferença entre duas leituras.
+     */
+    long delivered(ResourceType type) {
+        if (type == ResourceType.FLUID) {
+            return BenchCapabilities.fluidReceived();
+        }
+        if (type == ResourceType.ENERGY) {
+            return BenchCapabilities.energyReceived();
+        }
+        if (type != ResourceType.ITEM) {
+            return 0;
+        }
+        long total = destinationCleared + BenchCapabilities.itemsReceived();
+        for (Node node : nodes) {
+            IItemHandler handler = node.source() ? null : items(node);
+            if (handler != null) {
+                total += count(handler);
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Contagem neutra: itens que saíram de cada origem com inventário até agora (o que o benchmark pôs
+     * menos o que sobrou), na ordem de {@link #nodes}; {@code -1} para destinos e origens sem inventário
+     * (fonte infinita, fluido, energia).
+     */
+    long[] extractedBySource() {
+        long[] result = new long[nodes.size()];
+        for (int i = 0; i < nodes.size(); i++) {
+            Node node = nodes.get(i);
+            IItemHandler handler = node.source() ? items(node) : null;
+            result[i] = handler == null ? -1 : refilled[i] - count(handler);
+        }
+        return result;
+    }
+
+    private static long count(IItemHandler handler) {
+        long total = 0;
+        for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
+            total += handler.getStackInSlot(slot).getCount();
+        }
+        return total;
+    }
+
     int sourceCount() {
         int count = 0;
         for (Node node : nodes) {
@@ -350,9 +473,9 @@ final class BenchScene {
                     refill(node, handler);
                 }
             } else if (scenario == BenchScenario.BIG_FULL) {
-                clear(handler, Math.max(0, handler.getSlots() - FREE_TAIL_SLOTS));
+                destinationCleared += clear(handler, Math.max(0, handler.getSlots() - FREE_TAIL_SLOTS));
             } else if (scenario != BenchScenario.FULL && scenario != BenchScenario.STOCK) {
-                clear(handler, 0);
+                destinationCleared += clear(handler, 0);
             }
         }
     }
@@ -412,31 +535,42 @@ final class BenchScene {
     }
 
     private void refill(Node node, IItemHandler handler) {
+        long added = 0;
         for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
-            top(handler, slot, pattern(node, slot));
+            added += top(handler, slot, pattern(node, slot));
         }
+        refilled[node.index()] += added;
     }
 
-    /** Completa o slot com o item até 64 (ou o limite do slot). Slot com outro item fica como está. */
-    private static void top(IItemHandler handler, int slot, Item item) {
+    /**
+     * Completa o slot com o item até 64 (ou o limite do slot). Slot com outro item fica como está.
+     * Devolve quantos entraram.
+     */
+    private static int top(IItemHandler handler, int slot, Item item) {
         ItemStack inSlot = handler.getStackInSlot(slot);
         if (!inSlot.isEmpty() && !inSlot.is(item)) {
-            return;
+            return 0;
         }
         int want = Math.min(handler.getSlotLimit(slot), item.getDefaultMaxStackSize()) - inSlot.getCount();
-        if (want > 0) {
-            handler.insertItem(slot, new ItemStack(item, want), false);
+        if (want <= 0) {
+            return 0;
         }
+        return want - handler.insertItem(slot, new ItemStack(item, want), false).getCount();
     }
 
-    private static void clear(IItemHandler handler, int from) {
+    /** Esvazia os slots a partir de {@code from}; devolve quantos itens saíram. */
+    private static long clear(IItemHandler handler, int from) {
+        long removed = 0;
         for (int slot = from, n = handler.getSlots(); slot < n; slot++) {
             for (int guard = 0; guard < 64 && !handler.getStackInSlot(slot).isEmpty(); guard++) {
-                if (handler.extractItem(slot, Integer.MAX_VALUE, false).isEmpty()) {
+                ItemStack out = handler.extractItem(slot, Integer.MAX_VALUE, false);
+                if (out.isEmpty()) {
                     break;
                 }
+                removed += out.getCount();
             }
         }
+        return removed;
     }
 
     private @Nullable IItemHandler items(Node node) {
@@ -453,10 +587,16 @@ final class BenchScene {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }
         clocks.clear();
-        if (network != null) {
-            NetworkSavedData.get(level.getServer()).remove(network);
-            network = null;
+        if (transport.logisticsNetwork()) {
+            LogisticsNetworkBench.get().teardown(level, lnNodes, lnNetworks);
+            lnNodes.clear();
+            lnNetworks.clear();
         }
+        for (UUID id : networks) {
+            NetworkSavedData.get(level.getServer()).remove(id);
+        }
+        networks.clear();
+        network = null;
         for (Node node : nodes) {
             IItemHandler handler = items(node);
             if (handler != null) {

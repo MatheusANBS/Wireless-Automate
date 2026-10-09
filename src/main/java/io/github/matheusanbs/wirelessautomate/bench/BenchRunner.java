@@ -33,7 +33,11 @@ import org.jetbrains.annotations.Nullable;
  * mod roda no {@code Post}, depois que o vanilla já fechou a conta do MSPT dele, então o MSPT do
  * vanilla (e o do {@code /neoforge tps}) não inclui o mod; esta medição inclui.
  *
- * <p>Modo automático: com a variável {@code WA_BENCH} (ex.: {@code many:500:3:vanilla;idle:500:3}),
+ * <p>Cada tarefa diz quem transporta ({@link BenchTransport}); ao começar uma tarefa, o runner ajusta o
+ * orçamento do Wireless Automate ({@code wa-full}) ou o modo assíncrono do Logistics Network
+ * ({@code ln-async}) e devolve os valores de antes no fim dela.
+ *
+ * <p>Modo automático: com a variável {@code WA_BENCH} (ex.: {@code many:500:3:vanilla;idle:500:3:vanilla:ln}),
  * as tarefas começam quando o servidor sobe; o relatório vai para {@code WA_BENCH_OUT} (padrão
  * {@code bench-report.md} na pasta do servidor) e o servidor para no fim. Também lê
  * {@code WA_BENCH_BASELINE}, {@code WA_BENCH_WARMUP} e {@code WA_BENCH_MEASURE} (ticks), e
@@ -56,6 +60,10 @@ public final class BenchRunner {
     private static int emptyTicksLeft;
     private static final Samples emptyMspt = new Samples();
     private static final Samples emptyMod = new Samples();
+    /** Valores de antes da tarefa, para devolver no fim ({@link #applyTransport}). */
+    private static @Nullable Double savedBudget;
+    private static @Nullable Boolean savedAdaptive;
+    private static @Nullable Boolean savedLnAsync;
 
     static boolean busy() {
         return current != null || !queue.isEmpty() || emptyTicksLeft > 0;
@@ -82,6 +90,43 @@ public final class BenchRunner {
         if (current != null) {
             current.abort();
             current = null;
+        }
+        restoreTransport();
+    }
+
+    /** Ajusta o orçamento do Wireless Automate ou o modo do Logistics Network para a tarefa. */
+    private static void applyTransport(BenchTransport transport) {
+        restoreTransport();
+        switch (transport) {
+            case WA -> {
+            }
+            case WA_FULL -> {
+                savedBudget = Config.TICK_BUDGET_MS.get();
+                savedAdaptive = Config.ADAPTIVE_BUDGET.get();
+                Config.TICK_BUDGET_MS.set(BenchTransport.FULL_BUDGET_MS);
+                Config.ADAPTIVE_BUDGET.set(false);
+            }
+            case LN, LN_RR, LN_ASYNC -> {
+                LogisticsNetworkBench ln = LogisticsNetworkBench.get();
+                savedLnAsync = ln.async();
+                ln.setAsync(transport == BenchTransport.LN_ASYNC);
+            }
+        }
+    }
+
+    /** Devolve o que {@link #applyTransport} mudou. */
+    private static void restoreTransport() {
+        if (savedBudget != null) {
+            Config.TICK_BUDGET_MS.set(savedBudget);
+            savedBudget = null;
+        }
+        if (savedAdaptive != null) {
+            Config.ADAPTIVE_BUDGET.set(savedAdaptive);
+            savedAdaptive = null;
+        }
+        if (savedLnAsync != null) {
+            LogisticsNetworkBench.get().setAsync(savedLnAsync);
+            savedLnAsync = null;
         }
     }
 
@@ -119,11 +164,25 @@ public final class BenchRunner {
             current = new BenchRun(job, intEnv("WA_BENCH_BASELINE", DEFAULT_BASELINE),
                     intEnv("WA_BENCH_WARMUP", job.scenario().warmupTicks),
                     intEnv("WA_BENCH_MEASURE", DEFAULT_MEASURE), BenchRunner::emit);
-            current.start(server);
+            try {
+                applyTransport(job.transport());
+                current.start(server);
+            } catch (IllegalStateException e) {
+                // Reflexão no Logistics Network falhou: aborta a tarefa em vez de medir pela metade.
+                emit("ERRO na tarefa " + job.label() + ": " + e.getMessage());
+                WirelessAutomate.LOGGER.error("Benchmark: tarefa {} abortada", job.label(), e);
+                current.abort();
+                current = null;
+                restoreTransport();
+                if (queue.isEmpty()) {
+                    finish(server);
+                }
+            }
             return;
         }
         current.tick(server, tickNanos, modNanos);
         if (current.done()) {
+            restoreTransport();
             if (!current.job.jitWarmup()) {
                 finished.add(current);
             }
@@ -174,9 +233,16 @@ public final class BenchRunner {
         String out = System.getenv("WA_BENCH_OUT");
         // O código do motor começa interpretado: sem aquecer o JIT, a primeira tarefa sai bem mais lenta.
         List<BenchRun.Job> all = new ArrayList<>();
-        all.add(new BenchRun.Job(BenchScenario.MANY, 200, 1, BenchStorage.VANILLA, true));
+        all.add(new BenchRun.Job(BenchScenario.MANY, 200, 1, BenchStorage.VANILLA, BenchTransport.WA, true));
         if (BenchCapabilities.enabled()) {
-            all.add(new BenchRun.Job(BenchScenario.MIXED, 60, 1, BenchStorage.VANILLA, true));
+            all.add(new BenchRun.Job(BenchScenario.MIXED, 60, 1, BenchStorage.VANILLA, BenchTransport.WA, true));
+        }
+        // O motor do Logistics Network também começa interpretado: o mesmo aquecimento para ele.
+        if (jobs.stream().anyMatch(job -> job.transport().logisticsNetwork())) {
+            all.add(new BenchRun.Job(BenchScenario.MANY, 200, 1, BenchStorage.VANILLA, BenchTransport.LN, true));
+            if (BenchCapabilities.enabled()) {
+                all.add(new BenchRun.Job(BenchScenario.MIXED, 60, 1, BenchStorage.VANILLA, BenchTransport.LN, true));
+            }
         }
         all.addAll(jobs);
         emptyTicksLeft = EMPTY_TICKS;
@@ -192,7 +258,7 @@ public final class BenchRunner {
         auto = false;
     }
 
-    /** {@code cenário[:n[:reps[:armazenamento]]]} separados por {@code ;} ou {@code ,}. */
+    /** {@code cenário[:n[:reps[:armazenamento[:transporte]]]]} separados por {@code ;} ou {@code ,}. */
     static List<BenchRun.Job> parse(String spec) {
         List<BenchRun.Job> jobs = new ArrayList<>();
         for (String item : spec.split("[;,]")) {
@@ -211,20 +277,40 @@ public final class BenchRunner {
             if (storage == null) {
                 throw new IllegalArgumentException("armazenamento desconhecido: " + parts[3]);
             }
-            String problem = problem(scenario, storage);
+            BenchTransport transport = parts.length > 4 ? BenchTransport.byId(parts[4]) : BenchTransport.WA;
+            if (transport == null) {
+                throw new IllegalArgumentException("transporte desconhecido: " + parts[4]);
+            }
+            String problem = problem(scenario, storage, transport);
             if (problem != null) {
                 WirelessAutomate.LOGGER.warn("Benchmark: pulando {}: {}", trimmed, problem);
                 continue;
             }
-            jobs.add(new BenchRun.Job(scenario, Math.max(2, nodes), Math.max(1, reps), storage));
+            jobs.add(new BenchRun.Job(scenario, Math.max(2, nodes), Math.max(1, reps), storage, transport));
         }
         return jobs;
     }
 
     /** Por que a tarefa não pode rodar aqui; {@code null} se pode. */
-    static @Nullable String problem(BenchScenario scenario, BenchStorage storage) {
+    static @Nullable String problem(BenchScenario scenario, BenchStorage storage, BenchTransport transport) {
         if (!storage.available()) {
             return "o Sophisticated Storage não está carregado";
+        }
+        if (transport.logisticsNetwork()) {
+            if (!LogisticsNetworkBench.loaded()) {
+                return "o Logistics Network não está carregado (scripts/bench.sh com uma tarefa :ln põe o jar)";
+            }
+            if (!scenario.comparable()) {
+                return "o cenário " + scenario.id + " não tem equivalente no Logistics Network";
+            }
+        }
+        if (scenario == BenchScenario.INFINITE) {
+            if (!BenchCapabilities.enabled()) {
+                return "o cenário inf precisa de -Dwirelessautomate.bench=true (run benchServer)";
+            }
+            if (storage != BenchStorage.VANILLA) {
+                return "o cenário inf usa só máquinas de teste; rode com vanilla";
+            }
         }
         if (scenario == BenchScenario.MIXED && !BenchCapabilities.enabled()) {
             return "o cenário misto precisa de -Dwirelessautomate.bench=true (run benchServer)";
@@ -274,7 +360,11 @@ public final class BenchRunner {
                 + "- Orçamento: " + Config.TICK_BUDGET_MS.get() + " ms/tick, adaptativo " + Config.ADAPTIVE_BUDGET.get() + "\n"
                 + "- Sophisticated Storage: " + (BenchStorage.SOPH.available() ? "sim" : "não")
                 + ", Spark: " + (ModList.get().isLoaded("spark") ? "sim" : "não")
-                + ", máquinas de teste: " + (BenchCapabilities.enabled() ? "sim" : "não") + "\n\n";
+                + ", máquinas de teste: " + (BenchCapabilities.enabled() ? "sim" : "não") + "\n"
+                + "- Logistics Network: " + (LogisticsNetworkBench.loaded()
+                        ? LogisticsNetworkBench.version() + " (assíncrono na config: "
+                                + (LogisticsNetworkBench.get().async() ? "ligado" : "desligado") + ")"
+                        : "não") + "\n\n";
         try {
             Files.writeString(report, header, StandardCharsets.UTF_8);
         } catch (IOException e) {

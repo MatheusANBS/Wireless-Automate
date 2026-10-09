@@ -9,6 +9,12 @@
 # segundo de jogo continuam valendo, mas o MSPT sobe com a disputa de CPU.
 # WA_BENCH_JFR=1 grava também um perfil do Java Flight Recorder (local) em run/bench/reports/<data>.jfr.
 #
+# Benchmark comparativo (docs/benchmark-logistics-network.md): um quinto campo diz quem transporta, wa (padrão),
+# wa-full, ln, ln-rr ou ln-async, como em "many:500:3:vanilla:ln". "./scripts/bench.sh comparativo" roda a lista
+# COMPARATIVE_SPEC abaixo. Com alguma tarefa ln, o script põe o jar do Logistics Network em run/bench/mods
+# (baixado uma vez para run/bench-ln/, fora do git; o mod é All Rights Reserved e não vai para o repositório);
+# sem nenhuma, tira o jar, para as rodadas só do mod continuarem com o mesmo conjunto de mods.
+#
 # O que ele faz:
 #   - prepara run/bench: eula, server.properties com mundo plano novo, porta 25599, sem mobs;
 #   - sobe ./gradlew runBenchServer (com Sophisticated Storage e Spark; ver build.gradle) com WA_BENCH;
@@ -23,10 +29,24 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT/run/bench"
 DEFAULT_SPEC="many:500:3:vanilla;many:500:3:soph;idle:500:3:vanilla;idle:500:3:soph;full:100:3:vanilla;full:500:3:vanilla;raw:2:3:vanilla;raw:2:3:soph;big:20:3:vanilla;big:20:3:soph;bigfull:20:3:vanilla;bigfull:20:3:soph;types:20:3:soph;mixed:498:3:vanilla;rebuild:500:3:vanilla;sparse:500:3:vanilla;sparse:500:3:soph;stock:20:3:soph;bigstack:2:3:vanilla;redstone:100:3:vanilla;tablet:1000:3:vanilla"
+# Cada cenário comparável nos cinco transportes, um atrás do outro (mesma ordem em todas as rodadas).
+COMPARATIVE_SPEC=""
+for task in many:100:3:vanilla many:500:3:vanilla many:1000:3:vanilla idle:500:3:vanilla full:500:3:vanilla \
+        sparse:500:3:vanilla raw:2:3:vanilla big:20:3:vanilla bigfull:20:3:vanilla mixed:498:3:vanilla \
+        redstone:100:3:vanilla inf:2:3:vanilla inf:100:3:vanilla many:500:3:soph \
+        pairs:100:3:vanilla pairs:500:3:vanilla pairs:1000:3:vanilla; do
+    for transport in wa wa-full ln ln-rr ln-async; do
+        COMPARATIVE_SPEC="${COMPARATIVE_SPEC:+$COMPARATIVE_SPEC;}$task:$transport"
+    done
+done
+LN_VERSION="1.21.1-1.17.2"
+LN_URL="https://cursemaven.com/curse/maven/logistics-network-1448257/9086994/logistics-network-1448257-9086994.jar"
+
 SPEC="${1:-$DEFAULT_SPEC}"
 
 case "${SPEC}" in
-    -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    comparativo) SPEC="$COMPARATIVE_SPEC" ;;
 esac
 
 log() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -59,6 +79,19 @@ max-tick-time=-1
 sync-chunk-writes=false
 motd=Wireless Automate benchmark
 EOF
+
+mkdir -p "$RUN_DIR/mods"
+rm -f "$RUN_DIR"/mods/LogisticsNetworks-*.jar
+if printf '%s' "$SPEC" | grep -Eq ':ln(-async)?([;,]|$)'; then
+    LN_JAR="$ROOT/run/bench-ln/LogisticsNetworks-$LN_VERSION.jar"
+    if [ ! -s "$LN_JAR" ]; then
+        log "Baixando o Logistics Network $LN_VERSION (só para o benchmark local)"
+        mkdir -p "$(dirname "$LN_JAR")"
+        curl -fsSL -o "$LN_JAR" "$LN_URL"
+    fi
+    cp "$LN_JAR" "$RUN_DIR/mods/"
+    log "Logistics Network $LN_VERSION em run/bench/mods"
+fi
 
 log "Tarefas: $SPEC"
 log "Relatório: $REPORT"

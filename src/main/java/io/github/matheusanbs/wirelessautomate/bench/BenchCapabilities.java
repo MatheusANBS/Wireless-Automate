@@ -34,6 +34,26 @@ public final class BenchCapabilities {
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.bench");
 
+    /**
+     * O que os ralos receberam de verdade (fora as simulações), somado por tipo: a contagem neutra do
+     * benchmark comparativo, a mesma para qualquer mod que entregue neles. Só a thread do servidor escreve.
+     */
+    private static long itemsReceived;
+    private static long fluidReceived;
+    private static long energyReceived;
+
+    static long itemsReceived() {
+        return itemsReceived;
+    }
+
+    static long fluidReceived() {
+        return fluidReceived;
+    }
+
+    static long energyReceived() {
+        return energyReceived;
+    }
+
     public static boolean enabled() {
         return ENABLED;
     }
@@ -109,6 +129,9 @@ public final class BenchCapabilities {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (!simulate) {
+                itemsReceived += stack.getCount();
+            }
             return ItemStack.EMPTY;
         }
 
@@ -196,6 +219,9 @@ public final class BenchCapabilities {
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
+            if (action.execute()) {
+                fluidReceived += resource.getAmount();
+            }
             return resource.getAmount();
         }
 
@@ -249,7 +275,11 @@ public final class BenchCapabilities {
 
         @Override
         public int receiveEnergy(int toReceive, boolean simulate) {
-            return Math.max(0, toReceive);
+            int accepted = Math.max(0, toReceive);
+            if (!simulate) {
+                energyReceived += accepted;
+            }
+            return accepted;
         }
 
         @Override

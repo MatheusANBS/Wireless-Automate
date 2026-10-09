@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.bench;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -19,18 +21,33 @@ import net.neoforged.fml.ModList;
  * <p>Cada repetição: monta a cena com os roteadores sem rede → espera todos se registrarem →
  * mede a linha de base (MSPT sem a rede) → põe a rede → aquece → mede → desmonta. As ações (montar,
  * reencher, desmontar) rodam depois da medição do tick, então não entram nos números.
+ *
+ * <p>Benchmark comparativo (docs/benchmark-logistics-network.md): a vazão e as origens que moveram vêm da
+ * contagem neutra da cena ({@link BenchScene#delivered}, {@link BenchScene#extractedBySource}), igual
+ * para os dois mods. O custo é o MSPT com rede menos o da linha de base, mais a CPU das threads do
+ * planejamento assíncrono do Logistics Network ({@link #WORKER_PREFIX}), que não aparece no MSPT. As
+ * colunas do motor (mod, visitas, orçamento, remontagens) são só do Wireless Automate.
  */
 final class BenchRun {
     /** {@code jitWarmup}: só aquece o JIT antes das medições; o resultado não entra no resumo. */
-    record Job(BenchScenario scenario, int nodes, int reps, BenchStorage storage, boolean jitWarmup) {
+    record Job(BenchScenario scenario, int nodes, int reps, BenchStorage storage, BenchTransport transport,
+            boolean jitWarmup) {
         Job(BenchScenario scenario, int nodes, int reps, BenchStorage storage) {
-            this(scenario, nodes, reps, storage, false);
+            this(scenario, nodes, reps, storage, BenchTransport.WA, false);
+        }
+
+        Job(BenchScenario scenario, int nodes, int reps, BenchStorage storage, BenchTransport transport) {
+            this(scenario, nodes, reps, storage, transport, false);
         }
 
         String label() {
-            return (jitWarmup ? "aquecimento do JIT (descartado): " : "") + scenario.id + " n=" + nodes + " " + storage.id;
+            return (jitWarmup ? "aquecimento do JIT (descartado): " : "") + scenario.id + " n=" + nodes + " " + storage.id
+                    + " " + transport.id;
         }
     }
+
+    /** Threads do planejamento assíncrono do Logistics Network ({@code AsyncTransferRuntime}). */
+    static final String WORKER_PREFIX = "LogisticsNetworks-Worker";
 
     /**
      * Resultado de uma repetição. Tempos em ns, vazões por segundo de jogo. Visitas, orçamento
@@ -42,7 +59,27 @@ final class BenchRun {
             double fluidPerSecond, double energyPerSecond, double opsPerSecond, int sourcesMoved, int sources,
             int sourcesSleeping, int sourcesTotal, int destinationsSleeping, int destinationsTotal,
             long attachModNanos, long rebuilds, double rebuildMeanNanos, long afterTouchMaxNanos, int slots,
-            double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos) {
+            double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos,
+            boolean engine, double costNanos, double workerNanos, double neutralItems, double neutralFluid,
+            double neutralEnergy, int neutralMoved, int neutralSources) {
+        /** Unidades por segundo da contagem neutra (itens, mB e FE somados). */
+        double neutralUnits() {
+            return neutralItems + neutralFluid + neutralEnergy;
+        }
+
+        /** Custo total por tick: MSPT com rede menos a base, mais a CPU das threads do assíncrono. */
+        double totalCostNanos() {
+            return costNanos + workerNanos;
+        }
+
+        /**
+         * ns de custo por item movido (é o mesmo número que µs por mil itens). Só nos cenários só de
+         * itens: somar itens, mB e FE não dá uma unidade comparável.
+         */
+        double nanosPerUnit() {
+            return neutralItems <= 0 || neutralFluid > 0 || neutralEnergy > 0 ? Double.NaN
+                    : totalCostNanos() * 20 / neutralItems;
+        }
     }
 
     private enum Phase { SETTLE, BASELINE, ATTACHED, WARMUP, MEASURE, PAUSE }
@@ -81,6 +118,11 @@ final class BenchRun {
     private long fluidStart;
     private long energyStart;
     private long[] movedStart;
+    private long neutralItemsStart;
+    private long neutralFluidStart;
+    private long neutralEnergyStart;
+    private long[] extractedStart;
+    private long workerStart;
     private long opsSum;
     private int opsSeconds;
     private boolean done;
@@ -109,7 +151,7 @@ final class BenchRun {
 
     private void startRep(MinecraftServer server) {
         ServerLevel level = server.overworld();
-        scene = new BenchScene(level, job.scenario(), job.storage(), job.nodes());
+        scene = new BenchScene(level, job.scenario(), job.storage(), job.transport(), job.nodes());
         scene.build();
         baseMspt.clear();
         mspt.clear();
@@ -238,6 +280,11 @@ final class BenchRun {
         fluidStart = scene.moved(ResourceType.FLUID);
         energyStart = scene.moved(ResourceType.ENERGY);
         movedStart = scene.movedBySource();
+        neutralItemsStart = scene.delivered(ResourceType.ITEM);
+        neutralFluidStart = scene.delivered(ResourceType.FLUID);
+        neutralEnergyStart = scene.delivered(ResourceType.ENERGY);
+        extractedStart = scene.extractedBySource();
+        workerStart = workerCpuNanos();
         opsSum = 0;
         opsSeconds = 0;
     }
@@ -267,6 +314,18 @@ final class BenchRun {
                 sourcesMoved++;
             }
         }
+        long[] extractedEnd = scene.extractedBySource();
+        int neutralMoved = 0;
+        int neutralSources = 0;
+        for (int i = 0; i < extractedEnd.length; i++) {
+            if (extractedEnd[i] >= 0 && extractedStart[i] >= 0) {
+                neutralSources++;
+                if (extractedEnd[i] > extractedStart[i]) {
+                    neutralMoved++;
+                }
+            }
+        }
+        boolean waEngine = !job.transport().logisticsNetwork();
         double modTotal = mod.mean() * mod.size();
         double opsPerSecond = opsSeconds == 0 ? 0 : (double) opsSum / opsSeconds;
         double deliveries = opsPerSecond * seconds;
@@ -288,7 +347,12 @@ final class BenchRun {
                 stats == null ? 0 : stats.destinationsSleeping() + stats.destinationsAwake(),
                 attachModNanos, rebuilds, rebuilds <= 0 ? Double.NaN : (double) rebuildNanos / rebuilds,
                 afterTouch.max(), scene.slotsPerMachine(), rebuilds / seconds,
-                job.scenario() == BenchScenario.TABLET ? tablet.mean() : Double.NaN, tablet.max());
+                job.scenario() == BenchScenario.TABLET ? tablet.mean() : Double.NaN, tablet.max(),
+                waEngine, mspt.mean() - baseMspt.mean(), (double) (workerCpuNanos() - workerStart) / ticks,
+                (scene.delivered(ResourceType.ITEM) - neutralItemsStart) / seconds,
+                (scene.delivered(ResourceType.FLUID) - neutralFluidStart) / seconds,
+                (scene.delivered(ResourceType.ENERGY) - neutralEnergyStart) / seconds,
+                neutralMoved, neutralSources);
         reps.add(result);
         out.accept(repLine(job, result));
         if (ModList.get().isLoaded("spark")) {
@@ -298,8 +362,21 @@ final class BenchRun {
 
     /** Uma linha por repetição, legível no console e no relatório. */
     static String repLine(Job job, Rep r) {
+        String neutral = String.format(Locale.ROOT,
+                "  rep %d [%s]: MSPT base %.3f | com rede %.3f (p99 %.3f, máx %.3f) ms | custo %.4f ms/tick"
+                        + " + threads %.4f | contagem neutra %.0f itens/s, %.0f mB/s, %.0f FE/s | %s ns/item"
+                        + " | origens que moveram %s",
+                r.rep(), job.transport().id, ms(r.baseMsptMean()), ms(r.msptMean()), ms(r.msptP99()), ms(r.msptMax()),
+                ms(r.costNanos()), ms(r.workerNanos()), r.neutralItems(), r.neutralFluid(), r.neutralEnergy(),
+                num(r.nanosPerUnit(), 1),
+                r.neutralSources() == 0 ? "—" : r.neutralMoved() + "/" + r.neutralSources());
+        return r.engine() ? neutral + "\n" + engineLine(r) : neutral;
+    }
+
+    /** Detalhes do motor do Wireless Automate (contadores do {@link NetworkManager}). */
+    private static String engineLine(Rep r) {
         return String.format(Locale.ROOT,
-                "  rep %d: MSPT base %.3f (p99 %.3f) | com rede %.3f (p50 %.3f, p99 %.3f, máx %.3f) ms"
+                "    motor do WA, rep %d: MSPT base %.3f (p99 %.3f) | com rede %.3f (p50 %.3f, p99 %.3f, máx %.3f) ms"
                         + " | mod %.4f (p50 %.4f, p99 %.4f, máx %.4f; teto %.3f) ms/tick, orçamento esgotado em %.1f%% dos ticks"
                         + " | %s visitas/tick, %s µs/visita, %s µs/entrega, %.1f entregas/s"
                         + " | %.0f itens/s, %.0f mB/s, %.0f FE/s | origens que moveram %d/%d"
@@ -322,30 +399,61 @@ final class BenchRun {
         out.accept(summaryLine(job, reps));
     }
 
-    /** Linha da tabela de resumo (Markdown): média ± desvio padrão entre as repetições. */
+    /**
+     * Linha da tabela de resumo (Markdown): média ± desvio padrão entre as repetições. As colunas até
+     * "origens que moveram" são neutras (valem para os dois mods); as seguintes são do motor do Wireless
+     * Automate e ficam "—" no Logistics Network.
+     */
     static String summaryLine(Job job, List<Rep> reps) {
-        return String.format(Locale.ROOT, "| %s | %s | %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |",
-                job.scenario().id, job.storage().id, job.nodes(), reps.size(),
+        boolean engine = !job.transport().logisticsNetwork();
+        return String.format(Locale.ROOT, "| %s | %s | %s | %d | %d | %s | %s | %s | %s | %s | %s | %s"
+                        + " | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |",
+                job.scenario().id, job.transport().id, job.storage().id, job.nodes(), reps.size(),
                 pm(reps, r -> ms(r.baseMsptMean()), 3),
                 pm(reps, r -> ms(r.msptMean()), 3),
-                pm(reps, r -> ms(r.modMean()), 4),
-                pm(reps, r -> ms(r.modP99()), 4),
-                pm(reps, r -> ms(r.modMax()), 3),
-                pm(reps, Rep::exhaustedPct, 1),
-                pm(reps, r -> r.nanosPerVisit() / 1000.0, 2),
-                pm(reps, r -> r.nanosPerDelivery() / 1000.0, 2),
-                pm(reps, r -> r.itemsPerSecond() + r.fluidPerSecond() + r.energyPerSecond(), 0),
-                pm(reps, r -> 100.0 * r.sourcesMoved() / Math.max(1, r.sources()), 0),
-                pm(reps, r -> ms(r.attachModNanos()), 2),
-                pm(reps, Rep::visitsPerTick, 1),
-                pm(reps, Rep::rebuildsPerSecond, 1),
-                pm(reps, r -> ms(r.tabletMeanNanos()), 4));
+                pm(reps, r -> ms(r.costNanos()), 4),
+                pm(reps, r -> ms(r.workerNanos()), 4),
+                pm(reps, Rep::neutralUnits, 0),
+                pm(reps, Rep::nanosPerUnit, 1),
+                pm(reps, r -> r.neutralSources() == 0 ? Double.NaN : 100.0 * r.neutralMoved() / r.neutralSources(), 0),
+                engine ? pm(reps, r -> ms(r.modMean()), 4) : "—",
+                engine ? pm(reps, r -> ms(r.modP99()), 4) : "—",
+                engine ? pm(reps, r -> ms(r.modMax()), 3) : "—",
+                engine ? pm(reps, Rep::exhaustedPct, 1) : "—",
+                engine ? pm(reps, r -> r.nanosPerVisit() / 1000.0, 2) : "—",
+                engine ? pm(reps, r -> r.nanosPerDelivery() / 1000.0, 2) : "—",
+                engine ? pm(reps, r -> ms(r.attachModNanos()), 2) : "—",
+                engine ? pm(reps, Rep::visitsPerTick, 1) : "—",
+                engine ? pm(reps, Rep::rebuildsPerSecond, 1) : "—",
+                engine ? pm(reps, r -> ms(r.tabletMeanNanos()), 4) : "—");
     }
 
-    static final String SUMMARY_HEADER = "| cenário | armaz. | n | reps | MSPT base (ms) | MSPT com rede (ms) | mod média (ms/tick)"
-            + " | mod p99 | mod máx | ticks c/ orçamento esgotado (%) | µs/visita | µs/entrega | unidades/s"
-            + " | origens que moveram (%) | 1ª montagem (ms) | visitas/tick | remontagens/s | Tablet (ms/tick) |"
-            + "\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|";
+    static final String SUMMARY_HEADER = "| cenário | transporte | armaz. | n | reps | MSPT base (ms) | MSPT com rede (ms)"
+            + " | custo (ms/tick) | threads (ms/tick) | unidades/s (neutro) | ns/item | origens que moveram (%)"
+            + " | WA: mod média (ms/tick) | mod p99 | mod máx | ticks c/ orçamento esgotado (%) | µs/visita | µs/entrega"
+            + " | 1ª montagem (ms) | visitas/tick | remontagens/s | Tablet (ms/tick) |"
+            + "\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|";
+
+    /**
+     * CPU (ns) somada das threads do planejamento assíncrono do Logistics Network que existem agora; 0
+     * sem elas. O pool dele é fixo, então a diferença entre duas leituras é o trabalho entre elas.
+     */
+    static long workerCpuNanos() {
+        ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+        if (!bean.isThreadCpuTimeSupported()) {
+            return 0;
+        }
+        long total = 0;
+        for (Thread thread : Thread.getAllStackTraces().keySet()) {
+            if (thread.getName().startsWith(WORKER_PREFIX)) {
+                long cpu = bean.getThreadCpuTime(thread.threadId());
+                if (cpu > 0) {
+                    total += cpu;
+                }
+            }
+        }
+        return total;
+    }
 
     private static String pm(List<Rep> reps, java.util.function.ToDoubleFunction<Rep> field, int decimals) {
         double[] values = reps.stream().mapToDouble(field).toArray();

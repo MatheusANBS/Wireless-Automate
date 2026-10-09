@@ -131,19 +131,19 @@ public final class RecipeGameTests {
                         || !ModItems.TIER_CORES.containsKey(next)) {
                     continue;
                 }
-            ItemStack router = RouterBlockItem.withTier(ModItems.ROUTER.get(), tier);
-            router.set(DataComponents.CUSTOM_NAME, Component.literal("Fornalha 1"));
-            CraftingInput input = CraftingInput.of(3, 3, Arrays.asList(ItemStack.EMPTY, router, ItemStack.EMPTY,
-                    ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
-                    new ItemStack(ModItems.TIER_CORES.get(next).get()), ItemStack.EMPTY, ItemStack.EMPTY));
-            RecipeHolder<CraftingRecipe> holder = find(helper, input)
-                    .orElseThrow(() -> new GameTestAssertException("sem upgrade de " + tier));
-            helper.assertValueEqual(holder.id(), WirelessAutomate.id("router_upgrade"), "receita");
-            ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
-            helper.assertTrue(out.is(ModItems.ROUTER.get()), "resultado: " + out);
-            helper.assertValueEqual(out.getCount(), 1, "quantidade");
-            helper.assertValueEqual(RouterBlockItem.tierOf(out), next, "tier de " + tier);
-            helper.assertValueEqual(out.getHoverName().getString(), "Fornalha 1", "nome perdido");
+                ItemStack router = RouterBlockItem.withTier(ModItems.ROUTER.get(), tier);
+                router.set(DataComponents.CUSTOM_NAME, Component.literal("Fornalha 1"));
+                CraftingInput input = CraftingInput.of(3, 3, Arrays.asList(ItemStack.EMPTY, router, ItemStack.EMPTY,
+                        ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
+                        new ItemStack(ModItems.TIER_CORES.get(next).get()), ItemStack.EMPTY, ItemStack.EMPTY));
+                RecipeHolder<CraftingRecipe> holder = find(helper, input)
+                        .orElseThrow(() -> new GameTestAssertException("sem upgrade de " + tier));
+                helper.assertValueEqual(holder.id(), WirelessAutomate.id("router_upgrade"), "receita");
+                ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
+                helper.assertTrue(out.is(ModItems.ROUTER.get()), "resultado: " + out);
+                helper.assertValueEqual(out.getCount(), 1, "quantidade");
+                helper.assertValueEqual(RouterBlockItem.tierOf(out), next, "tier de " + tier);
+                helper.assertValueEqual(out.getHoverName().getString(), "Fornalha 1", "nome perdido");
             }
         }
         ItemStack basic = RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.BASIC);

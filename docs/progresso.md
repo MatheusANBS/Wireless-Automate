@@ -48,6 +48,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 2. Acompanhar o retorno de quem usa, principalmente com o Mekanism. O projeto foi aprovado no CurseForge em 9/10/2026: [página do mod](https://www.curseforge.com/minecraft/mc-mods/wireless-automate).
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
 4. Testar no jogo os químicos com máquinas de verdade do Mekanism (lembrar de ligar as faces delas com a ferramenta de configuração do Mekanism) e ver as texturas novas.
+4b. **Benchmark comparativo com o Logistics Network**, numa sessão local: plano e princípios em `docs/benchmark-comparativo.md`.
 5. Depois: atalhos de AE2/RS2.
 6. **Armazenamento do mod (entrou na 1.0).** Os cinco estão prontos (Baú, Tanque, Bateria, Tanque Químico e Tanque de Source). O Baú: tiers com capacidade pela config (`storage.chestCapacity`), atalho no roteador (Baú → Baú numa chamada por tipo; Baú ↔ inventário comum em pilhas, sem varrer o destino), visão `IItemHandler`, tela em lista com busca (`@mod`), ordenação e cliques, filtro de entrada (o estoque vira "guardar até N"), quebrar e colocar com o conteúdo e o filtro, upgrade pelos Cartões no mundo e na bancada (também no JEI), comparador, receita vanilla, página no guia, README, 12 GameTests e a seção do Baú no e2e. Tanque, Bateria e Tanque Químico no mesmo molde (base `StorageBlockEntity`, `KeyedStorage<K>`, tela em lista genérica e a da Bateria), sem atalho novo no motor: as APIs de fluido e energia já passam até 2^31 por chamada e a de químico é em `long`. Falta: os armazenamentos no `DevScreenshot` e testar no jogo com o Mekanism de verdade (recipientes de químico na tela). A vitrine já tem a fileira dos armazenamentos e a tela do Baú.
 
@@ -98,6 +99,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-09 | Intenção e plano do benchmark comparativo em `docs/benchmark-comparativo.md` (a fazer numa sessão local). |
 | 2026-10-09 | Na mesma 1.4.0, a pedido do dono: atalhos do JEI (R, U, A) na lista do Baú, do Tanque e do Tanque Químico (`StorageListScreen.ingredientAt` e um `IGuiContainerHandler` no plugin; o químico vira `ChemicalStack` pela ponte `Chemicals.ingredient`). Tag `v1.4.0` movida para o commit novo e o jar da release trocado. |
 | 2026-10-09 | Fechamento da 1.4.0: o dono conferiu no jogo o JEI e o tooltip; `mod_version` 1.4.0, changelog separado e unificado, descrição e README; merge do `upgrade-direto` no `main`, tag `v1.4.0` e release no GitHub com o jar. |
 | 2026-10-09 | Upgrade direto de tier (ramo `upgrade-direto`, subagentes nas tarefas 1 e 2): o Cartão de Upgrade sobe de qualquer tier abaixo direto para o dele, no clique e na bancada (`TierLadder.canUpgrade`, `RouterTier.canUpgradeTo`); tooltip só com o tier de destino; JEI com o tier como subtipo (antes só mostrava o Básico) e uma receita de upgrade por par de tiers; guia e especificação. 145 JUnit e 165 + 7 + 15 + 2 GameTests passando; sem e2e (nenhuma tela ou payload mudou). |

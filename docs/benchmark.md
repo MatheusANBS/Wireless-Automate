@@ -216,7 +216,7 @@ Remontagens no "rebuild" (10 por repetição): **3,3–4,0 ms cada antes, 0,29�
 
 - **Estouro pela última visita** (ainda não feito): levar o prazo do `TickBudget` para dentro do `ItemTransfer` e conferir entre as tentativas de slot, parando a visita com o cursor de slot salvo. Uma visita de 0,1–0,5 ms no Sophisticated Storage ainda passa do teto.
 - **Remontagem dividida entre ticks** (ainda não feito): montar as rotas novas à parte e trocar no fim, para redes de milhares de nós; hoje 500 nós custam menos de 1 ms.
-- A rodada base dividiu a máquina com outros agentes; a da máquina local (seção acima) rodou numa máquina parada. Falta comparar com outros mods de transporte do ATM10, como pede a especificação ("Comparação").
+- A rodada base dividiu a máquina com outros agentes; a da máquina local (seção acima) rodou numa máquina parada. Falta comparar com outros mods de transporte do ATM10, como pede a especificação ("Comparação"). Plano do primeiro, contra o Logistics Network, em `docs/benchmark-comparativo.md`.
 - O MSPT medido aqui inclui o mod, mas o MSPT que o `TickBudget.adapt` lê (`getAverageTickTimeNanos`) não inclui, porque o `Post` roda depois da conta do vanilla. O orçamento adaptativo, portanto, não enxerga o próprio custo do mod. É aceitável com 0,5–1 ms, mas vale saber.
 - Não há ainda o GameTest de regressão de performance da especificação. O caminho natural é um cenário pequeno (por exemplo, `rebuild` com 100 nós) que falhe se a remontagem passar de um limite folgado.
 - Energia e fluido do cenário misto usam máquinas de teste sem custo próprio: medem só o mod. Caldeirões não servem, porque trocam de bloco a cada balde e, com isso, remontam a rede inteira (o `AbstractCauldronBlock` invalida a capability).

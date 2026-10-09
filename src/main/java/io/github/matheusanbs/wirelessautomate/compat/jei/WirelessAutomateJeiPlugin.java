@@ -8,14 +8,18 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
+import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.core.NonNullList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.ResourceLocation;
@@ -30,7 +34,8 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
  * {@link JeiPlugin}, no cliente); nenhum código do mod a referencia, então sem o JEI nada daqui é
  * carregado. Na tela de filtro: arrastar um ingrediente para a grade e Shift + clique nele na lista
  * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. Na
- * bancada, mostra o upgrade do roteador com o núcleo do tier seguinte.
+ * bancada, mostra o upgrade do roteador com o núcleo do tier seguinte. O tier é subtipo do roteador e
+ * dos armazenamentos, para o JEI listar cada um separado, como a aba criativa.
  */
 @JeiPlugin
 public final class WirelessAutomateJeiPlugin implements IModPlugin {
@@ -39,6 +44,33 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public ResourceLocation getPluginUid() {
         return UID;
+    }
+
+    /**
+     * O tier fica no componente {@code BLOCK_STATE}; sem um interpretador, o JEI junta todas as variantes
+     * do mesmo item numa só (a Básica). O item sem o componente conta como Básico, como no jogo.
+     */
+    @Override
+    public void registerItemSubtypes(ISubtypeRegistration registration) {
+        registration.registerSubtypeInterpreter(ModItems.ROUTER.get(), TierSubtype.INSTANCE);
+        for (StorageKind kind : StorageKind.values()) {
+            registration.registerSubtypeInterpreter(ModItems.STORAGE.get(kind).get(), TierSubtype.INSTANCE);
+        }
+    }
+
+    /** O roteador e os armazenamentos guardam o tier do mesmo jeito ({@link StorageBlockItem#tierOf}). */
+    private enum TierSubtype implements ISubtypeInterpreter<ItemStack> {
+        INSTANCE;
+
+        @Override
+        public Object getSubtypeData(ItemStack stack, UidContext context) {
+            return StorageBlockItem.tierOf(stack);
+        }
+
+        @Override
+        public String getLegacyStringSubtypeInfo(ItemStack stack, UidContext context) {
+            return StorageBlockItem.tierOf(stack).getSerializedName();
+        }
     }
 
     /**

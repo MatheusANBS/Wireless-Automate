@@ -47,7 +47,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
                 return ItemStack.EMPTY;
             }
         }
-        if (router.isEmpty() || core == null || RouterBlockItem.tierOf(router).next() != core) {
+        if (router.isEmpty() || core == null || !RouterBlockItem.tierOf(router).canUpgradeTo(core)) {
             return ItemStack.EMPTY;
         }
         ItemStack result = router.copyWithCount(1);

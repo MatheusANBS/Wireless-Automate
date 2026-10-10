@@ -70,8 +70,8 @@ import org.lwjgl.glfw.GLFW;
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Cor de destaque do Tablet (a do item). */
-    static final int ACCENT = 0xFF45D6CC;
-    private static final int DANGER = 0xFFE5534B;
+    static final int ACCENT = GuiPaint.ACCENT;
+    private static final int DANGER = GuiPaint.DANGER;
     // O mínimo é o tamanho de sempre; a tela cresce pela borda direita, pela de baixo e pelo canto, e
     // o tamanho fica lembrado na sessão.
     private static final int MIN_W = 300;
@@ -198,12 +198,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     static int statusColor(NodeStatus status) {
         return switch (status) {
-            case ACTIVE -> 0xFF41C96B;
-            case IDLE -> 0xFF8D99A8;
-            case FULL -> 0xFFFFB020;
-            case UNLOADED -> 0xFFFF6B5E;
-            case PAUSED -> 0xFF7986CB;
-            case NO_NETWORK -> 0xFF5A6270;
+            case ACTIVE -> GuiPaint.OK;
+            case IDLE -> GuiPaint.MUTED;
+            case FULL -> GuiPaint.WARN;
+            case UNLOADED -> GuiPaint.DANGER;
+            case PAUSED -> GuiPaint.PAUSED;
+            case NO_NETWORK -> GuiPaint.DISABLED;
         };
     }
 
@@ -345,6 +345,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_SEARCH);
         searchBox.setTextColor(GuiPaint.FG);
+        searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         searchBox.setHint(tr("search").copy().withColor(GuiPaint.DISABLED));
         searchBox.setValue(search);
         searchBox.setResponder(value -> {
@@ -426,11 +427,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         newBox.setBordered(false);
         newBox.setMaxLength(32);
         newBox.setTextColor(GuiPaint.FG);
+        newBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         addRenderableWidget(newBox);
         renameBox = new EditBox(font, x + RX + 4, y + BODY_Y + 3, rw() - 8, 9, tr("rename"));
         renameBox.setBordered(false);
         renameBox.setMaxLength(32);
         renameBox.setTextColor(GuiPaint.FG);
+        renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         addRenderableWidget(renameBox);
         refresh();
     }
@@ -1298,20 +1301,20 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Nome, onde fica, tier, máquina, rede de cada aba, papéis e status. */
     private Component nodeTooltip(NodeView node, boolean clickOpens) {
         MutableComponent text = nodeName(node).copy();
-        text.append("\n").append(coords(node).copy().withColor(GuiPaint.MUTED));
-        text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.MUTED))
-                .append(Component.literal(" · ").withColor(GuiPaint.MUTED))
-                .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.MUTED));
+        text.append("\n").append(coords(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                .append(Component.literal(" · ").withColor(GuiPaint.TOOLTIP_MUTED))
+                .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         for (ResourceType type : MOVE_TYPES) {
-            text.append("\n").append(typeName(type).copy().withColor(GuiPaint.MUTED))
-                    .append(Component.literal(": ").withColor(GuiPaint.MUTED)).append(networkName(node.network(type)));
+            text.append("\n").append(typeName(type).copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                    .append(Component.literal(": ").withColor(GuiPaint.TOOLTIP_MUTED)).append(networkName(node.network(type)));
         }
         List<Component> roles = roleLabels(node.roles());
         if (!roles.isEmpty()) {
             MutableComponent line = Component.empty();
             for (int i = 0; i < roles.size(); i++) {
                 if (i > 0) {
-                    line.append(Component.literal(" · ").withColor(GuiPaint.MUTED));
+                    line.append(Component.literal(" · ").withColor(GuiPaint.TOOLTIP_MUTED));
                 }
                 line.append(roles.get(i));
             }
@@ -1319,7 +1322,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         text.append("\n").append(statusName(node.status()).copy().withColor(statusColor(node.status())));
         if (clickOpens) {
-            text.append("\n").append(tr("open.click").copy().withColor(GuiPaint.MUTED));
+            text.append("\n").append(tr("open.click").copy().withColor(GuiPaint.TOOLTIP_MUTED));
         }
         return text;
     }
@@ -1387,7 +1390,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             boolean picked = selected.contains(node.key());
             if (index == hovered || picked) {
                 GuiPaint.box(g, rx, ry, x1() - X0, NODE_ROW - 1, GuiPaint.BUTTON,
-                        picked ? ACCENT : GuiPaint.BUTTON_HOVER_BORDER);
+                        picked ? ACCENT : GuiPaint.LINE);
             } else if (i > 0) {
                 g.fill(rx + 2, ry - 1, x + x1() - 2, ry, GuiPaint.LINE);
             }
@@ -1436,7 +1439,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x0 = mapX0();
         int y0 = mapY0();
         int w = mapW();
-        g.fill(x0 + 1, y0 + 1, x0 + w - 1, y0 + mapH() - 1, GuiPaint.INSET);
+        g.fill(x0 + 1, y0 + 1, x0 + w - 1, y0 + mapH() - 1, GuiPaint.VIEW_PAPER);
         GuiPaint.outline(g, x0, y0, w, mapH(), GuiPaint.LINE);
         double scale = mapScale();
         // grade: o passo é uma potência de 2 em blocos que dê pelo menos 20 px
@@ -1447,7 +1450,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         BlockPos center = s.center();
         int cx = x0 + w / 2;
         int cy = y0 + mapH() / 2;
-        int gridColor = 0xFF1A2129;
+        int gridColor = GuiPaint.VIEW_GRID;
         int startX = Math.floorDiv(center.getX() - (int) (w / 2 * scale), step) * step;
         for (int bx = startX; (bx - center.getX()) / scale < w / 2.0; bx += step) {
             int px = (int) Math.round(cx + (bx - center.getX()) / scale);
@@ -1480,8 +1483,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 GuiPaint.outline(g, p[0] - 4, p[1] - 4, 9, 9, chosen ? GuiPaint.FG : GuiPaint.MUTED);
             }
             if (p[2] == 1) {
-                g.fill(p[0] - 3, p[1] - 2, p[0] + 4, p[1] + 3, GuiPaint.BEVEL_DARK);
-                g.fill(p[0] - 2, p[1] - 3, p[0] + 3, p[1] + 4, GuiPaint.BEVEL_DARK);
+                g.fill(p[0] - 3, p[1] - 2, p[0] + 4, p[1] + 3, GuiPaint.RING);
+                g.fill(p[0] - 2, p[1] - 3, p[0] + 3, p[1] + 4, GuiPaint.RING);
                 GuiPaint.dot(g, p[0] - 2, p[1] - 2, color);
             } else {
                 // fora do mapa: presa na borda, vazada
@@ -1533,7 +1536,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         GuiText.draw(g, font, tr("stats.time"), x + X0, y + BODY_Y, x1() - X0 - timeW - 6, GuiPaint.FG);
         GuiText.draw(g, font, time, x + x1() - timeW, y + BODY_Y, timeW, GuiPaint.MUTED);
         float used = s.budgetNanos() <= 0 ? 0 : Math.min(1f, s.modNanos() / (float) s.budgetNanos());
-        int barColor = used < 0.6f ? 0xFF41C96B : used < 0.9f ? 0xFFFFB020 : 0xFFFF6B5E;
+        int barColor = used < 0.6f ? GuiPaint.OK : used < 0.9f ? GuiPaint.WARN : GuiPaint.DANGER;
         g.fill(x + X0, y + BODY_Y + 11, x + x1(), y + BODY_Y + 15, GuiPaint.INSET);
         g.fill(x + X0, y + BODY_Y + 11, x + X0 + Math.max(1, Math.round((x1() - X0) * used)), y + BODY_Y + 15, barColor);
 
@@ -1566,8 +1569,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         for (int i = 0; i < rows && i + statsScroll < networks.size(); i++) {
             NetworkView n = networks.get(i + statsScroll);
             int cy = y + listY + i * STAT_CARD;
-            GuiPaint.box(g, x + X0, cy, x1() - X0, STAT_CARD - 3, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
-            GuiPaint.dot(g, x + X0 + 5, cy + 4, 0xFF000000 | n.color());
+            GuiPaint.box(g, x + X0, cy, x1() - X0, STAT_CARD - 3, GuiPaint.BUTTON, GuiPaint.LINE);
+            GuiPaint.eye(g, x + X0 + 5, cy + 4, 0xFF000000 | n.color());
             Component right = tr("stats.network", plural("meta.nodes", n.nodes()), ms(n.averageNanos()), n.opsPerSecond());
             int rightW = Math.min(font.width(right), (x1() - X0) / 2);
             GuiText.draw(g, font, right, x + x1() - 5 - rightW, cy + 3, rightW, GuiPaint.MUTED);
@@ -1672,12 +1675,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             Row row = rows.apply(index);
             int ry = y + i * ROW_H;
             if (row.selected) {
-                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.BUTTON);
+                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_SELECTED);
                 g.fill(x + 1, ry + 1, x + 2, ry + ROW_H, ACCENT);
             } else if (index == hovered) {
-                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.BUTTON);
+                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_HOVER);
             }
-            GuiPaint.dot(g, x + 5, ry + 5, row.color);
+            GuiPaint.eye(g, x + 5, ry + 5, row.color);
             int right = x + SIDE_W - 4;
             if (row.mark != null) {
                 GuiPaint.textRight(g, font, row.mark, right, ry + 4, GuiPaint.MUTED);
@@ -1749,7 +1752,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             return;
         }
         boolean hovered = canRename && overTitle(mouseX, mouseY);
-        GuiPaint.dot(g, x, y + 4, color);
+        GuiPaint.eye(g, x, y + 4, color);
         GuiText.draw(g, font, name, x + 9, y + 3, rw() - 10, hovered ? ACCENT : GuiPaint.FG);
         if (hovered) {
             int width = Math.min(font.width(name), rw() - 10);
@@ -1803,10 +1806,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             NetworkView n = networks.get(index);
             int ry = y + GROUP_NET_Y + i * GROUP_NET_ROW;
             if (index == hovered) {
-                g.fill(x, ry, x + rw(), ry + GROUP_NET_ROW, GuiPaint.BUTTON);
+                g.fill(x, ry, x + rw(), ry + GROUP_NET_ROW, GuiPaint.ROW_SELECTED);
             }
             GuiPaint.checkbox(g, x + 2, ry + 2, group.networks().contains(n.id()), ACCENT);
-            GuiPaint.dot(g, x + 15, ry + 4, 0xFF000000 | n.color());
+            GuiPaint.eye(g, x + 15, ry + 4, 0xFF000000 | n.color());
             GuiText.draw(g, font, Component.literal(n.name()), x + 24, ry + 3, rw() - 26,
                     group.manageable() ? GuiPaint.FG : GuiPaint.MUTED);
         }
@@ -1821,14 +1824,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private void paintTab(GuiGraphics g, FlatButton b, boolean hovered, Tab t) {
         boolean chosen = t == tab;
-        if (chosen) {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), ACCENT, ACCENT);
-        } else {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
-                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        }
+        GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), chosen, hovered);
         GuiPaint.textCentered(g, font, b.getMessage(), b.getX() + b.getWidth() / 2 + 1, b.getY() + 4,
-                chosen ? GuiPaint.DARK_TEXT : GuiPaint.FG);
+                GuiPaint.tabText(chosen, hovered));
     }
 
     private void paintText(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
@@ -1858,16 +1856,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         paintToggle(g, b, hovered, text, on);
     }
 
-    /** Botão principal, na cor do Tablet. */
+    /** Botão principal: coral, com o texto em porcelana. */
     private void paintPrimary(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
         if (!b.active) {
             paintText(g, b, hovered, text);
             return;
         }
-        int fill = hovered ? GuiPaint.mix(ACCENT, 0xFFFFFFFF, 0.2f) : ACCENT;
+        int fill = hovered ? GuiPaint.ACCENT : GuiPaint.ACCENT_DEEP;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, fill);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
-                GuiPaint.DARK_TEXT);
+                GuiPaint.SELECTED_TEXT);
     }
 
     private void paintDanger(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean armed) {
@@ -1875,7 +1873,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int border = armed || hovered ? DANGER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 3,
-                armed || hovered ? GuiPaint.mix(DANGER, 0xFFFFFFFF, 0.45f) : GuiPaint.FG);
+                armed || hovered ? DANGER : GuiPaint.FG);
     }
 
     /** Chip do filtro de tipo: ícone e "Só Energia ✕", na cor do tipo. */
@@ -1890,7 +1888,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         ResourceStyle.drawIcon(g, type, b.getX() + 4, b.getY() + 3);
         int textX = b.getX() + 4 + ResourceStyle.ICON + 3;
         GuiText.draw(g, font, typeChipText(type), textX, b.getY() + 3, b.getX() + b.getWidth() - 4 - textX,
-                hovered ? GuiPaint.FG : GuiPaint.mix(color, 0xFFFFFFFF, 0.35f));
+                hovered ? GuiPaint.FG : color);
     }
 
     private void paintMore(GuiGraphics g, FlatButton b, boolean hovered, Component label) {

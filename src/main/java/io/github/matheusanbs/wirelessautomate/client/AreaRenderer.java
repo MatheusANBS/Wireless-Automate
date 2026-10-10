@@ -34,8 +34,8 @@ import org.jetbrains.annotations.Nullable;
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class AreaRenderer {
-    /** Cor do contorno do Configurador (a do Vinculador é a da tela dele). */
-    private static final int CONFIGURATOR_COLOR = 0x45D6CC;
+    /** Cor do contorno do Configurador: coral; o Vinculador usa a cor da tela dele (a mesma). */
+    private static final int CONFIGURATOR_COLOR = GuiPaint.ACCENT & 0xFFFFFF;
 
     private AreaRenderer() {
     }

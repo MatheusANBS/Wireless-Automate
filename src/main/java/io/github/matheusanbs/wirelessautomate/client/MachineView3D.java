@@ -257,20 +257,28 @@ public final class MachineView3D {
         }
     }
 
-    /** Modo de cada face (moldura e véu na cor do modo), face sem acesso apagada, mouse e seleção. */
+    /** Véu de uma face sem acesso: porcelana da sombra, translúcida, que apaga a face sobre o papel. */
+    private static final int UNAVAILABLE_VEIL = 0x90BDB19A;
+    /** Véu da face sob o mouse: coral bem leve. */
+    private static final int POINTED_VEIL = 0x40F0603E;
+
+    /**
+     * Modo de cada face (moldura e véu na cor do modo), face sem acesso apagada, mouse (véu coral) e
+     * seleção (anel na cor do tier).
+     */
     private static void renderOverlays(VertexConsumer out, Matrix4f m, Function<Direction, FaceView> faces,
             Direction selected, @Nullable Direction pointed, int tierColor) {
         for (Direction face : DIRECTIONS) {
             FaceView view = faces.apply(face);
             if (!view.available()) {
-                quad(out, m, face, 0, 0, 1, 1, LIFT, 0x73000000);
+                quad(out, m, face, 0, 0, 1, 1, LIFT, UNAVAILABLE_VEIL);
             } else if (view.mode() != PortMode.NONE) {
                 int color = GuiPaint.modeColor(view.mode()) & 0xFFFFFF;
-                quad(out, m, face, 0, 0, 1, 1, LIFT, 0x28000000 | color);
+                quad(out, m, face, 0, 0, 1, 1, LIFT, 0x30000000 | color);
                 ring(out, m, face, 0, PX, LIFT * 2, 0xF0000000 | color);
             }
             if (face == pointed && face != selected) {
-                quad(out, m, face, 0, 0, 1, 1, LIFT * 3, 0x38FFFFFF);
+                quad(out, m, face, 0, 0, 1, 1, LIFT * 3, POINTED_VEIL);
             }
             if (face == selected) {
                 ring(out, m, face, 0, PX * 1.5f, LIFT * 3, 0xFF000000 | tierColor);

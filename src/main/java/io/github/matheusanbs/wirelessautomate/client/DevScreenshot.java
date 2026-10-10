@@ -323,7 +323,7 @@ public final class DevScreenshot {
         }
         FilterScreen created = new FilterScreen(new FilterMenu(0, inventory, view), inventory,
                 Component.translatable("gui.wirelessautomate.filter.title"), true);
-        created.previewTrim(face == null ? 0xFF45D6CC : GuiPaint.tierColor(RouterTier.ELITE));
+        created.previewTrim(face == null ? GuiPaint.ACCENT : GuiPaint.tierColor(RouterTier.ELITE));
         // os passos mexem em widgets: a tela precisa estar montada antes do primeiro quadro
         Minecraft minecraft = Minecraft.getInstance();
         created.init(minecraft, minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());

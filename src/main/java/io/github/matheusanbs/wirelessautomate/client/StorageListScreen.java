@@ -58,6 +58,10 @@ import org.lwjgl.glfw.GLFW;
 public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?>> {
     private static final int X0 = 8;
     private static final int HEAD_Y = 6;
+    /** Véu de grafite translúcido sobre a célula sob o mouse. */
+    private static final int HOVER_VEIL = 0x282A2730;
+    /** Quantidade no canto da célula: branco com sombra, como as pilhas do próprio jogo. */
+    private static final int COUNT_TEXT = 0xFFFFFFFF;
     private static final int SEARCH_Y = 21;
     private static final int ROW_H = 13;
     private static final int GRID_X = 14;
@@ -209,7 +213,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                 (g, b, hovered) -> {
                     paintButton(g, b, hovered, filterLabel, 8);
                     GuiPaint.dot(g, b.getX() + 5, b.getY() + 4,
-                            view().header().filtered() ? GuiPaint.tierColor(tier()) : GuiPaint.DISABLED);
+                            view().header().filtered() ? GuiPaint.ACCENT : GuiPaint.DISABLED);
                 },
                 () -> send(StorageActionPayload.Action.OPEN_FILTER, null))
                 .tooltip(() -> view().header().filtered() ? tr("filter.on.tooltip") : tr("filter.off.tooltip")));
@@ -223,6 +227,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox.setBordered(false);
         searchBox.setMaxLength(64);
         searchBox.setTextColor(GuiPaint.FG);
+        searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
         searchBox.setValue(lastSearch);
         searchBox.setResponder(value -> {
@@ -693,12 +698,12 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         FormattedCharSequence titleText = GuiPaint.ellipsize(font, title, titleMax);
         GuiPaint.text(g, font, titleText, x + X0, y + HEAD_Y + 3, GuiPaint.FG);
         int pillX = x + X0 + font.width(titleText) + 6;
-        GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.INSET, trim);
-        GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, trim);
+        GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.PANEL, trim);
+        GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, GuiPaint.FG);
 
         // busca
         GuiPaint.box(g, x + X0, y + SEARCH_Y, searchBox.getWidth() + 8, ROW_H, GuiPaint.INSET,
-                searchBox.isFocused() ? trim : GuiPaint.BUTTON_BORDER);
+                searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
 
         // grade
         for (int row = 0; row < rows; row++) {
@@ -720,7 +725,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int row = (int) Math.floor((mouseY - y - GRID_Y + 1) / (double) CELL);
             int hx = x + GRID_X + col * CELL;
             int hy = y + GRID_Y + row * CELL;
-            g.fill(hx, hy, hx + 16, hy + 16, 0x50FFFFFF);
+            g.fill(hx, hy, hx + 16, hy + 16, HOVER_VEIL);
         }
         if (shown.isEmpty()) {
             // Quebrado em linhas dentro da grade: na largura mínima a frase não cabe numa só.
@@ -743,7 +748,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int thumbH = Math.max(8, barH * rows / total);
             int thumbY = barTop + (barH - thumbH) * scrollRow / max;
             g.fill(x + barX(), thumbY, x + barX() + 4, thumbY + thumbH,
-                    draggingBar || onBar(mouseX, mouseY) ? trim : GuiPaint.BUTTON_HOVER_BORDER);
+                    draggingBar || onBar(mouseX, mouseY) ? GuiPaint.ACCENT : GuiPaint.BEVEL_DARK);
         }
 
         // ocupação
@@ -762,12 +767,12 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int barW = barX() + 4 - GRID_X + 1;
             g.fill(barX, y + usageY() + 10, barX + barW, y + usageY() + 12, GuiPaint.INSET);
             int filled = (int) Math.min(barW, Math.round((double) barW * header.total() / header.capacity()));
-            g.fill(barX, y + usageY() + 10, barX + filled, y + usageY() + 12, trim);
+            g.fill(barX, y + usageY() + 10, barX + filled, y + usageY() + 12, usageColor(header.total(), header.capacity()));
         }
 
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
         ResizeGrip.renderDotted(g, x, y, imageWidth, imageHeight,
-                resizeHandle.hover(mouseX, mouseY, x, y, imageWidth, imageHeight), trim);
+                resizeHandle.hover(mouseX, mouseY, x, y, imageWidth, imageHeight), GuiPaint.ACCENT);
 
         // inventário do jogador
         for (int row = 0; row < 3; row++) {
@@ -792,8 +797,14 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         g.pose().scale(0.5f, 0.5f, 1f);
         int tx = (cx + 16) * 2 - font.width(text) - 1;
         int ty = (cy + 16) * 2 - 8;
-        g.drawString(font, text, tx, ty, 0xFFFFFFFF, true);
+        g.drawString(font, text, tx, ty, COUNT_TEXT, true);
         g.pose().popPose();
+    }
+
+    /** Cor da barra de ocupação pelo estado: ok até 60%, atenção até 90%, erro acima. */
+    private static int usageColor(long total, long capacity) {
+        double used = (double) total / capacity;
+        return used < 0.6 ? GuiPaint.OK : used < 0.9 ? GuiPaint.WARN : GuiPaint.DANGER;
     }
 
     private static String percent(long total, long capacity) {

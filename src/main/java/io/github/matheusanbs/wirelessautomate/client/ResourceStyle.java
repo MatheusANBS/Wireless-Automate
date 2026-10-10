@@ -16,11 +16,11 @@ public final class ResourceStyle {
 
     public static int color(ResourceType type) {
         return switch (type) {
-            case ITEM -> 0xFFD9A35B;
-            case FLUID -> 0xFF3D8BFF;
-            case ENERGY -> 0xFFFFB020;
-            case CHEMICAL -> 0xFF97C853;
-            case SOURCE -> 0xFFB36DE0;
+            case ITEM -> 0xFFB57A3A;
+            case FLUID -> 0xFF2F6FD6;
+            case ENERGY -> 0xFFD9931A;
+            case CHEMICAL -> 0xFF5E9A2B;
+            case SOURCE -> 0xFF8E4FC9;
         };
     }
 

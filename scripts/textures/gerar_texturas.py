@@ -1,1426 +1,888 @@
 #!/usr/bin/env python3
-"""Gera todas as texturas do Wireless Automate, pixel a pixel, a partir de paletas nomeadas.
+"""Gera os sprites dos itens e os ícones da interface do Wireless Automate na identidade "Porcelana e
+Sinal" (ver docs/identidade-visual.md), e monta a folha de sprites com tudo, inclusive os blocos.
 
 Uso (na raiz do repositório):
 
-    python scripts/textures/gerar_texturas.py            # grava os PNGs e a folha de sprites
-    python scripts/textures/gerar_texturas.py --so-folha # só a folha (não toca nos PNGs)
+    python scripts/textures/gerar_texturas.py            # grava PNGs, .mcmeta, modelos e a folha
+    python scripts/textures/gerar_texturas.py --so-folha # só a folha (não toca nos assets)
 
-Cada sprite é uma grade de 16 linhas de texto; cada caractere aponta para uma cor da legenda
-do sprite ('.' é transparente). Para ajustar uma cor, mude a paleta; para mexer no desenho,
-mude a grade. Regras de estilo (ver docs/pacote-de-design.md):
+Paleta, materiais, o Olho e as utilidades vêm de `identidade.py`; as texturas e os modelos dos blocos
+vêm de `blocos.py` (`sprites()`, `modelos()`, `previas()`), quando o módulo existe.
 
-- 16×16, RGBA, só alfa 0 ou 255 (nada de semitransparência nem anti-aliasing);
-- 3 a 5 tons por material, luz vindo de cima à esquerda (claro em cima/esquerda, escuro
-  embaixo/direita);
-- itens com contorno escuro; nada de pixels soltos nem ruído.
+Cada item é uma grade de texto (a forma, pela legenda comum `LEG`) mais código para o que muda por
+quadro. Regras: 16×16, alfa só 0 ou 255, contorno de 1 px em grafite.0, luz de cima à esquerda, 3 a
+5 tons por material, nada de pixel solto. Todo item é animado (quadros empilhados + `.mcmeta`).
 
-As faces do roteador só usam o canto superior esquerdo do quadro (frente/trás 14×6,
-lateral 12×6, topo/base 14×12, antena: coluna 0 com 8 px e o quadrado 2×2 em x=2..3).
-O resto do quadro fica transparente, menos o topo, que é preenchido com o casco para as
-partículas de quebra (o modelo nunca lê essa área).
+Depois de gravar, apaga das pastas `textures/item`, `textures/gui` e `textures/block` (esta só
+quando `blocos.py` gerou algo) o que não saiu desta rodada: tudo ali é gerado.
 """
 
 from __future__ import annotations
 
-import json
+import math
 import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-RAIZ = Path(__file__).resolve().parents[2]
-ASSETS = RAIZ / "src/main/resources/assets/wirelessautomate/textures"
-FOLHA = RAIZ / "docs/preview/folha-de-sprites.png"
-VITRINE = RAIZ / "docs/preview/armazenamento-preview.png"
-MODELOS = RAIZ / "src/main/resources/assets/wirelessautomate"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from identidade import (  # noqa: E402
+    ASSETS, LENTE, MARCAS, MODELOS, PALETA, PREVIEW, RAIZ, MODO, RECURSO, TIERS_ATM, TIERS_CARTAO,
+    Cor, Sprite, animacao, contorno, cor, escurece, grava_json, legenda, mistura, olho, parado, pinta,
+    salvar,
+)
+
+FOLHA = PREVIEW / "folha-de-sprites.png"
+
+# Lentes extras para o Olho: porcelana (o Olho da capa do Guia) e o farol verde do chunk loading.
+LENTE.setdefault("porcelana", (PALETA["porcelana"]["4"], PALETA["porcelana"]["3"], PALETA["porcelana"]["1"]))
+LENTE.setdefault("chunk", (PALETA["chunk"]["3"], PALETA["chunk"]["2"], PALETA["chunk"]["0"]))
+# Os aparelhos sem tier (Configurador, Vinculador, Tablet, Filtro) levam uma lente de vidro.
+LENTE.setdefault("vidro", (PALETA["vidro"]["3"], PALETA["vidro"]["1"], PALETA["vidro"]["0"]))
+
+# Legenda comum dos itens: porcelana W p q r s · grafite G g h i j · coral C c d e f · latão L l m n
+# · vidro V v u t. 'x' é um espaço reservado (porcelana) onde o Olho entra depois do contorno.
+LEG = legenda(
+    W="porcelana.4", p="porcelana.3", q="porcelana.2", r="porcelana.1", s="porcelana.0",
+    G="grafite.4", g="grafite.3", h="grafite.2", i="grafite.1", j="grafite.0",
+    C="coral.4", c="coral.3", d="coral.2", e="coral.1", f="coral.0",
+    L="latao.3", l="latao.2", m="latao.1", n="latao.0",
+    V="vidro.3", v="vidro.2", u="vidro.1", t="vidro.0",
+    x="porcelana.3",
+)
+CONTORNO = cor("grafite.0")
+BRANCO = cor("porcelana.4")
 
 
-# ---------------------------------------------------------------------------
-# Paletas
-# ---------------------------------------------------------------------------
-
-def rgb(hexa: str) -> tuple[int, int, int, int]:
-    hexa = hexa.lstrip("#")
-    return (int(hexa[0:2], 16), int(hexa[2:4], 16), int(hexa[4:6], 16), 255)
+def corpo(grade: list[str]) -> Image.Image:
+    """Forma de um item: grade pela legenda comum, com o contorno de 1 px em grafite.0."""
+    return contorno(pinta(grade, LEG), CONTORNO)
 
 
-PALETAS: dict[str, dict[str, str]] = {
-    # Casco do roteador (metal escuro), do mais claro ao mais escuro.
-    "casco": {"4": "#46525f", "3": "#36404b", "2": "#29313b", "1": "#1e242c", "0": "#12161b"},
-    # Acento por tier do roteador (4 = brilho, 0 = sombra). Parte das cores já usadas nos rascunhos.
-    "roteador_basic": {"4": "#e1e8ee", "3": "#b3bcc5", "2": "#8f99a4", "1": "#6c757e", "0": "#4c535b"},
-    "roteador_advanced": {"4": "#ffe27d", "3": "#dcb257", "2": "#b88a2c", "1": "#916b1f", "0": "#644915"},
-    "roteador_elite": {"4": "#a5f6ef", "3": "#5cc7c0", "2": "#2f9e98", "1": "#257d78", "0": "#185653"},
-    "roteador_ultimate": {"4": "#dcc3ff", "3": "#9b7ad8", "2": "#6e44b8", "1": "#573593", "0": "#3b2368"},
-    # Esmeralda: verde puro, puxado para o amarelo, para não confundir com o Vibranium.
-    "roteador_emerald": {"4": "#c4ffd6", "3": "#4ee87a", "2": "#1fbf4e", "1": "#128a37", "0": "#0a5c24"},
-    # Tiers do Allthemodium: tons tirados dos lingotes do próprio mod (os PNGs dele não são usados).
-    "roteador_allthemodium": {"4": "#fff07a", "3": "#ffc70c", "2": "#ff8b04", "1": "#cf5a13", "0": "#a92405"},
-    "roteador_vibranium": {"4": "#73ffb9", "3": "#26de88", "2": "#1bb38a", "1": "#0f5c7a", "0": "#0e3c78"},
-    "roteador_unobtainium": {"4": "#f6c2fb", "3": "#ea84f5", "2": "#d152e3", "1": "#a82ce3", "0": "#432a94"},
-    # Lentes dos LEDs apagadas (energia, rede, atividade, cheio): a camada emissiva entra depois.
-    "leds": {"E": "#5a4a1c", "e": "#3a3014", "N": "#1c4f55", "n": "#133438",
-             "A": "#2c5426", "a": "#1d3819", "F": "#5c2424", "f": "#3c1818"},
-    # Mastro da antena (metal claro).
-    "mastro": {"3": "#b9c2cc", "2": "#8c96a1", "1": "#646e79", "0": "#454d56"},
-
-    # Placa dos cartões (upgrade e chunk loading): ardósia.
-    "placa": {"4": "#6f7e90", "3": "#5a6878", "2": "#465260", "1": "#36404b", "0": "#262d36"},
-    # Placa do cartão de filtro: verde de circuito.
-    "placa_filtro": {"4": "#7fcfa8", "3": "#4fae86", "2": "#33896a", "1": "#246a52", "0": "#174a39"},
-    "contorno": {"O": "#101318"},
-    "ouro": {"4": "#fff3b8", "3": "#f7d670", "2": "#dba63a", "1": "#a8751f", "0": "#6b4712"},
-    "chip": {"3": "#3a414c", "2": "#20252c", "1": "#14171c", "p": "#d3dbe3"},
-    # Faixa de cor por tier nos cartões (cor de destaque da tela: GuiPaint.tierColor).
-    "cartao_advanced": {"4": "#fff0b0", "3": "#ffd365", "2": "#f2b234", "1": "#c7841c", "0": "#87540f"},
-    "cartao_elite": {"4": "#d2fdf8", "3": "#86efe6", "2": "#45d6cc", "1": "#2aa39b", "0": "#196b66"},
-    "cartao_ultimate": {"4": "#efe2ff", "3": "#c7a3ff", "2": "#a46cff", "1": "#7a45d6", "0": "#4f2896"},
-    "cartao_emerald": {"4": "#dcffe6", "3": "#7af59c", "2": "#2fdc62", "1": "#18a345", "0": "#0d6a2b"},
-    "cartao_allthemodium": {"4": "#ffffba", "3": "#ffe03e", "2": "#ffa60c", "1": "#e0700a", "0": "#a92405"},
-    "cartao_vibranium": {"4": "#b4ffd9", "3": "#73ffb9", "2": "#26de88", "1": "#178287", "0": "#0e3c78"},
-    "cartao_unobtainium": {"4": "#f9d6fd", "3": "#ea84f5", "2": "#d152e3", "1": "#a82ce3", "0": "#432a94"},
-    "cartao_filtro": {"4": "#f4f7fa", "3": "#cdd5de", "2": "#a3aeba", "1": "#78838f", "0": "#525b65"},
-    "funil": {"W": "#f2f8f5", "a": "#b3d3c4"},
-    "cartao_chunk": {"4": "#e2ffc8", "3": "#b4f37f", "2": "#7fd34b", "1": "#509a2c", "0": "#2f641a"},
-
-    # Configurador (varinha).
-    "cristal": {"4": "#effffd", "3": "#9ff5ee", "2": "#45d6cc", "1": "#259a93", "0": "#16625e"},
-    "madeira": {"3": "#b9844f", "2": "#8e5d33", "1": "#663f21", "0": "#432812"},
-    # Tablet.
-    "tablet": {"4": "#6a7584", "3": "#525c69", "2": "#3e4652", "1": "#2c323b", "0": "#14171c"},
-    "tela": {"3": "#1d4752", "2": "#163843", "1": "#112c35", "0": "#0b1d24",
-             "N": "#7ff6ea", "n": "#36c7bb", "L": "#2a8f8a", "Y": "#ffd36b", "y": "#e79a1f"},
-    # Vinculador (controle laranja).
-    "laranja": {"4": "#ffc890", "3": "#f7a35c", "2": "#e07a2f", "1": "#ad5320", "0": "#6e3110"},
-
-    # Livro-guia: capa azul-ardósia, lombada escura e páginas creme.
-    "livro": {"4": "#4a6b8c", "3": "#36536f", "2": "#2b4560", "1": "#20354b",
-              "S": "#141f2b", "s": "#1d2c3c", "p": "#f1e8d0", "q": "#cbbf9f"},
-
-    # Portas da tela.
-    "porta_extract": {"4": "#a8cbff", "3": "#6ea6ff", "2": "#3d8bff", "1": "#2b61b3", "w": "#12284a",
-                      "s": "#0a1830", "a": "#cfe0ff"},
-    "porta_insert": {"4": "#ffd2a7", "3": "#ffb46e", "2": "#ff9a3c", "1": "#b36c2a", "w": "#46290f",
-                     "s": "#2c1908", "a": "#ffe3c8"},
-    "porta_both": {"4": "#aee9c0", "3": "#74d995", "2": "#41c96b", "1": "#2e8d4b", "w": "#123a20",
-                   "s": "#0a2413", "a": "#d3f5dd"},
-    "porta_none": {"d": "#aab3bd", "e": "#6f7984"},
-
-    # Armazenamento do mod: vidro dos visores, fluido (azul do Tablet), energia (amarelo do Tablet),
-    # químico (verde-amarelado, longe do verde do chunk loading) e o cubo de item do baú.
-    "vidro": {"V": "#e2f4f8", "v": "#26394a", "w": "#1a2733", "t": "#8fa6b4"},
-    "fluido": {"F": "#b4d7ff", "f": "#4d8ae6", "g": "#2f62b3", "G": "#234a8a", "u": "#d6e9ff"},
-    "energia": {"Y": "#fff3b0", "y": "#f2b234", "z": "#4f3a12"},
-    "quimico": {"C": "#d9f2a6", "c": "#97c853", "k": "#5f8c2e", "K": "#3a561c", "b": "#f3fde0"},
-    "caixa": {"T": "#e3c084", "R": "#6c4c28",
-              "Q": "#a3a3a3", "q": "#6e6e6e", "A": "#ffe88a", "a": "#d9a032",
-              "D": "#a6fff6", "d": "#2fbfb3", "E": "#ff5a4a", "e": "#a51b12", "l": "#1b2027"},
-    "branco": {"W": "#ffffff"},
-
-    # Tanque de Source: só a cor da Source e a da gema vêm do Ars Nouveau (as texturas são
-    # desenhadas aqui; os PNGs dele não são usados). O vidro é nosso.
-    "source_tanque": {"hi": "#d9a6f5", "top": "#b36de0", "a": "#9b4dc6", "b": "#9345be", "c": "#843aae",
-                      "deep": "#6b2f8f", "sp": "#ea8ef3", "w": "#fdd9f1"},
-    "source_gema": {"A": "#f3c2fa", "B": "#ea8ef3", "C": "#b36de0", "D": "#8a55d3", "E": "#6b197d", "W": "#fffbe8"},
-    "vidro_tanque": {"V": "#e6f6f7", "v": "#b9dde3", "e": "#7fb3c0"},
-}
-
-# A ordem do RouterTier (o predicado wirelessautomate:tier do modelo do item é a posição aqui).
-TIERS_ROTEADOR = ["basic", "advanced", "elite", "emerald", "allthemodium", "vibranium", "unobtainium", "ultimate"]
-TIERS_CARTAO = TIERS_ROTEADOR[1:]
-# Tiers do Allthemodium: cartão com os contatos no metal do tier, em vez de ouro.
-TIERS_ATM = ["allthemodium", "vibranium", "unobtainium"]
-# Marcas acesas na faixa do cartão: 1 a 4 na escada vanilla, 1 a 3 dentro da família do Allthemodium.
-MARCAS_CARTAO = {"advanced": 1, "elite": 2, "emerald": 3, "ultimate": 4,
-                 "allthemodium": 1, "vibranium": 2, "unobtainium": 3}
+def put(img: Image.Image, x: int, y: int, c: Cor) -> None:
+    if 0 <= x < img.width and 0 <= y < img.height:
+        img.putpixel((x, y), c)
 
 
-def legenda(**mapa: str) -> dict[str, tuple[int, int, int, int]]:
-    """Monta a legenda de um sprite: caractere -> 'paleta.tom' ou '#rrggbb'."""
-    saida = {}
-    for chave, ref in mapa.items():
-        if ref.startswith("#"):
-            saida[chave] = rgb(ref)
+def pulso(img: Image.Image, cx: int, cy: int, tier: str, raio: int, quadro: int, total: int) -> None:
+    """O Pulso do Olho em `total` quadros: repouso, anel aceso (e a lente clareia), onda saindo, repouso.
+    Com raio 1 o `olho` só desenha a onda e o anel aceso, então a lente clara dá o piscar."""
+    fases = [0.0, 0.6, 0.3, 0.0] if raio == 1 else [0.0, 0.6, 0.1, 0.3]
+    fase = fases[(quadro * len(fases)) // total]
+    olho(img, cx, cy, tier, fase, raio)
+    if fase == 0.6:
+        hi = cor(LENTE[tier][0])
+        if raio == 1:
+            put(img, cx, cy, hi)
         else:
-            paleta, tom = ref.split(".")
-            saida[chave] = rgb(PALETAS[paleta][tom])
-    return saida
+            put(img, cx, cy, mistura(cor(LENTE[tier][1]), hi, 0.5))
+            put(img, cx - 1, cy - 1, BRANCO if tier != "porcelana" else hi)
 
 
-def pinta(grade: list[str], leg: dict[str, tuple[int, int, int, int]]) -> Image.Image:
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    assert len(grade) <= 16, f"grade com {len(grade)} linhas"
-    for y, linha in enumerate(grade):
-        assert len(linha) <= 16, f"linha {y} com {len(linha)} colunas: {linha!r}"
-        for x, ch in enumerate(linha):
-            if ch in ". ":
-                continue
-            if ch not in leg:
-                raise KeyError(f"caractere {ch!r} sem cor na legenda (linha {y}: {linha!r})")
-            img.putpixel((x, y), leg[ch])
-    return img
-
-
-def contorno(img: Image.Image, cor: tuple[int, int, int, int]) -> Image.Image:
-    """Contorno de 1 px (vizinhança de 4) em volta dos pixels opacos."""
-    saida = img.copy()
-    for y in range(16):
-        for x in range(16):
-            if img.getpixel((x, y))[3]:
-                continue
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < 16 and 0 <= ny < 16 and img.getpixel((nx, ny))[3]:
-                    saida.putpixel((x, y), cor)
-                    break
-    return saida
-
-
-# ---------------------------------------------------------------------------
-# Roteador (faces de bloco)
-# ---------------------------------------------------------------------------
-# Legenda comum: 4..0 = acento do tier; h m p s o = casco (4..0).
-
-def leg_roteador(tier: str) -> dict[str, tuple[int, int, int, int]]:
-    p = f"roteador_{tier}"
-    leg = legenda(**{t: f"{p}.{t}" for t in "43210"})
-    leg.update(legenda(h="casco.4", m="casco.3", p="casco.2", s="casco.1", o="casco.0"))
-    leg.update(legenda(**{c: f"leds.{c}" for c in "EeNnAaFf"}))
-    return leg
-
-
-# Frente (14×6): quatro LEDs (energia, rede, atividade, cheio) em x=2,4,6,8 e a porta de dados.
-FRENTE = [
-    "43333333333332",
-    "3ssssssssssss1",
-    "3pEpNpApFpo3m1",
-    "3pepnpapfpo1m1",
-    "3mmmmmmmmmmmm1",
-    "11111111111110",
-]
-
-# Trás (14×6): três conectores e uma grade de ventilação.
-TRAS = [
-    "43333333333332",
-    "3ssssssssssss1",
-    "3pooopooopsps1",
-    "3po2opo2opsps1",
-    "3mmmmmmmmmmmm1",
-    "11111111111110",
-]
-
-# Lateral (12×6): fendas de ventilação.
-LATERAL = [
-    "433333333332",
-    "3ssssssssss1",
-    "3psopopopsp1",
-    "3psopopopsp1",
-    "3mmmmmmmmmm1",
-    "111111111110",
-]
-
-# Topo (14×12): encaixes das antenas em (1,1) e (12,1), placa rebaixada com o símbolo
-# wireless e parafusos na frente.
-TOPO = [
-    "43333333333332",
-    "3osppppppppos1",
-    "3soooooooooos1",
-    "3pos333333smp1",
-    "3po3ssssss2mp1",
-    "3poss3333ssmp1",
-    "3pos3ssss2smp1",
-    "3posss43sssmp1",
-    "3posss32sssmp1",
-    "3pommmmmmmmmp1",
-    "3hpppppppppph1",
-    "11111111111110",
-]
-
-# Base (14×12): chapa lisa com quatro parafusos e uma grade central.
-BASE = [
-    "22222222222221",
-    "2ssssssssssss1",
-    "2shssssssssms1",
-    "2ssssssssssss1",
-    "2sssoooooosss1",
-    "2sssmmmmmmsss1",
-    "2sssoooooosss1",
-    "2sssmmmmmmsss1",
-    "2ssssssssssss1",
-    "2shssssssssms1",
-    "2ssssssssssss1",
-    "11111111111110",
-]
-
-
-def face_roteador(tier: str, grade: list[str], preencher_resto: bool = False) -> Image.Image:
-    leg = leg_roteador(tier)
-    img = pinta(grade, leg)
-    if preencher_resto:
-        largura, altura = len(grade[0]), len(grade)
-        base = pinta(["p" * 16] * 16, leg)
-        base.paste(img.crop((0, 0, largura, altura)), (0, 0))
-        img = base
-    return img
-
-
-def antena(tier: str) -> Image.Image:
-    leg = legenda(**{t: f"roteador_{tier}.{t}" for t in "43210"})
-    leg.update(legenda(A="mastro.3", B="mastro.2", C="mastro.1", D="mastro.0", o="casco.0"))
-    # Coluna 0: mastro (linha 0 em cima, junto da ponta). x=2..3, y=0..1: a ponta luminosa.
-    grade = [
-        "B.43",
-        "A.32",
-        "B",
-        "2",
-        "1",
-        "B",
-        "C",
-        "D",
-    ]
-    return pinta(grade, leg)
-
-
-# ---------------------------------------------------------------------------
-# Armazenamento do mod (cubos inteiros: Baú, Tanque, Bateria e Tanque Químico)
-# ---------------------------------------------------------------------------
-# Mesmo casco e mesmo acento por tier do roteador. Moldura de cada face (feita em código, igual
-# nas seis): borda de 1 px na cor do tier com cantos em L de 3 px um tom acima, um anel de casco
-# com chanfro (claro em cima/esquerda, escuro embaixo/direita) e um recesso com sombra em
-# cima/esquerda e lábio claro embaixo/direita, em volta de um painel 10×10 (x, y = 3..12).
-# As laterais mostram o recurso; o topo, o símbolo wireless do roteador com um núcleo na cor do
-# recurso (dá para achar o bloco olhando de cima); a base é a mesma para os quatro.
-
-def moldura_armazenamento(painel: list[str]) -> list[str]:
-    assert len(painel) == 10 and all(len(linha) == 10 for linha in painel), "painel 10×10"
-    g = [["p"] * 16 for _ in range(16)]
-    for i in range(16):
-        g[0][i], g[i][0], g[15][i], g[i][15] = "3", "3", "1", "1"
-    for i in range(1, 15):
-        g[1][i], g[i][1], g[14][i], g[i][14] = "h", "m", "s", "s"
-    for i in range(2, 14):
-        g[2][i], g[i][2], g[13][i], g[i][13] = "o", "o", "m", "m"
-    g[13][2], g[2][13] = "o", "o"
-    # Cantos em L na cor do tier: um tom acima nos lados claros, um abaixo nos escuros.
-    for k in range(3):
-        g[0][k] = g[k][0] = "4"
-        g[0][15 - k] = "4" if k else "3"
-        g[k][15] = "2"
-        g[15 - k][0] = "2"
-        g[15][k] = "2" if k else "1"
-        g[15][15 - k] = g[15 - k][15] = "0"
-    g[1][1], g[1][14], g[14][1], g[14][14] = "3", "2", "2", "1"
-    for y, linha in enumerate(painel):
-        for x, ch in enumerate(linha):
-            g[3 + y][3 + x] = ch
-    return ["".join(linha) for linha in g]
-
-
-# Baú: quatro slots de inventário (escuros em cima/esquerda e claros embaixo/direita, como os do
-# jogo) com um bloco de pedra, um lingote de ouro, um diamante e pó de redstone.
-PAINEL_BAU = [
-    "oooopoooop",
-    "oQQqholllh",
-    "oQqqhoAAah",
-    "oqqqhoaaah",
-    "phhhhphhhh",
-    "oooopoooop",
-    "olDlhoEleh",
-    "oDddholEeh",
-    "oldlhoellh",
-    "phhhhphhhh",
-]
-
-# Tanque: visor de vidro, fluido até ~60% com a superfície clara, reflexo na diagonal e marcas
-# de nível à direita.
-PAINEL_TANQUE = [
-    "wwwwwwwwww",
-    "wVvvvvvvvw",
-    "wvVvvvvvvt",
-    "wvvvvvvvvw",
-    "FFFFFFFFFt",
-    "fuffffffff",
-    "fffffffuft",
-    "ffuffffffg",
-    "ffffffffgt",
-    "gggggGGGGG",
-]
-
-# Bateria: raio grande com brilho em volta ('z', posto em código) no painel escuro.
-PAINEL_BATERIA = [
-    "oooooooooo",
-    "ooooooYYyo",
-    "oooooYYyoo",
-    "ooooYYyooo",
-    "oooYYYYYyo",
-    "ooooooYyoo",
-    "oooooYyooo",
-    "ooooYyoooo",
-    "oooYyooooo",
-    "oooooooooo",
-]
-
-# Tanque Químico: visor de vidro cheio de gás, claro em cima e escuro embaixo, com bolhas e
-# marcas de nível (o tanque de fluido fica pela metade, o de gás cheio).
-PAINEL_QUIMICO = [
-    "KKKKKKKKKK",
-    "KVCCCCCCcK",
-    "KCVCCbCcct",
-    "KCCCCCcccK",
-    "KcCcccccct",
-    "KccccbcckK",
-    "Kcccccckkt",
-    "KcbcccckkK",
-    "Kkckkkkkkt",
-    "KKKKKKKKKK",
-]
-
-# Topo: arcos wireless na cor do tier e o núcleo na cor do recurso ('X' claro, 'x' escuro).
-PAINEL_TOPO = [
-    "ssssssssss",
-    "pppppppppp",
-    "pp433332pp",
-    "p4pppppp1p",
-    "ppp4332ppp",
-    "pp3pppp1pp",
-    "ppppXXpppp",
-    "ppppxxpppp",
-    "pppssssppp",
-    "pppppppppp",
-]
-
-# Base: chapa com grade de ventilação.
-PAINEL_BASE = [
-    "ssssssssss",
-    "pppppppppp",
-    "pooooooooh",
-    "pmmmmmmmmh",
-    "pooooooooh",
-    "pmmmmmmmmh",
-    "pooooooooh",
-    "pmmmmmmmmh",
-    "phhhhhhhhh",
-    "pppppppppp",
-]
-
-ARMAZENAMENTOS = {
-    "storage_chest": (PAINEL_BAU, ("caixa.T", "caixa.R")),
-    "storage_tank": (PAINEL_TANQUE, ("fluido.F", "fluido.g")),
-    "storage_battery": (PAINEL_BATERIA, ("energia.Y", "energia.y")),
-    "storage_chemical_tank": (PAINEL_QUIMICO, ("quimico.C", "quimico.k")),
-}
-
-
-def face_armazenamento(tier: str, painel: list[str], nucleo: tuple[str, str] | None = None) -> Image.Image:
-    p = f"roteador_{tier}"
-    leg = legenda(**{t: f"{p}.{t}" for t in "43210"})
-    leg.update(legenda(h="casco.4", m="casco.3", p="casco.2", s="casco.1", o="casco.0"))
-    for paleta in ("vidro", "fluido", "energia", "quimico", "caixa"):
-        leg.update({c: rgb(cor) for c, cor in PALETAS[paleta].items()})
-    if nucleo:
-        leg.update(legenda(X=nucleo[0], x=nucleo[1]))
-    grade = moldura_armazenamento(painel)
-    if any("Y" in linha for linha in painel):
-        # Brilho do raio: o fundo escuro vizinho (4 lados) de um pixel do raio.
-        g = [list(linha) for linha in grade]
-        for y in range(3, 13):
-            for x in range(3, 13):
-                if g[y][x] == "o" and any(grade[y + dy][x + dx] in "Yy"
-                                          for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-                    g[y][x] = "z"
-        grade = ["".join(linha) for linha in g]
-    return pinta(grade, leg)
-
-
-def cubo_montado(topo: Image.Image, lado: Image.Image, s: int = 6) -> Image.Image:
-    """Cubo em projeção isométrica simples: topo e duas laterais (a da direita mais escura)."""
-    W, H = 32 * s + 2, 32 * s + 2
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    cx, cy = W // 2, 16 * s + 1
-
-    def P(x, y, z):  # x para a direita-baixo, z para a esquerda-baixo, y para cima; 0..16
-        return (cx + (x - z) * s, cy + (x + z) * s // 2 - y * s)
-
-    def quad(pts, cor):
-        d.polygon([P(*p) for p in pts], fill=cor[:3])
-
-    for v in range(16):
-        for u in range(16):
-            quad([(u, 16, v), (u + 1, 16, v), (u + 1, 16, v + 1), (u, 16, v + 1)], topo.getpixel((u, v)))
-            # Lateral esquerda (z = 16), u da esquerda para a direita.
-            quad([(u, 16 - v, 16), (u + 1, 16 - v, 16), (u + 1, 15 - v, 16), (u, 15 - v, 16)],
-                 _escurece(lado.getpixel((u, v)), 0.82))
-            # Lateral direita (x = 16).
-            quad([(16, 16 - v, 16 - u), (16, 16 - v, 15 - u), (16, 15 - v, 15 - u), (16, 15 - v, 16 - u)],
-                 _escurece(lado.getpixel((u, v)), 0.62))
-    return img
+def lente(img: Image.Image, cx: int, cy: int, tier: str, quadro: int, total: int) -> None:
+    """Olho de 3×3 sem anel próprio (o que está em volta, contorno ou painel de grafite, faz o anel).
+    O piscar: a lente clareia num quadro, a onda sai no seguinte."""
+    fase = [0.0, 0.6, 0.3, 0.0][(quadro * 4) // total]
+    olho(img, cx, cy, tier, fase, 1, anel=False)
+    if fase == 0.6:
+        hi, mid, _ = (cor(c) for c in LENTE[tier])
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                put(img, cx + dx, cy + dy, hi if dx + dy <= 0 else mistura(mid, hi, 0.5))
+        put(img, cx - 1, cy - 1, BRANCO)
 
 
 # ---------------------------------------------------------------------------
 # Itens
 # ---------------------------------------------------------------------------
 
-# Cartões (família): moldura 16×12 com contorno, faixa de 3 px à esquerda, área de placa com o
-# ícone no centro e contatos dourados embaixo (dedos em x=6, 8, 10 e 12).
-# Legenda: 4..0 = faixa; '?' = marca de nível na faixa; H P S D = placa (luz, base, sombra, fundo);
-# G g y = ouro; K k j = chip; i = pinos; c d e = núcleo do chip na cor do tier; L = grade; W a = funil.
-
-# Cartão de upgrade de tier: chip com o núcleo na cor do tier e 1 a 4 marcas acesas na faixa.
-CARTAO_UPGRADE = [
+# Configurador: caneta-sonda na diagonal (tampa em cima à direita, ponta embaixo à esquerda).
+# Tampa de grafite com o clipe coral ao lado, corpo de porcelana, pegada de grafite, ponta com o Olho.
+CONFIGURADOR = [
     "................",
-    "................",
-    ".OOOOOOOOOOOOOO.",
-    "O433HHHHHHHHHHPO",
-    "O3?2HPPiPPiPPPSO",
-    "O322HPKKKKKkPPSO",
-    "O3?2HPKkcdkjPPSO",
-    "O221HPKkdekjPPSO",
-    "O2?1HPkjjjjjPPSO",
-    "O211HPPiPPiPPPSO",
-    "O1?0HPGPGPGPGPSO",
-    "O100HPgPgPgPgPSO",
-    "O000SSySySySySDO",
-    ".OOOOOOOOOOOOOO.",
-    "................",
-    "................",
-]
-
-# Cartão de chunk loading: faixa verde e uma grade 3×3 de chunks com o do centro aceso.
-CARTAO_CHUNK = [
-    "................",
-    "................",
-    ".OOOOOOOOOOOOOO.",
-    "O433HHHHHHHHHHPO",
-    "O322HPLLLLLLLPSO",
-    "O332HPLDLDLDLPSO",
-    "O322HPLLLLLLLPSO",
-    "O211HPLDL4LDLPSO",
-    "O211HPLLLLLLLPSO",
-    "O210HPLDLDLDLPSO",
-    "O110HPGPGPGPGPSO",
-    "O100HPgPgPgPgPSO",
-    "O000SSySySySySDO",
-    ".OOOOOOOOOOOOOO.",
-    "................",
-    "................",
-]
-
-# Cartão de filtro: placa verde, faixa prateada e um funil claro no lugar do chip.
-CARTAO_FILTRO = [
-    "................",
-    "................",
-    ".OOOOOOOOOOOOOO.",
-    "O433HHHHHHHHHHPO",
-    "O322HWWWWWWWaPSO",
-    "O322HPWWWWWaSPSO",
-    "O322HPPWWWaSPPSO",
-    "O211HPPPWaSPPPSO",
-    "O211HPPPWaSPPPSO",
-    "O210HPPPPSSPPPSO",
-    "O110HPGPGPGPGPSO",
-    "O100HPgPgPgPgPSO",
-    "O000SSySySySySDO",
-    ".OOOOOOOOOOOOOO.",
-    "................",
-    "................",
+    "...........Gggh.",
+    "..........Ggghc.",
+    ".........LlmnC..",
+    "........WWpqC...",
+    ".......WWpq.....",
+    "......WWpq......",
+    ".....WWpq.......",
+    "....WWpq........",
+    "...Gggh.........",
+    "..Gggh..........",
+    ".Wppq...........",
+    ".xxx............",
+    ".xxx............",
+    ".xxx............",
 ]
 
 
-def cartao(grade: list[str], faixa: str, placa: str = "placa", pips: int = 0,
-           contatos: str = "ouro") -> Image.Image:
-    leg = legenda(O="contorno.O",
-                  H=f"{placa}.4", P=f"{placa}.2", S=f"{placa}.1", D=f"{placa}.0",
-                  G=f"{contatos}.3", g=f"{contatos}.2", y=f"{contatos}.1",
-                  K="chip.3", k="chip.2", j="chip.1", i="chip.p",
-                  W="funil.W", a="funil.a")
-    leg.update({t: rgb(PALETAS[faixa][t]) for t in "43210"})
-    leg["L"] = rgb(PALETAS[faixa]["1"])
-    leg["c"] = rgb(PALETAS[faixa]["4"])
-    leg["d"] = rgb(PALETAS[faixa]["2"])
-    leg["e"] = rgb(PALETAS[faixa]["1"])
-    # Marcas do nível ('?'), de cima para baixo: acesas até o nível do tier, apagadas no resto.
-    leg["?"] = rgb(PALETAS[faixa]["0"])
-    img = pinta(grade, leg)
-    marcas = [(x, y) for y, linha in enumerate(grade) for x, ch in enumerate(linha) if ch == "?"]
-    for x, y in marcas[:pips]:
-        img.putpixel((x, y), rgb(PALETAS["branco"]["W"]))
-    return img
+def configurador() -> Sprite:
+    quadros = []
+    for k in range(4):
+        img = corpo(CONFIGURADOR)
+        lente(img, 2, 13, "vidro", k, 4)
+        quadros.append(img)
+    return animacao(quadros, 8)
 
 
-def configurador() -> Image.Image:
-    """Varinha: cristal ciano alongado, anel dourado e cabo de madeira, na diagonal.
-
-    Usa coordenadas giradas a partir do centro do cristal: u ao longo da varinha (positivo para
-    cima e para a direita) e v na transversal (negativo do lado de cima/esquerda, o iluminado).
-    """
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    cristal, ouro, madeira = PALETAS["cristal"], PALETAS["ouro"], PALETAS["madeira"]
-    cx, cy = 11, 4
-
-    def px(u, v, cor):
-        x, y = cx + (u + v) // 2, cy + (v - u) // 2
-        img.putpixel((x, y), rgb(cor))
-
-    for u in range(-20, 6):
-        for v in range(-2, 3):
-            if (u + v) % 2:
-                continue
-            if -4 <= u and abs(u) + 2 * abs(v) <= 5:  # cristal
-                px(u, v, cristal[{-2: "3", -1: "3", 0: "2", 1: "1", 2: "0"}[v]])
-            elif u in (-5, -6) and abs(u + 4) + abs(v) <= 3:  # anel dourado
-                px(u, v, ouro[{-2: "3", -1: "3", 0: "2", 1: "1", 2: "1"}[v]])
-            elif -18 <= u <= -7 and v in (0, 1):  # cabo
-                cabo = ("2", "1") if u <= -15 else ("3", "2")
-                px(u, v, madeira[cabo[v]])
-            elif u in (-19, -20) and v in (0, 1):  # pomo
-                px(u, v, ouro["2" if v == 0 else "1"])
-    px(1, -1, cristal["4"])  # brilho
-    px(3, -1, cristal["4"])
-    return contorno(img, rgb(PALETAS["contorno"]["O"]))
+# Vinculador: transceptor de mão. Antena de grafite com bolinha, corpo de porcelana com botão,
+# o Olho, a listra coral e um medidor de três barras numa janela de vidro.
+VINCULADOR = [
+    "................",
+    ".....Gg.........",
+    ".....gh.........",
+    "......h.........",
+    "......g.........",
+    "....WWWWWWWq....",
+    "....Wgggxxxq....",
+    "....WgLgxxxq....",
+    "....Whhhxxxq....",
+    "....Cccccccd....",
+    "....Wtttttpq....",
+    "....Wtttttpq....",
+    "....Wtttttpq....",
+    "....Wtttttpq....",
+    "....qqqqqqqr....",
+]
+BARRAS = ([3, 4, 3, 2, 1, 2], [2, 3, 4, 3, 2, 1], [1, 2, 3, 4, 3, 2])
 
 
+def vinculador() -> Sprite:
+    quadros = []
+    seg = cor("vidro.3")
+    seg_topo = cor("vidro.2")
+    for k in range(6):
+        img = corpo(VINCULADOR)
+        olho(img, 9, 7, "vidro", 0.0, 1, anel=False)
+        for i, alturas in enumerate(BARRAS):
+            h = alturas[k]
+            x = 5 + 2 * i
+            for y in range(14 - h, 14):
+                put(img, x, y, seg if y > 14 - h else seg_topo)
+        quadros.append(img)
+    return animacao(quadros, 5)
+
+
+# Tablet de Rede: prancheta de porcelana com clipe, moldura de grafite, tela de vidro arredondada e
+# o Olho embaixo. Na tela, a varredura de radar.
 TABLET = [
     "................",
-    "...OOOOOOOOOO...",
-    "..O4443j33332O..",
-    "..O4OOOOOOOO1O..",
-    "..O4ONNLLYYO1O..",
-    "..O4ONn33YyO1O..",
-    "..O4O2L22L2O1O..",
-    "..O3O22LL22O1O..",
-    "..O3O11NN11O1O..",
-    "..O3O11Nn11O1O..",
-    "..O3O000000O1O..",
-    "..O3OOOOOOOO1O..",
-    "..O32222BB221O..",
-    "..O22111bb110O..",
-    "...OOOOOOOOOO...",
+    "......ggg.......",
+    "..WWWWgggWWWq...",
+    "..Whhhhhhhhhq...",
+    "..Whhttttthhq...",
+    "..Whttttttthq...",
+    "..Whttttttthq...",
+    "..Whttttttthq...",
+    "..Whttttttthq...",
+    "..Whttttttthq...",
+    "..Whhttttthhq...",
+    "..Whhhhhhhhhq...",
+    "..Wpppxxxpppq...",
+    "..Wpppxxxpppq...",
+    "..qqqqxxxqqqr...",
+]
+DIRECOES = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
+BLIPS = [(5, 8), (9, 5)]
+
+
+def tablet() -> Sprite:
+    quadros = []
+    base = cor("vidro.0")
+    raio_c, rastro1, rastro2 = cor("vidro.3"), cor("vidro.2"), mistura(cor("vidro.1"), cor("vidro.0"), 0.45)
+    blip = cor("vidro.1")
+    cx, cy = 7, 7
+    for k in range(8):
+        img = corpo(TABLET)
+        for bx, by in BLIPS:
+            put(img, bx, by, blip)
+        for atraso, c in ((2, rastro2), (1, rastro1), (0, raio_c)):
+            dx, dy = DIRECOES[(k - atraso) % 8]
+            for i in range(1, 4):
+                x, y = cx + dx * i, cy + dy * i
+                if 4 <= x <= 10 and 4 <= y <= 10 and img.getpixel((x, y)) in (base, blip, rastro2, rastro1):
+                    put(img, x, y, c)
+        put(img, cx, cy, raio_c)
+        olho(img, 7, 13, "vidro", 0.0, 1, anel=False)
+        quadros.append(img)
+    return animacao(quadros, 4)
+
+
+# Cartão de Filtro: cartão perfurado de porcelana com o canto cortado, o Olho, a listra coral e
+# três linhas de furos de grafite. Uma faixa de luz corre pelos furos.
+FILTRO = [
     "................",
-]
-
-
-def tablet() -> Image.Image:
-    leg = legenda(O="tablet.0", **{"4": "tablet.4", "3": "tablet.3", "j": "tablet.1"})
-    # Moldura: 4 3 (claro/esquerda), 2 1 (sombra/direita); tela: 3..0 da paleta 'tela'.
-    grade = []
-    for y, linha in enumerate(TABLET):
-        grade.append(linha)
-    # A grade usa os mesmos dígitos para moldura e tela; separa pela posição (tela em x 5..11, y 4..10).
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    moldura = PALETAS["tablet"]
-    tela = PALETAS["tela"]
-    for y, linha in enumerate(grade):
-        for x, ch in enumerate(linha):
-            if ch == ".":
-                continue
-            na_tela = 5 <= x <= 10 and 4 <= y <= 10
-            if ch == "O":
-                cor = moldura["0"]
-            elif na_tela:
-                cor = tela[ch]
-            elif ch == "B":
-                cor = "#9aa4b2"
-            elif ch == "b":
-                cor = "#5d6672"
-            elif ch == "j":
-                cor = moldura["1"]
-            else:
-                cor = moldura[ch]
-            img.putpixel((x, y), rgb(cor))
-    return img
-
-
-# Livro-guia: capa com o símbolo de wireless (arcos em ciano sobre um ponto e uma antena dourados),
-# cantos dourados, lombada à esquerda e a borda das páginas à direita.
-LIVRO = [
     "................",
-    "..OOOOOOOOOOOO..",
-    ".OSs444444444pO.",
-    ".OSsg3333333gqO.",
-    ".OSs33CCCCC33pO.",
-    ".OSs3C33333C3qO.",
-    ".OSsC33ccc33CpO.",
-    ".OSs33c333c33qO.",
-    ".OSs333333333pO.",
-    ".OSs3333d3333qO.",
-    ".OSs333ddd333pO.",
-    ".OSs222222222qO.",
-    ".OSsg2222222gpO.",
-    ".OSs111111111qO.",
-    "..OOOOOOOOOOOO..",
+    "..WWWWWWWWWW....",
+    "..Wpppppppppq...",
+    "..Wxxxppcccdpq..",
+    "..Wxxxpppppppq..",
+    "..Wxxxpppppppq..",
+    "..Wppppppppppq..",
+    "..Wphphphphphq..",
+    "..Wppppppppppq..",
+    "..Wphphphphphq..",
+    "..Wppppppppppq..",
+    "..Wphphphphphq..",
+    "..qqqqqqqqqqqr..",
+]
+FUROS_X = [4, 6, 8, 10, 12]
+FUROS_Y = [8, 10, 12]
+
+
+def filtro() -> Sprite:
+    quadros = []
+    luz, rastro = cor("energia.3"), cor("energia.2")
+    for k in range(6):
+        img = corpo(FILTRO)
+        olho(img, 4, 5, "vidro", 0.0, 1, anel=False)
+        for y in FUROS_Y:
+            if k < 5:
+                put(img, FUROS_X[k], y, luz)
+            if 1 <= k <= 5:
+                put(img, FUROS_X[k - 1], y, rastro)
+        quadros.append(img)
+    return animacao(quadros, 5)
+
+
+# Cartões de Upgrade: válvula (tubo de vácuo). Bulbo de vidro, filamento na cor da lente do tier,
+# colar de porcelana com as marcas, base de grafite e pinos de latão (ou da cor do tier, no ATM).
+VALVULA = [
     "................",
+    "......VVvu......",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....Vvvvut.....",
+    ".....VvGGut.....",
+    "....pppppppq....",
+    "...Gggggggghh...",
+    "...ghhhhhhhi....",
+    "....L..ll..m....",
+    "....l..mm..n....",
+]
+TICKS = {0: [], 1: [7], 2: [6, 8], 3: [5, 7, 9], 4: [4, 6, 8, 10]}
+
+
+def valvula(tier: str) -> Sprite:
+    hi, mid, lo = (cor(c) for c in LENTE[tier])
+    marca = cor("grafite.1")
+    quadros = []
+    for k in range(8):
+        img = corpo(VALVULA)
+        for x in TICKS[MARCAS[tier]]:
+            put(img, x, 10, marca)
+        if tier in TIERS_ATM:
+            for (x, y), c in zip(((4, 13), (7, 13), (8, 13), (11, 13), (4, 14), (7, 14), (8, 14), (11, 14)),
+                                 (hi, mid, mid, lo, mid, lo, lo, lo)):
+                put(img, x, y, c)
+        # Filamento em zigue-zague, pulsando entre a lente e o brilho.
+        t = (1 + math.cos(2 * math.pi * k / 8)) / 2
+        fil = mistura(mid, hi, t)
+        pontos = [(7 if y % 2 else 8, y) for y in range(3, 9)]
+        for x, y in pontos:
+            put(img, x, y, fil)
+        # O vidro em volta do filamento esquenta junto.
+        for x, y in pontos:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 5 <= nx <= 10 and 2 <= ny <= 9 and (nx, ny) not in pontos and img.getpixel((nx, ny))[3]:
+                    put(img, nx, ny, mistura(img.getpixel((nx, ny)), hi, 0.45 * t))
+        # Um brilho sobe pela parede esquerda do bulbo.
+        put(img, 5 if k < 7 else 6, 9 - k, BRANCO)
+        quadros.append(img)
+    return animacao(quadros, 4)
+
+
+# Upgrade de Chunk Loading: a Lanterna de Vigia, "fica acesa enquanto você está longe". Lanterna de
+# mão: alça de grafite em cima, tampa de porcelana com o anel coral, gaiola de grafite (os dois montantes
+# e uma barra fina no meio) em volta do vidro, base de grafite. A chama verde (`chunk`) entra por código,
+# na frente da barra do meio, com o miolo claro e um halo no vidro em volta.
+LANTERNA = [
+    "................",
+    "......GGGGG.....",
+    "......Ggjgg.....",
+    "....WWWppppqq...",
+    "...WWpppppppqr..",
+    "...Cccccccccdd..",
+    "...hVvvvgvvvvh..",
+    "...hvvvvgvvvvh..",
+    "...hvvvvgvvvuh..",
+    "...hvvvvgvvvuh..",
+    "...hvvvvgvvuuh..",
+    "...hvvvvgvvuuh..",
+    "...ggggggggggg..",
+    "....hhhhhhhhh...",
+    "....iiiiiiiii...",
+]
+# A chama, quadro a quadro (6), ancorada na base do vidro (y = 11) e centrada em x = 8: 'a' borda
+# (chunk.1), 'b' corpo (chunk.2), 'c' miolo (chunk.3). Muda de altura e inclina para os lados.
+CHAMA = [
+    ["..a..", "..b..", ".bcb.", ".bcb.", "abcba"],
+    ["...a.", "..ab.", ".bcb.", ".bcb.", ".bcb.", "abcba"],
+    ["..a..", ".ab..", ".bcb.", "abcba"],
+    [".a...", ".ba..", ".bb..", ".bcb.", ".bcb.", "abcba"],
+    ["..a..", "..b..", ".bcb.", "abcba"],
+    ["..a..", "..b..", "..b..", ".bcb.", ".bcb.", "abcba"],
+]
+def lanterna() -> Sprite:
+    leg = legenda(a="chunk.1", b="chunk.2", c="chunk.3")
+    halo = mistura(cor("vidro.2"), cor("chunk.2"), 0.7)
+    quadros = []
+    for forma in CHAMA:
+        img = corpo(LANTERNA)
+        img.putpixel((8, 2), (0, 0, 0, 0))  # o furo da alça (o contorno já fechou em volta)
+        chama: set[tuple[int, int]] = set()
+        topo = 12 - len(forma)
+        for dy, linha in enumerate(forma):
+            for dx, ch in enumerate(linha):
+                if ch != ".":
+                    chama.add((6 + dx, topo + dy))
+        # O halo: o vidro encostado na chama fica esverdeado (só sobre vidro, nunca sobre a gaiola).
+        for x, y in chama:
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y - 1), (x, y + 1)):
+                if (nx, ny) not in chama and 4 <= nx <= 12 and 6 <= ny <= 11 and nx != 8:
+                    put(img, nx, ny, halo)
+        for dy, linha in enumerate(forma):
+            for dx, ch in enumerate(linha):
+                if ch != ".":
+                    put(img, 6 + dx, topo + dy, leg[ch])
+        quadros.append(img)
+    return animacao(quadros, 5)
+
+
+# Guia: caderno de campo. Capa coral com o Olho em porcelana e uma etiqueta, páginas de porcelana
+# aparecendo à direita e embaixo, espiral de grafite na lombada.
+GUIA = [
+    "................",
+    "................",
+    "..ghCCCCCCCCC...",
+    "...hCcccccccdq..",
+    "..ghCcccccccdq..",
+    "...hCccxxxccdq..",
+    "..ghCcxxxxxcdq..",
+    "...hCcxxxxxcdq..",
+    "..ghCcxxxxxcdq..",
+    "...hCccxxxccdq..",
+    "..ghCcccccccdq..",
+    "...hCcWpppqcdq..",
+    "..ghCcqqqqrcdq..",
+    "...hCdddddddeq..",
+    ".....qqqqqqqqr..",
 ]
 
 
-def livro() -> Image.Image:
-    leg = legenda(O="contorno.O", S="livro.S", s="livro.s", p="livro.p", q="livro.q",
-                  g="ouro.3", d="ouro.2", C="cristal.3", c="cristal.2",
-                  **{"4": "livro.4", "3": "livro.3", "2": "livro.2", "1": "livro.1"})
-    return pinta(LIVRO, leg)
-
-
-LINKER = [
-    "..........O.....",
-    ".........OYO....",
-    ".........OBO....",
-    "....OOOOOOCO....",
-    "...O44444443O...",
-    "...O4OOOOOO1O...",
-    "...O4....LN1O...",
-    "...O4...L..1O...",
-    "...O3..L...1O...",
-    "...O3NL....1O...",
-    "...O32222221O...",
-    "...O3K2YY2K1O...",
-    "...O3k2yy2k1O...",
-    "...O32222221O...",
-    "...O21111110O...",
-    "....OOOOOOOO....",
-]
-
-
-def vinculador() -> Image.Image:
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    lar = PALETAS["laranja"]
-    tela = PALETAS["tela"]
-    especiais = {
-        "O": "#1a1d22", "Y": "#ffd36b", "y": "#d98a1c", "B": "#9aa3ad", "C": "#646e79",
-        "K": "#4a525e", "k": "#2b3139", "N": tela["N"], "n": tela["n"], "L": tela["L"],
-        "b": tela["1"], ".": tela["2"],
-    }
-    for y, linha in enumerate(LINKER):
-        for x, ch in enumerate(linha):
-            na_tela = 5 <= x <= 10 and 6 <= y <= 9
-            if ch == "." and not na_tela:
-                continue
-            if ch in "43210" and not na_tela:
-                cor = lar[ch]
-            elif ch == "1" and na_tela:
-                cor = lar["1"]
-            else:
-                cor = especiais[ch]
-            img.putpixel((x, y), rgb(cor))
-    return img
+def guia() -> Sprite:
+    quadros = []
+    for k in range(4):
+        img = corpo(GUIA)
+        pulso(img, 8, 7, "porcelana", 2, k, 4)
+        quadros.append(img)
+    return animacao(quadros, 8)
 
 
 # ---------------------------------------------------------------------------
-# Portas da tela
+# Interface: "crachás de linha de metrô"
 # ---------------------------------------------------------------------------
+#
+# Os ícones da interface são crachás: formas cheias, uniformes e de alto contraste, pensados para ler
+# em 1× sobre o fundo claro das telas (porcelana.3 e porcelana.4). Nada de objetos miúdos: um disco na
+# cor do recurso com um símbolo branco de traço grosso (tipos) e uma tecla quadrada de porcelana com
+# uma seta grossa na cor do modo (portas).
 
-MOLDURA_PORTA = [
-    ".OOOOOOOOOOOOOO.",
-    "O44333333333333O",
-    "O43222222222221O",
-    "O32OOOOOOOOOO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OwwwwwwwwO21O",
-    "O32OOOOOOOOOO21O",
-    "O32222222222221O",
-    "O31111111111111O",
-    ".OOOOOOOOOOOOOO.",
-]
-
-SETA_CIMA = [
-    "........",
-    "...WW...",
-    "..WWWW..",
-    ".WWWWWW.",
-    "...WW...",
-    "...WW...",
-    "...WW...",
-    "........",
-]
-
-SETA_DUPLA = [
-    "...WW...",
-    "..WWWW..",
-    ".WWWWWW.",
-    "...WW...",
-    "...WW...",
-    ".WWWWWW.",
-    "..WWWW..",
-    "...WW...",
-]
+BRANCO_PURO = cor("#FFFFFF")
+PRANCHA_ICONES = PREVIEW / "icones-preview.png"
 
 
-def porta(modo: str, seta: list[str]) -> Image.Image:
-    pal = f"porta_{modo}"
-    leg = legenda(O="#0b0e12", w=f"{pal}.w", **{t: f"{pal}.{t}" for t in "4321"})
-    img = pinta(MOLDURA_PORTA, leg)
-    branco = rgb("#ffffff")
-    tinta = rgb(PALETAS[pal]["a"])
-    sombra = rgb(PALETAS[pal]["s"])
-    # Sombra projetada (1 px para baixo e para a direita), depois a seta por cima.
-    for y, linha in enumerate(seta):
-        for x, ch in enumerate(linha):
-            if ch != ".":
-                px, py = 4 + x + 1, 4 + y + 1
-                if 4 <= px <= 11 and 4 <= py <= 11:
-                    img.putpixel((px, py), sombra)
-    for y, linha in enumerate(seta):
-        for x, ch in enumerate(linha):
-            if ch != ".":
-                img.putpixel((4 + x, 4 + y), branco if ch == "W" else tinta)
-    return img
+def _interior(forma: set[tuple[int, int]]) -> set[tuple[int, int]]:
+    """Os pixels da forma que não tocam o lado de fora (vizinhança de 4)."""
+    return {(x, y) for x, y in forma
+            if all((x + dx, y + dy) in forma for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
 
 
-def porta_nenhum() -> Image.Image:
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    d = rgb(PALETAS["porta_none"]["d"])
-    e = rgb(PALETAS["porta_none"]["e"])
-    # Traços de 2 px com vãos de 2 px num quadrado de 1 a 14: simétrico nos quatro lados.
-    for i in range(1, 15):
-        if (i - 1) % 4 < 2:
-            img.putpixel((i, 1), d)
-            img.putpixel((1, i), d)
-            img.putpixel((i, 14), e)
-            img.putpixel((14, i), e)
-    # Cantos claros em cima/esquerda, escuros embaixo/direita.
-    img.putpixel((14, 1), d)
-    img.putpixel((1, 14), d)
-    return img
+def _sombra_baixo_direita(dentro: set[tuple[int, int]]) -> set[tuple[int, int]]:
+    """A faixa de 1 px da forma que fica embaixo ou à direita (o vizinho de baixo ou da direita é
+    fora da forma), sem a parte de cima/esquerda: a sombra de uma forma iluminada de cima à esquerda."""
+    return {(x, y) for x, y in dentro
+            if ((x + 1, y) not in dentro or (x, y + 1) not in dentro)
+            and (x - 1, y) in dentro and (x, y - 1) in dentro}
 
 
-# ---------------------------------------------------------------------------
-# Montagem
-# ---------------------------------------------------------------------------
-
-# Ícones dos tipos de recurso: direção "Sólido" aprovada pelo dono (8/10/2026), 9x9 sem contorno,
-# três tons da cor do tipo e um brilho. Ficam no canto de cima à esquerda de uma textura 16x16
-# (o padrão do script); a tela desenha só o recorte 9x9. Prancha: https://claude.ai/artifact/X5fHncvZXXnSpS3Fo4sDZM
-ICONES_TIPO = {
-    "item": ([
-        "...lll...",
-        ".lllllll.",
-        "bllllllld",
-        "bbblllddd",
-        "bbbbedddd",
-        "bbbbedddd",
-        "bbbbedddd",
-        ".bbbeddd.",
-        "...bed...",
-    ], legenda(b="#d9a35b", l="#f6d59a", d="#93622a", e="#fff0cc")),
-    "fluid": ([
-        "....b....",
-        "...bbb...",
-        "...bbb...",
-        "..bbbbb..",
-        ".bbbbbbb.",
-        ".blbbbbb.",
-        ".blbbbbd.",
-        "..bbbbd..",
-        "...ddd...",
-    ], legenda(b="#3d8bff", l="#a9cdff", d="#1f57b0")),
-    "energy": ([
-        "....llll.",
-        "...lllb..",
-        "..lbbb...",
-        ".bbbbbbb.",
-        "....bbd..",
-        "...bbd...",
-        "..bdd....",
-        "..bd.....",
-        ".d.......",
-    ], legenda(b="#ffb020", l="#ffe08a", d="#c47500")),
-    "chemical": ([
-        "..eeeee..",
-        "...e.e...",
-        "...e.e...",
-        "..e...e..",
-        ".ebbbbbe.",
-        "ebblbbbbe",
-        "eblbbbbde",
-        "ebbbbbdde",
-        ".eeeeeee.",
-    ], legenda(b="#97c853", l="#d9f2a6", d="#5f8c2e", e="#c8d2dc")),
-    # Source (Ars Nouveau): o roxo da Source do Ars.
-    "source": ([
-        "....l....",
-        "....l....",
-        "...lbb...",
-        "..lbebb..",
-        "llbeeebdd",
-        "..bbebd..",
-        "...bbd...",
-        "....d....",
-        "....d....",
-    ], legenda(b="#b36de0", l="#ea8ef3", d="#6b2f8f", e="#ffffff")),
+# --- Portas (16×16): teclas quadradas de porcelana com a seta do modo -------------------------------
+#
+# A tecla ocupa de (1,1) a (14,14) com os quatro cantos cortados: fundo porcelana.4, borda de 1 px em
+# grafite.2, luz branca em cima e à esquerda e sombra de tecla porcelana.1 embaixo e à direita (dentro
+# da borda). No centro, a seta (3 px de haste, cabeça de 7 px) na cor do modo (`MODO`), com 1 px de
+# sombra ×0,75 embaixo/à direita e contorno de 1 px em grafite.2: Extrai sobe, Insere desce, Armazém
+# tem cabeça em cima e embaixo com a haste curta. Nenhum é a tecla apagada (`porta_nenhum`).
+#
+# Grades 16×16 das setas ('S' é a seta; o resto é a tecla).
+SETAS = {
+    "extract": [
+        "................",
+        "................",
+        "................",
+        "................",
+        ".......S........",
+        "......SSS.......",
+        ".....SSSSS......",
+        "....SSSSSSS.....",
+        "......SSS.......",
+        "......SSS.......",
+        "......SSS.......",
+        "......SSS.......",
+        "................",
+    ],
+    "insert": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "......SSS.......",
+        "......SSS.......",
+        "......SSS.......",
+        "......SSS.......",
+        "....SSSSSSS.....",
+        ".....SSSSS......",
+        "......SSS.......",
+        ".......S........",
+        "................",
+    ],
+    "both": [
+        "................",
+        "................",
+        "................",
+        ".......S........",
+        "......SSS.......",
+        ".....SSSSS......",
+        "....SSSSSSS.....",
+        "......SSS.......",
+        "......SSS.......",
+        "....SSSSSSS.....",
+        ".....SSSSS......",
+        "......SSS.......",
+        ".......S........",
+        "................",
+    ],
 }
+TECLA_MIN, TECLA_MAX = 1, 14
 
 
-def icone_tipo(grade: list[str], leg: dict[str, tuple[int, int, int, int]]) -> Image.Image:
-    """Ícone 9x9 no canto de cima à esquerda de uma textura 16x16 (o resto transparente)."""
-    assert len(grade) == 9 and all(len(linha) == 9 for linha in grade), "ícone de tipo é 9x9"
-    return pinta(grade, leg)
-
-
-# --- Tanque de Source (modelo fino de jarra, com a Source visível por dentro do vidro) ---
-
-def _nova(cor: str | None = None) -> Image.Image:
-    return Image.new("RGBA", (16, 16), rgb(cor) if cor else (0, 0, 0, 0))
-
-
-def _tier(t: str) -> dict[str, tuple[int, int, int, int]]:
-    return {k: rgb(v) for k, v in PALETAS[f"roteador_{t}"].items()}
-
-
-def metal_lado(t: str, tampa: bool = False) -> Image.Image:
-    """Metal escuro com costura e o filete na cor do tier (em cima na base, embaixo na tampa)."""
-    casco = PALETAS["casco"]
-    img = _nova(casco["2"])
-    tc = _tier(t)
-    for x in range(16):
-        for y in range(16):
-            img.putpixel((x, y), rgb(casco["2"] if (x + y) % 7 else casco["3"]))
-    if tampa:  # tampa: y 11..13 -> v 2..4 (linha 4 = borda de baixo, a que o modelo mostra: tampa de y=11)
-        for x in range(16):
-            img.putpixel((x, 2), rgb(casco["4"]))
-            img.putpixel((x, 3), rgb(casco["2"]))
-            img.putpixel((x, 4), tc["3"])
-    else:  # base: y 0..2 -> v 13..15 (linha 13 = borda de cima)
-        for x in range(16):
-            img.putpixel((x, 13), tc["3"])
-            img.putpixel((x, 14), rgb(casco["2"]))
-            img.putpixel((x, 15), rgb(casco["0"]))
-        for x in (5, 10):  # parafusos
-            img.putpixel((x, 14), rgb(casco["4"]))
+def _tecla(fundo: Cor, borda: Cor | None, luz: bool) -> Image.Image:
+    """A tecla de porcelana: quadrado de (1,1) a (14,14) com os cantos cortados."""
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    a, b = TECLA_MIN, TECLA_MAX
+    cantos = {(a, a), (a, b), (b, a), (b, b)}
+    for y in range(a, b + 1):
+        for x in range(a, b + 1):
+            if (x, y) in cantos:
+                continue
+            na_borda = x in (a, b) or y in (a, b)
+            if na_borda:
+                if borda is not None:
+                    img.putpixel((x, y), borda)
+                continue
+            c = fundo
+            if luz:
+                if y == b - 1 or x == b - 1:
+                    c = cor("porcelana.1")  # sombra da tecla
+                if y == a + 1 or x == a + 1:
+                    c = BRANCO_PURO  # luz da tecla
+                    if (x, y) in ((a + 1, b - 1), (b - 1, a + 1)):
+                        c = cor("porcelana.3")  # onde a luz encontra a sombra
+            img.putpixel((x, y), c)
     return img
 
 
-def metal_topo(t: str, tampa: bool = False) -> Image.Image:
-    casco = PALETAS["casco"]
-    img = _nova(casco["2"])
-    tc = _tier(t)
-    for x in range(3, 13):
-        img.putpixel((x, 3), tc["4"])
-        img.putpixel((x, 12), tc["1"])
-    for y in range(3, 13):
-        img.putpixel((3, y), tc["3"])
-        img.putpixel((12, y), tc["1"])
-    if tampa:
-        # arcos wireless pequenos e o anel da gema
-        for (x, y, c) in ((5, 5, "4"), (6, 4, "4"), (9, 4, "3"), (10, 5, "2"),
-                          (5, 10, "2"), (6, 11, "1"), (9, 11, "1"), (10, 10, "0")):
-            img.putpixel((x, y), tc[c])
-        for x in range(6, 10):
-            for y in range(6, 10):
-                img.putpixel((x, y), rgb(casco["0"] if 7 <= x <= 8 and 7 <= y <= 8 else casco["4"]))
-    return img
+def porta(modo: str) -> Sprite:
+    img = _tecla(cor("porcelana.4"), cor("grafite.2"), luz=True)
+    base = cor(MODO[modo])
+    seta = {(x, y) for y, linha in enumerate(SETAS[modo]) for x, ch in enumerate(linha) if ch == "S"}
+    sombra = _sombra_baixo_direita(seta)
+    forma = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for x, y in seta:
+        forma.putpixel((x, y), escurece(base, 0.75) if (x, y) in sombra else base)
+    img.alpha_composite(contorno(forma, cor("grafite.2")))
+    return parado(img)
 
 
-def trilho_leste() -> Image.Image:
-    casco = PALETAS["casco"]
-    img = _nova(casco["1"])
-    for y in range(16):
-        img.putpixel((7, y), rgb(casco["2"]))
-    return img
+def porta_nenhum() -> Sprite:
+    """Nenhum: a tecla apagada. Fundo porcelana.2, borda tracejada em grafite.4 (traço de 2 px, vão
+    de 1) e um traço horizontal de 5×2 px em porcelana.0 no centro, no lugar da seta."""
+    img = _tecla(cor("porcelana.2"), None, luz=False)
+    a, b = TECLA_MIN, TECLA_MAX
+    tracejado = cor("grafite.4")
+    # A borda percorrida no sentido horário a partir do canto de cima à esquerda (sem os cantos).
+    borda = [(x, a) for x in range(a + 1, b)] + [(b, y) for y in range(a + 1, b)] + \
+            [(x, b) for x in range(b - 1, a, -1)] + [(a, y) for y in range(b - 1, a, -1)]
+    for n, (x, y) in enumerate(borda):
+        if n % 3 != 2:
+            img.putpixel((x, y), tracejado)
+    traco = cor("porcelana.0")
+    for y in (7, 8):
+        for x in range(5, 10):
+            img.putpixel((x, y), traco)
+    return parado(img)
 
 
-def trilho(t: str) -> Image.Image:
-    casco = PALETAS["casco"]
-    tc = _tier(t)
-    img = _nova()
-    for y in range(16):
-        for x in range(16):
-            img.putpixel((x, y), tc["3"] if x in (4, 11) else rgb(casco["1"]))
-    return img
+# --- Ícones de tipo (9×9): disco na cor do recurso com um símbolo branco ---------------------------
+#
+# O ícone é um disco cheio de 9 px de diâmetro na cor do recurso (`RECURSO`): tom cheio em cima,
+# ×0,75 na faixa de baixo à direita (sombra de 1 px), um pixel de brilho em cima à esquerda e contorno
+# de 1 px em grafite.1. Dentro, um símbolo branco de traço grosso, 5×5 no máximo, com 1 px de sombra do
+# tom escuro logo abaixo, onde cabe no disco (a sombra em diagonal fazia o símbolo virar mancha). Ocupa o
+# canto de cima à esquerda da textura 16×16 (a tela recorta 9×9).
+#
+# Os símbolos, grades 5×5: 'W' branco; 'd' o tom escuro do disco (detalhe interno); no cubo, 'T' a face
+# de cima (branco), 'L' a da esquerda e 'R' a da direita (branco tingido pela cor do recurso, para as
+# três faces lerem só pelo tom) e 'd' a aresta vertical da frente (as arestas de cima do Y, em 5 px,
+# viravam dois olhos).
+ICONES_TIPO = {
+    "item": [  # saco amarrado: as duas orelhas do laço, o nó escuro e o corpo de fundo reto
+        "W...W",
+        ".WdW.",
+        ".WWW.",
+        "WWWWW",
+        ".WWW.",
+    ],
+    "fluid": [  # gota: ponta fina em cima, barriga redonda embaixo
+        "..W..",
+        "..W..",
+        ".WWW.",
+        "WWWWW",
+        ".WWW.",
+    ],
+    "energy": [  # raio: desce da direita, dá o degrau e segue para a esquerda
+        "...WW",
+        "..WW.",
+        ".WWWW",
+        "..WW.",
+        ".WW..",
+    ],
+    "chemical": [  # frasco erlenmeyer: gargalo alto e a base larga
+        "..W..",
+        "..W..",
+        "..W..",
+        ".WWW.",
+        "WWWWW",
+    ],
+    "source": [  # estrela de 4 pontas com o ponto no meio
+        "..W..",
+        ".WWW.",
+        "WWdWW",
+        ".WWW.",
+        "..W..",
+    ],
+}
+DISCO_RAIO = 4.5
 
 
-def vidro() -> Image.Image:
-    v = PALETAS["vidro_tanque"]
-    img = _nova()
-    # o vidro vai de y=2 a y=11 (linhas 5..13): a borda de cima e o reflexo ficam 2 linhas abaixo de antes
-    for y in (6, 7, 8, 11):
-        img.putpixel((6, y), rgb(v["V"] if y < 8 else v["v"]))
-    img.putpixel((7, 6), rgb(v["v"]))
-    img.putpixel((9, 12), rgb(v["v"]))
-    for x in range(5, 11):
-        img.putpixel((x, 5), rgb(v["e"]))
-    return img
+def _disco() -> set[tuple[int, int]]:
+    """O disco de 9 px de diâmetro centrado em (4, 4)."""
+    return {(x, y) for x in range(9) for y in range(9) if (x - 4) ** 2 + (y - 4) ** 2 <= DISCO_RAIO ** 2}
 
 
-def liquido() -> Image.Image:
-    src = PALETAS["source_tanque"]
-    img = _nova()
-    for y in range(16):
-        for x in range(16):
-            base = src["a"] if (x * 3 + y * 5) % 4 else src["b"]
-            if y >= 13:
-                base = src["c"] if y == 13 else src["deep"]
-            img.putpixel((x, y), rgb(base))
-    for x, y in ((6, 4), (9, 7), (7, 10), (8, 2), (10, 11), (6, 8)):
-        img.putpixel((x, y), rgb(src["sp"]))
-    img.putpixel((7, 6), rgb(src["w"]))
-    return img
+def icone_tipo(nome: str) -> Sprite:
+    grade = ICONES_TIPO[nome]
+    assert len(grade) <= 5 and all(len(l) <= 5 for l in grade), f"ícone {nome} passa do 5×5"
+    base = cor(RECURSO[nome])
+    escuro = escurece(base, 0.75)
+    disco = _disco()
+    dentro = _interior(disco)
+    sombra = _sombra_baixo_direita(dentro)
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    grafite = cor("grafite.1")
+    for x, y in disco:
+        if (x, y) not in dentro:
+            img.putpixel((x, y), grafite)
+        else:
+            img.putpixel((x, y), escuro if (x, y) in sombra else base)
+    img.putpixel((2, 1), mistura(base, BRANCO_PURO, 0.6))  # o brilho
+    # O símbolo, centrado no disco (o 5×5 vai de (2,2) a (6,6)), com a sombra para baixo e à direita.
+    simbolo = {(x + 2, y + 2): ch for y, linha in enumerate(grade) for x, ch in enumerate(linha) if ch != "."}
+    for (x, y), ch in simbolo.items():
+        p = (x, y + 1)
+        if p in dentro and p not in simbolo:
+            img.putpixel(p, escuro)
+    tons = {"W": BRANCO_PURO, "T": BRANCO_PURO, "d": escuro,
+            "L": mistura(BRANCO_PURO, base, 0.3), "R": mistura(BRANCO_PURO, base, 0.6)}
+    for (x, y), ch in simbolo.items():
+        img.putpixel((x, y), tons[ch])
+    assert all(img.getpixel((x, y))[3] == 0 for x in range(16) for y in range(16) if x > 8 or y > 8), \
+        f"ícone {nome} passa do 9×9"
+    return parado(img)
 
 
-def superficie() -> Image.Image:
-    src = PALETAS["source_tanque"]
-    img = _nova(src["top"])
-    for x, y in ((5, 6), (8, 9), (10, 5), (6, 10), (9, 7)):
-        img.putpixel((x, y), rgb(src["hi"]))
-    img.putpixel((7, 7), rgb(src["w"]))
-    return img
+def prancha_icones(itens: dict[str, Sprite]) -> Image.Image:
+    """A prancha dos 9 ícones da interface em 1×, 2×, 4× e 8× sobre os dois fundos das telas
+    (porcelana.3 e porcelana.4); as portas também apagadas (alpha 0,5), como nos botões."""
+    fonte = _fonte(13)
+    fundos = [("porcelana.3  #F2EBDD", cor("porcelana.3")), ("porcelana.4  #FFFBF3", cor("porcelana.4"))]
+    escalas = [1, 2, 4, 8]
+    portas = ["port_extract", "port_insert", "port_both", "port_none"]
+    tipos = [f"type/{n}" for n in ICONES_TIPO]
+    margem, gap = 16, 10
+    coluna = 16 * 8 + 3 * gap  # a célula mais larga (8×)
+    largura = margem * 2 + 90 + coluna * (len(portas) + len(tipos))
+    out = Image.new("RGBA", (largura, 1400), cor("porcelana.3"))
+    d = ImageDraw.Draw(out)
+    tinta = cor("grafite.1")
+    y = margem
+    d.text((margem, y), "Ícones da interface: crachás (portas 16×16 e tipos 9×9), em 1×, 2×, 4× e 8×",
+           fill=tinta, font=_fonte(17))
+    y += 30
+
+    def quadro(nome: str) -> Image.Image:
+        q = itens[f"gui/{nome}"].quadro(0)
+        return q.crop((0, 0, 9, 9)) if nome.startswith("type/") else q
+
+    def alfa(img: Image.Image, a: float) -> Image.Image:
+        canal = img.getchannel("A").point(lambda v: int(v * a))
+        saida = img.copy()
+        saida.putalpha(canal)
+        return saida
+
+    for rotulo, fundo in fundos:
+        for apagado in (False, True):
+            bloco_alt = 24 + sum(16 * k + 4 for k in escalas) + 22
+            d.rectangle([(margem, y), (largura - margem, y + bloco_alt)], fill=fundo)
+            d.text((margem + 4, y + 4), rotulo + ("  ·  portas com alpha 0,5" if apagado else ""),
+                   fill=tinta, font=fonte)
+            x = margem + 90
+            for nome in portas + tipos:
+                img = quadro(nome)
+                if apagado and nome in portas:
+                    img = alfa(img, 0.5)
+                yy = y + 24
+                for k in escalas:
+                    out.alpha_composite(_amplia(img, k), (x, yy))
+                    yy += img.height * k + 4
+                d.text((x, y + bloco_alt - 18), nome.removeprefix("port_").removeprefix("type/"),
+                       fill=tinta, font=fonte)
+                x += coluna
+            y += bloco_alt + gap
+    # Uma fila como no jogo: as portas lado a lado em botões de 16 px, com a seleção apagada.
+    d.text((margem, y), "Como nos botões das faces (1× e 2×): a porta acesa e as outras apagadas",
+           fill=tinta, font=fonte)
+    y += 20
+    for k in (1, 2):
+        x = margem
+        for sel in range(4):
+            for n, nome in enumerate(portas):
+                img = quadro(nome) if n == sel else alfa(quadro(nome), 0.5)
+                out.alpha_composite(_amplia(img, k), (x, y))
+                x += 18 * k
+            x += 12 * k
+        y += 16 * k + 8
+    return out.crop((0, 0, largura, y + margem))
 
 
-def gema() -> Image.Image:
-    g = PALETAS["source_gema"]
-    img = _nova()
-    pad = ["ABBW", "BBCA", "CCDB", "DDEC", "EDDC"]
-    for y in range(16):
-        for x in range(16):
-            img.putpixel((x, y), rgb(g[pad[(y + x // 2) % 5][(x + y) % 4]]))
-    return img
+# ---------------------------------------------------------------------------
+# Montagem, modelos e folha
+# ---------------------------------------------------------------------------
 
-
-def pescoco(t: str) -> Image.Image:
-    casco = PALETAS["casco"]
-    tc = _tier(t)
-    img = _nova(casco["3"])
-    for x in range(16):
-        img.putpixel((x, 3), tc["4"] if x % 2 else rgb(casco["4"]))  # pescoço em y=12 -> linha 3
-    return img
-
-
-def sprites_tanque_source() -> dict[str, Image.Image]:
-    sprites: dict[str, Image.Image] = {}
-    for t in TIERS_ROTEADOR:
-        p = f"block/storage_source_tank_{t}"
-        sprites[f"{p}_base_side"] = metal_lado(t)
-        sprites[f"{p}_base_top"] = metal_topo(t)
-        sprites[f"{p}_cap_side"] = metal_lado(t, tampa=True)
-        sprites[f"{p}_cap_top"] = metal_topo(t, tampa=True)
-        sprites[f"{p}_rail"] = trilho(t)
-        sprites[f"{p}_neck"] = pescoco(t)
-    sprites["block/storage_source_tank_rail_side"] = trilho_leste()
-    sprites["block/storage_source_tank_glass"] = vidro()
-    sprites["block/storage_source_tank_source"] = liquido()
-    sprites["block/storage_source_tank_surface"] = superficie()
-    sprites["block/storage_source_tank_gem"] = gema()
-    return sprites
-
-
-def altura_source(fill: int) -> int:
-    """Topo (em pixels do bloco) da Source no nível 1..10; meio pixel arredonda para cima."""
-    return 2 + max(1, (fill * 18 + 10) // 20)  # round-half-up de fill * 9 / 10, em inteiros
-
-
-def elementos_tanque_source(fill: int) -> list[dict]:
-    """Os elementos do modelo, sem uv (o jogo calcula pela posição, como a prévia desenha)."""
-    laterais = ("north", "south", "east", "west")
-
-    def lat(tex: str) -> dict[str, dict]:
-        return {f: {"texture": "#" + tex} for f in laterais}
-
-    def trilho_el(de: list[int], ate: list[int]) -> dict:
-        return {"from": de, "to": ate,
-                "faces": {"north": {"texture": "#rail"}, "south": {"texture": "#rail"},
-                          "east": {"texture": "#rail_side"}, "west": {"texture": "#rail_side"}}}
-
-    base = {"from": [3, 0, 3], "to": [13, 2, 13],
-            "faces": {**lat("base_side"), "up": {"texture": "#base_top"},
-                      "down": {"texture": "#base_top", "cullface": "down"}}}
-    els = [base,
-           trilho_el([4, 2, 4], [5, 11, 5]), trilho_el([11, 2, 4], [12, 11, 5]),
-           trilho_el([4, 2, 11], [5, 11, 12]), trilho_el([11, 2, 11], [12, 11, 12])]
-    if fill > 0:
-        els.append({"from": [5, 2, 5], "to": [11, altura_source(fill), 11],
-                    "faces": {**lat("source"), "up": {"texture": "#surface"}}})
-    els += [
-        {"from": [4, 2, 4], "to": [12, 11, 12], "faces": lat("glass")},
-        {"from": [3, 11, 3], "to": [13, 12, 13],
-         "faces": {**lat("cap_side"), "up": {"texture": "#cap_top"}, "down": {"texture": "#base_top"}}},
-        {"from": [5, 12, 5], "to": [11, 13, 11], "faces": {**lat("neck"), "up": {"texture": "#cap_top"}}},
-        {"from": [7, 13, 7], "to": [9, 16, 9],
-         # uv explícito (uma faixa 2x3 das laterais, as linhas 13..15, e um quadrado 2x2 em cima e embaixo),
-         # para a gema ficar com o mesmo desenho aprovado; o uv automático pegaria as linhas 0..2.
-         "faces": {**{f: {"texture": "#gem", "uv": [7, 13, 9, 16]} for f in laterais},
-                   "up": {"texture": "#gem", "uv": [7, 7, 9, 9]},
-                   "down": {"texture": "#gem", "uv": [7, 7, 9, 9]}}},
-    ]
-    return els
-
-
-def _grava_json(destino: Path, dados: dict) -> None:
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text(json.dumps(dados, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
-
-
-ROTACOES_ROTEADOR = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "south": {"x": 90, "y": 180},
-                     "east": {"x": 90, "y": 90}, "west": {"x": 90, "y": 270}}
-
-
-def _sobreposicoes(modelo: str, sufixo: str = "") -> list[dict]:
-    """Overrides do modelo do item: o predicado wirelessautomate:tier é a posição do tier no enum."""
-    return [{"predicate": {"wirelessautomate:tier": n}, "model": f"{modelo}_{t}{sufixo}"}
-            for n, t in enumerate(TIERS_ROTEADOR[1:], start=1)]
-
-
-def modelos_tiers() -> None:
-    """Modelos de bloco, blockstates e modelos de item do roteador, dos armazenamentos e dos cartões, por tier.
-
-    O modelo do roteador (elementos e UVs) vem do router_basic.json, que é o molde escrito à mão; os outros
-    tiers só trocam as texturas. Cada tier tem ainda os filhos router_<tier>_spin1..3 (o giro do estado spin).
-    """
-    molde = (MODELOS / "models/block/router_basic.json").read_text(encoding="utf-8")
-    variantes: dict[str, dict] = {}
-    for t in TIERS_ROTEADOR:
-        if t != "basic":
-            destino = MODELOS / f"models/block/router_{t}.json"
-            destino.write_text(molde.replace("router_basic_", f"router_{t}_"), encoding="utf-8", newline="\n")
-        for spin in range(1, 4):
-            # Giro (spin) em torno de Y antes da rotação do blockstate, pela transformação raiz do NeoForge.
-            # O ângulo é negativo porque o y positivo gira no sentido anti-horário visto de cima; o spin
-            # gira no horário (norte -> leste), a convenção do RelativeSide e do "y" do blockstate.
-            _grava_json(MODELOS / f"models/block/router_{t}_spin{spin}.json", {
-                "parent": f"wirelessautomate:block/router_{t}",
-                "transform": {"origin": "center", "rotation": {"y": -90 * spin}},
-            })
-        for face, rot in ROTACOES_ROTEADOR.items():
-            for spin in range(4):
-                modelo = f"wirelessautomate:block/router_{t}" + (f"_spin{spin}" if spin else "")
-                variantes[f"facing={face},spin={spin},tier={t}"] = {"model": modelo, **rot}
-    _grava_json(MODELOS / "blockstates/router.json", {"variants": variantes})
-    _grava_json(MODELOS / "models/item/router.json", {
-        "parent": "wirelessautomate:block/router_basic",
-        "overrides": _sobreposicoes("wirelessautomate:block/router"),
-    })
-    for nome in ARMAZENAMENTOS:
-        variantes = {}
-        for t in TIERS_ROTEADOR:
-            _grava_json(MODELOS / f"models/block/{nome}_{t}.json", {
-                "parent": "minecraft:block/cube_bottom_top",
-                "textures": {
-                    "side": f"wirelessautomate:block/{nome}_{t}_side",
-                    "top": f"wirelessautomate:block/{nome}_{t}_top",
-                    "bottom": f"wirelessautomate:block/storage_{t}_bottom",
-                    "particle": f"wirelessautomate:block/{nome}_{t}_side",
-                },
-            })
-            variantes[f"tier={t}"] = {"model": f"wirelessautomate:block/{nome}_{t}"}
-        _grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": variantes})
-        _grava_json(MODELOS / f"models/item/{nome}.json", {
-            "parent": f"wirelessautomate:block/{nome}_basic",
-            "overrides": _sobreposicoes(f"wirelessautomate:block/{nome}"),
-        })
-    for t in TIERS_CARTAO:
-        _grava_json(MODELOS / f"models/item/tier_core_{t}.json", {
-            "parent": "minecraft:item/generated",
-            "textures": {"layer0": f"wirelessautomate:item/tier_core_{t}"},
-        })
-
-
-def modelos_tanque_source() -> None:
-    """Grava os 44 modelos (tier x nível), o blockstate e o modelo do item do Tanque de Source."""
-    variantes: dict[str, dict] = {}
-    comum = "wirelessautomate:block/storage_source_tank"
-    for t in TIERS_ROTEADOR:
-        pre = f"{comum}_{t}"
-        texturas = {"particle": f"{pre}_base_side", "base_side": f"{pre}_base_side",
-                    "base_top": f"{pre}_base_top", "cap_side": f"{pre}_cap_side", "cap_top": f"{pre}_cap_top",
-                    "rail": f"{pre}_rail", "neck": f"{pre}_neck", "rail_side": f"{comum}_rail_side",
-                    "glass": f"{comum}_glass", "source": f"{comum}_source", "surface": f"{comum}_surface",
-                    "gem": f"{comum}_gem"}
-        for fill in range(11):
-            nome = f"storage_source_tank_{t}_{fill}"
-            _grava_json(MODELOS / f"models/block/{nome}.json", {
-                "parent": "minecraft:block/block",
-                "render_type": "minecraft:cutout",
-                "ambientocclusion": False,
-                "textures": texturas,
-                "elements": elementos_tanque_source(fill),
-            })
-            variantes[f"fill={fill},tier={t}"] = {"model": f"wirelessautomate:block/{nome}"}
-    _grava_json(MODELOS / "blockstates/storage_source_tank.json", {"variants": variantes})
-    _grava_json(MODELOS / "models/item/storage_source_tank.json", {
-        "parent": f"{comum}_basic_6",
-        "overrides": _sobreposicoes(comum, "_6"),
-    })
-
-
-def tanque_source_montado(t: str, fill: int, sprites: dict[str, Image.Image], s: int = 9) -> Image.Image:
-    """Prévia do tanque em projeção isométrica, desenhada a partir dos mesmos elementos do modelo."""
-    pre = f"block/storage_source_tank_{t}"
-    comum = "block/storage_source_tank"
-    tex = {"base_side": sprites[f"{pre}_base_side"], "base_top": sprites[f"{pre}_base_top"],
-           "cap_side": sprites[f"{pre}_cap_side"], "cap_top": sprites[f"{pre}_cap_top"],
-           "rail": sprites[f"{pre}_rail"], "neck": sprites[f"{pre}_neck"],
-           "rail_side": sprites[f"{comum}_rail_side"], "glass": sprites[f"{comum}_glass"],
-           "source": sprites[f"{comum}_source"], "surface": sprites[f"{comum}_surface"],
-           "gem": sprites[f"{comum}_gem"]}
-    W, H = 24 * s, 34 * s
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    cx0, cy0 = W // 2, 21 * s
-
-    def pp(x, y, z):
-        return (cx0 + (x - z) * s, cy0 + (x + z - 16) * s // 2 - y * s)
-
-    def quad(pts, cor):
-        d.polygon([pp(*p) for p in pts], fill=cor[:3])
-
-    def sh(c, f):
-        return (int(c[0] * f), int(c[1] * f), int(c[2] * f), 255)
-
-    def lin(el, cara, y):
-        """Linha da textura do pixel de altura y: a do uv explícito (v inicial no topo) ou 15 - y."""
-        uv = el["faces"][cara].get("uv")
-        return (uv[1] + el["to"][1] - 1 - y) % 16 if uv else (15 - y) % 16
-
-    # Só as faces que se veem (sul, leste e cima), na ordem dos elementos (os de trás primeiro).
-    for el in elementos_tanque_source(fill):
-        (x0, y0, z0), (x1, y1, z1) = el["from"], el["to"]
-        f = {nome: tex[cara["texture"][1:]] for nome, cara in el["faces"].items()}
-        if "south" in f:
-            for x in range(x0, x1):
-                for y in range(y0, y1):
-                    c = f["south"].getpixel((x % 16, lin(el, "south", y)))
-                    if c[3]:
-                        quad([(x, y + 1, z1), (x + 1, y + 1, z1), (x + 1, y, z1), (x, y, z1)], sh(c, 0.84))
-        if "east" in f:
-            for z in range(z0, z1):
-                for y in range(y0, y1):
-                    c = f["east"].getpixel(((15 - z) % 16, lin(el, "east", y)))
-                    if c[3]:
-                        quad([(x1, y + 1, z + 1), (x1, y + 1, z), (x1, y, z), (x1, y, z + 1)], sh(c, 0.66))
-        if "up" in f:
-            for x in range(x0, x1):
-                for z in range(z0, z1):
-                    c = f["up"].getpixel((x % 16, z % 16))
-                    if c[3]:
-                        quad([(x, y1, z), (x + 1, y1, z), (x + 1, y1, z + 1), (x, y1, z + 1)], c)
-    return img
-
-
-def gerar() -> dict[str, Image.Image]:
-    sprites: dict[str, Image.Image] = {}
-    sprites["item/configurator"] = configurador()
-    sprites["item/network_tablet"] = tablet()
-    sprites["item/filter_card"] = cartao(CARTAO_FILTRO, "cartao_filtro", placa="placa_filtro")
-    sprites["item/linker"] = vinculador()
-    sprites["item/chunk_loader_upgrade"] = cartao(CARTAO_CHUNK, "cartao_chunk")
-    sprites["item/guide"] = livro()
+def gerar_itens() -> dict[str, Sprite]:
+    sprites: dict[str, Sprite] = {
+        "item/configurator": configurador(),
+        "item/linker": vinculador(),
+        "item/network_tablet": tablet(),
+        "item/filter_card": filtro(),
+    }
     for tier in TIERS_CARTAO:
-        sprites[f"item/tier_core_{tier}"] = cartao(CARTAO_UPGRADE, f"cartao_{tier}", pips=MARCAS_CARTAO[tier],
-                                                   contatos=f"cartao_{tier}" if tier in TIERS_ATM else "ouro")
-    for tier in TIERS_ROTEADOR:
-        sprites[f"block/router_{tier}_front"] = face_roteador(tier, FRENTE)
-        sprites[f"block/router_{tier}_back"] = face_roteador(tier, TRAS)
-        sprites[f"block/router_{tier}_side"] = face_roteador(tier, LATERAL)
-        sprites[f"block/router_{tier}_top"] = face_roteador(tier, TOPO, preencher_resto=True)
-        sprites[f"block/router_{tier}_bottom"] = face_roteador(tier, BASE)
-        sprites[f"block/router_{tier}_antenna"] = antena(tier)
-        sprites[f"block/storage_{tier}_bottom"] = face_armazenamento(tier, PAINEL_BASE)
-        for nome, (painel, nucleo) in ARMAZENAMENTOS.items():
-            sprites[f"block/{nome}_{tier}_side"] = face_armazenamento(tier, painel)
-            sprites[f"block/{nome}_{tier}_top"] = face_armazenamento(tier, PAINEL_TOPO, nucleo)
-    sprites["gui/port_extract"] = porta("extract", SETA_CIMA)
-    sprites["gui/port_insert"] = porta("insert", SETA_CIMA[::-1])
-    sprites["gui/port_both"] = porta("both", SETA_DUPLA)
+        sprites[f"item/tier_core_{tier}"] = valvula(tier)
+    sprites["item/chunk_loader_upgrade"] = lanterna()
+    sprites["item/guide"] = guia()
+    for modo in ("extract", "insert", "both"):
+        sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
-    for nome, (grade, leg) in ICONES_TIPO.items():
-        sprites[f"gui/type/{nome}"] = icone_tipo(grade, leg)
-    sprites.update(sprites_tanque_source())
-    for nome, img in sprites.items():
-        assert img.size == (16, 16), nome
-        alfas = set(img.getchannel("A").tobytes())
-        assert alfas <= {0, 255}, f"{nome}: alfa parcial {alfas}"
+    for nome in ICONES_TIPO:
+        sprites[f"gui/type/{nome}"] = icone_tipo(nome)
     return sprites
 
 
-# --- Prévia do roteador montado (projeção oblíqua) ---
-
-def _escurece(cor, f):
-    return (int(cor[0] * f), int(cor[1] * f), int(cor[2] * f), 255)
-
-
-def roteador_montado(tier: str, sprites: dict[str, Image.Image], s: int = 10) -> Image.Image:
-    """Desenha o corpo 14×6×12 e as antenas em projeção oblíqua (profundidade pela metade)."""
-    k = s // 2
-    W, H = 14 * s + 12 * k + 40, 16 * s + 12 * k + 20
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    ox, oy = 20, H - 10
-
-    def P(x, y, z):  # x 0..14 (esq.->dir.), y para cima, z 0 (trás)..12 (frente)
-        return (ox + x * s + (12 - z) * k, oy - y * s - (12 - z) * k)
-
-    def quad(pts, cor):
-        d.polygon([P(*p) for p in pts], fill=cor[:3])
-
-    top = sprites[f"block/router_{tier}_top"]
-    front = sprites[f"block/router_{tier}_front"]
-    side = sprites[f"block/router_{tier}_side"]
-    ant = sprites[f"block/router_{tier}_antenna"]
-    for v in range(12):
-        for u in range(14):
-            z = v
-            quad([(u, 6, z), (u + 1, 6, z), (u + 1, 6, z + 1), (u, 6, z + 1)], top.getpixel((u, v)))
-    for v in range(6):
-        for u in range(14):
-            quad([(u, 6 - v, 12), (u + 1, 6 - v, 12), (u + 1, 5 - v, 12), (u, 5 - v, 12)],
-                 _escurece(front.getpixel((u, v)), 0.82))
-    for v in range(6):
-        for u in range(12):
-            z = 12 - u
-            quad([(14, 6 - v, z), (14, 6 - v, z - 1), (14, 5 - v, z - 1), (14, 5 - v, z)],
-                 _escurece(side.getpixel((u, v)), 0.62))
-    for ax in (1, 12):
-        for v in range(8):
-            y = 14 - v
-            c = ant.getpixel((0, v))
-            quad([(ax, y, 2), (ax + 1, y, 2), (ax + 1, y - 1, 2), (ax, y - 1, 2)], _escurece(c, 0.82))
-            quad([(ax + 1, y, 2), (ax + 1, y, 1), (ax + 1, y - 1, 1), (ax + 1, y - 1, 2)], _escurece(c, 0.62))
-        x0, x1, z0, z1 = ax - 0.5, ax + 1.5, 0.5, 2.5
-        for i in range(2):
-            for j in range(2):
-                c = ant.getpixel((2 + i, j))
-                quad([(x0 + i, 16 - j, z1), (x0 + i + 1, 16 - j, z1), (x0 + i + 1, 15 - j, z1), (x0 + i, 15 - j, z1)],
-                     _escurece(c, 0.82))
-                quad([(x1, 16 - j, z1 - i), (x1, 16 - j, z1 - i - 1), (x1, 15 - j, z1 - i - 1), (x1, 15 - j, z1 - i)],
-                     _escurece(c, 0.62))
-                quad([(x0 + i, 16, z0 + j), (x0 + i + 1, 16, z0 + j), (x0 + i + 1, 16, z0 + j + 1), (x0 + i, 16, z0 + j + 1)],
-                     c)
-    return img
+def modelos_itens() -> None:
+    for tier in TIERS_CARTAO:
+        grava_json(MODELOS / f"models/item/tier_core_{tier}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/tier_core_{tier}"},
+        })
 
 
-def folha(sprites: dict[str, Image.Image]) -> Image.Image:
-    escala, celula, rotulo = 8, 128, 22
+def limpar(gerados: set[str], pastas: list[str]) -> int:
+    """Apaga os PNGs e .mcmeta das pastas que não saíram desta rodada."""
+    apagados = 0
+    for pasta in pastas:
+        raiz = ASSETS / pasta
+        if not raiz.exists():
+            continue
+        for arq in sorted(raiz.rglob("*")):
+            if not arq.is_file():
+                continue
+            nome = arq.name.removesuffix(".mcmeta")
+            if not nome.endswith(".png"):
+                continue
+            chave = str(arq.parent.relative_to(ASSETS) / nome[:-4]).replace("\\", "/")
+            if chave in gerados:
+                continue
+            arq.unlink()
+            apagados += 1
+    return apagados
+
+
+def _fonte(tamanho: int = 13) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+    for caminho in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(caminho, tamanho)
+        except OSError:
+            continue
     try:
-        fonte = ImageFont.load_default(size=13)
+        return ImageFont.load_default(size=tamanho)
     except TypeError:
-        fonte = ImageFont.load_default()
-    fundo, xadrez1, xadrez2, texto = (24, 28, 35), (34, 39, 48), (28, 33, 41), (210, 218, 228)
+        return ImageFont.load_default()
 
-    def tile(img):
-        t = Image.new("RGBA", (celula, celula), fundo + (255,))
-        dd = ImageDraw.Draw(t)
-        for yy in range(0, celula, 16):
-            for xx in range(0, celula, 16):
-                if (xx // 16 + yy // 16) % 2 == 0:
-                    dd.rectangle([xx, yy, xx + 15, yy + 15], fill=xadrez1)
-                else:
-                    dd.rectangle([xx, yy, xx + 15, yy + 15], fill=xadrez2)
-        big = img.resize((16 * escala, 16 * escala), Image.NEAREST)
-        t.alpha_composite(big)
-        return t
 
-    linhas: list[tuple[str, list[tuple[str, Image.Image]]]] = []
-    itens = ["configurator", "network_tablet", "linker", "filter_card", "chunk_loader_upgrade", "guide"]
-    cartoes = [f"tier_core_{t}" for t in TIERS_CARTAO]
-    linhas.append(("Itens", [(n, tile(sprites[f"item/{n}"])) for n in itens]))
-    linhas.append(("Cartões de Upgrade", [(n.removeprefix("tier_core_"), tile(sprites[f"item/{n}"]))
-                                          for n in cartoes]))
-    # Itens em tamanho real (1× e 2×), como no inventário.
-    linhas.append(("Portas da tela", [(n, tile(sprites[f"gui/{n}"]))
-                                      for n in ["port_extract", "port_insert", "port_both", "port_none"]]))
-    linhas.append(("Tipos de recurso", [(n, tile(sprites[f"gui/type/{n}"])) for n in ICONES_TIPO]))
-    for tier in TIERS_ROTEADOR:
-        faces = [(f"{tier}_{f}", tile(sprites[f"block/router_{tier}_{f}"]))
-                 for f in ["front", "back", "side", "top", "bottom", "antenna"]]
-        linhas.append((f"Roteador {tier}", faces))
-    for tier in TIERS_ROTEADOR:
-        faces = [(f"{tier}_bottom", tile(sprites[f"block/storage_{tier}_bottom"]))]
-        for n in ARMAZENAMENTOS:
-            curto = n.removeprefix("storage_").replace("chemical_tank", "chemical")
-            faces.append((f"{curto} side", tile(sprites[f"block/{n}_{tier}_side"])))
-            faces.append((f"{curto} top", tile(sprites[f"block/{n}_{tier}_top"])))
-        linhas.append((f"Armazenamento {tier}", faces))
+def _amplia(img: Image.Image, k: int) -> Image.Image:
+    return img.resize((img.width * k, img.height * k), Image.NEAREST)
 
-    margem, gap = 16, 12
-    colunas = 11
-    largura = margem * 2 + colunas * celula + (colunas - 1) * gap
-    montados = [roteador_montado(t, sprites, s=7) for t in TIERS_ROTEADOR]
-    alt_montado = max(m.height for m in montados)
-    cubos = [(f"{n.removeprefix('storage_')} {t}",
-              cubo_montado(sprites[f"block/{n}_{t}_top"], sprites[f"block/{n}_{t}_side"]))
-             for n in ARMAZENAMENTOS for t in TIERS_ROTEADOR]
-    por_linha = largura // (cubos[0][1].width + gap)
-    alt_cubos = -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
-    tanques = [(t, tanque_source_montado(t, 6, sprites, s=7)) for t in TIERS_ROTEADOR]
-    niveis = [(n, tanque_source_montado("elite", n, sprites, s=6)) for n in (0, 2, 5, 8, 10)]
-    alt_tanques = 20 + tanques[0][1].height + rotulo + gap + 20 + niveis[0][1].height + rotulo + gap
-    altura = (margem + sum(20 + celula + rotulo + gap for _ in linhas) + 20 + alt_montado + rotulo + 40 + 64
-              + alt_cubos + alt_tanques)
-    out = Image.new("RGBA", (largura, altura), fundo + (255,))
+
+def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
+          previas: list[tuple[str, Image.Image]]) -> Image.Image:
+    fonte = _fonte(13)
+    fonte_titulo = _fonte(17)
+    fundo, tinta, tinta2 = cor("porcelana.3"), cor("grafite.1"), cor("#7A7366")
+    margem, gap, escala = 16, 6, 6
+    celula = 16 * escala
+    largura = 1040
+
+    out = Image.new("RGBA", (largura, 6000), fundo)
     d = ImageDraw.Draw(out)
     y = margem
-    for titulo, cels in linhas:
-        d.text((margem, y), titulo, fill=texto, font=fonte)
-        y += 20
-        for i, (nome, t) in enumerate(cels):
-            x = margem + i * (celula + gap)
-            out.alpha_composite(t, (x, y))
-            d.text((x, y + celula + 4), nome, fill=texto, font=fonte)
-        y += celula + rotulo + gap
-    d.text((margem, y), "Roteador montado (frente + topo + lateral)", fill=texto, font=fonte)
-    y += 20
+
+    def titulo(texto: str) -> None:
+        nonlocal y
+        d.text((margem, y), texto, fill=tinta, font=fonte_titulo)
+        y += 26
+        d.line([(margem, y - 4), (largura - margem, y - 4)], fill=cor("grafite.4"), width=1)
+
+    def tile(img: Image.Image, k: int) -> Image.Image:
+        t = Image.new("RGBA", (img.width * k, img.height * k), fundo)
+        t.alpha_composite(_amplia(img, k))
+        return t
+
+    titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
+    nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "guide"]
+    for nome in nomes_itens:
+        sp = itens[f"item/{nome}"]
+        d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)
+        y += 18
+        x = margem
+        for n in range(sp.quadros):
+            out.alpha_composite(tile(sp.quadro(n), escala), (x, y))
+            x += celula + gap
+        x = largura - margem - 16 - 8 - 32 - 8 - 48
+        out.alpha_composite(tile(sp.quadro(0), 1), (x, y + celula - 16))
+        out.alpha_composite(tile(sp.quadro(0), 2), (x + 24, y + celula - 32))
+        out.alpha_composite(tile(sp.quadro(0), 3), (x + 64, y + celula - 48))
+        d.text((x, y + celula - 64), "1x 2x 3x", fill=tinta2, font=fonte)
+        y += celula + gap + 6
+
+    y += 10
+    titulo("Interface (sobre o fundo claro das telas)")
     x = margem
-    for tier, m in zip(TIERS_ROTEADOR, montados):
-        out.alpha_composite(m, (x, y))
-        d.text((x + 20, y + m.height + 2), tier, fill=texto, font=fonte)
-        x += m.width + gap
-    y += alt_montado + rotulo + 10
-    # Tira em tamanho real (1× e 2×) dos itens, para julgar a leitura no inventário.
-    d.text((margem, y), "Itens em 1x e 2x", fill=texto, font=fonte)
-    y += 18
-    x = margem
-    for n in itens + cartoes:
-        img = sprites[f"item/{n}"]
-        out.alpha_composite(img, (x, y + 8))
-        out.alpha_composite(img.resize((32, 32), Image.NEAREST), (x + 20, y))
-        x += 64
-    y += 56
-    out.info["cubos_y"] = y
-    d.text((margem, y), "Armazenamento montado (topo + laterais)", fill=texto, font=fonte)
-    y += 20
-    for i, (nome, cubo) in enumerate(cubos):
-        cx = margem + (i % por_linha) * (cubo.width + gap)
-        cy = y + (i // por_linha) * (cubo.height + rotulo + gap)
-        out.alpha_composite(cubo, (cx, cy))
-        d.text((cx + 10, cy + cubo.height + 2), nome, fill=texto, font=fonte)
-    y += -(-len(cubos) // por_linha) * (cubos[0][1].height + rotulo + gap) + 20
-    out.info["cubos_fim"] = y - 20
-    d.text((margem, y), "Tanque de Source (nivel 6 em cada tier)", fill=texto, font=fonte)
-    y += 20
-    for i, (t, im) in enumerate(tanques):
-        x = margem + i * (im.width + gap)
-        out.alpha_composite(im, (x, y))
-        d.text((x + 10, y + im.height + 2), t, fill=texto, font=fonte)
-    y += tanques[0][1].height + rotulo + gap
-    d.text((margem, y), "Tanque de Source, Elite, niveis 0, 2, 5, 8 e 10", fill=texto, font=fonte)
-    y += 20
-    for i, (n, im) in enumerate(niveis):
-        x = margem + i * (im.width + gap)
-        out.alpha_composite(im, (x, y))
-        d.text((x + 10, y + im.height + 2), f"nivel {n}", fill=texto, font=fonte)
-    return out
+    for nome in ["port_extract", "port_insert", "port_both", "port_none"]:
+        sp = itens[f"gui/{nome}"]
+        out.alpha_composite(tile(sp.quadro(0), escala), (x, y))
+        out.alpha_composite(tile(sp.quadro(0), 1), (x, y + celula + 4))
+        out.alpha_composite(tile(sp.quadro(0), 2), (x + 20, y + celula + 4))
+        d.text((x, y + celula + 40), nome, fill=tinta, font=fonte)
+        x += celula + gap + 8
+    for nome in ICONES_TIPO:
+        sp = itens[f"gui/type/{nome}"]
+        rec = sp.quadro(0).crop((0, 0, 9, 9))
+        out.alpha_composite(tile(rec, escala), (x, y))
+        out.alpha_composite(tile(rec, 1), (x, y + celula + 4))
+        out.alpha_composite(tile(rec, 2), (x + 14, y + celula + 4))
+        d.text((x, y + celula + 40), f"type/{nome}", fill=tinta, font=fonte)
+        x += 9 * escala + gap + 40
+    y += celula + 60
+
+    if blocos_sprites:
+        y += 10
+        titulo("Blocos: texturas (primeiro quadro, 4×)")
+        x = margem
+        k = 4
+        for nome in sorted(blocos_sprites):
+            sp = blocos_sprites[nome]
+            if x + 16 * k > largura - margem:
+                x = margem
+                y += 16 * k + 30
+            out.alpha_composite(tile(sp.quadro(0), k), (x, y))
+            rot = nome.removeprefix("block/")
+            if len(rot) > 14:
+                rot = rot[:13] + "…"
+            d.text((x, y + 16 * k + 2), rot, fill=tinta2, font=_fonte(9))
+            x += 16 * k + 14
+        y += 16 * k + 40
+    if previas:
+        y += 10
+        titulo("Blocos: prévias montadas")
+        x = margem
+        alt_linha = 0
+        for nome, img in previas:
+            if x + img.width > largura - margem:
+                x = margem
+                y += alt_linha + 26
+                alt_linha = 0
+            if out.height < y + img.height + 60:
+                novo = Image.new("RGBA", (largura, out.height + 2000), fundo)
+                novo.paste(out, (0, 0))
+                out = novo
+                d = ImageDraw.Draw(out)
+            out.alpha_composite(img.convert("RGBA"), (x, y))
+            d.text((x, y + img.height + 2), nome, fill=tinta, font=fonte)
+            x += img.width + gap + 8
+            alt_linha = max(alt_linha, img.height)
+        y += alt_linha + 30
+    return out.crop((0, 0, largura, y + margem))
 
 
 def main() -> None:
     so_folha = "--so-folha" in sys.argv
-    sprites = gerar()
+    itens = gerar_itens()
+
+    blocos = None
+    try:
+        import blocos as _blocos  # type: ignore[import-not-found]
+        blocos = _blocos
+    except ImportError:
+        print("aviso: scripts/textures/blocos.py não encontrado; só os itens e os ícones da interface")
+    blocos_sprites: dict[str, Sprite] = blocos.sprites() if blocos else {}
+    previas: list[tuple[str, Image.Image]] = blocos.previas(blocos_sprites) if blocos else []
+
+    todos = {**itens, **blocos_sprites}
+    apagados = 0
     if not so_folha:
-        modelos_tiers()
-        modelos_tanque_source()
-        for nome, img in sprites.items():
-            destino = ASSETS / f"{nome}.png"
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            img.save(destino)
+        for nome, sp in todos.items():
+            salvar(nome, sp)
+        modelos_itens()
+        if blocos:
+            blocos.modelos()
+        pastas = ["item", "gui"] + (["block"] if blocos_sprites else [])
+        apagados = limpar(set(todos), pastas)
+
     FOLHA.parent.mkdir(parents=True, exist_ok=True)
-    imagem = folha(sprites).convert("RGB")
-    imagem.save(FOLHA)
-    # Recorte dos cubos de armazenamento montados, para julgar o conjunto sem a folha inteira.
-    imagem.crop((0, imagem.info["cubos_y"] - 8, imagem.width, imagem.info["cubos_fim"])).save(VITRINE)
-    print(f"{len(sprites)} sprites{' (não gravados)' if so_folha else ''}; folha em {FOLHA.relative_to(RAIZ)}")
+    folha(itens, blocos_sprites, previas).convert("RGB").save(FOLHA)
+    prancha_icones(itens).convert("RGB").save(PRANCHA_ICONES)
+    estado = "não gravados" if so_folha else f"gravados, {apagados} arquivo(s) antigo(s) apagado(s)"
+    print(f"{len(todos)} sprites ({estado}); folha em {FOLHA.relative_to(RAIZ)}, "
+          f"ícones da interface em {PRANCHA_ICONES.relative_to(RAIZ)}")
 
 
 if __name__ == "__main__":

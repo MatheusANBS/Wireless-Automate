@@ -289,6 +289,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox.setBordered(false);
         renameBox.setMaxLength(RenameRouterPayload.MAX_LENGTH);
         renameBox.setTextColor(GuiPaint.FG);
+        renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         renameBox.setValue(renameDraft);
         renameBox.setResponder(value -> renameDraft = value);
         renameBox.visible = renaming;
@@ -610,9 +611,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private static int chunkLoadColor(ChunkLoadState state) {
         return switch (state) {
-            case ACTIVE -> 0xFF41C96B;
-            case LIMIT -> 0xFFFFB020;
-            case DISABLED -> 0xFFFF6B5E;
+            case ACTIVE -> GuiPaint.OK;
+            case LIMIT -> GuiPaint.WARN;
+            case DISABLED -> GuiPaint.DANGER;
             case NONE -> GuiPaint.MUTED;
         };
     }
@@ -625,21 +626,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         ChunkLoadState state = chunkLoadState();
         if (state == ChunkLoadState.NONE) {
             return tr("upgrade.tooltip").copy()
-                    .append("\n").append(tr("upgrade.tooltip.effect").copy().withColor(GuiPaint.MUTED))
-                    .append("\n").append(tr("upgrade.tooltip.add").copy().withColor(GuiPaint.MUTED));
+                    .append("\n").append(tr("upgrade.tooltip.effect").copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                    .append("\n").append(tr("upgrade.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
         }
         String key = "upgrade.state." + state.name().toLowerCase(Locale.ROOT);
         return GHOST_UPGRADE.getHoverName().copy()
                 .append("\n").append(tr(key).copy().withColor(chunkLoadColor(state)))
-                .append("\n").append(tr(key + ".detail").copy().withColor(GuiPaint.MUTED))
-                .append("\n").append(tr("upgrade.tooltip.remove").copy().withColor(GuiPaint.MUTED));
+                .append("\n").append(tr(key + ".detail").copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                .append("\n").append(tr("upgrade.tooltip.remove").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     /** Dica de um slot de cartão vazio: o tipo, a regra do conjunto e como pôr um cartão. */
     private Component cardSlotTooltip() {
         return tr("cards.tooltip", typeName(type)).copy()
-                .append("\n").append(tr("cards.tooltip.rule").copy().withColor(GuiPaint.MUTED))
-                .append("\n").append(tr("cards.tooltip.add").copy().withColor(GuiPaint.MUTED));
+                .append("\n").append(tr("cards.tooltip.rule").copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                .append("\n").append(tr("cards.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     private void changePriority(int direction) {
@@ -900,7 +901,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private Component machineTooltip() {
         ItemStack machine = snapshot().machine();
         Component name = machine.isEmpty() ? tr("machine.none") : machine.getHoverName();
-        return name.copy().append("\n").append(tr("view.hint").copy().withColor(GuiPaint.MUTED));
+        return name.copy().append("\n").append(tr("view.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     @Override
@@ -918,13 +919,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         // cabeçalho
         if (renaming) {
-            GuiPaint.box(g, x + X0, y + HEAD_Y, renameBox.getWidth() + 8, PILL_H, GuiPaint.INSET, trim);
+            GuiPaint.box(g, x + X0, y + HEAD_Y, renameBox.getWidth() + 8, PILL_H, GuiPaint.INSET, GuiPaint.ACCENT);
         }
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
         int tierX = x + headEnd() - tierW;
         GuiPaint.pill(g, tierX, y + HEAD_Y, tierW, PILL_H, GuiPaint.PANEL, trim);
-        GuiPaint.dot(g, tierX + 6, y + HEAD_Y + 4, trim);
+        GuiPaint.eye(g, tierX + 6, y + HEAD_Y + 4, trim);
         GuiPaint.text(g, font, tierText, tierX + 15, y + HEAD_Y + 3, GuiPaint.FG);
 
         // vazão da aba, ao lado do tier, no espaço entre o título e a pílula
@@ -944,9 +945,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             int color = chunkLoadColor(chunkLoad);
             g.pose().pushPose();
             g.pose().translate(0, 0, 300);
-            g.fill(ux + 11, uy + 1, ux + 17, uy + 7, GuiPaint.BEVEL_DARK);
+            g.fill(ux + 11, uy + 1, ux + 17, uy + 7, GuiPaint.RING);
             g.fill(ux + 12, uy + 2, ux + 16, uy + 6, color);
-            g.fill(ux + 12, uy + 2, ux + 14, uy + 4, GuiPaint.mix(color, 0xFFFFFFFF, 0.5f));
+            g.fill(ux + 12, uy + 2, ux + 14, uy + 4, GuiPaint.mix(color, GuiPaint.BEVEL_LIGHT, 0.5f));
             g.pose().popPose();
         }
 
@@ -958,7 +959,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int vy = y + BODY_Y;
         int viewW = viewW();
         int viewH = viewH();
-        g.fillGradient(vx + 1, vy + 1, vx + viewW - 1, vy + viewH - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
+        GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
         GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
         Direction buttonHovered = null;
         for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
@@ -973,7 +974,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
         } else if (pointed != null) {
             Component label = faceName(pointed);
-            g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, 0xB011151B);
+            g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, GHOST_VEIL);
             GuiPaint.text(g, font, label, vx + 4, vy + viewH - 11, GuiPaint.FG);
         }
 
@@ -1040,12 +1041,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         ResizeGrip.renderDotted(g, x, y, w, h, hover, trim);
     }
 
+    /** Véu de porcelana translúcida sobre os itens apagados e sob o rótulo da face no visor. */
+    private static final int GHOST_VEIL = 0xD8DDD3BF;
+
     /** Upgrade apagado no fundo do slot de upgrade vazio. */
     private void ghostUpgrade(GuiGraphics g, int x, int y) {
         g.renderFakeItem(GHOST_UPGRADE, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
-        g.fill(x, y, x + 16, y + 16, 0xD811151B);
+        g.fill(x, y, x + 16, y + 16, GHOST_VEIL);
         g.pose().popPose();
     }
 
@@ -1054,12 +1058,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         g.renderFakeItem(GHOST_CARD, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
-        g.fill(x, y, x + 16, y + 16, 0xD811151B);
+        g.fill(x, y, x + 16, y + 16, GHOST_VEIL);
         g.pose().popPose();
     }
 
     private void paintTitle(GuiGraphics g, FlatButton b, boolean hovered) {
-        int color = hovered ? tierColor() : GuiPaint.FG;
+        int color = hovered ? GuiPaint.ACCENT : GuiPaint.FG;
         GuiText.draw(g, font, displayName(), b.getX(), b.getY() + 3, b.getWidth() - 2, color);
         if (hovered) {
             int width = Math.min(font.width(displayName()), b.getWidth() - 2);
@@ -1073,11 +1077,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private Component networkTooltip() {
         Component hint = tr("network.tab.tooltip", typeName(type));
         Component name = networkLabel();
-        Component head = tr("network.label").copy().withColor(GuiPaint.MUTED);
+        Component head = tr("network.label").copy().withColor(GuiPaint.TOOLTIP_MUTED);
         if (font.width(name) <= netTextMax) {
             return head.copy().append("\n").append(hint);
         }
-        return head.copy().append("\n").append(name).append("\n").append(hint.copy().withColor(GuiPaint.MUTED));
+        return head.copy().append("\n").append(name).append("\n").append(hint.copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     private void paintNetwork(GuiGraphics g, FlatButton b, boolean hovered) {
@@ -1085,7 +1089,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int fill = hovered || networkListOpen ? GuiPaint.BUTTON : GuiPaint.PANEL;
         GuiPaint.pill(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, color);
         if (currentNetwork() != null) {
-            GuiPaint.dot(g, b.getX() + 6, b.getY() + 4, color);
+            GuiPaint.eye(g, b.getX() + 6, b.getY() + 4, color);
         } else {
             GuiPaint.outline(g, b.getX() + 6, b.getY() + 4, 5, 5, color);
         }
@@ -1097,37 +1101,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private void paintTab(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
         boolean selected = t == type;
-        int trim = tierColor();
-        if (selected) {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), trim, trim);
-        } else {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
-                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        }
+        GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), selected, hovered);
         networkDot(g, b.getX() + 5, b.getY() + 5, t);
         ResourceStyle.drawIcon(g, t, b.getX() + 4 + TAB_DOT, b.getY() + 3);
         if (b.getWidth() > TabLayout.ICON_TAB) {
             int textX = b.getX() + 4 + TAB_DOT + ResourceStyle.ICON + 3;
             GuiText.draw(g, font, typeName(t), textX, b.getY() + 4, b.getX() + b.getWidth() - 4 - textX,
-                    selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
-        }
-        if (selected) {
-            g.fill(b.getX() + 1, b.getY() + b.getHeight() - 2, b.getX() + b.getWidth() - 1,
-                    b.getY() + b.getHeight() - 1, ResourceStyle.color(t));
+                    GuiPaint.tabText(selected, hovered));
         }
     }
 
-    /**
-     * Ponto na cor da rede da aba {@code t} (vazado sem rede), com contorno escuro para aparecer
-     * também na aba selecionada, que é preenchida na cor do tier.
-     */
+    /** O Olho na cor da rede da aba {@code t}; sem rede, um anel vazado em {@code MUTED}. */
     private void networkDot(GuiGraphics g, int x, int y, ResourceType t) {
-        g.fill(x, y - 1, x + 5, y + 6, GuiPaint.BEVEL_DARK);
-        g.fill(x - 1, y, x + 6, y + 5, GuiPaint.BEVEL_DARK);
         if (network(t) != null) {
-            GuiPaint.dot(g, x, y, networkColor(t));
+            GuiPaint.eye(g, x, y, networkColor(t));
         } else {
-            g.fill(x, y, x + 5, y + 5, GuiPaint.BEVEL_DARK);
+            g.fill(x, y, x + 5, y + 5, GuiPaint.INSET);
             GuiPaint.outline(g, x, y, 5, 5, GuiPaint.MUTED);
         }
     }
@@ -1139,21 +1128,17 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         boolean pointed = hovered || direction == machineView.hoveredFace();
         int x = b.getX();
         int y = b.getY();
-        int border = selected ? tierColor() : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), v.available() ? GuiPaint.BUTTON : GuiPaint.INSET, border);
         if (selected) {
-            GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, tierColor());
+            GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, GuiPaint.SELECTED);
         }
         GuiPaint.port(g, v.available() ? v.mode() : PortMode.NONE, x + 1, y + 1, v.available() ? 1f : 0.3f);
         GuiPaint.text(g, font, tr("face.short." + direction.getName()), x + 19, y + 5,
                 v.available() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
         if (direction == snapshot().facing()) {
-            // marca do roteador preso nesta face: um "LED" na cor do tier ao lado da letra
-            int bx = x + b.getWidth() - 9;
-            int by = y + 6;
-            g.fill(bx, by, bx + 6, by + 6, GuiPaint.BEVEL_DARK);
-            g.fill(bx + 1, by + 1, bx + 5, by + 5, tierColor());
-            g.fill(bx + 1, by + 1, bx + 3, by + 3, GuiPaint.mix(tierColor(), 0xFFFFFFFF, 0.5f));
+            // marca do roteador preso nesta face: o Olho na cor do tier ao lado da letra
+            GuiPaint.eye(g, x + b.getWidth() - 9, y + 6, tierColor());
         }
     }
 
@@ -1260,7 +1245,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         Optional<UUID> current = snapshot().network(type);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
-        GuiPaint.box(g, x, y, w, dropdownHeight(), GuiPaint.INSET, GuiPaint.BUTTON_HOVER_BORDER);
+        GuiPaint.box(g, x, y, w, dropdownHeight(), GuiPaint.PANEL, GuiPaint.BUTTON_BORDER);
         GuiText.draw(g, font, listTitle(), x + 5, y + 4, w - 10, GuiPaint.MUTED);
         g.fill(x + 3, y + 2 + DROPDOWN_ROW, x + w - 3, y + 3 + DROPDOWN_ROW, GuiPaint.LINE);
         for (int i = 0; i < rows; i++) {
@@ -1270,16 +1255,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             NetworkEntry entry = none ? null : networks.get(index);
             boolean selected = none ? current.isEmpty() : current.isPresent() && current.get().equals(entry.id());
             if (index == hoveredRow) {
-                g.fill(x + 1, ry, x + w - 1, ry + DROPDOWN_ROW, GuiPaint.BUTTON);
+                g.fill(x + 1, ry, x + w - 1, ry + DROPDOWN_ROW, GuiPaint.ROW_SELECTED);
             }
             if (selected) {
-                g.fill(x + 1, ry, x + 2, ry + DROPDOWN_ROW, tierColor());
+                g.fill(x + 1, ry, x + 2, ry + DROPDOWN_ROW, GuiPaint.ACCENT);
             }
             int color = none ? GuiPaint.MUTED : 0xFF000000 | entry.color();
             if (none) {
                 GuiPaint.outline(g, x + 6, ry + 3, 5, 5, color);
             } else {
-                GuiPaint.dot(g, x + 6, ry + 3, color);
+                GuiPaint.eye(g, x + 6, ry + 3, color);
             }
             Component label = none ? tr("network.none") : Component.literal(entry.name());
             GuiText.draw(g, font, label, x + 15, ry + 2, w - 20, none ? GuiPaint.MUTED : GuiPaint.FG);

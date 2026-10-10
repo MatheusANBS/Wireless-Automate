@@ -33,11 +33,9 @@ public final class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .strength(3.0F, 6.0F)
                     .sound(SoundType.METAL)
-                    .requiresCorrectToolForDrops();
-            if (kind == StorageKind.SOURCE_TANK) {
-                // Forma fina (o modelo não preenche o cubo): sem oclusão.
-                properties = properties.noOcclusion();
-            }
+                    .requiresCorrectToolForDrops()
+                    // Os modelos têm elementos e não preenchem o cubo: sem oclusão (só visual).
+                    .noOcclusion();
             STORAGE.put(kind, BLOCKS.registerBlock(kind.id,
                     props -> kind == StorageKind.SOURCE_TANK ? new StorageSourceTankBlock(kind, props) : new StorageBlock(kind, props),
                     properties));

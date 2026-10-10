@@ -30,13 +30,15 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
     private static final int HEAD_Y = 8;
     private static final int BAR_Y = 30;
     private static final int BAR_H = 22;
-    private static final int CHARGING = 0xFF5BD47A;
-    private static final int DRAINING = 0xFFE5734B;
-    private static final int ENERGY = 0xFFFFD34D;
-    private static final int ENERGY_DARK = 0xFFC8901C;
-    private static final int SOURCE = 0xFF9749C2;
-    private static final int SOURCE_DARK = 0xFF6B2F8F;
-    private static final int SOURCE_LIGHT = 0xFFEA8EF3;
+    private static final int CHARGING = GuiPaint.OK;
+    private static final int DRAINING = GuiPaint.WARN;
+    /** Materiais {@code energia} e {@code source} de {@code identidade.py} (tons 2, 1 e 3). */
+    private static final int ENERGY = 0xFFFFD042;
+    private static final int ENERGY_DARK = 0xFFD9931A;
+    private static final int ENERGY_LIGHT = 0xFFFFF1B3;
+    private static final int SOURCE = 0xFFD08AF0;
+    private static final int SOURCE_DARK = 0xFF9B4DC6;
+    private static final int SOURCE_LIGHT = 0xFFF0C8FA;
 
     public StorageScalarScreen(StorageScalarMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -97,17 +99,17 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         int titleW = Math.min(font.width(title), W - 2 * X0 - pillW - 6);
         GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
         int pillX = x + X0 + titleW + 6;
-        GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.INSET, trim);
-        GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, trim);
+        GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.PANEL, trim);
+        GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, GuiPaint.FG);
 
         // barra: fundo afundado, energia com brilho em cima e marcas a cada 10%
         int barX = x + X0;
         int barW = W - 2 * X0;
         int barY = y + BAR_Y;
-        GuiPaint.box(g, barX - 1, barY - 1, barW + 2, BAR_H + 2, GuiPaint.INSET, trim);
+        GuiPaint.box(g, barX - 1, barY - 1, barW + 2, BAR_H + 2, GuiPaint.INSET, GuiPaint.LINE);
         int bar = source() ? SOURCE : ENERGY;
         int barDark = source() ? SOURCE_DARK : ENERGY_DARK;
-        int barLight = source() ? SOURCE_LIGHT : GuiPaint.mix(ENERGY, 0xFFFFFFFF, 0.5f);
+        int barLight = source() ? SOURCE_LIGHT : ENERGY_LIGHT;
         long stored = menu.stored();
         long capacity = menu.capacity();
         int filled = capacity <= 0 ? (stored > 0 ? barW : 0)
@@ -119,7 +121,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         }
         for (int i = 1; i < 10; i++) {
             int tx = barX + barW * i / 10;
-            g.fill(tx, barY + BAR_H - 3, tx + 1, barY + BAR_H, GuiPaint.mix(GuiPaint.INSET, 0xFF000000, 0.4f));
+            g.fill(tx, barY + BAR_H - 3, tx + 1, barY + BAR_H, GuiPaint.BEVEL_DARK);
         }
 
         // valor e porcentagem
@@ -128,7 +130,8 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
                 : tr("amount", RateFormat.abbreviate(stored), RateFormat.abbreviate(capacity));
         GuiText.draw(g, font, amount, barX, barY + BAR_H + 6, barW - 40, GuiPaint.FG);
         if (capacity > 0 && menu.received()) {
-            GuiPaint.textRight(g, font, Component.literal(percent(stored, capacity)), barX + barW, barY + BAR_H + 6, trim);
+            GuiPaint.textRight(g, font, Component.literal(percent(stored, capacity)), barX + barW, barY + BAR_H + 6,
+                    GuiPaint.FG);
         }
 
         // variação: por tick na Bateria, por segundo no Tanque de Source

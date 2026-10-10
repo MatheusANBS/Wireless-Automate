@@ -54,11 +54,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int SEP_Y = 26;
     private static final int BODY_Y = 31;
     /** Cor de destaque do Vinculador (a do item). */
-    static final int ACCENT = 0xFF4FC3F7;
-    private static final int WARN = 0xFFFFB020;
-    private static final int GOOD = 0xFF41C96B;
+    static final int ACCENT = GuiPaint.ACCENT;
+    private static final int WARN = GuiPaint.WARN;
+    private static final int GOOD = GuiPaint.OK;
     /** Cor do modo desvincular. */
-    private static final int UNLINK = 0xFFE5534B;
+    private static final int UNLINK = GuiPaint.DANGER;
 
     // coluna da esquerda: redes e tipo
     private static final int LW = 144;
@@ -284,6 +284,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         nameBox.setBordered(false);
         nameBox.setMaxLength(LinkerActionPayload.MAX_NAME_LENGTH);
         nameBox.setTextColor(GuiPaint.FG);
+        nameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         nameBox.setValue(draft);
         nameBox.setResponder(value -> draft = value);
         nameBox.setHint(tr("network.name").copy().withColor(GuiPaint.DISABLED));
@@ -733,7 +734,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void renderArea(GuiGraphics g, LinkerSnapshot s, int x, int y, int mouseX, int mouseY) {
         int mapW = rw();
         int mh = mapH();
-        g.fillGradient(x + 1, y + 1, x + mapW - 1, y + mh - 1, GuiPaint.VIEW_TOP, GuiPaint.VIEW_BOTTOM);
+        g.fill(x + 1, y + 1, x + mapW - 1, y + mh - 1, GuiPaint.VIEW_PAPER);
         GuiPaint.outline(g, x, y, mapW, mh, GuiPaint.LINE);
         MapView view = mapView(s, x, y, mapW, mh);
         g.enableScissor(x + 1, y + 1, x + mapW - 1, y + mh - 1);
@@ -749,11 +750,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             int fromZ = Math.floorDiv((int) Math.floor(view.centerZ() - halfH), step) * step;
             for (int wx = fromX; wx <= view.centerX() + halfW; wx += step) {
                 int sx = view.sx(wx);
-                g.fill(sx, y + 1, sx + 1, y + mh - 1, 0xFF1F2731);
+                g.fill(sx, y + 1, sx + 1, y + mh - 1, GuiPaint.VIEW_GRID);
             }
             for (int wz = fromZ; wz <= view.centerZ() + halfH; wz += step) {
                 int sz = view.sz(wz);
-                g.fill(x + 1, sz, x + mapW - 1, sz + 1, 0xFF1F2731);
+                g.fill(x + 1, sz, x + mapW - 1, sz + 1, GuiPaint.VIEW_GRID);
             }
             LinkerBox box = s.box();
             int color = activeColor();
@@ -773,7 +774,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 int dx = view.sx(dot.x() + 0.5) - size / 2;
                 int dz = view.sz(dot.z() + 0.5) - size / 2;
                 int fill = dot.color() < 0 ? GuiPaint.INSET : 0xFF000000 | dot.color();
-                int ring = dot.linked() ? GuiPaint.BEVEL_DARK : 0xFFFFFFFF;
+                int ring = dot.linked() ? GuiPaint.RING : GuiPaint.BEVEL_LIGHT;
                 g.fill(dx - 1, dz - 1, dx + size + 1, dz + size + 1, ring);
                 g.fill(dx, dz, dx + size, dz + size, fill);
                 if (dot.color() < 0) {
@@ -831,9 +832,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void corner(GuiGraphics g, MapView view, BlockPos pos, String label) {
         int cx = view.sx(pos.getX() + 0.5);
         int cz = view.sz(pos.getZ() + 0.5);
-        g.fill(cx - 3, cz - 3, cx + 4, cz + 4, GuiPaint.BEVEL_DARK);
-        g.fill(cx - 2, cz - 2, cx + 3, cz + 3, 0xFFFFFFFF);
-        g.drawString(font, label, cx + 5, cz - 9, GuiPaint.FG, true);
+        g.fill(cx - 3, cz - 3, cx + 4, cz + 4, GuiPaint.RING);
+        g.fill(cx - 2, cz - 2, cx + 3, cz + 3, GuiPaint.ACCENT);
+        g.drawString(font, label, cx + 5, cz - 9, GuiPaint.FG, false);
     }
 
     /** Retângulo tracejado (traços de 4 px, folgas de 2 px). */
@@ -946,7 +947,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             // "Nenhuma (desvincular)": anel vazio na cor do modo
             boolean selected = unlink();
             if (selected || hovered) {
-                g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
+                g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(),
+                        selected ? GuiPaint.ROW_SELECTED : GuiPaint.ROW_HOVER);
             }
             if (selected) {
                 g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), UNLINK);
@@ -958,12 +960,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         }
         boolean selected = !unlink() && Optional.of(entry.id()).equals(snapshot().active());
         if (selected) {
-            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
+            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.ROW_SELECTED);
             g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), ACCENT);
         } else if (hovered && entry.owned()) {
-            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.BUTTON);
+            g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.ROW_HOVER);
         }
-        GuiPaint.dot(g, b.getX() + 5, b.getY() + 3, 0xFF000000 | entry.color());
+        GuiPaint.eye(g, b.getX() + 5, b.getY() + 3, 0xFF000000 | entry.color());
         GuiText.draw(g, font, Component.literal(entry.name()), b.getX() + 14, b.getY() + 2,
                 b.getWidth() - 18 - scrollSpace,
                 entry.owned() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
@@ -977,27 +979,27 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         NetworkEntry entry = entryAt(index);
         if (entry == null) {
             return tr("network.unlink").copy().append("\n")
-                    .append(tr("network.unlink.tooltip").copy().withColor(GuiPaint.MUTED));
+                    .append(tr("network.unlink.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
         }
         Component name = Component.literal(entry.name());
         if (!entry.owned()) {
-            return name.copy().append("\n").append(tr("network.foreign").copy().withColor(GuiPaint.MUTED));
+            return name.copy().append("\n").append(tr("network.foreign").copy().withColor(GuiPaint.TOOLTIP_MUTED));
         }
         if (!unlink() && Optional.of(entry.id()).equals(snapshot().active())) {
-            return name.copy().append("\n").append(tr("network.active").copy().withColor(GuiPaint.MUTED));
+            return name.copy().append("\n").append(tr("network.active").copy().withColor(GuiPaint.TOOLTIP_MUTED));
         }
-        return name.copy().append("\n").append(tr("network.choose").copy().withColor(GuiPaint.MUTED));
+        return name.copy().append("\n").append(tr("network.choose").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     private void paintChoice(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected) {
         if (selected) {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), ACCENT, ACCENT);
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.SELECTED, GuiPaint.SELECTED);
         } else {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
                     hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         }
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
-                selected ? GuiPaint.DARK_TEXT : GuiPaint.FG);
+                selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
     }
 
     /** Chip de um tipo: ícone e nome; marcado, borda e fundo na cor do tipo (ou do desvincular). */
@@ -1041,8 +1043,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void paintLink(GuiGraphics g, FlatButton b, boolean hovered) {
         int color = activeColor();
         if (b.active) {
-            int fill = hovered ? GuiPaint.mix(color, 0xFFFFFFFF, 0.15f) : color;
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, GuiPaint.mix(color, 0xFF000000, 0.3f));
+            int fill = hovered ? GuiPaint.mix(color, GuiPaint.BEVEL_LIGHT, 0.15f) : color;
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, GuiPaint.mix(color, GuiPaint.RING, 0.3f));
         } else {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.INSET, GuiPaint.LINE);
         }

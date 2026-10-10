@@ -7,8 +7,8 @@ import net.minecraft.client.gui.GuiGraphics;
 /**
  * Desenho da alça de redimensionar no canto de baixo à direita e do destaque da borda, para as telas
  * que usam {@link ResizeHandle}. A alça e o destaque acendem na cor {@code lit} da tela com o mouse em
- * cima ou arrastando ({@code hover} não nulo, ver {@link ResizeHandle#hover}); parados, a alça fica na
- * cor da borda dos botões. Há duas variações, cada uma igual à que as telas já desenhavam.
+ * cima ou arrastando ({@code hover} não nulo, ver {@link ResizeHandle#hover}), que na identidade atual
+ * é sempre o coral; parados, a alça fica na cor do texto secundário. Há duas variações, cada uma igual à que as telas já desenhavam.
  */
 public final class ResizeGrip {
 
@@ -21,7 +21,7 @@ public final class ResizeGrip {
      */
     public static void renderDotted(GuiGraphics g, int left, int top, int width, int height,
             ResizeHandle.@Nullable Edge hover, int lit) {
-        int color = hover != null ? lit : GuiPaint.BUTTON_HOVER_BORDER;
+        int color = hover != null ? lit : GuiPaint.MUTED;
         int gx = left + width - 4;
         int gy = top + height - 4;
         for (int i = 0; i < 3; i++) {
@@ -44,7 +44,7 @@ public final class ResizeGrip {
      */
     public static void renderSolid(GuiGraphics g, int left, int top, int width, int height,
             ResizeHandle.@Nullable Edge hover, int lit) {
-        int color = hover != null ? lit : GuiPaint.BUTTON_HOVER_BORDER;
+        int color = hover != null ? lit : GuiPaint.MUTED;
         int gx = left + width - 4;
         int gy = top + height - 4;
         for (int d = 0; d <= 4; d += 2) {

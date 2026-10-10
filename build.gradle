@@ -419,35 +419,3 @@ tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 
         }
     }
 }
-
-// --- Porte 1.20.1 (temporário, até a tarefa 10) ---
-// Com -Pporte.soPuras, o source set main compila só a lógica pura testada em src/test/java e as
-// dependências puras dela, para o JUnit rodar enquanto o resto do mod ainda não compila no 1.20.1:
-// ./gradlew test -Pporte.soPuras
-if (project.hasProperty('porte.soPuras')) {
-    def base = 'io/github/matheusanbs/wirelessautomate/'
-    def puras = [
-            'bench/LnChannelPlan', 'bench/Samples',
-            'block/TierLadder',
-            'client/CardGrid', 'client/EnchantSearch', 'client/RateFormat', 'client/ResizeHandle',
-            'client/TabLayout', 'client/WheelLayout',
-            'filter/StockLimit',
-            'linker/LinkerBox', 'linker/LinkerTabs',
-            'network/Backoff', 'network/EnergySplit', 'network/RateLimiter', 'network/RateMath',
-            'network/ReachBox', 'network/ResourceType', 'network/RoundRobinOrder', 'network/SourceCursor',
-            'network/TickBudget',
-            'preset/PasteTypes',
-            'storage/StorageMath', 'storage/StorageShapes',
-            // Tarefa 4: o PasteMode usa o LinkerMode (com o StreamCodec da camada net/) e o ScalarStore
-            // implementa o BulkEnergy e o BulkSource (a Capability do Forge vem do StorageCapabilities, que só
-            // inicializa fora do JUnit); todos compilam no 1.20.1.
-            'preset/PasteMode', 'linker/LinkerMode',
-            'net/StreamCodec', 'net/StreamDecoder', 'net/StreamEncoder', 'net/StreamMemberEncoder',
-            'net/NeoForgeStreamCodecs', 'net/RegistryFriendlyByteBuf',
-            'storage/ScalarStore', 'storage/BulkEnergy', 'storage/BulkSource', 'storage/StorageCapabilities',
-            'storage/BulkItems', 'storage/BulkFluids',
-    ]
-    def testesFora = []
-    sourceSets.main.java { include puras.collect { base + it + '.java' } }
-    sourceSets.test.java { exclude testesFora.collect { base + it + '.java' } }
-}

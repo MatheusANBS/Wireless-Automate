@@ -3,13 +3,14 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismStorage;
 import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.minecraftforge.common.capabilities.Capability;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,9 +27,13 @@ public final class Chemicals {
     /** O Mekanism está instalado: a aba Químicos existe e o motor move químicos. */
     public static final boolean LOADED = ModList.get() != null && ModList.get().isLoaded("mekanism");
 
-    /** A capability de bloco do químico ({@code mekanism:chemical_handler}), ou {@code null} sem o Mekanism. */
-    public static @Nullable BlockCapability<?, @Nullable Direction> capability() {
-        return LOADED ? MekanismChemicals.BLOCK : null;
+    /**
+     * Porte 1.20.1 (Mekanism 10.4, D4): as capabilities de handler de químico, uma por subtipo, na ordem gás,
+     * infusão, pigmento, slurry; vazia sem o Mekanism. O {@code RouterBlockEntity.chemicals(face, subtipo)}
+     * indexa esta lista. (A tarefa 7 implementa {@code MekanismChemicals.CAPABILITIES}.)
+     */
+    public static List<Capability<?>> capabilities() {
+        return LOADED ? MekanismChemicals.CAPABILITIES : List.of();
     }
 
     /** Tanques de um handler de químico (o objeto de {@code RouterBlockEntity.chemicals}). */

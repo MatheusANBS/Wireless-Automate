@@ -1,9 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import net.minecraft.core.Direction;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import org.jetbrains.annotations.Nullable;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.CapabilityToken;
 
 /**
  * Source em {@code long}, sem o teto de {@link Integer#MAX_VALUE} por chamada da capability do Ars. É a
@@ -11,8 +10,9 @@ import org.jetbrains.annotations.Nullable;
  * Não usa tipos do Ars.
  */
 public interface BulkSource {
-    BlockCapability<BulkSource, @Nullable Direction> BLOCK =
-            BlockCapability.createSided(WirelessAutomate.id("bulk_source"), BulkSource.class);
+    /** A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). */
+    Capability<BulkSource> BLOCK = CapabilityManager.get(new CapabilityToken<>() {
+    });
 
     /** Guarda até {@code amount}; devolve quanto coube. */
     long insert(long amount, boolean simulate);

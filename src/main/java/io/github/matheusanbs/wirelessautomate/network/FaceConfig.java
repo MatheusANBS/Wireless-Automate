@@ -126,6 +126,25 @@ public final class FaceConfig {
                 .orElseGet(CompoundTag::new);
     }
 
+    /**
+     * Porte 1.20.1: {@link #save(HolderLookup.Provider)} sem os registros (o block entity grava e lê sem o
+     * mundo, no {@code saveAdditional}/{@code load}); os codecs do filtro só precisam do {@link NbtOps}.
+     */
+    public CompoundTag save() {
+        return CODEC.encodeStart(NbtOps.INSTANCE, this)
+                .resultOrPartial(error -> WirelessAutomate.LOGGER.error("Falha ao salvar a face {}: {}", this, error))
+                .filter(CompoundTag.class::isInstance)
+                .map(CompoundTag.class::cast)
+                .orElseGet(CompoundTag::new);
+    }
+
+    /** Porte 1.20.1: {@link #load(CompoundTag, HolderLookup.Provider)} sem os registros (ver {@link #save()}). */
+    public static FaceConfig load(CompoundTag tag) {
+        return CODEC.parse(NbtOps.INSTANCE, tag)
+                .resultOrPartial(error -> WirelessAutomate.LOGGER.warn("Face com dados inválidos ({}): {}", error, tag))
+                .orElseGet(FaceConfig::new);
+    }
+
     /** Lê o formato de {@link #save}; também lê as tags antigas, sem filtro. Campo ausente ou inválido fica no padrão. */
     public static FaceConfig load(CompoundTag tag, HolderLookup.Provider registries) {
         return CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag)

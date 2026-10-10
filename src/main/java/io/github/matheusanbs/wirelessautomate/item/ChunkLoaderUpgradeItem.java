@@ -6,6 +6,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Upgrade de chunk loading: no slot de upgrade da tela do roteador, mantém carregado o chunk do
@@ -18,8 +20,8 @@ public class ChunkLoaderUpgradeItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("item.wirelessautomate.chunk_loader_upgrade.tooltip")
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.wirelessautomate.chunk_loader_upgrade.tooltip.slot")

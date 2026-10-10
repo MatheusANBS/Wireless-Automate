@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.network.CapCache;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -28,25 +29,26 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -75,6 +77,8 @@ public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final RelativeSide[] SIDES = RelativeSide.values();
     private static final int FACES = Direction.values().length;
+    /** Subtipos de químico do Mekanism 10.4 (gás, infusão, pigmento, slurry): o teto de caches por face. */
+    private static final int CHEMICAL_SUBTYPES = 4;
 
     /** Rede de cada aba (por {@link ResourceType#ordinal()}); {@code null} = sem rede nesse tipo. */
     private final UUID[] networks = new UUID[ResourceType.values().length];
@@ -101,18 +105,26 @@ public class RouterBlockEntity extends BlockEntity {
     /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
     private boolean chunkUnloading;
 
-    /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
-    private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
-    private final BlockCapabilityCache<BulkItems, @Nullable Direction>[] bulkItemCaches = newCaches();
-    private final BlockCapabilityCache<BulkEnergy, @Nullable Direction>[] bulkEnergyCaches = newCaches();
-    private final BlockCapabilityCache<BulkFluids, @Nullable Direction>[] bulkFluidCaches = newCaches();
-    private final BlockCapabilityCache<BulkSource, @Nullable Direction>[] bulkSourceCaches = newCaches();
-    private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
-    private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
-    /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
-    private final BlockCapabilityCache<Object, @Nullable Direction>[] chemicalCaches = newCaches();
-    /** Source do Ars Nouveau; o handler fica como {@code Object} para esta classe não depender dele. */
-    private final BlockCapabilityCache<Object, @Nullable Direction>[] sourceCaches = newCaches();
+    /**
+     * Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. No Forge
+     * 1.20.1 ({@link CapCache}) o mundo não avisa quando o block entity da máquina aparece ou é trocado: o
+     * {@link RouterBlock#neighborChanged} chama {@link #machineNeighborChanged}, que invalida os caches.
+     */
+    private final CapCache<IItemHandler>[] itemCaches = newCaches();
+    private final CapCache<BulkItems>[] bulkItemCaches = newCaches();
+    private final CapCache<BulkEnergy>[] bulkEnergyCaches = newCaches();
+    private final CapCache<BulkFluids>[] bulkFluidCaches = newCaches();
+    private final CapCache<BulkSource>[] bulkSourceCaches = newCaches();
+    private final CapCache<IFluidHandler>[] fluidCaches = newCaches();
+    private final CapCache<IEnergyStorage>[] energyCaches = newCaches();
+    /**
+     * Químicos do Mekanism 10.4, um cache por subtipo ({@link Chemicals#capabilities()}: gás, infusão,
+     * pigmento, slurry) e face; o handler fica como {@code Object} para esta classe não depender dele.
+     */
+    @SuppressWarnings("unchecked")
+    private final CapCache<Object>[][] chemicalCaches = new CapCache[CHEMICAL_SUBTYPES][FACES];
+    /** Source do Ars Nouveau (o block entity da máquina, sem capability no Ars 4.12); como {@code Object}. */
+    private final CapCache<Object>[] sourceCaches = newCaches();
     private @Nullable Direction cacheFacing;
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
@@ -210,7 +222,7 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     private static String sanitizeName(String name) {
-        String clean = StringUtil.filterText(name).strip();
+        String clean = SharedConstants.filterText(name).strip();
         return clean.length() > RenameRouterPayload.MAX_LENGTH
                 ? clean.substring(0, RenameRouterPayload.MAX_LENGTH).strip()
                 : clean;
@@ -239,6 +251,10 @@ public class RouterBlockEntity extends BlockEntity {
         if (level == null) {
             return;
         }
+        // Porte 1.20.1: o Forge não invalida capability quando o block entity da máquina aparece, some ou
+        // muda de lados; o aviso do vizinho invalida os caches (a consulta seguinte busca de novo e, se o
+        // cache já tinha entregado algo, o motor acorda a porta da face, como no NeoForge).
+        invalidateCaches();
         Block block = level.getBlockState(machinePos()).getBlock();
         if (block != machineBlock) {
             machineBlock = block;
@@ -583,9 +599,9 @@ public class RouterBlockEntity extends BlockEntity {
         return types;
     }
 
-    /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
+    /** Inventário da máquina pela face {@code machineFace}, via {@link CapCache}. */
     public @Nullable IItemHandler items(Direction machineFace) {
-        return capability(itemCaches, Capabilities.ItemHandler.BLOCK, ResourceType.ITEM, machineFace);
+        return capability(itemCaches, ForgeCapabilities.ITEM_HANDLER, ResourceType.ITEM, machineFace);
     }
 
     /**
@@ -605,7 +621,7 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     public @Nullable IFluidHandler fluids(Direction machineFace) {
-        return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, ResourceType.FLUID, machineFace);
+        return capability(fluidCaches, ForgeCapabilities.FLUID_HANDLER, ResourceType.FLUID, machineFace);
     }
 
     /**
@@ -617,41 +633,59 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     public @Nullable IEnergyStorage energy(Direction machineFace) {
-        return capability(energyCaches, Capabilities.EnergyStorage.BLOCK, ResourceType.ENERGY, machineFace);
+        return capability(energyCaches, ForgeCapabilities.ENERGY, ResourceType.ENERGY, machineFace);
     }
 
     /**
-     * Handler de químicos do Mekanism ({@code IChemicalHandler}) pela face, ou {@code null} sem a
-     * capability ou sem o Mekanism. Devolvido como {@code Object}: só o código de
-     * {@code compat/mekanism} e o {@code ChemicalTransfer} sabem o tipo.
+     * Handler de químicos do Mekanism 10.4 do subtipo {@code subtype} (índice em
+     * {@link Chemicals#capabilities()}: gás, infusão, pigmento, slurry) pela face, ou {@code null} sem a
+     * capability ou sem o Mekanism. Devolvido como {@code Object}: só o código de {@code compat/mekanism} e o
+     * {@code ChemicalTransfer} sabem o tipo.
      */
     @SuppressWarnings("unchecked")
+    public @Nullable Object chemicals(Direction machineFace, int subtype) {
+        List<Capability<?>> capabilities = Chemicals.capabilities();
+        if (subtype < 0 || subtype >= capabilities.size() || subtype >= CHEMICAL_SUBTYPES) {
+            return null;
+        }
+        return capability(chemicalCaches[subtype], (Capability<Object>) capabilities.get(subtype),
+                ResourceType.CHEMICAL, machineFace);
+    }
+
+    /**
+     * O primeiro handler de químico que a face oferece, de qualquer subtipo (ver
+     * {@link #chemicals(Direction, int)}), ou {@code null}. Para quem só quer saber se a face tem químicos.
+     */
     public @Nullable Object chemicals(Direction machineFace) {
-        BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
-        return capability == null ? null
-                : capability(chemicalCaches, (BlockCapability<Object, @Nullable Direction>) capability,
-                        ResourceType.CHEMICAL, machineFace);
+        int count = Math.min(Chemicals.capabilities().size(), CHEMICAL_SUBTYPES);
+        for (int subtype = 0; subtype < count; subtype++) {
+            Object handler = chemicals(machineFace, subtype);
+            if (handler != null) {
+                return handler;
+            }
+        }
+        return null;
     }
 
     /**
      * Source em {@code long} (o Tanque de Source do mod) pela face, ou {@code null} se a máquina não
      * tiver. O motor tenta esta antes de {@link #arsSource}: sem o teto de {@link Integer#MAX_VALUE} por
-     * chamada da capability do Ars.
+     * chamada do Ars.
      */
     public @Nullable BulkSource bulkSource(Direction machineFace) {
         return capability(bulkSourceCaches, BulkSource.BLOCK, ResourceType.SOURCE, machineFace);
     }
 
     /**
-     * Source do Ars Nouveau ({@code ISourceCap}) pela face, ou {@code null} sem a capability ou sem o
-     * Ars. Devolvido como {@code Object}: só o código de {@code compat/arsnouveau} sabe o tipo.
+     * Source do Ars Nouveau 4.12 (o {@code ISourceTile} da máquina; o Ars 4.12 não tem capability de Source),
+     * ou {@code null} sem ele ou sem o Ars. Devolvido como {@code Object}: só o código de
+     * {@code compat/arsnouveau} sabe o tipo. Um cache por face, como os outros, mesmo que a face não importe.
      */
-    @SuppressWarnings("unchecked")
     public @Nullable Object arsSource(Direction machineFace) {
-        BlockCapability<?, @Nullable Direction> capability = Sources.capability();
-        return capability == null ? null
-                : capability(sourceCaches, (BlockCapability<Object, @Nullable Direction>) capability,
-                        ResourceType.SOURCE, machineFace);
+        Function<BlockEntity, @Nullable Object> lookup = Sources.sourceTile();
+        return lookup == null ? null
+                : cached(sourceCaches, machineFace, (serverLevel, isValid) -> CapCache.ofBlockEntity(serverLevel,
+                        machinePos(), lookup, isValid, () -> capabilityInvalidated(ResourceType.SOURCE, machineFace)));
     }
 
     /**
@@ -659,22 +693,27 @@ public class RouterBlockEntity extends BlockEntity {
      * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor. Cada cache avisa
      * a própria invalidação com o tipo e a face ({@link #capabilityInvalidated}).
      */
-    private <T> @Nullable T capability(BlockCapabilityCache<T, @Nullable Direction>[] caches,
-            BlockCapability<T, @Nullable Direction> capability, ResourceType type, Direction machineFace) {
+    private <T> @Nullable T capability(CapCache<T>[] caches, Capability<T> capability, ResourceType type,
+            Direction machineFace) {
+        return cached(caches, machineFace, (serverLevel, isValid) -> CapCache.create(capability, serverLevel,
+                machinePos(), machineFace, isValid, () -> capabilityInvalidated(type, machineFace)));
+    }
+
+    /** Consulta o cache da face, criando-o com {@code factory} (o mundo e a validade) na primeira vez. */
+    private <T> @Nullable T cached(CapCache<T>[] caches, Direction machineFace,
+            BiFunction<ServerLevel, BooleanSupplier, CapCache<T>> factory) {
         if (!(level instanceof ServerLevel serverLevel) || isRemoved()) {
             return null;
         }
         // Girar passa pelo setBlockState, que limpa os caches: o facing só é lido ao criar um.
-        BlockCapabilityCache<T, @Nullable Direction> cache = caches[machineFace.ordinal()];
+        CapCache<T> cache = caches[machineFace.ordinal()];
         if (cache == null) {
             Direction facing = facing();
             if (facing != cacheFacing) {
                 clearCaches();
                 cacheFacing = facing;
             }
-            cache = BlockCapabilityCache.create(capability, serverLevel, machinePos(), machineFace,
-                    () -> !isRemoved() && facing() == facing,
-                    () -> capabilityInvalidated(type, machineFace));
+            cache = factory.apply(serverLevel, () -> !isRemoved() && facing() == facing);
             caches[machineFace.ordinal()] = cache;
         }
         return cache.getCapability();
@@ -692,22 +731,41 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
+    /** Os vetores de caches do roteador (os caches ainda não criados ficam {@code null} neles). */
+    private List<CapCache<?>[]> cacheArrays() {
+        List<CapCache<?>[]> arrays = new ArrayList<>(List.of(itemCaches, bulkItemCaches, bulkEnergyCaches,
+                bulkFluidCaches, bulkSourceCaches, fluidCaches, energyCaches, sourceCaches));
+        arrays.addAll(Arrays.asList(chemicalCaches));
+        return arrays;
+    }
+
+    /** Marca todos os caches sujos (a máquina pode ter mudado); os que já entregaram algo avisam o motor. */
+    private void invalidateCaches() {
+        for (CapCache<?>[] caches : cacheArrays()) {
+            for (CapCache<?> cache : caches) {
+                if (cache != null) {
+                    cache.invalidate();
+                }
+            }
+        }
+    }
+
+    /** Descarta os caches (girado ou removido), tirando os listeners deles dos {@code LazyOptional}. */
     private void clearCaches() {
-        Arrays.fill(itemCaches, null);
-        Arrays.fill(bulkItemCaches, null);
-        Arrays.fill(bulkEnergyCaches, null);
-        Arrays.fill(bulkFluidCaches, null);
-        Arrays.fill(bulkSourceCaches, null);
-        Arrays.fill(fluidCaches, null);
-        Arrays.fill(energyCaches, null);
-        Arrays.fill(chemicalCaches, null);
-        Arrays.fill(sourceCaches, null);
+        for (CapCache<?>[] caches : cacheArrays()) {
+            for (int i = 0; i < caches.length; i++) {
+                if (caches[i] != null) {
+                    caches[i].close();
+                    caches[i] = null;
+                }
+            }
+        }
         cacheFacing = null;
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> BlockCapabilityCache<T, @Nullable Direction>[] newCaches() {
-        return (BlockCapabilityCache<T, @Nullable Direction>[]) new BlockCapabilityCache[FACES];
+    private static <T> CapCache<T>[] newCaches() {
+        return (CapCache<T>[]) new CapCache[FACES];
     }
 
     /**
@@ -810,6 +868,7 @@ public class RouterBlockEntity extends BlockEntity {
     @Override
     public void setRemoved() {
         super.setRemoved();
+        clearCaches();
         removeFromManager();
         if (level != null && !level.isClientSide && !chunkUnloading) {
             RouterChunkLoader.get().removed(this);
@@ -824,8 +883,8 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         CompoundTag networksTag = new CompoundTag();
         for (ResourceType type : ResourceType.values()) {
             UUID network = networks[type.ordinal()];
@@ -848,7 +907,7 @@ public class RouterBlockEntity extends BlockEntity {
             for (RelativeSide side : SIDES) {
                 FaceConfig config = face(type, side);
                 if (!config.isDefault()) {
-                    typeTag.put(side.key(), config.save(registries));
+                    typeTag.put(side.key(), config.save());
                 }
             }
             if (!typeTag.isEmpty()) {
@@ -868,7 +927,7 @@ public class RouterBlockEntity extends BlockEntity {
                     if (!slots[slot].isEmpty()) {
                         CompoundTag slotTag = new CompoundTag();
                         slotTag.putByte("slot", (byte) slot);
-                        list.add(slots[slot].save(registries, slotTag));
+                        list.add(slots[slot].save(slotTag));
                     }
                 }
                 if (!list.isEmpty()) {
@@ -883,7 +942,7 @@ public class RouterBlockEntity extends BlockEntity {
             tag.put("cards", cardsTag);
         }
         if (!upgrade.isEmpty()) {
-            tag.put("upgrade", upgrade.save(registries));
+            tag.put("upgrade", upgrade.save(new CompoundTag()));
             if (upgradeOwner != null) {
                 tag.putUUID("upgrade_owner", upgradeOwner);
             }
@@ -891,8 +950,8 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         // Formato antigo: uma rede para o roteador inteiro vale para todos os tipos.
         UUID legacy = tag.hasUUID("network") ? tag.getUUID("network") : null;
         CompoundTag networksTag = tag.getCompound("networks");
@@ -908,7 +967,7 @@ public class RouterBlockEntity extends BlockEntity {
             for (RelativeSide side : SIDES) {
                 FaceConfig config = face(type, side);
                 if (typeTag.contains(side.key(), CompoundTag.TAG_COMPOUND)) {
-                    config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key()), registries));
+                    config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key())));
                 } else {
                     config.reset();
                 }
@@ -925,14 +984,14 @@ public class RouterBlockEntity extends BlockEntity {
                     int slot = slotTag.getByte("slot");
                     ItemStack[] slots = cards[t][side.ordinal()];
                     if (slot >= 0 && slot < CARD_SLOTS) {
-                        // Item de mod removido: a pilha não lê e o slot fica vazio.
-                        ItemStack.parse(registries, slotTag).ifPresent(stack -> slots[slot] = stack);
+                        // Item de mod removido: a pilha lê vazia e o slot fica vazio.
+                        slots[slot] = ItemStack.of(slotTag);
                     }
                 }
             }
         }
         upgrade = tag.contains("upgrade", Tag.TAG_COMPOUND)
-                ? ItemStack.parse(registries, tag.getCompound("upgrade")).orElse(ItemStack.EMPTY)
+                ? ItemStack.of(tag.getCompound("upgrade"))
                 : ItemStack.EMPTY;
         upgradeOwner = !upgrade.isEmpty() && tag.hasUUID("upgrade_owner") ? tag.getUUID("upgrade_owner") : null;
         changeVersion++;

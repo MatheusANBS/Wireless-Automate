@@ -14,11 +14,11 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -29,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -81,21 +81,21 @@ public class LinkerItem extends Item {
      * aquela aba sozinha; sem nenhum dos dois, Todos.
      */
     public static LinkerTabs tabs(ItemStack stack) {
-        LinkerTabs tabs = stack.get(ModDataComponents.LINKER_TABS.get());
+        LinkerTabs tabs = ModDataComponents.LINKER_TABS.get(stack);
         if (tabs != null) {
             return tabs;
         }
-        ResourceType legacy = stack.get(ModDataComponents.LINKER_TYPE.get());
+        ResourceType legacy = ModDataComponents.LINKER_TYPE.get(stack);
         return legacy == null ? LinkerTabs.ALL : LinkerTabs.of(legacy);
     }
 
     /** Grava as abas (Todos apaga o componente) e apaga o formato antigo. */
     public static void setTabs(ItemStack stack, LinkerTabs tabs) {
-        stack.remove(ModDataComponents.LINKER_TYPE.get());
+        ModDataComponents.LINKER_TYPE.remove(stack);
         if (tabs.equals(LinkerTabs.ALL)) {
-            stack.remove(ModDataComponents.LINKER_TABS.get());
+            ModDataComponents.LINKER_TABS.remove(stack);
         } else {
-            stack.set(ModDataComponents.LINKER_TABS.get(), tabs);
+            ModDataComponents.LINKER_TABS.set(stack, tabs);
         }
     }
 
@@ -145,14 +145,14 @@ public class LinkerItem extends Item {
 
     /** O Vinculador está no modo desvincular ("Nenhuma" na escolha da rede). */
     public static boolean unlink(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.LINKER_UNLINK.get(), false);
+        return ModDataComponents.LINKER_UNLINK.getOrDefault(stack, false);
     }
 
     public static void setUnlink(ItemStack stack, boolean unlink) {
         if (unlink) {
-            stack.set(ModDataComponents.LINKER_UNLINK.get(), true);
+            ModDataComponents.LINKER_UNLINK.set(stack, true);
         } else {
-            stack.remove(ModDataComponents.LINKER_UNLINK.get());
+            ModDataComponents.LINKER_UNLINK.remove(stack);
         }
     }
 
@@ -206,14 +206,14 @@ public class LinkerItem extends Item {
 
     /** Modo do Vinculador; sem o componente, Único. */
     public static LinkerMode mode(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.LINKER_MODE.get(), LinkerMode.SINGLE);
+        return ModDataComponents.LINKER_MODE.getOrDefault(stack, LinkerMode.SINGLE);
     }
 
     public static void setMode(ItemStack stack, LinkerMode mode) {
         if (mode == LinkerMode.SINGLE) {
-            stack.remove(ModDataComponents.LINKER_MODE.get());
+            ModDataComponents.LINKER_MODE.remove(stack);
         } else {
-            stack.set(ModDataComponents.LINKER_MODE.get(), mode);
+            ModDataComponents.LINKER_MODE.set(stack, mode);
         }
     }
 
@@ -223,21 +223,21 @@ public class LinkerItem extends Item {
 
     /** Cantos marcados; {@code null} se nenhum. */
     public static @Nullable LinkerArea area(ItemStack stack) {
-        return stack.get(ModDataComponents.LINKER_AREA.get());
+        return ModDataComponents.LINKER_AREA.get(stack);
     }
 
     /** {@code null} apaga os cantos. */
     public static void setArea(ItemStack stack, @Nullable LinkerArea area) {
         if (area == null) {
-            stack.remove(ModDataComponents.LINKER_AREA.get());
+            ModDataComponents.LINKER_AREA.remove(stack);
         } else {
-            stack.set(ModDataComponents.LINKER_AREA.get(), area);
+            ModDataComponents.LINKER_AREA.set(stack, area);
         }
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable(KEY + "tooltip.mode", modeName(mode(stack))).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable(KEY + "tooltip.tabs", tabsName(tabs(stack))).withStyle(ChatFormatting.AQUA));
         if (unlink(stack)) {

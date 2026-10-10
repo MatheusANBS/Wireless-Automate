@@ -22,14 +22,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.common.world.chunk.TicketController;
-import net.neoforged.neoforge.common.world.chunk.TicketHelper;
+import net.minecraftforge.common.world.ForgeChunkManager;
+import net.minecraftforge.common.world.ForgeChunkManager.TicketHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Tickets do Upgrade de chunk loading, um gerenciador por servidor. Um roteador com o upgrade força,
  * com ticking, o chunk dele e o da máquina (se for outro), em nome da posição do roteador
- * ({@link #CONTROLLER}). Os tickets são do NeoForge e ficam salvos no mundo; ao carregar o mundo,
+ * ({@link #CONTROLLER}). Os tickets são do Forge e ficam salvos no mundo; ao carregar o mundo,
  * {@link #validateTickets} tira os de roteadores que sumiram ou perderam o upgrade.
  *
  * <p>Sem tick por bloco: o roteador avisa quando o upgrade muda ({@link #update}), quando carrega
@@ -43,8 +43,12 @@ import org.jetbrains.annotations.Nullable;
  * esperavam são reavaliados. Desligado na config, todos ficam {@link ChunkLoadState#DISABLED}.
  */
 public final class RouterChunkLoader {
-    public static final TicketController CONTROLLER =
-            new TicketController(WirelessAutomate.id("router"), RouterChunkLoader::validateTickets);
+    /**
+     * Os tickets do mod, em nome da posição do roteador. No Forge 1.20.1 não há {@code TicketController}:
+     * esta fachada chama o {@link ForgeChunkManager} com o id do mod, e a validação ao carregar o mundo é
+     * registrada por {@link #registerValidation()}.
+     */
+    public static final Controller CONTROLLER = new Controller();
     private static final long[] NO_CHUNKS = new long[0];
 
     private static RouterChunkLoader instance;
@@ -364,7 +368,7 @@ public final class RouterChunkLoader {
     }
 
     /**
-     * O roteador em {@code pos} tem ticket deste controle no chunk. Para os GameTests: o NeoForge
+     * O roteador em {@code pos} tem ticket deste controle no chunk. Para os GameTests: o Forge
      * não expõe a consulta, então tira o ticket (a remoção diz se existia) e o devolve.
      */
     public static boolean hasTicket(ServerLevel level, BlockPos pos, long chunk) {
@@ -385,6 +389,21 @@ public final class RouterChunkLoader {
      * se o upgrade está desligado. Ler o block entity carrega o chunk dele, que o ticket carregaria
      * de qualquer jeito. O limite por jogador é conferido quando cada roteador carrega.
      */
+    /** Registra a validação dos tickets salvos (no setup comum do mod). */
+    public static void registerValidation() {
+        ForgeChunkManager.setForcedChunkLoadingCallback(WirelessAutomate.MODID, RouterChunkLoader::validateTickets);
+    }
+
+    /** Fachada do {@code TicketController} do NeoForge sobre o {@link ForgeChunkManager}. */
+    public static final class Controller {
+        private Controller() {
+        }
+
+        public boolean forceChunk(ServerLevel level, BlockPos owner, int chunkX, int chunkZ, boolean add, boolean ticking) {
+            return ForgeChunkManager.forceChunk(level, WirelessAutomate.MODID, owner, chunkX, chunkZ, add, ticking);
+        }
+    }
+
     private static void validateTickets(ServerLevel level, TicketHelper helper) {
         boolean enabled = enabled();
         helper.getBlockTickets().forEach((pos, tickets) -> {
@@ -404,8 +423,9 @@ public final class RouterChunkLoader {
                 return;
             }
             long[] wanted = chunksOf(router);
-            removeOthers(helper, pos, tickets.ticking(), wanted, true);
-            removeOthers(helper, pos, tickets.nonTicking(), NO_CHUNKS, false);
+            // No Forge, o primeiro do par são os tickets sem ticking e o segundo, os com ticking.
+            removeOthers(helper, pos, tickets.getSecond(), wanted, true);
+            removeOthers(helper, pos, tickets.getFirst(), NO_CHUNKS, false);
         });
     }
 

@@ -20,6 +20,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Cartão de upgrade de tier: clique no roteador (ou num armazenamento) de qualquer tier abaixo para levá-lo ao tier do
@@ -57,8 +59,8 @@ public class TierCoreItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         if (!tier.loaded()) {
             tooltip.add(Component.translatable(KEY + "requires").withStyle(ChatFormatting.RED));
         }

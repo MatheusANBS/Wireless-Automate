@@ -23,9 +23,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.ComponentUtils;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -39,7 +39,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -87,15 +87,15 @@ public class ConfiguratorItem extends Item {
 
     /** Tipo (aba) que o Configurador cola; {@code null} = todos. */
     public static @Nullable ResourceType type(ItemStack stack) {
-        return stack.get(ModDataComponents.CONFIGURATOR_TYPE.get());
+        return ModDataComponents.CONFIGURATOR_TYPE.get(stack);
     }
 
     /** {@code null} = Todos (sem o componente). */
     public static void setType(ItemStack stack, @Nullable ResourceType type) {
         if (type == null) {
-            stack.remove(ModDataComponents.CONFIGURATOR_TYPE.get());
+            ModDataComponents.CONFIGURATOR_TYPE.remove(stack);
         } else {
-            stack.set(ModDataComponents.CONFIGURATOR_TYPE.get(), type);
+            ModDataComponents.CONFIGURATOR_TYPE.set(stack, type);
         }
     }
 
@@ -123,16 +123,16 @@ public class ConfiguratorItem extends Item {
 
     /** Modo da varinha; sem o componente, pincel ({@link LinkerMode#SINGLE}). */
     public static LinkerMode mode(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.CONFIGURATOR_MODE.get(), LinkerMode.SINGLE);
+        return ModDataComponents.CONFIGURATOR_MODE.getOrDefault(stack, LinkerMode.SINGLE);
     }
 
     public static void setMode(ItemStack stack, LinkerMode mode) {
         if (mode == LinkerMode.SINGLE) {
             // O pincel não guarda o "qualquer máquina" da área (estado invisível no item).
-            stack.remove(ModDataComponents.CONFIGURATOR_MODE.get());
-            stack.remove(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get());
+            ModDataComponents.CONFIGURATOR_MODE.remove(stack);
+            ModDataComponents.CONFIGURATOR_ANY_MACHINE.remove(stack);
         } else {
-            stack.set(ModDataComponents.CONFIGURATOR_MODE.get(), mode);
+            ModDataComponents.CONFIGURATOR_MODE.set(stack, mode);
         }
     }
 
@@ -141,16 +141,16 @@ public class ConfiguratorItem extends Item {
      * pincel ignora). Sem os componentes, pincel; Área sem o {@code any_machine}, mesma máquina.
      */
     public static PasteMode pasteMode(ItemStack stack) {
-        return PasteMode.of(mode(stack), stack.getOrDefault(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false));
+        return PasteMode.of(mode(stack), ModDataComponents.CONFIGURATOR_ANY_MACHINE.getOrDefault(stack, false));
     }
 
     /** Grava o modo; o {@code any_machine} só fica no item quando {@code true} (sai no pincel). */
     public static void setPasteMode(ItemStack stack, PasteMode mode) {
         setMode(stack, mode.linkerMode());
         if (mode.anyMachine()) {
-            stack.set(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), true);
+            ModDataComponents.CONFIGURATOR_ANY_MACHINE.set(stack, true);
         } else {
-            stack.remove(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get());
+            ModDataComponents.CONFIGURATOR_ANY_MACHINE.remove(stack);
         }
     }
 
@@ -159,27 +159,27 @@ public class ConfiguratorItem extends Item {
     }
 
     public static @Nullable LinkerArea area(ItemStack stack) {
-        return stack.get(ModDataComponents.CONFIGURATOR_AREA.get());
+        return ModDataComponents.CONFIGURATOR_AREA.get(stack);
     }
 
     public static void setArea(ItemStack stack, @Nullable LinkerArea area) {
         if (area == null) {
-            stack.remove(ModDataComponents.CONFIGURATOR_AREA.get());
+            ModDataComponents.CONFIGURATOR_AREA.remove(stack);
         } else {
-            stack.set(ModDataComponents.CONFIGURATOR_AREA.get(), area);
+            ModDataComponents.CONFIGURATOR_AREA.set(stack, area);
         }
     }
 
     /** Bloco da máquina do roteador copiado; {@code null} se não há cópia (ou ela é de antes dessa regra). */
     public static @Nullable ResourceLocation machine(ItemStack stack) {
-        return stack.get(ModDataComponents.CONFIGURATOR_MACHINE.get());
+        return ModDataComponents.CONFIGURATOR_MACHINE.get(stack);
     }
 
     /** Apaga a cópia (e a máquina dela) e a área; o modo fica. Devolve se havia algo. */
     public static boolean clear(ItemStack stack) {
-        boolean had = stack.has(ModDataComponents.PRESET.get()) || area(stack) != null;
-        stack.remove(ModDataComponents.PRESET.get());
-        stack.remove(ModDataComponents.CONFIGURATOR_MACHINE.get());
+        boolean had = ModDataComponents.PRESET.has(stack) || area(stack) != null;
+        ModDataComponents.PRESET.remove(stack);
+        ModDataComponents.CONFIGURATOR_MACHINE.remove(stack);
         setArea(stack, null);
         return had;
     }
@@ -244,7 +244,7 @@ public class ConfiguratorItem extends Item {
                 setPasteMode(stack, mode);
                 serverPlayer.displayClientMessage(Component.translatable(KEY + "mode", modeName(mode)), true);
             } else {
-                RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
+                RouterPreset preset = ModDataComponents.PRESET.get(stack);
                 serverPlayer.displayClientMessage(preset == null
                         ? Component.translatable(KEY + "empty")
                         : ConfiguratorArea.message(ConfiguratorArea.paste(serverPlayer, stack, preset)), true);
@@ -263,8 +263,8 @@ public class ConfiguratorItem extends Item {
                 preset = preset.withoutNetwork(type);
             }
         }
-        stack.set(ModDataComponents.PRESET.get(), preset);
-        stack.set(ModDataComponents.CONFIGURATOR_MACHINE.get(), ConfiguratorArea.machine(player.serverLevel(), router));
+        ModDataComponents.PRESET.set(stack, preset);
+        ModDataComponents.CONFIGURATOR_MACHINE.set(stack, ConfiguratorArea.machine(player.serverLevel(), router));
         List<Component> names = names(data, preset.distinctNetworks());
         Component message;
         if (names.isEmpty()) {
@@ -286,7 +286,7 @@ public class ConfiguratorItem extends Item {
      * no seletor, só aquela aba é colada (e só a rede dela entra na regra).
      */
     private static void paste(ServerPlayer player, ItemStack stack, RouterBlockEntity router, BlockPos pos) {
-        RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
+        RouterPreset preset = ModDataComponents.PRESET.get(stack);
         if (preset == null) {
             player.displayClientMessage(Component.translatable(KEY + "empty"), true);
             return;
@@ -345,14 +345,14 @@ public class ConfiguratorItem extends Item {
 
     @Override
     public boolean isFoil(ItemStack stack) {
-        return stack.has(ModDataComponents.PRESET.get()) || super.isFoil(stack);
+        return ModDataComponents.PRESET.has(stack) || super.isFoil(stack);
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         // Estado: o que está copiado, o modo e a área, e o tipo colado.
-        RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
+        RouterPreset preset = ModDataComponents.PRESET.get(stack);
         if (preset == null) {
             tooltip.add(Component.translatable(KEY + "tooltip.empty").withStyle(ChatFormatting.GRAY));
         } else {

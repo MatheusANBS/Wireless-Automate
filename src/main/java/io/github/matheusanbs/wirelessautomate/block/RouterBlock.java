@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
-import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
@@ -18,7 +17,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -53,7 +51,6 @@ import org.jetbrains.annotations.Nullable;
  * absoluta da máquina não muda (ver {@link RelativeSide}).
  */
 public class RouterBlock extends BaseEntityBlock {
-    public static final MapCodec<RouterBlock> CODEC = simpleCodec(RouterBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
     public static final EnumProperty<RouterTier> TIER = EnumProperty.create("tier", RouterTier.class);
     /** Giro em torno do eixo do {@link #FACING}, 0 a 3; nasce em 0, a posição de antes do giro existir. */
@@ -63,11 +60,6 @@ public class RouterBlock extends BaseEntityBlock {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(SPIN, 0)
                 .setValue(TIER, RouterTier.BASIC));
-    }
-
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
     }
 
     @Override
@@ -87,12 +79,14 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+    @SuppressWarnings("deprecation")
+    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         return !level.getBlockState(attachedPos(state, pos)).isAir();
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+    @SuppressWarnings("deprecation")
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
             LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
         if (direction == state.getValue(FACING).getOpposite() && !state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState();
@@ -114,43 +108,43 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+    @SuppressWarnings("deprecation")
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
             BlockPos neighborPos, boolean movedByPiston) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             router.updatePowered();
             if (neighborPos.equals(attachedPos(state, pos))) {
                 // Máquina trocada ou removida: só a tela aberta, se houver, refaz o ícone e os slots.
-                // Só o estado mudou (fornalha acesa)? O roteador confere o bloco e não faz nada.
+                // Só o estado mudou (fornalha acesa)? O roteador confere o bloco e não faz nada. No Forge
+                // 1.20.1 o aviso também invalida os caches de capability (ver machineNeighborChanged).
                 router.machineNeighborChanged();
             }
         }
     }
 
     /**
-     * Itens que agem no roteador pelo próprio {@code useOn} (Vinculador, Configurador e núcleos de
-     * tier) pulam a interação do bloco; senão o clique abriria a tela e o item não rodaria. Com
-     * qualquer outro item, segue para {@link #useWithoutItem}, que abre a tela. Com Shift e um item
-     * na mão o vanilla nem chama a interação do bloco: o giro é só com as mãos vazias.
-     */
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
-            Player player, InteractionHand hand, BlockHitResult hitResult) {
-        Item item = stack.getItem();
-        if (item instanceof LinkerItem || item instanceof ConfiguratorItem || item instanceof TierCoreItem) {
-            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
-        }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    /**
-     * Clique direito abre a tela do roteador. Com Shift (o vanilla só chega aqui com Shift quando as
+     * Porte 1.20.1: o {@code use} junta o {@code useItemOn} e o {@code useWithoutItem} do {@code main}.
+     *
+     * <p>Itens que agem no roteador pelo próprio {@code useOn} (Vinculador, Configurador e núcleos de
+     * tier) pulam a interação do bloco ({@code PASS}, e o vanilla chama o {@code useOn} do item); senão o
+     * clique abriria a tela e o item não rodaria. Como no 1.21, só a mão principal segue para a tela (com
+     * qualquer outro item ou vazia). Com Shift e um item na mão o vanilla nem chama a interação do bloco:
+     * o giro é só com as mãos vazias.
+     *
+     * <p>Clique direito abre a tela do roteador. Com Shift (o vanilla só chega aqui com Shift quando as
      * duas mãos estão vazias) gira o roteador 90° em torno da face onde está preso, se o jogador pode
      * mexer no bloco; senão não faz nada.
      */
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+    @SuppressWarnings("deprecation")
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
             BlockHitResult hitResult) {
+        Item item = player.getItemInHand(hand).getItem();
+        if (item instanceof LinkerItem || item instanceof ConfiguratorItem || item instanceof TierCoreItem
+                || hand != InteractionHand.MAIN_HAND) {
+            return InteractionResult.PASS;
+        }
         if (player.isSecondaryUseActive()) {
             if (!player.mayBuild() || !level.mayInteract(player, pos)) {
                 return InteractionResult.PASS;
@@ -171,7 +165,7 @@ public class RouterBlock extends BaseEntityBlock {
     /**
      * O conteúdo da máquina mudou: acorda as portas do nó e as origens que esperam por elas (ver
      * {@link NetworkManager#wake}; uma entrega nossa não acorda as alimentadoras). Só chega quando a máquina chama
-     * {@code setChanged()} no block entity (o NeoForge propaga para as 6 faces); máquinas que
+     * {@code setChanged()} no block entity (o Forge propaga para as 6 faces); máquinas que
      * mudam o inventário sem isso ficam com o reserva, as checagens com backoff do gerenciador.
      */
     @Override
@@ -187,7 +181,8 @@ public class RouterBlock extends BaseEntityBlock {
      * Upgrade de chunk loading. O upgrade de tier troca só o estado e não passa por aqui.
      */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    @SuppressWarnings("deprecation")
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             Containers.dropContents(level, pos, router.removeAllCards());
             ItemStack upgrade = router.removeUpgrade();
@@ -201,12 +196,14 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    @SuppressWarnings("deprecation")
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return RouterShapes.get(state.getValue(FACING), state.getValue(SPIN));
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    @SuppressWarnings("deprecation")
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -215,14 +212,16 @@ public class RouterBlock extends BaseEntityBlock {
      * para a direção girada, para o roteador inteiro girar junto.
      */
     @Override
-    protected BlockState rotate(BlockState state, Rotation rotation) {
+    @SuppressWarnings("deprecation")
+    public BlockState rotate(BlockState state, Rotation rotation) {
         Direction top = RelativeSide.TOP.toAbsolute(state.getValue(FACING), state.getValue(SPIN));
         return withTop(state, rotation.rotate(state.getValue(FACING)), rotation.rotate(top));
     }
 
     /** Mesma regra do {@link #rotate}: o espelho não preserva a lateralidade, manter o {@code TOP} basta. */
     @Override
-    protected BlockState mirror(BlockState state, Mirror mirror) {
+    @SuppressWarnings("deprecation")
+    public BlockState mirror(BlockState state, Mirror mirror) {
         Direction top = RelativeSide.TOP.toAbsolute(state.getValue(FACING), state.getValue(SPIN));
         return withTop(state, mirror.mirror(state.getValue(FACING)), mirror.mirror(top));
     }
@@ -260,7 +259,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     /** Clique do meio (criativo): o roteador no tier do bloco, não o Básico padrão do item. */
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return RouterBlockItem.withTier((RouterBlockItem) asItem(), state.getValue(TIER));
     }
 

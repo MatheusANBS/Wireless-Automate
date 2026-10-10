@@ -1,21 +1,21 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.Config;
-import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.BlockItemStateProperties;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Item de um armazenamento do mod. O tier viaja no {@code block_state}, como no roteador; um bloco
+ * Item de um armazenamento do mod. O tier viaja no {@code BlockStateTag}, como no roteador ({@link RouterBlockItem#setTier}); um bloco
  * quebrado cheio leva também o {@link StorageContents} (só a referência ao conteúdo e o resumo do
  * tooltip) e o filtro de entrada.
  */
@@ -34,22 +34,20 @@ public class StorageBlockItem extends BlockItem {
     /** O item do bloco no tier dado ({@code item} é o item de um {@link StorageBlock}). */
     public static ItemStack withTier(Item item, RouterTier tier) {
         ItemStack stack = new ItemStack(item);
-        stack.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(RouterBlock.TIER, tier));
+        RouterBlockItem.setTier(stack, tier);
         return stack;
     }
 
     public static RouterTier tierOf(ItemStack stack) {
-        RouterTier tier = stack.getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY)
-                .get(RouterBlock.TIER);
-        return tier != null ? tier : RouterTier.BASIC;
+        return RouterBlockItem.tierOf(stack);
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         RouterTier tier = tierOf(stack);
         tooltip.add(Component.translatable(tier.translationKey()).withStyle(ChatFormatting.GRAY));
-        StorageContents contents = stack.get(ModDataComponents.STORAGE_CONTENTS.get());
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(stack);
         long capacity = Config.storageCapacity(kind, tier);
         if (contents != null) {
             tooltip.add(StorageBlock.summary(kind, contents.total(), contents.types(), capacity).copy()
@@ -58,7 +56,7 @@ public class StorageBlockItem extends BlockItem {
             tooltip.add(Component.translatable("block.wirelessautomate.storage.empty", StorageBlock.capacity(kind, capacity))
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
-        if (stack.has(ModDataComponents.STORAGE_FILTER.get())) {
+        if (ModDataComponents.STORAGE_FILTER.has(stack)) {
             tooltip.add(Component.translatable("block.wirelessautomate.storage.filtered").withStyle(ChatFormatting.DARK_AQUA));
         }
         if (!kind.loaded()) {

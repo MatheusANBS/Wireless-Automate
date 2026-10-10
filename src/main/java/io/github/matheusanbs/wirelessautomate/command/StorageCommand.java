@@ -76,7 +76,7 @@ public final class StorageCommand {
         long[] summary = summary(stored.data());
         ItemStack block = StorageBlockItem.withTier(ModItems.STORAGE.get(stored.kind()).get(),
                 tierFor(stored, summary[1]));
-        block.set(ModDataComponents.STORAGE_CONTENTS.get(), new StorageContents(id, (int) summary[0], summary[1]));
+        ModDataComponents.STORAGE_CONTENTS.set(block, new StorageContents(id, (int) summary[0], summary[1]));
         if (!player.getInventory().add(block)) {
             player.drop(block, false);
         }

@@ -237,6 +237,72 @@ public final class StorageGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Baú → slot de pilha grande (como um barril com upgrade de pilha ou uma gaveta, limite do slot
+     * acima de 99): o roteador entrega o que cabe numa chamada só, em vez de uma pilha de 64 por vez.
+     * Com 64 por chamada seriam 15.625 inserções.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chestFillsABigSlotInFewCalls(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-bau-pilha-grande");
+        BlockPos machine = helper.absolutePos(B);
+        TestMachines.reset(machine);
+        storageChest(helper, A, RouterTier.ULTIMATE).storage().insert(new ItemStack(Items.COBBLESTONE), 1_000_000L, false);
+        helper.setBlock(B, TestMachines.BIG_SLOT);
+        RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+
+        helper.onEachTick(() -> helper.assertValueEqual(
+                stored(helper, A, Items.COBBLESTONE) + TestMachines.bigSlot(machine).count(), 1_000_000L, "pedregulho"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.bigSlot(machine).count(), 1_000_000, "no slot"))
+                .thenExecute(() -> {
+                    int inserts = TestMachines.bigSlot(machine).inserts();
+                    helper.assertTrue(inserts <= 4, inserts + " inserções: a entrega não passou de uma pilha por chamada");
+                    helper.assertTrue(storage(helper, A).isEmpty(), "origem não esvaziou");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Baú → inventário que declara limite 64 mas não limita o que recebe: nenhuma chamada passa de uma
+     * pilha, então nenhum slot passa de 64 (a pilha grande vai só para slots com limite acima de 99).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chestNeverOverfillsASlotThatTrustsTheCaller(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-bau-slot-ingenuo");
+        BlockPos machine = helper.absolutePos(B);
+        TestMachines.reset(machine);
+        storageChest(helper, A, RouterTier.ULTIMATE).storage().insert(new ItemStack(Items.COBBLESTONE), 10_000L, false);
+        helper.setBlock(B, TestMachines.NAIVE_SLOTS);
+        RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+        int capacity = TestMachines.NaiveSlots.SLOTS * 64;
+
+        helper.onEachTick(() -> helper.assertValueEqual(
+                stored(helper, A, Items.COBBLESTONE) + TestMachines.naiveSlots(machine).total(), 10_000L, "pedregulho"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.naiveSlots(machine).total(), capacity, "cheio"))
+                .thenIdle(5)
+                .thenExecute(() -> {
+                    TestMachines.NaiveSlots slots = TestMachines.naiveSlots(machine);
+                    helper.assertTrue(slots.largestCall() <= 64, "chamada com " + slots.largestCall() + " itens");
+                    helper.assertValueEqual(slots.largestSlot(), 64, "maior slot");
+                    helper.assertValueEqual(stored(helper, A, Items.COBBLESTONE), 10_000L - capacity, "resto no Baú");
+                })
+                .thenSucceed();
+    }
+
     /** Baú vanilla → Baú: tudo entra, por tipo, sem varrer slots do destino. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void vanillaChestFillsAChest(GameTestHelper helper) {

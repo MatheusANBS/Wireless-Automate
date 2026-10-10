@@ -536,10 +536,12 @@ final class ItemTransfer {
 
     /**
      * Entrega até {@code max} de um tipo do Baú de origem, na ordem da passada. Para outro Baú do mod
-     * é uma transferência só, de qualquer tamanho. Para um inventário comum vai em pilhas (o tamanho
-     * máximo do item), a primeira simulada e as seguintes direto nos slots do plano, como a
-     * {@link #burst rajada}, cada uma contando como tentativa ({@link #burstSteps}, até
-     * {@code allowance}); com estoque no destino, uma pilha por destino. Devolve quanto entregou.
+     * é uma transferência só, de qualquer tamanho. Para um inventário comum, uma entrega simulada leva
+     * tudo o que o destino aceita: cada slot recebe numa chamada até o que ele aceita
+     * ({@link InsertPlan#insert}: uma pilha, ou o limite do slot se ele passa de
+     * {@link Item#ABSOLUTE_MAX_STACK_SIZE}, como num barril com upgrade de pilha). Só passa de uma
+     * entrega se o pedaço chegou ao teto de um {@code int}; cada uma depois da primeira conta como
+     * tentativa ({@link #burstSteps}, até {@code allowance}). Devolve quanto entregou.
      */
     private static long deliverBulk(Port source, BulkItems bulk, ItemStack key, long max,
             RoundRobinOrder<Port> order, List<Port> pass, long now, int allowance) {
@@ -602,28 +604,29 @@ final class ItemTransfer {
                 destinationSlept = true;
                 continue;
             }
-            int stackSize = Math.max(1, key.getMaxStackSize());
             boolean first = true;
             boolean sourceEmpty = false;
             while (remaining > 0) {
-                int chunk = (int) Math.min(remaining, stackSize);
-                int accepts;
-                if (first) {
-                    accepts = planInsert(source, destination, target, key, key.copyWithCount(chunk), stock, components);
-                    if (accepts < 0) {
-                        break;
-                    }
-                    if (accepts == 0) {
-                        destination.destinationBackoff.sleep(now);
-                        destinationSlept = true;
-                        break;
-                    }
-                } else {
+                // Uma entrega pode levar mais que uma pilha: o plano limita cada slot ao que ele aceita
+                // numa chamada (InsertPlan#insert), então um inventário comum recebe o mesmo de antes, e
+                // um slot de pilha grande (upgrade de pilha, gaveta) recebe tudo o que cabe de uma vez.
+                int chunk = (int) Math.min(remaining, Integer.MAX_VALUE);
+                if (!first) {
                     if (burstSteps >= allowance) {
                         break;
                     }
                     burstSteps++;
-                    accepts = chunk;
+                }
+                int accepts = planInsert(source, destination, target, key, key.copyWithCount(chunk), stock, components);
+                if (accepts < 0) {
+                    break;
+                }
+                if (accepts == 0) {
+                    if (first) {
+                        destination.destinationBackoff.sleep(now);
+                        destinationSlept = true;
+                    }
+                    break;
                 }
                 long taken = bulk.extract(key, accepts, false);
                 if (taken <= 0) {
@@ -648,7 +651,9 @@ final class ItemTransfer {
                     sourceEmpty = true;
                     break;
                 }
-                if (delivered < accepts || stock > 0) {
+                // O destino aceitou menos que o oferecido: está cheio. Só segue se aceitou tudo (o
+                // pedaço era o teto de um int e ainda há mais).
+                if (delivered < chunk || stock > 0) {
                     break;
                 }
                 first = false;
@@ -746,6 +751,8 @@ final class ItemTransfer {
         private int[] empties = new int[64];
         private int[] fulls = new int[16];
         private long counted;
+        /** Tamanho máximo do item da simulação em curso ({@link #insert}). */
+        private int itemMax;
 
         private final Port[] memoPorts = new Port[MEMORY];
         private final Item[] memoItems = new Item[MEMORY];
@@ -823,6 +830,7 @@ final class ItemTransfer {
          */
         int simulate(IItemHandler target, ItemStack stack, int count, long stock) {
             size = 0;
+            itemMax = stack.getMaxStackSize();
             counted = 0;
             int emptyCount = 0;
             int fullCount = 0;
@@ -899,7 +907,7 @@ final class ItemTransfer {
         }
 
         private ItemStack offer(IItemHandler target, int slot, ItemStack stack) {
-            ItemStack rest = target.insertItem(slot, stack, true);
+            ItemStack rest = insert(target, slot, stack, itemMax, true);
             if (rest.getCount() < stack.getCount()) {
                 if (size == slots.length) {
                     slots = Arrays.copyOf(slots, size * 2);
@@ -909,13 +917,62 @@ final class ItemTransfer {
             return rest;
         }
 
-        /** Insere de verdade nos slots do plano; o que sobrar vai pelo empilhado. Devolve a sobra. */
+        /**
+         * Insere de verdade nos slots do plano; o que sobrar vai pelo empilhado. Devolve a sobra. Vem
+         * sempre depois da {@link #simulate} do mesmo item, de quem reaproveita o tamanho máximo.
+         */
         ItemStack execute(IItemHandler target, ItemStack stack) {
             ItemStack rest = stack;
             for (int i = 0; i < size && !rest.isEmpty(); i++) {
-                rest = target.insertItem(slots[i], rest, false);
+                rest = insert(target, slots[i], rest, itemMax, false);
             }
-            return rest.isEmpty() ? rest : ItemHandlerHelper.insertItemStacked(target, rest, false);
+            return rest.isEmpty() ? rest : insertStacked(target, rest, itemMax);
+        }
+
+        /**
+         * {@link IItemHandler#insertItem} sem passar, numa chamada, do que o slot aceita: até o tamanho
+         * máximo do item ({@code itemMax}), ou até o limite do slot se ele passa de
+         * {@link Item#ABSOLUTE_MAX_STACK_SIZE} (99, o limite comum do vanilla e do {@code ItemStackHandler}).
+         * Um slot que declara mais que isso (upgrade de pilha, gaveta) recebe a pilha grande de uma vez;
+         * os outros nunca veem uma pilha acima do tamanho do item, mesmo que não a limitem. Devolve a sobra.
+         */
+        static ItemStack insert(IItemHandler target, int slot, ItemStack stack, int itemMax, boolean simulate) {
+            int count = stack.getCount();
+            if (count > itemMax) {
+                int limit = target.getSlotLimit(slot);
+                int cap = limit > Item.ABSOLUTE_MAX_STACK_SIZE ? Math.max(itemMax, limit) : itemMax;
+                if (count > cap) {
+                    ItemStack rest = target.insertItem(slot, stack.copyWithCount(cap), simulate);
+                    return stack.copyWithCount(count - cap + rest.getCount());
+                }
+            }
+            return target.insertItem(slot, stack, simulate);
+        }
+
+        /**
+         * O {@link ItemHandlerHelper#insertItemStacked} (primeiro as pilhas do mesmo item, depois os
+         * vazios, na ordem dos slots), com cada chamada limitada como em {@link #insert}. Devolve a sobra.
+         */
+        static ItemStack insertStacked(IItemHandler target, ItemStack stack, int itemMax) {
+            ItemStack rest = stack;
+            int slots = target.getSlots();
+            if (stack.isStackable()) {
+                for (int slot = 0; slot < slots && !rest.isEmpty(); slot++) {
+                    if (ItemStack.isSameItemSameComponents(target.getStackInSlot(slot), rest)) {
+                        rest = insert(target, slot, rest, itemMax, false);
+                    }
+                }
+                for (int slot = 0; slot < slots && !rest.isEmpty(); slot++) {
+                    if (target.getStackInSlot(slot).isEmpty()) {
+                        rest = insert(target, slot, rest, itemMax, false);
+                    }
+                }
+            } else {
+                for (int slot = 0; slot < slots && !rest.isEmpty(); slot++) {
+                    rest = insert(target, slot, rest, itemMax, false);
+                }
+            }
+            return rest;
         }
     }
 

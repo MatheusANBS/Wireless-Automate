@@ -70,8 +70,12 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
   destino seguem a capability do `main` (Imbuement Chamber não é drenada, Sourcelink não recebe, Creative Jar
   é ralo e fonte).
 - **JEI 15:** sem o Shift + clique de um ingrediente do JEI para o filtro; arrastar funciona.
-- **Caldeirão:** o Forge não dá handler de fluido ao caldeirão vanilla, então o roteador não move fluido
-  de e para ele. Os GameTests de fluido usam um tanque de teste (`TestMachines.SIMPLE_TANK`).
+- **Caldeirão e compostor:** o Forge não dá handler a esses blocos sem block entity; o ramo tem os do NeoForge
+  (`network/VanillaBlockHandlers`, porte do `CauldronWrapper` e o handler do compostor), achados pelo `CapCache`
+  na busca por bloco. Caldeirões de outros mods não entram (o 1.20.1 não tem o registro de conteúdo de caldeirão).
+- **Cache de capability:** o `network/CapCache` faz o papel do `BlockCapabilityCache`; o que o Forge não avisa vem
+  do `neighborChanged` da máquina (block entity trocado, cache negativo que passa a achar a capability) e do índice
+  de chunks `CapCacheChunks` (`ChunkEvent.Load/Unload`).
 - **Campos de texto:** o `EditBox` do 1.20.1 desenha o texto com sombra.
 
 ## Ordem sugerida

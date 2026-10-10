@@ -39,13 +39,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -120,18 +118,9 @@ public final class TypeNetworkGameTests {
      * Itens: A (extrai) e B na rede X, o chamariz C na Y. Fluidos: D (extrai) e E na rede Y, o
      * chamariz F na X. Os diamantes vão de A para B e a água de D para E; C e F ficam vazios. Os
      * baús ficam em diagonal para não virarem baú duplo.
-     *
-     * <p>Porte 1.20.1: os fluidos ficam em tanques de teste ({@link TestMachines#SIMPLE_TANK}) no lugar dos
-     * caldeirões do {@code main}, que o NeoForge expõe como handler de fluido e o Forge 1.20.1 não.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void eachTypeFollowsItsOwnNetwork(GameTestHelper helper) {
-        if (!TestMachines.enabled()) {
-            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
-            // teste não prova nada, então falha em vez de passar.
-            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
-            return;
-        }
         UUID x = newNetwork(helper, "teste-aba-x");
         UUID y = newNetwork(helper, "teste-aba-y");
         BlockPos a = new BlockPos(0, 1, 0);
@@ -144,15 +133,10 @@ public final class TypeNetworkGameTests {
         RouterBlockEntity ra = place(helper, a, chest, x, y);
         RouterBlockEntity rb = place(helper, b, chest, x, y);
         RouterBlockEntity rc = place(helper, c, chest, y, x);
-        BlockState tank = TestMachines.SIMPLE_TANK.get().defaultBlockState();
-        for (BlockPos pos : List.of(d, e, f)) {
-            TestMachines.reset(helper.absolutePos(pos));
-        }
-        TestMachines.simpleTank(helper.absolutePos(d)).fill(new FluidStack(Fluids.WATER, 1_000),
-                IFluidHandler.FluidAction.EXECUTE);
-        RouterBlockEntity rd = place(helper, d, tank, x, y);
-        RouterBlockEntity re = place(helper, e, tank, x, y);
-        RouterBlockEntity rf = place(helper, f, tank, y, x);
+        RouterBlockEntity rd = place(helper, d,
+                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), x, y);
+        RouterBlockEntity re = place(helper, e, Blocks.CAULDRON.defaultBlockState(), x, y);
+        RouterBlockEntity rf = place(helper, f, Blocks.CAULDRON.defaultBlockState(), y, x);
         ra.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         rb.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
         rc.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
@@ -171,16 +155,14 @@ public final class TypeNetworkGameTests {
                 })
                 .thenWaitUntil(() -> {
                     GameTestCompat.assertValueEqual(helper, count(helper, b, Items.DIAMOND), 10, "diamantes em B");
-                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(e)).getFluidAmount(), 1_000,
-                            "água em E");
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, e);
+                    helper.assertBlockProperty(e, LayeredCauldronBlock.LEVEL, 3);
                 })
                 .thenIdle(10)
                 .thenExecute(() -> {
                     GameTestCompat.assertValueEqual(helper, count(helper, c, Items.DIAMOND), 0, "itens cruzaram para a rede Y");
-                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(f)).getFluidAmount(), 0,
-                            "fluidos cruzaram para a rede X");
-                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(d)).getFluidAmount(), 0,
-                            "água ficou em D");
+                    helper.assertBlockPresent(Blocks.CAULDRON, f);
+                    helper.assertBlockPresent(Blocks.CAULDRON, d);
                     helper.assertTrue(source.isEmpty(), "origem não esvaziou");
                 })
                 .thenSucceed();

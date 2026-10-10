@@ -20,11 +20,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -277,43 +277,19 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
-    /**
-     * Tanque de teste em {@code pos} ({@link TestMachines#SIMPLE_TANK}, com {@code water} mB de água), com um
-     * roteador em cima. Porte 1.20.1: no {@code main} os testes de fluido usavam caldeirões, que o NeoForge expõe
-     * como handler de fluido e o Forge 1.20.1 não.
-     */
-    private static RouterBlockEntity simpleTank(GameTestHelper helper, BlockPos pos, int water, @Nullable UUID network) {
-        BlockPos machine = helper.absolutePos(pos);
-        TestMachines.reset(machine);
-        if (water > 0) {
-            TestMachines.simpleTank(machine).fill(new FluidStack(Fluids.WATER, water), IFluidHandler.FluidAction.EXECUTE);
-        }
-        return place(helper, pos, TestMachines.SIMPLE_TANK.get().defaultBlockState(), network);
-    }
-
-    /** Água no tanque de teste em {@code pos}. */
-    private static int water(GameTestHelper helper, BlockPos pos) {
-        FluidStack stored = TestMachines.simpleTank(helper.absolutePos(pos)).getFluid();
-        return stored.getFluid() == Fluids.WATER ? stored.getAmount() : 0;
-    }
-
     @GameTest(template = "empty")
     public static void fluidMovesBetweenCauldrons(GameTestHelper helper) {
-        if (!TestMachines.enabled()) {
-            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
-            // teste não prova nada, então falha em vez de passar.
-            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
-            return;
-        }
         UUID network = newNetwork(helper, "teste-fluido");
-        RouterBlockEntity source = simpleTank(helper, A, 1_000, network);
+        RouterBlockEntity source = place(helper, A,
+                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = simpleTank(helper, B, 0, network);
+        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.succeedWhen(() -> {
-            GameTestCompat.assertValueEqual(helper, water(helper, A), 0, "água na origem");
-            GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino");
+            helper.assertBlockPresent(Blocks.CAULDRON, A);
+            helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+            helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
         });
     }
 
@@ -389,8 +365,7 @@ public final class TransferGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fluidBeyondSixteenTanksMoves(GameTestHelper helper) {
         if (!TestMachines.enabled()) {
-            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
-            // teste não prova nada, então falha em vez de passar.
+            // Porte 1.20.1: a origem é uma máquina de teste; sem ela o teste não prova nada, então falha.
             helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
             return;
         }
@@ -400,13 +375,14 @@ public final class TransferGameTests {
         TestMachines.manyTanks(machine).set(18, new FluidStack(Fluids.WATER, 1_000));
         RouterBlockEntity source = place(helper, A, TestMachines.MANY_TANKS.get().defaultBlockState(), network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = simpleTank(helper, B, 0, network);
+        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenWaitUntil(() -> {
-                    GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino");
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
                     GameTestCompat.assertValueEqual(helper, TestMachines.manyTanks(machine).amount(18), 0, "tanque 18");
                 })
                 .thenSucceed();
@@ -419,8 +395,7 @@ public final class TransferGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fluidFromLiveTankIsNotLost(GameTestHelper helper) {
         if (!TestMachines.enabled()) {
-            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
-            // teste não prova nada, então falha em vez de passar.
+            // Porte 1.20.1: a origem é uma máquina de teste; sem ela o teste não prova nada, então falha.
             helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
             return;
         }
@@ -430,13 +405,16 @@ public final class TransferGameTests {
         TestMachines.liveTank(machine).set(new FluidStack(Fluids.WATER, 1_000));
         RouterBlockEntity source = place(helper, A, TestMachines.LIVE_TANK.get().defaultBlockState(), network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = simpleTank(helper, B, 0, network);
+        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, TestMachines.liveTank(machine).amount(), 0, "tanque vivo"))
-                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino"))
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
+                })
                 .thenSucceed();
     }
 

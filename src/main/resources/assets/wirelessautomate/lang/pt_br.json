@@ -692,5 +692,11 @@
   "gui.wirelessautomate.linker.outcome.unloaded.one": "Fora: 1 chunk descarregado",
   "gui.wirelessautomate.linker.outcome.protected": "Fora: %s em área protegida",
   "gui.wirelessautomate.linker.count.with_already": "%s roteadores · %s já na rede",
-  "gui.wirelessautomate.linker.count.with_unlinked": "%s roteadores · %s já sem rede"
+  "gui.wirelessautomate.linker.count.with_unlinked": "%s roteadores · %s já sem rede",
+  "gui.wirelessautomate.recipes.error.not_editable": "Esta receita não pode ser editada",
+  "gui.wirelessautomate.recipes.error.empty": "A receita precisa de pelo menos um ingrediente",
+  "gui.wirelessautomate.recipes.error.unknown_item": "Item desconhecido: %s",
+  "gui.wirelessautomate.recipes.error.bad_tag": "Tag inválida: %s",
+  "gui.wirelessautomate.recipes.error.disk": "Não foi possível gravar o arquivo: %s",
+  "gui.wirelessautomate.recipes.error.bad_count": "O resultado empilha no máximo %s"
 }

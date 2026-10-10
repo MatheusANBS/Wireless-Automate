@@ -49,6 +49,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
+        // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
+        NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
         ChunkLoaderEvents.register(modEventBus);
     }

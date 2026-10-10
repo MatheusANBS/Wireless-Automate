@@ -20,6 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.server.level.ClientInformation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -186,6 +189,9 @@ public final class RecipeEditorGameTests {
             RecipeDraft unknown = base.withSlot(0, RecipeSlot.item("wirelessautomate:nao_existe"));
             helper.assertTrue(RecipeEditor.save(server, id, unknown).isPresent(), "item inexistente deve dar erro");
 
+            RecipeDraft badTag = base.withSlot(0, RecipeSlot.tag("c:nao_existe_wa"));
+            helper.assertTrue(RecipeEditor.save(server, id, badTag).isPresent(), "tag inexistente deve dar erro");
+
             RecipeDraft swapped = RecipeDraft.fromShapeless(List.of(RecipeSlot.item("minecraft:stick")), 1);
             helper.assertTrue(RecipeEditor.save(server, id, swapped).isPresent(), "forma trocada deve dar erro");
 
@@ -247,7 +253,16 @@ public final class RecipeEditorGameTests {
     public static void actionNeedsOperator(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ResourceLocation id = id("chunk_loader_upgrade");
+        ResourceLocation opId = id("storage_battery");
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        // Operador fora da lista de jogadores (sem conexão): só o handle o vê.
+        ServerPlayer operator = new ServerPlayer(server, helper.getLevel(),
+                new GameProfile(UUID.randomUUID(), "test-mock-operator"), ClientInformation.createDefault()) {
+            @Override
+            protected int getPermissionLevel() {
+                return 2;
+            }
+        };
         try {
             helper.assertFalse(player.hasPermissions(2), "o jogador de teste não deve ser operador");
             RecipeDraft draft = require(server, id).current().withCount(2);
@@ -265,8 +280,22 @@ public final class RecipeEditorGameTests {
             helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "sem permissão nada é gravado");
             helper.assertFalse(new RecipeEditorMenu(2, player.getInventory(), RecipeEditorSnapshot.of(server))
                     .stillValid(player), "o menu não vale sem permissão");
+            player.containerMenu = player.inventoryMenu;
+
+            // Controle positivo: um operador com o editor aberto grava.
+            helper.assertTrue(operator.hasPermissions(2), "o operador de teste deve ter permissão 2");
+            RecipeDraft opDraft = require(server, opId).current().withCount(2);
+            operator.containerMenu = new RecipeEditorMenu(3, operator.getInventory(), RecipeEditorSnapshot.of(server));
+            helper.assertTrue(operator.containerMenu.stillValid(operator), "o menu vale com permissão");
+            RecipeEditorActionPayload.handle(operator, RecipeEditorActionPayload.save(opId, opDraft));
+            helper.assertTrue(Files.isRegularFile(RecipeOverridePack.recipeFile(opId)), "o operador grava");
         } finally {
+            // Um RecipeEditorMenu esquecido aberto falharia no stillValid e recarregaria os recursos ao fechar.
+            player.containerMenu = player.inventoryMenu;
+            operator.containerMenu = operator.inventoryMenu;
+            server.getPlayerList().remove(player);
             clean(id);
+            clean(opId);
         }
         helper.succeed();
     }

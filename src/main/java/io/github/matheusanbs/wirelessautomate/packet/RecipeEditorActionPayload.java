@@ -62,7 +62,7 @@ public record RecipeEditorActionPayload(Action action, ResourceLocation id, @Nul
 
     /**
      * Servidor: confere permissão 2 e o editor aberto (recusa em silêncio, só log em debug), executa a ação,
-     * mostra o erro na barra de ação e devolve o snapshot novo. Público para os GameTests.
+     * mostra o erro na barra de ação e manda o snapshot novo a todos os editores abertos. Público para os GameTests.
      */
     public static void handle(@Nullable ServerPlayer player, RecipeEditorActionPayload payload) {
         if (player == null) {
@@ -83,9 +83,10 @@ public record RecipeEditorActionPayload(Action action, ResourceLocation id, @Nul
         };
         error.ifPresent(message -> player.displayClientMessage(message, true));
         if (payload.action() == Action.RELOAD) {
-            RecipeEditor.reload(server).thenRunAsync(() -> RecipeEditorMenu.broadcast(server, true), server);
+            RecipeEditorMenu.reloadAndBroadcast(server, true);
             return;
         }
-        RecipeEditorStatePayload.send(player, RecipeEditorSnapshot.of(server));
+        // Todos os editores abertos veem a ação, não só quem agiu.
+        RecipeEditorMenu.broadcast(server, false);
     }
 }

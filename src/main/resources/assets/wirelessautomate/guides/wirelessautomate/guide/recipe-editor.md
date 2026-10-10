@@ -36,7 +36,7 @@ Pick a recipe in the list: the 3 × 3 grid and the result show up on the right.
 | Put an item in a slot | Click the slot, then an item in your inventory (the item stays there), or click the slot with the item on your cursor. With JEI, drag the item onto the slot. |
 | Empty a slot | Right-click it. |
 | Accept any item of a tag | Pick the slot and click **Tag**. The arrows cycle through the item's tags. **Item** goes back to the exact item. |
-| Empty the grid | **Clear**. |
+| Empty the chosen slot | **Clear** (or right click the slot). |
 | Change the result's amount | **−** and **+**, up to the item's stack size (64 at most). |
 
 ## Saving and reloading

@@ -731,5 +731,6 @@
   "gui.wirelessautomate.recipes.divergent": "Differs from what is loaded (another datapack, or not reloaded yet)",
   "gui.wirelessautomate.recipes.tooltip.any_of": "Any item of",
   "gui.wirelessautomate.recipes.tooltip.clear": "Right click: clear",
-  "gui.wirelessautomate.recipes.tooltip.pick": "Click, then pick an item from the inventory"
+  "gui.wirelessautomate.recipes.tooltip.pick": "Click, then pick an item from the inventory",
+  "gui.wirelessautomate.recipes.reload_failed": "Reload failed; see the server log"
 }

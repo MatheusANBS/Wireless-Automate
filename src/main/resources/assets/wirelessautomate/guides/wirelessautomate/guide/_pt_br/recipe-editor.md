@@ -36,7 +36,7 @@ Escolha uma receita na lista: a grade 3 × 3 e o resultado aparecem à direita.
 | Pôr um item num slot | Clique no slot e depois num item do seu inventário (o item não sai de lá), ou clique no slot com o item no cursor. Com o JEI, arraste o item para o slot. |
 | Esvaziar um slot | Clique com o botão direito nele. |
 | Aceitar qualquer item de uma tag | Escolha o slot e clique em **Tag**. As setas trocam entre as tags do item. **Item** volta para o item exato. |
-| Esvaziar a grade | **Limpar**. |
+| Esvaziar o slot escolhido | **Limpar** (ou clique direito no slot). |
 | Mudar a quantidade do resultado | **−** e **+**, até o tamanho da pilha do item (no máximo 64). |
 
 ## Salvar e recarregar

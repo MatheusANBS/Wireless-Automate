@@ -692,5 +692,11 @@
   "gui.wirelessautomate.linker.outcome.unloaded.one": "Skipped: 1 unloaded chunk",
   "gui.wirelessautomate.linker.outcome.protected": "Skipped: %s in protected areas",
   "gui.wirelessautomate.linker.count.with_already": "%s routers · %s already in it",
-  "gui.wirelessautomate.linker.count.with_unlinked": "%s routers · %s already unlinked"
+  "gui.wirelessautomate.linker.count.with_unlinked": "%s routers · %s already unlinked",
+  "gui.wirelessautomate.recipes.error.not_editable": "This recipe cannot be edited",
+  "gui.wirelessautomate.recipes.error.empty": "The recipe needs at least one ingredient",
+  "gui.wirelessautomate.recipes.error.unknown_item": "Unknown item: %s",
+  "gui.wirelessautomate.recipes.error.bad_tag": "Invalid tag: %s",
+  "gui.wirelessautomate.recipes.error.disk": "Could not write the file: %s",
+  "gui.wirelessautomate.recipes.error.bad_count": "The result stacks to at most %s"
 }

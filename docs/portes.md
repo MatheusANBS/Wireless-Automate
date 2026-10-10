@@ -36,7 +36,7 @@ Vale reavaliar se a manutenção de três ramos começar a pesar (por exemplo, s
 | Alvo | Ramo | Packs | Loader | Estado | Espelha |
 | --- | --- | --- | --- | --- | --- |
 | 1.21.1 | `main` | ATM10, ATM10 To the Sky | NeoForge 21.1.248+ | Publicado | 1.6.0 |
-| 1.20.1 | `mc/1.20.1-forge` (a criar) | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47 (o ATM9 To the Sky usa o 47.4.10) | A investigar | — |
+| 1.20.1 | `mc/1.20.1-forge` (a criar) | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47 (o ATM9 To the Sky usa o 47.4.10) | Investigado ([relatório](portes/1.20.1-forge-impacto.md)): porte grande; aguarda o ok do dono e a decisão do Mekanism | — |
 | 26.1 | `mc/26.1-neoforge` (a criar) | ATM11 (alfa, Minecraft 26.1.2) | NeoForge 26.1 | A investigar | — |
 
 ## O que já se sabe (a confirmar pela investigação)
@@ -72,3 +72,4 @@ O ATM9 é um pack grande e estável, com muito jogador.
 | Data | O que foi feito |
 | --- | --- |
 | 2026-10-10 | Estratégia de ramos por alvo e a skill `wa-porte` para investigar o impacto de cada porte. |
+| 2026-10-10 | 1.20.1 Forge investigado: projeto mínimo (MDG 2.0.148 `legacyforge`, Java 17, Gradle 9.2.1) compila e abre; relatório em `docs/portes/1.20.1-forge-impacto.md`. |

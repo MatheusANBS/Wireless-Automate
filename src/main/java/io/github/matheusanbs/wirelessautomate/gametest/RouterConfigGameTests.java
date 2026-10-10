@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -28,8 +27,8 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /** Configuração por face, rotação relativa, caches de capability e redstone do roteador. */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -45,7 +44,7 @@ public final class RouterConfigGameTests {
     private static RouterBlockEntity placeOnChest(GameTestHelper helper) {
         helper.setBlock(MACHINE, Blocks.CHEST);
         helper.setBlock(ROUTER, router(Direction.UP));
-        return helper.getBlockEntity(ROUTER);
+        return GameTestCompat.getBlockEntity(helper, ROUTER);
     }
 
     @GameTest(template = "empty")
@@ -58,12 +57,12 @@ public final class RouterConfigGameTests {
         node.setRedstone(ResourceType.ENERGY, Direction.UP, RedstoneMode.HIGH);
         node.setMode(ResourceType.ENERGY, Direction.UP, PortMode.INSERT);
 
-        helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.NORTH).mode(), PortMode.EXTRACT, "modo");
-        helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "outra face");
-        helper.assertValueEqual(node.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.NONE, "outro tipo");
-        helper.assertValueEqual(node.face(ResourceType.FLUID, Direction.DOWN).priority(), 5, "prioridade");
+        GameTestCompat.assertValueEqual(helper, node.face(ResourceType.ITEM, Direction.NORTH).mode(), PortMode.EXTRACT, "modo");
+        GameTestCompat.assertValueEqual(helper, node.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "outra face");
+        GameTestCompat.assertValueEqual(helper, node.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.NONE, "outro tipo");
+        GameTestCompat.assertValueEqual(helper, node.face(ResourceType.FLUID, Direction.DOWN).priority(), 5, "prioridade");
         FaceConfig energy = node.face(ResourceType.ENERGY, Direction.UP);
-        helper.assertValueEqual(energy.redstone(), RedstoneMode.HIGH, "redstone");
+        GameTestCompat.assertValueEqual(helper, energy.redstone(), RedstoneMode.HIGH, "redstone");
         helper.assertTrue(energy.isActive(true) && !energy.isActive(false), "isActive ignorou o redstone");
         helper.assertTrue(!node.face(ResourceType.FLUID, Direction.DOWN).isActive(true), "face NONE ativa");
         // facing=UP: a face de cima da máquina é a FRONT.
@@ -74,9 +73,8 @@ public final class RouterConfigGameTests {
     @GameTest(template = "empty")
     public static void configSurvivesSaveAndLoad(GameTestHelper helper) {
         RouterBlockEntity node = placeOnChest(helper);
-        HolderLookup.Provider registries = helper.getLevel().registryAccess();
 
-        CompoundTag empty = node.saveWithoutMetadata(registries);
+        CompoundTag empty = node.saveWithoutMetadata();
         helper.assertTrue(!empty.contains("faces"), "faces padrão foram salvas");
 
         UUID network = UUID.randomUUID();
@@ -84,24 +82,24 @@ public final class RouterConfigGameTests {
         node.setMode(ResourceType.ITEM, Direction.EAST, PortMode.BOTH);
         node.setPriority(ResourceType.ITEM, Direction.EAST, -3);
         node.setRedstone(ResourceType.FLUID, Direction.DOWN, RedstoneMode.LOW);
-        CompoundTag tag = node.saveWithoutMetadata(registries);
+        CompoundTag tag = node.saveWithoutMetadata();
 
         RouterBlockEntity copy = new RouterBlockEntity(node.getBlockPos(), node.getBlockState());
-        copy.loadWithComponents(tag, registries);
-        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), network, "rede");
+        copy.load(tag);
+        GameTestCompat.assertValueEqual(helper, copy.networkId(ResourceType.ITEM), network, "rede");
         for (ResourceType type : ResourceType.values()) {
             for (Direction face : Direction.values()) {
-                helper.assertValueEqual(copy.face(type, face), node.face(type, face), type + " " + face);
+                GameTestCompat.assertValueEqual(helper, copy.face(type, face), node.face(type, face), type + " " + face);
             }
         }
 
         CompoundTag bad = new CompoundTag();
         bad.putString("mode", "nao_existe");
         bad.putString("redstone", "HIGH");
-        FaceConfig parsed = FaceConfig.load(bad, registries);
-        helper.assertValueEqual(parsed.mode(), PortMode.NONE, "enum inválido sem fallback");
-        helper.assertValueEqual(parsed.redstone(), RedstoneMode.HIGH, "redstone válido perdido");
-        helper.assertTrue(new FaceConfig().save(registries).isEmpty(), "padrão não é tag vazia");
+        FaceConfig parsed = FaceConfig.load(bad);
+        GameTestCompat.assertValueEqual(helper, parsed.mode(), PortMode.NONE, "enum inválido sem fallback");
+        GameTestCompat.assertValueEqual(helper, parsed.redstone(), RedstoneMode.HIGH, "redstone válido perdido");
+        helper.assertTrue(new FaceConfig().save().isEmpty(), "padrão não é tag vazia");
         helper.succeed();
     }
 
@@ -114,11 +112,11 @@ public final class RouterConfigGameTests {
                 for (RelativeSide side : RelativeSide.values()) {
                     Direction absolute = RelativeSide.toAbsolute(facing, spin, side);
                     seen.add(absolute);
-                    helper.assertValueEqual(RelativeSide.fromAbsolute(facing, spin, absolute), side, where + " " + side);
+                    GameTestCompat.assertValueEqual(helper, RelativeSide.fromAbsolute(facing, spin, absolute), side, where + " " + side);
                 }
-                helper.assertValueEqual(seen.size(), 6, "não é bijeção para " + where);
-                helper.assertValueEqual(RelativeSide.FRONT.toAbsolute(facing, spin), facing, "FRONT com " + where);
-                helper.assertValueEqual(RelativeSide.BACK.toAbsolute(facing, spin), facing.getOpposite(), "BACK com " + where);
+                GameTestCompat.assertValueEqual(helper, seen.size(), 6, "não é bijeção para " + where);
+                GameTestCompat.assertValueEqual(helper, RelativeSide.FRONT.toAbsolute(facing, spin), facing, "FRONT com " + where);
+                GameTestCompat.assertValueEqual(helper, RelativeSide.BACK.toAbsolute(facing, spin), facing.getOpposite(), "BACK com " + where);
             }
         }
 
@@ -131,24 +129,23 @@ public final class RouterConfigGameTests {
                 Direction.EAST, new Direction[] {Direction.UP, Direction.SOUTH},
                 Direction.WEST, new Direction[] {Direction.UP, Direction.NORTH});
         topLeft.forEach((facing, expected) -> {
-            helper.assertValueEqual(RelativeSide.TOP.toAbsolute(facing, 0), expected[0], "TOP com " + facing);
-            helper.assertValueEqual(RelativeSide.LEFT.toAbsolute(facing, 0), expected[1], "LEFT com " + facing);
-            helper.assertValueEqual(RelativeSide.BOTTOM.toAbsolute(facing, 0), expected[0].getOpposite(), "BOTTOM");
-            helper.assertValueEqual(RelativeSide.RIGHT.toAbsolute(facing, 0), expected[1].getOpposite(), "RIGHT");
+            GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(facing, 0), expected[0], "TOP com " + facing);
+            GameTestCompat.assertValueEqual(helper, RelativeSide.LEFT.toAbsolute(facing, 0), expected[1], "LEFT com " + facing);
+            GameTestCompat.assertValueEqual(helper, RelativeSide.BOTTOM.toAbsolute(facing, 0), expected[0].getOpposite(), "BOTTOM");
+            GameTestCompat.assertValueEqual(helper, RelativeSide.RIGHT.toAbsolute(facing, 0), expected[1].getOpposite(), "RIGHT");
         });
 
         // A mesma configuração salva vale em relação ao facing de cada roteador.
-        HolderLookup.Provider registries = helper.getLevel().registryAccess();
         RouterBlockEntity up = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
         up.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         up.setMode(ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT);
-        CompoundTag tag = up.saveWithoutMetadata(registries);
+        CompoundTag tag = up.saveWithoutMetadata();
 
         RouterBlockEntity east = new RouterBlockEntity(BlockPos.ZERO, router(Direction.EAST));
-        east.loadWithComponents(tag, registries);
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.EXTRACT, "FRONT girada");
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT, "TOP girada");
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "sobrou na face antiga");
+        east.load(tag);
+        GameTestCompat.assertValueEqual(helper, east.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.EXTRACT, "FRONT girada");
+        GameTestCompat.assertValueEqual(helper, east.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT, "TOP girada");
+        GameTestCompat.assertValueEqual(helper, east.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "sobrou na face antiga");
         helper.succeed();
     }
 
@@ -157,11 +154,11 @@ public final class RouterConfigGameTests {
     public static void spinTurnsClockwiseSeenFromOutside(GameTestHelper helper) {
         Direction[] tops = {Direction.SOUTH, Direction.WEST, Direction.NORTH, Direction.EAST};
         for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
-            helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.UP, spin), tops[spin], "TOP com spin " + spin);
+            GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(Direction.UP, spin), tops[spin], "TOP com spin " + spin);
         }
-        helper.assertValueEqual(RelativeSide.LEFT.toAbsolute(Direction.UP, 1), Direction.SOUTH, "LEFT com spin 1");
+        GameTestCompat.assertValueEqual(helper, RelativeSide.LEFT.toAbsolute(Direction.UP, 1), Direction.SOUTH, "LEFT com spin 1");
         // Numa parede (facing=north, olhando para sul): TOP sai de cima e vai para a direita de quem olha.
-        helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.NORTH, 1), Direction.WEST, "TOP na parede");
+        GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(Direction.NORTH, 1), Direction.WEST, "TOP na parede");
         helper.succeed();
     }
 
@@ -235,9 +232,9 @@ public final class RouterConfigGameTests {
     public static void rotateKeepsTopWithStructure(GameTestHelper helper) {
         BlockState up = router(Direction.UP);
         BlockState turned = up.rotate(Rotation.CLOCKWISE_90);
-        helper.assertValueEqual(turned.getValue(RouterBlock.FACING), Direction.UP, "facing");
-        helper.assertValueEqual(turned.getValue(RouterBlock.SPIN), 1, "spin");
-        helper.assertValueEqual(RelativeSide.TOP.toAbsolute(Direction.UP, turned.getValue(RouterBlock.SPIN)),
+        GameTestCompat.assertValueEqual(helper, turned.getValue(RouterBlock.FACING), Direction.UP, "facing");
+        GameTestCompat.assertValueEqual(helper, turned.getValue(RouterBlock.SPIN), 1, "spin");
+        GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(Direction.UP, turned.getValue(RouterBlock.SPIN)),
                 Rotation.CLOCKWISE_90.rotate(Direction.SOUTH), "TOP girado");
         for (Direction facing : Direction.values()) {
             for (int spin = 0; spin < RelativeSide.SPINS; spin++) {
@@ -245,14 +242,14 @@ public final class RouterConfigGameTests {
                 Direction top = RelativeSide.TOP.toAbsolute(facing, spin);
                 for (Rotation rotation : Rotation.values()) {
                     BlockState rotated = state.rotate(rotation);
-                    helper.assertValueEqual(rotated.getValue(RouterBlock.FACING), rotation.rotate(facing), "facing " + rotation);
-                    helper.assertValueEqual(RelativeSide.TOP.toAbsolute(rotated.getValue(RouterBlock.FACING),
+                    GameTestCompat.assertValueEqual(helper, rotated.getValue(RouterBlock.FACING), rotation.rotate(facing), "facing " + rotation);
+                    GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(rotated.getValue(RouterBlock.FACING),
                             rotated.getValue(RouterBlock.SPIN)), rotation.rotate(top), facing + " " + spin + " " + rotation);
                 }
                 for (Mirror mirror : Mirror.values()) {
                     BlockState mirrored = state.mirror(mirror);
-                    helper.assertValueEqual(mirrored.getValue(RouterBlock.FACING), mirror.mirror(facing), "facing " + mirror);
-                    helper.assertValueEqual(RelativeSide.TOP.toAbsolute(mirrored.getValue(RouterBlock.FACING),
+                    GameTestCompat.assertValueEqual(helper, mirrored.getValue(RouterBlock.FACING), mirror.mirror(facing), "facing " + mirror);
+                    GameTestCompat.assertValueEqual(helper, RelativeSide.TOP.toAbsolute(mirrored.getValue(RouterBlock.FACING),
                             mirrored.getValue(RouterBlock.SPIN)), mirror.mirror(top), facing + " " + spin + " " + mirror);
                 }
             }
@@ -279,9 +276,9 @@ public final class RouterConfigGameTests {
                     node.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     helper.setBlock(hopper, Blocks.HOPPER);
                     helper.setBlock(ROUTER, router(Direction.SOUTH));
-                    helper.assertTrue(helper.getBlockEntity(ROUTER) == node, "block entity trocado ao girar");
-                    helper.assertValueEqual(node.machinePos(), helper.absolutePos(hopper), "máquina");
-                    helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.EXTRACT,
+                    helper.assertTrue(GameTestCompat.getBlockEntity(helper, ROUTER) == node, "block entity trocado ao girar");
+                    GameTestCompat.assertValueEqual(helper, node.machinePos(), helper.absolutePos(hopper), "máquina");
+                    GameTestCompat.assertValueEqual(helper, node.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.EXTRACT,
                             "configuração não girou");
                     var items = node.items(Direction.SOUTH);
                     helper.assertTrue(items != null && items.getSlots() == 5, "cache não foi refeito para o funil");
@@ -295,7 +292,7 @@ public final class RouterConfigGameTests {
         helper.setBlock(MACHINE, Blocks.CHEST);
         helper.setBlock(power, Blocks.REDSTONE_BLOCK);
         helper.setBlock(ROUTER, router(Direction.UP));
-        RouterBlockEntity node = helper.getBlockEntity(ROUTER);
+        RouterBlockEntity node = GameTestCompat.getBlockEntity(helper, ROUTER);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(node.powered(), "onLoad não leu o sinal"))
@@ -312,19 +309,19 @@ public final class RouterConfigGameTests {
         UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "teste-chaves").id();
         helper.setBlock(new BlockPos(0, 1, 0), Blocks.CHEST);
         helper.setBlock(new BlockPos(0, 2, 0), router(Direction.UP));
-        RouterBlockEntity node = helper.getBlockEntity(new BlockPos(0, 2, 0));
+        RouterBlockEntity node = GameTestCompat.getBlockEntity(helper, new BlockPos(0, 2, 0));
         node.setNetworkId(network);
         node.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
-        CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
+        CompoundTag tag = node.saveWithoutMetadata();
         Set<String> networks = tag.getCompound("networks").getAllKeys();
         helper.assertTrue(networks.containsAll(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
         helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
 
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);
         helper.setBlock(new BlockPos(2, 2, 2), router(Direction.UP));
-        RouterBlockEntity copy = helper.getBlockEntity(new BlockPos(2, 2, 2));
-        copy.loadWithComponents(tag, helper.getLevel().registryAccess());
+        RouterBlockEntity copy = GameTestCompat.getBlockEntity(helper, new BlockPos(2, 2, 2));
+        copy.load(tag);
         helper.assertTrue(network.equals(copy.networkId(ResourceType.ENERGY)), "rede de energia perdida");
         helper.assertTrue(copy.face(ResourceType.FLUID, Direction.UP).mode() == PortMode.INSERT, "modo de fluido perdido");
         helper.succeed();

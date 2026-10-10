@@ -25,8 +25,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Giro do roteador por Shift + clique com as mãos vazias: o {@code spin} avança e a configuração de
@@ -43,7 +43,7 @@ public final class RouterSpinGameTests {
         UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
         helper.setBlock(MACHINE, Blocks.CHEST);
         helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(ROUTER);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, ROUTER);
         router.setNetworkId(network);
         router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
         router.setPriority(ResourceType.ITEM, Direction.NORTH, 3);
@@ -64,7 +64,7 @@ public final class RouterSpinGameTests {
     }
 
     private static Player sneaking(GameTestHelper helper, GameType mode) {
-        Player player = helper.makeMockPlayer(mode);
+        Player player = GameTestCompat.makeMockPlayer(helper, mode);
         player.setShiftKeyDown(true);
         return player;
     }
@@ -76,9 +76,9 @@ public final class RouterSpinGameTests {
     /** A configuração montada em {@link #configured}, conferida pelas faces absolutas. */
     private static void assertConfig(GameTestHelper helper, RouterBlockEntity router, String when) {
         FaceConfig north = router.face(ResourceType.ITEM, Direction.NORTH);
-        helper.assertValueEqual(north.mode(), PortMode.EXTRACT, "modo da face norte " + when);
-        helper.assertValueEqual(north.priority(), 3, "prioridade da face norte " + when);
-        helper.assertValueEqual(router.face(ResourceType.FLUID, Direction.EAST).mode(), PortMode.INSERT,
+        GameTestCompat.assertValueEqual(helper, north.mode(), PortMode.EXTRACT, "modo da face norte " + when);
+        GameTestCompat.assertValueEqual(helper, north.priority(), 3, "prioridade da face norte " + when);
+        GameTestCompat.assertValueEqual(helper, router.face(ResourceType.FLUID, Direction.EAST).mode(), PortMode.INSERT,
                 "fluido na face leste " + when);
         for (Direction face : Direction.values()) {
             if (face != Direction.NORTH) {
@@ -88,7 +88,7 @@ public final class RouterSpinGameTests {
                 helper.assertTrue(router.face(ResourceType.FLUID, face).isDefault(), "fluido na face " + face + " " + when);
             }
             int expectedCards = face == Direction.NORTH ? 1 : 0;
-            helper.assertValueEqual(router.cardCount(ResourceType.ITEM, face), expectedCards, "cartões na face " + face + " " + when);
+            GameTestCompat.assertValueEqual(helper, router.cardCount(ResourceType.ITEM, face), expectedCards, "cartões na face " + face + " " + when);
         }
         helper.assertTrue(ItemStack.matches(router.card(ResourceType.ITEM, side(router, Direction.NORTH), 0), card()),
                 "cartão saiu do slot da face norte " + when);
@@ -104,17 +104,17 @@ public final class RouterSpinGameTests {
                     RelativeSide before = side(router, Direction.NORTH);
                     int version = router.changeVersion();
                     helper.useBlock(ROUTER, player);
-                    helper.assertValueEqual(spin(helper), 1, "spin depois do primeiro clique");
-                    helper.assertTrue(helper.getBlockEntity(ROUTER) == router, "block entity trocado");
+                    GameTestCompat.assertValueEqual(helper, spin(helper), 1, "spin depois do primeiro clique");
+                    helper.assertTrue(GameTestCompat.getBlockEntity(helper, ROUTER) == router, "block entity trocado");
                     helper.assertTrue(router.changeVersion() != version, "tela não soube do giro");
                     helper.assertTrue(side(router, Direction.NORTH) != before, "lado relativo da face norte não mudou");
                     assertConfig(helper, router, "com spin 1");
                     for (int i = 2; i <= 4; i++) {
                         helper.useBlock(ROUTER, player);
-                        helper.assertValueEqual(spin(helper), i % RelativeSide.SPINS, "spin no clique " + i);
+                        GameTestCompat.assertValueEqual(helper, spin(helper), i % RelativeSide.SPINS, "spin no clique " + i);
                         assertConfig(helper, router, "com spin " + (i % RelativeSide.SPINS));
                     }
-                    helper.assertValueEqual(side(router, Direction.NORTH), before, "quatro giros não voltaram");
+                    GameTestCompat.assertValueEqual(helper, side(router, Direction.NORTH), before, "quatro giros não voltaram");
                 })
                 .thenSucceed();
     }
@@ -125,14 +125,14 @@ public final class RouterSpinGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
                 .thenExecute(() -> {
-                    helper.useBlock(ROUTER, helper.makeMockPlayer(GameType.SURVIVAL));
-                    helper.assertValueEqual(spin(helper), 0, "girou sem Shift");
+                    helper.useBlock(ROUTER, GameTestCompat.makeMockPlayer(helper, GameType.SURVIVAL));
+                    GameTestCompat.assertValueEqual(helper, spin(helper), 0, "girou sem Shift");
                     // Sem poder construir (modo aventura; o jogador de teste não ajusta as habilidades
                     // pelo modo, então é direto): não pode mexer no bloco, então nem gira.
                     Player adventure = sneaking(helper, GameType.ADVENTURE);
                     adventure.getAbilities().mayBuild = false;
                     helper.useBlock(ROUTER, adventure);
-                    helper.assertValueEqual(spin(helper), 0, "girou sem poder construir");
+                    GameTestCompat.assertValueEqual(helper, spin(helper), 0, "girou sem poder construir");
                     assertConfig(helper, router, "sem giro");
                 })
                 .thenSucceed();

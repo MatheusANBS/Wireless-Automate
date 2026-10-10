@@ -31,16 +31,15 @@ import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.resources.RegistryOps;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -50,8 +49,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Configurador (pincel e colar em área na mesma máquina ou em qualquer uma, o seletor de tipo) e o
@@ -77,7 +76,7 @@ public final class ConfiguratorGameTests {
         BlockPos pos = machine.relative(facing);
         helper.setBlock(machine, block);
         helper.setBlock(pos, router(facing));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static boolean use(ServerPlayer player, RouterBlockEntity router, boolean sneak) {
@@ -104,7 +103,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity foreign = place(helper, new BlockPos(0, 1, 2), Direction.EAST);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork own = data.create(player.getUUID(), "Pincel " + player.getUUID());
         WaNetwork other = data.create(UUID.randomUUID(), "Alheia " + player.getUUID());
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
@@ -115,40 +114,40 @@ public final class ConfiguratorGameTests {
                 .thenExecute(() -> {
                     try {
                         helper.assertTrue(use(player, target, false), "colar sem cópia não respondeu");
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "cópia do nada");
+                        helper.assertTrue(!ModDataComponents.PRESET.has(configurator), "cópia do nada");
 
                         configureUp(source);
                         source.setNetworkId(own.id());
                         helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset preset = ModDataComponents.PRESET.get(configurator);
                         helper.assertTrue(preset != null, "nada copiado para o item");
-                        helper.assertValueEqual(preset.configuredFaces(), 4, "faces configuradas");
-                        helper.assertValueEqual(preset.network(ResourceType.ITEM), own.id(), "rede não copiada");
+                        GameTestCompat.assertValueEqual(helper, preset.configuredFaces(), 4, "faces configuradas");
+                        GameTestCompat.assertValueEqual(helper, preset.network(ResourceType.ITEM), own.id(), "rede não copiada");
 
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         for (ResourceType type : TYPES) {
                             for (RelativeSide side : SIDES) {
-                                helper.assertValueEqual(target.face(type, side), source.face(type, side),
+                                GameTestCompat.assertValueEqual(helper, target.face(type, side), source.face(type, side),
                                         type + " " + side);
                             }
                         }
                         // facing=north: FRONT norte, TOP cima, LEFT leste, BACK sul.
-                        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.NORTH).mode(),
+                        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ITEM, Direction.NORTH).mode(),
                                 PortMode.EXTRACT, "FRONT");
-                        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.UP).mode(),
+                        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ITEM, Direction.UP).mode(),
                                 PortMode.INSERT, "TOP");
-                        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.SOUTH).mode(),
+                        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ITEM, Direction.SOUTH).mode(),
                                 PortMode.NONE, "a face absoluta TOP da origem não pode ser copiada como absoluta");
-                        helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.EAST).priority(), 7, "LEFT");
-                        helper.assertValueEqual(target.face(ResourceType.ENERGY, Direction.SOUTH).redstone(),
+                        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.FLUID, Direction.EAST).priority(), 7, "LEFT");
+                        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ENERGY, Direction.SOUTH).redstone(),
                                 RedstoneMode.HIGH, "BACK");
-                        helper.assertValueEqual(target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
+                        GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
 
                         // Rede de outro dono: só as faces vão.
                         source.setNetworkId(other.id());
                         use(player, source, true);
                         use(player, foreign, false);
-                        helper.assertValueEqual(foreign.face(ResourceType.ITEM, RelativeSide.TOP).mode(),
+                        GameTestCompat.assertValueEqual(helper, foreign.face(ResourceType.ITEM, RelativeSide.TOP).mode(),
                                 PortMode.INSERT, "faces não coladas sem a rede");
                         helper.assertTrue(foreign.networkId(ResourceType.ITEM) == null, "colou rede de outro dono");
                     } finally {
@@ -175,7 +174,7 @@ public final class ConfiguratorGameTests {
         target.setRedstone(ResourceType.ENERGY, Direction.EAST, RedstoneMode.LOW);
 
         preset.applyTo(target);
-        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.DOWN).mode(), PortMode.INSERT, "FRONT");
+        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ITEM, Direction.DOWN).mode(), PortMode.INSERT, "FRONT");
         int configured = 0;
         for (ResourceType type : TYPES) {
             for (RelativeSide side : SIDES) {
@@ -184,9 +183,9 @@ public final class ConfiguratorGameTests {
                 }
             }
         }
-        helper.assertValueEqual(configured, 1, "faces configuradas no destino não foram zeradas");
-        helper.assertValueEqual(target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
-        helper.assertValueEqual(RouterPreset.copyOf(target).withoutNetworks(), preset,
+        GameTestCompat.assertValueEqual(helper, configured, 1, "faces configuradas no destino não foram zeradas");
+        GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
+        GameTestCompat.assertValueEqual(helper, RouterPreset.copyOf(target).withoutNetworks(), preset,
                 "copiar o colado não dá o mesmo preset");
         helper.succeed();
     }
@@ -199,24 +198,23 @@ public final class ConfiguratorGameTests {
         up.setNetworkId(UUID.randomUUID());
         RouterPreset preset = RouterPreset.copyOf(up);
 
-        RegistryAccess registries = helper.getLevel().registryAccess();
-        RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        DynamicOps<Tag> ops = NbtOps.INSTANCE;
         for (RouterPreset original : new RouterPreset[] {preset, preset.withoutNetworks(), RouterPreset.EMPTY}) {
-            Tag tag = RouterPreset.CODEC.encodeStart(ops, original).getOrThrow();
-            RouterPreset decoded = RouterPreset.CODEC.parse(ops, tag).getOrThrow();
-            helper.assertValueEqual(decoded, original, "codec persistente");
-            helper.assertValueEqual(decoded.hashCode(), original.hashCode(), "hashCode");
+            Tag tag = RouterPreset.CODEC.encodeStart(ops, original).getOrThrow(false, error -> {});
+            RouterPreset decoded = RouterPreset.CODEC.parse(ops, tag).getOrThrow(false, error -> {});
+            GameTestCompat.assertValueEqual(helper, decoded, original, "codec persistente");
+            GameTestCompat.assertValueEqual(helper, decoded.hashCode(), original.hashCode(), "hashCode");
 
-            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
             try {
                 RouterPreset.STREAM_CODEC.encode(buf, original);
-                helper.assertValueEqual(RouterPreset.STREAM_CODEC.decode(buf), original, "stream codec");
+                GameTestCompat.assertValueEqual(helper, RouterPreset.STREAM_CODEC.decode(buf), original, "stream codec");
             } finally {
                 buf.release();
             }
         }
         helper.assertTrue(!preset.equals(preset.withoutNetworks()), "equals ignorou a rede");
-        helper.assertValueEqual(preset.face(ResourceType.CHEMICAL, RelativeSide.RIGHT).priority(), -2, "RIGHT");
+        GameTestCompat.assertValueEqual(helper, preset.face(ResourceType.CHEMICAL, RelativeSide.RIGHT).priority(), -2, "RIGHT");
         helper.succeed();
     }
 
@@ -250,7 +248,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity sameB = place(helper, new BlockPos(2, 0, 2), Direction.NORTH, Blocks.FURNACE);
         RouterBlockEntity chest = place(helper, new BlockPos(0, 0, 2), Direction.UP, Blocks.CHEST);
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         // O jogador falso nasce longe da estrutura; a área exige estar perto.
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
@@ -262,13 +260,13 @@ public final class ConfiguratorGameTests {
                     try {
                         configureUp(source);
                         clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        helper.assertTrue(configurator.has(ModDataComponents.PRESET.get()), "nada copiado");
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
+                        helper.assertTrue(ModDataComponents.PRESET.has(configurator), "nada copiado");
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.machine(configurator),
                                 BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE), "máquina copiada");
 
                         clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo Área");
-                        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo Área");
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
                                 "o primeiro Shift + clique vai à Área na mesma máquina");
                         clickAir(helper, player, false);
                         helper.assertTrue(sameA.face(ResourceType.ITEM, RelativeSide.FRONT).isDefault(),
@@ -282,9 +280,9 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, false);
                         for (ResourceType type : TYPES) {
                             for (RelativeSide side : SIDES) {
-                                helper.assertValueEqual(sameA.face(type, side), source.face(type, side),
+                                GameTestCompat.assertValueEqual(helper, sameA.face(type, side), source.face(type, side),
                                         "mesma máquina, " + type + " " + side);
-                                helper.assertValueEqual(sameB.face(type, side), source.face(type, side),
+                                GameTestCompat.assertValueEqual(helper, sameB.face(type, side), source.face(type, side),
                                         "mesma máquina girada, " + type + " " + side);
                             }
                         }
@@ -303,29 +301,28 @@ public final class ConfiguratorGameTests {
                         // Shift + clique num bloco sem roteador limpa a cópia e a área; o modo fica.
                         clickBlock(helper, player, new BlockPos(1, 0, 1), true);
                         helper.assertTrue(ConfiguratorItem.area(configurator) == null, "área não foi limpa");
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get())
+                        helper.assertTrue(!ModDataComponents.PRESET.has(configurator)
                                 && ConfiguratorItem.machine(configurator) == null, "cópia não foi limpa");
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo mudou");
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo mudou");
                         // Num roteador, Shift + clique continua copiando.
                         clickBlock(helper, player, new BlockPos(0, 1, 2), true);
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.machine(configurator),
                                 BuiltInRegistries.BLOCK.getKey(Blocks.CHEST), "Shift + clique no roteador não copiou");
 
                         // O ciclo tem três modos: Área (qualquer máquina) e depois o pincel.
                         clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY,
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY,
                                 "Área na mesma máquina → qualquer máquina");
-                        helper.assertTrue(configurator.getOrDefault(
-                                ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false), "sem o any_machine");
+                        helper.assertTrue(ModDataComponents.CONFIGURATOR_ANY_MACHINE.getOrDefault(configurator, false), "sem o any_machine");
                         clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
                                 "volta ao pincel");
-                        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+                        helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(configurator),
                                 "o pincel guardou o any_machine");
                         // No pincel também limpa.
                         clickBlock(helper, player, new BlockPos(1, 0, 1), true);
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "pincel não limpou");
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
+                        helper.assertTrue(!ModDataComponents.PRESET.has(configurator), "pincel não limpou");
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
                                 "Shift + clique num bloco trocou o modo");
                     } finally {
                         player.setShiftKeyDown(false);
@@ -345,7 +342,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.BARREL);
         RouterBlockEntity chest = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.CHEST);
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
@@ -356,9 +353,9 @@ public final class ConfiguratorGameTests {
                     try {
                         configureUp(source);
                         clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset copied = ModDataComponents.PRESET.get(configurator);
                         helper.assertTrue(copied != null, "nada copiado");
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
+                        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.machine(configurator),
                                 BuiltInRegistries.BLOCK.getKey(Blocks.BARREL), "máquina copiada");
 
                         // Mesma máquina: o do baú fica como estava.
@@ -366,7 +363,7 @@ public final class ConfiguratorGameTests {
                         clickBlock(helper, player, new BlockPos(0, 0, 0), false);
                         clickBlock(helper, player, new BlockPos(2, 2, 0), false);
                         ConfiguratorArea.Outcome same = ConfiguratorArea.paste(player, configurator, copied);
-                        helper.assertValueEqual(same.otherMachine(), 1, "outra máquina na mesma máquina");
+                        GameTestCompat.assertValueEqual(helper, same.otherMachine(), 1, "outra máquina na mesma máquina");
                         for (ResourceType type : TYPES) {
                             for (RelativeSide side : SIDES) {
                                 helper.assertTrue(chest.face(type, side).isDefault(),
@@ -385,13 +382,13 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, false);
                         for (ResourceType type : TYPES) {
                             for (RelativeSide side : SIDES) {
-                                helper.assertValueEqual(chest.face(type, side), source.face(type, side),
+                                GameTestCompat.assertValueEqual(helper, chest.face(type, side), source.face(type, side),
                                         "qualquer máquina, " + type + " " + side);
                             }
                         }
                         ConfiguratorArea.Outcome any = ConfiguratorArea.paste(player, configurator, copied);
-                        helper.assertValueEqual(any.otherMachine(), 0, "outra máquina em qualquer máquina");
-                        helper.assertValueEqual(any.applied(), 2, "roteadores colados");
+                        GameTestCompat.assertValueEqual(helper, any.otherMachine(), 0, "outra máquina em qualquer máquina");
+                        GameTestCompat.assertValueEqual(helper, any.applied(), 2, "roteadores colados");
                     } finally {
                         player.setShiftKeyDown(false);
                         helper.getLevel().getServer().getPlayerList().remove(player);
@@ -407,41 +404,41 @@ public final class ConfiguratorGameTests {
     @GameTest(template = "empty")
     public static void pasteModeDefaultsAndComponents(GameTestHelper helper) {
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "varinha nova");
+        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "varinha nova");
 
         ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
+        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
                 "Área sem o any_machine");
 
         ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_ANY);
-        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "AREA_ANY grava a Área");
-        helper.assertTrue(configurator.getOrDefault(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false),
+        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.mode(configurator), LinkerMode.AREA, "AREA_ANY grava a Área");
+        helper.assertTrue(ModDataComponents.CONFIGURATOR_ANY_MACHINE.getOrDefault(configurator, false),
                 "AREA_ANY sem o componente");
         ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_SAME);
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+        helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(configurator),
                 "AREA_SAME deixou o componente");
         ConfiguratorItem.setPasteMode(configurator, PasteMode.BRUSH);
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_MODE.get()), "pincel deixou o modo");
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+        helper.assertFalse(ModDataComponents.CONFIGURATOR_MODE.has(configurator), "pincel deixou o modo");
+        helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(configurator),
                 "pincel deixou o any_machine");
         for (PasteMode mode : PasteMode.values()) {
-            helper.assertValueEqual(PasteMode.of(mode.linkerMode(), mode.anyMachine()), mode, "ida e volta " + mode);
+            GameTestCompat.assertValueEqual(helper, PasteMode.of(mode.linkerMode(), mode.anyMachine()), mode, "ida e volta " + mode);
             ConfiguratorItem.setPasteMode(configurator, mode);
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), mode, "no item " + mode);
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), mode, "no item " + mode);
         }
 
         // any_machine perdido num pincel: continua pincel, e o Shift + clique no ar vai à Área mesma máquina.
         ConfiguratorItem.setPasteMode(configurator, PasteMode.BRUSH);
-        configurator.set(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), true);
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel com any_machine");
+        ModDataComponents.CONFIGURATOR_ANY_MACHINE.set(configurator, true);
+        GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel com any_machine");
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         try {
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
             clickAir(helper, player, true);
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
                     "Shift + clique no ar a partir do pincel");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(configurator),
                     "a Área mesma máquina ficou com o any_machine");
         } finally {
             player.setShiftKeyDown(false);
@@ -456,7 +453,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
         RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
@@ -495,7 +492,7 @@ public final class ConfiguratorGameTests {
     private static void assertFaces(GameTestHelper helper, RouterBlockEntity router, ResourceType type,
             RouterPreset expected, String message) {
         for (RelativeSide side : SIDES) {
-            helper.assertValueEqual(router.face(type, side), expected.face(type, side), message + " " + type + " " + side);
+            GameTestCompat.assertValueEqual(helper, router.face(type, side), expected.face(type, side), message + " " + type + " " + side);
         }
     }
 
@@ -509,7 +506,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork items = data.create(player.getUUID(), "Itens " + player.getUUID());
         WaNetwork fluids = data.create(player.getUUID(), "Fluidos " + player.getUUID());
         WaNetwork energy = data.create(player.getUUID(), "Energia " + player.getUUID());
@@ -532,35 +529,35 @@ public final class ConfiguratorGameTests {
                         configureTarget(target, before.id());
                         RouterPreset targetBefore = RouterPreset.copyOf(target);
                         helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset copied = ModDataComponents.PRESET.get(configurator);
 
                         ConfiguratorItem.setType(configurator, ResourceType.FLUID);
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
-                        helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
+                        GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            GameTestCompat.assertValueEqual(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
 
                         source.setNetworkId(ResourceType.ITEM, foreign.id());
                         RouterPreset withForeign = RouterPreset.copyOf(source);
                         PresetApplier.Checked onlyFluids = PresetApplier.check(player, withForeign, ResourceType.FLUID);
                         helper.assertTrue(!onlyFluids.droppedAny(), "avisou da rede de outra aba");
-                        helper.assertValueEqual(onlyFluids.applied(), List.of(fluids.id()), "redes da aba colada");
+                        GameTestCompat.assertValueEqual(helper, onlyFluids.applied(), List.of(fluids.id()), "redes da aba colada");
                         helper.assertTrue(PresetApplier.check(player, withForeign).droppedAny(),
                                 "Todos não recusou a rede alheia");
                         source.setNetworkId(ResourceType.ITEM, items.id());
 
                         // Todos: o comportamento de sempre, tudo colado.
                         ConfiguratorItem.setType(configurator, null);
-                        helper.assertTrue(!configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()),
+                        helper.assertTrue(!ModDataComponents.CONFIGURATOR_TYPE.has(configurator),
                                 "Todos deixou o componente");
                         use(player, target, false);
                         for (ResourceType type : TYPES) {
                             assertFaces(helper, target, type, copied, "Todos:");
-                            helper.assertValueEqual(target.networkId(type), copied.network(type), "Todos, rede " + type);
+                            GameTestCompat.assertValueEqual(helper, target.networkId(type), copied.network(type), "Todos, rede " + type);
                         }
                     } finally {
                         for (WaNetwork network : new WaNetwork[] {items, fluids, energy, before, foreign}) {
@@ -579,7 +576,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork power = data.create(player.getUUID(), "Energia área " + player.getUUID());
         WaNetwork before = data.create(player.getUUID(), "Antes área " + player.getUUID());
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
@@ -595,7 +592,7 @@ public final class ConfiguratorGameTests {
                         configureTarget(target, before.id());
                         RouterPreset targetBefore = RouterPreset.copyOf(target);
                         clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset copied = ModDataComponents.PRESET.get(configurator);
                         helper.assertTrue(copied != null, "nada copiado");
 
                         ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
@@ -605,11 +602,11 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, false);
 
                         assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
-                        helper.assertValueEqual(target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
+                        GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            GameTestCompat.assertValueEqual(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
                     } finally {
                         player.setShiftKeyDown(false);
@@ -628,7 +625,7 @@ public final class ConfiguratorGameTests {
     @GameTest(template = "empty")
     public static void cycleConfiguratorTypeSkipsChemicalsWithoutMekanism(GameTestHelper helper) {
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         try {
             ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
@@ -647,10 +644,10 @@ public final class ConfiguratorGameTests {
                 helper.assertTrue(ConfiguratorItem.type(configurator) == expected,
                         "avançar: " + ConfiguratorItem.type(configurator));
             }
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o componente");
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_TYPE.has(configurator), "Todos deixou o componente");
             helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(-1)),
                     "recusou voltar");
-            helper.assertValueEqual(ConfiguratorItem.type(configurator),
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.type(configurator),
                     Sources.LOADED ? ResourceType.SOURCE
                             : Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY, "voltar de Todos");
             helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(0)),
@@ -660,7 +657,7 @@ public final class ConfiguratorGameTests {
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
             helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
                     "aceitou sem o Configurador na mão");
-            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_TYPE.has(linker), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }
@@ -674,35 +671,35 @@ public final class ConfiguratorGameTests {
     @GameTest(template = "empty")
     public static void wheelPayloadSetsModeAndType(GameTestHelper helper) {
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         try {
             ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
             helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
                     new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.of(ResourceType.FLUID))), "recusou");
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY, "modo");
-            helper.assertValueEqual(ConfiguratorItem.type(configurator), ResourceType.FLUID, "tipo");
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY, "modo");
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.type(configurator), ResourceType.FLUID, "tipo");
 
             helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
                     new ConfiguratorWheelPayload(PasteMode.BRUSH, Optional.empty())), "recusou o pincel");
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o tipo");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel");
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_TYPE.has(configurator), "Todos deixou o tipo");
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(configurator),
                     "pincel guardou o qualquer máquina");
 
             if (!Chemicals.LOADED) {
                 helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
                         new ConfiguratorWheelPayload(PasteMode.AREA_SAME, Optional.of(ResourceType.CHEMICAL))),
                         "aceitou Químicos sem o Mekanism");
-                helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "mudou ao recusar");
+                GameTestCompat.assertValueEqual(helper, ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "mudou ao recusar");
             }
 
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
             helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
                     new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.empty())), "aceitou sem o Configurador");
-            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get())
-                    || linker.has(ModDataComponents.CONFIGURATOR_MODE.get()), "mexeu noutro item");
+            helper.assertFalse(ModDataComponents.CONFIGURATOR_ANY_MACHINE.has(linker)
+                    || ModDataComponents.CONFIGURATOR_MODE.has(linker), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }
@@ -713,12 +710,12 @@ public final class ConfiguratorGameTests {
     @GameTest(template = "empty")
     public static void configuratorTypeRoundTripsThroughCodec(GameTestHelper helper) {
         for (ResourceType type : TYPES) {
-            Tag tag = ConfiguratorItem.TYPE_CODEC.encodeStart(NbtOps.INSTANCE, type).getOrThrow();
-            helper.assertValueEqual(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow(), type,
+            Tag tag = ConfiguratorItem.TYPE_CODEC.encodeStart(NbtOps.INSTANCE, type).getOrThrow(false, error -> {});
+            GameTestCompat.assertValueEqual(helper, ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow(false, error -> {}), type,
                     "codec " + type);
         }
         helper.assertTrue(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, NbtOps.INSTANCE.createString("lava"))
-                .isError(), "aceitou um tipo desconhecido");
+                .error().isPresent(), "aceitou um tipo desconhecido");
         helper.succeed();
     }
 }

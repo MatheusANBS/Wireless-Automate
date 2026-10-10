@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -50,7 +49,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -62,10 +61,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -98,7 +97,7 @@ public final class StorageGameTests {
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, tier));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         router.setNetworkId(type, network);
         router.setMode(type, Direction.UP, mode);
@@ -107,11 +106,11 @@ public final class StorageGameTests {
 
     private static StorageChestBlockEntity storageChest(GameTestHelper helper, BlockPos pos, RouterTier tier) {
         helper.setBlock(pos, ModBlocks.STORAGE_CHEST.get().defaultBlockState().setValue(RouterBlock.TIER, tier));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static ItemStorage storage(GameTestHelper helper, BlockPos pos) {
-        StorageChestBlockEntity chest = helper.getBlockEntity(pos);
+        StorageChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         return chest.storage();
     }
 
@@ -120,7 +119,7 @@ public final class StorageGameTests {
     }
 
     private static int vanilla(GameTestHelper helper, BlockPos pos, Item item) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack stack = chest.getItem(i);
@@ -168,13 +167,13 @@ public final class StorageGameTests {
     @GameTest(template = "empty")
     public static void storesByTypeAndCount(GameTestHelper helper) {
         ItemStorage storage = storageChest(helper, A, RouterTier.ULTIMATE).storage();
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), 12_000_000L, false), 12_000_000L, "guardou");
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIAMOND, 7), 5, false), 5L, "diamantes");
-        helper.assertValueEqual(storage.types(), 2, "tipos");
-        helper.assertValueEqual(storage.total(), 12_000_005L, "total");
-        helper.assertValueEqual(storage.extract(new ItemStack(Items.DIAMOND), 9, false), 5L, "tirou só o que havia");
-        helper.assertValueEqual(storage.types(), 1, "tipo zerado sai da lista");
-        helper.assertValueEqual(storage.extract(new ItemStack(Items.DIRT), 1, false), 0L, "tipo ausente");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.COBBLESTONE), 12_000_000L, false), 12_000_000L, "guardou");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.DIAMOND, 7), 5, false), 5L, "diamantes");
+        GameTestCompat.assertValueEqual(helper, storage.types(), 2, "tipos");
+        GameTestCompat.assertValueEqual(helper, storage.total(), 12_000_005L, "total");
+        GameTestCompat.assertValueEqual(helper, storage.extract(new ItemStack(Items.DIAMOND), 9, false), 5L, "tirou só o que havia");
+        GameTestCompat.assertValueEqual(helper, storage.types(), 1, "tipo zerado sai da lista");
+        GameTestCompat.assertValueEqual(helper, storage.extract(new ItemStack(Items.DIRT), 1, false), 0L, "tipo ausente");
         helper.succeed();
     }
 
@@ -184,16 +183,16 @@ public final class StorageGameTests {
         StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.BASIC);
         long basic = Config.chestCapacity(RouterTier.BASIC);
         ItemStorage storage = chest.storage();
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), basic + 100, false), basic, "cheio no Básico");
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 1, true), 0L, "cheio aceita nada");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.COBBLESTONE), basic + 100, false), basic, "cheio no Básico");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.DIRT), 1, true), 0L, "cheio aceita nada");
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED),
                 "upgrade para Avançado");
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ULTIMATE),
                 "pula para o Ultimate");
-        StorageChestBlockEntity upgraded = helper.getBlockEntity(A);
+        StorageChestBlockEntity upgraded = GameTestCompat.getBlockEntity(helper, A);
         helper.assertTrue(upgraded == chest, "o block entity é o mesmo");
-        helper.assertValueEqual(upgraded.storage().total(), basic, "conteúdo mantido");
-        helper.assertValueEqual(upgraded.storage().insert(new ItemStack(Items.DIRT), 100, false), 100L, "cabe mais");
+        GameTestCompat.assertValueEqual(helper, upgraded.storage().total(), basic, "conteúdo mantido");
+        GameTestCompat.assertValueEqual(helper, upgraded.storage().insert(new ItemStack(Items.DIRT), 100, false), 100L, "cabe mais");
         helper.succeed();
     }
 
@@ -203,13 +202,13 @@ public final class StorageGameTests {
         StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.ULTIMATE);
         chest.storage().insert(new ItemStack(Items.COBBLESTONE), 1_000, false);
         ItemStorageHandler handler = chest.handler();
-        helper.assertValueEqual(handler.getSlots(), 2, "um tipo + o vazio");
-        helper.assertValueEqual(handler.getStackInSlot(0).getCount(), 1_000, "quantidade real");
-        helper.assertValueEqual(handler.extractItem(0, 500, false).getCount(), 64, "uma pilha por extração");
-        helper.assertValueEqual(handler.insertItem(0, new ItemStack(Items.DIAMOND, 3), false).getCount(), 3,
+        GameTestCompat.assertValueEqual(helper, handler.getSlots(), 2, "um tipo + o vazio");
+        GameTestCompat.assertValueEqual(helper, handler.getStackInSlot(0).getCount(), 1_000, "quantidade real");
+        GameTestCompat.assertValueEqual(helper, handler.extractItem(0, 500, false).getCount(), 64, "uma pilha por extração");
+        GameTestCompat.assertValueEqual(helper, handler.insertItem(0, new ItemStack(Items.DIAMOND, 3), false).getCount(), 3,
                 "slot de outro tipo recusa");
         helper.assertTrue(handler.insertItem(1, new ItemStack(Items.DIAMOND, 3), false).isEmpty(), "o vazio aceita");
-        helper.assertValueEqual(chest.storage().total(), 1_000L - 64 + 3, "total");
+        GameTestCompat.assertValueEqual(helper, chest.storage().total(), 1_000L - 64 + 3, "total");
         helper.succeed();
     }
 
@@ -228,9 +227,9 @@ public final class StorageGameTests {
         long[] started = new long[1];
 
         helper.onEachTick(() -> {
-            helper.assertValueEqual(stored(helper, A, Items.COBBLESTONE) + stored(helper, B, Items.COBBLESTONE),
+            GameTestCompat.assertValueEqual(helper, stored(helper, A, Items.COBBLESTONE) + stored(helper, B, Items.COBBLESTONE),
                     12_000_000L, "pedregulho");
-            helper.assertValueEqual(stored(helper, A, Items.DIAMOND) + stored(helper, B, Items.DIAMOND), 1_000L, "diamantes");
+            GameTestCompat.assertValueEqual(helper, stored(helper, A, Items.DIAMOND) + stored(helper, B, Items.DIAMOND), 1_000L, "diamantes");
         });
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
@@ -241,7 +240,7 @@ public final class StorageGameTests {
                     // Pilha por pilha (64 por extração, 32 por visita) seriam milhares de ticks; a folga
                     // cobre a remontagem das rotas e o orçamento dividido com os outros testes do lote.
                     helper.assertTrue(ticks <= 20, "levou " + ticks + " ticks: o atalho não moveu o tipo inteiro");
-                    helper.assertValueEqual(stored(helper, B, Items.COBBLESTONE), 12_000_000L, "pedregulho no destino");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.COBBLESTONE), 12_000_000L, "pedregulho no destino");
                 })
                 .thenSucceed();
     }
@@ -256,13 +255,13 @@ public final class StorageGameTests {
         RouterBlockEntity target = router(helper, B, RouterTier.ELITE, network, PortMode.INSERT);
         int capacity = 27 * 64;
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 stored(helper, A, Items.COBBLESTONE) + vanilla(helper, B, Items.COBBLESTONE), 5_000L, "pedregulho"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> helper.assertValueEqual(vanilla(helper, B, Items.COBBLESTONE), capacity, "vanilla cheio"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, vanilla(helper, B, Items.COBBLESTONE), capacity, "vanilla cheio"))
                 .thenIdle(5)
-                .thenExecute(() -> helper.assertValueEqual(stored(helper, A, Items.COBBLESTONE), 5_000L - capacity, "resto no Baú"))
+                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, stored(helper, A, Items.COBBLESTONE), 5_000L - capacity, "resto no Baú"))
                 .thenSucceed();
     }
 
@@ -281,15 +280,15 @@ public final class StorageGameTests {
         BlockPos machine = helper.absolutePos(B);
         TestMachines.reset(machine);
         storageChest(helper, A, RouterTier.ULTIMATE).storage().insert(new ItemStack(Items.COBBLESTONE), 1_000_000L, false);
-        helper.setBlock(B, TestMachines.BIG_SLOT);
+        helper.setBlock(B, TestMachines.BIG_SLOT.get());
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 stored(helper, A, Items.COBBLESTONE) + TestMachines.bigSlot(machine).count(), 1_000_000L, "pedregulho"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.bigSlot(machine).count(), 1_000_000, "no slot"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count(), 1_000_000, "no slot"))
                 .thenExecute(() -> {
                     int inserts = TestMachines.bigSlot(machine).inserts();
                     helper.assertTrue(inserts <= 4, inserts + " inserções: a entrega não passou de uma pilha por chamada");
@@ -312,22 +311,22 @@ public final class StorageGameTests {
         BlockPos machine = helper.absolutePos(B);
         TestMachines.reset(machine);
         storageChest(helper, A, RouterTier.ULTIMATE).storage().insert(new ItemStack(Items.COBBLESTONE), 10_000L, false);
-        helper.setBlock(B, TestMachines.NAIVE_SLOTS);
+        helper.setBlock(B, TestMachines.NAIVE_SLOTS.get());
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
         int capacity = TestMachines.NaiveSlots.SLOTS * 64;
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 stored(helper, A, Items.COBBLESTONE) + TestMachines.naiveSlots(machine).total(), 10_000L, "pedregulho"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.naiveSlots(machine).total(), capacity, "cheio"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, TestMachines.naiveSlots(machine).total(), capacity, "cheio"))
                 .thenIdle(5)
                 .thenExecute(() -> {
                     TestMachines.NaiveSlots slots = TestMachines.naiveSlots(machine);
                     helper.assertTrue(slots.largestCall() <= 64, "chamada com " + slots.largestCall() + " itens");
-                    helper.assertValueEqual(slots.largestSlot(), 64, "maior slot");
-                    helper.assertValueEqual(stored(helper, A, Items.COBBLESTONE), 10_000L - capacity, "resto no Baú");
+                    GameTestCompat.assertValueEqual(helper, slots.largestSlot(), 64, "maior slot");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, A, Items.COBBLESTONE), 10_000L - capacity, "resto no Baú");
                 })
                 .thenSucceed();
     }
@@ -337,7 +336,7 @@ public final class StorageGameTests {
     public static void vanillaChestFillsAChest(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-vanilla-bau");
         helper.setBlock(A, Blocks.CHEST);
-        ChestBlockEntity chest = helper.getBlockEntity(A);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, A);
         chest.setItem(0, new ItemStack(Items.DIAMOND, 10));
         chest.setItem(3, new ItemStack(Items.COBBLESTONE, 64));
         chest.setItem(7, new ItemStack(Items.COBBLESTONE, 30));
@@ -345,14 +344,14 @@ public final class StorageGameTests {
         RouterBlockEntity source = router(helper, A, RouterTier.ELITE, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ELITE, network, PortMode.INSERT);
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 vanilla(helper, A, Items.COBBLESTONE) + stored(helper, B, Items.COBBLESTONE), 94L, "pedregulho"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 10L, "diamantes no Baú");
-                    helper.assertValueEqual(stored(helper, B, Items.COBBLESTONE), 94L, "pedregulho no Baú");
-                    helper.assertValueEqual(storage(helper, B).types(), 2, "dois tipos");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.DIAMOND), 10L, "diamantes no Baú");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.COBBLESTONE), 94L, "pedregulho no Baú");
+                    GameTestCompat.assertValueEqual(helper, storage(helper, B).types(), 2, "dois tipos");
                 })
                 .thenSucceed();
     }
@@ -367,31 +366,30 @@ public final class StorageGameTests {
         storage(helper, A).insert(new ItemStack(Items.DIAMOND), 5, false);
         Filter filter = new Filter(Filter.ListMode.BLACKLIST, false,
                 List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIRT), 0)));
-        StorageChestBlockEntity original = helper.getBlockEntity(A);
+        StorageChestBlockEntity original = GameTestCompat.getBlockEntity(helper, A);
         original.setFilter(filter);
         BlockPos absolute = helper.absolutePos(A);
         helper.getLevel().destroyBlock(absolute, true);
 
         List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2),
                 entity -> entity.getItem().is(ModBlocks.STORAGE_CHEST.get().asItem()));
-        helper.assertValueEqual(drops.size(), 1, "um Baú no chão");
+        GameTestCompat.assertValueEqual(helper, drops.size(), 1, "um Baú no chão");
         ItemStack dropped = drops.get(0).getItem().copy();
         drops.get(0).discard();
-        StorageContents contents = dropped.get(ModDataComponents.STORAGE_CONTENTS.get());
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(dropped);
         helper.assertTrue(contents != null, "o item leva a referência");
-        helper.assertValueEqual(contents.total(), 1_000_005L, "resumo do total");
-        helper.assertValueEqual(contents.types(), 2, "resumo dos tipos");
-        helper.assertValueEqual(dropped.get(DataComponents.BLOCK_STATE)
-                .get(RouterBlock.TIER), RouterTier.ELITE, "tier no item");
+        GameTestCompat.assertValueEqual(helper, contents.total(), 1_000_005L, "resumo do total");
+        GameTestCompat.assertValueEqual(helper, contents.types(), 2, "resumo dos tipos");
+        GameTestCompat.assertValueEqual(helper, StorageBlockItem.tierOf(dropped), RouterTier.ELITE, "tier no item");
 
         ItemStack copy = dropped.copy();
         place(helper, dropped, A);
         place(helper, copy, B);
-        helper.assertValueEqual(storage(helper, A).total(), 1_000_005L, "o conteúdo voltou");
-        helper.assertValueEqual(stored(helper, A, Items.DIAMOND), 5L, "diamantes de volta");
+        GameTestCompat.assertValueEqual(helper, storage(helper, A).total(), 1_000_005L, "o conteúdo voltou");
+        GameTestCompat.assertValueEqual(helper, stored(helper, A, Items.DIAMOND), 5L, "diamantes de volta");
         helper.assertTrue(storage(helper, B).isEmpty(), "a cópia do item nasce vazia");
-        StorageChestBlockEntity placed = helper.getBlockEntity(A);
-        helper.assertValueEqual(placed.filter(), filter, "o filtro voltou com o bloco");
+        StorageChestBlockEntity placed = GameTestCompat.getBlockEntity(helper, A);
+        GameTestCompat.assertValueEqual(helper, placed.filter(), filter, "o filtro voltou com o bloco");
         helper.succeed();
     }
 
@@ -402,13 +400,13 @@ public final class StorageGameTests {
         chest.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
                 List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), 100))));
         ItemStorage storage = chest.storage();
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 10, false), 0L, "terra recusada");
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 64L, "primeira pilha");
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 36L, "só até 100");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.DIRT), 10, false), 0L, "terra recusada");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 64L, "primeira pilha");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 36L, "só até 100");
         helper.assertTrue(chest.handler().insertItem(1, new ItemStack(Items.DIRT), false).getCount() == 1,
                 "o funil também passa pelo filtro");
         chest.setFilter(Filter.EMPTY);
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 10, false), 10L, "sem filtro, tudo entra");
+        GameTestCompat.assertValueEqual(helper, storage.insert(new ItemStack(Items.DIRT), 10, false), 10L, "sem filtro, tudo entra");
         helper.succeed();
     }
 
@@ -417,7 +415,7 @@ public final class StorageGameTests {
     public static void routerRespectsTheInputFilter(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-bau-filtro");
         helper.setBlock(A, Blocks.CHEST);
-        ChestBlockEntity source = helper.getBlockEntity(A);
+        ChestBlockEntity source = GameTestCompat.getBlockEntity(helper, A);
         source.setItem(0, new ItemStack(Items.DIAMOND, 10));
         source.setItem(1, new ItemStack(Items.DIRT, 20));
         storageChest(helper, B, RouterTier.BASIC).setFilter(new Filter(Filter.ListMode.WHITELIST, false,
@@ -426,11 +424,11 @@ public final class StorageGameTests {
         RouterBlockEntity to = router(helper, B, RouterTier.ELITE, network, PortMode.INSERT);
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, from, to))
-                .thenWaitUntil(() -> helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 10L, "diamantes no Baú"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.DIAMOND), 10L, "diamantes no Baú"))
                 .thenIdle(10)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(stored(helper, B, Items.DIRT), 0L, "terra recusada");
-                    helper.assertValueEqual(vanilla(helper, A, Items.DIRT), 20, "terra na origem");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.DIRT), 0L, "terra recusada");
+                    GameTestCompat.assertValueEqual(helper, vanilla(helper, A, Items.DIRT), 20, "terra na origem");
                 })
                 .thenSucceed();
     }
@@ -446,25 +444,25 @@ public final class StorageGameTests {
         ItemStack cobble = new ItemStack(Items.COBBLESTONE);
 
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_STACK, cobble), "pegar pilha");
-        helper.assertValueEqual(menu.getCarried().getCount(), 64, "pilha no cursor");
+        GameTestCompat.assertValueEqual(helper, menu.getCarried().getCount(), 64, "pilha no cursor");
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.INSERT_CARRIED_ONE, ItemStack.EMPTY), "devolver um");
-        helper.assertValueEqual(menu.getCarried().getCount(), 63, "um a menos no cursor");
+        GameTestCompat.assertValueEqual(helper, menu.getCarried().getCount(), 63, "um a menos no cursor");
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.INSERT_CARRIED, ItemStack.EMPTY), "devolver tudo");
         helper.assertTrue(menu.getCarried().isEmpty(), "cursor vazio");
-        helper.assertValueEqual(storage.total(), 1_000L, "tudo de volta");
+        GameTestCompat.assertValueEqual(helper, storage.total(), 1_000L, "tudo de volta");
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_HALF, cobble), "meia pilha");
-        helper.assertValueEqual(menu.getCarried().getCount(), 32, "meia pilha no cursor");
+        GameTestCompat.assertValueEqual(helper, menu.getCarried().getCount(), 32, "meia pilha no cursor");
         helper.assertFalse(act(player, menu, StorageActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND)),
                 "tipo que não existe");
         menu.setCarried(ItemStack.EMPTY);
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_TO_INVENTORY, cobble), "para o inventário");
         int slot = player.getInventory().findSlotMatchingItem(cobble);
         helper.assertTrue(slot >= 0, "pedregulho no inventário");
-        helper.assertValueEqual(storage.total(), 1_000L - 32 - 64, "saiu do Baú");
+        GameTestCompat.assertValueEqual(helper, storage.total(), 1_000L - 32 - 64, "saiu do Baú");
         int menuSlot = slot < 9 ? 27 + slot : slot - 9;
         menu.quickMoveStack(player, menuSlot);
         helper.assertTrue(player.getInventory().getItem(slot).isEmpty(), "Shift + clique guardou");
-        helper.assertValueEqual(storage.total(), 1_000L - 32, "de volta ao Baú");
+        GameTestCompat.assertValueEqual(helper, storage.total(), 1_000L - 32, "de volta ao Baú");
         helper.succeed();
     }
 
@@ -483,7 +481,7 @@ public final class StorageGameTests {
         StorageListMenu<ItemStack> menu = new StorageListMenu<>(CONTAINER_ID, player.getInventory(), chest);
         StorageListMenu.Sync<ItemStack> first = menu.poll();
         helper.assertTrue(first != null && first.reset(), "a abertura manda tudo");
-        helper.assertValueEqual(first.changes().size(), 2, "dois tipos");
+        GameTestCompat.assertValueEqual(helper, first.changes().size(), 2, "dois tipos");
         helper.assertTrue(menu.poll() == null, "nada mudou, nada vai");
         storage.extract(new ItemStack(Items.DIAMOND), 5, false);
         helper.assertTrue(menu.poll() == null, "espera o intervalo");
@@ -492,9 +490,9 @@ public final class StorageGameTests {
                 .thenExecute(() -> {
                     StorageListMenu.Sync<ItemStack> next = menu.poll();
                     helper.assertTrue(next != null && !next.reset(), "a diferença vai depois do intervalo");
-                    helper.assertValueEqual(next.changes().size(), 1, "só o tipo que mudou");
-                    helper.assertValueEqual(next.changes().get(0).count(), 0L, "diamante saiu");
-                    helper.assertValueEqual(next.header().total(), 500L, "total novo");
+                    GameTestCompat.assertValueEqual(helper, next.changes().size(), 1, "só o tipo que mudou");
+                    GameTestCompat.assertValueEqual(helper, next.changes().get(0).count(), 0L, "diamante saiu");
+                    GameTestCompat.assertValueEqual(helper, next.header().total(), 500L, "total novo");
                 })
                 .thenSucceed();
     }
@@ -504,20 +502,20 @@ public final class StorageGameTests {
     public static void chestUpgradeRecipe(GameTestHelper helper) {
         ItemStack chest = StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(), RouterTier.BASIC);
         StorageContents contents = new StorageContents(UUID.randomUUID(), 3, 12_345L);
-        chest.set(ModDataComponents.STORAGE_CONTENTS.get(), contents);
-        CraftingInput input = CraftingInput.of(2, 1,
+        ModDataComponents.STORAGE_CONTENTS.set(chest, contents);
+        CraftingContainer input = GameTestCompat.craftingInput(2, 1,
                 List.of(chest, new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get())));
         ItemStack out = helper.getLevel().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel())
                 .orElseThrow(() -> new GameTestAssertException("sem receita de upgrade do Baú"))
-                .value().assemble(input, helper.getLevel().registryAccess());
+                .assemble(input, helper.getLevel().registryAccess());
         helper.assertTrue(out.is(ModItems.STORAGE_CHEST.get()), "resultado: " + out);
-        helper.assertValueEqual(StorageBlockItem.tierOf(out), RouterTier.ADVANCED, "tier");
-        helper.assertValueEqual(out.get(ModDataComponents.STORAGE_CONTENTS.get()), contents, "conteúdo mantido");
-        CraftingInput skip = CraftingInput.of(2, 1,
+        GameTestCompat.assertValueEqual(helper, StorageBlockItem.tierOf(out), RouterTier.ADVANCED, "tier");
+        GameTestCompat.assertValueEqual(helper, ModDataComponents.STORAGE_CONTENTS.get(out), contents, "conteúdo mantido");
+        CraftingContainer skip = GameTestCompat.craftingInput(2, 1,
                 List.of(chest, new ItemStack(ModItems.TIER_CORES.get(RouterTier.ELITE).get())));
         helper.assertTrue(helper.getLevel().getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, skip, helper.getLevel()).isPresent(), "pula tier");
-        CraftingInput down = CraftingInput.of(2, 1, List.of(StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(),
+        CraftingContainer down = GameTestCompat.craftingInput(2, 1, List.of(StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(),
                 RouterTier.ELITE), new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get())));
         helper.assertTrue(helper.getLevel().getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, down, helper.getLevel()).isEmpty(), "desceu tier");
@@ -575,7 +573,7 @@ public final class StorageGameTests {
             }
         }
         helper.assertTrue(orphan != null, "o conteúdo ficou no servidor");
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.getInventory().clearContent();
         try {
             helper.getLevel().getServer().getCommands().getDispatcher().execute("wa storage recover " + orphan,
@@ -590,12 +588,12 @@ public final class StorageGameTests {
                 given = player.getInventory().getItem(i);
             }
         }
-        StorageContents contents = given.get(ModDataComponents.STORAGE_CONTENTS.get());
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(given);
         helper.assertTrue(contents != null && contents.id().equals(orphan) && contents.total() == 777,
                 "o item aponta para o conteúdo: " + given);
-        helper.assertValueEqual(StorageBlockItem.tierOf(given), RouterTier.ELITE, "o tier que se perdeu");
+        GameTestCompat.assertValueEqual(helper, StorageBlockItem.tierOf(given), RouterTier.ELITE, "o tier que se perdeu");
         place(helper, given, B);
-        helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 777L, "os diamantes voltaram");
+        GameTestCompat.assertValueEqual(helper, stored(helper, B, Items.DIAMOND), 777L, "os diamantes voltaram");
         helper.succeed();
     }
 
@@ -606,11 +604,11 @@ public final class StorageGameTests {
     @GameTest(template = "empty")
     public static void recoverGuessesTheTierOfOldContents(GameTestHelper helper) {
         long basic = Config.storageCapacity(StorageKind.CHEST, RouterTier.BASIC);
-        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()), 10),
+        GameTestCompat.assertValueEqual(helper, StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()), 10),
                 RouterTier.BASIC, "pouco cabe no Básico");
-        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()),
+        GameTestCompat.assertValueEqual(helper, StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, null, new ListTag()),
                 basic + 1), RouterTier.ADVANCED, "um a mais que o Básico vai para o Avançado");
-        helper.assertValueEqual(StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, RouterTier.ELITE,
+        GameTestCompat.assertValueEqual(helper, StorageCommand.tierFor(new StorageSavedData.Stored(StorageKind.CHEST, RouterTier.ELITE,
                 new ListTag()), 10), RouterTier.ELITE, "gravado vale o gravado");
         helper.succeed();
     }
@@ -624,7 +622,7 @@ public final class StorageGameTests {
     private static void breakByPlayer(GameTestHelper helper, GameType mode, ItemStack tool, long total) {
         storageChest(helper, A, RouterTier.ADVANCED).storage().insert(new ItemStack(Items.COBBLESTONE), total, false);
         BlockPos absolute = helper.absolutePos(A);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(absolute.above()));
         player.setGameMode(mode);
         player.setItemInHand(InteractionHand.MAIN_HAND, tool);
@@ -641,16 +639,16 @@ public final class StorageGameTests {
     private static void assertDroppedWith(GameTestHelper helper, BlockPos absolute, long total) {
         List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(1.5),
                 entity -> entity.getItem().is(ModItems.STORAGE_CHEST.get()));
-        helper.assertValueEqual(drops.size(), 1, "Baús no chão " + drops.stream()
-                .map(e -> String.valueOf(e.getItem().get(ModDataComponents.STORAGE_CONTENTS.get()))).toList());
-        StorageContents contents = drops.get(0).getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+        GameTestCompat.assertValueEqual(helper, drops.size(), 1, "Baús no chão " + drops.stream()
+                .map(e -> String.valueOf(ModDataComponents.STORAGE_CONTENTS.get(e.getItem()))).toList());
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(drops.get(0).getItem());
         helper.assertTrue(contents != null && contents.total() == total, "o Baú no chão leva o conteúdo: " + contents);
         drops.forEach(ItemEntity::discard);
     }
 
     @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, StorageChestBlockEntity chest) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above()));
         return player;
     }
@@ -677,24 +675,24 @@ public final class StorageGameTests {
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY, cobble), "rodinha: tirar um");
         int inv = player.getInventory().findSlotMatchingItem(cobble);
         helper.assertTrue(inv >= 0 && player.getInventory().getItem(inv).getCount() == 1, "um no inventário");
-        helper.assertValueEqual(storage.total(), initial - 1, "um a menos no Baú");
+        GameTestCompat.assertValueEqual(helper, storage.total(), initial - 1, "um a menos no Baú");
         int menuSlot = inv < 9 ? 27 + inv : inv - 9;
         helper.assertTrue(slotAct(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_SLOT, menuSlot), "rodinha: puxar para o slot");
-        helper.assertValueEqual(player.getInventory().getItem(inv).getCount(), 2, "dois no slot");
+        GameTestCompat.assertValueEqual(helper, player.getInventory().getItem(inv).getCount(), 2, "dois no slot");
         helper.assertTrue(slotAct(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_SLOT, menuSlot), "rodinha: guardar do slot");
-        helper.assertValueEqual(player.getInventory().getItem(inv).getCount(), 1, "um no slot");
+        GameTestCompat.assertValueEqual(helper, player.getInventory().getItem(inv).getCount(), 1, "um no slot");
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_INVENTORY, cobble), "rodinha: guardar um");
         helper.assertTrue(player.getInventory().getItem(inv).isEmpty(), "slot vazio");
-        helper.assertValueEqual(storage.total(), initial, "tudo de volta");
+        GameTestCompat.assertValueEqual(helper, storage.total(), initial, "tudo de volta");
         helper.assertFalse(act(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_INVENTORY, cobble), "nada para guardar");
         helper.assertFalse(slotAct(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_SLOT, 999), "slot fora do menu");
 
         // Shift + duplo clique com item no cursor: o inventário enche e o cursor fica como está.
         menu.setCarried(new ItemStack(Items.STICK, 5));
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_ALL_TO_INVENTORY, cobble), "Shift + duplo clique");
-        helper.assertValueEqual(menu.getCarried().getCount(), 5, "cursor como estava");
-        helper.assertValueEqual(player.getInventory().countItem(Items.COBBLESTONE), 36 * 64, "inventário cheio");
-        helper.assertValueEqual(storage.total(), initial - 36 * 64, "o resto no Baú");
+        GameTestCompat.assertValueEqual(helper, menu.getCarried().getCount(), 5, "cursor como estava");
+        GameTestCompat.assertValueEqual(helper, player.getInventory().countItem(Items.COBBLESTONE), 36 * 64, "inventário cheio");
+        GameTestCompat.assertValueEqual(helper, storage.total(), initial - 36 * 64, "o resto no Baú");
         helper.assertFalse(act(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY, cobble), "sem espaço");
         helper.succeed();
     }
@@ -713,26 +711,26 @@ public final class StorageGameTests {
 
     private static StorageTankBlockEntity storageTank(GameTestHelper helper, BlockPos pos, RouterTier tier) {
         helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.TANK).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static StorageBatteryBlockEntity storageBattery(GameTestHelper helper, BlockPos pos, RouterTier tier) {
         helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static StorageSourceTankBlockEntity storageSourceTank(GameTestHelper helper, BlockPos pos, RouterTier tier) {
         helper.setBlock(pos, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static long fluid(GameTestHelper helper, BlockPos pos, net.minecraft.world.level.material.Fluid fluid) {
-        StorageTankBlockEntity tank = helper.getBlockEntity(pos);
+        StorageTankBlockEntity tank = GameTestCompat.getBlockEntity(helper, pos);
         return tank.storage().count(new FluidStack(fluid, 1));
     }
 
     private static long energy(GameTestHelper helper, BlockPos pos) {
-        StorageBatteryBlockEntity battery = helper.getBlockEntity(pos);
+        StorageBatteryBlockEntity battery = GameTestCompat.getBlockEntity(helper, pos);
         return battery.store().stored();
     }
 
@@ -741,15 +739,15 @@ public final class StorageGameTests {
     public static void tankStoresFluidsByType(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.TANK, RouterTier.BASIC);
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 100_000), FluidAction.EXECUTE), 100_000,
+        GameTestCompat.assertValueEqual(helper, tank.handler().fill(new FluidStack(Fluids.WATER, 100_000), FluidAction.EXECUTE), 100_000,
                 "água pela visão comum");
-        helper.assertValueEqual(tank.storage().insert(new FluidStack(Fluids.LAVA, 1), capacity, false),
+        GameTestCompat.assertValueEqual(helper, tank.storage().insert(new FluidStack(Fluids.LAVA, 1), capacity, false),
                 capacity - 100_000, "lava até a capacidade");
-        helper.assertValueEqual(tank.storage().types(), 2, "dois fluidos");
-        helper.assertValueEqual(tank.handler().getTanks(), 3, "um tanque por fluido + o vazio");
-        helper.assertValueEqual(tank.handler().drain(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE).getAmount(),
+        GameTestCompat.assertValueEqual(helper, tank.storage().types(), 2, "dois fluidos");
+        GameTestCompat.assertValueEqual(helper, tank.handler().getTanks(), 3, "um tanque por fluido + o vazio");
+        GameTestCompat.assertValueEqual(helper, tank.handler().drain(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE).getAmount(),
                 1_000, "drena a água pedida");
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 5_000), FluidAction.SIMULATE), 1_000,
+        GameTestCompat.assertValueEqual(helper, tank.handler().fill(new FluidStack(Fluids.WATER, 5_000), FluidAction.SIMULATE), 1_000,
                 "cheio: só cabe o que saiu");
         helper.succeed();
     }
@@ -759,16 +757,16 @@ public final class StorageGameTests {
     @SuppressWarnings("removal")
     public static void bucketOnTheTankBlock(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
         player.setGameMode(GameType.SURVIVAL);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(tank.getBlockPos()), Direction.UP, tank.getBlockPos(), false);
-        tank.getBlockState().useItemOn(player.getMainHandItem(), helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
-        helper.assertValueEqual(fluid(helper, A, Fluids.WATER), 1_000L, "o balde esvaziou no Tanque");
+        tank.getBlockState().use(helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
+        GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.WATER), 1_000L, "o balde esvaziou no Tanque");
         helper.assertTrue(player.getMainHandItem().is(Items.BUCKET), "balde vazio na mão: " + player.getMainHandItem());
-        tank.getBlockState().useItemOn(player.getMainHandItem(), helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
-        helper.assertValueEqual(fluid(helper, A, Fluids.WATER), 0L, "o balde encheu");
+        tank.getBlockState().use(helper.getLevel(), player, InteractionHand.MAIN_HAND, hit);
+        GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.WATER), 0L, "o balde encheu");
         helper.assertTrue(player.getMainHandItem().is(Items.WATER_BUCKET), "balde de água na mão: " + player.getMainHandItem());
         helper.succeed();
     }
@@ -779,8 +777,8 @@ public final class StorageGameTests {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
                 List.of(new FilterEntry.FluidEntry(new FluidStack(Fluids.LAVA, 1), 0))));
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE), 0, "água recusada");
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.LAVA, 1_000), FluidAction.EXECUTE), 1_000, "lava aceita");
+        GameTestCompat.assertValueEqual(helper, tank.handler().fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE), 0, "água recusada");
+        GameTestCompat.assertValueEqual(helper, tank.handler().fill(new FluidStack(Fluids.LAVA, 1_000), FluidAction.EXECUTE), 1_000, "lava aceita");
         helper.succeed();
     }
 
@@ -798,12 +796,12 @@ public final class StorageGameTests {
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.INSERT);
         long[] started = new long[1];
-        helper.onEachTick(() -> helper.assertValueEqual(fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER),
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER),
                 amount, "água"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenExecute(() -> started[0] = helper.getTick())
-                .thenWaitUntil(() -> helper.assertValueEqual(fluid(helper, B, Fluids.WATER), amount, "água no destino"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, fluid(helper, B, Fluids.WATER), amount, "água no destino"))
                 .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
                         "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
                 .thenSucceed();
@@ -814,11 +812,11 @@ public final class StorageGameTests {
     public static void batteryStoresEnergy(GameTestHelper helper) {
         StorageBatteryBlockEntity battery = storageBattery(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.BATTERY, RouterTier.BASIC);
-        helper.assertValueEqual(battery.store().insert(capacity + 500, false), capacity, "cheia no Básico");
-        helper.assertValueEqual(battery.handler().receiveEnergy(10, true), 0, "cheia não recebe");
-        helper.assertValueEqual(battery.handler().extractEnergy(1_000, false), 1_000, "extrai pela visão comum");
-        helper.assertValueEqual(battery.handler().getEnergyStored(), (int) (capacity - 1_000), "guardado");
-        helper.assertValueEqual(battery.signal(), 14, "comparador quase cheio");
+        GameTestCompat.assertValueEqual(helper, battery.store().insert(capacity + 500, false), capacity, "cheia no Básico");
+        GameTestCompat.assertValueEqual(helper, battery.handler().receiveEnergy(10, true), 0, "cheia não recebe");
+        GameTestCompat.assertValueEqual(helper, battery.handler().extractEnergy(1_000, false), 1_000, "extrai pela visão comum");
+        GameTestCompat.assertValueEqual(helper, battery.handler().getEnergyStored(), (int) (capacity - 1_000), "guardado");
+        GameTestCompat.assertValueEqual(helper, battery.signal(), 14, "comparador quase cheio");
         helper.succeed();
     }
 
@@ -836,11 +834,11 @@ public final class StorageGameTests {
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.INSERT);
         long[] started = new long[1];
-        helper.onEachTick(() -> helper.assertValueEqual(energy(helper, A) + energy(helper, B), amount, "energia"));
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, energy(helper, A) + energy(helper, B), amount, "energia"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenExecute(() -> started[0] = helper.getTick())
-                .thenWaitUntil(() -> helper.assertValueEqual(energy(helper, B), amount, "energia no destino"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, energy(helper, B), amount, "energia no destino"))
                 .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
                         "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
                 .thenSucceed();
@@ -852,7 +850,7 @@ public final class StorageGameTests {
     public static void tankAndBatteryKeepContentsWhenBroken(GameTestHelper helper) {
         storageTank(helper, A, RouterTier.ELITE).storage().insert(new FluidStack(Fluids.LAVA, 1), 7_654_321L, false);
         storageBattery(helper, B, RouterTier.ELITE).store().insert(9_876_543L, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.setGameMode(GameType.CREATIVE);
         for (BlockPos pos : List.of(A, B)) {
             player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above()));
@@ -862,8 +860,8 @@ public final class StorageGameTests {
         ItemStack battery = pickUp(helper, B, StorageKind.BATTERY, 9_876_543L);
         place(helper, tank, A, StorageKind.TANK);
         place(helper, battery, B, StorageKind.BATTERY);
-        helper.assertValueEqual(fluid(helper, A, Fluids.LAVA), 7_654_321L, "a lava voltou");
-        helper.assertValueEqual(energy(helper, B), 9_876_543L, "a energia voltou");
+        GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.LAVA), 7_654_321L, "a lava voltou");
+        GameTestCompat.assertValueEqual(helper, energy(helper, B), 9_876_543L, "a energia voltou");
         helper.succeed();
     }
 
@@ -872,14 +870,14 @@ public final class StorageGameTests {
     public static void sourceTankStoresAndShowsLevel(GameTestHelper helper) {
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC);
-        helper.assertValueEqual(capacity, 10_000L, "capacidade do Básico");
-        helper.assertValueEqual(tank.store().insert(5_000, false), 5_000L, "metade");
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
-        helper.assertValueEqual(tank.store().insert(999_999, false), 5_000L, "até a capacidade");
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10, "cheio");
-        helper.assertValueEqual(tank.signal(), 15, "comparador cheio");
+        GameTestCompat.assertValueEqual(helper, capacity, 10_000L, "capacidade do Básico");
+        GameTestCompat.assertValueEqual(helper, tank.store().insert(5_000, false), 5_000L, "metade");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
+        GameTestCompat.assertValueEqual(helper, tank.store().insert(999_999, false), 5_000L, "até a capacidade");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10, "cheio");
+        GameTestCompat.assertValueEqual(helper, tank.signal(), 15, "comparador cheio");
         tank.store().extract(10_000, false);
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
         helper.succeed();
     }
 
@@ -893,7 +891,7 @@ public final class StorageGameTests {
         long original = capacity.get();
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         tank.store().insert(5_000, false);
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
         // O onLoad (que põe o tanque no conjunto) roda no tick seguinte à colocação.
         helper.startSequence()
                 .thenIdle(3)
@@ -901,12 +899,12 @@ public final class StorageGameTests {
                     try {
                         capacity.set(100_000L);
                         SourceTankLevels.refreshAll();
-                        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
+                        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
                     } finally {
                         capacity.set(original);
                         SourceTankLevels.refreshAll();
                     }
-                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível com a capacidade restaurada");
+                    GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível com a capacidade restaurada");
                 })
                 .thenSucceed();
     }
@@ -919,9 +917,9 @@ public final class StorageGameTests {
         tank.store().insert(5_000, false);
         // No mesmo tick da colocação (antes do onLoad): o conteúdo é de nível 5 e o bloco diz 9.
         helper.getLevel().setBlock(abs, helper.getLevel().getBlockState(abs).setValue(StorageSourceTankBlock.FILL, 9), 3);
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 9, "nível errado forçado");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 9, "nível errado forçado");
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível corrigido"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível corrigido"))
                 .thenSucceed();
     }
 
@@ -931,10 +929,10 @@ public final class StorageGameTests {
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         tank.store().insert(10_000, false);
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED), "upgrade");
-        StorageSourceTankBlockEntity upgraded = helper.getBlockEntity(A);
-        helper.assertValueEqual(upgraded.store().stored(), 10_000L, "Source depois do upgrade");
+        StorageSourceTankBlockEntity upgraded = GameTestCompat.getBlockEntity(helper, A);
+        GameTestCompat.assertValueEqual(helper, upgraded.store().stored(), 10_000L, "Source depois do upgrade");
         // 10.000 de 80.000 (um oitavo): nível 2, arredondado para cima.
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 2, "nível com a capacidade nova");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 2, "nível com a capacidade nova");
         helper.succeed();
     }
 
@@ -944,16 +942,16 @@ public final class StorageGameTests {
     public static void sourceTankKeepsSourceWhenBroken(GameTestHelper helper) {
         long source = 3_000_000_001L;
         storageSourceTank(helper, C, RouterTier.ULTIMATE).store().insert(source, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.setGameMode(GameType.CREATIVE);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(C).above()));
         player.gameMode.destroyBlock(helper.absolutePos(C));
         ItemStack item = pickUp(helper, C, StorageKind.SOURCE_TANK, source);
-        helper.assertValueEqual(StorageBlockItem.tierOf(item), RouterTier.ULTIMATE, "tier no item");
+        GameTestCompat.assertValueEqual(helper, StorageBlockItem.tierOf(item), RouterTier.ULTIMATE, "tier no item");
         place(helper, item, C, StorageKind.SOURCE_TANK);
-        StorageSourceTankBlockEntity placed = helper.getBlockEntity(C);
-        helper.assertValueEqual(placed.store().stored(), source, "a Source voltou");
-        helper.assertValueEqual(helper.getBlockState(C).getValue(StorageSourceTankBlock.FILL), 10, "nível do bloco recolocado");
+        StorageSourceTankBlockEntity placed = GameTestCompat.getBlockEntity(helper, C);
+        GameTestCompat.assertValueEqual(helper, placed.store().stored(), source, "a Source voltou");
+        GameTestCompat.assertValueEqual(helper, helper.getBlockState(C).getValue(StorageSourceTankBlock.FILL), 10, "nível do bloco recolocado");
         helper.succeed();
     }
 
@@ -973,16 +971,16 @@ public final class StorageGameTests {
             long energy = (long) c[2];
             storageBattery(helper, A, RouterTier.ELITE).store().insert(energy, false);
             BlockPos absolute = helper.absolutePos(A);
-            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
             player.moveTo(Vec3.atCenterOf(absolute.above()));
             player.setGameMode((GameType) c[0]);
             player.setItemInHand(InteractionHand.MAIN_HAND, (ItemStack) c[1]);
             player.gameMode.destroyBlock(absolute);
             helper.assertBlockNotPresent(ModBlocks.STORAGE.get(StorageKind.BATTERY).get(), A);
             ItemStack item = pickUp(helper, A, StorageKind.BATTERY, energy);
-            helper.assertValueEqual(StorageBlockItem.tierOf(item), RouterTier.ELITE, "tier no item (" + c[0] + ")");
+            GameTestCompat.assertValueEqual(helper, StorageBlockItem.tierOf(item), RouterTier.ELITE, "tier no item (" + c[0] + ")");
             place(helper, item, A, StorageKind.BATTERY);
-            helper.assertValueEqual(energy(helper, A), energy, "energia de volta (" + c[0] + ", " + c[1] + ")");
+            GameTestCompat.assertValueEqual(helper, energy(helper, A), energy, "energia de volta (" + c[0] + ", " + c[1] + ")");
             helper.setBlock(A, Blocks.AIR);
         }
         helper.succeed();
@@ -992,8 +990,8 @@ public final class StorageGameTests {
     private static ItemStack pickUp(GameTestHelper helper, BlockPos pos, StorageKind kind, long total) {
         List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                 new AABB(helper.absolutePos(pos)).inflate(1.5), entity -> entity.getItem().is(ModItems.STORAGE.get(kind).get()));
-        helper.assertValueEqual(drops.size(), 1, kind + " no chão");
-        StorageContents contents = drops.get(0).getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+        GameTestCompat.assertValueEqual(helper, drops.size(), 1, kind + " no chão");
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(drops.get(0).getItem());
         helper.assertTrue(contents != null && contents.total() == total, kind + " leva o conteúdo: " + contents);
         ItemStack stack = drops.get(0).getItem().copy();
         drops.get(0).discard();
@@ -1006,7 +1004,7 @@ public final class StorageGameTests {
     public static void tankScreenFillsAndEmptiesBuckets(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         tank.storage().insert(new FluidStack(Fluids.WATER, 1), 5_000, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
         player.getInventory().clearContent();
         StorageListMenu<FluidStack> menu = (StorageListMenu<FluidStack>) (StorageListMenu<?>)
@@ -1017,15 +1015,15 @@ public final class StorageGameTests {
         helper.assertTrue(StorageListMenu.handle(player, new StorageActionPayload(CONTAINER_ID, StorageKind.TANK,
                 StorageActionPayload.Action.TAKE_STACK, Optional.of(water))), "encher o balde");
         helper.assertTrue(menu.getCarried().is(Items.WATER_BUCKET), "balde de água no cursor: " + menu.getCarried());
-        helper.assertValueEqual(tank.storage().count(water), 4_000L, "saiu um balde");
+        GameTestCompat.assertValueEqual(helper, tank.storage().count(water), 4_000L, "saiu um balde");
         helper.assertTrue(StorageListMenu.handle(player, new StorageActionPayload(CONTAINER_ID, StorageKind.TANK,
                 StorageActionPayload.Action.INSERT_CARRIED)), "esvaziar o balde");
         helper.assertTrue(menu.getCarried().is(Items.BUCKET), "balde vazio no cursor");
-        helper.assertValueEqual(tank.storage().count(water), 5_000L, "voltou o balde");
+        GameTestCompat.assertValueEqual(helper, tank.storage().count(water), 5_000L, "voltou o balde");
         menu.setCarried(ItemStack.EMPTY);
         player.getInventory().setItem(9, new ItemStack(Items.WATER_BUCKET));
         menu.quickMoveStack(player, 0);
-        helper.assertValueEqual(tank.storage().count(water), 6_000L, "Shift + clique esvaziou o balde do inventário");
+        GameTestCompat.assertValueEqual(helper, tank.storage().count(water), 6_000L, "Shift + clique esvaziou o balde do inventário");
         helper.assertTrue(player.getInventory().countItem(Items.BUCKET) == 1, "o balde vazio voltou ao inventário");
         helper.succeed();
     }

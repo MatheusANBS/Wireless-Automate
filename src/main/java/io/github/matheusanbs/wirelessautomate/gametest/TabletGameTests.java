@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
-import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -30,10 +29,8 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -41,11 +38,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.protocol.PacketFlow;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
@@ -54,8 +48,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -75,7 +69,7 @@ public final class TabletGameTests {
         helper.setBlock(machine, Blocks.CHEST);
         BlockPos pos = machine.above();
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(pos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, pos);
         router.setNetworkId(network);
         return router;
     }
@@ -100,7 +94,7 @@ public final class TabletGameTests {
     /** Jogador falso com um Tablet no inventário, perto de {@code pos}. */
     @SuppressWarnings("removal")
     private static ServerPlayer playerWithTablet(GameTestHelper helper, BlockPos pos) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above(2)));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         return player;
@@ -169,8 +163,8 @@ public final class TabletGameTests {
                     helper.assertTrue(entry.network(ResourceType.ENERGY) == null, "energia sem rede");
 
                     // ida e volta pelo arquivo
-                    CompoundTag saved = index(helper).save(new CompoundTag(), helper.getLevel().registryAccess());
-                    NodeIndex.Entry loaded = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                    CompoundTag saved = index(helper).save(new CompoundTag());
+                    NodeIndex.Entry loaded = NodeIndex.load(saved).entry(key);
                     helper.assertTrue(loaded != null, "nó perdido ao salvar");
                     eq(helper, loaded.name(), "Baú do índice", "nome salvo");
                     eq(helper, loaded.roles(), entry.roles(), "papéis salvos");
@@ -310,8 +304,7 @@ public final class TabletGameTests {
                 .thenExecute(() -> {
                     // cabeçalho e página vão à parte; o cliente junta os dois
                     TabletSnapshot server = again.snapshot();
-                    RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
-                            helper.getLevel().registryAccess());
+                    RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
                     TabletSnapshot.HEADER_CODEC.encode(buf, server);
                     TabletSnapshot.Page.STREAM_CODEC.encode(buf, server.page());
                     TabletMenu client = new TabletMenu(80, player.getInventory(), TabletSnapshot.HEADER_CODEC.decode(buf));
@@ -472,7 +465,7 @@ public final class TabletGameTests {
                     helper.assertTrue(TabletPayloads.handleAction(player, new TabletActionPayload(76, Action.GROUP_PAUSE,
                             Optional.of(group.id()), Optional.empty(), "", 1)), "pausar");
                     helper.assertTrue(data.isPaused(network.id()), "rede não pausada");
-                    ((ChestBlockEntity) helper.getBlockEntity(A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
+                    ((ChestBlockEntity) GameTestCompat.getBlockEntity(helper, A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
                 })
                 .thenIdle(30)
                 .thenExecute(() -> {
@@ -493,7 +486,7 @@ public final class TabletGameTests {
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Item item) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             if (chest.getItem(i).is(item)) {
@@ -505,51 +498,11 @@ public final class TabletGameTests {
 
     // ------------------------------------------------------------------ abrir à distância
 
-    /** Jogador falso que abre telas sem o pacote de abertura (como o de {@code FilterMenuGameTests}). */
-    private static final class MockPlayer extends ServerPlayer {
-        private static int nextContainerId = 300;
-
-        MockPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
-            super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
-        }
-
-        @Override
-        public boolean isSpectator() {
-            return false;
-        }
-
-        @Override
-        public boolean isCreative() {
-            return true;
-        }
-
-        @Override
-        public OptionalInt openMenu(@Nullable MenuProvider provider,
-                @Nullable Consumer<RegistryFriendlyByteBuf> extraDataWriter) {
-            if (provider == null) {
-                return OptionalInt.empty();
-            }
-            int containerId = nextContainerId++;
-            AbstractContainerMenu menu = provider.createMenu(containerId, getInventory(), this);
-            if (menu == null) {
-                return OptionalInt.empty();
-            }
-            if (extraDataWriter != null) {
-                extraDataWriter.accept(new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess()));
-            }
-            containerMenu = menu;
-            return OptionalInt.of(containerId);
-        }
-    }
-
     @GameTest(template = "empty")
     public static void openRouterFromAfar(GameTestHelper helper) {
-        CommonListenerCookie cookie = CommonListenerCookie.createInitial(
-                new GameProfile(UUID.randomUUID(), "test-mock-player"), false);
-        MockPlayer player = new MockPlayer(helper, cookie);
-        Connection connection = new Connection(PacketFlow.SERVERBOUND);
-        new EmbeddedChannel(connection);
-        helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        // Porte 1.20.1: no main, um MockPlayer sobrescrevia o openMenu do NeoForge; no Forge a abertura é estática
+        // (NetworkHooks.openScreen) e as telas abrem pelo caminho de verdade, com o pacote na conexão embutida.
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         WaNetwork network = data(helper).create(player.getUUID(), "teste-abrir");
         RouterBlockEntity router = chestWithRouter(helper, A, network.id());

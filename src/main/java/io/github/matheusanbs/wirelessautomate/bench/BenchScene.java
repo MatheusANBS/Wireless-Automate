@@ -38,10 +38,11 @@ import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -119,7 +120,7 @@ final class BenchScene {
         for (Item item : BuiltInRegistries.ITEM) {
             ResourceLocation key = BuiltInRegistries.ITEM.getKey(item);
             if (!key.getNamespace().equals("minecraft") || item == Items.AIR
-                    || item.getDefaultMaxStackSize() != 64
+                    || item.getMaxStackSize() != 64
                     || (item instanceof BlockItem block && block.getBlock() instanceof ShulkerBoxBlock)) {
                 continue;
             }
@@ -231,12 +232,12 @@ final class BenchScene {
                     level.setBlock(node.machine(), storage.big().defaultBlockState(), PLACE_FLAGS);
                 }
             }
-            case FLUID_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SOURCE.defaultBlockState(), PLACE_FLAGS);
-            case FLUID_SINK -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SINK.defaultBlockState(), PLACE_FLAGS);
-            case ENERGY_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SOURCE.defaultBlockState(), PLACE_FLAGS);
-            case ENERGY_SINK -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SINK.defaultBlockState(), PLACE_FLAGS);
-            case STACK_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.STACK_SOURCE.defaultBlockState(), PLACE_FLAGS);
-            case ITEM_SINK -> level.setBlock(node.machine(), BenchCapabilities.ITEM_SINK.defaultBlockState(), PLACE_FLAGS);
+            case FLUID_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SOURCE.get().defaultBlockState(), PLACE_FLAGS);
+            case FLUID_SINK -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SINK.get().defaultBlockState(), PLACE_FLAGS);
+            case ENERGY_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SOURCE.get().defaultBlockState(), PLACE_FLAGS);
+            case ENERGY_SINK -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SINK.get().defaultBlockState(), PLACE_FLAGS);
+            case STACK_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.STACK_SOURCE.get().defaultBlockState(), PLACE_FLAGS);
+            case ITEM_SINK -> level.setBlock(node.machine(), BenchCapabilities.ITEM_SINK.get().defaultBlockState(), PLACE_FLAGS);
         }
     }
 
@@ -263,7 +264,7 @@ final class BenchScene {
     private Filter destinationFilter() {
         List<FilterEntry> entries = new ArrayList<>();
         for (String tag : new String[] {"minecraft:logs", "minecraft:planks", "minecraft:wool", "c:ingots", "c:gems", "c:ores"}) {
-            entries.add(new FilterEntry.TagEntry(ResourceLocation.parse(tag), 0));
+            entries.add(new FilterEntry.TagEntry(new ResourceLocation(tag), 0));
         }
         for (Item item : junkItems) {
             entries.add(new FilterEntry.ItemEntry(new ItemStack(item), 0));
@@ -511,7 +512,7 @@ final class BenchScene {
         } else if (scenario == BenchScenario.STOCK) {
             int left = STOCK_LIMIT;
             for (int slot = 0; slot < handler.getSlots() && left > 0; slot++) {
-                int count = Math.min(left, Items.COBBLESTONE.getDefaultMaxStackSize());
+                int count = Math.min(left, Items.COBBLESTONE.getMaxStackSize());
                 left -= count - handler.insertItem(slot, new ItemStack(Items.COBBLESTONE, count), false).getCount();
             }
         } else if (scenario == BenchScenario.FULL) {
@@ -551,7 +552,7 @@ final class BenchScene {
         if (!inSlot.isEmpty() && !inSlot.is(item)) {
             return 0;
         }
-        int want = Math.min(handler.getSlotLimit(slot), item.getDefaultMaxStackSize()) - inSlot.getCount();
+        int want = Math.min(handler.getSlotLimit(slot), item.getMaxStackSize()) - inSlot.getCount();
         if (want <= 0) {
             return 0;
         }
@@ -577,7 +578,8 @@ final class BenchScene {
         if (node.kind() != Machine.SMALL && node.kind() != Machine.BIG) {
             return null;
         }
-        return level.getCapability(Capabilities.ItemHandler.BLOCK, node.machine(), Direction.UP);
+        BlockEntity be = level.getBlockEntity(node.machine());
+        return be == null ? null : be.getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.UP).resolve().orElse(null);
     }
 
     /** Tira a rede, esvazia e remove tudo, solta os chunks. */

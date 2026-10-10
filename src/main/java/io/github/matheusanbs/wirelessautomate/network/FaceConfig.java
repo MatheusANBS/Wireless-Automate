@@ -7,7 +7,6 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import java.util.Locale;
 import java.util.Objects;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 
@@ -117,14 +116,10 @@ public final class FaceConfig {
         return config;
     }
 
-    /** NBT compacto pelo {@link #CODEC}: uma face padrão vira uma tag vazia. Porte 1.20.1: igual a {@link #save()}. */
-    public CompoundTag save(HolderLookup.Provider registries) {
-        return save();
-    }
-
     /**
-     * Porte 1.20.1: {@link #save(HolderLookup.Provider)} sem os registros (o block entity grava e lê sem o
-     * mundo, no {@code saveAdditional}/{@code load}); os codecs do filtro só precisam do {@link NbtOps}.
+     * NBT compacto pelo {@link #CODEC}: uma face padrão vira uma tag vazia. Porte 1.20.1: sem os registros (o block
+     * entity grava e lê sem o mundo, no {@code saveAdditional}/{@code load}); os codecs do filtro só precisam do
+     * {@link NbtOps}.
      */
     public CompoundTag save() {
         return CODEC.encodeStart(NbtOps.INSTANCE, this)
@@ -134,16 +129,14 @@ public final class FaceConfig {
                 .orElseGet(CompoundTag::new);
     }
 
-    /** Porte 1.20.1: {@link #load(CompoundTag, HolderLookup.Provider)} sem os registros (ver {@link #save()}). */
+    /**
+     * Lê o formato de {@link #save}; também lê as tags antigas, sem filtro. Campo ausente ou inválido fica no padrão.
+     * Porte 1.20.1: sem os registros (ver {@link #save()}).
+     */
     public static FaceConfig load(CompoundTag tag) {
         return CODEC.parse(NbtOps.INSTANCE, tag)
                 .resultOrPartial(error -> WirelessAutomate.LOGGER.warn("Face com dados inválidos ({}): {}", error, tag))
                 .orElseGet(FaceConfig::new);
-    }
-
-    /** Lê o formato de {@link #save}; também lê as tags antigas, sem filtro. Campo ausente ou inválido fica no padrão. */
-    public static FaceConfig load(CompoundTag tag, HolderLookup.Provider registries) {
-        return load(tag); // porte 1.20.1: sem os registros
     }
 
     private static <E extends Enum<E>> Codec<E> enumCodec(Class<E> type, E fallback) {

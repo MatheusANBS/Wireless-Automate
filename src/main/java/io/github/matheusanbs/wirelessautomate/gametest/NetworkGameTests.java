@@ -27,8 +27,8 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Redes, rede ativa e Vinculador. O {@link NetworkSavedData} é global do servidor e os testes
@@ -67,7 +67,7 @@ public final class NetworkGameTests {
     public static void activeOrCreateCreatesAndReuses(GameTestHelper helper) {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         UUID playerId = player.getUUID();
         try {
             helper.assertTrue(data.activeNetwork(playerId) == null, "jogador novo já tinha rede ativa");
@@ -99,8 +99,8 @@ public final class NetworkGameTests {
         original.setActiveNetwork(alice, power.id());
         original.setActiveNetwork(bob, slurry.id());
 
-        CompoundTag tag = original.save(new CompoundTag(), helper.getLevel().registryAccess());
-        NetworkSavedData loaded = NetworkSavedData.load(tag, helper.getLevel().registryAccess());
+        CompoundTag tag = original.save(new CompoundTag());
+        NetworkSavedData loaded = NetworkSavedData.load(tag);
 
         helper.assertTrue(List.copyOf(loaded.networks()).equals(List.of(ore, slurry, power)),
                 "redes ou ordem de criação diferentes após carregar");
@@ -114,10 +114,10 @@ public final class NetworkGameTests {
     public static void linkerPutsRouterInActiveNetwork(GameTestHelper helper) {
         helper.setBlock(MACHINE, Blocks.CHEST);
         helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(ROUTER);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, ROUTER);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         try {
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
             BlockPos pos = helper.absolutePos(ROUTER);
@@ -153,7 +153,7 @@ public final class NetworkGameTests {
         helper.setBlock(MACHINE, Blocks.CHEST);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork active = data.create(player.getUUID(), "Ativa " + player.getUUID());
         data.setActiveNetwork(player.getUUID(), active.id());
         try {
@@ -163,12 +163,12 @@ public final class NetworkGameTests {
                     new BlockHitResult(Vec3.atCenterOf(machine).add(0, 0.5, 0), Direction.UP, machine, false));
             helper.assertTrue(player.getMainHandItem().useOn(context).consumesAction(), "não colocou o roteador");
             helper.assertBlockPresent(ModBlocks.ROUTER.get(), ROUTER);
-            RouterBlockEntity router = helper.getBlockEntity(ROUTER);
+            RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, ROUTER);
             for (ResourceType type : ResourceType.values()) {
                 helper.assertTrue(router.networkId(type) == null, type + " entrou numa rede ao colocar");
             }
             helper.assertTrue(!router.hasNetwork(), "hasNetwork depois de colocar");
-            helper.assertValueEqual(data.activeNetwork(player.getUUID()), active.id(), "rede ativa mudou");
+            GameTestCompat.assertValueEqual(helper, data.activeNetwork(player.getUUID()), active.id(), "rede ativa mudou");
         } finally {
             data.remove(active.id());
             helper.getLevel().getServer().getPlayerList().remove(player);

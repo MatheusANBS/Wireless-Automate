@@ -1,19 +1,22 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.gametest.TestCapabilityBlock;
+import java.util.function.Supplier;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.registries.RegisterEvent;
 
 /**
  * Máquinas de teste para o cenário misto: o vanilla não tem bloco com energia, e o caldeirão troca
@@ -21,16 +24,28 @@ import net.neoforged.neoforge.items.IItemHandler;
  * 1 slot com uma pilha enorme (gaveta, bin) e o ralo de itens do cenário {@code bigstack}. Só existem com
  * {@code -Dwirelessautomate.bench=true} (o run {@code benchServer} liga), presas a blocos vanilla sem
  * capability: fonte infinita e ralo que aceita tudo, sem estado, então o custo medido é só o do mod.
- * O evento é do barramento do mod; o {@code @EventBusSubscriber} descobre o barramento pelo tipo.
+ * O evento é do barramento do mod.
+ *
+ * <p>Porte 1.20.1 (D3): no {@code main} eram blocos vanilla com a capability presa pelo NeoForge; aqui são
+ * {@link TestCapabilityBlock}s (um block entity mínimo com as propriedades do bloco vanilla de antes),
+ * registrados só com a propriedade ligada. Por isso os campos viraram {@link Supplier}.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class BenchCapabilities {
-    public static final Block FLUID_SOURCE = Blocks.LAPIS_BLOCK;
-    public static final Block FLUID_SINK = Blocks.PRISMARINE_BRICKS;
-    public static final Block ENERGY_SOURCE = Blocks.EMERALD_BLOCK;
-    public static final Block ENERGY_SINK = Blocks.DIAMOND_BLOCK;
-    public static final Block STACK_SOURCE = Blocks.GOLD_BLOCK;
-    public static final Block ITEM_SINK = Blocks.IRON_BLOCK;
+    private static final TestCapabilityBlock.Group MACHINES = new TestCapabilityBlock.Group("bench_machine")
+            .add("fluid_source", Blocks.LAPIS_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? InfiniteWater.INSTANCE : null)
+            .add("fluid_sink", Blocks.PRISMARINE_BRICKS, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? FluidVoid.INSTANCE : null)
+            .add("energy_source", Blocks.EMERALD_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.ENERGY ? InfiniteEnergy.INSTANCE : null)
+            .add("energy_sink", Blocks.DIAMOND_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.ENERGY ? EnergyVoid.INSTANCE : null)
+            .add("stack_source", Blocks.GOLD_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.ITEM_HANDLER ? BigStack.INSTANCE : null)
+            .add("item_sink", Blocks.IRON_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.ITEM_HANDLER ? ItemVoid.INSTANCE : null);
+
+    public static final Supplier<Block> FLUID_SOURCE = () -> MACHINES.block("fluid_source");
+    public static final Supplier<Block> FLUID_SINK = () -> MACHINES.block("fluid_sink");
+    public static final Supplier<Block> ENERGY_SOURCE = () -> MACHINES.block("energy_source");
+    public static final Supplier<Block> ENERGY_SINK = () -> MACHINES.block("energy_sink");
+    public static final Supplier<Block> STACK_SOURCE = () -> MACHINES.block("stack_source");
+    public static final Supplier<Block> ITEM_SINK = () -> MACHINES.block("item_sink");
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.bench");
 
@@ -59,17 +74,14 @@ public final class BenchCapabilities {
     }
 
     @SubscribeEvent
-    static void register(RegisterCapabilitiesEvent event) {
+    public static void register(RegisterEvent event) {
         if (!ENABLED) {
             return;
         }
-        WirelessAutomate.LOGGER.info("Benchmark: máquinas de teste de fluido e energia ligadas");
-        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> InfiniteWater.INSTANCE, FLUID_SOURCE);
-        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> FluidVoid.INSTANCE, FLUID_SINK);
-        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> InfiniteEnergy.INSTANCE, ENERGY_SOURCE);
-        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> EnergyVoid.INSTANCE, ENERGY_SINK);
-        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> BigStack.INSTANCE, STACK_SOURCE);
-        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> ItemVoid.INSTANCE, ITEM_SINK);
+        if (event.getRegistryKey().equals(Registries.BLOCK)) {
+            WirelessAutomate.LOGGER.info("Benchmark: máquinas de teste de fluido e energia ligadas");
+        }
+        MACHINES.register(event);
     }
 
     /**
@@ -98,7 +110,7 @@ public final class BenchCapabilities {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            int count = Math.min(amount, Items.COBBLESTONE.getDefaultMaxStackSize());
+            int count = Math.min(amount, Items.COBBLESTONE.getMaxStackSize());
             return count <= 0 ? ItemStack.EMPTY : new ItemStack(Items.COBBLESTONE, count);
         }
 
@@ -184,7 +196,7 @@ public final class BenchCapabilities {
 
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            return resource.is(Fluids.WATER) ? resource.copy() : FluidStack.EMPTY;
+            return resource.getFluid() == Fluids.WATER ? resource.copy() : FluidStack.EMPTY;
         }
 
         @Override

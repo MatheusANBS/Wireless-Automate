@@ -20,31 +20,34 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Source do Ars Nouveau: Source Jars de verdade, um roteador em cima de cada (facing=UP, face
  * configurada {@link net.minecraft.core.Direction#UP}). Rodam só na run {@code runGameTestServerSource},
  * que tem o Ars na pasta mods e liga o namespace {@value #NAMESPACE} (o template é
- * {@code data/wirelessautomate_source/structure/empty.nbt}). Sem o Ars, só passam.
+ * {@code data/wirelessautomate_source/structures/empty.nbt}). Sem o Ars, só passam.
  *
- * <p>Nenhum tipo do Ars nas assinaturas: o NeoForge inspeciona esta classe por reflexão mesmo sem o
+ * <p>Porte 1.20.1: os Relays do Ars 4.12 só ligam em {@code AbstractSourceMachine}, então não ligam no Tanque de
+ * Source (limitação documentada); o {@code main} não tem teste de Relay aqui, e nenhum foi acrescentado.
+ *
+ * <p>Nenhum tipo do Ars nas assinaturas: o Forge inspeciona esta classe por reflexão mesmo sem o
  * Ars. O que usa a API fica em {@code SourceTestSupport}.
  */
 @GameTestHolder(SourceGameTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class SourceGameTests {
     static final String NAMESPACE = "wirelessautomate_source";
-    static final ResourceLocation JAR = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar");
+    static final ResourceLocation JAR = new ResourceLocation("ars_nouveau", "source_jar");
 
     /** A run de Source está ligada e o Ars está presente. */
     static boolean enabled() {
         return Boolean.getBoolean("wirelessautomate.sourceTests") && ModList.get().isLoaded("ars_nouveau");
     }
 
-    /** A run de Source carrega o Ars, e a Source Jar existe no registro e tem a capability. */
+    /** A run de Source carrega o Ars, e a Source Jar existe no registro e guarda Source ({@code ISourceTile} no 1.20.1). */
     @GameTest(template = "empty")
     public static void arsNouveauIsLoaded(GameTestHelper helper) {
         if (!Boolean.getBoolean("wirelessautomate.sourceTests")) {
@@ -55,7 +58,7 @@ public final class SourceGameTests {
         helper.assertTrue(BuiltInRegistries.BLOCK.get(JAR) != Blocks.AIR, "sem a Source Jar no registro");
         helper.setBlock(A, BuiltInRegistries.BLOCK.get(JAR));
         helper.assertTrue(SourceTestSupport.hasSource(helper.getLevel(), helper.absolutePos(A)),
-                "Source Jar sem a capability ars_nouveau:source");
+                "Source Jar sem ISourceTile");
         helper.succeed();
     }
 
@@ -74,7 +77,7 @@ public final class SourceGameTests {
         BlockPos routerPos = pos.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, tier));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         router.setMode(ResourceType.SOURCE, Direction.UP, mode);
         return router;
@@ -113,8 +116,8 @@ public final class SourceGameTests {
                 .thenWaitUntil(() -> helper.assertTrue(registered(from, to), "roteadores não registrados"))
                 .thenExecute(() -> set(helper, A, 5_000))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(amount(helper, B), 5_000, "Source no destino");
-                    helper.assertValueEqual(amount(helper, A), 0, "Source na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B), 5_000, "Source no destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A), 0, "Source na origem");
                 })
                 .thenSucceed();
     }
@@ -134,9 +137,9 @@ public final class SourceGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(registered(from, high, low), "roteadores não registrados"))
                 .thenExecute(() -> set(helper, A, 3_000))
-                .thenWaitUntil(() -> helper.assertValueEqual(amount(helper, B), 3_000, "Source na prioridade 5"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, amount(helper, B), 3_000, "Source na prioridade 5"))
                 .thenIdle(10)
-                .thenExecute(() -> helper.assertValueEqual(amount(helper, C), 0, "Source na prioridade 0"))
+                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, amount(helper, C), 0, "Source na prioridade 0"))
                 .thenSucceed();
     }
 
@@ -154,10 +157,10 @@ public final class SourceGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(registered(from, first, second), "roteadores não registrados"))
                 .thenExecute(() -> set(helper, A, 4_000))
-                .thenWaitUntil(() -> helper.assertValueEqual(amount(helper, A), 0, "Source na origem"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, amount(helper, A), 0, "Source na origem"))
                 .thenExecute(() -> {
-                    helper.assertValueEqual(amount(helper, B), 2_000, "primeira jarra");
-                    helper.assertValueEqual(amount(helper, C), 2_000, "segunda jarra");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B), 2_000, "primeira jarra");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, C), 2_000, "segunda jarra");
                 })
                 .thenSucceed();
     }
@@ -183,12 +186,12 @@ public final class SourceGameTests {
                 })
                 .thenIdle(40)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(amount(helper, A), 1_000, "saiu Source para uma jarra cheia");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A), 1_000, "saiu Source para uma jarra cheia");
                     set(helper, B, 0);
                 })
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(amount(helper, B), 1_000, "Source depois de esvaziar o destino");
-                    helper.assertValueEqual(amount(helper, A), 0, "Source na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B), 1_000, "Source depois de esvaziar o destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A), 0, "Source na origem");
                 })
                 .thenSucceed();
     }
@@ -213,7 +216,7 @@ public final class SourceGameTests {
                     helper.assertTrue(moved >= 100, "o limitador travou, passou só " + moved);
                     // Um segundo de balde (100) + 20 ticks a 5 por tick (100), com folga de um tick.
                     helper.assertTrue(moved <= 205, "passou do limite do tier: " + moved);
-                    helper.assertValueEqual(amount(helper, A) + moved, 10_000, "Source perdida ou criada");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A) + moved, 10_000, "Source perdida ou criada");
                 })
                 .thenSucceed();
     }
@@ -228,7 +231,7 @@ public final class SourceGameTests {
     }
 
     private static StorageSourceTankBlockEntity tank(GameTestHelper helper, BlockPos pos) {
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     /** Tanque de Source do tier em {@code pos}, com um roteador Ultimate em cima, na rede, no modo dado. */
@@ -238,7 +241,7 @@ public final class SourceGameTests {
         BlockPos routerPos = pos.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         router.setMode(ResourceType.SOURCE, Direction.UP, mode);
         return router;
@@ -267,8 +270,8 @@ public final class SourceGameTests {
                 .thenWaitUntil(() -> helper.assertTrue(registered(from, to), "roteadores não registrados"))
                 .thenExecute(() -> set(helper, A, 5_000))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(tank(helper, B).store().stored(), 5_000L, "Source no tanque");
-                    helper.assertValueEqual(amount(helper, A), 0, "Source na jarra");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, B).store().stored(), 5_000L, "Source no tanque");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A), 0, "Source na jarra");
                 })
                 .thenSucceed();
     }
@@ -296,13 +299,16 @@ public final class SourceGameTests {
                 // numa visita só: sem o caminho em bloco, a primeira leitura não vazia seria Integer.MAX_VALUE
                 .thenWaitUntil(() -> helper.assertTrue(tank(helper, B).store().stored() > 0, "nada chegou ao destino"))
                 .thenExecute(() -> {
-                    helper.assertValueEqual(tank(helper, B).store().stored(), 3_000_000_000L, "Source no destino");
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 0L, "Source na origem");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, B).store().stored(), 3_000_000_000L, "Source no destino");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 0L, "Source na origem");
                 })
                 .thenSucceed();
     }
 
-    /** As máquinas do Ars tiram do tanque pelo SourceManager; sem o bastante, o Ars devolve o que tirou. */
+    /**
+     * As máquinas do Ars tiram do tanque pelo SourceManager; sem o bastante, nada sai. Porte 1.20.1: o Ars 4.12 tira
+     * de uma fonte só ({@code takeSource}); no {@code main}, o Ars juntava fontes e devolvia o que tirou.
+     */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void arsMachinesTakeFromTank(GameTestHelper helper) {
         if (!enabled()) {
@@ -315,10 +321,10 @@ public final class SourceGameTests {
                 .thenExecute(() -> {
                     helper.assertTrue(SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 2_000),
                             "o Ars não tirou 2.000 do tanque");
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000L, "Source depois de tirar");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 3_000L, "Source depois de tirar");
                     helper.assertTrue(!SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 9_000),
                             "o Ars tirou 9.000 de um tanque com 3.000");
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000L, "Source depois de devolver");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 3_000L, "Source depois de devolver");
                 })
                 .thenSucceed();
     }
@@ -336,7 +342,7 @@ public final class SourceGameTests {
                 .thenExecute(() -> {
                     helper.assertTrue(SourceTestSupport.takeNearby(helper.getLevel(), center(helper), 5, 1_000),
                             "o Ars não tirou 1.000 do tanque");
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 2_999_999_000L, "Source depois de tirar");
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 2_999_999_000L, "Source depois de tirar");
                 })
                 .thenSucceed();
     }
@@ -359,9 +365,9 @@ public final class SourceGameTests {
                     List<BlockPos> empty = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(empty.contains(tankPos), "o tanque vazio não aceita Source: " + empty);
                     SourceTestSupport.set(helper.getLevel(), tankPos, 200_000);
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 10_000L,
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 10_000L,
                             "setSource limitado à capacidade");
-                    helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10,
+                    GameTestCompat.assertValueEqual(helper, helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10,
                             "nível depois do setSource");
                     List<BlockPos> full = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(!full.contains(tankPos), "o tanque cheio ainda aceita Source");
@@ -388,11 +394,11 @@ public final class SourceGameTests {
                     List<BlockPos> full = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(!full.contains(tankPos), "o tanque com o int cheio aparece para os Sourcelinks");
                     SourceTestSupport.set(helper.getLevel(), tankPos, Integer.MAX_VALUE);
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 3_000_000_000L,
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 3_000_000_000L,
                             "setSource(MAX) derrubou o conteúdo acima do int");
                     // um setSource(getSource() - n) de terceiros tira só n, não derruba para o teto do int
                     SourceTestSupport.set(helper.getLevel(), tankPos, Integer.MAX_VALUE - 1000);
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 2_999_999_000L,
+                    GameTestCompat.assertValueEqual(helper, tank(helper, A).store().stored(), 2_999_999_000L,
                             "setSource(MAX - 1000) não tirou só 1000");
                     tank(helper, A).store().extract(2_999_999_000L - 1_000_000L, false);
                     List<BlockPos> room = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
@@ -417,7 +423,7 @@ public final class SourceGameTests {
                 .thenSucceed();
     }
 
-    /** A capability do Ars no tanque, em int: quantidade e capacidade cortadas no Integer.MAX_VALUE. */
+    /** A visão do Ars no tanque ({@code ISourceTile} no 1.20.1), em int: quantidade e capacidade cortadas no Integer.MAX_VALUE. */
     @GameTest(template = "empty")
     public static void tankHasSourceCapability(GameTestHelper helper) {
         if (!enabled()) {
@@ -426,10 +432,10 @@ public final class SourceGameTests {
         }
         placeTank(helper, A, RouterTier.ULTIMATE).store().insert(3_000_000_000L, false);
         helper.assertTrue(SourceTestSupport.hasSource(helper.getLevel(), helper.absolutePos(A)),
-                "tanque sem a capability ars_nouveau:source");
-        helper.assertValueEqual(SourceTestSupport.capacity(helper.getLevel(), helper.absolutePos(A)),
+                "tanque sem ISourceTile");
+        GameTestCompat.assertValueEqual(helper, SourceTestSupport.capacity(helper.getLevel(), helper.absolutePos(A)),
                 Integer.MAX_VALUE, "capacidade do Ultimate");
-        helper.assertValueEqual(amount(helper, A), Integer.MAX_VALUE, "quantidade acima do int");
+        GameTestCompat.assertValueEqual(helper, amount(helper, A), Integer.MAX_VALUE, "quantidade acima do int");
         helper.succeed();
     }
 
@@ -441,7 +447,7 @@ public final class SourceGameTests {
             return;
         }
         helper.assertTrue(helper.getLevel().getRecipeManager()
-                .byKey(ResourceLocation.fromNamespaceAndPath("wirelessautomate", "storage_source_tank")).isPresent(),
+                .byKey(new ResourceLocation("wirelessautomate", "storage_source_tank")).isPresent(),
                 "sem a receita do Tanque de Source");
         helper.succeed();
     }

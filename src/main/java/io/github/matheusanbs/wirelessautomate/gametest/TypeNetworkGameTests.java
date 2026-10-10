@@ -25,15 +25,13 @@ import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.RegistryOps;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
@@ -41,13 +39,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -68,14 +68,14 @@ public final class TypeNetworkGameTests {
         helper.setBlock(machine, machineState);
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(others);
         router.setNetworkId(ResourceType.ITEM, items);
         return router;
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Item item) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack stack = chest.getItem(i);
@@ -120,9 +120,16 @@ public final class TypeNetworkGameTests {
      * Itens: A (extrai) e B na rede X, o chamariz C na Y. Fluidos: D (extrai) e E na rede Y, o
      * chamariz F na X. Os diamantes vão de A para B e a água de D para E; C e F ficam vazios. Os
      * baús ficam em diagonal para não virarem baú duplo.
+     *
+     * <p>Porte 1.20.1: os fluidos ficam em tanques de teste ({@link TestMachines#SIMPLE_TANK}) no lugar dos
+     * caldeirões do {@code main}, que o NeoForge expõe como handler de fluido e o Forge 1.20.1 não.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void eachTypeFollowsItsOwnNetwork(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
         UUID x = newNetwork(helper, "teste-aba-x");
         UUID y = newNetwork(helper, "teste-aba-y");
         BlockPos a = new BlockPos(0, 1, 0);
@@ -135,36 +142,43 @@ public final class TypeNetworkGameTests {
         RouterBlockEntity ra = place(helper, a, chest, x, y);
         RouterBlockEntity rb = place(helper, b, chest, x, y);
         RouterBlockEntity rc = place(helper, c, chest, y, x);
-        RouterBlockEntity rd = place(helper, d,
-                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), x, y);
-        RouterBlockEntity re = place(helper, e, Blocks.CAULDRON.defaultBlockState(), x, y);
-        RouterBlockEntity rf = place(helper, f, Blocks.CAULDRON.defaultBlockState(), y, x);
+        BlockState tank = TestMachines.SIMPLE_TANK.get().defaultBlockState();
+        for (BlockPos pos : List.of(d, e, f)) {
+            TestMachines.reset(helper.absolutePos(pos));
+        }
+        TestMachines.simpleTank(helper.absolutePos(d)).fill(new FluidStack(Fluids.WATER, 1_000),
+                IFluidHandler.FluidAction.EXECUTE);
+        RouterBlockEntity rd = place(helper, d, tank, x, y);
+        RouterBlockEntity re = place(helper, e, tank, x, y);
+        RouterBlockEntity rf = place(helper, f, tank, y, x);
         ra.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         rb.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
         rc.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
         rd.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
         re.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
         rf.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
-        ChestBlockEntity source = helper.getBlockEntity(a);
+        ChestBlockEntity source = GameTestCompat.getBlockEntity(helper, a);
         source.setItem(0, new ItemStack(Items.DIAMOND, 10));
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, ra, rb, rc, rd, re, rf))
                 // Todo nó tem algum tipo em cada rede.
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(nodes(helper, x), 6, "nós na rede X");
-                    helper.assertValueEqual(nodes(helper, y), 6, "nós na rede Y");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, x), 6, "nós na rede X");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, y), 6, "nós na rede Y");
                 })
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(count(helper, b, Items.DIAMOND), 10, "diamantes em B");
-                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, e);
-                    helper.assertBlockProperty(e, LayeredCauldronBlock.LEVEL, 3);
+                    GameTestCompat.assertValueEqual(helper, count(helper, b, Items.DIAMOND), 10, "diamantes em B");
+                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(e)).getFluidAmount(), 1_000,
+                            "água em E");
                 })
                 .thenIdle(10)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(count(helper, c, Items.DIAMOND), 0, "itens cruzaram para a rede Y");
-                    helper.assertBlockPresent(Blocks.CAULDRON, f);
-                    helper.assertBlockPresent(Blocks.CAULDRON, d);
+                    GameTestCompat.assertValueEqual(helper, count(helper, c, Items.DIAMOND), 0, "itens cruzaram para a rede Y");
+                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(f)).getFluidAmount(), 0,
+                            "fluidos cruzaram para a rede X");
+                    GameTestCompat.assertValueEqual(helper, TestMachines.simpleTank(helper.absolutePos(d)).getFluidAmount(), 0,
+                            "água ficou em D");
                     helper.assertTrue(source.isEmpty(), "origem não esvaziou");
                 })
                 .thenSucceed();
@@ -182,26 +196,26 @@ public final class TypeNetworkGameTests {
         RouterBlockEntity target = place(helper, b, chest, first, first);
         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         target.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-        ChestBlockEntity sourceChest = helper.getBlockEntity(a);
+        ChestBlockEntity sourceChest = GameTestCompat.getBlockEntity(helper, a);
         sourceChest.setItem(0, new ItemStack(Items.DIAMOND, 10));
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenIdle(20)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(count(helper, b, Items.DIAMOND), 0, "redes diferentes trocaram");
-                    helper.assertValueEqual(nodes(helper, first), 1, "nós na rede 1");
-                    helper.assertValueEqual(nodes(helper, second), 1, "nós na rede 2");
+                    GameTestCompat.assertValueEqual(helper, count(helper, b, Items.DIAMOND), 0, "redes diferentes trocaram");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, first), 1, "nós na rede 1");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, second), 1, "nós na rede 2");
                     source.setNetworkId(ResourceType.ITEM, first);
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, b, Items.DIAMOND), 10, "diamantes em B"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, count(helper, b, Items.DIAMOND), 10, "diamantes em B"))
                 .thenExecute(() -> {
-                    helper.assertValueEqual(nodes(helper, first), 2, "nós na rede 1 depois da troca");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, first), 2, "nós na rede 1 depois da troca");
                     // Fluidos, energia e químicos do roteador A continuam na rede 2.
-                    helper.assertValueEqual(nodes(helper, second), 1, "nós na rede 2 depois da troca");
+                    GameTestCompat.assertValueEqual(helper, nodes(helper, second), 1, "nós na rede 2 depois da troca");
                     source.setNetworkId(first);
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(nodes(helper, second), 0, "rede 2 sem nós"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, nodes(helper, second), 0, "rede 2 sem nós"))
                 .thenSucceed();
     }
 
@@ -209,27 +223,26 @@ public final class TypeNetworkGameTests {
     @GameTest(template = "empty")
     public static void legacyNetworkTagAppliesToAllTypes(GameTestHelper helper) {
         BlockState state = ModBlocks.ROUTER.get().defaultBlockState();
-        HolderLookup.Provider registries = helper.getLevel().registryAccess();
         UUID legacy = UUID.randomUUID();
         CompoundTag old = new CompoundTag();
         old.putUUID("network", legacy);
 
         RouterBlockEntity router = new RouterBlockEntity(BlockPos.ZERO, state);
-        router.loadWithComponents(old, registries);
+        router.load(old);
         for (ResourceType type : ResourceType.values()) {
-            helper.assertValueEqual(router.networkId(type), legacy, "rede antiga em " + type);
+            GameTestCompat.assertValueEqual(helper, router.networkId(type), legacy, "rede antiga em " + type);
         }
 
         UUID energy = UUID.randomUUID();
         router.setNetworkId(ResourceType.ENERGY, energy);
         router.setNetworkId(ResourceType.CHEMICAL, null);
-        CompoundTag saved = router.saveWithoutMetadata(registries);
+        CompoundTag saved = router.saveWithoutMetadata();
         helper.assertFalse(saved.contains("network"), "salvou o formato antigo");
         RouterBlockEntity copy = new RouterBlockEntity(BlockPos.ZERO, state);
-        copy.loadWithComponents(saved, registries);
-        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), legacy, "itens");
-        helper.assertValueEqual(copy.networkId(ResourceType.FLUID), legacy, "fluidos");
-        helper.assertValueEqual(copy.networkId(ResourceType.ENERGY), energy, "energia");
+        copy.load(saved);
+        GameTestCompat.assertValueEqual(helper, copy.networkId(ResourceType.ITEM), legacy, "itens");
+        GameTestCompat.assertValueEqual(helper, copy.networkId(ResourceType.FLUID), legacy, "fluidos");
+        GameTestCompat.assertValueEqual(helper, copy.networkId(ResourceType.ENERGY), energy, "energia");
         helper.assertTrue(copy.networkId(ResourceType.CHEMICAL) == null, "químicos sem rede");
         helper.succeed();
     }
@@ -246,24 +259,24 @@ public final class TypeNetworkGameTests {
         RouterBlockEntity router = place(helper, new BlockPos(1, 1, 1), Blocks.CHEST.defaultBlockState(),
                 before, before);
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork active = data.create(player.getUUID(), "Base " + player.getUUID());
         data.setActiveNetwork(player.getUUID(), active.id());
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.ENERGY);
+        ModDataComponents.LINKER_TYPE.set(linker, ResourceType.ENERGY);
         player.setItemInHand(InteractionHand.MAIN_HAND, linker);
         try {
             helper.assertTrue(use(player, ModItems.LINKER.get(), router, false), "vinculador não agiu");
-            helper.assertValueEqual(router.networkId(ResourceType.ENERGY), active.id(), "energia");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), before, "itens mudaram");
-            helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-            helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ENERGY), active.id(), "energia");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), before, "itens mudaram");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
 
-            linker.remove(ModDataComponents.LINKER_TYPE.get());
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
+            ModDataComponents.LINKER_TYPE.remove(linker);
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
             use(player, ModItems.LINKER.get(), router, false);
             for (ResourceType type : LoadedTypes.LIST) {
-                helper.assertValueEqual(router.networkId(type), active.id(), "Todos não vinculou " + type);
+                GameTestCompat.assertValueEqual(helper, router.networkId(type), active.id(), "Todos não vinculou " + type);
             }
         } finally {
             data.remove(active.id());
@@ -280,7 +293,7 @@ public final class TypeNetworkGameTests {
     @GameTest(template = "empty")
     public static void cycleLinkerTypePayloadCycles(GameTestHelper helper) {
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         try {
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
@@ -292,24 +305,24 @@ public final class TypeNetworkGameTests {
             for (LinkerTabs expected : forward) {
                 helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                         "recusou avançar");
-                helper.assertValueEqual(LinkerItem.tabs(linker), expected, "avançar");
+                GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), expected, "avançar");
             }
-            helper.assertFalse(linker.has(ModDataComponents.LINKER_TABS.get()), "Todos deixou o componente");
+            helper.assertFalse(ModDataComponents.LINKER_TABS.has(linker), "Todos deixou o componente");
             helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(-1)),
                     "recusou voltar");
-            helper.assertValueEqual(LinkerItem.tabs(linker),
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker),
                     LinkerTabs.of(Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY), "voltar de Todos");
             // uma combinação marcada na tela vai para Todos
             LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID));
             helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                     "recusou avançar da combinação");
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "combinação não foi para Todos");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), LinkerTabs.ALL, "combinação não foi para Todos");
             // o componente antigo vale como a aba dele e some na primeira troca
-            linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.FLUID);
+            ModDataComponents.LINKER_TYPE.set(linker, ResourceType.FLUID);
             helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                     "recusou avançar do tipo antigo");
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.ENERGY), "depois de Fluidos");
-            helper.assertFalse(linker.has(ModDataComponents.LINKER_TYPE.get()), "o componente antigo ficou");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.ENERGY), "depois de Fluidos");
+            helper.assertFalse(ModDataComponents.LINKER_TYPE.has(linker), "o componente antigo ficou");
             helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(0)),
                     "aceitou direção 0");
 
@@ -317,7 +330,7 @@ public final class TypeNetworkGameTests {
             player.setItemInHand(InteractionHand.MAIN_HAND, other);
             helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
                     "aceitou sem o Vinculador na mão");
-            helper.assertFalse(other.has(ModDataComponents.LINKER_TABS.get()), "mexeu noutro item");
+            helper.assertFalse(ModDataComponents.LINKER_TABS.has(other), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }
@@ -332,7 +345,7 @@ public final class TypeNetworkGameTests {
     public static void presetCopiesNetworksPerType(GameTestHelper helper) {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         WaNetwork lines = data.create(player.getUUID(), "Linha " + player.getUUID());
         WaNetwork fluids = data.create(player.getUUID(), "Fluidos " + player.getUUID());
         WaNetwork targetNetwork = data.create(player.getUUID(), "Destino " + player.getUUID());
@@ -347,38 +360,37 @@ public final class TypeNetworkGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
         try {
             helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), source, true), "copiar não agiu");
-            RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
+            RouterPreset preset = ModDataComponents.PRESET.get(configurator);
             helper.assertTrue(preset != null, "nada copiado");
-            helper.assertValueEqual(preset.network(ResourceType.ITEM), lines.id(), "itens no preset");
-            helper.assertValueEqual(preset.network(ResourceType.FLUID), fluids.id(), "fluidos no preset");
-            helper.assertValueEqual(preset.network(ResourceType.ENERGY), foreign.id(), "energia no preset");
+            GameTestCompat.assertValueEqual(helper, preset.network(ResourceType.ITEM), lines.id(), "itens no preset");
+            GameTestCompat.assertValueEqual(helper, preset.network(ResourceType.FLUID), fluids.id(), "fluidos no preset");
+            GameTestCompat.assertValueEqual(helper, preset.network(ResourceType.ENERGY), foreign.id(), "energia no preset");
             helper.assertTrue(preset.network(ResourceType.CHEMICAL) == null, "químicos no preset");
 
             helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), target, false), "colar não agiu");
-            helper.assertValueEqual(target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
-            helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "fluidos colados");
-            helper.assertValueEqual(target.networkId(ResourceType.ENERGY), targetNetwork.id(),
+            GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
+            GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.FLUID), fluids.id(), "fluidos colados");
+            GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.ENERGY), targetNetwork.id(),
                     "colou a rede de outro dono");
-            helper.assertValueEqual(target.networkId(ResourceType.CHEMICAL), targetNetwork.id(),
+            GameTestCompat.assertValueEqual(helper, target.networkId(ResourceType.CHEMICAL), targetNetwork.id(),
                     "tipo sem rede no preset mexeu na rede");
 
             // Codecs: por tipo vai e volta; o formato antigo (rede única) vale para todos os tipos.
-            RegistryAccess registries = helper.getLevel().registryAccess();
-            RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
-            Tag tag = RouterPreset.CODEC.encodeStart(ops, preset).getOrThrow();
-            helper.assertValueEqual(RouterPreset.CODEC.parse(ops, tag).getOrThrow(), preset, "codec por tipo");
-            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+            DynamicOps<Tag> ops = NbtOps.INSTANCE;
+            Tag tag = RouterPreset.CODEC.encodeStart(ops, preset).getOrThrow(false, error -> {});
+            GameTestCompat.assertValueEqual(helper, RouterPreset.CODEC.parse(ops, tag).getOrThrow(false, error -> {}), preset, "codec por tipo");
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
             try {
                 RouterPreset.STREAM_CODEC.encode(buf, preset);
-                helper.assertValueEqual(RouterPreset.STREAM_CODEC.decode(buf), preset, "stream codec por tipo");
+                GameTestCompat.assertValueEqual(helper, RouterPreset.STREAM_CODEC.decode(buf), preset, "stream codec por tipo");
             } finally {
                 buf.release();
             }
             CompoundTag legacy = new CompoundTag();
             legacy.putUUID("network", lines.id());
-            RouterPreset old = RouterPreset.CODEC.parse(ops, legacy).getOrThrow();
+            RouterPreset old = RouterPreset.CODEC.parse(ops, legacy).getOrThrow(false, error -> {});
             for (ResourceType type : ResourceType.values()) {
-                helper.assertValueEqual(old.network(type), lines.id(), "preset antigo em " + type);
+                GameTestCompat.assertValueEqual(helper, old.network(type), lines.id(), "preset antigo em " + type);
             }
             helper.assertTrue(!preset.equals(preset.withoutNetwork(ResourceType.FLUID)), "equals ignorou uma aba");
         } finally {

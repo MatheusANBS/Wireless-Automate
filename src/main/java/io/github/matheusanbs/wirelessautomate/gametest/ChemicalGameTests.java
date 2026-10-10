@@ -28,20 +28,20 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Químicos do Mekanism: tanques de químico de teste ({@link ChemicalTestTanks}, um tanque da API
  * do Mekanism num bloco vanilla), um roteador em cima de cada (facing=UP, face configurada
  * {@link Direction#UP}). Rodam só na run {@code runGameTestServerChemicals}, que tem o Mekanism na
  * pasta mods e liga o namespace {@value #NAMESPACE} (o template é
- * {@code data/wirelessautomate_chemicals/structure/empty.nbt}). Sem o Mekanism, só passam.
+ * {@code data/wirelessautomate_chemicals/structures/empty.nbt}). Sem o Mekanism, só passam.
  *
  * <p>Nenhum tipo do Mekanism nas assinaturas: o NeoForge inspeciona esta classe por reflexão mesmo
  * sem o Mekanism. O que usa a API fica em {@link ChemicalTestSupport}.
@@ -52,8 +52,10 @@ public final class ChemicalGameTests {
     static final String NAMESPACE = "wirelessautomate_chemicals";
     private static final BlockPos A = new BlockPos(0, 1, 0);
     private static final BlockPos B = new BlockPos(2, 1, 2);
-    private static final ResourceLocation HYDROGEN = ResourceLocation.fromNamespaceAndPath("mekanism", "hydrogen");
-    private static final ResourceLocation OXYGEN = ResourceLocation.fromNamespaceAndPath("mekanism", "oxygen");
+    private static final ResourceLocation HYDROGEN = new ResourceLocation("mekanism", "hydrogen");
+    private static final ResourceLocation OXYGEN = new ResourceLocation("mekanism", "oxygen");
+    /** Um tipo de infusão (não é gás): o Mekanism 10.4 do 1.20.1 separa os químicos em quatro tipos (D4). */
+    private static final ResourceLocation REDSTONE_INFUSION = new ResourceLocation("mekanism", "redstone");
 
     private static UUID newNetwork(GameTestHelper helper, String name) {
         return NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
@@ -62,10 +64,10 @@ public final class ChemicalGameTests {
     /** Tanque de teste em {@code pos}, com um roteador em cima na rede, no modo dado. */
     private static RouterBlockEntity tank(GameTestHelper helper, BlockPos pos, UUID network, PortMode mode) {
         ChemicalTestSupport.reset(helper.absolutePos(pos));
-        helper.setBlock(pos, ChemicalTestTanks.BLOCK);
+        helper.setBlock(pos, ChemicalTestTanks.BLOCK.get());
         BlockPos routerPos = pos.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         router.setMode(ResourceType.CHEMICAL, Direction.UP, mode);
         return router;
@@ -79,7 +81,7 @@ public final class ChemicalGameTests {
 
     private static void fill(GameTestHelper helper, BlockPos pos, ResourceLocation chemical, long amount) {
         long rest = ChemicalTestSupport.fill(helper.getLevel(), helper.absolutePos(pos), chemical, amount);
-        helper.assertValueEqual(rest, 0L, "sobra ao encher o tanque");
+        GameTestCompat.assertValueEqual(helper, rest, 0L, "sobra ao encher o tanque");
     }
 
     @GameTest(template = "empty")
@@ -96,8 +98,36 @@ public final class ChemicalGameTests {
                         && NetworkManager.get().contains(target), "roteadores não registrados"))
                 .thenExecute(() -> fill(helper, A, HYDROGEN, 2_000))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(amount(helper, B, HYDROGEN), 2_000L, "hidrogênio no destino");
-                    helper.assertValueEqual(amount(helper, A, HYDROGEN), 0L, "hidrogênio na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 2_000L, "hidrogênio no destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, HYDROGEN), 0L, "hidrogênio na origem");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Porte 1.20.1 (D4): um químico que não é gás (a infusão de redstone) também anda, pela capability de infusão.
+     * No {@code main} só havia um tipo de químico; aqui o roteador roda uma vez por tipo que a face oferece.
+     */
+    @GameTest(template = "empty")
+    public static void infusionMovesBetweenTanks(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-quimico-infusao");
+        RouterBlockEntity source = tank(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
+                        && NetworkManager.get().contains(target), "roteadores não registrados"))
+                .thenExecute(() -> {
+                    fill(helper, A, REDSTONE_INFUSION, 2_000);
+                    fill(helper, A, HYDROGEN, 1_000);
+                })
+                .thenWaitUntil(() -> {
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, REDSTONE_INFUSION), 2_000L, "infusão no destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, REDSTONE_INFUSION), 0L, "infusão na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 1_000L, "hidrogênio no destino");
                 })
                 .thenSucceed();
     }
@@ -120,14 +150,14 @@ public final class ChemicalGameTests {
                 .thenExecute(() -> fill(helper, A, HYDROGEN, 1_000))
                 .thenIdle(40)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(amount(helper, B, HYDROGEN), 0L, "o filtro deixou passar hidrogênio");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 0L, "o filtro deixou passar hidrogênio");
                     // Agora hidrogênio com estoque: a origem guarda 500 mB.
                     source.setFilter(ResourceType.CHEMICAL, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
                             List.of(new FilterEntry.ChemicalEntry(HYDROGEN, 500))));
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(amount(helper, B, HYDROGEN), 500L, "hidrogênio no destino"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 500L, "hidrogênio no destino"))
                 .thenIdle(20)
-                .thenExecute(() -> helper.assertValueEqual(amount(helper, A, HYDROGEN), 500L, "estoque na origem"))
+                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, amount(helper, A, HYDROGEN), 500L, "estoque na origem"))
                 .thenSucceed();
     }
 
@@ -141,19 +171,19 @@ public final class ChemicalGameTests {
         UUID network = newNetwork(helper, "teste-quimico-muitos-tanques");
         BlockPos machine = helper.absolutePos(A);
         ChemicalTestSupport.reset(machine);
-        helper.setBlock(A, ChemicalTestTanks.MANY_TANKS_BLOCK);
+        helper.setBlock(A, ChemicalTestTanks.MANY_TANKS_BLOCK.get());
         helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity source = helper.getBlockEntity(A.above());
+        RouterBlockEntity source = GameTestCompat.getBlockEntity(helper, A.above());
         source.setNetworkId(network);
         source.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.EXTRACT);
         RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
-        helper.assertValueEqual(ChemicalTestSupport.fillTank(machine, 18, HYDROGEN, 1_000), 0L, "sobra ao encher");
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.fillTank(machine, 18, HYDROGEN, 1_000), 0L, "sobra ao encher");
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
                         && NetworkManager.get().contains(target), "roteadores não registrados"))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(amount(helper, B, HYDROGEN), 1_000L, "hidrogênio no destino");
-                    helper.assertValueEqual(ChemicalTestSupport.tankAmount(machine, 18), 0L, "tanque 18");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 1_000L, "hidrogênio no destino");
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.tankAmount(machine, 18), 0L, "tanque 18");
                 })
                 .thenSucceed();
     }
@@ -163,20 +193,20 @@ public final class ChemicalGameTests {
     public static void chemicalEntryCodecsAndMatching(GameTestHelper helper) {
         Filter filter = new Filter(Filter.ListMode.WHITELIST, false, List.of(
                 new FilterEntry.ChemicalEntry(HYDROGEN, 250), new FilterEntry.ModEntry("othermod", 0)));
-        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        Tag tag = Filter.CODEC.encodeStart(ops, filter).getOrThrow();
-        helper.assertValueEqual(Filter.CODEC.parse(ops, tag).getOrThrow(), filter, "codec salvo");
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        var ops = NbtOps.INSTANCE;
+        Tag tag = Filter.CODEC.encodeStart(ops, filter).getOrThrow(false, error -> {});
+        GameTestCompat.assertValueEqual(helper, Filter.CODEC.parse(ops, tag).getOrThrow(false, error -> {}), filter, "codec salvo");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
         try {
             Filter.STREAM_CODEC.encode(buf, filter);
-            helper.assertValueEqual(Filter.STREAM_CODEC.decode(buf), filter, "codec de rede");
+            GameTestCompat.assertValueEqual(helper, Filter.STREAM_CODEC.decode(buf), filter, "codec de rede");
         } finally {
             buf.release();
         }
         helper.assertTrue(filter.testChemical(HYDROGEN), "hidrogênio exato");
         helper.assertTrue(!filter.testChemical(OXYGEN), "oxigênio não está no filtro");
-        helper.assertTrue(filter.testChemical(ResourceLocation.fromNamespaceAndPath("othermod", "gas")), "mod");
-        helper.assertValueEqual(filter.chemicalStock(HYDROGEN), 250L, "estoque");
+        helper.assertTrue(filter.testChemical(new ResourceLocation("othermod", "gas")), "mod");
+        GameTestCompat.assertValueEqual(helper, filter.chemicalStock(HYDROGEN), 250L, "estoque");
         // Uma entrada de químico não casa com itens (vale só para o tipo dela).
         helper.assertTrue(!filter.testItem(Items.STONE.getDefaultInstance()), "casou com item");
         helper.succeed();
@@ -197,28 +227,28 @@ public final class ChemicalGameTests {
         UUID target = newNetwork(helper, "teste-vinculador-quimicos");
         helper.setBlock(A, Blocks.STONE);
         helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(A.above());
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, A.above());
         router.setNetworkId(before);
 
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), LoadedTypes.LIST, "Todos");
+        GameTestCompat.assertValueEqual(helper, LinkerItem.effectiveTabs(linker), LoadedTypes.LIST, "Todos");
         LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.CHEMICAL));
         List<ResourceType> tabs = LinkerItem.effectiveTabs(linker);
-        helper.assertValueEqual(tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");
+        GameTestCompat.assertValueEqual(helper, tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");
 
         LinkerActions.apply(router, tabs, target);
-        helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens vinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+        GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
+        GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), target, "itens vinculados");
+        GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
         helper.assertTrue(LinkerActions.inTarget(router, tabs, target), "não conta como vinculado");
 
         LinkerActions.apply(router, List.of(ResourceType.CHEMICAL), null);
         helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos não desvinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
+        GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
 
         LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ENERGY));
-        helper.assertValueEqual(LinkerItem.cycleTabs(linker, 1), LinkerTabs.of(ResourceType.CHEMICAL), "atalho Químicos");
-        helper.assertValueEqual(LinkerItem.cycleTabs(linker, 1), LinkerTabs.ALL, "depois de Químicos");
+        GameTestCompat.assertValueEqual(helper, LinkerItem.cycleTabs(linker, 1), LinkerTabs.of(ResourceType.CHEMICAL), "atalho Químicos");
+        GameTestCompat.assertValueEqual(helper, LinkerItem.cycleTabs(linker, 1), LinkerTabs.ALL, "depois de Químicos");
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         data.remove(before);
         data.remove(target);
@@ -233,10 +263,10 @@ public final class ChemicalGameTests {
                 .setValue(RouterBlock.TIER, tier));
         helper.setBlock(pos.above(), ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
-        RouterBlockEntity router = helper.getBlockEntity(pos.above());
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, pos.above());
         router.setNetworkId(network);
         router.setMode(ResourceType.CHEMICAL, Direction.UP, mode);
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     /**
@@ -254,10 +284,10 @@ public final class ChemicalGameTests {
         chemicalTank(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
         helper.assertTrue(ChemicalTestSupport.hasHandler(helper.getLevel(), helper.absolutePos(A)), "capability do Mekanism");
         fill(helper, A, HYDROGEN, 3_000_000_000L);
-        helper.assertValueEqual(from.storage().count(HYDROGEN), 3_000_000_000L, "guardado por id");
-        helper.onEachTick(() -> helper.assertValueEqual(amount(helper, A, HYDROGEN) + amount(helper, B, HYDROGEN),
+        GameTestCompat.assertValueEqual(helper, from.storage().count(HYDROGEN), 3_000_000_000L, "guardado por id");
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, amount(helper, A, HYDROGEN) + amount(helper, B, HYDROGEN),
                 3_000_000_000L, "hidrogênio"));
-        helper.succeedWhen(() -> helper.assertValueEqual(amount(helper, B, HYDROGEN), 3_000_000_000L, "no destino"));
+        helper.succeedWhen(() -> GameTestCompat.assertValueEqual(helper, amount(helper, B, HYDROGEN), 3_000_000_000L, "no destino"));
     }
 
     /** Filtro de entrada do Tanque Químico: só o oxigênio entra, também pelo Mekanism. */
@@ -271,9 +301,9 @@ public final class ChemicalGameTests {
         StorageChemicalTankBlockEntity tank = chemicalTank(helper, A, RouterTier.BASIC, network, PortMode.INSERT);
         tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false, List.of(new FilterEntry.ChemicalEntry(OXYGEN, 0))));
         long rest = ChemicalTestSupport.fill(helper.getLevel(), helper.absolutePos(A), HYDROGEN, 1_000);
-        helper.assertValueEqual(rest, 1_000L, "hidrogênio recusado");
+        GameTestCompat.assertValueEqual(helper, rest, 1_000L, "hidrogênio recusado");
         fill(helper, A, OXYGEN, 1_000);
-        helper.assertValueEqual(tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
+        GameTestCompat.assertValueEqual(helper, tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
         helper.succeed();
     }
 }

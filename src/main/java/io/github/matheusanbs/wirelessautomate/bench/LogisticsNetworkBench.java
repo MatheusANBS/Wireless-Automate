@@ -14,7 +14,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -28,6 +28,11 @@ import org.jetbrains.annotations.Nullable;
  * O codec dele é leniente (um campo errado vira o padrão em silêncio), então {@link #place} confere o
  * canal gravado de volta e falha alto se não bater. Qualquer falha de reflexão lança
  * {@link IllegalStateException}: o cenário aborta em vez de medir pela metade.
+ *
+ * <p>TODO etapa 3 (porte 1.20.1): a versão 1.20.1 do Logistics Network (1.3.0) não tem {@code loadNodeState},
+ * {@code saveNodeState}, {@code NodeClipboardConfig.joinNetwork} nem {@code Config.asyncPlanning}; com ela, o
+ * construtor falha na reflexão e o cenário {@code ln} aborta com {@link IllegalStateException} (nada é medido pela
+ * metade). O adaptador por setters dessa versão fica para a etapa 3; {@link LnChannelPlan} não muda.
  */
 final class LogisticsNetworkBench {
     static final String MOD_ID = "logisticsnetworks";

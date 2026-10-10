@@ -36,8 +36,8 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Vinculador em modo Área: marcar cantos com Shift + clique, contar e vincular os roteadores da
@@ -61,14 +61,14 @@ public final class LinkerAreaGameTests {
         helper.setBlock(machine, Blocks.STONE);
         BlockPos pos = machine.above();
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(pos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, pos);
         router.setNetworkId(network);
         return router;
     }
 
     @SuppressWarnings("removal")
     private static ServerPlayer player(GameTestHelper helper, ItemStack linker) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
         player.setItemInHand(InteractionHand.MAIN_HAND, linker);
         return player;
@@ -138,27 +138,27 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(shiftClick(player, helper.absolutePos(CORNER1)), "canto 1 não agiu");
             LinkerArea area = LinkerItem.area(linker);
             helper.assertTrue(area != null && !area.complete(), "canto 1 não marcado: " + area);
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.INCOMPLETE, "só com o canto 1");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.INCOMPLETE, "só com o canto 1");
             helper.assertTrue(shiftClick(player, helper.absolutePos(CORNER2)), "canto 2 não agiu");
             area = LinkerItem.area(linker);
             helper.assertTrue(area != null && area.complete(), "canto 2 não marcado: " + area);
-            helper.assertValueEqual(area.box().volume(), 3L * 2 * 2, "volume");
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE, "área completa");
+            GameTestCompat.assertValueEqual(helper, area.box().volume(), 3L * 2 * 2, "volume");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.NONE, "área completa");
 
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok(), "vincular recusou: " + result.problem());
-            helper.assertValueEqual(result.linked(), 2, "vinculados");
-            helper.assertValueEqual(result.already(), 0, "já estavam");
+            GameTestCompat.assertValueEqual(helper, result.linked(), 2, "vinculados");
+            GameTestCompat.assertValueEqual(helper, result.already(), 0, "já estavam");
             for (RouterBlockEntity inside : new RouterBlockEntity[] {a, b}) {
-                helper.assertValueEqual(inside.networkId(ResourceType.FLUID), active.id(), "fluidos de dentro");
-                helper.assertValueEqual(inside.networkId(ResourceType.ITEM), before, "itens mudaram");
-                helper.assertValueEqual(inside.networkId(ResourceType.ENERGY), before, "energia mudou");
+                GameTestCompat.assertValueEqual(helper, inside.networkId(ResourceType.FLUID), active.id(), "fluidos de dentro");
+                GameTestCompat.assertValueEqual(helper, inside.networkId(ResourceType.ITEM), before, "itens mudaram");
+                GameTestCompat.assertValueEqual(helper, inside.networkId(ResourceType.ENERGY), before, "energia mudou");
             }
-            helper.assertValueEqual(c.networkId(ResourceType.FLUID), before, "C fora da área mudou");
+            GameTestCompat.assertValueEqual(helper, c.networkId(ResourceType.FLUID), before, "C fora da área mudou");
 
             LinkResult again = LinkerActions.link(player, linker);
-            helper.assertValueEqual(again.linked(), 0, "vinculou de novo");
-            helper.assertValueEqual(again.already(), 2, "já estavam na segunda vez");
+            GameTestCompat.assertValueEqual(helper, again.linked(), 0, "vinculou de novo");
+            GameTestCompat.assertValueEqual(helper, again.already(), 2, "já estavam na segunda vez");
 
             // um terceiro clique recomeça pelo canto 1
             shiftClick(player, helper.absolutePos(C));
@@ -186,7 +186,7 @@ public final class LinkerAreaGameTests {
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
             for (ResourceType type : LoadedTypes.LIST) {
-                helper.assertValueEqual(a.networkId(type), active.id(), "aba " + type);
+                GameTestCompat.assertValueEqual(helper, a.networkId(type), active.id(), "aba " + type);
             }
         } finally {
             cleanup(helper, player, before, active.id());
@@ -218,10 +218,10 @@ public final class LinkerAreaGameTests {
 
             // uma área acima do limite vinda de outro lugar (config reduzida, item antigo) é recusada
             LinkerItem.setArea(linker, area.withSecond(first.offset((int) max, 0, 0)));
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.TOO_BIG, "problema");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.TOO_BIG, "problema");
             LinkResult result = LinkerActions.link(player, linker);
-            helper.assertValueEqual(result.problem(), LinkerProblem.TOO_BIG, "vinculou área grande");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            GameTestCompat.assertValueEqual(helper, result.problem(), LinkerProblem.TOO_BIG, "vinculou área grande");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
         } finally {
             cleanup(helper, player, before);
         }
@@ -244,9 +244,9 @@ public final class LinkerAreaGameTests {
         try {
             markArea(helper, player);
             player.moveTo(helper.absoluteVec(new Vec3(1.5, 3 + distance + 20, 1.5)));
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.TOO_FAR, "problema");
-            helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR, "vinculou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.TOO_FAR, "problema");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR, "vinculou");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
         } finally {
             cleanup(helper, player, before);
         }
@@ -269,31 +269,31 @@ public final class LinkerAreaGameTests {
         data.setActiveNetwork(player.getUUID(), foreign.id());
         try {
             markArea(helper, player);
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK, "problema");
-            helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.FOREIGN_NETWORK,
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK, "problema");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.link(player, linker).problem(), LinkerProblem.FOREIGN_NETWORK,
                     "vinculou à rede alheia");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
 
             LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
                     LinkerSnapshot.capture(player, linker, null));
             player.containerMenu = menu;
-            helper.assertValueEqual(menu.snapshot().problem(), LinkerProblem.FOREIGN_NETWORK, "tela sem o aviso");
+            GameTestCompat.assertValueEqual(helper, menu.snapshot().problem(), LinkerProblem.FOREIGN_NETWORK, "tela sem o aviso");
             helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_ACTIVE,
                     Optional.of(foreign.id()), "", 0)), "aceitou escolher a rede alheia");
             helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_ACTIVE,
                     Optional.of(own.id()), "", 0)), "recusou a própria rede");
-            helper.assertValueEqual(data.activeNetwork(player.getUUID()), own.id(), "rede ativa");
+            GameTestCompat.assertValueEqual(helper, data.activeNetwork(player.getUUID()), own.id(), "rede ativa");
             helper.assertFalse(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID + 1, Op.LINK)),
                     "aceitou outro containerId");
             helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
                     "Vincular pela tela recusou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), own.id(), "itens de A");
-            helper.assertValueEqual(a.networkId(ResourceType.FLUID), before, "fluidos de A mudaram");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), own.id(), "itens de A");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.FLUID), before, "fluidos de A mudaram");
             LinkerSnapshot snapshot = menu.poll();
             helper.assertTrue(snapshot != null && snapshot.outcome().isPresent()
                     && snapshot.outcome().get().linked() == 1, "a tela não mostra o resultado: " + snapshot);
-            helper.assertValueEqual(snapshot.inside(), 1, "roteadores na área");
-            helper.assertValueEqual(snapshot.already(), 1, "já na rede");
+            GameTestCompat.assertValueEqual(helper, snapshot.inside(), 1, "roteadores na área");
+            GameTestCompat.assertValueEqual(helper, snapshot.already(), 1, "já na rede");
         } finally {
             cleanup(helper, player, before, foreign.id(), own.id());
         }
@@ -319,9 +319,9 @@ public final class LinkerAreaGameTests {
         int garbage = ~LinkerTabs.available(LoadedTypes.LIST).mask() | LinkerTabs.of(ResourceType.ITEM).mask();
         helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
                 Optional.empty(), "", garbage)), "recusou máscara com um tipo disponível");
-        helper.assertValueEqual(LinkerItem.tabs(linker).mask() & ~LinkerTabs.available(LoadedTypes.LIST).mask(), 0,
+        GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker).mask() & ~LinkerTabs.available(LoadedTypes.LIST).mask(), 0,
                 "gravou bits de tipos indisponíveis");
-        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), List.of(ResourceType.ITEM), "abas depois do lixo");
+        GameTestCompat.assertValueEqual(helper, LinkerItem.effectiveTabs(linker), List.of(ResourceType.ITEM), "abas depois do lixo");
         helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_TABS,
                 Optional.empty(), "", ~LinkerTabs.available(LoadedTypes.LIST).mask())), "aceitou só bits indisponíveis");
         helper.succeed();
@@ -345,15 +345,15 @@ public final class LinkerAreaGameTests {
             LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
                     LinkerSnapshot.capture(player, linker, null));
             player.containerMenu = menu;
-            helper.assertValueEqual(menu.snapshot().inside(), 2, "roteadores na prévia");
-            helper.assertValueEqual(menu.snapshot().routers().size(), 2, "pontos na prévia");
+            GameTestCompat.assertValueEqual(helper, menu.snapshot().inside(), 2, "roteadores na prévia");
+            GameTestCompat.assertValueEqual(helper, menu.snapshot().routers().size(), 2, "pontos na prévia");
             helper.assertTrue(menu.poll() == null, "estado sem mudança foi reenviado");
 
             helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
                     Optional.empty(), "", ResourceType.ENERGY.ordinal())), "recusou desmarcar Energia");
             LinkerTabs expected = LinkerTabs.ALL.toggle(ResourceType.ENERGY);
-            helper.assertValueEqual(LinkerItem.tabs(linker), expected, "abas");
-            helper.assertValueEqual(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), expected, "abas");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
                     Optional.empty(), "", ResourceType.CHEMICAL.ordinal())), Chemicals.LOADED,
                     "Químicos com o Mekanism " + Chemicals.LOADED);
             if (Chemicals.LOADED) {
@@ -361,7 +361,7 @@ public final class LinkerAreaGameTests {
             }
             helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
                     Optional.empty(), "", 99)), "aceitou aba inválida");
-            helper.assertValueEqual(LinkerItem.tabs(linker), expected, "abas depois das recusas");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), expected, "abas depois das recusas");
             LinkerSnapshot afterType = menu.poll();
             helper.assertTrue(afterType != null && afterType.tabs().equals(expected),
                     "a tela não recebeu as abas");
@@ -374,7 +374,7 @@ public final class LinkerAreaGameTests {
                             Op.TOGGLE_TAB, Optional.empty(), "", type.ordinal())), "recusou desmarcar " + type);
                 }
             }
-            helper.assertValueEqual(LinkerItem.effectiveTabs(linker), List.of(ResourceType.FLUID), "sobrou");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.effectiveTabs(linker), List.of(ResourceType.FLUID), "sobrou");
             helper.assertFalse(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.TOGGLE_TAB,
                     Optional.empty(), "", ResourceType.FLUID.ordinal())), "aceitou desmarcar a última aba");
 
@@ -385,11 +385,11 @@ public final class LinkerAreaGameTests {
             WaNetwork network = data.byName(player.getUUID(), "teste-area-nova");
             helper.assertTrue(network != null, "rede não criada");
             created = network.id();
-            helper.assertValueEqual(data.activeNetwork(player.getUUID()), created, "a nova não ficou ativa");
+            GameTestCompat.assertValueEqual(helper, data.activeNetwork(player.getUUID()), created, "a nova não ficou ativa");
             int count = data.networksOf(player.getUUID()).size();
             LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.CREATE_NETWORK,
                     Optional.empty(), "TESTE-AREA-NOVA", 0));
-            helper.assertValueEqual(data.networksOf(player.getUUID()).size(), count, "nome repetido criou outra");
+            GameTestCompat.assertValueEqual(helper, data.networksOf(player.getUUID()).size(), count, "nome repetido criou outra");
             LinkerSnapshot afterCreate = menu.poll();
             helper.assertTrue(afterCreate != null && afterCreate.active().equals(Optional.of(created))
                     && afterCreate.networks().stream().anyMatch(e -> e.id().equals(network.id())),
@@ -397,7 +397,7 @@ public final class LinkerAreaGameTests {
 
             helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_MODE,
                     Optional.empty(), "", LinkerMode.SINGLE.ordinal())), "recusou o modo");
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "modo");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.mode(linker), LinkerMode.SINGLE, "modo");
             helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.CLEAR_AREA)),
                     "recusou limpar");
             helper.assertTrue(LinkerItem.area(linker) == null, "cantos ficaram");
@@ -433,19 +433,19 @@ public final class LinkerAreaGameTests {
         WaNetwork active = data.create(player.getUUID(), "teste-area-modo-ativa");
         data.setActiveNetwork(player.getUUID(), active.id());
         try {
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "modo inicial");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.mode(linker), LinkerMode.SINGLE, "modo inicial");
             player.setShiftKeyDown(true);
             linker.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.AREA, "Shift + clique no ar");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.mode(linker), LinkerMode.AREA, "Shift + clique no ar");
             linker.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "de volta a Único");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.mode(linker), LinkerMode.SINGLE, "de volta a Único");
             player.setShiftKeyDown(false);
 
             helper.assertTrue(shiftClick(player, helper.absolutePos(A)), "Shift + clique num bloco em Único");
             helper.assertTrue(LinkerItem.area(linker) == null, "Único marcou canto");
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "Único alternou o modo");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.mode(linker), LinkerMode.SINGLE, "Único alternou o modo");
             helper.assertTrue(shiftClick(player, a.getBlockPos()), "Shift + clique no roteador");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), active.id(), "Único não vinculou");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), active.id(), "Único não vinculou");
         } finally {
             cleanup(helper, player, before, active.id());
         }
@@ -469,12 +469,12 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(click(player, a.getBlockPos()), "clique no roteador não agiu");
             helper.assertTrue(a.networkId(ResourceType.ITEM) == null, "itens ficaram na rede");
             helper.assertTrue(a.networkId(ResourceType.FLUID) == null, "fluidos ficaram na rede");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
-            helper.assertValueEqual(a.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
             assertNoNetworkCreated(helper, player);
 
             helper.assertTrue(click(player, a.getBlockPos()), "segundo clique não agiu");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou no segundo clique");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou no segundo clique");
             assertNoNetworkCreated(helper, player);
         } finally {
             cleanup(helper, player, before);
@@ -498,30 +498,30 @@ public final class LinkerAreaGameTests {
         ServerPlayer player = player(helper, linker);
         try {
             markArea(helper, player);
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE, "problema");
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.NONE, "problema");
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.unlink(), "desvincular recusou: " + result);
-            helper.assertValueEqual(result.linked(), 2, "desvinculados");
+            GameTestCompat.assertValueEqual(helper, result.linked(), 2, "desvinculados");
             helper.assertTrue(result.network() == null, "desvincular usou uma rede");
             for (RouterBlockEntity inside : new RouterBlockEntity[] {a, b}) {
                 helper.assertTrue(inside.networkId(ResourceType.ITEM) == null, "itens de dentro");
                 helper.assertTrue(inside.networkId(ResourceType.FLUID) == null, "fluidos de dentro");
-                helper.assertValueEqual(inside.networkId(ResourceType.ENERGY), before, "energia de dentro mudou");
+                GameTestCompat.assertValueEqual(helper, inside.networkId(ResourceType.ENERGY), before, "energia de dentro mudou");
                 if (Chemicals.LOADED) {
                     helper.assertTrue(inside.networkId(ResourceType.CHEMICAL) == null, "químicos de dentro");
                 } else {
-                    helper.assertValueEqual(inside.networkId(ResourceType.CHEMICAL), before,
+                    GameTestCompat.assertValueEqual(helper, inside.networkId(ResourceType.CHEMICAL), before,
                             "químicos mudaram sem o Mekanism");
                 }
             }
             for (ResourceType type : ResourceType.values()) {
-                helper.assertValueEqual(c.networkId(type), before, "C fora da área mudou: " + type);
+                GameTestCompat.assertValueEqual(helper, c.networkId(type), before, "C fora da área mudou: " + type);
             }
             assertNoNetworkCreated(helper, player);
 
             LinkResult again = LinkerActions.link(player, linker);
-            helper.assertValueEqual(again.linked(), 0, "desvinculou de novo");
-            helper.assertValueEqual(again.already(), 2, "já sem rede na segunda vez");
+            GameTestCompat.assertValueEqual(helper, again.linked(), 0, "desvinculou de novo");
+            GameTestCompat.assertValueEqual(helper, again.already(), 2, "já sem rede na segunda vez");
             assertNoNetworkCreated(helper, player);
         } finally {
             cleanup(helper, player, before);
@@ -552,13 +552,13 @@ public final class LinkerAreaGameTests {
             markArea(helper, player);
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok(), "vincular recusou: " + result.problem());
-            helper.assertValueEqual(result.linked(), 1, "vinculados (B)");
-            helper.assertValueEqual(result.already(), 1, "já estavam (A)");
+            GameTestCompat.assertValueEqual(helper, result.linked(), 1, "vinculados (B)");
+            GameTestCompat.assertValueEqual(helper, result.already(), 1, "já estavam (A)");
             for (RouterBlockEntity router : new RouterBlockEntity[] {a, b}) {
-                helper.assertValueEqual(router.networkId(ResourceType.ITEM), active.id(), "itens");
-                helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-                helper.assertValueEqual(router.networkId(ResourceType.ENERGY), before, "energia mudou");
-                helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL),
+                GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), active.id(), "itens");
+                GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+                GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ENERGY), before, "energia mudou");
+                GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.CHEMICAL),
                         Chemicals.LOADED ? active.id() : before, "químicos");
             }
         } finally {
@@ -575,18 +575,18 @@ public final class LinkerAreaGameTests {
         RouterBlockEntity a = router(helper, A, before);
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
         LinkerItem.setMode(linker, LinkerMode.AREA);
-        linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.FLUID);
+        ModDataComponents.LINKER_TYPE.set(linker, ResourceType.FLUID);
         ServerPlayer player = player(helper, linker);
         WaNetwork active = data.create(player.getUUID(), "teste-tipo-antigo-ativa");
         data.setActiveNetwork(player.getUUID(), active.id());
         try {
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.FLUID), "abas do tipo antigo");
+            GameTestCompat.assertValueEqual(helper, LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.FLUID), "abas do tipo antigo");
             markArea(helper, player);
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
-            helper.assertValueEqual(a.networkId(ResourceType.FLUID), active.id(), "fluidos");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.FLUID), active.id(), "fluidos");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou");
         } finally {
             cleanup(helper, player, before, active.id());
         }
@@ -613,33 +613,33 @@ public final class LinkerAreaGameTests {
             int distance = LinkerActions.maxDistance();
             if (distance > 0) {
                 player.moveTo(helper.absoluteVec(new Vec3(1.5, 3 + distance + 20, 1.5)));
-                helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR,
+                GameTestCompat.assertValueEqual(helper, LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR,
                         "desvinculou de longe");
-                helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou de longe");
+                GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou de longe");
                 player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
             }
 
             if (!Chemicals.LOADED) {
                 LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.CHEMICAL));
-                helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_TABS, "sem abas");
+                GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.NO_TABS, "sem abas");
                 helper.assertFalse(LinkerActions.single(player, linker, a), "clique sem abas mudou o roteador");
                 for (ResourceType type : ResourceType.values()) {
-                    helper.assertValueEqual(a.networkId(type), before, "sem abas mudou " + type);
+                    GameTestCompat.assertValueEqual(helper, a.networkId(type), before, "sem abas mudou " + type);
                 }
                 LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
             }
 
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE,
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.NONE,
                     "rede alheia barrou o desvincular");
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "desvinculou " + result);
             helper.assertTrue(a.networkId(ResourceType.ITEM) == null, "itens ficaram");
-            helper.assertValueEqual(data.activeNetwork(player.getUUID()), foreign.id(), "a rede ativa mudou");
+            GameTestCompat.assertValueEqual(helper, data.activeNetwork(player.getUUID()), foreign.id(), "a rede ativa mudou");
             helper.assertTrue(data.networksOf(player.getUUID()).isEmpty(), "desvincular criou uma rede");
 
             // de volta a vincular, a rede alheia volta a barrar
             LinkerItem.setUnlink(linker, false);
-            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK,
+            GameTestCompat.assertValueEqual(helper, LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK,
                     "vincular à rede alheia");
         } finally {
             cleanup(helper, player, before, foreign.id());
@@ -676,7 +676,7 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
                     "Desvincular pela tela recusou");
             helper.assertTrue(a.networkId(ResourceType.ENERGY) == null, "energia ficou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            GameTestCompat.assertValueEqual(helper, a.networkId(ResourceType.ITEM), before, "itens mudaram");
             LinkerSnapshot afterLink = menu.poll();
             helper.assertTrue(afterLink != null && afterLink.outcome().isPresent()
                     && afterLink.outcome().get().unlink() && afterLink.outcome().get().linked() == 1,

@@ -25,26 +25,28 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceKey;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -52,9 +54,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Regras por propriedade no filtro ({@link ItemRule}, {@link FilterEntry.RuleEntry}): cada condição
@@ -69,19 +71,33 @@ public final class RuleFilterGameTests {
     private static final BlockPos B = new BlockPos(2, 1, 2);
     private static final int CONTAINER_ID = 53;
 
-    private static Holder<Enchantment> enchantment(GameTestHelper helper, ResourceKey<Enchantment> key) {
-        return helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
+    /**
+     * Porte 1.20.1 (D6): os encantamentos são objetos do registro do Forge (não {@code ResourceKey} de um registro
+     * de dados); o id vem do {@link ForgeRegistries#ENCHANTMENTS}.
+     */
+    private static Enchantment enchantment(GameTestHelper helper, Enchantment enchantment) {
+        return enchantment;
     }
 
-    private static ItemStack enchanted(GameTestHelper helper, net.minecraft.world.item.Item item, ResourceKey<Enchantment> key,
+    /** O id do encantamento (o {@code Enchantments.X.location()} do 1.21). */
+    private static ResourceLocation id(Enchantment enchantment) {
+        return ForgeRegistries.ENCHANTMENTS.getKey(enchantment);
+    }
+
+    private static ItemStack enchanted(GameTestHelper helper, net.minecraft.world.item.Item item, Enchantment key,
             int level) {
         ItemStack stack = new ItemStack(item);
         stack.enchant(enchantment(helper, key), level);
         return stack;
     }
 
-    private static ItemStack book(GameTestHelper helper, ResourceKey<Enchantment> key, int level) {
+    private static ItemStack book(GameTestHelper helper, Enchantment key, int level) {
         return EnchantedBookItem.createForEnchantment(new EnchantmentInstance(enchantment(helper, key), level));
+    }
+
+    /** O {@code PotionContents.createItemStack} do 1.21. */
+    private static ItemStack potion(net.minecraft.world.item.Item item, Potion potion) {
+        return PotionUtils.setPotion(new ItemStack(item), potion);
     }
 
     private static ItemStack damaged(net.minecraft.world.item.Item item, int damage) {
@@ -102,8 +118,8 @@ public final class RuleFilterGameTests {
     @GameTest(template = "empty")
     public static void eachPropertyBothWays(GameTestHelper helper) {
         ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
-        ItemStack fortunePick = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 3);
-        ItemStack fortuneBook = book(helper, Enchantments.FORTUNE, 3);
+        ItemStack fortunePick = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 3);
+        ItemStack fortuneBook = book(helper, Enchantments.BLOCK_FORTUNE, 3);
         ItemStack diamond = new ItemStack(Items.DIAMOND, 12);
 
         ItemRule enchantedYes = rule(Property.ENCHANTED, true);
@@ -118,15 +134,15 @@ public final class RuleFilterGameTests {
         expect(helper, rule(Property.DAMAGED, false), diamond, true, "diamante (não gasta = intacto)");
 
         ItemStack named = new ItemStack(Items.DIAMOND);
-        named.set(DataComponents.CUSTOM_NAME, Component.literal("Joia"));
+        named.setHoverName(Component.literal("Joia"));
         expect(helper, rule(Property.NAMED, true), named, true, "diamante renomeado");
         expect(helper, rule(Property.NAMED, true), diamond, false, "diamante comum");
 
-        expect(helper, rule(Property.POTION, true), PotionContents.createItemStack(Items.POTION, Potions.HEALING), true,
+        expect(helper, rule(Property.POTION, true), potion(Items.POTION, Potions.HEALING), true,
                 "poção de cura");
-        expect(helper, rule(Property.POTION, true), PotionContents.createItemStack(Items.POTION, Potions.WATER), false,
+        expect(helper, rule(Property.POTION, true), potion(Items.POTION, Potions.WATER), false,
                 "garrafa de água");
-        expect(helper, rule(Property.POTION, true), PotionContents.createItemStack(Items.TIPPED_ARROW, Potions.POISON), true,
+        expect(helper, rule(Property.POTION, true), potion(Items.TIPPED_ARROW, Potions.POISON), true,
                 "flecha com efeito");
 
         expect(helper, rule(Property.STACKABLE, true), diamond, true, "diamante");
@@ -134,9 +150,13 @@ public final class RuleFilterGameTests {
         expect(helper, rule(Property.STACKABLE, false), pick, true, "picareta (não empilhável)");
 
         ItemStack fullBox = new ItemStack(Items.SHULKER_BOX);
-        fullBox.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.DIRT, 3))));
+        // Porte 1.20.1: o conteúdo fica no NBT (o BlockEntityTag da caixa e a lista Items do bundle).
+        BlockItem.setBlockEntityData(fullBox, BlockEntityType.SHULKER_BOX,
+                ContainerHelper.saveAllItems(new CompoundTag(), NonNullList.of(ItemStack.EMPTY, new ItemStack(Items.DIRT, 3))));
         ItemStack bundle = new ItemStack(Items.BUNDLE);
-        bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(Items.DIRT))));
+        ListTag bundleItems = new ListTag();
+        bundleItems.add(new ItemStack(Items.DIRT).save(new CompoundTag()));
+        bundle.getOrCreateTag().put("Items", bundleItems);
         expect(helper, rule(Property.CONTENTS, true), fullBox, true, "caixa de shulker com terra");
         expect(helper, rule(Property.CONTENTS, true), bundle, true, "bundle com terra");
         expect(helper, rule(Property.CONTENTS, true), new ItemStack(Items.SHULKER_BOX), false, "caixa de shulker vazia");
@@ -144,7 +164,7 @@ public final class RuleFilterGameTests {
 
         // várias condições: todas precisam bater
         ItemRule both = enchantedYes.withFlag(Property.DAMAGED, true);
-        ItemStack worn = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 1);
+        ItemStack worn = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 1);
         worn.setDamageValue(50);
         expect(helper, both, worn, true, "encantada e gasta");
         expect(helper, both, fortunePick, false, "encantada e nova");
@@ -154,10 +174,10 @@ public final class RuleFilterGameTests {
 
     @GameTest(template = "empty")
     public static void enchantmentDurabilityAndScope(GameTestHelper helper) {
-        ItemRule fortune2 = ItemRule.EMPTY.withEnchantment(Optional.of(new Enchant(Enchantments.FORTUNE.location(), 2)));
-        expect(helper, fortune2, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 3), true, "Fortuna III");
-        expect(helper, fortune2, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 1), false, "Fortuna I");
-        expect(helper, fortune2, book(helper, Enchantments.FORTUNE, 2), true, "livro de Fortuna II");
+        ItemRule fortune2 = ItemRule.EMPTY.withEnchantment(Optional.of(new Enchant(id(Enchantments.BLOCK_FORTUNE), 2)));
+        expect(helper, fortune2, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 3), true, "Fortuna III");
+        expect(helper, fortune2, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 1), false, "Fortuna I");
+        expect(helper, fortune2, book(helper, Enchantments.BLOCK_FORTUNE, 2), true, "livro de Fortuna II");
         expect(helper, fortune2, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.SILK_TOUCH, 1), false,
                 "Toque de seda");
 
@@ -171,14 +191,14 @@ public final class RuleFilterGameTests {
         expect(helper, atLeast90, damaged(Items.DIAMOND_PICKAXE, 1000), false, "picareta gasta");
 
         ItemRule pickaxes = rule(Property.ENCHANTED, true).withScope("#minecraft:pickaxes");
-        expect(helper, pickaxes, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 1), true, "picareta encantada");
+        expect(helper, pickaxes, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 1), true, "picareta encantada");
         expect(helper, pickaxes, enchanted(helper, Items.DIAMOND_SWORD, Enchantments.SHARPNESS, 1), false, "espada encantada");
-        expect(helper, pickaxes, book(helper, Enchantments.FORTUNE, 3), false, "livro encantado");
+        expect(helper, pickaxes, book(helper, Enchantments.BLOCK_FORTUNE, 3), false, "livro encantado");
 
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        linker.set(DataComponents.CUSTOM_NAME, Component.literal("Meu"));
+        linker.setHoverName(Component.literal("Meu"));
         ItemStack namedDiamond = new ItemStack(Items.DIAMOND);
-        namedDiamond.set(DataComponents.CUSTOM_NAME, Component.literal("Meu"));
+        namedDiamond.setHoverName(Component.literal("Meu"));
         ItemRule ours = rule(Property.NAMED, true).withScope("@" + WirelessAutomate.MODID);
         expect(helper, ours, linker, true, "Vinculador renomeado");
         expect(helper, ours, namedDiamond, false, "diamante renomeado");
@@ -194,14 +214,14 @@ public final class RuleFilterGameTests {
 
     @GameTest(template = "empty")
     public static void rulesInFilterOrderAndStock(GameTestHelper helper) {
-        ItemStack fortunePick = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.FORTUNE, 3);
+        ItemStack fortunePick = enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_FORTUNE, 3);
         FilterEntry diamond = new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 5);
         FilterEntry stackable = new FilterEntry.RuleEntry(rule(Property.STACKABLE, true), 64);
         Filter white = new Filter(Filter.ListMode.WHITELIST, false, List.of(diamond, stackable));
         helper.assertTrue(white.testItem(new ItemStack(Items.DIRT)) && !white.testItem(fortunePick), "lista branca");
         // a primeira entrada que casa decide o estoque
-        helper.assertValueEqual(white.itemStock(new ItemStack(Items.DIAMOND)), 5L, "estoque do diamante");
-        helper.assertValueEqual(white.itemStock(new ItemStack(Items.DIRT)), 64L, "estoque pela regra");
+        GameTestCompat.assertValueEqual(helper, white.itemStock(new ItemStack(Items.DIAMOND)), 5L, "estoque do diamante");
+        GameTestCompat.assertValueEqual(helper, white.itemStock(new ItemStack(Items.DIRT)), 64L, "estoque pela regra");
         helper.assertTrue(white.usesItemStock(), "estoque da regra não contou");
 
         Filter black = new Filter(Filter.ListMode.BLACKLIST, false,
@@ -214,26 +234,26 @@ public final class RuleFilterGameTests {
         // duplicada (mesma regra) é ignorada, outra regra entra
         Filter more = white.withEntry(new FilterEntry.RuleEntry(rule(Property.STACKABLE, true), 0))
                 .withEntry(new FilterEntry.RuleEntry(rule(Property.STACKABLE, false), 0));
-        helper.assertValueEqual(more.entries().size(), 3, "entradas depois de duplicada e nova");
+        GameTestCompat.assertValueEqual(helper, more.entries().size(), 3, "entradas depois de duplicada e nova");
         helper.succeed();
     }
 
     @GameTest(template = "empty")
     public static void ruleCodecs(GameTestHelper helper) {
         ItemRule rule = ItemRule.EMPTY.withFlag(Property.ENCHANTED, true).withFlag(Property.STACKABLE, false)
-                .withEnchantment(Optional.of(new Enchant(Enchantments.MENDING.location(), 1)))
+                .withEnchantment(Optional.of(new Enchant(id(Enchantments.MENDING), 1)))
                 .withDurability(Optional.of(new Durability(false, 25))).withScope("#c:tools");
         Filter filter = new Filter(Filter.ListMode.WHITELIST, true, List.of(
-                new FilterEntry.RuleEntry(rule, 7), new FilterEntry.TagEntry(ResourceLocation.parse("c:ingots"), 0)));
-        RegistryOps<Tag> ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        Tag saved = Filter.CODEC.encodeStart(ops, filter).getOrThrow();
-        helper.assertValueEqual(Filter.CODEC.parse(ops, saved).getOrThrow(), filter, "filtro salvo e lido");
+                new FilterEntry.RuleEntry(rule, 7), new FilterEntry.TagEntry(new ResourceLocation("c:ingots"), 0)));
+        DynamicOps<Tag> ops = NbtOps.INSTANCE;
+        Tag saved = Filter.CODEC.encodeStart(ops, filter).getOrThrow(false, error -> {});
+        GameTestCompat.assertValueEqual(helper, Filter.CODEC.parse(ops, saved).getOrThrow(false, error -> {}), filter, "filtro salvo e lido");
 
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
         try {
             FilterEntriesPayload payload = FilterEntriesPayload.add(CONTAINER_ID, filter.entries());
             FilterEntriesPayload.STREAM_CODEC.encode(buf, payload);
-            helper.assertValueEqual(FilterEntriesPayload.STREAM_CODEC.decode(buf), payload, "pacote decodificado");
+            GameTestCompat.assertValueEqual(helper, FilterEntriesPayload.STREAM_CODEC.decode(buf), payload, "pacote decodificado");
         } finally {
             buf.release();
         }
@@ -245,25 +265,25 @@ public final class RuleFilterGameTests {
         helper.setBlock(A, Blocks.CHEST);
         helper.setBlock(A.above(), io.github.matheusanbs.wirelessautomate.registry.ModBlocks.ROUTER.get()
                 .defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(A.above());
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, A.above());
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         try {
             FilterMenu items = open(player, router, ResourceType.ITEM);
-            FilterEntry ingots = new FilterEntry.TagEntry(ResourceLocation.parse("c:ingots"), 99);
-            FilterEntry logs = new FilterEntry.TagEntry(ResourceLocation.withDefaultNamespace("logs"), 0);
+            FilterEntry ingots = new FilterEntry.TagEntry(new ResourceLocation("c:ingots"), 99);
+            FilterEntry logs = new FilterEntry.TagEntry(new ResourceLocation("logs"), 0);
             FilterEntry enchantedRule = new FilterEntry.RuleEntry(rule(Property.ENCHANTED, true), 0);
             helper.assertTrue(send(player, -1, List.of(ingots, logs, enchantedRule, new FilterEntry.ModEntry("minecraft", 0))),
                     "recusou tags, regra e mod");
             Filter filter = router.face(ResourceType.ITEM, Direction.UP).filter();
-            helper.assertValueEqual(filter.entries().size(), 4, "entradas");
-            helper.assertValueEqual(filter.entries().get(0).stock(), 0L, "estoque vindo do cliente não zerou");
+            GameTestCompat.assertValueEqual(helper, filter.entries().size(), 4, "entradas");
+            GameTestCompat.assertValueEqual(helper, filter.entries().get(0).stock(), 0L, "estoque vindo do cliente não zerou");
             helper.assertTrue(items.pollView() != null, "a visão não acompanhou");
 
             // duplicadas não entram de novo
             helper.assertTrue(send(player, -1, List.of(logs)), "recusou duplicada");
-            helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).filter().entries().size(), 4, "duplicada entrou");
+            GameTestCompat.assertValueEqual(helper, router.face(ResourceType.ITEM, Direction.UP).filter().entries().size(), 4, "duplicada entrou");
 
             // editar a regra: troca no lugar e mantém o estoque
             router.setFilter(ResourceType.ITEM, Direction.UP, router.face(ResourceType.ITEM, Direction.UP).filter().withStock(2, 32));
@@ -286,10 +306,10 @@ public final class RuleFilterGameTests {
 
             // fluidos: tag sim, regra não
             open(player, router, ResourceType.FLUID);
-            helper.assertTrue(send(player, -1, List.of(new FilterEntry.TagEntry(ResourceLocation.withDefaultNamespace("water"), 0))),
+            helper.assertTrue(send(player, -1, List.of(new FilterEntry.TagEntry(new ResourceLocation("water"), 0))),
                     "recusou tag de fluido");
             helper.assertFalse(send(player, -1, List.of(enchantedRule)), "aceitou regra num filtro de fluidos");
-            helper.assertValueEqual(router.face(ResourceType.FLUID, Direction.UP).filter().entries().size(), 1, "fluidos");
+            GameTestCompat.assertValueEqual(helper, router.face(ResourceType.FLUID, Direction.UP).filter().entries().size(), 1, "fluidos");
         } finally {
             player.containerMenu = player.inventoryMenu;
         }
@@ -314,9 +334,9 @@ public final class RuleFilterGameTests {
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT,
                 new Filter(Filter.ListMode.WHITELIST, false, List.of(new FilterEntry.RuleEntry(rule(Property.ENCHANTED, true), 0))));
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT, Filter.EMPTY);
-        ChestBlockEntity from = helper.getBlockEntity(A);
+        ChestBlockEntity from = GameTestCompat.getBlockEntity(helper, A);
         from.setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
-        from.setItem(1, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.EFFICIENCY, 5));
+        from.setItem(1, enchanted(helper, Items.DIAMOND_PICKAXE, Enchantments.BLOCK_EFFICIENCY, 5));
         from.setItem(2, new ItemStack(Items.COBBLESTONE, 32));
         from.setItem(3, book(helper, Enchantments.MENDING, 1));
         Predicate<ItemStack> isEnchanted = stack -> ItemRule.has(stack, Property.ENCHANTED);
@@ -324,11 +344,11 @@ public final class RuleFilterGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source) && NetworkManager.get().contains(target),
                         "roteadores não registrados"))
-                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, isEnchanted), 2, "encantados no destino"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, count(helper, B, isEnchanted), 2, "encantados no destino"))
                 .thenIdle(10)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(count(helper, B, isEnchanted.negate()), 0, "comuns no destino");
-                    helper.assertValueEqual(count(helper, A, isEnchanted.negate()), 33, "comuns na origem");
+                    GameTestCompat.assertValueEqual(helper, count(helper, B, isEnchanted.negate()), 0, "comuns no destino");
+                    GameTestCompat.assertValueEqual(helper, count(helper, A, isEnchanted.negate()), 33, "comuns na origem");
                 })
                 .thenSucceed();
     }
@@ -337,7 +357,7 @@ public final class RuleFilterGameTests {
         helper.setBlock(pos, Blocks.CHEST);
         helper.setBlock(pos.above(), io.github.matheusanbs.wirelessautomate.registry.ModBlocks.ROUTER.get()
                 .defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(pos.above());
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, pos.above());
         router.setNetworkId(network);
         router.setMode(ResourceType.ITEM, Direction.UP, mode);
         router.setFilter(ResourceType.ITEM, Direction.UP, filter);
@@ -345,7 +365,7 @@ public final class RuleFilterGameTests {
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Predicate<ItemStack> which) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack stack = chest.getItem(i);

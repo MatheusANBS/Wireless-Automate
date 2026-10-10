@@ -42,7 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-00b. **Portes** (`docs/portes.md`, skill `wa-porte`): investigar o 1.20.1 Forge (ATM9 e ATM9 To the Sky) e o 26.1 (ATM11), só os relatórios de impacto, e decidir a ordem.
+00b. **Portes** (`docs/portes.md`, skill `wa-porte`): 1.20.1 Forge investigado (10/10), relatório em `docs/portes/1.20.1-forge-impacto.md` (porte grande; aguarda o ok do dono e a decisão do Mekanism: só gás ou os quatro químicos). Falta investigar o 26.1 (ATM11) e decidir a ordem.
 000. **1.6.0 publicada (10/10):** GitHub e CurseForge, com o jar, o changelog e a descrição nova com a imagem da roda (`feature-16-wheel`).
 00. **Imagens do CurseForge com o visual novo: feitas e no ar (10/10).** Falta só o dono colar a `descricao.md` nova na página do projeto e apagar da galeria as imagens antigas (attachments 2027/2028).
 0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.
@@ -102,6 +102,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-10 | Porte 1.20.1 Forge investigado (`wa-porte`): projeto mínimo do alvo compila e abre (MDG `legacyforge`, Java 17), APIs do Forge e dos mods do ATM9 To the Sky conferidas; relatório de impacto em `docs/portes/1.20.1-forge-impacto.md`. |
 | 2026-10-10 | 1.6.0: merge do `roda-configurador` (o dono testou e aprovou), versão, changelog separado e unificado, READMEs e descrição. |
 | 2026-10-10 | Roda do Configurador (ramo `roda-configurador`; spec e plano em `docs/superpowers/`): o dono achou que a área não colava as faces, e era a regra da mesma máquina (cópia de um Barril, alvo num Baú Wireless). A regra virou opção: modo Área (qualquer máquina) (`PasteMode`, componente `configurator_any_machine`), Shift + clique no ar em ciclo pelos três modos e uma roda radial animada no Alt esquerdo (`ConfiguratorWheelScreen`, `WheelLayout` com JUnit, `ConfiguratorWheelPayload`, protocolo `11`) com o anel dos modos e o do tipo colado, nomes acompanhando a curva, centro grande e vãos entre as fatias, desenhada num tamanho fixo e escalada em passos nítidos. Guia nos dois idiomas, e2e com a roda aberta (`10b-configurador-roda`, `10c-configurador-roda-pt`). |
 | 2026-10-10 | Links novos do CurseForge (attachments 2034/633 a 649) na `descricao.md`, no lugar dos marcadores `ENVIAR:`; script de console `links-console.js` na skill para colher os links de uma vez. |

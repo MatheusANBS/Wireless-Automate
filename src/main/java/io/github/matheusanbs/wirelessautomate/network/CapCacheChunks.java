@@ -90,7 +90,9 @@ public final class CapCacheChunks {
 
     private static void invalidate(ServerLevel level, ChunkPos pos) {
         if (!level.getServer().isSameThread()) {
-            // O Forge posta os dois na thread do servidor; se um mod postar de outra, fica para ela.
+            // No Forge 1.20.1 os dois são postados na thread principal (o Unload no ChunkMap.scheduleUnload, pela
+            // unloadQueue que a thread principal processa; o Load no protoChunkToFullChunk, pelo
+            // mainThreadMailbox): este ramo não é o caminho comum. Só se um mod postar de outra thread.
             level.getServer().execute(() -> invalidate(level, pos));
             return;
         }

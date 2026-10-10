@@ -92,6 +92,8 @@ public class RouterBlockEntity extends BlockEntity {
     private int changeVersion;
     /** Total movido como origem, por {@link ResourceType#ordinal()}, desde que o nó carregou. Não é salvo. */
     private final long[] moved = new long[TYPES.length];
+    /** Quanto a última visita que moveu algo moveu, por tipo (os GameTests provam a vazão por visita sem relógio). */
+    private final long[] lastVisitMoved = new long[TYPES.length];
     /** Slots de cartão por face e por tipo. */
     public static final int CARD_SLOTS = 2;
     /** Tipos com slots de cartão, na ordem de {@link #cards}. */
@@ -285,6 +287,12 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public void addMoved(ResourceType type, long amount) {
         moved[type.ordinal()] += amount;
+        lastVisitMoved[type.ordinal()] = amount;
+    }
+
+    /** Quanto a última visita (do motor) que moveu algo deste tipo moveu; 0 se nenhuma moveu desde a carga. */
+    public long lastVisitMoved(ResourceType type) {
+        return lastVisitMoved[type.ordinal()];
     }
 
     /** Total movido como origem desde que o nó carregou (itens, mB ou FE). */

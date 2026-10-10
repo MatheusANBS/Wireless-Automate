@@ -101,6 +101,11 @@ public final class TestMachines {
         return SWITCH_TANKS.computeIfAbsent(pos.immutable(), key -> new FluidTank(SWITCH_TANK_CAPACITY));
     }
 
+    /** Liga a capability do tanque de {@code pos} sem avisar ninguém (o mod que não chama {@code neighborChanged}). */
+    static void switchOnSilently(BlockPos pos) {
+        SWITCHED_ON.add(pos.immutable());
+    }
+
     static boolean switchedOn(BlockPos pos) {
         return SWITCHED_ON.contains(pos);
     }

@@ -56,6 +56,11 @@ public final class VanillaBlockHandlers {
         return from != null && to != null && Cauldron.of(from) != null && Cauldron.of(to) != null;
     }
 
+    /** O handler de bloco achado em {@code found} ainda vale com {@code now} no lugar (o mesmo bloco, ou caldeirão → caldeirão). */
+    static boolean sameHandler(Block found, Block now) {
+        return found == now || bothCauldrons(found, now);
+    }
+
     /**
      * O conteúdo de cada caldeirão, como o {@code CauldronFluidContent} do NeoForge 21.1: bloco, fluido, total
      * ({@link FluidType#BUCKET_VOLUME}), nível máximo e a propriedade de nível (a neve em pó não entra).
@@ -64,6 +69,9 @@ public final class VanillaBlockHandlers {
         EMPTY(Blocks.CAULDRON, Fluids.EMPTY, null, 1),
         WATER(Blocks.WATER_CAULDRON, Fluids.WATER, LayeredCauldronBlock.LEVEL, 3),
         LAVA(Blocks.LAVA_CAULDRON, Fluids.LAVA, null, 1);
+
+        /** Os três, sem o clone do {@code values()} a cada consulta (elas rodam em toda chamada do handler). */
+        private static final Cauldron[] ALL = values();
 
         final Block block;
         final Fluid fluid;
@@ -88,7 +96,7 @@ public final class VanillaBlockHandlers {
         }
 
         static @Nullable Cauldron of(Block block) {
-            for (Cauldron cauldron : values()) {
+            for (Cauldron cauldron : ALL) {
                 if (cauldron.block == block) {
                     return cauldron;
                 }
@@ -97,7 +105,7 @@ public final class VanillaBlockHandlers {
         }
 
         static @Nullable Cauldron forFluid(Fluid fluid) {
-            for (Cauldron cauldron : values()) {
+            for (Cauldron cauldron : ALL) {
                 if (cauldron.fluid == fluid) {
                     return cauldron;
                 }

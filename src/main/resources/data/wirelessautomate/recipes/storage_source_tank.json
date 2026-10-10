@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "ars_nouveau"
     }
   ],
@@ -24,7 +24,7 @@
     }
   },
   "result": {
-    "id": "wirelessautomate:storage_source_tank",
+    "item": "wirelessautomate:storage_source_tank",
     "count": 1
   }
 }

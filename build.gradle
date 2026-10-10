@@ -4,22 +4,24 @@ import org.gradle.api.services.BuildServiceParameters
 plugins {
     id 'java-library'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.148'
+    // Modo legacyforge do ModDevGradle: Forge 47 (Minecraft 1.20.1), com o reobfJar para o jar publicado.
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148'
 }
 
 tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
+// O jar sai como wirelessautomate-<versão>+mc1.20.1-forge.jar (o publicado é o do reobfJar).
+version = "${mod_version}+mc${minecraft_version}-forge"
 group = mod_group_id
 
 base {
     archivesName = mod_id
 }
 
-// O Minecraft 1.21.1 roda em Java 21.
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+// O Minecraft 1.20.1 roda em Java 17.
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 sourceSets.main.resources {
     // Recursos gerados pelo runData.
@@ -37,7 +39,6 @@ repositories {
         url = 'https://maven.blamejared.com/'
         content {
             includeGroup 'mezz.jei'
-            includeGroup 'net.mezzdev.config' // biblioteca de config que o JEI 19.56+ usa
             includeGroup 'com.hollingsworth.ars_nouveau' // Ars Nouveau (Source, ver compat/arsnouveau).
         }
     }
@@ -51,8 +52,8 @@ repositories {
     }
 }
 
-neoForge {
-    version = project.neo_version
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
 
     parchment {
         mappingsVersion = project.parchment_mappings_version
@@ -62,13 +63,13 @@ neoForge {
     runs {
         client {
             client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         // Sobe um servidor sem mundo, roda todos os GameTests do mod e encerra.
@@ -78,7 +79,7 @@ neoForge {
             // Pasta própria, com o mundo apagado antes de cada rodada (tarefa abaixo): dados salvos de
             // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
             gameDirectory = project.file('run/gametest')
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
             // Liga as máquinas de teste (gametest/TestMachines): slot de pilha enorme e muitos tanques.
             systemProperty 'wirelessautomate.gameTests', 'true'
         }
@@ -103,32 +104,31 @@ neoForge {
     }
 }
 
-// Dependências só para testar em dev, sem virar dependência publicada do mod.
-configurations {
-    runtimeClasspath.extendsFrom localRuntime
-}
 
 dependencies {
     // Integrações opcionais (ver docs/especificacao.md, seção Integrações).
 
-    // JEI: só a API na compilação; o JEI completo só nas execuções de dev (runClient), sem virar
-    // dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    // JEI: só a API na compilação; o JEI completo no classpath das execuções de dev (modRuntimeOnly,
+    // remapeado pelo MDG; o modo legacyforge não tem o localRuntime), sem virar dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
+    modCompileOnly "mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"
+    modRuntimeOnly "mezz.jei:jei-${minecraft_version}-forge:${jei_version}"
 
     // Mekanism: só a API na compilação (IChemicalHandler, ChemicalStack). O mod completo vai para a
     // pasta mods do runClient e da run gameTestServerChemicals (abaixo), não para o classpath: com
     // ele, os GameTests de jogador falso quebram (o Mekanism manda pacotes ao "entrar" o jogador).
     // Tudo que toca na API fica em compat/mekanism e só carrega com o Mekanism presente.
-    compileOnly "mekanism:Mekanism:${minecraft_version}-${mekanism_version}:api"
+    modCompileOnly "mekanism:Mekanism:${minecraft_version}-${mekanism_version}:api"
 
     // Ars Nouveau: o jar inteiro só na compilação (não há jar de API), sem as dependências dele. O
     // mod completo, com GeckoLib e Curios, vai para a pasta mods do runClient e da run
     // gameTestServerSource (abaixo). Tudo que toca na API fica em compat/arsnouveau e só carrega
     // com o Ars presente.
-    compileOnly("com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}") {
+    modCompileOnly("com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}") {
         transitive = false
     }
+
+    // GuideME: só na compilação (item/GuideBook); o livro em si é data-driven.
+    modCompileOnly "maven.modrinth:guideme:${guideme_version}"
 
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
@@ -141,7 +141,7 @@ tasks.named('test', Test).configure {
 }
 
 // --- Benchmark (docs/benchmark.md) ---
-// Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
+// Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo CurseForge (cursemaven),
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
 // dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau,
 // o GuideME e o Mouse Tweaks, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
@@ -150,7 +150,7 @@ repositories {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
         filter { includeGroup 'maven.modrinth' }
     }
-    // Allthemodium e All The Tweaks só existem no CurseForge.
+    // Os mods do pack (ATM9 To the Sky) vêm do CurseForge, pelos ids de arquivo do gradle.properties.
     exclusiveContent {
         forRepository { maven { name = 'CurseMaven'; url = 'https://cursemaven.com' } }
         filter { includeGroup 'curse.maven' }
@@ -180,35 +180,40 @@ configurations {
     }
 }
 
+// Os jars dos mods do pack (Forge, nomes SRG) vão para as pastas mods das runs. Ainda sem remapear para
+// os nomes de dev: provar as runs com mods é a etapa 2 do porte (TODO etapa 2).
 dependencies {
-    benchMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
-    benchMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
-    benchMods 'maven.modrinth:spark:1.10.124-neoforge-1.21.1'
-    clientMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
-    clientMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
+    benchMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
+    benchMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
+    benchMods "curse.maven:spark-361579:${spark_file}"
+    clientMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
+    clientMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
     // Observable (perfil de lag por bloco e entidade, desenhado no mundo) e as dependências dele.
-    clientMods 'maven.modrinth:observable:5.4.4+neoforge'
-    clientMods 'maven.modrinth:kotlin-for-forge:5.12.0'
-    clientMods 'maven.modrinth:architectury-api:13.0.11+neoforge'
+    clientMods "curse.maven:observable-509575:${observable_file}"
+    clientMods "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
+    clientMods "curse.maven:architectury-api-419699:${architectury_file}"
     clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // GuideME: o livro-guia do mod (data-driven, em assets/wirelessautomate/guides); opcional.
-    clientMods 'maven.modrinth:guideme:21.1.19'
+    clientMods "maven.modrinth:guideme:${guideme_version}"
     // Mouse Tweaks: para testar a lista do Baú junto com os arrastos dele nos slots.
-    clientMods 'maven.modrinth:mouse-tweaks:1.21-2.26.1-neoforge'
+    clientMods "curse.maven:mouse-tweaks-60089:${mousetweaks_file}"
     chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // Ars Nouveau (Source) e as dependências obrigatórias dele.
     clientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
-    clientMods "maven.modrinth:geckolib:${geckolib_version}"
-    clientMods "maven.modrinth:curios:${curios_version}"
+    clientMods "curse.maven:geckolib-388172:${geckolib_file}"
+    clientMods "curse.maven:curios-309927:${curios_file}"
     sourceTestMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
-    sourceTestMods "maven.modrinth:geckolib:${geckolib_version}"
-    sourceTestMods "maven.modrinth:curios:${curios_version}"
+    sourceTestMods "curse.maven:geckolib-388172:${geckolib_file}"
+    sourceTestMods "curse.maven:curios-309927:${curios_file}"
     // Allthemodium (tiers Allthemodium, Vibranium e Unobtainium) e All The Tweaks (fragmento de ATM Star).
     clientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
     clientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
     atmTestMods "curse.maven:allthemodium-364466:${allthemodium_file}"
     atmTestMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
-    atmTestMods "maven.modrinth:geckolib:${geckolib_version}" // o Allthemodium 3.2 exige
+    // O Allthemodium 2.5 exige o All The Ores e o GeckoLib.
+    clientMods "curse.maven:alltheores-405593:${alltheores_file}"
+    atmTestMods "curse.maven:alltheores-405593:${alltheores_file}"
+    atmTestMods "curse.maven:geckolib-388172:${geckolib_file}"
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -232,7 +237,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
                 'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar',
-                'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'mouse-tweaks-*.jar'
+                'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'alltheores-*.jar', 'mouse-tweaks-*.jar', 'spark-*.jar'
     }
 }
 
@@ -249,7 +254,7 @@ var prepareObservableConfig = tasks.register('prepareObservableConfig') {
     }
 }
 
-neoForge.runs.client.taskBefore prepareClientMods
+legacyForge.runs.client.taskBefore prepareClientMods
 
 // GameTests de químicos: um servidor de testes próprio, com o Mekanism na pasta mods, que roda só o
 // namespace wirelessautomate_chemicals (gametest/ChemicalGameTests). ./gradlew runGameTestServerChemicals
@@ -258,17 +263,17 @@ var prepareChemicalTestMods = tasks.register('prepareChemicalTestMods', Sync) {
     into layout.projectDirectory.dir('run/gametest-chemicals/mods')
 }
 
-neoForge.runs {
+legacyForge.runs {
     gameTestServerChemicals {
         type = 'gameTestServer'
         gameDirectory = project.file('run/gametest-chemicals')
-        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_chemicals'
+        systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_chemicals'
         // Liga os tanques de químico de teste (gametest/ChemicalTestTanks).
         systemProperty 'wirelessautomate.chemicalTests', 'true'
         taskBefore prepareChemicalTestMods
     }
 }
-neoForge.runs.client.taskBefore prepareObservableConfig
+legacyForge.runs.client.taskBefore prepareObservableConfig
 
 // GameTests de Source: um servidor de testes próprio, com o Ars Nouveau (e GeckoLib e Curios) na
 // pasta mods, que roda só o namespace wirelessautomate_source (gametest/SourceGameTests).
@@ -278,11 +283,11 @@ var prepareSourceTestMods = tasks.register('prepareSourceTestMods', Sync) {
     into layout.projectDirectory.dir('run/gametest-source/mods')
 }
 
-neoForge.runs {
+legacyForge.runs {
     gameTestServerSource {
         type = 'gameTestServer'
         gameDirectory = project.file('run/gametest-source')
-        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_source'
+        systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_source'
         systemProperty 'wirelessautomate.sourceTests', 'true'
         taskBefore prepareSourceTestMods
     }
@@ -296,16 +301,16 @@ var prepareAtmTestMods = tasks.register('prepareAtmTestMods', Sync) {
     into layout.projectDirectory.dir('run/gametest-atm/mods')
 }
 
-neoForge.runs {
+legacyForge.runs {
     gameTestServerAllthemodium {
         type = 'gameTestServer'
         gameDirectory = project.file('run/gametest-atm')
-        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_atm'
+        systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_atm'
         taskBefore prepareAtmTestMods
     }
 }
 
-neoForge.runs {
+legacyForge.runs {
     // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado
     // pelo scripts/bench.sh. A propriedade wirelessautomate.bench liga as máquinas de teste de
     // fluido e energia (bench/BenchCapabilities.java).
@@ -325,12 +330,12 @@ neoForge.runs {
     }
 }
 
-// Preenche os ${...} do neoforge.mods.toml com os valores do gradle.properties.
+// Preenche os ${...} do META-INF/mods.toml com os valores do gradle.properties.
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
+            forge_version          : forge_version,
             loader_version_range   : loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
@@ -345,10 +350,12 @@ var generateModMetadata = tasks.register('generateModMetadata', ProcessResources
     into 'build/generated/sources/modMetadata'
 }
 sourceSets.main.resources.srcDir generateModMetadata
-neoForge.ideSyncTask generateModMetadata
+legacyForge.ideSyncTask generateModMetadata
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Durante o porte o compilador tem de mostrar todos os erros (scripts/porte/erros.sh), não só 100.
+    options.compilerArgs += ['-Xmaxerrs', '100000']
 }
 
 idea {
@@ -409,4 +416,31 @@ tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 
             }
         }
     }
+}
+
+// --- Porte 1.20.1 (temporário, até a tarefa 10) ---
+// Com -Pporte.soPuras, o source set main compila só a lógica pura testada em src/test/java e as
+// dependências puras dela, para o JUnit rodar enquanto o resto do mod ainda não compila no 1.20.1:
+// ./gradlew test -Pporte.soPuras
+if (project.hasProperty('porte.soPuras')) {
+    def base = 'io/github/matheusanbs/wirelessautomate/'
+    def puras = [
+            'bench/LnChannelPlan', 'bench/Samples',
+            'block/TierLadder',
+            'client/CardGrid', 'client/EnchantSearch', 'client/RateFormat', 'client/ResizeHandle',
+            'client/TabLayout', 'client/WheelLayout',
+            'filter/StockLimit',
+            'linker/LinkerBox', 'linker/LinkerTabs',
+            'network/Backoff', 'network/EnergySplit', 'network/RateLimiter', 'network/RateMath',
+            'network/ReachBox', 'network/ResourceType', 'network/RoundRobinOrder', 'network/SourceCursor',
+            'network/TickBudget',
+            'preset/PasteTypes',
+            'storage/StorageMath', 'storage/StorageShapes',
+    ]
+    // Fora até o build inteiro voltar: o PasteMode usa o LinkerMode, que usa o StreamCodec do 1.21
+    // (camada net/ da tarefa 2), e o ScalarStore implementa o BulkEnergy e o BulkSource, que usam a
+    // BlockCapability do NeoForge (CapCache, tarefas 2 e 4).
+    def testesFora = ['preset/PasteModeTest', 'storage/ScalarStoreTest']
+    sourceSets.main.java { include puras.collect { base + it + '.java' } }
+    sourceSets.test.java { exclude testesFora.collect { base + it + '.java' } }
 }

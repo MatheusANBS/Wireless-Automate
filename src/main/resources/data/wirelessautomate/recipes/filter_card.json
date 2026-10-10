@@ -11,7 +11,7 @@
     "C": { "item": "minecraft:comparator" }
   },
   "result": {
-    "id": "wirelessautomate:filter_card",
+    "item": "wirelessautomate:filter_card",
     "count": 2
   }
 }

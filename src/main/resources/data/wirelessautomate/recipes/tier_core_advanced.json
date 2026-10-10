@@ -12,7 +12,7 @@
     "B": { "item": "minecraft:gold_block" }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_advanced",
+    "item": "wirelessautomate:tier_core_advanced",
     "count": 1
   }
 }

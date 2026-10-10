@@ -10,40 +10,42 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''${mod_description}'''
 
+# A versão do Forge do gradle.properties é a mínima exigida (a do ATM9 To the Sky).
 [[dependencies.${mod_id}]]
-    modId="neoforge"
-    type="required"
-    versionRange="[${neo_version},)"
+    modId="forge"
+    mandatory=true
+    versionRange="[${forge_version},)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="minecraft"
-    type="required"
+    mandatory=true
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
 
 # Integrações opcionais: carregam só se o mod estiver presente.
+# Mekanism 10.4: os quatro químicos (gás, infusão, pigmento e slurry).
 [[dependencies.${mod_id}]]
     modId="mekanism"
-    type="optional"
-    versionRange="[10.7,)"
+    mandatory=false
+    versionRange="[10.4,)"
     ordering="AFTER"
     side="BOTH"
 
-# Ars Nouveau: a aba Source. A API de Source é a mesma desde a 5.2.0 (a primeira para 1.21.1).
+# Ars Nouveau: a aba Source.
 [[dependencies.${mod_id}]]
     modId="ars_nouveau"
-    type="optional"
-    versionRange="[5.2,)"
+    mandatory=false
+    versionRange="[4.12,)"
     ordering="NONE"
     side="BOTH"
 
 # Allthemodium: os tiers Allthemodium, Vibranium e Unobtainium (só ids e tags nas receitas, sem API).
 [[dependencies.${mod_id}]]
     modId="allthemodium"
-    type="optional"
+    mandatory=false
     versionRange="[2,)"
     ordering="NONE"
     side="BOTH"
@@ -51,15 +53,15 @@ description='''${mod_description}'''
 # GuideME mostra o livro-guia (data-driven, sem código: assets/wirelessautomate/guideme_guides e guides).
 [[dependencies.${mod_id}]]
     modId="guideme"
-    type="optional"
-    versionRange="[21.1,)"
+    mandatory=false
+    versionRange="[20.1,)"
     ordering="NONE"
     side="BOTH"
 
-# JEI 19 é a linha do 1.21.1. Arrastar funciona em toda ela; Shift + clique na lista pede 19.28+.
+# JEI 15 é a linha do 1.20.1.
 [[dependencies.${mod_id}]]
     modId="jei"
-    type="optional"
-    versionRange="[19,)"
+    mandatory=false
+    versionRange="[15,)"
     ordering="NONE"
     side="BOTH"

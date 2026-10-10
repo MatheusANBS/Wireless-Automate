@@ -17,10 +17,14 @@
               ]
             },
             {
-              "function": "minecraft:copy_components",
+              "function": "minecraft:copy_nbt",
               "source": "block_entity",
-              "include": [
-                "wirelessautomate:storage_contents"
+              "ops": [
+                {
+                  "source": "storage_contents",
+                  "target": "storage_contents",
+                  "op": "replace"
+                }
               ]
             }
           ]

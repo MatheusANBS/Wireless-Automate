@@ -12,7 +12,7 @@
     "I": { "item": "minecraft:iron_ingot" }
   },
   "result": {
-    "id": "wirelessautomate:router",
+    "item": "wirelessautomate:router",
     "count": 1
   }
 }

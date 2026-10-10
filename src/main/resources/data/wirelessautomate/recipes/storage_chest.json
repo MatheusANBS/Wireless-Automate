@@ -21,7 +21,7 @@
     }
   },
   "result": {
-    "id": "wirelessautomate:storage_chest",
+    "item": "wirelessautomate:storage_chest",
     "count": 1
   }
 }

@@ -97,15 +97,15 @@ public final class FaceConfig {
      * Formato salvo (NBT da face, preset do Configurador): só os campos fora do padrão, então uma
      * face padrão vira um mapa vazio. Tolerante: enum com nome inválido ou campo com tipo errado
      * volta ao padrão, e uma entrada de filtro que não lê é descartada ({@link FilterCodecs#LENIENT}).
-     * Precisa de {@code RegistryOps} por causa dos componentes das entradas de item e fluido.
+     * Porte 1.20.1: basta o {@link NbtOps} (as entradas de item e fluido gravam o NBT da pilha).
      */
     public static final Codec<FaceConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
-            enumCodec(PortMode.class, PortMode.NONE).lenientOptionalFieldOf(MODE, PortMode.NONE)
+            enumCodec(PortMode.class, PortMode.NONE).optionalFieldOf(MODE, PortMode.NONE)
                     .forGetter(FaceConfig::mode),
-            Codec.INT.lenientOptionalFieldOf(PRIORITY, 0).forGetter(FaceConfig::priority),
-            enumCodec(RedstoneMode.class, RedstoneMode.IGNORE).lenientOptionalFieldOf(REDSTONE, RedstoneMode.IGNORE)
+            Codec.INT.optionalFieldOf(PRIORITY, 0).forGetter(FaceConfig::priority),
+            enumCodec(RedstoneMode.class, RedstoneMode.IGNORE).optionalFieldOf(REDSTONE, RedstoneMode.IGNORE)
                     .forGetter(FaceConfig::redstone),
-            FilterCodecs.LENIENT.lenientOptionalFieldOf(FILTER, Filter.EMPTY).forGetter(FaceConfig::filter))
+            FilterCodecs.LENIENT.optionalFieldOf(FILTER, Filter.EMPTY).forGetter(FaceConfig::filter))
             .apply(i, FaceConfig::of));
 
     private static FaceConfig of(PortMode mode, int priority, RedstoneMode redstone, Filter filter) {
@@ -117,13 +117,9 @@ public final class FaceConfig {
         return config;
     }
 
-    /** NBT compacto pelo {@link #CODEC}: uma face padrão vira uma tag vazia. */
+    /** NBT compacto pelo {@link #CODEC}: uma face padrão vira uma tag vazia. Porte 1.20.1: igual a {@link #save()}. */
     public CompoundTag save(HolderLookup.Provider registries) {
-        return CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), this)
-                .resultOrPartial(error -> WirelessAutomate.LOGGER.error("Falha ao salvar a face {}: {}", this, error))
-                .filter(CompoundTag.class::isInstance)
-                .map(CompoundTag.class::cast)
-                .orElseGet(CompoundTag::new);
+        return save();
     }
 
     /**
@@ -147,9 +143,7 @@ public final class FaceConfig {
 
     /** Lê o formato de {@link #save}; também lê as tags antigas, sem filtro. Campo ausente ou inválido fica no padrão. */
     public static FaceConfig load(CompoundTag tag, HolderLookup.Provider registries) {
-        return CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag)
-                .resultOrPartial(error -> WirelessAutomate.LOGGER.warn("Face com dados inválidos ({}): {}", error, tag))
-                .orElseGet(FaceConfig::new);
+        return load(tag); // porte 1.20.1: sem os registros
     }
 
     private static <E extends Enum<E>> Codec<E> enumCodec(Class<E> type, E fallback) {

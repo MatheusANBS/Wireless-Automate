@@ -305,7 +305,7 @@ public final class NetworkManager {
     public void tick(MinecraftServer server) {
         budget.setBaseNanos((long) (Config.TICK_BUDGET_MS.get() * 1_000_000L));
         if (Config.ADAPTIVE_BUDGET.get()) {
-            budget.adapt(server.getAverageTickTimeNanos() / 1_000_000.0);
+            budget.adapt(server.getAverageTickTime()); // porte 1.20.1: média móvel em ms (o 1.21 dá a média em ns)
         } else {
             budget.adapt(0);
         }

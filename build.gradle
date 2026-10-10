@@ -436,11 +436,16 @@ if (project.hasProperty('porte.soPuras')) {
             'network/TickBudget',
             'preset/PasteTypes',
             'storage/StorageMath', 'storage/StorageShapes',
+            // Tarefa 4: o PasteMode usa o LinkerMode (com o StreamCodec da camada net/) e o ScalarStore
+            // implementa o BulkEnergy e o BulkSource (a Capability do Forge vem do StorageCapabilities, que só
+            // inicializa fora do JUnit); todos compilam no 1.20.1.
+            'preset/PasteMode', 'linker/LinkerMode',
+            'net/StreamCodec', 'net/StreamDecoder', 'net/StreamEncoder', 'net/StreamMemberEncoder',
+            'net/NeoForgeStreamCodecs', 'net/RegistryFriendlyByteBuf',
+            'storage/ScalarStore', 'storage/BulkEnergy', 'storage/BulkSource', 'storage/StorageCapabilities',
+            'storage/BulkItems', 'storage/BulkFluids',
     ]
-    // Fora até o build inteiro voltar: o PasteMode usa o LinkerMode, que usa o StreamCodec do 1.21
-    // (camada net/ da tarefa 2), e o ScalarStore implementa o BulkEnergy e o BulkSource, que usam a
-    // BlockCapability do NeoForge (CapCache, tarefas 2 e 4).
-    def testesFora = ['preset/PasteModeTest', 'storage/ScalarStoreTest']
+    def testesFora = []
     sourceSets.main.java { include puras.collect { base + it + '.java' } }
     sourceSets.test.java { exclude testesFora.collect { base + it + '.java' } }
 }

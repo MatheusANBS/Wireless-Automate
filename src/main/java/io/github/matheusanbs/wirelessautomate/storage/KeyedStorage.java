@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
-import net.minecraft.core.HolderLookup;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -66,10 +66,10 @@ public abstract class KeyedStorage<K> {
     /** Cópia normalizada para guardar como chave (pilha de 1, 1 mB); imutáveis podem voltar a mesma. */
     protected abstract K normalize(K key);
 
-    protected abstract Tag saveKey(K key, HolderLookup.Provider registries);
+    protected abstract Tag saveKey(K key);
 
     /** A chave lida, ou {@code null} se não existe mais (mod removido). */
-    protected abstract @Nullable K loadKey(Tag tag, HolderLookup.Provider registries);
+    protected abstract @Nullable K loadKey(Tag tag);
 
     public void setAdmission(Admission<K> admission) {
         this.admission = admission;
@@ -178,11 +178,11 @@ public abstract class KeyedStorage<K> {
     }
 
     /** Lista de {@code {key, count}}. */
-    public ListTag save(HolderLookup.Provider registries) {
+    public ListTag save() {
         ListTag list = new ListTag();
         for (Entry entry : entries) {
             CompoundTag tag = new CompoundTag();
-            tag.put("key", saveKey(entry.key, registries));
+            tag.put("key", saveKey(entry.key));
             tag.putLong("count", entry.count);
             list.add(tag);
         }
@@ -194,7 +194,7 @@ public abstract class KeyedStorage<K> {
      * perdidos, como no baú vanilla, e o caso vai para o log. Lê também o campo antigo
      * {@code item} do Baú.
      */
-    public void load(ListTag list, HolderLookup.Provider registries) {
+    public void load(ListTag list) {
         clear();
         for (int i = 0; i < list.size(); i++) {
             CompoundTag tag = list.getCompound(i);
@@ -203,7 +203,7 @@ public abstract class KeyedStorage<K> {
             if (count <= 0 || keyTag == null) {
                 continue;
             }
-            K key = loadKey(keyTag, registries);
+            K key = loadKey(keyTag);
             if (key == null || isEmptyKey(key)) {
                 WirelessAutomate.LOGGER.warn("{}: tipo ilegível descartado ({} unidades): {}", what, count, keyTag);
                 continue;

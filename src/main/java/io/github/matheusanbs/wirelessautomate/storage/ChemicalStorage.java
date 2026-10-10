@@ -4,7 +4,7 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import it.unimi.dsi.fastutil.Hash;
 import java.util.Objects;
 import java.util.function.LongSupplier;
-import net.minecraft.core.HolderLookup;
+
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -44,7 +44,7 @@ public final class ChemicalStorage extends KeyedStorage<ResourceLocation> {
     }
 
     @Override
-    protected Tag saveKey(ResourceLocation key, HolderLookup.Provider registries) {
+    protected Tag saveKey(ResourceLocation key) {
         return StringTag.valueOf(key.toString());
     }
 
@@ -53,7 +53,7 @@ public final class ChemicalStorage extends KeyedStorage<ResourceLocation> {
      * valer quando ele voltar); com ele, um químico que não existe mais é descartado.
      */
     @Override
-    protected @Nullable ResourceLocation loadKey(Tag tag, HolderLookup.Provider registries) {
+    protected @Nullable ResourceLocation loadKey(Tag tag) {
         ResourceLocation id = ResourceLocation.tryParse(tag.getAsString());
         if (id == null || Chemicals.LOADED && !Chemicals.exists(id)) {
             return null;

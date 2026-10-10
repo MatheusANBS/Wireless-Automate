@@ -2,7 +2,7 @@ package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
@@ -44,13 +44,13 @@ public abstract class KeyedStorageBlockEntity<K> extends StorageBlockEntity {
     }
 
     @Override
-    protected Tag saveContents(HolderLookup.Provider registries) {
-        return keyed().save(registries);
+    protected Tag saveContents() {
+        return keyed().save();
     }
 
     @Override
-    protected void loadContents(@Nullable Tag tag, HolderLookup.Provider registries) {
-        keyed().load(tag instanceof ListTag list ? list : new ListTag(), registries);
+    protected void loadContents(@Nullable Tag tag) {
+        keyed().load(tag instanceof ListTag list ? list : new ListTag());
     }
 
     @Override

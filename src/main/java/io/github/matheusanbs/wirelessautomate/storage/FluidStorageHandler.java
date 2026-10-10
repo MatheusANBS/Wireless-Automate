@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 
 /**
  * O Tanque visto como um handler de fluido comum: um tanque por fluido guardado, mais um vazio no
@@ -26,7 +26,7 @@ public final class FluidStorageHandler implements IFluidHandler {
         if (tank < 0 || tank >= storage.types()) {
             return FluidStack.EMPTY;
         }
-        return storage.key(tank).copyWithAmount((int) Math.min(storage.count(tank), Integer.MAX_VALUE));
+        return new FluidStack(storage.key(tank), (int) Math.min(storage.count(tank), Integer.MAX_VALUE));
     }
 
     @Override
@@ -40,7 +40,7 @@ public final class FluidStorageHandler implements IFluidHandler {
         if (tank < 0 || tank > storage.types()) {
             return false;
         }
-        return tank == storage.types() || FluidStack.isSameFluidSameComponents(storage.key(tank), stack);
+        return tank == storage.types() || storage.key(tank).isFluidEqual(stack);
     }
 
     @Override
@@ -57,7 +57,7 @@ public final class FluidStorageHandler implements IFluidHandler {
             return FluidStack.EMPTY;
         }
         long taken = storage.extract(resource, resource.getAmount(), action.simulate());
-        return taken <= 0 ? FluidStack.EMPTY : resource.copyWithAmount((int) taken);
+        return taken <= 0 ? FluidStack.EMPTY : new FluidStack(resource, (int) taken);
     }
 
     /** Drena do primeiro fluido guardado, como um tanque comum de um fluido só. */
@@ -68,6 +68,6 @@ public final class FluidStorageHandler implements IFluidHandler {
         }
         FluidStack key = storage.key(0);
         long taken = storage.extract(key, maxDrain, action.simulate());
-        return taken <= 0 ? FluidStack.EMPTY : key.copyWithAmount((int) taken);
+        return taken <= 0 ? FluidStack.EMPTY : new FluidStack(key, (int) taken);
     }
 }

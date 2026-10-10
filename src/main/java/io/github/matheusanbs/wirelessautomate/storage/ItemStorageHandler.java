@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandler;
 
 /**
  * O Baú visto como um inventário comum, para funis, AE2, RS e outros mods: um slot por tipo, mais
@@ -61,6 +61,6 @@ public final class ItemStorageHandler implements IItemHandler {
         if (slot < 0 || slot > storage.types()) {
             return false;
         }
-        return slot == storage.types() || ItemStack.isSameItemSameComponents(storage.key(slot), stack);
+        return slot == storage.types() || ItemStack.isSameItemSameTags(storage.key(slot), stack);
     }
 }

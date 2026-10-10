@@ -3,11 +3,13 @@ package io.github.matheusanbs.wirelessautomate.filter;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraft.world.item.ItemStackLinkedSet;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Uma entrada de filtro: exata (item ou fluido, com componentes; químico do Mekanism pelo id), tag, mod
@@ -39,7 +41,7 @@ public sealed interface FilterEntry {
 
         @Override
         public boolean sameTarget(FilterEntry other) {
-            return other instanceof ItemEntry o && ItemStack.isSameItemSameComponents(stack, o.stack);
+            return other instanceof ItemEntry o && ItemStack.isSameItemSameTags(stack, o.stack);
         }
 
         @Override
@@ -54,14 +56,14 @@ public sealed interface FilterEntry {
 
         @Override
         public int hashCode() {
-            return ItemStack.hashItemAndComponents(stack) * 31 + Long.hashCode(stock);
+            return ItemStackLinkedSet.TYPE_AND_TAG.hashCode(stack) * 31 + Long.hashCode(stock);
         }
     }
 
     /** Fluido exato; a pilha é guardada com 1 mB. */
     record FluidEntry(FluidStack stack, long stock) implements FilterEntry {
         public FluidEntry {
-            stack = stack.copyWithAmount(1);
+            stack = new FluidStack(stack, 1);
             stock = Math.max(0, stock);
         }
 
@@ -72,7 +74,7 @@ public sealed interface FilterEntry {
 
         @Override
         public boolean sameTarget(FilterEntry other) {
-            return other instanceof FluidEntry o && FluidStack.isSameFluidSameComponents(stack, o.stack);
+            return other instanceof FluidEntry o && stack.isFluidEqual(o.stack);
         }
 
         @Override
@@ -87,7 +89,7 @@ public sealed interface FilterEntry {
 
         @Override
         public int hashCode() {
-            return FluidStack.hashFluidAndComponents(stack) * 31 + Long.hashCode(stock);
+            return stack.hashCode() * 31 + Long.hashCode(stock);
         }
     }
 
@@ -185,7 +187,7 @@ public sealed interface FilterEntry {
     Codec<Long> STOCK = Codec.LONG;
 
     MapCodec<ItemEntry> ITEM_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemStack.SINGLE_ITEM_CODEC.fieldOf("item").forGetter(ItemEntry::stack),
+            ItemStack.CODEC.fieldOf("item").forGetter(ItemEntry::stack),
             STOCK.optionalFieldOf("stock", 0L).forGetter(ItemEntry::stock)).apply(i, ItemEntry::new));
     MapCodec<FluidEntry> FLUID_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             FluidStack.CODEC.fieldOf("fluid").forGetter(FluidEntry::stack),
@@ -205,12 +207,12 @@ public sealed interface FilterEntry {
             STOCK.optionalFieldOf("stock", 0L).forGetter(RuleEntry::stock)).apply(i, RuleEntry::new));
 
     Codec<FilterEntry> CODEC = Codec.STRING.dispatch("kind", FilterEntry::kind, kind -> switch (kind) {
-        case "item" -> ITEM_CODEC;
-        case "fluid" -> FLUID_CODEC;
-        case "tag" -> TAG_CODEC;
-        case "mod" -> MOD_CODEC;
-        case "chemical" -> CHEMICAL_CODEC;
-        case "rule" -> RULE_CODEC;
+        case "item" -> ITEM_CODEC.codec();
+        case "fluid" -> FLUID_CODEC.codec();
+        case "tag" -> TAG_CODEC.codec();
+        case "mod" -> MOD_CODEC.codec();
+        case "chemical" -> CHEMICAL_CODEC.codec();
+        case "rule" -> RULE_CODEC.codec();
         default -> throw new IllegalArgumentException("Tipo de entrada de filtro desconhecido: " + kind);
     });
 
@@ -219,10 +221,10 @@ public sealed interface FilterEntry {
     private static void encode(RegistryFriendlyByteBuf buf, FilterEntry entry) {
         if (entry instanceof ItemEntry e) {
             buf.writeByte(0);
-            ItemStack.STREAM_CODEC.encode(buf, e.stack());
+            GameCodecs.ITEM_STACK.encode(buf, e.stack());
         } else if (entry instanceof FluidEntry e) {
             buf.writeByte(1);
-            FluidStack.STREAM_CODEC.encode(buf, e.stack());
+            GameCodecs.FLUID_STACK.encode(buf, e.stack());
         } else if (entry instanceof TagEntry e) {
             buf.writeByte(2);
             buf.writeResourceLocation(e.tag());
@@ -242,8 +244,8 @@ public sealed interface FilterEntry {
     private static FilterEntry decode(RegistryFriendlyByteBuf buf) {
         byte kind = buf.readByte();
         return switch (kind) {
-            case 0 -> new ItemEntry(ItemStack.STREAM_CODEC.decode(buf), 0).withStock(buf.readVarLong());
-            case 1 -> new FluidEntry(FluidStack.STREAM_CODEC.decode(buf), 0).withStock(buf.readVarLong());
+            case 0 -> new ItemEntry(GameCodecs.ITEM_STACK.decode(buf), 0).withStock(buf.readVarLong());
+            case 1 -> new FluidEntry(GameCodecs.FLUID_STACK.decode(buf), 0).withStock(buf.readVarLong());
             case 2 -> new TagEntry(buf.readResourceLocation(), buf.readVarLong());
             case 3 -> new ModEntry(buf.readUtf(64), buf.readVarLong());
             case 4 -> new ChemicalEntry(buf.readResourceLocation(), buf.readVarLong());

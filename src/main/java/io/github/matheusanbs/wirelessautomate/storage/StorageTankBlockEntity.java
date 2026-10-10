@@ -6,7 +6,10 @@ import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Tanque: fluidos por tipo ({@link FluidStorage}), em mB, vistos por todo mundo (canos, o
@@ -33,6 +36,15 @@ public class StorageTankBlockEntity extends KeyedStorageBlockEntity<FluidStack> 
 
     public FluidStorageHandler handler() {
         return handler;
+    }
+
+    /** A de fluido do Forge (para todo mundo) e a {@link BulkFluids} (para o roteador, em {@code long}). */
+    @Override
+    protected @Nullable Object exposed(Capability<?> capability) {
+        if (capability == ForgeCapabilities.FLUID_HANDLER) {
+            return handler;
+        }
+        return capability == BulkFluids.BLOCK ? storage : null;
     }
 
     @Override

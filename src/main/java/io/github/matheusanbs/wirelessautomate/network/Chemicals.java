@@ -9,9 +9,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.common.capabilities.Capability;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -22,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class Chemicals {
     /** Um id que nunca é químico, para comparar sem nulos. */
-    public static final ResourceLocation EMPTY_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");
+    public static final ResourceLocation EMPTY_ID = new ResourceLocation("mekanism", "empty");
 
     /** O Mekanism está instalado: a aba Químicos existe e o motor move químicos. */
     public static final boolean LOADED = ModList.get() != null && ModList.get().isLoaded("mekanism");
@@ -77,12 +76,6 @@ public final class Chemicals {
         return LOADED ? MekanismChemicals.tint(id) : 0xFFFFFF;
     }
 
-    /** Registra a capability de químico do Tanque Químico; sem o Mekanism, nada. */
-    public static void registerStorage(RegisterCapabilitiesEvent event) {
-        if (LOADED) {
-            MekanismStorage.register(event);
-        }
-    }
 
     /** Enche o recipiente do Mekanism com o químico do Tanque Químico; devolve quanto passou (0 sem ele). */
     public static long fillContainer(ItemStack container, ChemicalStorage storage, ResourceLocation id) {

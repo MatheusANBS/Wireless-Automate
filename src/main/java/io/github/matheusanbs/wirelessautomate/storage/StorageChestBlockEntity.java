@@ -6,6 +6,9 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Baú: itens por tipo ({@link ItemStorage}), vistos pelos outros mods como um inventário comum
@@ -32,6 +35,15 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
 
     public ItemStorageHandler handler() {
         return handler;
+    }
+
+    /** A de itens do Forge (para todo mundo) e a {@link BulkItems} (para o roteador). */
+    @Override
+    protected @Nullable Object exposed(Capability<?> capability) {
+        if (capability == ForgeCapabilities.ITEM_HANDLER) {
+            return handler;
+        }
+        return capability == BulkItems.BLOCK ? storage : null;
     }
 
     @Override

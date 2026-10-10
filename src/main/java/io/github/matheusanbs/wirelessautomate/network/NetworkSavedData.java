@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -31,8 +30,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class NetworkSavedData extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_networks";
-    public static final SavedData.Factory<NetworkSavedData> FACTORY =
-            new SavedData.Factory<>(NetworkSavedData::new, NetworkSavedData::load);
 
     /** Cores padrão das redes novas, escolhidas pelo hash do id. */
     private static final int[] PALETTE = {
@@ -54,7 +51,7 @@ public final class NetworkSavedData extends SavedData {
     }
 
     public static NetworkSavedData get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        return server.overworld().getDataStorage().computeIfAbsent(NetworkSavedData::load, NetworkSavedData::new, DATA_NAME);
     }
 
     /**
@@ -255,7 +252,7 @@ public final class NetworkSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         ListTag list = new ListTag();
         for (WaNetwork network : networks.values()) {
             list.add(network.save());
@@ -279,7 +276,7 @@ public final class NetworkSavedData extends SavedData {
         return tag;
     }
 
-    public static NetworkSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static NetworkSavedData load(CompoundTag tag) {
         NetworkSavedData data = new NetworkSavedData();
         ListTag list = tag.getList("networks", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {

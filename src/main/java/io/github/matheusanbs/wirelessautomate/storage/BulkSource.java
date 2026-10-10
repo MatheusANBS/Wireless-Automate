@@ -1,8 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
 
 /**
  * Source em {@code long}, sem o teto de {@link Integer#MAX_VALUE} por chamada da capability do Ars. É a
@@ -10,9 +8,12 @@ import net.minecraftforge.common.capabilities.CapabilityToken;
  * Não usa tipos do Ars.
  */
 public interface BulkSource {
-    /** A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). */
-    Capability<BulkSource> BLOCK = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    /**
+     * A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). Criada no
+     * {@link StorageCapabilities}: assim esta interface não depende do Forge para carregar (o JUnit do
+     * {@code ScalarStore} roda sem ele).
+     */
+    Capability<BulkSource> BLOCK = StorageCapabilities.SOURCE;
 
     /** Guarda até {@code amount}; devolve quanto coube. */
     long insert(long amount, boolean simulate);

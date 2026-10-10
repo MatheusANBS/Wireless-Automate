@@ -3,32 +3,33 @@ package io.github.matheusanbs.wirelessautomate.filter;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import net.minecraft.Util;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.component.ItemContainerContents;
-import net.minecraft.world.item.component.SuspiciousStewEffects;
+import net.minecraft.world.item.SuspiciousStewItem;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -88,7 +89,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
                 ResourceLocation.CODEC.fieldOf("id").forGetter(Enchant::id),
                 Codec.INT.optionalFieldOf("level", 1).forGetter(Enchant::minLevel)).apply(i, Enchant::new));
         static final StreamCodec<ByteBuf, Enchant> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, Enchant::id, ByteBufCodecs.VAR_INT, Enchant::minLevel, Enchant::new);
+                GameCodecs.RESOURCE_LOCATION, Enchant::id, ByteBufCodecs.VAR_INT, Enchant::minLevel, Enchant::new);
     }
 
     /** Durabilidade restante: {@code atLeast} = pelo menos {@code percent}%, senão abaixo de {@code percent}%. */
@@ -309,37 +310,47 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         };
     }
 
-    /** A pilha tem a propriedade? */
+    /**
+     * A pilha tem a propriedade? Porte 1.20.1 (D6): lê o NBT da pilha no lugar dos componentes do 1.21
+     * ({@code Enchantments} e {@code StoredEnchantments}, nome na bigorna, {@code Potion}/{@code CustomPotionEffects}
+     * e os efeitos do ensopado, {@code Items} do bundle e do {@code BlockEntityTag}).
+     */
     public static boolean has(ItemStack stack, Property property) {
         return switch (property) {
-            case ENCHANTED -> !stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty()
-                    || !stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty();
+            case ENCHANTED -> !stack.getEnchantmentTags().isEmpty()
+                    || !EnchantedBookItem.getEnchantments(stack).isEmpty();
             case DAMAGED -> stack.isDamaged();
-            case NAMED -> stack.has(DataComponents.CUSTOM_NAME);
-            case POTION -> stack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY).hasEffects()
-                    || !stack.getOrDefault(DataComponents.SUSPICIOUS_STEW_EFFECTS, SuspiciousStewEffects.EMPTY).effects().isEmpty();
+            case NAMED -> stack.hasCustomHoverName();
+            case POTION -> !PotionUtils.getMobEffects(stack).isEmpty()
+                    || nonEmptyList(stack.getTag(), SuspiciousStewItem.EFFECTS_TAG);
             case STACKABLE -> stack.getMaxStackSize() > 1;
-            case CONTENTS -> stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItems().iterator().hasNext()
-                    || !stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).isEmpty();
+            case CONTENTS -> nonEmptyList(BlockItem.getBlockEntityData(stack), "Items")
+                    || nonEmptyList(stack.getTag(), "Items");
         };
     }
 
     /** Maior nível do encantamento na pilha, no item ou guardado (livro); 0 se não tem. */
     public static int enchantLevel(ItemStack stack, ResourceKey<Enchantment> key) {
-        return Math.max(level(stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY), key),
-                level(stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY), key));
+        return Math.max(level(stack.getEnchantmentTags(), key), level(EnchantedBookItem.getEnchantments(stack), key));
     }
 
-    private static int level(ItemEnchantments enchantments, ResourceKey<Enchantment> key) {
+    /** Nível do encantamento numa lista {@code Enchantments}/{@code StoredEnchantments}, pelo id (sem o registro). */
+    private static int level(ListTag enchantments, ResourceKey<Enchantment> key) {
         if (enchantments.isEmpty()) {
             return 0;
         }
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            if (entry.getKey().is(key)) {
-                return entry.getIntValue();
+        for (int i = 0; i < enchantments.size(); i++) {
+            CompoundTag entry = enchantments.getCompound(i);
+            if (key.location().equals(EnchantmentHelper.getEnchantmentId(entry))) {
+                return EnchantmentHelper.getEnchantmentLevel(entry);
             }
         }
         return 0;
+    }
+
+    /** O tag tem uma lista não vazia na chave? */
+    private static boolean nonEmptyList(@Nullable CompoundTag tag, String key) {
+        return tag != null && !tag.getList(key, Tag.TAG_COMPOUND).isEmpty();
     }
 
     @SuppressWarnings("deprecation")

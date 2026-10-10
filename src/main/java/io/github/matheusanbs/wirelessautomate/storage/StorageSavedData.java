@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -24,8 +23,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class StorageSavedData extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_storage";
-    public static final SavedData.Factory<StorageSavedData> FACTORY =
-            new SavedData.Factory<>(StorageSavedData::new, StorageSavedData::load);
 
     /**
      * Um conteúdo guardado: de que armazenamento é, o tier do bloco quebrado e o NBT dele. O tier é
@@ -37,7 +34,7 @@ public final class StorageSavedData extends SavedData {
     private final Map<UUID, Stored> contents = new HashMap<>();
 
     public static StorageSavedData get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        return server.overworld().getDataStorage().computeIfAbsent(StorageSavedData::load, StorageSavedData::new, DATA_NAME);
     }
 
     /** Guarda o conteúdo de um armazenamento quebrado (substitui o que houver com o mesmo id). */
@@ -70,7 +67,7 @@ public final class StorageSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         CompoundTag all = new CompoundTag();
         contents.forEach((id, stored) -> {
             CompoundTag entry = new CompoundTag();
@@ -86,7 +83,7 @@ public final class StorageSavedData extends SavedData {
     }
 
     /** Lê o formato {@code {kind, data}}; uma lista solta é do formato antigo, só de Baús. */
-    private static StorageSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
+    private static StorageSavedData load(CompoundTag tag) {
         StorageSavedData data = new StorageSavedData();
         CompoundTag all = tag.getCompound("contents");
         for (String key : all.getAllKeys()) {

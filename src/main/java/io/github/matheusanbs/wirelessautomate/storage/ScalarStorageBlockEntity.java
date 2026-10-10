@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.Tag;
@@ -55,12 +55,12 @@ public abstract class ScalarStorageBlockEntity extends StorageBlockEntity {
     }
 
     @Override
-    protected Tag saveContents(HolderLookup.Provider registries) {
+    protected Tag saveContents() {
         return LongTag.valueOf(store.stored());
     }
 
     @Override
-    protected void loadContents(@Nullable Tag tag, HolderLookup.Provider registries) {
+    protected void loadContents(@Nullable Tag tag) {
         store.set(tag instanceof NumericTag number ? number.getAsLong() : 0);
     }
 

@@ -13,8 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackLinkedSet;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -316,7 +316,7 @@ final class ItemTransfer {
         int size = offered.getCount();
         int moved = 0;
         while (burstSteps < allowance && moved < cap) {
-            if (!ItemStack.isSameItemSameComponents(handler.getStackInSlot(slot), offered)) {
+            if (!ItemStack.isSameItemSameTags(handler.getStackInSlot(slot), offered)) {
                 break;
             }
             int want = Math.min(size, cap - moved);
@@ -325,7 +325,7 @@ final class ItemTransfer {
                 break;
             }
             burstSteps++;
-            if (!ItemStack.isSameItemSameComponents(taken, offered)) {
+            if (!ItemStack.isSameItemSameTags(taken, offered)) {
                 // O filtro do destino aprovou outro item: devolve.
                 giveBack(source, handler, slot, taken);
                 break;
@@ -539,7 +539,7 @@ final class ItemTransfer {
      * é uma transferência só, de qualquer tamanho. Para um inventário comum, uma entrega simulada leva
      * tudo o que o destino aceita: cada slot recebe numa chamada até o que ele aceita
      * ({@link InsertPlan#insert}: uma pilha, ou o limite do slot se ele passa de
-     * {@link Item#ABSOLUTE_MAX_STACK_SIZE}, como num barril com upgrade de pilha). Só passa de uma
+     * {@link Item#MAX_STACK_SIZE}, como num barril com upgrade de pilha). Só passa de uma
      * entrega se o pedaço chegou ao teto de um {@code int}; cada uma depois da primeira conta como
      * tentativa ({@link #burstSteps}, até {@code allowance}). Devolve quanto entregou.
      */
@@ -818,7 +818,7 @@ final class ItemTransfer {
         private boolean matches(int i, ItemStack stack, boolean components) {
             ItemStack exact = memoStacks[i];
             if (components) {
-                return exact != null && ItemStack.isSameItemSameComponents(exact, stack);
+                return exact != null && ItemStack.isSameItemSameTags(exact, stack);
             }
             return exact == null && memoItems[i] == stack.getItem();
         }
@@ -853,7 +853,7 @@ final class ItemTransfer {
                     }
                     continue;
                 }
-                boolean same = ItemStack.isSameItemSameComponents(inSlot, stack);
+                boolean same = ItemStack.isSameItemSameTags(inSlot, stack);
                 if (count == COUNT_COMPONENTS ? same : count == COUNT_ITEM && ItemStack.isSameItem(inSlot, stack)) {
                     counted += inSlot.getCount();
                     if (counted >= stock) {
@@ -932,7 +932,7 @@ final class ItemTransfer {
         /**
          * {@link IItemHandler#insertItem} sem passar, numa chamada, do que o slot aceita: até o tamanho
          * máximo do item ({@code itemMax}), ou até o limite do slot se ele passa de
-         * {@link Item#ABSOLUTE_MAX_STACK_SIZE} (99, o limite comum do vanilla e do {@code ItemStackHandler}).
+         * {@link Item#MAX_STACK_SIZE} (64 no 1.20.1, o limite comum do vanilla e do {@code ItemStackHandler}).
          * Um slot que declara mais que isso (upgrade de pilha, gaveta) recebe a pilha grande de uma vez;
          * os outros nunca veem uma pilha acima do tamanho do item, mesmo que não a limitem. Devolve a sobra.
          */
@@ -940,7 +940,7 @@ final class ItemTransfer {
             int count = stack.getCount();
             if (count > itemMax) {
                 int limit = target.getSlotLimit(slot);
-                int cap = limit > Item.ABSOLUTE_MAX_STACK_SIZE ? Math.max(itemMax, limit) : itemMax;
+                int cap = limit > Item.MAX_STACK_SIZE ? Math.max(itemMax, limit) : itemMax;
                 if (count > cap) {
                     ItemStack rest = target.insertItem(slot, stack.copyWithCount(cap), simulate);
                     return stack.copyWithCount(count - cap + rest.getCount());
@@ -958,7 +958,7 @@ final class ItemTransfer {
             int slots = target.getSlots();
             if (stack.isStackable()) {
                 for (int slot = 0; slot < slots && !rest.isEmpty(); slot++) {
-                    if (ItemStack.isSameItemSameComponents(target.getStackInSlot(slot), rest)) {
+                    if (ItemStack.isSameItemSameTags(target.getStackInSlot(slot), rest)) {
                         rest = insert(target, slot, rest, itemMax, false);
                     }
                 }

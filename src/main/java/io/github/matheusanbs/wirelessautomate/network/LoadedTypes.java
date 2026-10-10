@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import java.util.List;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 /** Os tipos de recurso que existem nesta instância (o mod de cada um está carregado), na ordem do registro. */
 public final class LoadedTypes {

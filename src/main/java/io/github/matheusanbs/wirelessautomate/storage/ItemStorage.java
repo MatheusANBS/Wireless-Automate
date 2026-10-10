@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import java.util.function.LongSupplier;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackLinkedSet;
@@ -28,13 +28,17 @@ public final class ItemStorage extends KeyedStorage<ItemStack> implements BulkIt
     }
 
     @Override
-    protected Tag saveKey(ItemStack key, HolderLookup.Provider registries) {
-        return key.save(registries);
+    protected Tag saveKey(ItemStack key) {
+        return key.save(new CompoundTag());
     }
 
     @Override
-    protected @Nullable ItemStack loadKey(Tag tag, HolderLookup.Provider registries) {
-        return ItemStack.parse(registries, tag).orElse(null);
+    protected @Nullable ItemStack loadKey(Tag tag) {
+        if (!(tag instanceof CompoundTag compound)) {
+            return null;
+        }
+        ItemStack stack = ItemStack.of(compound);
+        return stack.isEmpty() ? null : stack;
     }
 
     @Override

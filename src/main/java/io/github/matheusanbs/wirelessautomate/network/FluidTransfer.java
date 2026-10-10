@@ -6,9 +6,9 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.storage.BulkFluids;
 import java.util.List;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -210,9 +210,9 @@ final class FluidTransfer {
         if (bulk != null) {
             return bulk.extract(key, amount, simulate);
         }
-        FluidStack out = handler.drain(key.copyWithAmount((int) Math.min(amount, Integer.MAX_VALUE)),
+        FluidStack out = handler.drain(new FluidStack(key, (int) Math.min(amount, Integer.MAX_VALUE)),
                 simulate ? FluidAction.SIMULATE : FluidAction.EXECUTE);
-        return out.isEmpty() || !FluidStack.isSameFluidSameComponents(out, key) ? 0 : out.getAmount();
+        return out.isEmpty() || !out.isFluidEqual(key) ? 0 : out.getAmount();
     }
 
     /** Enche até {@code amount} do fluido de {@code key} pelo lado que existir; devolve quanto entrou. */
@@ -221,7 +221,7 @@ final class FluidTransfer {
         if (bulk != null) {
             return bulk.insert(key, amount, simulate);
         }
-        return handler.fill(key.copyWithAmount((int) Math.min(amount, Integer.MAX_VALUE)),
+        return handler.fill(new FluidStack(key, (int) Math.min(amount, Integer.MAX_VALUE)),
                 simulate ? FluidAction.SIMULATE : FluidAction.EXECUTE);
     }
 
@@ -234,7 +234,7 @@ final class FluidTransfer {
         long total = 0;
         for (int tank = 0, n = handler.getTanks(); tank < n; tank++) {
             FluidStack inTank = handler.getFluidInTank(tank);
-            if (components ? FluidStack.isSameFluidSameComponents(inTank, stack) : FluidStack.isSameFluid(inTank, stack)) {
+            if (components ? inTank.isFluidEqual(stack) : inTank.getFluid() == stack.getFluid()) {
                 total += inTank.getAmount();
             }
         }
@@ -246,7 +246,7 @@ final class FluidTransfer {
         long back = fill(bulk, handler, key, leftover, false);
         if (back < leftover) {
             WirelessAutomate.LOGGER.warn("Destino recusou {} mB de {} depois de aceitar na simulação e a origem {} não aceitou de volta; perdido",
-                    leftover - back, key.getHoverName().getString(), source);
+                    leftover - back, key.getDisplayName().getString(), source);
         }
     }
 

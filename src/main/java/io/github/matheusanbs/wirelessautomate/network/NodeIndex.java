@@ -12,14 +12,13 @@ import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -44,7 +43,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class NodeIndex extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_nodes";
-    public static final SavedData.Factory<NodeIndex> FACTORY = new SavedData.Factory<>(NodeIndex::new, NodeIndex::load);
 
     /** Papéis de um tipo, em {@link #role}. */
     public static final int EXTRACT = 0;
@@ -256,7 +254,7 @@ public final class NodeIndex extends SavedData {
     }
 
     public static NodeIndex get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        return server.overworld().getDataStorage().computeIfAbsent(NodeIndex::load, NodeIndex::new, DATA_NAME);
     }
 
     /** Bit do papel {@code role} ({@link #EXTRACT}, {@link #INSERT} ou {@link #STORAGE}) do tipo. */
@@ -399,7 +397,7 @@ public final class NodeIndex extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         ListTag list = new ListTag();
         for (Entry entry : entries.values()) {
             list.add(entry.save());
@@ -408,7 +406,7 @@ public final class NodeIndex extends SavedData {
         return tag;
     }
 
-    public static NodeIndex load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static NodeIndex load(CompoundTag tag) {
         NodeIndex index = new NodeIndex();
         ListTag list = tag.getList("nodes", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {

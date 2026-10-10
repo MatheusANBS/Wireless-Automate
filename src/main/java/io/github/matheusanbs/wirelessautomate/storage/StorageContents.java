@@ -5,8 +5,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
 import java.util.UUID;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 
 /**
  * Componente do item de um Baú quebrado cheio: só a referência ao conteúdo, guardado no servidor
@@ -20,7 +21,7 @@ public record StorageContents(UUID id, int types, long total) {
             Codec.LONG.fieldOf("total").forGetter(StorageContents::total)).apply(instance, StorageContents::new));
 
     public static final StreamCodec<ByteBuf, StorageContents> STREAM_CODEC = StreamCodec.composite(
-            UUIDUtil.STREAM_CODEC, StorageContents::id,
+            GameCodecs.UUID, StorageContents::id,
             ByteBufCodecs.VAR_INT, StorageContents::types,
             ByteBufCodecs.VAR_LONG, StorageContents::total,
             StorageContents::new);

@@ -81,7 +81,7 @@ public final class ConfiguratorArea {
         ServerLevel level = player.serverLevel();
         LinkerScan scan = LinkerScan.of(level, box);
         ResourceLocation machine = ConfiguratorItem.machine(stack);
-        if (!stack.has(ModDataComponents.PRESET.get())) {
+        if (!ModDataComponents.PRESET.has(stack)) {
             return Component.translatable(KEY + "corner2_no_copy", size, scan.routers().size());
         }
         if (ConfiguratorItem.pasteMode(stack).anyMachine()) {

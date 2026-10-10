@@ -171,16 +171,23 @@ def tex_quimico() -> Sprite:
 
 
 def tex_gema() -> Sprite:
-    """Lados da gema do Tanque de Source: Source que pulsa de brilho."""
+    """Gema do Tanque de Source, 3×2 em (0, 0) (os lados da gema de 3×3×2 px): três facetas, da clara à
+    escura, com o brilho pulsando; e a ponta 3×3 em (4, 0) (o topo), um losango claro no meio."""
     quadros = []
     for k in range(QUADROS):
         pulso = 0.5 * (1 + math.sin(2 * math.pi * k / QUADROS))
         img = nova()
-        ret(img, 0, 0, 16, 16, mistura(C("source", 2), C("source", 3), 0.6 * pulso))
-        ret(img, 0, 0, 16, 1, C("source", 3))
-        ret(img, 0, 0, 1, 16, C("source", 3))
-        ret(img, 0, 15, 16, 16, mistura(C("source", 1), C("source", 2), 0.5 * pulso))
-        ret(img, 15, 0, 16, 16, C("source", 1))
+        brilho = mistura(C("source", 2), C("source", 3), pulso)
+        for i, tom in enumerate((3, 2, 1)):
+            ret(img, i, 0, i + 1, 2, C("source", tom))
+        img.putpixel((0, 0), mistura(C("source", 3), cor("porcelana.4"), 0.4 * pulso))
+        img.putpixel((1, 0), brilho)
+        img.putpixel((2, 1), C("source", 0))
+        # Ponta: anel escuro com o miolo claro.
+        ret(img, 4, 0, 7, 3, C("source", 1))
+        ret(img, 5, 1, 6, 2, brilho)
+        img.putpixel((4, 0), C("source", 2))
+        img.putpixel((6, 2), C("source", 0))
         quadros.append(img)
     return animacao(quadros, 4)
 
@@ -204,8 +211,8 @@ def tex_bateria_visor() -> Sprite:
     return animacao(quadros, 4)
 
 
-# Regiões da textura `detalhes` (u0, v0): faixa de perigo, listra coral, lado da tampa, régua, terminal, volante.
-DET = {"perigo": (0, 0), "listra": (0, 2), "tampa": (0, 4), "regua": (0, 7), "terminal": (4, 6), "volante": (8, 6)}
+# Regiões da textura `detalhes` (u0, v0): faixa de perigo, listra coral, lado da tampa, régua, terminal.
+DET = {"perigo": (0, 0), "listra": (0, 2), "tampa": (0, 4), "regua": (0, 7), "terminal": (4, 6)}
 
 
 def tex_detalhes() -> Image.Image:
@@ -228,14 +235,6 @@ def tex_detalhes() -> Image.Image:
     img.putpixel((5, 6), C("latao", 2))
     img.putpixel((4, 7), C("latao", 2))
     img.putpixel((5, 7), C("latao", 1))
-    # Volante (8×8, u 8..16, v 6..14): aro de grafite com os cantos cortados e quatro pegas; o meio é vazado.
-    for i in range(8):
-        for j in range(8):
-            borda = i in (0, 7) or j in (0, 7)
-            canto = (i in (0, 7)) and (j in (0, 7))
-            if borda and not canto:
-                pega = (i in (3, 4) and j in (0, 7)) or (j in (3, 4) and i in (0, 7))
-                img.putpixel((8 + i, 6 + j), C("grafite", 4) if pega else C("grafite", 2))
     return img
 
 
@@ -275,34 +274,31 @@ def tex_router_frente(tier: str) -> Sprite:
     return animacao(quadros, 4)
 
 
-def _mascara_prato(i: int, j: int) -> float:
-    return math.hypot(i - 3.5, j - 3.5)
+# Regiões da textura da antena (u0, v0): interior do prato 6×6, costas 6×6, latão 2×2 (receptor e pontas).
+ANT = {"prato": (0, 0), "costas": (8, 0), "latao": (0, 8)}
 
 
 def tex_router_antena(tier: str) -> Image.Image:
-    """Antena: interior do prato 8×8 (u 0..8) na cor da lente, costas 8×8 (u 8..16), borda 8×1 (v 8)."""
+    """Antena: interior do prato 6×6 (u 0..6) na cor da lente, com aro de porcelana; costas 6×6 de grafite
+    (u 8..14); latão 2×2 em (0, 8), para o receptor e as pontas das hastes. Tudo opaco: nada de canto
+    transparente (o prato é um elemento sólido)."""
     hi, mid, lo = (cor(x) for x in LENTE[tier])
     img = nova()
-    for i in range(8):
-        for j in range(8):
-            d = _mascara_prato(i, j)
-            if d > 4.1:
-                continue
-            if d > 3.2:
-                c = C("porcelana", 4 if i + j < 7 else 1)
-                img.putpixel((i, j), c)
-                img.putpixel((8 + i, j), C("porcelana", 4 if i + j < 7 else 2))
-                continue
-            img.putpixel((i, j), lo if d <= 1.2 else mid)
-            img.putpixel((8 + i, j), C("porcelana", 3) if d > 1.2 else C("grafite", 2))
-    img.putpixel((2, 2), hi)
-    img.putpixel((3, 2), hi)
-    img.putpixel((2, 3), hi)
-    ret(img, 2, 8, 6, 9, C("grafite", 2))  # a borda do prato: só o meio, para os cantos sumirem
-    # Ponta das hastes (2×2) e corpo das hastes (1×10, v 10..16 + ...), em u 0..3 v 10..16.
-    ret(img, 0, 10, 2, 12, C("latao", 2))
-    img.putpixel((0, 10), C("latao", 3))
-    img.putpixel((1, 11), C("latao", 1))
+    p, c, l = ANT["prato"], ANT["costas"], ANT["latao"]
+    # Interior: aro de porcelana (claro em cima e à esquerda), lente do tier com o foco escuro no meio.
+    painel(img, p[0], p[1], p[0] + 6, p[1] + 6, "porcelana", 4, 3, 1)
+    ret(img, p[0] + 1, p[1] + 1, p[0] + 5, p[1] + 5, mid)
+    ret(img, p[0] + 2, p[1] + 2, p[0] + 4, p[1] + 4, lo)
+    img.putpixel((p[0] + 1, p[1] + 1), hi)
+    img.putpixel((p[0] + 4, p[1] + 4), lo)
+    # Costas: grafite com um friso de porcelana no meio (a nervura do prato).
+    grafite(img, c[0], c[1], c[0] + 6, c[1] + 6)
+    ret(img, c[0] + 1, c[1] + 2, c[0] + 5, c[1] + 4, C("grafite", 1))
+    ret(img, c[0] + 2, c[1] + 2, c[0] + 4, c[1] + 4, C("porcelana", 1))
+    # Latão 2×2.
+    ret(img, l[0], l[1], l[0] + 2, l[1] + 2, C("latao", 2))
+    img.putpixel((l[0], l[1]), C("latao", 3))
+    img.putpixel((l[0] + 1, l[1] + 1), C("latao", 1))
     return img
 
 
@@ -431,14 +427,24 @@ def lados_cheios(tex: str) -> Faces:
 
 
 class Modelo:
+    """Um modelo de bloco por elementos. Regras de construção (conferidas por `validar_geometria`):
+
+    - elementos **encostam, não se atravessam** (volume de interseção zero), salvo um `dentro=True`, que
+      fica dentro de um translúcido (fluido na coluna de vidro, gás no vaso) e só por isso é visível;
+    - duas faces desenhadas nunca dividem o mesmo plano com área em comum (é o que pisca no jogo);
+    - toda face que não é desenhada está inteiramente coberta por um elemento encostado (senão é buraco).
+    """
+
     def __init__(self, nome: str, particula: str, translucido: bool = False):
         self.nome = nome
         self.particula = particula
         self.translucido = translucido
         self.elementos: list[dict] = []
+        self.dentro: list[bool] = []
         self.texturas: set[str] = {particula}
 
-    def caixa(self, de: Vec, ate: Vec, faces: Faces, rot: tuple[str, float, Vec] | None = None) -> None:
+    def caixa(self, de: Vec, ate: Vec, faces: Faces, rot: tuple[str, float, Vec] | None = None,
+              dentro: bool = False) -> None:
         el: dict = {"from": list(de), "to": list(ate), "faces": {}}
         if rot:
             eixo, angulo, origem = rot
@@ -450,6 +456,7 @@ class Modelo:
             el["faces"][face] = dados
             self.texturas.add(tex)
         self.elementos.append(el)
+        self.dentro.append(dentro)
 
     def json(self) -> dict:
         texturas = {t: f"{NS}:block/{t}" for t in sorted(self.texturas)}
@@ -468,66 +475,83 @@ def _no_limite(face: str, de: Vec, ate: Vec) -> bool:
             "west": de[0] == 0, "east": ate[0] == 16}[face]
 
 
-def pes(m: Modelo, recuo: float, lado: float, altura: float, y0: float = 0) -> None:
-    """Quatro pés de grafite nos cantos, de `lado` px, `recuo` px para dentro do cubo."""
+def todas(tex: str, menos: tuple[str, ...] = ()) -> Faces:
+    """As seis faces (menos as de `menos`, cobertas por um vizinho encostado) com a textura inteira."""
+    return {f: (tex, None) for f in ("up", "down", *LATERAIS) if f not in menos}
+
+
+def pes(m: Modelo, recuo: float, lado: float, altura: float, topo: bool = False) -> None:
+    """Quatro pés de grafite nos cantos, de `lado` px, `recuo` px para dentro do cubo. Sem `topo`, o pé fica
+    debaixo do corpo (que cobre a face de cima); com `topo`, é um para-choque solto e mostra a face de cima."""
     for x in (recuo, 16 - recuo - lado):
         for z in (recuo, 16 - recuo - lado):
-            m.caixa([x, y0, z], [x + lado, y0 + altura, z + lado],
-                    {**lados_cheios("grafite"), "up": ("grafite", None), "down": ("grafite", None)})
+            m.caixa([x, 0, z], [x + lado, altura, z + lado], todas("grafite", () if topo else ("up",)))
 
 
-def anel(m: Modelo, de: Vec, ate: Vec, tex: str = "grafite") -> None:
-    m.caixa(de, ate, {**lados_cheios(tex), "up": (tex, None), "down": (tex, None)})
+def anel(m: Modelo, de: Vec, ate: Vec, menos: tuple[str, ...] = (), tex: str = "grafite") -> None:
+    m.caixa(de, ate, todas(tex, menos))
 
 
 # --- Roteador ---------------------------------------------------------------
 
+# Hastes traseiras: dentro das caixas de colisão de RouterShapes.UP_BOXES (x 1,5..3,5 e 12,5..14,5, z 2,5..4,5).
+HASTES_X = (2, 13)
+PRATO_ROT = ("x", -45.0, [8, 9, 7])  # gira em torno da aresta de trás do pé do prato, no topo do mastro
+
+
 def modelo_router(t: str) -> Modelo:
+    """Prato de porcelana (y 0..1), para-choques nos cantos, corpo baixo de grafite recuado (y 1..5) com a
+    listra coral e o Olho que varre na frente (sul), mastro, e a antena parabólica: um prato sólido 6×6×1
+    que, em pé e virado para o sul, cai 45° para trás (rotação −45° em x, pela aresta de baixo e de trás),
+    de modo que o interior, na cor do tier, olha para a frente e para cima. Um braço de 1 px sai do centro
+    do prato até o receptor de latão. Hastes finas de grafite nos cantos de trás, com a ponta de latão."""
     m = Modelo(f"router_{t}", "porcelana")
     frente, antena = f"router_{t}_frente", f"router_{t}_antena"
-    # Prato de porcelana e os quatro para-choques de grafite.
-    m.caixa([1, 0, 2], [15, 2, 14], {**lados_cheios("porcelana"), "up": ("porcelana", None), "down": ("porcelana", None)})
+    latao = (antena, [ANT["latao"][0], ANT["latao"][1], ANT["latao"][0] + 1, ANT["latao"][1] + 1])
+    # Base e os quatro para-choques (soltos: só encostam no prato).
+    m.caixa([1, 0, 2], [15, 1, 14], todas("porcelana"))
     for x in (1, 13):
         for z in (2, 12):
-            anel(m, [x, 0, z], [x + 2, 3, z + 2])
-    # Corpo baixo de grafite com a listra coral; a frente (sul) com o Olho que varre.
-    corpo = ([3, 2, 4], [13, 6, 12])
-    m.caixa(*corpo, {"south": (frente, [0, 0, 10, 4]), "north": (frente, [0, 4, 10, 8]),
-                     "east": (frente, [0, 4, 8, 8]), "west": (frente, [0, 4, 8, 8]),
-                     "up": ("grafite", None)})
-    # Duas hastes finas nos cantos de trás (onde a colisão já tem as antenas), com ponta de latão.
-    for x in (1.5, 12.5):
-        m.caixa([x, 3, 2.5], [x + 1, 14, 3.5], lados_cheios("grafite"))
-        m.caixa([x - 0.25, 14, 2.25], [x + 1.25, 15.5, 3.75],
-                {**lados(antena, 0, 10, [0, 0, 0], [2, 2, 2]), "up": (antena, [0, 10, 2, 12]), "down": (antena, [0, 10, 2, 12])})
-    # Mastro vertical, braço inclinado a 22,5° e o prato parabólico a 45°, virado para a frente e para cima.
-    m.caixa([7, 6, 7], [9, 11, 9], lados_cheios("grafite"))
-    m.caixa([7, 10.5, 7], [9, 12.75, 9], lados_cheios("grafite"), rot=("x", 22.5, [8, 11, 8]))
-    m.caixa([4, 12.25, 4], [12, 13.25, 12],
-            {"up": (antena, [0, 0, 8, 8]), "down": (antena, [8, 0, 16, 8]),
-             **lados(antena, 0, 8, [4, 12.25, 4], [12, 13.25, 12])},
-            rot=("x", 45, [8, 12.75, 8]))
-    # O receptor na frente do prato (latão), no foco.
-    m.caixa([7.5, 14, 9.5], [8.5, 15, 10.5],
-            {**lados(antena, 0, 10, [0, 0, 0], [1, 1, 1]), "up": (antena, [0, 10, 1, 11]), "down": (antena, [0, 10, 1, 11])},
-            rot=("x", 45, [8, 12.75, 8]))
+            m.caixa([x, 1, z], [x + 2, 3, z + 2], todas("grafite", ("down",)))
+    # Corpo baixo; a frente (sul) tem a listra coral e a fenda do Olho na própria textura.
+    m.caixa([3, 1, 4], [13, 5, 12], {"south": (frente, [0, 0, 10, 4]), "north": (frente, [0, 4, 10, 8]),
+                                     "east": (frente, [0, 4, 8, 8]), "west": (frente, [0, 4, 8, 8]),
+                                     "up": ("grafite", None)})
+    # Hastes finas sobre os para-choques de trás, com a ponta de latão de 1 px.
+    for x in HASTES_X:
+        m.caixa([x, 3, 2.5], [x + 1, 11, 3.5], lados_cheios("grafite"))
+        m.caixa([x, 11, 2.5], [x + 1, 12, 3.5], {**{f: latao for f in LATERAIS}, "up": latao})
+    # Mastro e a antena.
+    m.caixa([7, 5, 7], [9, 9, 9], todas("grafite", ("down",)))
+    p, c = ANT["prato"], ANT["costas"]
+    m.caixa([5, 9, 7], [11, 15, 8], {"south": (antena, [p[0], p[1], p[0] + 6, p[1] + 6]),
+                                     "north": (antena, [c[0], c[1], c[0] + 6, c[1] + 6]),
+                                     **{f: ("grafite", None) for f in ("up", "down", "east", "west")}},
+            rot=PRATO_ROT)
+    m.caixa([7.5, 11.5, 8], [8.5, 12.5, 10], {f: ("grafite", None) for f in ("up", "down", "east", "west")},
+            rot=PRATO_ROT)
+    m.caixa([7.5, 11.5, 10], [8.5, 12.5, 11], {f: latao for f in ("up", "down", "east", "west", "south")},
+            rot=PRATO_ROT)
     return m
 
 
 # --- Baú ---------------------------------------------------------------------
 
 def modelo_chest(t: str) -> Modelo:
+    """Arquivo de gavetas: pés debaixo do corpo, corpo de porcelana recuado 1 px, tampa cheia com o Olho e,
+    em cada lado, duas gavetas salientes de 1 px (a face de dentro fica contra o corpo)."""
     m = Modelo(f"storage_chest_{t}", "porcelana")
     gaveta, topo = f"storage_chest_{t}", f"topo_{t}"
-    pes(m, 0, 3, 2)
-    m.caixa([1, 2, 1], [15, 14, 15], {**lados_cheios("porcelana"), "down": ("porcelana", None)})
+    pes(m, 1, 3, 2)
+    m.caixa([1, 2, 1], [15, 14, 15], todas("porcelana", ("up",)))
     m.caixa([0, 14, 0], [16, 16, 16], {**lados("detalhes", 0, DET["tampa"][1], [0, 14, 0], [16, 16, 16]),
                                        "up": (topo, [0, 0, 16, 16]), "down": ("porcelana", None)})
+    oposta = {"south": "north", "north": "south", "east": "west", "west": "east"}
     for y0 in (2, 8):
         uv = [0, 0, 12, 5]
         for de, ate, face in (([2, y0, 15], [14, y0 + 5, 16], "south"), ([2, y0, 0], [14, y0 + 5, 1], "north"),
                               ([15, y0, 2], [16, y0 + 5, 14], "east"), ([0, y0, 2], [1, y0 + 5, 14], "west")):
-            faces: Faces = {f: ("porcelana", None) for f in ("up", "down", *LATERAIS) if f != face}
+            faces = todas("porcelana", (oposta[face],))
             faces[face] = (gaveta, uv)
             m.caixa(de, ate, faces)
     return m
@@ -536,21 +560,25 @@ def modelo_chest(t: str) -> Modelo:
 # --- Tanque -------------------------------------------------------------------
 
 def modelo_tank(t: str) -> Modelo:
+    """Base e tampa de porcelana com anéis de grafite, uma coluna de vidro (uma caixa só: duas se
+    atravessando piscam) com o fluido dentro e quatro réguas de nível encostadas no vidro."""
     m = Modelo(f"storage_tank_{t}", "porcelana", translucido=True)
     tex, topo = f"storage_tank_{t}", f"topo_{t}"
-    pes(m, 0, 3, 1)
+    pes(m, 2, 3, 1)
     m.caixa([2, 1, 2], [14, 4, 14], {**lados(tex, 0, 0, [2, 1, 2], [14, 4, 14]), "up": ("porcelana", None), "down": ("porcelana", None)})
-    anel(m, [3, 4, 3], [13, 5, 13])
-    # Fluido (nível fixo) e a coluna de vidro: uma caixa reta e outra a 45°.
-    m.caixa([5, 5, 5], [11, 12, 11], {**lados_cheios("fluido"), "up": ("fluido_superficie", None)})
+    anel(m, [3, 4, 3], [13, 5, 13], ("down",))
+    m.caixa([5, 5, 5], [11, 12, 11], {**lados_cheios("fluido"), "up": ("fluido_superficie", None)}, dentro=True)
     m.caixa([4, 5, 4], [12, 13, 12], lados_cheios("vidro"))
-    m.caixa([4.5, 5, 4.5], [11.5, 13, 11.5], lados_cheios("vidro"), rot=("y", 45, [8, 9, 8]))
-    # Régua de nível nas quatro laterais.
     r = DET["regua"]
-    for de, ate in (([7.5, 5, 12], [8.5, 13, 13.5]), ([7.5, 5, 2.5], [8.5, 13, 4]),
-                    ([12, 5, 7.5], [13.5, 13, 8.5]), ([2.5, 5, 7.5], [4, 13, 8.5])):
-        m.caixa(de, ate, {f: ("detalhes", [r[0], r[1], r[0] + 1, r[1] + 8]) for f in LATERAIS})
-    anel(m, [3, 13, 3], [13, 14, 13])
+    regua = ("detalhes", [r[0], r[1], r[0] + 1, r[1] + 8])
+    for de, ate, dentro_face in (([7.5, 5, 12], [8.5, 13, 13], "north"), ([7.5, 5, 3], [8.5, 13, 4], "south"),
+                                 ([12, 5, 7.5], [13, 13, 8.5], "west"), ([3, 5, 7.5], [4, 13, 8.5], "east")):
+        faces = todas("grafite", (dentro_face, "up", "down"))  # as faces de cima e de baixo ficam nos anéis
+        for f in LATERAIS:
+            if f != dentro_face:
+                faces[f] = regua
+        m.caixa(de, ate, faces)
+    anel(m, [3, 13, 3], [13, 14, 13], ("up",))
     m.caixa([2, 14, 2], [14, 16, 14], {**lados(tex, 0, 4, [2, 14, 2], [14, 16, 14]), "up": (topo, [2, 2, 14, 14]), "down": ("porcelana", None)})
     return m
 
@@ -558,27 +586,28 @@ def modelo_tank(t: str) -> Modelo:
 # --- Bateria ------------------------------------------------------------------
 
 def modelo_battery(t: str) -> Modelo:
+    """Três células empilhadas com separadores de grafite rentes, plinto e cornija de grafite, tampa com a
+    listra e o Olho, dois terminais de latão e um visor de carga saliente em cada lado, encostado nas células."""
     m = Modelo(f"storage_battery_{t}", "porcelana")
     tex, topo = f"storage_battery_{t}", f"topo_{t}"
-    pes(m, 0, 3, 1)
+    pes(m, 1, 3, 1)
     anel(m, [1, 1, 1], [15, 2, 15])
     for n, y0 in enumerate((2, 6, 10)):
         m.caixa([2, y0, 2], [14, y0 + 3, 14], lados(tex, 0, 4 * n, [2, y0, 2], [14, y0 + 3, 14]))
         if n < 2:
-            anel(m, [1, y0 + 3, 1], [15, y0 + 4, 15])
+            m.caixa([2, y0 + 3, 2], [14, y0 + 4, 14], lados_cheios("grafite"))
     anel(m, [1, 13, 1], [15, 14, 15])
     m.caixa([2, 14, 2], [14, 15, 14], {**lados("detalhes", 0, DET["listra"][1] + 1, [2, 14, 2], [14, 15, 14]),
                                        "up": (topo, [2, 2, 14, 14])})
-    # Terminais de latão em dois cantos opostos.
     tm = DET["terminal"]
     for x, z in ((3, 3), (11, 11)):
         uv = [tm[0], tm[1], tm[0] + 2, tm[1] + 2]
         m.caixa([x, 15, z], [x + 2, 16, z + 2], {f: ("detalhes", uv) for f in ("up", *LATERAIS)})
-    # Visor de carga saliente nas quatro laterais.
     uv = [0, 0, 4, 11]
-    for de, ate, face in (([6, 2, 15], [10, 13, 16], "south"), ([6, 2, 0], [10, 13, 1], "north"),
-                          ([15, 2, 6], [16, 13, 10], "east"), ([0, 2, 6], [1, 13, 10], "west")):
-        faces = {f: ("grafite", None) for f in ("up", *LATERAIS) if f != face}
+    oposta = {"south": "north", "north": "south", "east": "west", "west": "east"}
+    for de, ate, face in (([6, 2, 14], [10, 13, 15], "south"), ([6, 2, 1], [10, 13, 2], "north"),
+                          ([14, 2, 6], [15, 13, 10], "east"), ([1, 2, 6], [2, 13, 10], "west")):
+        faces = {f: ("grafite", None) for f in LATERAIS if f != face and f != oposta[face]}
         faces[face] = ("bateria_visor", uv)
         m.caixa(de, ate, faces)
     return m
@@ -587,27 +616,27 @@ def modelo_battery(t: str) -> Modelo:
 # --- Tanque Químico -----------------------------------------------------------
 
 def modelo_chemical(t: str) -> Modelo:
+    """Vaso de pressão por caixas empilhadas e encostadas (sem rotações: as caixas a 45° atravessavam o
+    corpo): pés, anel, ombro de baixo com a faixa de perigo, equador com a vigia (o gás gira dentro, visto
+    pelo vidro), ombro de cima, calota com o Olho e, no topo, o volante: um aro vazado de quatro barras,
+    pelo qual o Olho aparece."""
     m = Modelo(f"storage_chemical_tank_{t}", "porcelana", translucido=True)
     tex, topo = f"storage_chemical_tank_{t}", f"topo_{t}"
-    pes(m, 1, 3, 1)
+    pes(m, 3, 2, 1)
     anel(m, [3, 1, 3], [13, 2, 13])
+    m.caixa([4, 2, 4], [12, 3, 12], lados_cheios("porcelana"))
     perigo = DET["perigo"]
-    m.caixa([4, 2, 4], [12, 3, 12], {**lados_cheios("porcelana"), "down": ("porcelana", None)})
-    # Ombro de baixo com a faixa de perigo, reto e a 45°.
     faixa = {f: ("detalhes", [perigo[0], perigo[1], perigo[0] + 10, perigo[1] + 2]) for f in LATERAIS}
     m.caixa([3, 3, 3], [13, 5, 13], {**faixa, "down": ("porcelana", None)})
-    m.caixa([3.2, 3, 3.2], [12.8, 5, 12.8], {**faixa, "down": ("porcelana", None)}, rot=("y", 45, [8, 4, 8]))
-    # Equador com a vigia e o gás girando lá dentro.
-    m.caixa([3, 5, 3], [13, 11, 13], {**lados_cheios("quimico"), "up": ("quimico", None)})
+    m.caixa([3, 5, 3], [13, 11, 13], lados_cheios("quimico"), dentro=True)
     m.caixa([2, 5, 2], [14, 11, 14], {**lados(tex, 0, 0, [2, 5, 2], [14, 11, 14]), "up": ("porcelana", None), "down": ("porcelana", None)})
-    # Ombro de cima, reto e a 45°, e a calota com o Olho.
-    m.caixa([3, 11, 3], [13, 13, 13], lados_cheios("porcelana"))
-    m.caixa([3.2, 11, 3.2], [12.8, 13, 12.8], {**lados_cheios("porcelana"), "up": ("porcelana", None)}, rot=("y", 45, [8, 12, 8]))
+    m.caixa([3, 11, 3], [13, 13, 13], todas("porcelana", ("down",)))
     m.caixa([4, 13, 4], [12, 14, 12], {**lados_cheios("porcelana"), "up": (topo, [4, 4, 12, 12])})
-    # Volante da válvula: aro vazado em cima, o Olho aparece pelo meio.
-    v = DET["volante"]
-    m.caixa([4, 14, 4], [12, 15.5, 12], {**lados_cheios("grafite"), "up": ("detalhes", [v[0], v[1], v[0] + 8, v[1] + 8]),
-                                        "down": ("detalhes", [v[0], v[1], v[0] + 8, v[1] + 8])})
+    # Volante: barras norte e sul inteiras, barras leste e oeste entre elas (sem as faces contra as outras).
+    m.caixa([4, 14, 4], [12, 15, 5], todas("grafite", ("down",)))
+    m.caixa([4, 14, 11], [12, 15, 12], todas("grafite", ("down",)))
+    m.caixa([4, 14, 5], [5, 15, 11], todas("grafite", ("down", "north", "south")))
+    m.caixa([11, 14, 5], [12, 15, 11], todas("grafite", ("down", "north", "south")))
     return m
 
 
@@ -619,19 +648,22 @@ def altura_source(fill: int) -> int:
 
 
 def modelo_source_tank(t: str, fill: int) -> Modelo:
+    """Jarra: para-choques nos cantos da base, base e tampa de porcelana, quatro trilhos de grafite nos
+    cantos de fora da coluna de vidro (uma caixa só), a Source dentro no nível `fill`, e no topo um colar
+    de grafite com a gema pequena (3×3×2 px)."""
     m = Modelo(f"storage_source_tank_{t}_{fill}", "porcelana", translucido=True)
     tex = f"storage_source_tank_{t}"
-    pes(m, 2, 2, 1)
+    pes(m, 2, 1, 1, topo=True)
     m.caixa([3, 0, 3], [13, 2, 13], {**lados(tex, 0, 0, [3, 0, 3], [13, 2, 13]), "up": ("porcelana", None), "down": ("porcelana", None)})
-    for x in (4, 11):
-        for z in (4, 11):
+    for x in (3, 12):
+        for z in (3, 12):
             m.caixa([x, 2, z], [x + 1, 12, z + 1], lados_cheios("grafite"))
     if fill > 0:
-        m.caixa([5, 2, 5], [11, altura_source(fill), 11], {**lados_cheios("source"), "up": ("source_superficie", None)})
+        m.caixa([5, 2, 5], [11, altura_source(fill), 11], {**lados_cheios("source"), "up": ("source_superficie", None)}, dentro=True)
     m.caixa([4, 2, 4], [12, 12, 12], lados_cheios("vidro"))
     m.caixa([3, 12, 3], [13, 13, 13], {**lados(tex, 0, 2, [3, 12, 3], [13, 13, 13]), "up": ("porcelana", None), "down": ("porcelana", None)})
-    m.caixa([6, 13, 6], [10, 14, 10], {**lados_cheios("grafite"), "up": ("grafite", None)})
-    m.caixa([6.5, 14, 6.5], [9.5, 16, 9.5], {**lados("gema", 0, 0, [6.5, 14, 6.5], [9.5, 16, 9.5]), "up": (tex, [13, 0, 16, 3])})
+    m.caixa([6, 13, 6], [10, 14, 10], todas("grafite", ("down",)))
+    m.caixa([6.5, 14, 6.5], [9.5, 16, 9.5], {**{f: ("gema", [0, 0, 3, 2]) for f in LATERAIS}, "up": ("gema", [4, 0, 7, 3])})
     return m
 
 
@@ -670,6 +702,157 @@ def validar_modelo(dados: dict, texturas: set[str]) -> None:
             assert len(f["uv"]) == 4 and all(0 <= v <= 16 for v in f["uv"]), f["uv"]
 
 
+# Eixo normal de cada face e qual canto da caixa fixa a coordenada do plano.
+FACE_EIXO = {"west": (0, "from"), "east": (0, "to"), "down": (1, "from"), "up": (1, "to"),
+             "north": (2, "from"), "south": (2, "to")}
+EPS = 1e-6
+
+
+def _chave_rot(el: dict) -> tuple | None:
+    r = el.get("rotation")
+    return (r["axis"], float(r["angle"]), tuple(r["origin"])) if r else None
+
+
+def _face_plana(el: dict, face: str, local: bool) -> tuple[int, float, list[tuple[float, float]]] | None:
+    """(eixo, coordenada do plano, polígono 2D) da face: no referencial do próprio elemento (`local`) ou do
+    bloco, quando a face continua num plano alinhado a um eixo depois da rotação (senão None)."""
+    eixo, lado = FACE_EIXO[face]
+    cantos = _cantos(face, el["from"], el["to"])
+    rot = el.get("rotation")
+    if rot and not local:
+        if rot["axis"] != "xyz"[eixo]:
+            return None
+        cantos = [_rot(p, rot) for p in cantos]
+    coord = cantos[0][eixo]
+    outros = [i for i in range(3) if i != eixo]
+    return eixo, coord, [(p[outros[0]], p[outros[1]]) for p in cantos]
+
+
+def _area(poly: list[tuple[float, float]]) -> float:
+    return sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1]
+               for i in range(len(poly))) / 2
+
+
+def _no_poligono(p: tuple[float, float], poly: list[tuple[float, float]], folga: float) -> bool:
+    """Ponto dentro do polígono convexo; `folga` > 0 aceita a borda, < 0 exige estar bem dentro."""
+    sinal = 1 if _area(poly) > 0 else -1
+    for i in range(len(poly)):
+        (ax, ay), (bx, by) = poly[i], poly[(i + 1) % len(poly)]
+        comp = math.hypot(bx - ax, by - ay) or 1
+        if sinal * ((bx - ax) * (p[1] - ay) - (by - ay) * (p[0] - ax)) / comp < -folga:
+            return False
+    return True
+
+
+def _amostras(poly: list[tuple[float, float]], passo: float) -> list[tuple[float, float]]:
+    """Centros de uma grade de `passo` px que caem bem dentro do polígono."""
+    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+    pontos = []
+    x = math.floor(min(xs) / passo) * passo + passo / 2
+    while x < max(xs):
+        y = math.floor(min(ys) / passo) * passo + passo / 2
+        while y < max(ys):
+            if _no_poligono((x, y), poly, -EPS):
+                pontos.append((x, y))
+            y += passo
+        x += passo
+    return pontos
+
+
+def _sobrepoe(a: list[tuple[float, float]], b: list[tuple[float, float]]) -> bool:
+    """Os dois polígonos coplanares têm área em comum (algum ponto bem dentro dos dois)."""
+    return any(_no_poligono(p, b, -1e-3) for p in _amostras(a, 0.25))
+
+
+def _coberta(face: list[tuple[float, float]], cobertas: list[list[tuple[float, float]]]) -> bool:
+    return all(any(_no_poligono(p, c, EPS) for c in cobertas) for p in _amostras(face, 0.5))
+
+
+def _volume_comum(a: dict, b: dict) -> float:
+    v = 1.0
+    for i in range(3):
+        v *= max(0.0, min(a["to"][i], b["to"][i]) - max(a["from"][i], b["from"][i]))
+    return v
+
+
+def _erros_do_grupo(m: Modelo, indices: list[int], local: bool) -> list[str]:
+    """As três checagens entre os elementos `indices`, num referencial comum: o do bloco (só as faces que
+    ficam alinhadas aos eixos) ou o local de um grupo com a mesma rotação."""
+    erros: list[str] = []
+    planas: dict[int, dict[str, tuple[int, float, list]]] = {}
+    for i in indices:
+        planas[i] = {}
+        for face in FACE_EIXO:
+            fp = _face_plana(m.elementos[i], face, local)
+            if fp and abs(_area(fp[2])) > EPS:
+                planas[i][face] = fp
+    for n, i in enumerate(indices):
+        a = m.elementos[i]
+        for j in indices[n + 1:]:
+            b = m.elementos[j]
+            if (local or not a.get("rotation") and not b.get("rotation")) and not (m.dentro[i] or m.dentro[j]):
+                if _volume_comum(a, b) > EPS:
+                    erros.append(f"elementos {i} e {j} se atravessam: {a['from']}-{a['to']} × {b['from']}-{b['to']}")
+            for fa, (ea, ca, pa) in planas[i].items():
+                if fa not in a["faces"]:
+                    continue
+                for fb, (eb, cb, pb) in planas[j].items():
+                    if fb in b["faces"] and ea == eb and abs(ca - cb) < EPS and _sobrepoe(pa, pb):
+                        erros.append(f"faces coplanares que piscam: {i}.{fa} e {j}.{fb} no plano {'xyz'[ea]}={ca}")
+    return erros
+
+
+def _faces_cobertas(m: Modelo, indices: list[int], local: bool) -> set[tuple[int, str]]:
+    """As faces não desenhadas dos elementos `indices` que algum vizinho encostado cobre inteiras."""
+    cobertas: set[tuple[int, str]] = set()
+    for i in indices:
+        for face in FACE_EIXO:
+            if face in m.elementos[i]["faces"]:
+                continue
+            fp = _face_plana(m.elementos[i], face, local)
+            if not fp or abs(_area(fp[2])) <= EPS:
+                continue
+            eixo, coord, poly = fp
+            vizinhas = []
+            for j in indices:
+                if j == i:
+                    continue
+                for f2 in FACE_EIXO:
+                    fq = _face_plana(m.elementos[j], f2, local)
+                    if fq and fq[0] == eixo and abs(fq[1] - coord) < EPS:
+                        vizinhas.append(fq[2])
+            if _coberta(poly, vizinhas):
+                cobertas.add((i, face))
+    return cobertas
+
+
+def validar_geometria(m: Modelo) -> None:
+    """Nenhum par de faces coplanares desenhadas com área em comum, nenhum par de caixas que se atravessa
+    (salvo `dentro`) e nenhuma face omitida sem um vizinho encostado que a cubra (buraco)."""
+    erros: list[str] = []
+    grupos: dict[tuple | None, list[int]] = {}
+    for i, el in enumerate(m.elementos):
+        grupos.setdefault(_chave_rot(el), []).append(i)
+    todos_idx = list(range(len(m.elementos)))
+    erros += _erros_do_grupo(m, todos_idx, local=False)
+    cobertas = _faces_cobertas(m, todos_idx, local=False)
+    for chave, indices in grupos.items():
+        if chave is not None:
+            erros += _erros_do_grupo(m, indices, local=True)
+            cobertas |= _faces_cobertas(m, indices, local=True)
+    for i, el in enumerate(m.elementos):
+        for face in FACE_EIXO:
+            if face in el["faces"] or (i, face) in cobertas:
+                continue
+            de, ate = el["from"], el["to"]
+            eixo = FACE_EIXO[face][0]
+            if any(ate[k] - de[k] <= EPS for k in range(3) if k != eixo):
+                continue  # face sem área
+            erros.append(f"buraco: elemento {i} ({de}-{ate}) sem a face {face} e sem vizinho que a cubra")
+    if erros:
+        raise AssertionError(f"{m.nome}:\n  " + "\n  ".join(erros))
+
+
 def _sobreposicoes(modelo: str, sufixo: str = "") -> list[dict]:
     """Overrides do modelo do item: o predicado wirelessautomate:tier é a posição do tier no enum."""
     return [{"predicate": {f"{NS}:tier": n}, "model": f"{modelo}_{t}{sufixo}"}
@@ -684,6 +867,7 @@ def modelos(texturas: set[str] | None = None) -> None:
     for nome, m in construir_modelos().items():
         dados = m.json()
         validar_modelo(dados, texturas)
+        validar_geometria(m)
         grava_json(pasta / f"{nome}.json", dados)
         gerados.add(nome)
     variantes: dict[str, dict] = {}

@@ -96,14 +96,22 @@ coral** horizontal e o **Olho no topo** (lente do tier, com o Pulso animado na t
 occlusion desligado nos modelos com elementos finos. Blocos que não preenchem o cubo precisam de
 `noOcclusion()` no registro (visual, sem lógica).
 
+Construção limpa, conferida por `blocos.validar_geometria` em todo modelo gerado: os elementos
+**encostam, não se atravessam** (só o fluido, o gás e a Source ficam dentro da caixa de vidro, marcados
+com `dentro=True`); duas faces desenhadas nunca dividem o mesmo plano com área em comum (é o que pisca
+no jogo); e toda face não desenhada está inteiramente coberta por um vizinho encostado (senão é buraco).
+Pés ficam debaixo do corpo, sem a face de cima; uma caixa de vidro só por coluna (duas se atravessando
+piscam); nada de caixas a 45° cruzando o corpo. As galerias do jogo (`WA_SCREENSHOT_ONLY=giro` e
+`=blocos` no `DevScreenshot`) mostram os modelos reais renderizados pelo jogo.
+
 | Bloco | Forma |
 | --- | --- |
-| Roteador | prato de porcelana na base, corpo de grafite baixo com a listra coral, mastro e uma **antena parabólica** inclinada (planos a 22,5° e 45°) com o interior na cor do tier; na frente um pequeno Olho que varre (animado). Mesma convenção de `facing` e `spin` do modelo antigo; silhueta dentro da caixa 1..15 × 0..16 × 2..14 para a colisão (`RouterShapes.UP_BOXES` pode ser ajustada à silhueta nova) |
-| Baú Wireless | arquivo de gavetas: corpo de porcelana recuado 1 px, duas gavetas por lado com puxador de grafite e etiqueta na cor do tier, pés de grafite, Olho no topo |
-| Tanque Wireless | coluna octogonal de vidro (duas caixas, uma a 45°) entre base e tampa de porcelana com anéis de grafite, fluido azul dentro com a superfície ondulando (animada), régua de nível na frente |
-| Bateria Wireless | três células empilhadas com separadores de grafite, dois terminais de latão no topo, visor de carga com segmentos que correm (animado), listra coral |
-| Tanque Químico Wireless | vaso de pressão: caixas empilhadas que aproximam uma esfera, volante de válvula no topo, gás verde girando por dentro (animado), faixa de perigo grafite e coral |
-| Tanque de Source Wireless | mantém a jarra e os 11 níveis de `fill`, nos materiais novos: base e tampa de porcelana, trilhos de grafite, Source roxa ondulando (animada), gema no topo pulsando |
+| Roteador | prato de porcelana na base (y 0..1), quatro para-choques de grafite nos cantos, corpo baixo de grafite recuado (y 1..5) com a listra coral e a fenda do Olho que varre na frente (sul), na própria textura; mastro de 2×2 e a **antena parabólica**: um prato sólido de 6×6×1 que, em pé e virado para o sul, cai 45° para trás (rotação −45° em x pela aresta de baixo e de trás, no topo do mastro), com o interior na cor do tier olhando para a frente e para cima e as costas de grafite; um braço de 1 px sai do centro do prato até o receptor de latão (1 px). Duas hastes finas (1×1) de grafite sobre os para-choques de trás, até y=12, com a ponta de latão, dentro das caixas de colisão de `RouterShapes.UP_BOXES`. Mesma convenção de `facing` e `spin`; silhueta dentro de 1..15 × 0..16 × 2..14 |
+| Baú Wireless | arquivo de gavetas: pés debaixo do corpo, corpo de porcelana recuado 1 px, duas gavetas salientes por lado (a face de dentro contra o corpo) com puxador de grafite e etiqueta na cor do tier, tampa cheia com o Olho |
+| Tanque Wireless | uma coluna de vidro (uma caixa só) entre base e tampa de porcelana com anéis de grafite, fluido azul dentro com a superfície ondulando (animada), quatro réguas de nível encostadas no vidro |
+| Bateria Wireless | três células empilhadas com separadores de grafite rentes, plinto e cornija de grafite, dois terminais de latão no topo, um visor de carga saliente por lado, encostado nas células, com segmentos que correm (animado), listra coral na tampa |
+| Tanque Químico Wireless | vaso de pressão por caixas empilhadas e encostadas (sem rotações): anel, ombro com a faixa de perigo grafite e coral, equador com a vigia de vidro (o gás verde gira por dentro, animado), ombro de cima, calota com o Olho e um volante vazado de quatro barras de grafite pelo qual o Olho aparece |
+| Tanque de Source Wireless | mantém a jarra e os 11 níveis de `fill`: para-choques nos cantos, base e tampa de porcelana, quatro trilhos de grafite nos cantos de fora da coluna de vidro (uma caixa só), Source roxa dentro ondulando (animada), colar de grafite e uma gema pequena (3×3×2) no topo, pulsando |
 
 As quatro laterais de um armazenamento são iguais (o roteador se prende em qualquer face).
 

@@ -18,46 +18,10 @@
       ],
       "to": [
         15,
-        2,
+        1,
         14
       ],
       "faces": {
-        "north": {
-          "uv": [
-            1.0,
-            14.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#porcelana"
-        },
-        "south": {
-          "uv": [
-            1.0,
-            14.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#porcelana"
-        },
-        "east": {
-          "uv": [
-            2.0,
-            14.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#porcelana"
-        },
-        "west": {
-          "uv": [
-            2.0,
-            14.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#porcelana"
-        },
         "up": {
           "uv": [
             1.0,
@@ -76,13 +40,49 @@
           ],
           "texture": "#porcelana",
           "cullface": "down"
+        },
+        "north": {
+          "uv": [
+            1.0,
+            15.0,
+            15.0,
+            16.0
+          ],
+          "texture": "#porcelana"
+        },
+        "south": {
+          "uv": [
+            1.0,
+            15.0,
+            15.0,
+            16.0
+          ],
+          "texture": "#porcelana"
+        },
+        "east": {
+          "uv": [
+            2.0,
+            15.0,
+            14.0,
+            16.0
+          ],
+          "texture": "#porcelana"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            15.0,
+            14.0,
+            16.0
+          ],
+          "texture": "#porcelana"
         }
       }
     },
     {
       "from": [
         1,
-        0,
+        1,
         2
       ],
       "to": [
@@ -91,42 +91,6 @@
         4
       ],
       "faces": {
-        "north": {
-          "uv": [
-            13.0,
-            13.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            1.0,
-            13.0,
-            3.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            12.0,
-            13.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            2.0,
-            13.0,
-            4.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
         "up": {
           "uv": [
             1.0,
@@ -136,22 +100,48 @@
           ],
           "texture": "#grafite"
         },
-        "down": {
+        "north": {
+          "uv": [
+            13.0,
+            13.0,
+            15.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
           "uv": [
             1.0,
-            12.0,
+            13.0,
             3.0,
-            14.0
+            15.0
           ],
-          "texture": "#grafite",
-          "cullface": "down"
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            13.0,
+            4.0,
+            15.0
+          ],
+          "texture": "#grafite"
         }
       }
     },
     {
       "from": [
         1,
-        0,
+        1,
         12
       ],
       "to": [
@@ -160,42 +150,6 @@
         14
       ],
       "faces": {
-        "north": {
-          "uv": [
-            13.0,
-            13.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            1.0,
-            13.0,
-            3.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            2.0,
-            13.0,
-            4.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            12.0,
-            13.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
         "up": {
           "uv": [
             1.0,
@@ -205,22 +159,48 @@
           ],
           "texture": "#grafite"
         },
-        "down": {
+        "north": {
+          "uv": [
+            13.0,
+            13.0,
+            15.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
           "uv": [
             1.0,
-            2.0,
+            13.0,
             3.0,
-            4.0
+            15.0
           ],
-          "texture": "#grafite",
-          "cullface": "down"
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            2.0,
+            13.0,
+            4.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ],
+          "texture": "#grafite"
         }
       }
     },
     {
       "from": [
         13,
-        0,
+        1,
         2
       ],
       "to": [
@@ -229,42 +209,6 @@
         4
       ],
       "faces": {
-        "north": {
-          "uv": [
-            1.0,
-            13.0,
-            3.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            13.0,
-            13.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            12.0,
-            13.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            2.0,
-            13.0,
-            4.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
         "up": {
           "uv": [
             13.0,
@@ -274,22 +218,48 @@
           ],
           "texture": "#grafite"
         },
-        "down": {
+        "north": {
+          "uv": [
+            1.0,
+            13.0,
+            3.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
           "uv": [
             13.0,
-            12.0,
+            13.0,
             15.0,
-            14.0
+            15.0
           ],
-          "texture": "#grafite",
-          "cullface": "down"
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            13.0,
+            4.0,
+            15.0
+          ],
+          "texture": "#grafite"
         }
       }
     },
     {
       "from": [
         13,
-        0,
+        1,
         12
       ],
       "to": [
@@ -298,42 +268,6 @@
         14
       ],
       "faces": {
-        "north": {
-          "uv": [
-            1.0,
-            13.0,
-            3.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            13.0,
-            13.0,
-            15.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            2.0,
-            13.0,
-            4.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            12.0,
-            13.0,
-            14.0,
-            16.0
-          ],
-          "texture": "#grafite"
-        },
         "up": {
           "uv": [
             13.0,
@@ -343,562 +277,570 @@
           ],
           "texture": "#grafite"
         },
-        "down": {
+        "north": {
+          "uv": [
+            1.0,
+            13.0,
+            3.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
           "uv": [
             13.0,
-            2.0,
+            13.0,
             15.0,
-            4.0
+            15.0
           ],
-          "texture": "#grafite",
-          "cullface": "down"
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            2.0,
+            13.0,
+            4.0,
+            15.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ],
+          "texture": "#grafite"
         }
       }
     },
     {
       "from": [
         3,
+        1,
+        4
+      ],
+      "to": [
+        13,
+        5,
+        12
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            10.0,
+            4.0
+          ],
+          "texture": "#router_basic_frente"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            4.0,
+            10.0,
+            8.0
+          ],
+          "texture": "#router_basic_frente"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            4.0,
+            8.0,
+            8.0
+          ],
+          "texture": "#router_basic_frente"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            4.0,
+            8.0,
+            8.0
+          ],
+          "texture": "#router_basic_frente"
+        },
+        "up": {
+          "uv": [
+            3.0,
+            4.0,
+            13.0,
+            12.0
+          ],
+          "texture": "#grafite"
+        }
+      }
+    },
+    {
+      "from": [
         2,
-        4
-      ],
-      "to": [
-        13,
-        6,
-        12
-      ],
-      "faces": {
-        "south": {
-          "uv": [
-            0.0,
-            0.0,
-            10.0,
-            4.0
-          ],
-          "texture": "#router_basic_frente"
-        },
-        "north": {
-          "uv": [
-            0.0,
-            4.0,
-            10.0,
-            8.0
-          ],
-          "texture": "#router_basic_frente"
-        },
-        "east": {
-          "uv": [
-            0.0,
-            4.0,
-            8.0,
-            8.0
-          ],
-          "texture": "#router_basic_frente"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            4.0,
-            8.0,
-            8.0
-          ],
-          "texture": "#router_basic_frente"
-        },
-        "up": {
-          "uv": [
-            3.0,
-            4.0,
-            13.0,
-            12.0
-          ],
-          "texture": "#grafite"
-        }
-      }
-    },
-    {
-      "from": [
-        1.5,
         3,
         2.5
       ],
       "to": [
-        2.5,
-        14,
-        3.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            13.5,
-            2.0,
-            14.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            1.5,
-            2.0,
-            2.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            12.5,
-            2.0,
-            13.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            2.5,
-            2.0,
-            3.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        }
-      }
-    },
-    {
-      "from": [
-        1.25,
-        14,
-        2.25
-      ],
-      "to": [
-        2.75,
-        15.5,
-        3.75
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "south": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "east": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "down": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        }
-      }
-    },
-    {
-      "from": [
-        12.5,
         3,
-        2.5
-      ],
-      "to": [
-        13.5,
-        14,
-        3.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            2.5,
-            2.0,
-            3.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            12.5,
-            2.0,
-            13.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            12.5,
-            2.0,
-            13.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            2.5,
-            2.0,
-            3.5,
-            13.0
-          ],
-          "texture": "#grafite"
-        }
-      }
-    },
-    {
-      "from": [
-        12.25,
-        14,
-        2.25
-      ],
-      "to": [
-        13.75,
-        15.5,
-        3.75
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "south": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "east": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        },
-        "down": {
-          "uv": [
-            0.0,
-            10.0,
-            2.0,
-            12.0
-          ],
-          "texture": "#router_basic_antena"
-        }
-      }
-    },
-    {
-      "from": [
-        7,
-        6,
-        7
-      ],
-      "to": [
-        9,
         11,
-        9
+        3.5
       ],
       "faces": {
         "north": {
           "uv": [
-            7.0,
+            13.0,
             5.0,
-            9.0,
-            10.0
+            14.0,
+            13.0
           ],
           "texture": "#grafite"
         },
         "south": {
           "uv": [
-            7.0,
+            2.0,
             5.0,
-            9.0,
-            10.0
+            3.0,
+            13.0
           ],
           "texture": "#grafite"
         },
         "east": {
           "uv": [
-            7.0,
+            12.5,
             5.0,
-            9.0,
-            10.0
+            13.5,
+            13.0
           ],
           "texture": "#grafite"
         },
         "west": {
           "uv": [
-            7.0,
+            2.5,
             5.0,
-            9.0,
-            10.0
+            3.5,
+            13.0
           ],
           "texture": "#grafite"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        11,
+        2.5
+      ],
+      "to": [
+        3,
+        12,
+        3.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        3,
+        2.5
+      ],
+      "to": [
+        14,
+        11,
+        3.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2.0,
+            5.0,
+            3.0,
+            13.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
+          "uv": [
+            13.0,
+            5.0,
+            14.0,
+            13.0
+          ],
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            5.0,
+            13.5,
+            13.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            2.5,
+            5.0,
+            3.5,
+            13.0
+          ],
+          "texture": "#grafite"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        11,
+        2.5
+      ],
+      "to": [
+        14,
+        12,
+        3.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
         }
       }
     },
     {
       "from": [
         7,
-        10.5,
+        5,
         7
       ],
       "to": [
         9,
-        12.75,
+        9,
         9
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            7.0,
-            3.25,
-            9.0,
-            5.5
-          ],
-          "texture": "#grafite"
-        },
-        "south": {
-          "uv": [
-            7.0,
-            3.25,
-            9.0,
-            5.5
-          ],
-          "texture": "#grafite"
-        },
-        "east": {
-          "uv": [
-            7.0,
-            3.25,
-            9.0,
-            5.5
-          ],
-          "texture": "#grafite"
-        },
-        "west": {
-          "uv": [
-            7.0,
-            3.25,
-            9.0,
-            5.5
-          ],
-          "texture": "#grafite"
-        }
-      },
-      "rotation": {
-        "origin": [
-          8,
-          11,
-          8
-        ],
-        "axis": "x",
-        "angle": 22.5
-      }
-    },
-    {
-      "from": [
-        4,
-        12.25,
-        4
-      ],
-      "to": [
-        12,
-        13.25,
-        12
       ],
       "faces": {
         "up": {
           "uv": [
-            0.0,
-            0.0,
-            8.0,
-            8.0
+            7.0,
+            7.0,
+            9.0,
+            9.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
-        "down": {
+        "north": {
           "uv": [
-            8.0,
+            7.0,
+            7.0,
+            9.0,
+            11.0
+          ],
+          "texture": "#grafite"
+        },
+        "south": {
+          "uv": [
+            7.0,
+            7.0,
+            9.0,
+            11.0
+          ],
+          "texture": "#grafite"
+        },
+        "east": {
+          "uv": [
+            7.0,
+            7.0,
+            9.0,
+            11.0
+          ],
+          "texture": "#grafite"
+        },
+        "west": {
+          "uv": [
+            7.0,
+            7.0,
+            9.0,
+            11.0
+          ],
+          "texture": "#grafite"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        9,
+        7
+      ],
+      "to": [
+        11,
+        15,
+        8
+      ],
+      "faces": {
+        "south": {
+          "uv": [
             0.0,
-            16.0,
-            8.0
+            0.0,
+            6.0,
+            6.0
           ],
           "texture": "#router_basic_antena"
         },
         "north": {
           "uv": [
+            8.0,
             0.0,
-            8.0,
-            8.0,
-            9.0
+            14.0,
+            6.0
           ],
           "texture": "#router_basic_antena"
         },
-        "south": {
+        "up": {
           "uv": [
-            0.0,
+            5.0,
+            7.0,
+            11.0,
+            8.0
+          ],
+          "texture": "#grafite"
+        },
+        "down": {
+          "uv": [
+            5.0,
             8.0,
-            8.0,
+            11.0,
             9.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
         "east": {
           "uv": [
-            0.0,
             8.0,
-            8.0,
-            9.0
+            1.0,
+            9.0,
+            7.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
         "west": {
           "uv": [
-            0.0,
+            7.0,
+            1.0,
             8.0,
-            8.0,
-            9.0
+            7.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         }
       },
       "rotation": {
         "origin": [
           8,
-          12.75,
-          8
+          9,
+          7
         ],
         "axis": "x",
-        "angle": 45
+        "angle": -45.0
       }
     },
     {
       "from": [
         7.5,
-        14,
-        9.5
+        11.5,
+        8
       ],
       "to": [
         8.5,
-        15,
-        10.5
+        12.5,
+        10
       ],
       "faces": {
-        "north": {
+        "up": {
           "uv": [
-            0.0,
-            10.0,
-            1.0,
-            11.0
+            7.5,
+            8.0,
+            8.5,
+            10.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
-        "south": {
+        "down": {
           "uv": [
-            0.0,
-            10.0,
-            1.0,
-            11.0
+            7.5,
+            6.0,
+            8.5,
+            8.0
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
         "east": {
           "uv": [
-            0.0,
-            10.0,
-            1.0,
-            11.0
+            6.0,
+            3.5,
+            8.0,
+            4.5
           ],
-          "texture": "#router_basic_antena"
+          "texture": "#grafite"
         },
         "west": {
           "uv": [
-            0.0,
+            8.0,
+            3.5,
             10.0,
-            1.0,
-            11.0
+            4.5
           ],
-          "texture": "#router_basic_antena"
-        },
+          "texture": "#grafite"
+        }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          9,
+          7
+        ],
+        "axis": "x",
+        "angle": -45.0
+      }
+    },
+    {
+      "from": [
+        7.5,
+        11.5,
+        10
+      ],
+      "to": [
+        8.5,
+        12.5,
+        11
+      ],
+      "faces": {
         "up": {
           "uv": [
             0.0,
-            10.0,
+            8.0,
             1.0,
-            11.0
+            9.0
           ],
           "texture": "#router_basic_antena"
         },
         "down": {
           "uv": [
             0.0,
-            10.0,
+            8.0,
             1.0,
-            11.0
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
+          ],
+          "texture": "#router_basic_antena"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            8.0,
+            1.0,
+            9.0
           ],
           "texture": "#router_basic_antena"
         }
@@ -906,11 +848,11 @@
       "rotation": {
         "origin": [
           8,
-          12.75,
-          8
+          9,
+          7
         ],
         "axis": "x",
-        "angle": 45
+        "angle": -45.0
       }
     }
   ]

@@ -785,7 +785,9 @@ public final class StorageGameTests {
     /**
      * Tanque → Tanque no Ultimate pelo roteador: 30 bilhões de mB passam em poucos ticks. Pela API de
      * fluido do NeoForge ({@code int}) seriam no máximo 2,1 bilhões por tick, ou 15 ticks; entre
-     * Tanques o roteador usa o {@code BulkFluids}, em {@code long}. Sem fluido criado nem perdido.
+     * Tanques o roteador usa o {@code BulkFluids}, em {@code long}. Sem fluido criado nem perdido. Porte 1.20.1:
+     * no {@code main} a prova era chegar tudo em até 10 ticks; aqui é o que a afirmação diz, uma visita mover mais
+     * que {@link Integer#MAX_VALUE} ({@link RouterBlockEntity#lastVisitMoved}), sem relógio nem orçamento em ms.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void tankToTankMovesBeyondInt(GameTestHelper helper) {
@@ -795,15 +797,19 @@ public final class StorageGameTests {
         storageTank(helper, B, RouterTier.ULTIMATE);
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.FLUID, PortMode.INSERT);
-        long[] started = new long[1];
-        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER),
-                amount, "água"));
+        long[] largestVisit = new long[1];
+        helper.onEachTick(() -> {
+            GameTestCompat.assertValueEqual(helper, fluid(helper, A, Fluids.WATER) + fluid(helper, B, Fluids.WATER), amount, "água");
+            largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.FLUID));
+        });
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenExecute(() -> started[0] = helper.getTick())
                 .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, fluid(helper, B, Fluids.WATER), amount, "água no destino"))
-                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
-                        "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
+                .thenExecute(() -> {
+                    largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.FLUID));
+                    helper.assertTrue(largestVisit[0] > Integer.MAX_VALUE,
+                            "a maior visita moveu " + largestVisit[0] + " mB: ainda no teto do int");
+                })
                 .thenSucceed();
     }
 
@@ -823,7 +829,8 @@ public final class StorageGameTests {
     /**
      * Bateria → Bateria no Ultimate pelo roteador: 50 bilhões de FE passam em poucos ticks. Pela API
      * de energia do NeoForge ({@code int}) seriam no máximo 2,1 bilhões por tick, ou 24 ticks; entre
-     * Baterias o roteador usa o {@code BulkEnergy}, em {@code long}. Sem energia criada nem perdida.
+     * Baterias o roteador usa o {@code BulkEnergy}, em {@code long}. Sem energia criada nem perdida. Porte 1.20.1:
+     * a prova é uma visita mover mais que {@link Integer#MAX_VALUE} (no {@code main}, chegar tudo em até 10 ticks).
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void batteryToBatteryMovesBeyondInt(GameTestHelper helper) {
@@ -833,14 +840,19 @@ public final class StorageGameTests {
         storageBattery(helper, B, RouterTier.ULTIMATE);
         RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, ResourceType.ENERGY, PortMode.INSERT);
-        long[] started = new long[1];
-        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, energy(helper, A) + energy(helper, B), amount, "energia"));
+        long[] largestVisit = new long[1];
+        helper.onEachTick(() -> {
+            GameTestCompat.assertValueEqual(helper, energy(helper, A) + energy(helper, B), amount, "energia");
+            largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.ENERGY));
+        });
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenExecute(() -> started[0] = helper.getTick())
                 .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, energy(helper, B), amount, "energia no destino"))
-                .thenExecute(() -> helper.assertTrue(helper.getTick() - started[0] <= 10,
-                        "levou " + (helper.getTick() - started[0]) + " ticks: ainda no teto do int"))
+                .thenExecute(() -> {
+                    largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.ENERGY));
+                    helper.assertTrue(largestVisit[0] > Integer.MAX_VALUE,
+                            "a maior visita moveu " + largestVisit[0] + " FE: ainda no teto do int");
+                })
                 .thenSucceed();
     }
 

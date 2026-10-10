@@ -78,7 +78,13 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
   na busca por bloco. Caldeirões de outros mods não entram (o 1.20.1 não tem o registro de conteúdo de caldeirão).
 - **Cache de capability:** o `network/CapCache` faz o papel do `BlockCapabilityCache`; o que o Forge não avisa vem
   do `neighborChanged` da máquina (block entity trocado, cache negativo que passa a achar a capability) e do índice
-  de chunks `CapCacheChunks` (`ChunkEvent.Load/Unload`).
+  de chunks `CapCacheChunks` (`ChunkEvent.Load/Unload`). Um cache nulo também pergunta de novo depois do teto do
+  sono (100 ticks), para máquinas que passam a oferecer a capability sem avisar os vizinhos.
+- **Testes de vazão sem relógio:** `tankToTankMovesBeyondInt`, `batteryToBatteryMovesBeyondInt` e
+  `bigStackSlotMovesMoreThanAStackPerVisit` afirmam o mesmo que no `main`, mas de outra forma: no `main`, "chega
+  tudo em até 10 ticks"; aqui, "uma visita moveu mais que `Integer.MAX_VALUE`" (ou mais que uma pilha), pelo
+  `RouterBlockEntity.lastVisitMoved`. A medida em ticks dependia do orçamento do motor em ms e falhava com a CPU
+  ocupada.
 - **Campos de texto:** o `EditBox` do 1.20.1 desenha o texto com sombra.
 
 ## Ordem sugerida

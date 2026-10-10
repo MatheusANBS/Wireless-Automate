@@ -245,6 +245,20 @@ public final class NetworkManager {
     }
 
     /**
+     * Para GameTests e diagnóstico: quantos ticks faltam para o destino na face (absoluta) da máquina acordar
+     * sozinho, contados de {@code now} ({@code getTickCount} do servidor); 0 se acordado, -1 se a porta não existe.
+     */
+    public long destinationSleepLeft(RouterBlockEntity node, ResourceType type, Direction face, long now) {
+        NodePorts ports = nodes.get(node);
+        Port port = ports == null ? null : ports.peek(type, face);
+        if (port == null) {
+            return -1;
+        }
+        long wakeAt = port.destinationBackoff.wakeAt();
+        return wakeAt <= now ? 0 : wakeAt - now;
+    }
+
+    /**
      * Para GameTests e diagnóstico: o intervalo do próximo sono da origem na face (absoluta) da
      * máquina, que dobra a cada sono e volta a 1 quando algo a acorda; -1 se a porta não existe.
      */

@@ -296,7 +296,9 @@ public final class TransferGameTests {
     /**
      * Slot com pilha maior que uma extração (gaveta, barril com upgrade de pilha) no Elite: a visita
      * repete o slot enquanto houver saldo e itens, em vez de entregar 64 e passar para o próximo.
-     * Com 64 por visita o baú levaria 27 ticks para encher.
+     * Com 64 por visita o baú levaria 27 ticks para encher. Porte 1.20.1: no {@code main} a prova era o baú
+     * encher em até 10 ticks; aqui é o que a afirmação diz, uma visita mover mais que uma pilha
+     * ({@link RouterBlockEntity#lastVisitMoved}), sem depender do orçamento do motor (em ms) nem do relógio.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void bigStackSlotMovesMoreThanAStackPerVisit(GameTestHelper helper) {
@@ -313,17 +315,19 @@ public final class TransferGameTests {
         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
         int capacity = 27 * 64;
-        long[] started = new long[1];
+        long[] largestVisit = new long[1];
 
-        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count() + count(helper, B, Items.COBBLESTONE),
-                10_000, "pedregulho"));
+        helper.onEachTick(() -> {
+            GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count() + count(helper, B, Items.COBBLESTONE),
+                    10_000, "pedregulho");
+            largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.ITEM));
+        });
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenExecute(() -> started[0] = helper.getTick())
                 .thenWaitUntil(() -> assertCount(helper, B, Items.COBBLESTONE, capacity))
                 .thenExecute(() -> {
-                    long ticks = helper.getTick() - started[0];
-                    helper.assertTrue(ticks <= 10, "baú levou " + ticks + " ticks para encher: o slot não repetiu");
+                    largestVisit[0] = Math.max(largestVisit[0], source.lastVisitMoved(ResourceType.ITEM));
+                    helper.assertTrue(largestVisit[0] > 64, "a maior visita moveu " + largestVisit[0] + ": o slot não repetiu");
                     GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count(), 10_000 - capacity, "na origem");
                 })
                 .thenSucceed();

@@ -3,25 +3,21 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.network.CapCacheChunks;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import java.util.Comparator;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.TicketType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
@@ -36,17 +32,21 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Porte 1.20.1: o {@code CapCache} do roteador (o papel do {@code BlockCapabilityCache} do NeoForge) e os handlers
- * de blocos vanilla sem block entity ({@code VanillaBlockHandlers}). Cada teste prova uma regra de quando o cache
- * se refaz: bloco da máquina trocado, máquina que passa a oferecer a capability sem trocar de block entity, máquina
- * quebrada e recolocada com o roteador vivo, mudança só de estado (não acorda), o chunk da máquina carregando; e o
- * compostor recebendo e entregando. Máquinas em y=1 com o roteador em cima (facing=UP), salvo onde diz.
- *
- * <p>Em lotes próprios ({@code capcache} e {@code capcache_chunks}): os lotes comuns ficam com a mesma composição de
- * antes, e os testes de vazão por tick deles (o orçamento do motor é em ms) não dividem o tick com estes. O de
- * chunks gera e salva centenas de chunks longe dali, e o trabalho dos workers e do coletor de lixo atrasava os
- * testes de vazão dos lotes seguintes: o nome {@code capcache_chunks} o põe por último (o {@code GameTestRunner} do
- * 1.20.1 agrupa os lotes num {@code HashMap}; o balde de {@code capcache_chunks} vem depois do de
- * {@code defaultBatch}).
+ * de blocos vanilla sem block entity ({@code VanillaBlockHandlers}). Máquinas em y=1 com o roteador em cima
+ * (facing=UP), salvo onde diz. O que cada teste prova (e se depende do que a tarefa 3 da etapa 2 trouxe):
+ * <ul>
+ *   <li>{@link #machineStartsOfferingWithoutNewBlockEntity}: o cache negativo pergunta de novo no
+ *       {@code neighborChanged} (falha sem isso: a água nunca entra);</li>
+ *   <li>{@link #machineStartsOfferingSilently}: a rede de segurança do cache negativo, sem aviso aos vizinhos (falha
+ *       sem ela);</li>
+ *   <li>{@link #composterTakesCompostAndGivesBoneMeal} e {@link #machineSwappedForBlockWithOtherCapability}: os
+ *       handlers do compostor e do caldeirão (falham sem eles; a invalidação por troca de bloco já existia);</li>
+ *   <li>{@link #machineStateChangeDoesNotWakeSleepingPort}: guarda de que o cache negativo não invalida às cegas
+ *       (passaria sem a tarefa; falha se a pergunta de novo avisar sem capability nova);</li>
+ *   <li>{@link #machineBrokenAndReplacedWithRouterAlive}: regressão (passaria sem a tarefa: o baú velho invalida as
+ *       capabilities ao sair).</li>
+ * </ul>
+ * O índice de chunks tem o teste dele em {@link ChunkCapCacheGameTests}, num namespace próprio.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -57,9 +57,6 @@ public final class CapCacheGameTests {
     private static final BlockPos D = new BlockPos(0, 1, 2);
     /** Uma origem que já dormiu várias vezes seguidas tem o próximo sono pelo menos assim (ticks). */
     private static final int DEEP_SLEEP = 32;
-    /** Ticket dos chunks do teste de carga ({@link #machineChunkLoadWakesPort}); sem prazo. */
-    private static final TicketType<ChunkPos> TEST_TICKET = TicketType.create("wirelessautomate_capcache_test",
-            Comparator.comparingLong(ChunkPos::toLong));
 
     private static UUID newNetwork(GameTestHelper helper, String name) {
         return NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
@@ -117,7 +114,7 @@ public final class CapCacheGameTests {
      * máquina; trocar o baú por um caldeirão vazio (o bloco mudou, o roteador invalida os caches) faz o roteador usar o
      * handler do caldeirão, e a água sai logo, sem esperar o teto do sono.
      */
-    @GameTest(template = "empty", timeoutTicks = 300, batch = "capcache")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void machineSwappedForBlockWithOtherCapability(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-cache-troca");
         RouterBlockEntity source = place(helper, A,
@@ -151,7 +148,7 @@ public final class CapCacheGameTests {
      * destino dorme sem máquina; ligado ({@link TestMachines#switchOn}, sem trocar de block entity, com o aviso aos
      * vizinhos de uma máquina real), o roteador pergunta de novo ao cache nulo, acorda e a água entra.
      */
-    @GameTest(template = "empty", timeoutTicks = 300, batch = "capcache")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void machineStartsOfferingWithoutNewBlockEntity(GameTestHelper helper) {
         if (!TestMachines.enabled()) {
             helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
@@ -190,11 +187,41 @@ public final class CapCacheGameTests {
     }
 
     /**
+     * Rede de segurança do cache negativo: o tanque de teste passa a oferecer fluido sem avisar os vizinhos (um mod
+     * que só chama {@code invalidateCaps}/{@code setChanged}); o cache nulo pergunta de novo na primeira consulta
+     * depois do teto do sono, e a água entra sem trocar de bloco nem recarregar o chunk.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void machineStartsOfferingSilently(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-cache-negativo-mudo");
+        RouterBlockEntity source = place(helper, A,
+                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), network);
+        source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
+        BlockPos tank = helper.absolutePos(B);
+        TestMachines.reset(tank);
+        RouterBlockEntity target = place(helper, B, TestMachines.SWITCH_TANK.get().defaultBlockState(), network);
+        target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> assertDestinationSleeping(helper, network))
+                .thenExecute(() -> TestMachines.switchOnSilently(tank))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, TestMachines.switchTank(tank).getFluidAmount(), 1_000,
+                        "água no tanque ligado sem aviso"))
+                .thenExecute(() -> helper.assertBlockPresent(Blocks.CAULDRON, A))
+                .thenSucceed();
+    }
+
+    /**
      * Máquina quebrada e recolocada com o roteador vivo: o baú da origem sai sem avisar os vizinhos (o roteador não
      * vê o ar e não cai) e um baú novo entra no lugar, com outro block entity e o mesmo bloco. O roteador continua o
      * mesmo e tira do baú novo.
      */
-    @GameTest(template = "empty", timeoutTicks = 300, batch = "capcache")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void machineBrokenAndReplacedWithRouterAlive(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-cache-recolocar");
         RouterBlockEntity source = place(helper, A, Blocks.CHEST.defaultBlockState(), network);
@@ -231,7 +258,7 @@ public final class CapCacheGameTests {
      * máquina com sinal de comparador, como a fornalha, acorda as portas pelo {@code onNeighborChange} do roteador,
      * como no {@code main}: o aviso de conteúdo mudado.)
      */
-    @GameTest(template = "empty", timeoutTicks = 400, batch = "capcache")
+    @GameTest(template = "empty", timeoutTicks = 400)
     public static void machineStateChangeDoesNotWakeSleepingPort(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-cache-estado");
         RouterBlockEntity source = place(helper, A, Blocks.CAMPFIRE.defaultBlockState(), network);
@@ -262,7 +289,7 @@ public final class CapCacheGameTests {
      * abóbora (chance 100%), o compostor chega ao nível 7 e, 20 ticks depois, ao 8; o roteador de baixo (facing=DOWN)
      * tira a farinha de osso para outro baú. Duas redes, para as tortas não irem direto para o baú da farinha.
      */
-    @GameTest(template = "empty", timeoutTicks = 600, batch = "capcache")
+    @GameTest(template = "empty", timeoutTicks = 600)
     public static void composterTakesCompostAndGivesBoneMeal(GameTestHelper helper) {
         UUID input = newNetwork(helper, "teste-compostor-entrada");
         UUID output = newNetwork(helper, "teste-compostor-saida");
@@ -288,111 +315,6 @@ public final class CapCacheGameTests {
                     helper.assertBlockProperty(C, ComposterBlock.LEVEL, 0);
                     GameTestCompat.assertValueEqual(helper, count(helper, D, Items.PUMPKIN_PIE), 0, "tortas no baú da farinha");
                 })
-                .thenSucceed();
-    }
-
-    /**
-     * O chunk da máquina carregando acorda a porta (o índice de chunks dos caches, como o
-     * {@code invalidateCapabilities(ChunkPos)} do NeoForge). Longe dos outros testes, num par de chunks vizinhos
-     * presos por um ticket: o roteador de destino no chunk R, na borda, e o baú dele no chunk M. Os dois descarregam
-     * de verdade (sem ticket). Depois só R volta, como borda de um ticket de nível 33 (carregado, com M ainda fora):
-     * o destino consulta a máquina com o chunk dela fora e dorme sem máquina. Promover M a carregado (o ticket ganha
-     * raio 1) posta o {@code ChunkEvent.Load} dele, o cache é invalidado, a porta acorda e os diamantes entram logo,
-     * sem esperar o teto do sono (100 ticks). Nada lê o chunk M antes da promoção (o {@code getBlockState} o
-     * carregaria): só {@code hasChunk}. Num lote próprio, o último (ver a classe).
-     */
-    @GameTest(template = "empty", timeoutTicks = 2400, batch = "capcache_chunks")
-    public static void machineChunkLoadWakesPort(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        BlockPos base = helper.absolutePos(BlockPos.ZERO);
-        ChunkPos routerChunk = new ChunkPos((base.getX() >> 4) + 512, base.getZ() >> 4);
-        ChunkPos machineChunk = new ChunkPos(routerChunk.x + 1, routerChunk.z);
-        int y = base.getY() + 1;
-        int z = routerChunk.getMinBlockZ() + 8;
-        BlockPos sourceChest = new BlockPos(routerChunk.getMinBlockX() + 8, y, z);
-        BlockPos sourceRouter = sourceChest.above();
-        // O roteador na última coluna de R, preso pelo lado oeste do baú em M (facing=WEST: o roteador fica a oeste).
-        BlockPos targetRouter = new BlockPos(routerChunk.getMaxBlockX(), y, z);
-        BlockPos targetChest = targetRouter.east();
-        UUID network = newNetwork(helper, "teste-cache-chunk");
-        BlockEntity[] unloading = new BlockEntity[2];
-        long[] promotedAt = {0};
-        int chunksBefore = level.getChunkSource().getLoadedChunksCount();
-
-        helper.startSequence()
-                // Os dois chunks carregados (R com nível 32, M com 33).
-                .thenExecute(() -> level.getChunkSource().addRegionTicket(TEST_TICKET, routerChunk, 1, routerChunk))
-                .thenWaitUntil(() -> helper.assertTrue(level.hasChunk(routerChunk.x, routerChunk.z)
-                        && level.hasChunk(machineChunk.x, machineChunk.z), "os chunks não carregaram"))
-                .thenExecute(() -> {
-                    level.setBlock(sourceChest, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
-                    level.setBlock(targetChest, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
-                    level.setBlock(sourceRouter, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP),
-                            Block.UPDATE_ALL);
-                    level.setBlock(targetRouter, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.WEST),
-                            Block.UPDATE_ALL);
-                    RouterBlockEntity source = (RouterBlockEntity) level.getBlockEntity(sourceRouter);
-                    RouterBlockEntity target = (RouterBlockEntity) level.getBlockEntity(targetRouter);
-                    source.setNetworkId(network);
-                    source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    target.setNetworkId(network);
-                    target.setMode(ResourceType.ITEM, Direction.WEST, PortMode.INSERT);
-                    unloading[0] = source;
-                    unloading[1] = level.getBlockEntity(targetChest);
-                })
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains((RouterBlockEntity) unloading[0]),
-                        "roteador não registrado"))
-                // Sem ticket, os dois descarregam de verdade (o roteador e o baú saem do mundo).
-                .thenExecute(() -> {
-                    level.getChunkSource().removeRegionTicket(TEST_TICKET, routerChunk, 1, routerChunk);
-                })
-                .thenWaitUntil(() -> helper.assertTrue(unloading[0].isRemoved() && unloading[1].isRemoved(),
-                        "os chunks não descarregaram"))
-                .thenExecute(() -> {
-                    GameTestCompat.assertValueEqual(helper, CapCacheChunks.count(level, machineChunk), 0,
-                            "caches do chunk da máquina depois de descarregar");
-                    // Só R volta: nível 33 nele, 34 em M (fora).
-                    level.getChunkSource().addRegionTicket(TEST_TICKET, routerChunk, 0, routerChunk);
-                })
-                .thenWaitUntil(() -> {
-                    helper.assertTrue(level.hasChunk(routerChunk.x, routerChunk.z), "o chunk do roteador não voltou");
-                    BlockEntity target = level.getBlockEntity(targetRouter);
-                    BlockEntity source = level.getBlockEntity(sourceRouter);
-                    helper.assertTrue(target instanceof RouterBlockEntity && source instanceof RouterBlockEntity,
-                            "os roteadores não voltaram: " + target + ", " + source + ", " + level.getBlockState(targetRouter));
-                    helper.assertTrue(NetworkManager.get().contains((RouterBlockEntity) target)
-                            && NetworkManager.get().contains((RouterBlockEntity) source), "os roteadores não se registraram");
-                })
-                .thenExecute(() -> {
-                    helper.assertFalse(level.hasChunk(machineChunk.x, machineChunk.z), "o chunk da máquina carregou junto");
-                    ChestBlockEntity chest = (ChestBlockEntity) level.getBlockEntity(sourceChest);
-                    chest.setItem(0, new ItemStack(Items.DIAMOND, 10));
-                })
-                .thenWaitUntil(() -> {
-                    NetworkStats stats = stats(level, network);
-                    helper.assertTrue(stats != null && stats.destinationsSleeping() == 1, "o destino com o chunk fora não dormiu");
-                    helper.assertFalse(level.hasChunk(machineChunk.x, machineChunk.z), "o chunk da máquina carregou");
-                    // Os caches do destino (o de itens do Baú do mod e o de itens) miram o chunk da máquina.
-                    helper.assertTrue(CapCacheChunks.count(level, machineChunk) >= 1, "nenhum cache no índice do chunk da máquina");
-                })
-                .thenExecute(() -> {
-                    level.getChunkSource().addRegionTicket(TEST_TICKET, routerChunk, 1, routerChunk);
-                    promotedAt[0] = helper.getTick();
-                })
-                .thenWaitUntil(() -> {
-                    helper.assertTrue(level.hasChunk(machineChunk.x, machineChunk.z), "o chunk da máquina não carregou");
-                    GameTestCompat.assertValueEqual(helper, count(level.getBlockEntity(targetChest), Items.DIAMOND), 10,
-                            "diamantes no baú do chunk da máquina");
-                })
-                .thenExecute(() -> {
-                    long ticks = helper.getTick() - promotedAt[0];
-                    helper.assertTrue(ticks < 40, "a entrega demorou " + ticks + " ticks depois de o chunk carregar");
-                    level.getChunkSource().removeRegionTicket(TEST_TICKET, routerChunk, 0, routerChunk);
-                    level.getChunkSource().removeRegionTicket(TEST_TICKET, routerChunk, 1, routerChunk);
-                })
-                // Espera os chunks gerados em volta descarregarem: senão salvar e descarregar entra no lote seguinte.
-                .thenWaitUntil(() -> helper.assertTrue(level.getChunkSource().getLoadedChunksCount() <= chunksBefore,
-                        "chunks do teste ainda carregados: " + level.getChunkSource().getLoadedChunksCount() + " > " + chunksBefore))
                 .thenSucceed();
     }
 }

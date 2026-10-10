@@ -6,6 +6,7 @@ import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -35,7 +36,9 @@ import org.jetbrains.annotations.Nullable;
  * do Mekanism mudado de "nenhum" para saída) avisa os vizinhos ({@code neighborChanged}; o Mekanism 10.4 chama
  * {@code WorldUtils.notifyNeighborOfChange} depois de invalidar a capability do lado): o dono chama
  * {@link #revalidate}, que, com o mesmo block entity, pergunta de novo só aos caches nulos e invalida os que agora
- * acham algo. Sem custo por tick; uma mudança só de estado que não traz capability nova não acorda ninguém.
+ * acham algo. Sem custo por tick; uma mudança só de estado que não traz capability nova não acorda ninguém. Para
+ * quem não avisa os vizinhos (só {@code invalidateCaps} e {@code setChanged}), um cache nulo busca de novo depois de
+ * {@link #NEGATIVE_RECHECK_TICKS} (a porta que dormiu até o teto pergunta outra vez).
  *
  * <p><b>Chunks:</b> cada cache entra no índice do {@link CapCacheChunks} (pelo chunk do alvo) na primeira
  * {@link #get()} e sai no {@link #close()}; o chunk do alvo carregar ou descarregar invalida o cache, como o
@@ -43,7 +46,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p><b>Busca por bloco:</b> criado com um {@link BlockLookup} ({@link VanillaBlockHandlers}: caldeirão e
  * compostor, sem block entity), a busca suja lê o estado do bloco e pergunta a ele antes do block entity; o handler
- * achado fica guardado até o dono invalidar (o roteador invalida quando o bloco da máquina muda) ou o chunk mudar.
+ * achado fica guardado até o dono invalidar (o roteador invalida quando o bloco da máquina muda) ou o chunk mudar;
+ * a consulta confere o bloco guardado (trocado sem aviso aos vizinhos, refaz).
  *
  * <p>Sujo, a próxima {@link #get()} busca de novo: {@code level.getBlockEntity(pos)} e
  * {@code getCapability(cap, side)}, só se o chunk do alvo estiver carregado ({@code level.isLoaded(pos)}); com
@@ -57,6 +61,12 @@ import org.jetbrains.annotations.Nullable;
  * <p>Só no servidor e na thread do servidor.
  */
 public final class CapCache<T> {
+    /**
+     * Rede de segurança do cache negativo: um cache que guardou {@code null} busca de novo na primeira consulta
+     * depois deste intervalo (o teto do sono das portas), para a máquina que passa a oferecer a capability sem
+     * avisar os vizinhos. Custa no máximo uma busca por teto de sono por cache nulo consultado; nunca por tick.
+     */
+    static final int NEGATIVE_RECHECK_TICKS = NetworkManager.MAX_SLEEP_TICKS;
     private static final BooleanSupplier ALWAYS = () -> true;
     private static final Runnable NOTHING = () -> {
     };
@@ -80,6 +90,10 @@ public final class CapCache<T> {
     private @Nullable T value;
     /** Está no índice do {@link CapCacheChunks}. */
     private boolean indexed;
+    /** O bloco que deu o valor na busca por bloco ({@link BlockLookup}), ou {@code null} se o valor veio do block entity. */
+    private @Nullable Block valueBlock;
+    /** O {@code getGameTime} da última busca no mundo (para a rede de segurança do cache negativo). */
+    private long checkedAt;
 
     /** Cache sem aviso de invalidação. */
     public CapCache(ServerLevel level, BlockPos pos, @Nullable Direction side, Capability<T> capability) {
@@ -149,7 +163,7 @@ public final class CapCache<T> {
     /** A capability, ou {@code null} se o alvo não tem (ou se o chunk dele não está carregado). */
     public @Nullable T get() {
         handedOut = true;
-        if (!dirty && !stale()) {
+        if (!dirty && !stale() && (value != null || level.getGameTime() - checkedAt < NEGATIVE_RECHECK_TICKS)) {
             return value;
         }
         if (!indexed) {
@@ -160,17 +174,21 @@ public final class CapCache<T> {
             forget();
             return null;
         }
+        checkedAt = level.getGameTime();
         if (blockLookup != null) {
-            T fromBlock = blockLookup.find(level, pos, level.getBlockState(pos), side);
+            BlockState state = level.getBlockState(pos);
+            T fromBlock = blockLookup.find(level, pos, state, side);
             if (fromBlock != null) {
                 dropListener();
                 blockEntity = null;
                 optional = null;
+                valueBlock = state.getBlock();
                 value = fromBlock;
                 dirty = false;
                 return fromBlock;
             }
         }
+        valueBlock = null;
         BlockEntity be = level.getBlockEntity(pos);
         LazyOptional<T> found = null;
         T result = null;
@@ -253,6 +271,10 @@ public final class CapCache<T> {
 
     /** O valor guardado já não vale: o block entity saiu ou o optional foi invalidado sem avisar. */
     private boolean stale() {
+        if (valueBlock != null) {
+            // Handler de bloco: o bloco foi trocado sem aviso aos vizinhos (flag 2, ferramenta de edição)?
+            return !level.isLoaded(pos) || !VanillaBlockHandlers.sameHandler(valueBlock, level.getBlockState(pos).getBlock());
+        }
         return (blockEntity != null && blockEntity.isRemoved()) || (optional != null && !optional.isPresent());
     }
 
@@ -279,6 +301,7 @@ public final class CapCache<T> {
 
     private void forget() {
         dropListener();
+        valueBlock = null;
         blockEntity = null;
         optional = null;
         value = null;

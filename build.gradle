@@ -85,7 +85,8 @@ legacyForge {
             // Pasta própria, com o mundo apagado antes de cada rodada (tarefa abaixo): dados salvos de
             // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
             gameDirectory = project.file("${runRoot}/gametest")
-            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+            // O namespace wirelessautomate_chunks (gametest/ChunkCapCacheGameTests) roda junto, com o template próprio.
+            systemProperty 'forge.enabledGameTestNamespaces', "${project.mod_id},wirelessautomate_chunks"
             // Liga as máquinas de teste (gametest/TestMachines): slot de pilha enorme e muitos tanques.
             systemProperty 'wirelessautomate.gameTests', 'true'
         }

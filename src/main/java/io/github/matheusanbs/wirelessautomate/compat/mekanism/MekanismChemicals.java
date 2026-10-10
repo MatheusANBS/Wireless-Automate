@@ -44,13 +44,13 @@ import org.jetbrains.annotations.Nullable;
  * primeiro, e o mod avisa no log uma vez, quando monta o índice (no primeiro uso, com os registros prontos).
  */
 public final class MekanismChemicals {
-    public static final Capability<IGasHandler> GAS = CapabilityManager.get(new CapabilityToken<>() {
+    public static final Capability<IGasHandler> GAS = CapabilityManager.get(new CapabilityToken<IGasHandler>() {
     });
-    public static final Capability<IInfusionHandler> INFUSION = CapabilityManager.get(new CapabilityToken<>() {
+    public static final Capability<IInfusionHandler> INFUSION = CapabilityManager.get(new CapabilityToken<IInfusionHandler>() {
     });
-    public static final Capability<IPigmentHandler> PIGMENT = CapabilityManager.get(new CapabilityToken<>() {
+    public static final Capability<IPigmentHandler> PIGMENT = CapabilityManager.get(new CapabilityToken<IPigmentHandler>() {
     });
-    public static final Capability<ISlurryHandler> SLURRY = CapabilityManager.get(new CapabilityToken<>() {
+    public static final Capability<ISlurryHandler> SLURRY = CapabilityManager.get(new CapabilityToken<ISlurryHandler>() {
     });
 
     /**
@@ -131,6 +131,9 @@ public final class MekanismChemicals {
     /** Tipo de cada id dos quatro registros; montado no primeiro uso (os registros do Forge não mudam depois). */
     private static volatile @Nullable Object2IntOpenHashMap<ResourceLocation> index;
 
+    /** As colisões de id já foram logadas (uma vez por processo, mesmo que cliente e servidor montem o índice). */
+    private static volatile boolean collisionsLogged;
+
     /** Índice do tipo (em {@link #SUBTYPES}) do químico {@code id}, ou -1 se ele não existe. Não aloca. */
     public static int subtype(ResourceLocation id) {
         Object2IntOpenHashMap<ResourceLocation> map = index;
@@ -143,10 +146,13 @@ public final class MekanismChemicals {
         return map.getInt(id);
     }
 
-    private static @Nullable Object2IntOpenHashMap<ResourceLocation> buildIndex() {
+    private static synchronized @Nullable Object2IntOpenHashMap<ResourceLocation> buildIndex() {
+        if (index != null) {
+            return index;
+        }
         for (Subtype<?, ?> type : SUBTYPES) {
-            if (type.registry() == null) {
-                // Cedo demais (registros ainda não criados): tenta de novo no próximo uso.
+            if (type.registry() == null || type.registry().isEmpty()) {
+                // Cedo demais (registros ainda não criados ou não preenchidos): tenta de novo no próximo uso.
                 return null;
             }
         }
@@ -159,6 +165,9 @@ public final class MekanismChemicals {
                 }
                 int first = map.getInt(id);
                 if (first >= 0) {
+                    if (collisionsLogged) {
+                        continue;
+                    }
                     WirelessAutomate.LOGGER.warn("O químico {} existe como {} e como {}; o Wireless Automate usa o {}",
                             id, SUBTYPES.get(first).name, type.name, SUBTYPES.get(first).name);
                 } else {
@@ -166,6 +175,7 @@ public final class MekanismChemicals {
                 }
             }
         }
+        collisionsLogged = true;
         index = map;
         return map;
     }

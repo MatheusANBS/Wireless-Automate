@@ -698,5 +698,7 @@
   "gui.wirelessautomate.recipes.error.unknown_item": "Unknown item: %s",
   "gui.wirelessautomate.recipes.error.bad_tag": "Invalid tag: %s",
   "gui.wirelessautomate.recipes.error.disk": "Could not write the file: %s",
-  "gui.wirelessautomate.recipes.error.bad_count": "The result stacks to at most %s"
+  "gui.wirelessautomate.recipes.error.bad_count": "The result stacks to at most %s",
+  "gui.wirelessautomate.recipes.title": "Wireless Automate Recipes",
+  "gui.wirelessautomate.recipes.reloaded": "Recipes reloaded for all players"
 }

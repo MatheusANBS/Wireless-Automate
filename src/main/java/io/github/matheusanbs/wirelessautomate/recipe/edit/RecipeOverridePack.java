@@ -33,9 +33,19 @@ public final class RecipeOverridePack {
         return FMLPaths.CONFIGDIR.get().resolve("wirelessautomate/recipes");
     }
 
-    /** {@code root/data/<ns>/recipe/<path>.json}. */
+    /**
+     * {@code root/data/<ns>/recipe/<path>.json}. Um {@link ResourceLocation} aceita {@code ..} no caminho:
+     * se o arquivo sair da pasta {@code recipe} do namespace, lança {@link IllegalArgumentException}.
+     */
     public static Path recipeFile(ResourceLocation id) {
-        return root().resolve("data").resolve(id.getNamespace()).resolve("recipe").resolve(id.getPath() + ".json");
+        Path root = root().toAbsolutePath().normalize();
+        Path dir = root.resolve("data").resolve(id.getNamespace()).resolve("recipe").normalize();
+        Path file = dir
+                .resolve(id.getPath() + ".json").normalize();
+        if (!dir.startsWith(root) || !file.startsWith(dir)) {
+            throw new IllegalArgumentException("id fora da pasta recipe do pack de receitas editadas: " + id);
+        }
+        return file;
     }
 
     /** Cria a pasta e o {@code pack.mcmeta} se faltarem; erros de disco vão para o log. */

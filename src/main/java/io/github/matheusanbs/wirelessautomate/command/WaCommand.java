@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import io.github.matheusanbs.wirelessautomate.bench.BenchCommand;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -107,6 +108,12 @@ public final class WaCommand {
                                                         .then(Commands.argument("priority", IntegerArgumentType.integer())
                                                                 .executes(context -> face(context,
                                                                         IntegerArgumentType.getInteger(context, "priority")))))))))
+                .then(Commands.literal("recipes")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> {
+                            RecipeEditorMenu.open(context.getSource().getPlayerOrException());
+                            return 1;
+                        }))
                 .then(StorageCommand.node())
                 .then(BenchCommand.node()));
     }

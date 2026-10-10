@@ -268,6 +268,11 @@ public final class RecipeEditor {
         if (!id.getNamespace().equals(WirelessAutomate.MODID)) {
             return Optional.empty();
         }
+        try {
+            RecipeOverridePack.recipeFile(id);
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
         Optional<RecipeHolder<?>> loaded = server.getRecipeManager().byKey(id);
         if (loaded.isPresent()) {
             if (!isCraftingSerializer(loaded.get().value())) {

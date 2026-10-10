@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -33,6 +34,10 @@ public final class ModMenus {
             MENU_TYPES.register("storage_list", () -> IMenuTypeExtension.create(StorageListMenu::fromNetwork));
     public static final Supplier<MenuType<StorageScalarMenu>> STORAGE_SCALAR =
             MENU_TYPES.register("storage_scalar", () -> IMenuTypeExtension.create(StorageScalarMenu::new));
+
+    /** Editor de receitas do /wa recipes. */
+    public static final Supplier<MenuType<RecipeEditorMenu>> RECIPE_EDITOR =
+            MENU_TYPES.register("recipe_editor", () -> IMenuTypeExtension.create(RecipeEditorMenu::new));
 
     private ModMenus() {
     }

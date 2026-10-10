@@ -698,5 +698,7 @@
   "gui.wirelessautomate.recipes.error.unknown_item": "Item desconhecido: %s",
   "gui.wirelessautomate.recipes.error.bad_tag": "Tag inválida: %s",
   "gui.wirelessautomate.recipes.error.disk": "Não foi possível gravar o arquivo: %s",
-  "gui.wirelessautomate.recipes.error.bad_count": "O resultado empilha no máximo %s"
+  "gui.wirelessautomate.recipes.error.bad_count": "O resultado empilha no máximo %s",
+  "gui.wirelessautomate.recipes.title": "Receitas do Wireless Automate",
+  "gui.wirelessautomate.recipes.reloaded": "Receitas recarregadas para todos os jogadores"
 }

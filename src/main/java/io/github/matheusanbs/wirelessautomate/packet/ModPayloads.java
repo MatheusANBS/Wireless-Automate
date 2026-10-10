@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
@@ -50,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "11";
+    public static final String VERSION = "12";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -93,6 +94,11 @@ public final class ModPayloads {
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
                 (payload, context) -> StorageListMenu.handle(serverPlayer(context), payload));
         registrar.playToClient(ScalarStatePayload.TYPE, ScalarStatePayload.STREAM_CODEC, StorageScalarMenu::onState);
+        // Editor de receitas (/wa recipes): handlers no RecipeEditorMenu e no RecipeEditorActionPayload.
+        registrar.playToClient(RecipeEditorStatePayload.TYPE, RecipeEditorStatePayload.STREAM_CODEC,
+                RecipeEditorMenu::onState);
+        registrar.playToServer(RecipeEditorActionPayload.TYPE, RecipeEditorActionPayload.STREAM_CODEC,
+                (payload, context) -> RecipeEditorActionPayload.handle(serverPlayer(context), payload));
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
     }

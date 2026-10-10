@@ -4,7 +4,7 @@
 
 Wireless transport of items, fluids, energy, chemicals and Source for **NeoForge 1.21.1** (Java 21), built for ATM10. The goal is to be the fastest transport in the pack and the lightest on TPS: one central manager, no per-block ticking, and a time cap per tick.
 
-**Status:** version 1.5 (1.5.0: Mouse Tweaks-style controls in the Chest, such as Shift + drag, mouse wheel and Shift + double-click, and NeoForge 21.1.248; 1.5.1: the Chest fills other mods' big-stack slots at once). Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), both with the changelog. Requires NeoForge 21.1.248 or newer (runs on ATM10).
+**Status:** version 1.5 (1.5.0: Mouse Tweaks-style controls in the Chest, such as Shift + drag, mouse wheel and Shift + double-click, and NeoForge 21.1.248; 1.5.1: the Chest fills other mods' big-stack slots at once; 1.5.2: new "Porcelain and Signal" visual identity, with animated items, 3D blocks, light screens and tight hitboxes). Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), both with the changelog. Requires NeoForge 21.1.248 or newer (runs on ATM10).
 
 ## Features
 

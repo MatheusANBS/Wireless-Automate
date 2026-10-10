@@ -4,7 +4,7 @@ Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoFor
 
 > **[Read in English](README.en.md)**
 
-**Estado:** versão 1.5 (1.5.0: controles no estilo do Mouse Tweaks no Baú, como Shift + arrastar, rodinha e Shift + duplo clique, e NeoForge 21.1.248; 1.5.1: o Baú enche slots de pilha grande de outros mods de uma vez). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
+**Estado:** versão 1.5 (1.5.0: controles no estilo do Mouse Tweaks no Baú, como Shift + arrastar, rodinha e Shift + duplo clique, e NeoForge 21.1.248; 1.5.1: o Baú enche slots de pilha grande de outros mods de uma vez; 1.5.2: identidade visual nova "Porcelana e Sinal", com itens animados, blocos 3D, telas claras e hitboxes justas). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
 
 ## Recursos
 

@@ -40,6 +40,7 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:storage_battery" /> [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
 | <ItemImage id="wirelessautomate:storage_chemical_tank" /> [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 | <ItemImage id="wirelessautomate:storage_source_tank" /> [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
+| [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
 

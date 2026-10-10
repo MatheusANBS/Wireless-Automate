@@ -298,6 +298,7 @@ recursos entre si, sem canos.
 | ''' + item('storage_battery') + ''' [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
 | ''' + item('storage_chemical_tank') + ''' [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 | ''' + item('storage_source_tank') + ''' [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
+| [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
 
@@ -352,6 +353,7 @@ resources with the others, with no pipes.
 | ''' + item('storage_battery') + ''' [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
 | ''' + item('storage_chemical_tank') + ''' [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
 | ''' + item('storage_source_tank') + ''' [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
+| [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
 
@@ -2105,7 +2107,113 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 19) + '''
+page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 19) + '''
+# Editor de receitas
+
+Troque os ingredientes e o resultado das receitas de bancada do mod sem sair do jogo e sem mexer em
+arquivos. Serve para ajustar o custo dos itens do Wireless Automate ao seu pack.
+
+## Quem pode usar
+
+Só operadores (permissão 2). Num mundo de um jogador só, é preciso ter os comandos ativados (cheats).
+
+## Abrir
+
+Digite `/wa recipes`. A tela mostra, à esquerda, as receitas de bancada do mod que estão carregadas,
+com uma busca no topo. A bolinha de cada receita diz o estado:
+
+| Bolinha | Estado |
+| --- | --- |
+| **Verde** | Receita padrão do mod. |
+| **Coral** | Receita editada por você. |
+| **Cinza** | Receita desativada. |
+
+## Editar uma receita
+
+Escolha uma receita na lista: a grade 3 × 3 e o resultado aparecem à direita.
+
+| Para... | Faça |
+| --- | --- |
+| Pôr um item num slot | Clique no slot e depois num item do seu inventário (o item não sai de lá), ou clique no slot com o item no cursor. Com o JEI, arraste o item para o slot. |
+| Esvaziar um slot | Clique com o botão direito nele. |
+| Aceitar qualquer item de uma tag | Escolha o slot e clique em **Tag**. As setas trocam entre as tags do item. **Item** volta para o item exato. |
+| Esvaziar a grade | **Limpar**. |
+| Mudar a quantidade do resultado | **−** e **+**, até o tamanho da pilha do item (no máximo 64). |
+
+## Salvar e recarregar
+
+| Botão | O que faz |
+| --- | --- |
+| **Salvar** | Só grava a receita. Nada muda no jogo ainda. |
+| **Recarregar agora** | Aplica as mudanças salvas, para todos os jogadores, na hora. |
+| **Restaurar padrão** | Volta a receita ao que o mod traz. |
+| **Desativar** / **Reativar** | Tira a receita do jogo, ou a devolve. |
+
+Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são recarregadas ao fechar.
+
+## Bom saber
+
+| | |
+| --- | --- |
+| **Onde fica** | As edições ficam em `config/wirelessautomate/recipes/`, uma pasta só para a instância. Valem em todos os mundos dela e, num servidor, no servidor. Sobrevivem às atualizações do mod. |
+| **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
+| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
+| **Voltar tudo** | Apague a pasta `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
+''', front('Recipe editor', 'minecraft:writable_book', 19) + '''
+# Recipe editor
+
+Change the ingredients and the result of the mod's crafting-table recipes without leaving the game
+and without touching files. Use it to fit the cost of Wireless Automate items to your pack.
+
+## Who can use it
+
+Operators only (permission level 2). In a single-player world, cheats must be enabled.
+
+## Opening it
+
+Type `/wa recipes`. The screen lists, on the left, the mod's crafting recipes that are currently
+loaded, with a search box on top. The dot next to each recipe shows its state:
+
+| Dot | State |
+| --- | --- |
+| **Green** | The mod's default recipe. |
+| **Coral** | A recipe you edited. |
+| **Gray** | A disabled recipe. |
+
+## Editing a recipe
+
+Pick a recipe in the list: the 3 × 3 grid and the result show up on the right.
+
+| To... | Do this |
+| --- | --- |
+| Put an item in a slot | Click the slot, then an item in your inventory (the item stays there), or click the slot with the item on your cursor. With JEI, drag the item onto the slot. |
+| Empty a slot | Right-click it. |
+| Accept any item of a tag | Pick the slot and click **Tag**. The arrows cycle through the item's tags. **Item** goes back to the exact item. |
+| Empty the grid | **Clear**. |
+| Change the result's amount | **−** and **+**, up to the item's stack size (64 at most). |
+
+## Saving and reloading
+
+| Button | What it does |
+| --- | --- |
+| **Save** | Only writes the recipe. Nothing changes in the game yet. |
+| **Reload now** | Applies the saved changes, for every player, right away. |
+| **Restore default** | Puts the recipe back to what the mod ships. |
+| **Disable** / **Enable** | Takes the recipe out of the game, or brings it back. |
+
+If you close the screen with saved changes that haven't been applied, they are reloaded on close.
+
+## Good to know
+
+| | |
+| --- | --- |
+| **Where it lives** | Edits are kept in `config/wirelessautomate/recipes/`, a folder for the instance. They apply to every world in it and, on a server, to the server. They survive mod updates. |
+| **Other datapacks and KubeJS** | If another datapack or KubeJS changes the same recipe, theirs wins, and the screen warns that the recipe differs from what is loaded. |
+| **What is not listed** | Other mods' recipes, the Filter Card copy and the router upgrade in the crafting table. You can't create new recipes either. |
+| **Undo everything** | Delete the folder `config/wirelessautomate/recipes/` and reload (`/reload`). |
+''')
+
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 20) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
@@ -2117,7 +2225,7 @@ Todas com itens vanilla, na bancada.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 19) + '''
+''', front('All recipes', 'minecraft:crafting_table', 20) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.

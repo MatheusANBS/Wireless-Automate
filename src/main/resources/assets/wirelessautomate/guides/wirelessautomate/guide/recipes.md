@@ -3,7 +3,7 @@ navigation:
   title: All recipes
   icon: minecraft:crafting_table
   parent: index.md
-  position: 19
+  position: 20
 ---
 
 

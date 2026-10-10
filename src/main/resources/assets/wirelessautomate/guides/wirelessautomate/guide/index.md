@@ -40,6 +40,7 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:storage_battery" /> [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
 | <ItemImage id="wirelessautomate:storage_chemical_tank" /> [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
 | <ItemImage id="wirelessautomate:storage_source_tank" /> [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
+| [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
 

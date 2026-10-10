@@ -306,6 +306,10 @@ As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodi
 
 Balanceamento feito em 8/10/2026: escada ×8 com os tiers vanilla modestos e os do Allthemodium com materiais do ATM10 (fragmento de ATM Star no Ultimate).
 
+## Editor de receitas
+
+`/wa recipes` (só operador) abre uma tela para editar as receitas de bancada do mod sem arquivos: lista com busca e estado (padrão, editada, desativada), grade 3×3 de slots fantasmas (inventário, cursor ou JEI), Item/Tag, quantidade do resultado, Salvar, Restaurar padrão e Desativar. As edições vão para `config/wirelessautomate/recipes/`, um datapack global (vale em todos os mundos da instância e sobrevive a atualizações); a recarga vale para todos os jogadores. Outro datapack ou o KubeJS na mesma receita ganha, e a tela avisa. Fora: receitas de outros mods, as especiais e criar receita nova. Design completo em `docs/superpowers/specs/2026-10-10-editor-de-receitas-design.md`.
+
 ## Roadmap
 
 O v1 entrega o motor de transferência e a configuração essencial; o v2 completa a experiência.

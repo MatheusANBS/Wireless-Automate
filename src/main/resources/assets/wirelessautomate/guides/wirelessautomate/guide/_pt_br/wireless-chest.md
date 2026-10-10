@@ -66,7 +66,9 @@ número exato.
 | Achar um item | Digite na busca. **@mod** procura pelo mod (ex.: **@mekanism**). |
 | Mudar a ordem | O botão ao lado da busca alterna: quantidade, nome e mod. |
 | Pegar uma pilha | Clique no item. Botão direito: meia pilha. |
-| Mandar direto para o inventário | **Shift** + clique no item. |
+| Mandar direto para o inventário | **Shift** + clique no item. Segure **Shift** e arraste pela lista: uma pilha de cada item por onde passar. |
+| Encher o inventário com um item | Com qualquer item no cursor, **Shift** + clique duas vezes no item. |
+| Mover um item por vez | Rodinha sobre o item: para baixo tira um, para cima guarda um do inventário. Sobre um item do inventário: para baixo guarda um, para cima puxa um do baú. |
 | Guardar o que está no cursor | Clique em qualquer lugar da lista. Botão direito: um só. |
 | Guardar do inventário | **Shift** + clique no item do inventário. |
 

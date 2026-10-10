@@ -327,15 +327,19 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         }
         Optional<Object> key = payload.key();
         return switch (menu.kind.storage) {
-            case CHEST -> menu.handleItems(player, payload.action(), key.map(ItemStack.class::cast).orElse(ItemStack.EMPTY));
+            case CHEST -> menu.handleItems(player, payload.action(), key.map(ItemStack.class::cast).orElse(ItemStack.EMPTY),
+                    payload.slot());
             case TANK, CHEMICAL_TANK -> menu.handleContainers(player, payload.action(), key.orElse(null));
             case BATTERY, SOURCE_TANK -> false;
         };
     }
 
-    /** Baú: pilha para o cursor, meia pilha, para o inventário, e guardar o cursor. */
+    /**
+     * Baú: pilha para o cursor, meia pilha, para o inventário, guardar o cursor, a rodinha (um item
+     * por vez, sobre um tipo ou sobre um slot do inventário) e o Shift + duplo clique com item no cursor (o máximo que couber; o cursor fica).
+     */
     @SuppressWarnings("unchecked")
-    private boolean handleItems(ServerPlayer player, StorageActionPayload.Action action, ItemStack key) {
+    private boolean handleItems(ServerPlayer player, StorageActionPayload.Action action, ItemStack key, int slotIndex) {
         KeyedStorage<ItemStack> items = (KeyedStorage<ItemStack>) (KeyedStorage<?>) storage.keyed();
         ItemStack carried = getCarried();
         switch (action) {
@@ -364,9 +368,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                     return false;
                 }
                 ItemStack moving = key.copyWithCount((int) Math.min(key.getMaxStackSize(), present));
-                int offered = moving.getCount();
-                player.getInventory().add(moving);
-                int added = offered - moving.getCount();
+                int added = addToInventory(player.getInventory(), moving);
                 if (added <= 0) {
                     return false;
                 }
@@ -383,6 +385,65 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 }
                 carried.shrink((int) accepted);
                 setCarried(carried.isEmpty() ? ItemStack.EMPTY : carried);
+            }
+            case TAKE_ONE_TO_INVENTORY -> {
+                if (key.isEmpty() || items.count(key) <= 0) {
+                    return false;
+                }
+                if (addToInventory(player.getInventory(), key.copyWithCount(1)) <= 0) {
+                    return false;
+                }
+                items.extract(key, 1, false);
+            }
+            case INSERT_ONE_FROM_INVENTORY -> {
+                Slot from = key.isEmpty() ? null : slots.stream()
+                        .filter(s -> s.mayPickup(player) && ItemStack.isSameItemSameComponents(s.getItem(), key))
+                        .findFirst().orElse(null);
+                if (from == null || items.insert(from.getItem(), 1, false) <= 0) {
+                    return false;
+                }
+                from.remove(1);
+                from.setChanged();
+            }
+            case INSERT_ONE_FROM_SLOT -> {
+                Slot from = slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
+                if (from == null || from.getItem().isEmpty() || !from.mayPickup(player)
+                        || items.insert(from.getItem(), 1, false) <= 0) {
+                    return false;
+                }
+                from.remove(1);
+                from.setChanged();
+            }
+            case TAKE_ONE_TO_SLOT -> {
+                Slot to = slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
+                ItemStack there = to == null ? ItemStack.EMPTY : to.getItem();
+                if (there.isEmpty() || there.getCount() >= to.getMaxStackSize(there) || !to.mayPlace(there)
+                        || items.count(there) <= 0) {
+                    return false;
+                }
+                items.extract(there, 1, false);
+                there.grow(1);
+                to.setChanged();
+            }
+            case TAKE_ALL_TO_INVENTORY -> {
+                if (key.isEmpty()) {
+                    return false;
+                }
+                boolean moved = false;
+                while (true) {
+                    long present = items.count(key);
+                    if (present <= 0) {
+                        break;
+                    }
+                    ItemStack moving = key.copyWithCount((int) Math.min(key.getMaxStackSize(), present));
+                    int added = addToInventory(player.getInventory(), moving);
+                    if (added <= 0) {
+                        break;
+                    }
+                    items.extract(key, added, false);
+                    moved = true;
+                }
+                return moved;
             }
             default -> {
                 return false;
@@ -470,9 +531,47 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         }
         if (toCursor && getCarried().isEmpty()) {
             setCarried(stack);
-        } else if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
+        } else {
+            addToInventory(player.getInventory(), stack);
+            if (!stack.isEmpty()) {
+                player.drop(stack, false);
+            }
         }
+    }
+
+    /**
+     * Põe no inventário o que couber da pilha (que diminui) e devolve quanto entrou. Não usa o
+     * {@code Inventory.add}: no criativo ele apaga o que não cabe e diz que guardou tudo, e o resto
+     * sairia do Baú e sumiria.
+     */
+    private static int addToInventory(Inventory inventory, ItemStack stack) {
+        int added = 0;
+        while (!stack.isEmpty()) {
+            int slot = inventory.getSlotWithRemainingSpace(stack);
+            if (slot < 0) {
+                slot = inventory.getFreeSlot();
+            }
+            if (slot < 0) {
+                break;
+            }
+            ItemStack there = inventory.getItem(slot);
+            int max = Math.min(stack.getMaxStackSize(), inventory.getMaxStackSize(stack));
+            int moving = Math.min(stack.getCount(), there.isEmpty() ? max : max - there.getCount());
+            if (moving <= 0) {
+                break;
+            }
+            if (there.isEmpty()) {
+                inventory.setItem(slot, stack.copyWithCount(moving));
+            } else {
+                there.grow(moving);
+            }
+            stack.shrink(moving);
+            added += moving;
+        }
+        if (added > 0) {
+            inventory.setChanged();
+        }
+        return added;
     }
 
     /** O Tanque visto como uma fonte de um fluido só, para encher um recipiente com o fluido clicado. */

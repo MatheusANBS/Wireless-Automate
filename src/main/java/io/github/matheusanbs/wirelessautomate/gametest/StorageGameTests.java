@@ -566,6 +566,49 @@ public final class StorageGameTests {
         return menu;
     }
 
+    /** A rodinha (um item por vez, sobre um tipo ou sobre um slot) e o Shift + duplo clique (o máximo que couber). */
+    @GameTest(template = "empty")
+    public static void wheelAndDoubleClickMoveItems(GameTestHelper helper) {
+        StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.BASIC);
+        ItemStorage storage = chest.storage();
+        storage.insert(new ItemStack(Items.COBBLESTONE), 5_000, false);
+        long initial = storage.total();
+        helper.assertTrue(initial > 36 * 64, "o Baú básico guarda mais que um inventário: " + initial);
+        ServerPlayer player = playerNear(helper, chest);
+        player.getInventory().clearContent();
+        StorageListMenu<ItemStack> menu = openMenu(player, chest);
+        ItemStack cobble = new ItemStack(Items.COBBLESTONE);
+
+        helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY, cobble), "rodinha: tirar um");
+        int inv = player.getInventory().findSlotMatchingItem(cobble);
+        helper.assertTrue(inv >= 0 && player.getInventory().getItem(inv).getCount() == 1, "um no inventário");
+        helper.assertValueEqual(storage.total(), initial - 1, "um a menos no Baú");
+        int menuSlot = inv < 9 ? 27 + inv : inv - 9;
+        helper.assertTrue(slotAct(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_SLOT, menuSlot), "rodinha: puxar para o slot");
+        helper.assertValueEqual(player.getInventory().getItem(inv).getCount(), 2, "dois no slot");
+        helper.assertTrue(slotAct(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_SLOT, menuSlot), "rodinha: guardar do slot");
+        helper.assertValueEqual(player.getInventory().getItem(inv).getCount(), 1, "um no slot");
+        helper.assertTrue(act(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_INVENTORY, cobble), "rodinha: guardar um");
+        helper.assertTrue(player.getInventory().getItem(inv).isEmpty(), "slot vazio");
+        helper.assertValueEqual(storage.total(), initial, "tudo de volta");
+        helper.assertFalse(act(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_INVENTORY, cobble), "nada para guardar");
+        helper.assertFalse(slotAct(player, menu, StorageActionPayload.Action.INSERT_ONE_FROM_SLOT, 999), "slot fora do menu");
+
+        // Shift + duplo clique com item no cursor: o inventário enche e o cursor fica como está.
+        menu.setCarried(new ItemStack(Items.STICK, 5));
+        helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_ALL_TO_INVENTORY, cobble), "Shift + duplo clique");
+        helper.assertValueEqual(menu.getCarried().getCount(), 5, "cursor como estava");
+        helper.assertValueEqual(player.getInventory().countItem(Items.COBBLESTONE), 36 * 64, "inventário cheio");
+        helper.assertValueEqual(storage.total(), initial - 36 * 64, "o resto no Baú");
+        helper.assertFalse(act(player, menu, StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY, cobble), "sem espaço");
+        helper.succeed();
+    }
+
+    private static boolean slotAct(ServerPlayer player, StorageListMenu<ItemStack> menu, StorageActionPayload.Action action, int slot) {
+        return StorageListMenu.handle(player, new StorageActionPayload(menu.containerId, StorageKind.CHEST, action,
+                Optional.empty(), slot));
+    }
+
     private static boolean act(ServerPlayer player, StorageListMenu<ItemStack> menu, StorageActionPayload.Action action, ItemStack key) {
         return StorageListMenu.handle(player, new StorageActionPayload(menu.containerId, StorageKind.CHEST, action,
                 key.isEmpty() ? Optional.empty() : Optional.of(key)));

@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -45,7 +46,11 @@ import org.lwjgl.glfw.GLFW;
  * é lembrado na sessão.
  *
  * <p>Baú: clique numa célula põe uma pilha no cursor; botão direito, meia pilha; Shift + clique,
- * uma pilha no inventário. Com um item no cursor, clicar na grade guarda tudo (botão direito: um).
+ * uma pilha no inventário, e Shift + arrastar pela grade, uma pilha de cada tipo por onde passar;
+ * com um item no cursor, Shift + duplo clique (como no vanilla), o máximo do tipo que couber no
+ * inventário (o cursor fica como está). A rodinha sobre um tipo tira um item
+ * (para baixo) ou guarda um do inventário (para cima); sobre um slot do inventário, guarda um dele
+ * (para baixo) ou puxa um do Baú (para cima), como o Mouse Tweaks; sobre o vazio, rola a lista. Com um item no cursor, clicar na grade guarda tudo (botão direito: um).
  * Tanques: com um recipiente no cursor (balde, tanque de outro mod), clicar num tipo enche o
  * recipiente com ele, ou o esvazia se ele já estiver cheio; botão direito esvazia um. Shift + clique
  * no inventário guarda a pilha (ou esvazia os recipientes). O servidor valida tudo.
@@ -58,6 +63,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private static final int GRID_X = 14;
     private static final int GRID_Y = 38;
     private static final int CELL = 18;
+    /** Intervalo do duplo clique, o mesmo dos slots do vanilla. */
+    private static final long DOUBLE_CLICK_MS = 250;
     private static final int SORT_W = 52;
     /** Menor tamanho da grade: a largura do inventário do jogador e três linhas. */
     private static final int MIN_COLS = 9;
@@ -95,6 +102,14 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private Sort shownSort = sort;
     private int scrollRow;
     private boolean draggingBar;
+    /**
+     * Shift + arrasto na grade do Baú (como o Mouse Tweaks faz nos slots, que a grade não tem):
+     * os tipos já mandados para o inventário neste arrasto, para cada um ir uma vez só.
+     */
+    private @Nullable List<ItemStack> shiftDragTaken;
+    /** O último Shift + clique com item no cursor num tipo do Baú e quando, para o Shift + duplo clique. */
+    private ItemStack lastClickKey = ItemStack.EMPTY;
+    private long lastClickTime;
     private EditBox searchBox;
     private FlatButton filterButton;
     private FlatButton sortButton;
@@ -241,9 +256,13 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     }
 
     private void send(StorageActionPayload.Action action, @Nullable Object key) {
+        send(action, key, -1);
+    }
+
+    private void send(StorageActionPayload.Action action, @Nullable Object key, int slot) {
         if (!preview) {
             PacketDistributor.sendToServer(new StorageActionPayload(menu.containerId, storageKind(), action,
-                    Optional.ofNullable(key)));
+                    Optional.ofNullable(key), slot));
         }
     }
 
@@ -489,6 +508,21 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         if (inGrid(mouseX, mouseY) && (button == 0 || button == 1)) {
             setFocused(null);
             Object key = keyAt(mouseX, mouseY);
+            // Com um item no cursor, Shift + clique num tipo do Baú manda uma pilha dele para o
+            // inventário (o cursor fica como está, como no vanilla), e Shift + duplo clique, o máximo
+            // do tipo que couber. Sem item no cursor, o duplo clique não faz nada a mais, para não
+            // encher o inventário sem querer.
+            if (items() && button == 0 && key instanceof ItemStack stack && Screen.hasShiftDown()
+                    && !menu.getCarried().isEmpty()) {
+                long now = Util.getMillis();
+                boolean doubleClick = now - lastClickTime < DOUBLE_CLICK_MS
+                        && ItemStack.isSameItemSameComponents(lastClickKey, stack);
+                lastClickKey = doubleClick ? ItemStack.EMPTY : stack;
+                lastClickTime = now;
+                send(doubleClick ? StorageActionPayload.Action.TAKE_ALL_TO_INVENTORY
+                        : StorageActionPayload.Action.TAKE_TO_INVENTORY, stack);
+                return true;
+            }
             if (!menu.getCarried().isEmpty()) {
                 // Tanques: clique num tipo enche o recipiente com ele (ou o esvazia, se cheio).
                 if (!items() && button == 0 && key != null) {
@@ -504,6 +538,11 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                         : Screen.hasShiftDown() ? StorageActionPayload.Action.TAKE_TO_INVENTORY
                         : StorageActionPayload.Action.TAKE_STACK;
                 send(action, key);
+                if (action == StorageActionPayload.Action.TAKE_TO_INVENTORY) {
+                    shiftDragTaken = new ArrayList<>(List.of((ItemStack) key));
+                }
+            } else if (items() && button == 0 && Screen.hasShiftDown()) {
+                shiftDragTaken = new ArrayList<>();
             }
             return true;
         }
@@ -525,6 +564,15 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             dragBar(mouseY);
             return true;
         }
+        if (shiftDragTaken != null && button == 0) {
+            if (Screen.hasShiftDown() && menu.getCarried().isEmpty() && inGrid(mouseX, mouseY)
+                    && keyAt(mouseX, mouseY) instanceof ItemStack key
+                    && shiftDragTaken.stream().noneMatch(taken -> ItemStack.isSameItemSameComponents(taken, key))) {
+                shiftDragTaken.add(key);
+                send(StorageActionPayload.Action.TAKE_TO_INVENTORY, key);
+            }
+            return true;
+        }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -538,6 +586,10 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             draggingBar = false;
             return true;
         }
+        if (shiftDragTaken != null && button == 0) {
+            shiftDragTaken = null;
+            return true;
+        }
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -548,6 +600,22 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        // Rodinha do Baú, no sentido do Mouse Tweaks: para baixo empurra um item para o outro lado
+        // (da grade para o inventário, do slot para o Baú), para cima puxa um de volta. Sobre uma
+        // célula vazia ou a barra, a rodinha rola a lista.
+        if (items() && scrollY != 0) {
+            boolean push = scrollY < 0;
+            if (inGrid(mouseX, mouseY) && keyAt(mouseX, mouseY) instanceof ItemStack key) {
+                send(push ? StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY
+                        : StorageActionPayload.Action.INSERT_ONE_FROM_INVENTORY, key);
+                return true;
+            }
+            if (hoveredSlot != null && hoveredSlot.hasItem()) {
+                send(push ? StorageActionPayload.Action.INSERT_ONE_FROM_SLOT
+                        : StorageActionPayload.Action.TAKE_ONE_TO_SLOT, null, hoveredSlot.index);
+                return true;
+            }
+        }
         if ((inGrid(mouseX, mouseY) || onBar(mouseX, mouseY)) && scrollY != 0) {
             scrollRow = Math.max(0, Math.min(maxScroll(), scrollRow - (int) Math.signum(scrollY)));
             return true;

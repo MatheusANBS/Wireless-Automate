@@ -143,8 +143,8 @@ tasks.named('test', Test).configure {
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
-// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau
-// e o GuideME, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
+// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau,
+// o GuideME e o Mouse Tweaks, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -193,6 +193,8 @@ dependencies {
     clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // GuideME: o livro-guia do mod (data-driven, em assets/wirelessautomate/guides); opcional.
     clientMods 'maven.modrinth:guideme:21.1.19'
+    // Mouse Tweaks: para testar a lista do Baú junto com os arrastos dele nos slots.
+    clientMods 'maven.modrinth:mouse-tweaks:1.21-2.26.1-neoforge'
     chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // Ars Nouveau (Source) e as dependências obrigatórias dele.
     clientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
@@ -230,7 +232,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
                 'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar',
-                'allthemodium-*.jar', 'all-the-tweaks-*.jar'
+                'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'mouse-tweaks-*.jar'
     }
 }
 

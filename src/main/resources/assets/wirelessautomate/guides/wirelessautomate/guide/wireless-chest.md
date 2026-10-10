@@ -67,7 +67,9 @@ exact number.
 | Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**). |
 | Change the order | The button next to the search box cycles: amount, name and mod. |
 | Take a stack | Click the item. Right click: half a stack. |
-| Send it straight to the inventory | **Shift** + click the item. |
+| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. |
+| Fill the inventory with an item | With any item on the cursor, **Shift** + double-click the item. |
+| Move one item at a time | Mouse wheel over the item: down takes one, up stores one from your inventory. Over an item in your inventory: down stores one, up pulls one from the chest. |
 | Store what's on the cursor | Click anywhere on the list. Right click: just one. |
 | Store from the inventory | **Shift** + click the item in your inventory. |
 

@@ -1425,7 +1425,9 @@ número exato.
 | Achar um item | Digite na busca. **@mod** procura pelo mod (ex.: **@mekanism**). |
 | Mudar a ordem | O botão ao lado da busca alterna: quantidade, nome e mod. |
 | Pegar uma pilha | Clique no item. Botão direito: meia pilha. |
-| Mandar direto para o inventário | **Shift** + clique no item. |
+| Mandar direto para o inventário | **Shift** + clique no item. Segure **Shift** e arraste pela lista: uma pilha de cada item por onde passar. |
+| Encher o inventário com um item | Com qualquer item no cursor, **Shift** + clique duas vezes no item. |
+| Mover um item por vez | Rodinha sobre o item: para baixo tira um, para cima guarda um do inventário. Sobre um item do inventário: para baixo guarda um, para cima puxa um do baú. |
 | Guardar o que está no cursor | Clique em qualquer lugar da lista. Botão direito: um só. |
 | Guardar do inventário | **Shift** + clique no item do inventário. |
 
@@ -1497,7 +1499,9 @@ exact number.
 | Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**). |
 | Change the order | The button next to the search box cycles: amount, name and mod. |
 | Take a stack | Click the item. Right click: half a stack. |
-| Send it straight to the inventory | **Shift** + click the item. |
+| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. |
+| Fill the inventory with an item | With any item on the cursor, **Shift** + double-click the item. |
+| Move one item at a time | Mouse wheel over the item: down takes one, up stores one from your inventory. Over an item in your inventory: down stores one, up pulls one from the chest. |
 | Store what's on the cursor | Click anywhere on the list. Right click: just one. |
 | Store from the inventory | **Shift** + click the item in your inventory. |
 

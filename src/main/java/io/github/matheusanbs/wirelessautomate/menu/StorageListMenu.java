@@ -429,21 +429,23 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 if (key.isEmpty()) {
                     return false;
                 }
-                boolean moved = false;
-                while (true) {
-                    long present = items.count(key);
-                    if (present <= 0) {
-                        break;
-                    }
-                    ItemStack moving = key.copyWithCount((int) Math.min(key.getMaxStackSize(), present));
+                // Enche o inventário pilha por pilha e tira do Baú uma vez só no fim: cada retirada
+                // salva o chunk e avisa os vizinhos.
+                long left = items.count(key);
+                long moved = 0;
+                while (left > 0) {
+                    ItemStack moving = key.copyWithCount((int) Math.min(key.getMaxStackSize(), left));
                     int added = addToInventory(player.getInventory(), moving);
                     if (added <= 0) {
                         break;
                     }
-                    items.extract(key, added, false);
-                    moved = true;
+                    left -= added;
+                    moved += added;
                 }
-                return moved;
+                if (moved <= 0) {
+                    return false;
+                }
+                items.extract(key, moved, false);
             }
             default -> {
                 return false;

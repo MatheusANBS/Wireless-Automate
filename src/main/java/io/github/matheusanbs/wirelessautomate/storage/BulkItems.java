@@ -1,22 +1,22 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import org.jetbrains.annotations.Nullable;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.CapabilityToken;
 
 /**
  * Itens por tipo e quantidade {@code long}, sem o teto de uma pilha por chamada do
- * {@link net.neoforged.neoforge.items.IItemHandler}. É a capability que o roteador procura antes da
- * de itens do NeoForge: entre dois baús do mod, mover milhões de um tipo é uma chamada só.
+ * {@link net.minecraftforge.items.IItemHandler}. É a capability que o roteador procura antes da
+ * de itens do Forge: entre dois baús do mod, mover milhões de um tipo é uma chamada só.
  *
  * <p>As chaves são pilhas de 1 (item e componentes); quem chama não pode alterá-las. As posições
  * ({@code index}) valem até a próxima mudança: um tipo que zera sai da lista.
  */
 public interface BulkItems {
-    BlockCapability<BulkItems, @Nullable Direction> BLOCK =
-            BlockCapability.createSided(WirelessAutomate.id("bulk_items"), BulkItems.class);
+    /** A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). */
+    Capability<BulkItems> BLOCK = CapabilityManager.get(new CapabilityToken<>() {
+    });
 
     /** Quantos tipos há guardados. */
     int types();

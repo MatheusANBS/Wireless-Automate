@@ -3,11 +3,12 @@ package io.github.matheusanbs.wirelessautomate.recipe;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
@@ -18,19 +19,19 @@ import net.minecraft.world.level.Level;
  * são os vazios com o componente copiado, e o configurado volta para a grade, como na cópia de livros.
  */
 public class FilterCardCopyRecipe extends CustomRecipe {
-    public FilterCardCopyRecipe(CraftingBookCategory category) {
-        super(category);
+    public FilterCardCopyRecipe(ResourceLocation id, CraftingBookCategory category) {
+        super(id, category);
     }
 
     private static boolean configured(ItemStack stack) {
-        return FilterCardItem.isCard(stack) && stack.has(ModDataComponents.CARD_FILTER.get());
+        return FilterCardItem.isCard(stack) && ModDataComponents.CARD_FILTER.has(stack);
     }
 
     /** O resultado: o configurado com uma unidade por cartão vazio, ou vazio se a grade não casa. */
-    private static ItemStack copies(CraftingInput input) {
+    private static ItemStack copies(CraftingContainer input) {
         ItemStack original = ItemStack.EMPTY;
         int blanks = 0;
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.isEmpty()) {
                 continue;
@@ -51,18 +52,18 @@ public class FilterCardCopyRecipe extends CustomRecipe {
     }
 
     @Override
-    public boolean matches(CraftingInput input, Level level) {
+    public boolean matches(CraftingContainer input, Level level) {
         return !copies(input).isEmpty();
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries) {
         return copies(input);
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
-        NonNullList<ItemStack> remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(CraftingContainer input) {
+        NonNullList<ItemStack> remaining = NonNullList.withSize(input.getContainerSize(), ItemStack.EMPTY);
         for (int i = 0; i < remaining.size(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.hasCraftingRemainingItem()) {

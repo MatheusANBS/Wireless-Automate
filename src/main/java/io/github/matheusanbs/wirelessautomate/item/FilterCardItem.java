@@ -13,9 +13,9 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -26,7 +26,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Cartão de Filtro: carrega um filtro completo de itens ou de fluidos. Clique direito no ar abre a
@@ -63,9 +64,10 @@ public class FilterCardItem extends Item {
                 },
                 ResourceType::key);
 
+        /** No DFU 6 (1.20.1) o {@code optionalFieldOf} já é leniente (o {@code lenientOptionalFieldOf} do 1.21). */
         public static final Codec<Contents> CODEC = RecordCodecBuilder.create(i -> i.group(
                 TYPE_CODEC.optionalFieldOf("type", ResourceType.ITEM).forGetter(Contents::type),
-                FilterCodecs.LENIENT.lenientOptionalFieldOf("filter", Filter.EMPTY).forGetter(Contents::filter))
+                FilterCodecs.LENIENT.optionalFieldOf("filter", Filter.EMPTY).forGetter(Contents::filter))
                 .apply(i, Contents::new));
 
         public static final StreamCodec<RegistryFriendlyByteBuf, Contents> STREAM_CODEC = StreamCodec.composite(
@@ -80,15 +82,15 @@ public class FilterCardItem extends Item {
 
     /** O que o cartão carrega; um cartão sem componente é de itens e vazio. */
     public static Contents contents(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.CARD_FILTER.get(), Contents.EMPTY);
+        return ModDataComponents.CARD_FILTER.getOrDefault(stack, Contents.EMPTY);
     }
 
     /** Grava no cartão; o conteúdo padrão remove o componente, para empilhar com cartões novos. */
     public static void setContents(ItemStack stack, Contents contents) {
         if (contents.isDefault()) {
-            stack.remove(ModDataComponents.CARD_FILTER.get());
+            ModDataComponents.CARD_FILTER.remove(stack);
         } else {
-            stack.set(ModDataComponents.CARD_FILTER.get(), contents);
+            ModDataComponents.CARD_FILTER.set(stack, contents);
         }
     }
 
@@ -128,8 +130,8 @@ public class FilterCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         Contents contents = contents(stack);
         Filter filter = contents.filter();
         Component mode = Component.translatable(KEY + (filter.listMode() == Filter.ListMode.BLACKLIST

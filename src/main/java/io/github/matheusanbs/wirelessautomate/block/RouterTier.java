@@ -3,7 +3,7 @@ package io.github.matheusanbs.wirelessautomate.block;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.util.StringRepresentable;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
 /**

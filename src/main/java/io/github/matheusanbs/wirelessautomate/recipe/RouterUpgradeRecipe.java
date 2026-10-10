@@ -7,12 +7,11 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
@@ -22,18 +21,18 @@ import net.minecraft.world.level.Level;
  * acima do item (Básico + Esmeralda vale, como Avançado + Elite), como o clique com o
  * cartão no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
  * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um armazenamento cheio),
- * no tier novo. Os dois guardam o tier no {@code block_state}, com a mesma propriedade.
+ * no tier novo. Os dois guardam o tier no {@code BlockStateTag}, com a mesma propriedade.
  */
 public class RouterUpgradeRecipe extends CustomRecipe {
-    public RouterUpgradeRecipe(CraftingBookCategory category) {
-        super(category);
+    public RouterUpgradeRecipe(ResourceLocation id, CraftingBookCategory category) {
+        super(id, category);
     }
 
     /** O roteador ou o armazenamento no tier novo, ou vazio se a grade não casa. */
-    public static ItemStack upgraded(CraftingInput input) {
+    public static ItemStack upgraded(CraftingContainer input) {
         ItemStack router = ItemStack.EMPTY;
         RouterTier core = null;
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.isEmpty()) {
                 continue;
@@ -51,19 +50,17 @@ public class RouterUpgradeRecipe extends CustomRecipe {
             return ItemStack.EMPTY;
         }
         ItemStack result = router.copyWithCount(1);
-        result.set(DataComponents.BLOCK_STATE, result
-                .getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY)
-                .with(RouterBlock.TIER, core));
+        RouterBlockItem.setTier(result, core);
         return result;
     }
 
     @Override
-    public boolean matches(CraftingInput input, Level level) {
+    public boolean matches(CraftingContainer input, Level level) {
         return !upgraded(input).isEmpty();
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries) {
         return upgraded(input);
     }
 

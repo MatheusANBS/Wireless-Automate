@@ -56,6 +56,8 @@ public final class CapCache<T> {
     private boolean handedOut;
     private @Nullable BlockEntity blockEntity;
     private @Nullable LazyOptional<T> optional;
+    /** O listener posto em {@link #optional}, para tirar ao trocar de optional ou no {@link #close()}. */
+    private @Nullable Listener<T> listener;
     private @Nullable T value;
 
     /** Cache sem aviso de invalidação. */
@@ -136,9 +138,13 @@ public final class CapCache<T> {
                 result = lookup.apply(be);
             }
         }
-        // Um listener por LazyOptional: o mesmo optional ainda válido já tem o nosso.
-        if (found != null && found != optional) {
-            found.addListener(new Listener<>(this));
+        // Um listener por LazyOptional: o mesmo optional ainda válido já tem o nosso; ao trocar, sai do antigo.
+        if (found != optional) {
+            dropListener();
+            if (found != null) {
+                listener = new Listener<>(this);
+                found.addListener(listener);
+            }
         }
         blockEntity = be;
         optional = found;
@@ -170,7 +176,25 @@ public final class CapCache<T> {
         return (blockEntity != null && blockEntity.isRemoved()) || (optional != null && !optional.isPresent());
     }
 
+    /**
+     * Descarta o cache (o dono não vai mais usá-lo: roteador removido ou girado): tira o listener do
+     * {@link LazyOptional} guardado, que senão ficaria preso nele. Não avisa o dono. Uma {@link #get()}
+     * depois disso volta a funcionar normalmente.
+     */
+    public void close() {
+        forget();
+        handedOut = false;
+    }
+
+    private void dropListener() {
+        if (optional != null && listener != null) {
+            optional.removeListener(listener);
+        }
+        listener = null;
+    }
+
     private void forget() {
+        dropListener();
         blockEntity = null;
         optional = null;
         value = null;

@@ -7,29 +7,29 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * Config do servidor ({@code config/wirelessautomate-server.toml}), para o modpack ajustar.
  * Nos limites de vazão, 0 significa sem limite.
  */
 public final class Config {
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec SPEC;
 
-    public static final ModConfigSpec.DoubleValue TICK_BUDGET_MS;
-    public static final ModConfigSpec.BooleanValue ADAPTIVE_BUDGET;
+    public static final ForgeConfigSpec.DoubleValue TICK_BUDGET_MS;
+    public static final ForgeConfigSpec.BooleanValue ADAPTIVE_BUDGET;
     public static final Map<RouterTier, TierValues> TIERS = new EnumMap<>(RouterTier.class);
-    public static final ModConfigSpec.BooleanValue CHUNK_LOADING_ENABLED;
-    public static final ModConfigSpec.IntValue CHUNK_LOADING_MAX_PER_PLAYER;
-    public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
-    public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
-    public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
+    public static final ForgeConfigSpec.BooleanValue CHUNK_LOADING_ENABLED;
+    public static final ForgeConfigSpec.IntValue CHUNK_LOADING_MAX_PER_PLAYER;
+    public static final ForgeConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
+    public static final ForgeConfigSpec.IntValue LINKER_MAX_DISTANCE;
+    public static final ForgeConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
     /** Versão do balanceamento já aplicada a este arquivo (ver {@link #migrateBalance()}). */
-    public static final ModConfigSpec.IntValue BALANCE_VERSION;
+    public static final ForgeConfigSpec.IntValue BALANCE_VERSION;
     /** 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026). */
     public static final int CURRENT_BALANCE = 1;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
-    public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
+    public static final Map<StorageKind, Map<RouterTier, ForgeConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
 
     /** Comentário de cada chave de vazão (a ordem no arquivo vem do enum {@link ResourceType}, não deste mapa). */
@@ -40,9 +40,9 @@ public final class Config {
             "sourcePerSecond", "Source por segundo, por face (Ars Nouveau; 0 = sem limite).");
 
     public record TierValues(
-            Map<String, ModConfigSpec.LongValue> rates,
-            ModConfigSpec.IntValue range,
-            ModConfigSpec.BooleanValue crossDimension) {
+            Map<String, ForgeConfigSpec.LongValue> rates,
+            ForgeConfigSpec.IntValue range,
+            ForgeConfigSpec.BooleanValue crossDimension) {
         /**
          * Vazão do tipo na unidade da config ({@link ResourceType#ratePerTick()}); 0 = sem limite. O
          * padrão do tier enquanto a config do servidor não carregou (tela fora de um mundo).
@@ -56,12 +56,12 @@ public final class Config {
      * O valor da config do servidor, ou o padrão enquanto ela não carregou: no cliente fora de um
      * mundo (tela de título, modo de capturas) o {@code get()} lança {@link IllegalStateException}.
      */
-    public static <T> T read(ModConfigSpec.ConfigValue<T> value) {
+    public static <T> T read(ForgeConfigSpec.ConfigValue<T> value) {
         return SPEC.isLoaded() ? value.get() : value.getDefault();
     }
 
     static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
         builder.push("performance");
         TICK_BUDGET_MS = builder
@@ -75,7 +75,7 @@ public final class Config {
         builder.push("tiers");
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
-            Map<String, ModConfigSpec.LongValue> rates = new LinkedHashMap<>();
+            Map<String, ForgeConfigSpec.LongValue> rates = new LinkedHashMap<>();
             for (ResourceType type : ResourceType.values()) {
                 if (!rates.containsKey(type.rateKey())) {
                     rates.put(type.rateKey(), builder.comment(Objects.requireNonNull(RATE_COMMENTS.get(type.rateKey()), "sem comentário para a vazão " + type.rateKey()))
@@ -120,7 +120,7 @@ public final class Config {
                 case SOURCE_TANK -> "Capacidade do Tanque de Source por tier, em Source (0 = sem limite).";
             });
             builder.push(kind.configKey);
-            Map<RouterTier, ModConfigSpec.LongValue> byTier = new EnumMap<>(RouterTier.class);
+            Map<RouterTier, ForgeConfigSpec.LongValue> byTier = new EnumMap<>(RouterTier.class);
             for (RouterTier tier : RouterTier.values()) {
                 byTier.put(tier, builder.defineInRange(tier.getSerializedName(), kind.defaultCapacity(tier), 0L, Long.MAX_VALUE));
             }
@@ -174,7 +174,7 @@ public final class Config {
             RouterTier tier = OLD_TIERS[i];
             TierValues values = TIERS.get(tier);
             for (ResourceType type : ResourceType.values()) {
-                ModConfigSpec.LongValue rate = values.rates().get(type.rateKey());
+                ForgeConfigSpec.LongValue rate = values.rates().get(type.rateKey());
                 long target = type.defaultRate(tier.ordinal());
                 if (rate.get() == OLD_RATES.get(type.rateKey())[i] && rate.get() != target) {
                     rate.set(target);
@@ -186,7 +186,7 @@ public final class Config {
                 changed++;
             }
             for (StorageKind kind : StorageKind.values()) {
-                ModConfigSpec.LongValue capacity = STORAGE_CAPACITY.get(kind).get(tier);
+                ForgeConfigSpec.LongValue capacity = STORAGE_CAPACITY.get(kind).get(tier);
                 long target = kind.defaultCapacity(tier);
                 if (capacity.get() == OLD_CAPACITY.get(kind)[i] && capacity.get() != target) {
                     capacity.set(target);

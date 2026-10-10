@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.common.util.NonNullConsumer;
@@ -24,15 +25,27 @@ import org.jetbrains.annotations.Nullable;
  *   <li>quando o block entity guardado foi removido ({@link BlockEntity#isRemoved()}, checado a cada
  *       consulta; cobre quem não invalida as capabilities);</li>
  *   <li>quando o dono chama {@link #invalidate()} ou {@link #revalidate} (este só se o block entity no alvo
- *       não é mais o da última consulta). O Forge 1.20.1 não avisa quando aparece um block entity onde não
- *       havia nenhum, nem quando o chunk do alvo carrega: o roteador chama {@link #revalidate} no
- *       {@code neighborChanged} da máquina e {@link #invalidate()} quando o bloco dela muda.</li>
+ *       não é mais o da última consulta, ou se um cache negativo agora acha a capability). O Forge 1.20.1 não
+ *       avisa quando aparece um block entity onde não havia nenhum: o roteador chama {@link #revalidate} no
+ *       {@code neighborChanged} da máquina e {@link #invalidate()} quando o bloco dela muda;</li>
+ *   <li>quando o chunk do alvo carrega ou descarrega ({@link CapCacheChunks}).</li>
  * </ul>
  * <b>Cache negativo:</b> sem block entity no alvo, ou com um block entity sem a capability, não há
- * {@link LazyOptional} para ouvir; o cache só se refaz por {@link #invalidate()} ou {@link #revalidate} do dono
- * (ou pelo {@code isRemoved()} de um block entity guardado). Um block entity que passa a oferecer a capability
- * sem trocar de objeto nem chamar {@code invalidateCaps} não é visto até o dono invalidar.
- * Sujo, a próxima {@link #get()} busca de novo: {@code level.getBlockEntity(pos)} e
+ * {@link LazyOptional} para ouvir. Uma máquina que passa a oferecer a capability sem trocar de block entity (lado
+ * do Mekanism mudado de "nenhum" para saída) avisa os vizinhos ({@code neighborChanged}; o Mekanism 10.4 chama
+ * {@code WorldUtils.notifyNeighborOfChange} depois de invalidar a capability do lado): o dono chama
+ * {@link #revalidate}, que, com o mesmo block entity, pergunta de novo só aos caches nulos e invalida os que agora
+ * acham algo. Sem custo por tick; uma mudança só de estado que não traz capability nova não acorda ninguém.
+ *
+ * <p><b>Chunks:</b> cada cache entra no índice do {@link CapCacheChunks} (pelo chunk do alvo) na primeira
+ * {@link #get()} e sai no {@link #close()}; o chunk do alvo carregar ou descarregar invalida o cache, como o
+ * {@code invalidateCapabilities(ChunkPos)} do NeoForge.
+ *
+ * <p><b>Busca por bloco:</b> criado com um {@link BlockLookup} ({@link VanillaBlockHandlers}: caldeirão e
+ * compostor, sem block entity), a busca suja lê o estado do bloco e pergunta a ele antes do block entity; o handler
+ * achado fica guardado até o dono invalidar (o roteador invalida quando o bloco da máquina muda) ou o chunk mudar.
+ *
+ * <p>Sujo, a próxima {@link #get()} busca de novo: {@code level.getBlockEntity(pos)} e
  * {@code getCapability(cap, side)}, só se o chunk do alvo estiver carregado ({@code level.isLoaded(pos)}); com
  * o chunk descarregado devolve {@code null} e continua sujo.
  *
@@ -53,6 +66,7 @@ public final class CapCache<T> {
     private final @Nullable Direction side;
     private final @Nullable Capability<T> capability;
     private final @Nullable Function<BlockEntity, @Nullable T> lookup;
+    private final @Nullable BlockLookup<T> blockLookup;
     private final BooleanSupplier isValid;
     private final Runnable onInvalidate;
 
@@ -64,6 +78,8 @@ public final class CapCache<T> {
     /** O listener posto em {@link #optional}, para tirar ao trocar de optional ou no {@link #close()}. */
     private @Nullable Listener<T> listener;
     private @Nullable T value;
+    /** Está no índice do {@link CapCacheChunks}. */
+    private boolean indexed;
 
     /** Cache sem aviso de invalidação. */
     public CapCache(ServerLevel level, BlockPos pos, @Nullable Direction side, Capability<T> capability) {
@@ -72,16 +88,18 @@ public final class CapCache<T> {
 
     public CapCache(ServerLevel level, BlockPos pos, @Nullable Direction side, Capability<T> capability,
             BooleanSupplier isValid, Runnable onInvalidate) {
-        this(level, pos, side, capability, null, isValid, onInvalidate);
+        this(level, pos, side, capability, null, null, isValid, onInvalidate);
     }
 
     private CapCache(ServerLevel level, BlockPos pos, @Nullable Direction side, @Nullable Capability<T> capability,
-            @Nullable Function<BlockEntity, @Nullable T> lookup, BooleanSupplier isValid, Runnable onInvalidate) {
+            @Nullable Function<BlockEntity, @Nullable T> lookup, @Nullable BlockLookup<T> blockLookup,
+            BooleanSupplier isValid, Runnable onInvalidate) {
         this.level = level;
         this.pos = pos.immutable();
         this.side = side;
         this.capability = capability;
         this.lookup = lookup;
+        this.blockLookup = blockLookup;
         this.isValid = isValid;
         this.onInvalidate = onInvalidate;
     }
@@ -96,13 +114,23 @@ public final class CapCache<T> {
     }
 
     /**
+     * Como {@link #create(Capability, ServerLevel, BlockPos, Direction, BooleanSupplier, Runnable)}, mas a busca
+     * suja pergunta antes ao bloco ({@code blockLookup}, com o estado lido na hora); sem resposta dele, segue
+     * pela capability do block entity. Para os blocos vanilla sem block entity ({@link VanillaBlockHandlers}).
+     */
+    public static <T> CapCache<T> create(Capability<T> capability, ServerLevel level, BlockPos pos,
+            @Nullable Direction side, BlockLookup<T> blockLookup, BooleanSupplier isValid, Runnable onInvalidate) {
+        return new CapCache<>(level, pos, side, capability, null, blockLookup, isValid, onInvalidate);
+    }
+
+    /**
      * Cache de algo que o block entity do alvo dá sem capability (como o {@code ISourceTile} do Ars 4.12):
      * {@code lookup} recebe o block entity e devolve o valor ou {@code null}. Fica sujo pelas mesmas regras,
      * menos a do {@link LazyOptional}.
      */
     public static <T> CapCache<T> ofBlockEntity(ServerLevel level, BlockPos pos, Function<BlockEntity, @Nullable T> lookup,
             BooleanSupplier isValid, Runnable onInvalidate) {
-        return new CapCache<>(level, pos, null, null, lookup, isValid, onInvalidate);
+        return new CapCache<>(level, pos, null, null, lookup, null, isValid, onInvalidate);
     }
 
     public ServerLevel level() {
@@ -124,9 +152,24 @@ public final class CapCache<T> {
         if (!dirty && !stale()) {
             return value;
         }
+        if (!indexed) {
+            CapCacheChunks.add(this);
+            indexed = true;
+        }
         if (!level.isLoaded(pos)) {
             forget();
             return null;
+        }
+        if (blockLookup != null) {
+            T fromBlock = blockLookup.find(level, pos, level.getBlockState(pos), side);
+            if (fromBlock != null) {
+                dropListener();
+                blockEntity = null;
+                optional = null;
+                value = fromBlock;
+                dirty = false;
+                return fromBlock;
+            }
         }
         BlockEntity be = level.getBlockEntity(pos);
         LazyOptional<T> found = null;
@@ -177,14 +220,35 @@ public final class CapCache<T> {
     }
 
     /**
-     * O vizinho avisou mudança: invalida só se o block entity no alvo ({@code current}) não é o da última
-     * consulta (apareceu, sumiu ou foi trocado). Mudança só de estado, com o mesmo block entity, não faz
+     * O vizinho avisou mudança ({@code current} é o block entity no alvo agora). Fica sujo se o block entity não
+     * é o da última consulta (apareceu, sumiu ou foi trocado). Com o mesmo block entity, um cache negativo (que
+     * guardou {@code null}) pergunta de novo, sem guardar nada, e só fica sujo se agora acha a capability (a
+     * máquina passou a oferecer sem trocar de block entity). Mudança só de estado, sem capability nova, não faz
      * nada (nem avisa o dono). Um cache já sujo fica como está.
      */
     public void revalidate(@Nullable BlockEntity current) {
-        if (!dirty && blockEntity != current) {
+        if (dirty) {
+            return;
+        }
+        if (blockEntity != current) {
+            invalidate();
+        } else if (value == null && level.isLoaded(pos) && presentNow(current)) {
             invalidate();
         }
+    }
+
+    /** O alvo oferece agora o que este cache procura? Sem efeito no cache (nem listener). */
+    private boolean presentNow(@Nullable BlockEntity be) {
+        if (blockLookup != null && blockLookup.find(level, pos, level.getBlockState(pos), side) != null) {
+            return true;
+        }
+        if (be == null) {
+            return false;
+        }
+        if (capability != null) {
+            return be.getCapability(capability, side).isPresent();
+        }
+        return lookup != null && lookup.apply(be) != null;
     }
 
     /** O valor guardado já não vale: o block entity saiu ou o optional foi invalidado sem avisar. */
@@ -200,6 +264,10 @@ public final class CapCache<T> {
     public void close() {
         forget();
         handedOut = false;
+        if (indexed) {
+            CapCacheChunks.remove(this);
+            indexed = false;
+        }
     }
 
     private void dropListener() {
@@ -215,6 +283,12 @@ public final class CapCache<T> {
         optional = null;
         value = null;
         dirty = true;
+    }
+
+    /** Busca por bloco: o valor que o bloco em {@code state} dá pelo lado, ou {@code null}. */
+    @FunctionalInterface
+    public interface BlockLookup<T> {
+        @Nullable T find(ServerLevel level, BlockPos pos, BlockState state, @Nullable Direction side);
     }
 
     /** Ouve a invalidação de um {@link LazyOptional}; só age se ele ainda for o guardado pelo cache. */

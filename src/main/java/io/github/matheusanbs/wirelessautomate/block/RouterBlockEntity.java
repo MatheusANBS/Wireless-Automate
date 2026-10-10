@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
+import io.github.matheusanbs.wirelessautomate.network.VanillaBlockHandlers;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
@@ -108,7 +109,8 @@ public class RouterBlockEntity extends BlockEntity {
     /**
      * Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. No Forge
      * 1.20.1 ({@link CapCache}) o mundo não avisa quando o block entity da máquina aparece ou é trocado: o
-     * {@link RouterBlock#neighborChanged} chama {@link #machineNeighborChanged}, que invalida os caches.
+     * {@link RouterBlock#neighborChanged} chama {@link #machineNeighborChanged}, que invalida os caches. Todo
+     * cache criado é fechado no {@link #clearCaches} (giro e {@link #setRemoved}), que o tira do índice de chunks.
      */
     private final CapCache<IItemHandler>[] itemCaches = newCaches();
     private final CapCache<BulkItems>[] bulkItemCaches = newCaches();
@@ -255,8 +257,12 @@ public class RouterBlockEntity extends BlockEntity {
         }
         Block block = level.getBlockState(machinePos()).getBlock();
         if (block != machineBlock) {
-            // Porte 1.20.1: bloco novo, todos os caches (inclusive os negativos) buscam de novo.
-            invalidateCaches();
+            // Porte 1.20.1: bloco novo, todos os caches (inclusive os negativos) buscam de novo. Caldeirão que
+            // vira outro caldeirão (encheu, esvaziou) continua com o mesmo handler, que relê o estado: como no
+            // NeoForge, que só invalida ao pôr ou tirar um caldeirão, os caches ficam (a porta acorda abaixo).
+            if (!VanillaBlockHandlers.bothCauldrons(machineBlock, block)) {
+                invalidateCaches();
+            }
             machineBlock = block;
             machineChanged();
             if (!level.isClientSide) {
@@ -265,9 +271,10 @@ public class RouterBlockEntity extends BlockEntity {
                 NetworkManager.get().wake(this);
             }
         } else if (!level.isClientSide) {
-            // Porte 1.20.1: o Forge não avisa quando o block entity da máquina aparece, some ou é trocado.
-            // Mesmo bloco: só os caches cujo block entity mudou ficam sujos (e avisam o motor, como o
-            // BlockCapabilityCache do NeoForge); só o estado mudou (fornalha acesa): nada, nem acordar.
+            // Porte 1.20.1: o Forge não avisa quando o block entity da máquina aparece, some ou é trocado, nem
+            // quando ela passa a oferecer uma capability sem trocar de block entity. Mesmo bloco: ficam sujos os
+            // caches cujo block entity mudou e os negativos que agora acham a capability (e avisam o motor, como
+            // o BlockCapabilityCache do NeoForge); só o estado mudou (fornalha acesa): nada, nem acordar.
             revalidateCaches(level.getBlockEntity(machinePos()));
         }
     }
@@ -604,9 +611,13 @@ public class RouterBlockEntity extends BlockEntity {
         return types;
     }
 
-    /** Inventário da máquina pela face {@code machineFace}, via {@link CapCache}. */
+    /**
+     * Inventário da máquina pela face {@code machineFace}, via {@link CapCache}. Porte 1.20.1: o compostor, sem
+     * block entity, pelo handler de {@link VanillaBlockHandlers} (o NeoForge dá esse handler; o Forge não).
+     */
     public @Nullable IItemHandler items(Direction machineFace) {
-        return capability(itemCaches, ForgeCapabilities.ITEM_HANDLER, ResourceType.ITEM, machineFace);
+        return capability(itemCaches, ForgeCapabilities.ITEM_HANDLER, VanillaBlockHandlers::items, ResourceType.ITEM,
+                machineFace);
     }
 
     /**
@@ -625,8 +636,13 @@ public class RouterBlockEntity extends BlockEntity {
         return capability(bulkFluidCaches, BulkFluids.BLOCK, ResourceType.FLUID, machineFace);
     }
 
+    /**
+     * Tanques da máquina pela face. Porte 1.20.1: os caldeirões vanilla (vazio, água e lava), sem block entity, pelo
+     * handler de {@link VanillaBlockHandlers} (o NeoForge dá esse handler; o Forge não).
+     */
     public @Nullable IFluidHandler fluids(Direction machineFace) {
-        return capability(fluidCaches, ForgeCapabilities.FLUID_HANDLER, ResourceType.FLUID, machineFace);
+        return capability(fluidCaches, ForgeCapabilities.FLUID_HANDLER, VanillaBlockHandlers::fluids, ResourceType.FLUID,
+                machineFace);
     }
 
     /**
@@ -702,6 +718,13 @@ public class RouterBlockEntity extends BlockEntity {
             Direction machineFace) {
         return cached(caches, machineFace, (serverLevel, isValid) -> CapCache.create(capability, serverLevel,
                 machinePos(), machineFace, isValid, () -> capabilityInvalidated(type, machineFace)));
+    }
+
+    /** Como o de cima, com a busca por bloco antes do block entity ({@link CapCache.BlockLookup}). */
+    private <T> @Nullable T capability(CapCache<T>[] caches, Capability<T> capability, CapCache.BlockLookup<T> blockLookup,
+            ResourceType type, Direction machineFace) {
+        return cached(caches, machineFace, (serverLevel, isValid) -> CapCache.create(capability, serverLevel,
+                machinePos(), machineFace, blockLookup, isValid, () -> capabilityInvalidated(type, machineFace)));
     }
 
     /** Consulta o cache da face, criando-o com {@code factory} (o mundo e a validade) na primeira vez. */

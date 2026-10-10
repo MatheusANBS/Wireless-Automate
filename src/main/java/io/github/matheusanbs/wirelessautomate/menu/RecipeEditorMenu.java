@@ -88,7 +88,8 @@ public class RecipeEditorMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.pending() > 0) {
+        // Fechar ao sair do jogo ou com o servidor parando também passa aqui: só recarrega com ele rodando.
+        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.pending() > 0 && serverPlayer.server.isRunning()) {
             MinecraftServer server = serverPlayer.server;
             RecipeEditor.reload(server).thenRunAsync(() -> broadcast(server, false), server);
         }

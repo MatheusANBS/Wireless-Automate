@@ -1,19 +1,21 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.packet.ScalarStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.storage.ScalarStorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -48,7 +50,7 @@ public class StorageScalarMenu extends AbstractContainerMenu {
 
     /** Cliente. */
     public StorageScalarMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, BlockPos.STREAM_CODEC.decode(buf), buf.readEnum(StorageKind.class));
+        this(containerId, GameCodecs.BLOCK_POS.decode(buf), buf.readEnum(StorageKind.class));
     }
 
     /** Cliente (e a captura de tela de desenvolvimento). */
@@ -61,11 +63,11 @@ public class StorageScalarMenu extends AbstractContainerMenu {
     }
 
     public static void open(ServerPlayer player, ScalarStorageBlockEntity storage) {
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new StorageScalarMenu(containerId, inventory, storage),
                         storage.getBlockState().getBlock().getName()),
                 buf -> {
-                    BlockPos.STREAM_CODEC.encode(buf, storage.getBlockPos());
+                    GameCodecs.BLOCK_POS.encode(buf, storage.getBlockPos());
                     buf.writeEnum(storage.kind());
                 });
     }
@@ -136,7 +138,7 @@ public class StorageScalarMenu extends AbstractContainerMenu {
         sentCapacity = cap;
         lastSync = now;
         ScalarStatePayload payload = new ScalarStatePayload(containerId, value, cap, now);
-        if (viewer.connection != null && viewer.connection.hasChannel(payload)) {
+        if (viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
         }
     }

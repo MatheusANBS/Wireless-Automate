@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -13,9 +14,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.Direction;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -26,7 +27,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -186,7 +187,7 @@ public class RouterMenu extends AbstractContainerMenu {
         Component title = router.name().isEmpty()
                 ? router.getBlockState().getBlock().getName()
                 : Component.literal(router.name());
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new RouterMenu(containerId, inventory, router, snapshot), title),
                 buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot));
     }
@@ -572,7 +573,7 @@ public class RouterMenu extends AbstractContainerMenu {
 
     private void send(CustomPacketPayload payload) {
         // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
-        if (viewer != null && viewer.connection != null && viewer.connection.hasChannel(payload)) {
+        if (viewer != null && viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
         }
     }

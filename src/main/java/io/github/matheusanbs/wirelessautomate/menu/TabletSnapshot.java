@@ -1,6 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
@@ -8,10 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -237,7 +237,7 @@ public record TabletSnapshot(
                 buf.writeUUID(id);
             }
         }
-        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
+        GameCodecs.COMPONENT.encode(buf, s.notice);
         buf.writeVarInt(s.noticeId);
     }
 
@@ -306,7 +306,7 @@ public record TabletSnapshot(
             }
             groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members)));
         }
-        Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
+        Component notice = GameCodecs.COMPONENT.decode(buf);
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.of(), notice, noticeId);

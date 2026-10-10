@@ -127,7 +127,9 @@ public final class TypeNetworkGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void eachTypeFollowsItsOwnNetwork(GameTestHelper helper) {
         if (!TestMachines.enabled()) {
-            helper.succeed();
+            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
+            // teste não prova nada, então falha em vez de passar.
+            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
             return;
         }
         UUID x = newNetwork(helper, "teste-aba-x");

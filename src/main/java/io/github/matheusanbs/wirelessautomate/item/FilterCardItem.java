@@ -160,14 +160,22 @@ public class FilterCardItem extends Item {
 
     /** Nome curto de uma entrada: o item, fluido ou químico, {@code #tag}, {@code @mod} ou a regra, com o estoque. */
     public static Component describe(FilterEntry entry) {
-        Component name = switch (entry) {
-            case FilterEntry.ItemEntry e -> e.stack().getHoverName();
-            case FilterEntry.FluidEntry e -> e.stack().getHoverName();
-            case FilterEntry.TagEntry e -> Component.literal("#" + e.tag());
-            case FilterEntry.ModEntry e -> Component.literal("@" + e.modId());
-            case FilterEntry.ChemicalEntry e -> Chemicals.name(e.chemical());
-            case FilterEntry.RuleEntry e -> e.rule().describe();
-        };
+        Component name;
+        if (entry instanceof FilterEntry.ItemEntry e) {
+            name = e.stack().getHoverName();
+        } else if (entry instanceof FilterEntry.FluidEntry e) {
+            name = e.stack().getHoverName();
+        } else if (entry instanceof FilterEntry.TagEntry e) {
+            name = Component.literal("#" + e.tag());
+        } else if (entry instanceof FilterEntry.ModEntry e) {
+            name = Component.literal("@" + e.modId());
+        } else if (entry instanceof FilterEntry.ChemicalEntry e) {
+            name = Chemicals.name(e.chemical());
+        } else if (entry instanceof FilterEntry.RuleEntry e) {
+            name = e.rule().describe();
+        } else {
+            throw new IllegalStateException("Entrada de filtro desconhecida: " + entry);
+        }
         return entry.stock() > 0 ? Component.translatable(KEY + "tooltip.stock", name, entry.stock()) : name;
     }
 

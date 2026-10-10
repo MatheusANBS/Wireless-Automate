@@ -328,32 +328,36 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     /** Nome do tipo para mostrar: o do item, o do fluido ou o do químico. */
     private static Component displayName(Object key) {
-        return switch (key) {
-            case ItemStack stack -> stack.getHoverName();
-            case FluidStack fluid -> fluid.getHoverName();
-            case ResourceLocation id -> Chemicals.name(id);
-            default -> Component.literal(String.valueOf(key));
-        };
+        if (key instanceof ItemStack stack) {
+            return stack.getHoverName();
+        } else if (key instanceof FluidStack fluid) {
+            return fluid.getHoverName();
+        } else if (key instanceof ResourceLocation id) {
+            return Chemicals.name(id);
+        }
+        return Component.literal(String.valueOf(key));
     }
 
     /** Mod do tipo, para a busca {@code @mod} e a ordem por mod. */
     private static String namespace(Object key) {
-        return switch (key) {
-            case ItemStack stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
-            case FluidStack fluid -> BuiltInRegistries.FLUID.getKey(fluid.getFluid()).getNamespace();
-            case ResourceLocation id -> id.getNamespace();
-            default -> "";
-        };
+        if (key instanceof ItemStack stack) {
+            return BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        } else if (key instanceof FluidStack fluid) {
+            return BuiltInRegistries.FLUID.getKey(fluid.getFluid()).getNamespace();
+        } else if (key instanceof ResourceLocation id) {
+            return id.getNamespace();
+        }
+        return "";
     }
 
     /** O tipo na célula: o item, ou a textura do fluido ou do químico tingida. */
     private void renderKey(GuiGraphics g, Object key, int x, int y, int trim) {
-        switch (key) {
-            case ItemStack stack -> g.renderItem(stack, x, y);
-            case FluidStack fluid -> GuiPaint.fluid(g, fluid, x, y);
-            case ResourceLocation id -> GuiPaint.chemical(g, font, id, x, y, trim);
-            default -> {
-            }
+        if (key instanceof ItemStack stack) {
+            g.renderItem(stack, x, y);
+        } else if (key instanceof FluidStack fluid) {
+            GuiPaint.fluid(g, fluid, x, y);
+        } else if (key instanceof ResourceLocation id) {
+            GuiPaint.chemical(g, font, id, x, y, trim);
         }
     }
 
@@ -445,13 +449,14 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
      */
     public @Nullable Hovered ingredientAt(double mouseX, double mouseY) {
         Object key = keyAt(mouseX, mouseY);
-        Object ingredient = switch (key) {
-            case null -> null;
-            case ItemStack stack -> stack.copyWithCount(1);
-            case FluidStack fluid -> fluid.copyWithAmount(1_000);
-            case ResourceLocation id -> Chemicals.ingredient(id);
-            default -> null;
-        };
+        Object ingredient = null;
+        if (key instanceof ItemStack stack) {
+            ingredient = stack.copyWithCount(1);
+        } else if (key instanceof FluidStack fluid) {
+            ingredient = fluid.copyWithAmount(1_000);
+        } else if (key instanceof ResourceLocation id) {
+            ingredient = Chemicals.ingredient(id);
+        }
         if (ingredient == null) {
             return null;
         }

@@ -126,7 +126,7 @@ public final class GuiText {
         if (CLIPS.isEmpty()) {
             return null;
         }
-        Clip c = CLIPS.getFirst();
+        Clip c = CLIPS.get(0);
         return new int[] {c.x() + c.width() / 2, c.y() + c.height() / 2};
     }
 

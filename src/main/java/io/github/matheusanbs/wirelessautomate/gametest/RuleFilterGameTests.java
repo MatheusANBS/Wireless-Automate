@@ -258,7 +258,7 @@ public final class RuleFilterGameTests {
                     "recusou tags, regra e mod");
             Filter filter = router.face(ResourceType.ITEM, Direction.UP).filter();
             helper.assertValueEqual(filter.entries().size(), 4, "entradas");
-            helper.assertValueEqual(filter.entries().getFirst().stock(), 0L, "estoque vindo do cliente não zerou");
+            helper.assertValueEqual(filter.entries().get(0).stock(), 0L, "estoque vindo do cliente não zerou");
             helper.assertTrue(items.pollView() != null, "a visão não acompanhou");
 
             // duplicadas não entram de novo

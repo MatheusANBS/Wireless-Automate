@@ -270,7 +270,7 @@ public class ConfiguratorItem extends Item {
         if (names.isEmpty()) {
             message = Component.translatable(KEY + "copied", preset.configuredFaces());
         } else if (names.size() == 1) {
-            message = Component.translatable(KEY + "copied_network", preset.configuredFaces(), names.getFirst());
+            message = Component.translatable(KEY + "copied_network", preset.configuredFaces(), names.get(0));
         } else {
             message = Component.translatable(KEY + "copied_networks", preset.configuredFaces(), list(names));
         }
@@ -309,7 +309,7 @@ public class ConfiguratorItem extends Item {
             List<Component> names = names(data, applied);
             return switch (names.size()) {
                 case 0 -> Component.translatable(KEY + "pasted");
-                case 1 -> Component.translatable(KEY + "pasted_network", names.getFirst());
+                case 1 -> Component.translatable(KEY + "pasted_network", names.get(0));
                 default -> Component.translatable(KEY + "pasted_networks", list(names));
             };
         }

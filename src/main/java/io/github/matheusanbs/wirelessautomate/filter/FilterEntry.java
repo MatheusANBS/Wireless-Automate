@@ -217,31 +217,24 @@ public sealed interface FilterEntry {
     StreamCodec<RegistryFriendlyByteBuf, FilterEntry> STREAM_CODEC = StreamCodec.of(FilterEntry::encode, FilterEntry::decode);
 
     private static void encode(RegistryFriendlyByteBuf buf, FilterEntry entry) {
-        switch (entry) {
-            case ItemEntry e -> {
-                buf.writeByte(0);
-                ItemStack.STREAM_CODEC.encode(buf, e.stack());
-            }
-            case FluidEntry e -> {
-                buf.writeByte(1);
-                FluidStack.STREAM_CODEC.encode(buf, e.stack());
-            }
-            case TagEntry e -> {
-                buf.writeByte(2);
-                buf.writeResourceLocation(e.tag());
-            }
-            case ModEntry e -> {
-                buf.writeByte(3);
-                buf.writeUtf(e.modId(), 64);
-            }
-            case ChemicalEntry e -> {
-                buf.writeByte(4);
-                buf.writeResourceLocation(e.chemical());
-            }
-            case RuleEntry e -> {
-                buf.writeByte(5);
-                ItemRule.STREAM_CODEC.encode(buf, e.rule());
-            }
+        if (entry instanceof ItemEntry e) {
+            buf.writeByte(0);
+            ItemStack.STREAM_CODEC.encode(buf, e.stack());
+        } else if (entry instanceof FluidEntry e) {
+            buf.writeByte(1);
+            FluidStack.STREAM_CODEC.encode(buf, e.stack());
+        } else if (entry instanceof TagEntry e) {
+            buf.writeByte(2);
+            buf.writeResourceLocation(e.tag());
+        } else if (entry instanceof ModEntry e) {
+            buf.writeByte(3);
+            buf.writeUtf(e.modId(), 64);
+        } else if (entry instanceof ChemicalEntry e) {
+            buf.writeByte(4);
+            buf.writeResourceLocation(e.chemical());
+        } else if (entry instanceof RuleEntry e) {
+            buf.writeByte(5);
+            ItemRule.STREAM_CODEC.encode(buf, e.rule());
         }
         buf.writeVarLong(entry.stock());
     }

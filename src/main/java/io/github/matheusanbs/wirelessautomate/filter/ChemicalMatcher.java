@@ -21,17 +21,13 @@ final class ChemicalMatcher {
         mods.defaultReturnValue(CompiledMatcher.NONE);
         boolean stock = false;
         for (int i = 0, n = entries.size(); i < n; i++) {
-            switch (entries.get(i)) {
-                case FilterEntry.ChemicalEntry e -> {
-                    exact.putIfAbsent(e.chemical(), i);
-                    stock |= e.stock() > 0;
-                }
-                case FilterEntry.ModEntry e -> {
-                    mods.putIfAbsent(e.modId(), i);
-                    stock |= e.stock() > 0;
-                }
-                default -> {
-                }
+            FilterEntry entry = entries.get(i);
+            if (entry instanceof FilterEntry.ChemicalEntry e) {
+                exact.putIfAbsent(e.chemical(), i);
+                stock |= e.stock() > 0;
+            } else if (entry instanceof FilterEntry.ModEntry e) {
+                mods.putIfAbsent(e.modId(), i);
+                stock |= e.stock() > 0;
             }
         }
         usesStock = stock;

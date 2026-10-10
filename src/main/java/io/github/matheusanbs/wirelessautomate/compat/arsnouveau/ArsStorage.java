@@ -7,7 +7,9 @@ import io.github.matheusanbs.wirelessautomate.storage.ScalarStore;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O Tanque de Source visto pelo Ars Nouveau. Só é carregada com o Ars presente (pela ponte
@@ -16,8 +18,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * <p>Porte 1.20.1 (Ars 4.12, sem capability de Source): com o Ars, o block entity do tanque é o
  * {@link SourceTank}, que implementa {@link ISourceTile}. Ele entra no {@link SourceManager} como provider,
  * que as máquinas do Ars (e os Sourcelinks a 5 blocos) consultam no raio delas. Os Relays do Ars 4.12 só
- * ligam em {@code AbstractSourceMachine} (conferido no bytecode do {@code RelayTile}): não enxergam o
- * tanque. O Ars é todo em {@code int}: quantidade e capacidade aparecem no máximo
+ * ligam em {@code AbstractSourceMachine} (conferido no bytecode do {@code RelayTile}): os mixins de
+ * {@code compat/arsnouveau/mixin} entregam a eles a {@link RelayView} do tanque ({@link #forRelay}). O Ars
+ * é todo em {@code int}: quantidade e capacidade aparecem no máximo
  * {@link Integer#MAX_VALUE}, mas o conteúdo continua em {@code long} no {@link ScalarStore}.
  */
 public final class ArsStorage {
@@ -38,6 +41,14 @@ public final class ArsStorage {
         SourceManager.INSTANCE.addInterface(level, new TankProvider(sourceTank));
     }
 
+    /**
+     * Para os mixins dos Relays: o block entity que o Relay vê na posição. O Tanque de Source vira a
+     * {@link RelayView} dele (um {@code AbstractSourceMachine}); qualquer outro passa igual.
+     */
+    public static BlockEntity forRelay(BlockEntity be) {
+        return be instanceof SourceTank tank && !tank.isRemoved() ? tank.relayView() : be;
+    }
+
     private static int clamp(long value) {
         return (int) Math.min(Math.max(0, value), Integer.MAX_VALUE);
     }
@@ -48,8 +59,22 @@ public final class ArsStorage {
      * depois acertar mesmo com mais de {@link Integer#MAX_VALUE} guardado.
      */
     public static final class SourceTank extends StorageSourceTankBlockEntity implements ISourceTile {
+        private @Nullable RelayView relayView;
+
         public SourceTank(BlockPos pos, BlockState state) {
             super(pos, state);
+        }
+
+        /** A visão deste tanque para os Relays, criada na primeira vez e sempre no nível atual do tanque. */
+        public RelayView relayView() {
+            RelayView view = relayView;
+            if (view == null) {
+                view = relayView = new RelayView(this);
+            }
+            if (view.getLevel() != level) {
+                view.setLevel(level);
+            }
+            return view;
         }
 
         @Override

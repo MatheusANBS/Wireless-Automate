@@ -35,7 +35,7 @@ public final class ConfiguratorWheelKeys {
                     || !minecraft.player.getMainHandItem().is(ModItems.CONFIGURATOR.get())) {
                 continue;
             }
-            minecraft.setScreen(new ConfiguratorWheelScreen());
+            minecraft.setScreen(ConfiguratorWheelScreen.fromKey());
         }
     }
 

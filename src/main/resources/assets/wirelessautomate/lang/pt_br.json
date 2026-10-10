@@ -448,7 +448,7 @@
   "key.wirelessautomate.open_tablet.missing": "Você não tem um Tablet de Rede no inventário",
   "key.wirelessautomate.configurator_wheel": "Roda do Configurador",
   "gui.wirelessautomate.configurator_wheel.short.brush": "Pincel",
-  "gui.wirelessautomate.configurator_wheel.short.area_same": "Mesma máq.",
+  "gui.wirelessautomate.configurator_wheel.short.area_same": "Mesma",
   "gui.wirelessautomate.configurator_wheel.short.area_any": "Qualquer",
   "gui.wirelessautomate.configurator_wheel.desc.brush": "Clique num roteador para colar nele",
   "gui.wirelessautomate.configurator_wheel.desc.area_same": "Cola na área, só na máquina da cópia",

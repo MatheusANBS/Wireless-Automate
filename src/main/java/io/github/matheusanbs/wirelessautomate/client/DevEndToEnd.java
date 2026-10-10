@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
@@ -1159,6 +1160,13 @@ public final class DevEndToEnd {
                 && ConfiguratorItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.AREA,
                 () -> "modo: " + ConfiguratorItem.mode(Minecraft.getInstance().player.getMainHandItem())));
         list.add(shift(false));
+        wheelSteps(list, "", "10b-configurador-roda");
+        list.add(new Step("roda: escolher Área (qualquer máquina)", STEP_TIMEOUT_MS,
+                () -> wheelScreen().choose(wheelScreen().hitOf(PasteMode.AREA_ANY)),
+                () -> wheelScreen().mode() == PasteMode.AREA_ANY
+                        && onServer(server -> ConfiguratorItem.pasteMode(serverWand(server)) == PasteMode.AREA_ANY),
+                () -> "varinha: " + onServer(server -> String.valueOf(ConfiguratorItem.pasteMode(serverWand(server))))));
+        list.add(close("fechar a roda"));
         list.add(new Step("marcar a área (baú A e roteador B)", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             for (BlockPos corner : List.of(chestA, routerB)) {
@@ -1177,6 +1185,36 @@ public final class DevEndToEnd {
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode() == PortMode.EXTRACT
                 && router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().isEmpty()),
                 () -> "B: " + onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).toString())));
+    }
+
+    private static ConfiguratorWheelScreen wheelScreen() {
+        return (ConfiguratorWheelScreen) Minecraft.getInstance().screen;
+    }
+
+    /**
+     * Roda do Configurador aberta direto (sem a tecla, então ela não fecha por a tecla estar solta),
+     * com o mouse na fatia do modo Área (qualquer máquina): o centro mostra o nome e a descrição dela.
+     * Confere que nenhum texto da roda fica cortado e fotografa.
+     */
+    private static void wheelSteps(List<Step> list, String label, String file) {
+        list.add(new Step(label + "abrir a roda do Configurador", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().setScreen(new ConfiguratorWheelScreen()),
+                () -> Minecraft.getInstance().screen instanceof ConfiguratorWheelScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step(label + "roda: mouse no modo Área (qualquer máquina)", STEP_TIMEOUT_MS, () -> {
+            int[] point = wheelScreen().pointOf(wheelScreen().hitOf(PasteMode.AREA_ANY));
+            moveMouse(point[0], point[1]);
+        }, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            var window = minecraft.getWindow();
+            double x = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+            double y = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+            return wheelScreen().hitOf(PasteMode.AREA_ANY).equals(wheelScreen().hitAt(x, y));
+        }, () -> "fatia sob o mouse"));
+        list.add(wait(label + "abertura da roda", 6));
+        list.add(new Step(label + "roda: nenhum texto cortado", STEP_TIMEOUT_MS, () -> {
+        }, () -> GuiText.clipCount() == 0, () -> GuiText.clipCount() + " texto(s) cortado(s) na roda"));
+        list.add(capture(file));
     }
 
     // ------------------------------------------------------------------ Vitrine (WA_SHOWCASE)
@@ -2641,6 +2679,16 @@ public final class DevEndToEnd {
                 () -> routerScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
         list.add(close("pt: fechar B"));
+
+        // Roda do Configurador em português (rótulos e descrições mais longos)
+        list.add(new Step("pt: Configurador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                    .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
+            return null;
+        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.CONFIGURATOR.get()),
+                () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
+        wheelSteps(list, "pt: ", "10c-configurador-roda-pt");
+        list.add(close("pt: fechar a roda"));
 
         // Vinculador em modo Área, com três abas marcadas
         list.add(new Step("pt: Vinculador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {

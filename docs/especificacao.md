@@ -20,7 +20,7 @@ O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de fi
 | --- | --- | --- |
 | Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Shift + clique direito com as mãos vazias gira o roteador 90° em torno do eixo da face (horário para quem olha a face de frente); a configuração das faces da máquina não muda. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
 | Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Levam o roteador ao tier do cartão, de qualquer tier abaixo (`RouterTier.canUpgradeTo`): clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
-| Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área presos à mesma máquina. |
+| Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área (só na mesma máquina ou em qualquer uma). |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Escolhe a rede ativa e coloca roteadores nela, um a um ou por área. |
 | Cartão de filtro | Item | Guarda um filtro reutilizável entre roteadores. |
@@ -101,19 +101,21 @@ São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não te
 
 ### Configurador
 
-Sem tela: tudo é feito com cliques. O tooltip mostra o estado (cópia, máquina, modo e área, tipo colado) e os comandos do modo atual.
+Sem tela: tudo é feito com cliques e com a roda. O tooltip mostra o estado (cópia, máquina, modo e área, tipo colado) e os comandos do modo atual. São três modos: Pincel, Área (mesma máquina) e Área (qualquer máquina).
 
 | Gesto | Pincel (padrão) | Área |
 | --- | --- | --- |
 | Shift + clique direito num roteador | Copia a configuração | Copia a configuração |
 | Clique direito num roteador | Cola nele | Marca um canto |
 | Clique direito num bloco | — | Marca um canto (1º, 2º; o 3º recomeça) |
-| Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina |
+| Clique direito no ar | — | Cola em todos os roteadores da área presos à mesma máquina (ou em todos, no modo qualquer máquina) |
 | Shift + clique direito num bloco sem roteador | Limpa a varinha (cópia e área) | Limpa a varinha (cópia e área) |
-| Shift + clique direito no ar | Troca para Área | Troca para Pincel |
+| Shift + clique direito no ar | Próximo modo (Pincel → Área mesma → Área qualquer → Pincel) | Próximo modo |
 | Shift + roda do mouse | Troca o tipo colado | Troca o tipo colado |
+| Segurar Alt esquerdo | Abre a roda | Abre a roda |
 
 - **Tipo colado:** Todos (padrão, sem componente), Itens, Fluidos, Energia e, só com o Mekanism, Químicos (componente `configurator_type`; a action bar mostra o tipo). Copiar sempre copia tudo; o tipo vale ao colar, no pincel e na área. Em Todos, todas as abas (faces e redes). Num tipo, só as faces e a rede daquela aba, ainda sob a regra das redes; as outras abas do roteador ficam como estavam. Exemplo: copiar um roteador configurado só para fluidos e colar em Fluidos sem mexer nos itens e na energia dos outros.
+- **Roda:** segurar a tecla da roda (Alt esquerdo por padrão, `key.wirelessautomate.configurator_wheel`) com o Configurador na mão principal abre uma roda radial animada, sem pausar o jogo: o anel de dentro escolhe o modo, o de fora o tipo colado (Todos e os tipos carregados). A opção atual de cada anel tem borda laranja, a fatia sob o mouse cresce e o centro mostra o nome e a descrição dela. Soltar a tecla escolhe e fecha; clique escolhe sem fechar; soltar no centro ou Esc fecha sem mudar. A escolha vai ao servidor com o estado completo (`ConfiguratorWheelPayload`), que confere a varinha na mão.
 
 ## Filtros
 
@@ -171,7 +173,7 @@ O Configurador guarda uma cópia só, no próprio item (decisão do dono: sem bi
 - **Tipo colado:** Shift + roda do mouse escolhe Todos ou uma aba só (Itens, Fluidos, Energia, Químicos com o Mekanism); colar num tipo só não toca nas outras abas do destino (faces e rede).
 - **Pincel:** Shift + clique copia de um roteador, clique cola em outro (em qualquer máquina).
 - **Aplicação relativa:** as faces são salvas em relação à orientação do roteador, então a cópia funciona com o bloco virado para qualquer lado.
-- **Colar em área:** no modo Área, cliques em dois blocos marcam a área (contorno no mundo, como no Vinculador) e clique no ar cola em todos os roteadores carregados dela **presos ao mesmo tipo de máquina** do copiado; os outros ficam como estavam e a action bar conta quantos. A área segue os limites do Vinculador (`linker.maxAreaVolume` e `linker.maxDistance`).
+- **Colar em área:** no modo Área, cliques em dois blocos marcam a área (contorno no mundo, como no Vinculador) e clique no ar cola em todos os roteadores carregados dela **presos ao mesmo tipo de máquina** do copiado; os outros ficam como estavam e a action bar conta quantos (e lembra do modo qualquer máquina). No modo **Área (qualquer máquina)** (componente `configurator_any_machine`), cola em todos os roteadores carregados da área. A área segue os limites do Vinculador (`linker.maxAreaVolume` e `linker.maxDistance`).
 - **Redes:** cada aba só leva a rede se o jogador puder usá-la; senão fica com a de antes, com aviso.
 
 ## Integrações

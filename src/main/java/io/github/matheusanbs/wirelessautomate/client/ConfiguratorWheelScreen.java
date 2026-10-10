@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -33,6 +34,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Roda radial do Configurador (segurar a tecla {@link ConfiguratorWheelKeys#WHEEL}): o anel de dentro
@@ -45,13 +47,28 @@ import org.joml.Matrix4f;
 public final class ConfiguratorWheelScreen extends Screen {
     private static final String KEY = "gui.wirelessautomate.configurator_wheel.";
     private static final PasteMode[] MODES = PasteMode.values();
-    /** Raio externo do mockup, a unidade das medidas abaixo. */
-    private static final double MOCKUP = 182;
-    private static final double GAP = 0.035;
     private static final long OPEN_MS = 150;
-    private static final float HOT_SCALE = 1.06f;
-    private static final int DISC = 0x991B1920;
-    private static final int HOT_FILL = 0xFFFFF8EA;
+    /** Raio externo da roda no desenho, antes da escala para a tela. */
+    private static final double DESIGN_RADIUS = 150;
+    /** Parte da menor dimensão da tela que o raio externo pode ocupar. */
+    private static final double SCREEN_FRACTION = 0.45;
+    /** Disco escuro atrás da roda: aparece na borda e nos vãos entre as fatias. */
+    private static final int DISC = 0xD81B1920;
+    /** Fatia sob o mouse: um tom claro do laranja de destaque. */
+    private static final int HOT_FILL = 0xFFFDE3D6;
+    /** Contorno das fatias (por dentro): tinta fina, a opção atual de cada anel em destaque mais grosso. */
+    private static final int BORDER = 1;
+    private static final int CURRENT_BORDER = 2;
+    /** Ícone (16 a 18 px), espaço e nome (texto do jogo, 8 px) empilhados no raio de cada fatia. */
+    private static final int ICON = 18;
+    private static final int LABEL_GAP = 3;
+    private static final int LABEL_HEIGHT = 8;
+    private static final int CONTENT_HEIGHT = ICON + LABEL_GAP + LABEL_HEIGHT;
+    /** Altura de uma linha de texto no centro. */
+    private static final int LINE = 10;
+    /** Linhas máximas do nome e da descrição no centro. */
+    private static final int TITLE_LINES = 2;
+    private static final int DESC_LINES = 3;
     /** Cores misturadas do ícone "qualquer máquina", como no mockup. */
     private static final int[] ANY_COLORS = {0xFFB57A3A, 0xFF6E7480, 0xFF2F9D5C, 0xFF8E4FC9, 0xFFB57A3A, 0xFFD59A1E};
 
@@ -60,11 +77,31 @@ public final class ConfiguratorWheelScreen extends Screen {
     private final long openedAt = Util.getMillis();
     private PasteMode mode;
     private @Nullable ResourceType pasteType;
-    private WheelLayout layout = WheelLayout.forRadius(90);
+    /**
+     * A roda é desenhada sempre no mesmo tamanho ({@link #DESIGN_RADIUS}) e escalada para a tela por
+     * {@link #wheelScale}, numa escala nítida (um número inteiro de pixels da janela por pixel do
+     * desenho): assim as proporções e o texto são os mesmos em qualquer escala de GUI.
+     */
+    private final WheelLayout layout = WheelLayout.forRadius(DESIGN_RADIUS);
+    private float wheelScale = 1;
     private int centerX;
     private int centerY;
     private double lastMouseX = -1;
     private double lastMouseY = -1;
+    /** Aberta pela tecla (não pelo e2e): o {@link #tick()} confere se a tecla ainda está apertada. */
+    private boolean openedByKey;
+    /** Já chegou o {@code keyReleased}/{@code mouseReleased} da tecla da roda. */
+    private boolean releaseSeen;
+
+    /**
+     * A roda aberta pela tecla: se a tecla já foi solta antes de a tela abrir (toque rápido), o
+     * soltar não chega à tela e ela fecha sozinha no primeiro tick, sem escolher nada.
+     */
+    public static ConfiguratorWheelScreen fromKey() {
+        ConfiguratorWheelScreen screen = new ConfiguratorWheelScreen();
+        screen.openedByKey = true;
+        return screen;
+    }
 
     public ConfiguratorWheelScreen() {
         super(Component.translatable("key.wirelessautomate.configurator_wheel"));
@@ -82,7 +119,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     protected void init() {
         centerX = width / 2;
         centerY = height / 2;
-        layout = WheelLayout.forRadius(Mth.clamp(0.38 * Math.min(width, height), 90, 180));
+        wheelScale = crispScale(SCREEN_FRACTION * Math.min(width, height) / DESIGN_RADIUS);
         if (lastMouseX < 0) {
             lastMouseX = centerX;
             lastMouseY = centerY;
@@ -121,9 +158,22 @@ public final class ConfiguratorWheelScreen extends Screen {
         return index < 0 ? null : new Hit(Ring.OUTER, index);
     }
 
+    /** Escala da roda na tela (o desenho tem raio externo {@link #DESIGN_RADIUS}). */
+    public float wheelScale() {
+        return wheelScale;
+    }
+
     /** A fatia no ponto da tela, ou {@code null} no centro e fora da roda. */
     public @Nullable Hit hitAt(double x, double y) {
-        return layout.hit(x - centerX, y - centerY, MODES.length, types.size());
+        return layout.hit((x - centerX) / wheelScale, (y - centerY) / wheelScale, MODES.length, types.size());
+    }
+
+    /** Ponto da tela no meio da fatia {@code hit} (para mover o mouse até ela no e2e e nas capturas). */
+    public int[] pointOf(Hit hit) {
+        double radius = layout.ringMiddle(hit.ring()) * wheelScale;
+        double angle = WheelLayout.sliceMiddle(hit.index(), count(hit.ring()));
+        return new int[] {(int) Math.round(centerX + radius * Math.sin(angle)),
+                (int) Math.round(centerY - radius * Math.cos(angle))};
     }
 
     /**
@@ -164,7 +214,25 @@ public final class ConfiguratorWheelScreen extends Screen {
         Player player = Minecraft.getInstance().player;
         if (player == null || !player.getMainHandItem().is(ModItems.CONFIGURATOR.get())) {
             onClose();
+            return;
         }
+        if (openedByKey && !releaseSeen && !wheelKeyDown()) {
+            // toque rápido: a tecla foi solta antes de a tela abrir, o soltar não chegou aqui
+            onClose();
+        }
+    }
+
+    /** Se a tecla da roda está fisicamente apertada agora (teclado ou botão do mouse). */
+    private static boolean wheelKeyDown() {
+        InputConstants.Key key = ConfiguratorWheelKeys.WHEEL.getKey();
+        if (key.getValue() == InputConstants.UNKNOWN.getValue()) {
+            return true;
+        }
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        if (key.getType() == InputConstants.Type.MOUSE) {
+            return GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
+        }
+        return InputConstants.isKeyDown(window, key.getValue());
     }
 
     @Override
@@ -176,6 +244,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         if (ConfiguratorWheelKeys.WHEEL.matches(keyCode, scanCode)) {
+            releaseSeen = true;
             choose(hitAt(lastMouseX, lastMouseY));
             onClose();
             return true;
@@ -200,6 +269,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     @Override
     public boolean mouseReleased(double x, double y, int button) {
         if (ConfiguratorWheelKeys.WHEEL.matchesMouse(button)) {
+            releaseSeen = true;
             choose(hitAt(x, y));
             onClose();
             return true;
@@ -219,7 +289,7 @@ public final class ConfiguratorWheelScreen extends Screen {
         GuiText.beginFrame();
         Hit hot = hitAt(mouseX, mouseY);
         float eased = easeOutBack(Mth.clamp((Util.getMillis() - openedAt) / (float) OPEN_MS, 0, 1));
-        float scale = 0.6f + 0.4f * eased;
+        float scale = wheelScale * (0.6f + 0.4f * eased);
         PoseStack pose = g.pose();
         pose.pushPose();
         pose.translate(centerX, centerY, 0);
@@ -227,8 +297,8 @@ public final class ConfiguratorWheelScreen extends Screen {
         pose.scale(scale, scale, 1);
         // daqui em diante, coordenadas relativas ao centro da roda
         drawShapes(g, hot);
-        drawRing(g, Ring.INNER, hot);
-        drawRing(g, Ring.OUTER, hot);
+        drawRing(g, Ring.INNER);
+        drawRing(g, Ring.OUTER);
         drawCenter(g, hot);
         pose.popPose();
     }
@@ -241,11 +311,27 @@ public final class ConfiguratorWheelScreen extends Screen {
         return 1 + c3 * u * u * u + c1 * u * u;
     }
 
-    private double unit() {
-        return layout.outerRadius() / MOCKUP;
+    // ------------------------------------------------------------------ medidas
+
+    /**
+     * A maior escala nítida até {@code fit}: {@code k / gui} com {@code k} inteiro (na escala de GUI 3:
+     * 1/3, 2/3, 1, 4/3...), no mínimo {@code 1 / gui} e no máximo 2.
+     */
+    private static float crispScale(double fit) {
+        int gui = Math.max(1, (int) Math.round(Minecraft.getInstance().getWindow().getGuiScale()));
+        int k = Mth.clamp((int) Math.floor(fit * gui + 1e-6), 1, 2 * gui);
+        return (float) k / gui;
     }
 
-    /** Disco translúcido, fatias com contorno (a sob o mouse por último) e o centro, num só lote de triângulos. */
+    private Component label(Ring ring, int index) {
+        return ring == Ring.INNER
+                ? Component.translatable(KEY + "short." + MODES[index].key())
+                : ConfiguratorItem.typeName(types.get(index));
+    }
+
+    // ------------------------------------------------------------------ formas
+
+    /** Disco escuro, fatias com contorno por dentro (a sob o mouse por último) e o centro, num só lote de triângulos. */
     private void drawShapes(GuiGraphics g, @Nullable Hit hot) {
         g.flush();
         RenderSystem.enableBlend();
@@ -255,9 +341,8 @@ public final class ConfiguratorWheelScreen extends Screen {
         BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES,
                 DefaultVertexFormat.POSITION_COLOR);
         Matrix4f matrix = g.pose().last().pose();
-        double u = unit();
 
-        sector(buffer, matrix, 0, layout.outerRadius() + 6 * u, 0, 2 * Math.PI, 0, DISC, 0, 0, 1, 48);
+        sector(buffer, matrix, 0, layout.outerRadius() + layout.gap() + 1, 0, 2 * Math.PI, 0, DISC, 64);
         for (Ring ring : Ring.values()) {
             int count = count(ring);
             for (int i = 0; i < count; i++) {
@@ -269,109 +354,141 @@ public final class ConfiguratorWheelScreen extends Screen {
         if (hot != null) {
             slice(buffer, matrix, hot.ring(), hot.index(), true);
         }
-        double r = centerRadius();
-        sector(buffer, matrix, 0, r + 1, 0, 2 * Math.PI, 0, GuiPaint.FG, 0, 0, 1, 32);
-        sector(buffer, matrix, 0, r, 0, 2 * Math.PI, 0, hot != null ? GuiPaint.FG : GuiPaint.PANEL, 0, 0, 1, 32);
+        double r = layout.centerRadius();
+        sector(buffer, matrix, 0, r, 0, 2 * Math.PI, 0, GuiPaint.FG, 48);
+        sector(buffer, matrix, 0, r - BORDER, 0, 2 * Math.PI, 0, hot != null ? GuiPaint.FG : GuiPaint.PANEL, 48);
 
         BufferUploader.drawWithShader(buffer.buildOrThrow());
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
     }
 
-    /** Uma fatia: o contorno (um pouco maior, por trás) e o preenchimento. */
+    /**
+     * Uma fatia: a forma inteira na cor do contorno e o preenchimento recuado pela grossura dele (o
+     * contorno fica por dentro e nunca invade o vão). As bordas laterais ficam a meio vão da linha que
+     * divide as fatias, em pixels, então o vão tem a mesma largura perto e longe do centro. A sob o
+     * mouse cresce um pouco para dentro do vão, sem fechá-lo.
+     */
     private void slice(BufferBuilder buffer, Matrix4f matrix, Ring ring, int index, boolean hot) {
         int count = count(ring);
-        double r1 = ring == Ring.INNER ? layout.innerRadius() : layout.outerRingStart();
-        double r2 = ring == Ring.INNER ? layout.innerRingEnd() : layout.outerRadius();
-        double a0 = WheelLayout.sliceStart(index, count) + GAP;
-        double a1 = WheelLayout.sliceEnd(index, count) - GAP;
+        double grow = hot ? layout.gap() / 4 : 0;
+        double r1 = layout.ringStart(ring) - grow;
+        double r2 = layout.ringEnd(ring) + grow;
+        double a0 = WheelLayout.sliceStart(index, count);
+        double a1 = WheelLayout.sliceEnd(index, count);
+        double side = layout.gap() / 2 - grow;
         boolean current = isCurrent(ring, index);
-        double border = current ? 2 : 1;
-        double middle = WheelLayout.sliceMiddle(index, count);
-        double rm = (r1 + r2) / 2;
-        double gx = rm * Math.sin(middle);
-        double gy = -rm * Math.cos(middle);
-        double grow = hot ? HOT_SCALE : 1;
-        int segments = Math.max(12, (int) Math.ceil((a1 - a0) / (Math.PI / 32)));
-        sector(buffer, matrix, r1 - border, r2 + border, a0, a1, border,
-                current ? GuiPaint.ACCENT : GuiPaint.FG, gx, gy, grow, segments);
-        sector(buffer, matrix, r1, r2, a0, a1, 0, hot ? HOT_FILL : GuiPaint.PANEL, gx, gy, grow, segments);
+        int border = current ? CURRENT_BORDER : BORDER;
+        int segments = Math.max(12, (int) Math.ceil((a1 - a0) / (Math.PI / 48)));
+        sector(buffer, matrix, r1, r2, a0, a1, side, current ? GuiPaint.ACCENT : GuiPaint.FG, segments);
+        sector(buffer, matrix, r1 + border, r2 - border, a0, a1, side + border, hot ? HOT_FILL : GuiPaint.PANEL,
+                segments);
     }
 
     /**
      * Setor de anel de {@code r1} a {@code r2} e de {@code a0} a {@code a1} (0 no topo, horário), com as
-     * bordas laterais afastadas {@code pad} (em comprimento) e escalado {@code grow} em torno de
-     * ({@code gx}, {@code gy}).
+     * bordas laterais recuadas {@code inset} (em pixels, na perpendicular, não em ângulo) para dentro.
      */
     private static void sector(BufferBuilder buffer, Matrix4f matrix, double r1, double r2, double a0, double a1,
-            double pad, int color, double gx, double gy, double grow, int segments) {
+            double inset, int color, int segments) {
         double inner = Math.max(0, r1);
-        double padIn = inner > 0 ? pad / inner : 0;
-        double padOut = r2 > 0 ? pad / r2 : 0;
-        double in0 = a0 - padIn;
-        double in1 = a1 + padIn;
-        double out0 = a0 - padOut;
-        double out1 = a1 + padOut;
         for (int s = 0; s < segments; s++) {
             double f0 = (double) s / segments;
             double f1 = (double) (s + 1) / segments;
-            double ai0 = Mth.lerp(f0, in0, in1);
-            double ai1 = Mth.lerp(f1, in0, in1);
-            double ao0 = Mth.lerp(f0, out0, out1);
-            double ao1 = Mth.lerp(f1, out0, out1);
-            vertex(buffer, matrix, inner, ai0, color, gx, gy, grow);
-            vertex(buffer, matrix, r2, ao0, color, gx, gy, grow);
-            vertex(buffer, matrix, r2, ao1, color, gx, gy, grow);
-            vertex(buffer, matrix, inner, ai0, color, gx, gy, grow);
-            vertex(buffer, matrix, r2, ao1, color, gx, gy, grow);
-            vertex(buffer, matrix, inner, ai1, color, gx, gy, grow);
+            double[] i0 = edgePoint(inner, f0, a0, a1, inset);
+            double[] i1 = edgePoint(inner, f1, a0, a1, inset);
+            double[] o0 = edgePoint(r2, f0, a0, a1, inset);
+            double[] o1 = edgePoint(r2, f1, a0, a1, inset);
+            vertex(buffer, matrix, i0, color);
+            vertex(buffer, matrix, o0, color);
+            vertex(buffer, matrix, o1, color);
+            vertex(buffer, matrix, i0, color);
+            vertex(buffer, matrix, o1, color);
+            vertex(buffer, matrix, i1, color);
         }
     }
 
-    private static void vertex(BufferBuilder buffer, Matrix4f matrix, double radius, double angle, int color,
-            double gx, double gy, double grow) {
-        double x = radius * Math.sin(angle);
-        double y = -radius * Math.cos(angle);
-        x = gx + (x - gx) * grow;
-        y = gy + (y - gy) * grow;
-        buffer.addVertex(matrix, (float) x, (float) y, 0).setColor(color);
+    /**
+     * Ponto do arco de raio {@code radius} na fração {@code f} do caminho entre as bordas, que ficam
+     * recuadas {@code inset} na perpendicular: no raio {@code radius}, o recuo em ângulo é
+     * {@code asin(inset / radius)}, maior perto do centro.
+     */
+    private static double[] edgePoint(double radius, double f, double a0, double a1, double inset) {
+        double start = a0;
+        double end = a1;
+        if (inset != 0 && radius > 0 && a1 - a0 < 2 * Math.PI - 1e-6) {
+            double shift = Math.asin(Mth.clamp(inset / radius, -1, 1));
+            start = a0 + shift;
+            end = a1 - shift;
+            if (end < start) {
+                start = end = (a0 + a1) / 2;
+            }
+        }
+        double angle = Mth.lerp(f, start, end);
+        return new double[] {radius * Math.sin(angle), -radius * Math.cos(angle)};
     }
 
-    /** Ícones e rótulos curtos de um anel; a fatia sob o mouse cresce junto. */
-    private void drawRing(GuiGraphics g, Ring ring, @Nullable Hit hot) {
+    private static void vertex(BufferBuilder buffer, Matrix4f matrix, double[] point, int color) {
+        buffer.addVertex(matrix, (float) point[0], (float) point[1], 0).setColor(color);
+    }
+
+    // ------------------------------------------------------------------ conteúdo
+
+    /**
+     * Ícones e nomes curtos de um anel. O ícone fica reto, no ângulo do meio da fatia; o nome acompanha
+     * a curva do anel, centrado no mesmo ângulo. Ícone e nome ocupam juntos a altura
+     * {@link #CONTENT_HEIGHT}, centrada no raio do meio do anel, com o ícone sempre "acima" do nome na
+     * tela: na metade de cima o ícone vai para fora e o nome para dentro; na de baixo o nome é virado e
+     * os dois trocam de lado ({@link WheelLayout#flipped}).
+     */
+    private void drawRing(GuiGraphics g, Ring ring) {
         int count = count(ring);
-        double r1 = ring == Ring.INNER ? layout.innerRadius() : layout.outerRingStart();
-        double r2 = ring == Ring.INNER ? layout.innerRingEnd() : layout.outerRadius();
-        double rm = (r1 + r2) / 2;
-        double span = 2 * Math.PI / count - 2 * GAP;
-        int labelWidth = (int) Math.min(Math.min(2 * rm * Math.sin(Math.min(span, Math.PI) / 2) * 0.85, 80),
-                (r2 - r1) * 2.2);
-        boolean labels = labelWidth >= 24 && r2 - r1 >= 26;
-        PoseStack pose = g.pose();
+        double middleRadius = layout.ringMiddle(ring);
+        double iconOffset = CONTENT_HEIGHT / 2.0 - ICON / 2.0;
+        double labelOffset = CONTENT_HEIGHT / 2.0 - LABEL_HEIGHT / 2.0;
         for (int i = 0; i < count; i++) {
-            double middle = WheelLayout.sliceMiddle(i, count);
-            int x = (int) Math.round(rm * Math.sin(middle));
-            int y = (int) Math.round(-rm * Math.cos(middle));
-            boolean isHot = isHit(hot, ring, i);
-            pose.pushPose();
-            if (isHot) {
-                pose.translate(x, y, 0);
-                pose.scale(HOT_SCALE, HOT_SCALE, 1);
-                pose.translate(-x, -y, 0);
-            }
-            int iconY = labels ? y - 5 : y;
+            double angle = WheelLayout.sliceMiddle(i, count);
+            boolean flipped = WheelLayout.flipped(angle);
+            double iconRadius = middleRadius + (flipped ? -iconOffset : iconOffset);
+            int x = (int) Math.round(iconRadius * Math.sin(angle));
+            int y = (int) Math.round(-iconRadius * Math.cos(angle));
             if (ring == Ring.INNER) {
-                modeIcon(g, MODES[i], x, iconY);
+                modeIcon(g, MODES[i], x, y);
             } else {
-                typeIcon(g, types.get(i), x, iconY);
+                typeIcon(g, types.get(i), x, y);
             }
-            if (labels) {
-                Component label = ring == Ring.INNER
-                        ? Component.translatable(KEY + "short." + MODES[i].key())
-                        : ConfiguratorItem.typeName(types.get(i));
-                int w = Math.min(font.width(label), labelWidth);
-                GuiText.draw(g, font, label, x - w / 2, iconY + 10, labelWidth, GuiPaint.FG);
-            }
+            double labelRadius = middleRadius + (flipped ? labelOffset : -labelOffset);
+            arcText(g, label(ring, i), labelRadius, angle, flipped,
+                    layout.labelArc(labelRadius, count, CURRENT_BORDER + 2));
+        }
+    }
+
+    /**
+     * Texto que acompanha a curva: cada letra no seu ângulo do arco de raio {@code radius}, girada para
+     * ficar tangente a ele, com o texto centrado em {@code middle}. Virado, segue no sentido anti-horário
+     * e cada letra gira meia volta a mais (lido da esquerda para a direita na metade de baixo). Maior que
+     * {@code maxArc}, é abreviado com "…" (não acontece com os nomes de hoje).
+     */
+    private void arcText(GuiGraphics g, Component text, double radius, double middle, boolean flipped, double maxArc) {
+        String string = text.getString();
+        if (font.width(string) > maxArc) {
+            string = font.plainSubstrByWidth(string, Math.max(0, (int) maxArc - font.width("…"))) + "…";
+        }
+        double direction = flipped ? -1 : 1;
+        double position = -font.width(string) / 2.0;
+        PoseStack pose = g.pose();
+        for (int offset = 0; offset < string.length(); ) {
+            int codePoint = string.codePointAt(offset);
+            String letter = new String(Character.toChars(codePoint));
+            offset += Character.charCount(codePoint);
+            int advance = font.width(letter);
+            double angle = middle + direction * (position + advance / 2.0) / radius;
+            position += advance;
+            pose.pushPose();
+            pose.translate(radius * Math.sin(angle), -radius * Math.cos(angle), 0);
+            pose.mulPose(Axis.ZP.rotation((float) (flipped ? angle + Math.PI : angle)));
+            // a letra centrada no ponto do arco (a largura sem o espaço da direita, a altura sem a sombra)
+            g.drawString(font, letter, -(advance - 1) / 2, -LABEL_HEIGHT / 2, GuiPaint.FG, false);
             pose.popPose();
         }
     }
@@ -394,14 +511,13 @@ public final class ConfiguratorWheelScreen extends Screen {
         }
     }
 
-    /** Ícone de tipo centrado em ({@code x}, {@code y}); Todos é um quadrado neutro. */
+    /** Ícone de tipo centrado em ({@code x}, {@code y}), em dobro (18 × 18); Todos é um quadrado neutro. */
     private void typeIcon(GuiGraphics g, @Nullable ResourceType type, int x, int y) {
-        int scale = layout.outerRadius() >= 130 ? 2 : 1;
         int size = ResourceStyle.ICON;
         PoseStack pose = g.pose();
         pose.pushPose();
-        pose.translate(x - size * scale / 2f, y - size * scale / 2f, 0);
-        pose.scale(scale, scale, 1);
+        pose.translate(x - size, y - size, 0);
+        pose.scale(2, 2, 1);
         if (type == null) {
             g.fill(0, 0, size, size, GuiPaint.FG);
             g.fill(1, 1, size - 1, size - 1, GuiPaint.MUTED);
@@ -411,15 +527,12 @@ public final class ConfiguratorWheelScreen extends Screen {
         pose.popPose();
     }
 
-    private double centerRadius() {
-        return layout.innerRadius() - 4 * unit();
-    }
-
-    /** Nome e descrição da fatia sob o mouse, ou "Soltar aqui fecha", em texto reduzido para caber. */
+    /**
+     * Nome e descrição da fatia sob o mouse, ou "Soltar aqui fecha", em texto de escala 1, centrados no
+     * disco central. A largura das linhas é a do disco menos uma margem (a corda no alto e embaixo do
+     * bloco de até cinco linhas ainda cabe); texto maior que isso o {@link GuiText} abrevia.
+     */
     private void drawCenter(GuiGraphics g, @Nullable Hit hot) {
-        double r = centerRadius();
-        float scale = (float) Mth.clamp(r / 52, 0.5, 1);
-        int width = (int) (1.6 * r / scale);
         Component title;
         Component desc;
         if (hot == null) {
@@ -434,18 +547,16 @@ public final class ConfiguratorWheelScreen extends Screen {
             title = ConfiguratorItem.typeName(type);
             desc = type == null ? Component.translatable(KEY + "all_tabs") : capitalized(ConfiguratorItem.onlyTab(type));
         }
-        int titleLines = GuiText.lineCount(font, title, width, 2);
-        int descLines = desc == null ? 0 : GuiText.lineCount(font, desc, width, 4);
-        int textHeight = (titleLines + descLines) * 10 - 2 + (desc == null ? 0 : 2);
-        PoseStack pose = g.pose();
-        pose.pushPose();
-        pose.scale(scale, scale, 1);
-        int y = -textHeight / 2;
-        y += GuiText.wrapCentered(g, font, title, 0, y, width, 2, hot != null ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+        int width = (int) (layout.centerRadius() * 1.6);
+        int titleLines = GuiText.lineCount(font, title, width, TITLE_LINES);
+        int descLines = desc == null ? 0 : GuiText.lineCount(font, desc, width, DESC_LINES);
+        int height = (titleLines + descLines) * LINE - 2 + (descLines > 0 ? 3 : 0);
+        int y = -height / 2;
+        y += GuiText.wrapCentered(g, font, title, 0, y, width, TITLE_LINES,
+                hot != null ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         if (desc != null) {
-            GuiText.wrapCentered(g, font, desc, 0, y + 2, width, 4, GuiPaint.TOOLTIP_MUTED);
+            GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES, GuiPaint.TOOLTIP_MUTED);
         }
-        pose.popPose();
     }
 
     private static Component capitalized(@Nullable Component text) {

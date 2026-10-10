@@ -6,6 +6,8 @@ import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.FilterViewPayload;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -39,7 +41,9 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
                 Component.translatable("gui.wirelessautomate.router.face." + face.getName()));
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
-                buf -> FilterView.STREAM_CODEC.encode(buf, view));
+                buf -> FilterView.STREAM_CODEC.encode(buf, view),
+                buf -> FilterView.STREAM_CODEC.encode(buf, view.reduced()),
+                id -> List.of(new FilterViewPayload(id, view)));
     }
 
     @Override

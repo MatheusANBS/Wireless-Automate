@@ -1,11 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.net;
 
+import com.mojang.logging.LogUtils;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkEvent;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * O {@link IPayloadContext} sobre o {@link NetworkEvent.Context} do Forge. O jogador do lado do cliente vem
@@ -13,7 +15,9 @@ import org.jetbrains.annotations.Nullable;
  * pode tocar no {@code Minecraft} (o servidor dedicado quebra ao carregar a classe).
  */
 public final class ForgePayloadContext implements IPayloadContext {
-    private static volatile Supplier<@Nullable Player> clientPlayer = () -> null;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static volatile @Nullable Supplier<@Nullable Player> clientPlayer;
+    private static volatile boolean warned;
 
     private final NetworkEvent.Context context;
 
@@ -32,7 +36,19 @@ public final class ForgePayloadContext implements IPayloadContext {
 
     @Override
     public @Nullable Player player() {
-        return flow() == PacketFlow.SERVERBOUND ? context.getSender() : clientPlayer.get();
+        if (flow() == PacketFlow.SERVERBOUND) {
+            return context.getSender();
+        }
+        Supplier<@Nullable Player> supplier = clientPlayer;
+        if (supplier == null) {
+            if (!warned) {
+                warned = true;
+                LOGGER.warn("ForgePayloadContext.setClientPlayer não foi chamado no setup do cliente: "
+                        + "os pacotes do servidor para o cliente serão ignorados");
+            }
+            return null;
+        }
+        return supplier.get();
     }
 
     @Override

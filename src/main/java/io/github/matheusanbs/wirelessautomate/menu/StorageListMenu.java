@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
 import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
@@ -16,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.storage.KeyedStorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
+import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -40,6 +42,7 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * Menu da tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico). Os únicos slots
@@ -53,6 +56,7 @@ import org.jetbrains.annotations.Nullable;
  * na hora). Um armazenamento com milhões chegando não inunda o cliente.
  */
 public class StorageListMenu<K> extends AbstractContainerMenu {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final double MAX_DISTANCE = 8.0;
     /** Ticks mínimos entre dois envios de diferenças. */
     public static final int SYNC_INTERVAL = 5;
@@ -280,26 +284,51 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         return changes;
     }
 
-    /** Manda em pacotes de até {@link StorageEntriesPayload#MAX_ENTRIES} tipos; só o primeiro leva o {@code reset}. */
+    /**
+     * Manda em pacotes de até {@link StorageEntriesPayload#MAX_ENTRIES} tipos e
+     * {@link StorageEntriesPayload#MAX_BYTES} bytes (cada chave é medida pelo codec); só o primeiro leva o
+     * {@code reset}. Porte 1.20.1: o vanilla recusa pacote de mais de 1 MiB e o Forge não divide. Um tipo que
+     * sozinho passa do teto não vai (aviso no log): some da lista da tela, mas continua no armazenamento, e o
+     * roteador e os mods de automação ainda o tiram.
+     */
     @SuppressWarnings("unchecked")
     private void send(Sync<K> sync) {
-        List<StorageListView.Entry<K>> changes = sync.changes();
-        int max = StorageEntriesPayload.MAX_ENTRIES;
-        int from = 0;
-        do {
-            int to = Math.min(changes.size(), from + max);
-            List<StorageListView.Entry<Object>> part = new ArrayList<>(to - from);
-            for (StorageListView.Entry<K> entry : changes.subList(from, to)) {
-                part.add((StorageListView.Entry<Object>) (StorageListView.Entry<?>) entry);
+        RegistryFriendlyByteBuf scratch = new RegistryFriendlyByteBuf(Unpooled.buffer());
+        List<StorageListView.Entry<Object>> part = new ArrayList<>();
+        int bytes = 0;
+        boolean first = true;
+        for (StorageListView.Entry<K> entry : sync.changes()) {
+            scratch.clear();
+            kind.codec.encode(scratch, entry.key());
+            // A quantidade vai num VarLong: até 10 bytes.
+            int size = scratch.readableBytes() + 10;
+            if (size > StorageEntriesPayload.MAX_BYTES) {
+                LOGGER.warn("Tipo de {} com {} bytes fora da lista da tela de {}: passa do teto de {} por pacote",
+                        kind.storage, size, viewer.getScoreboardName(), StorageEntriesPayload.MAX_BYTES);
+                continue;
             }
-            StorageEntriesPayload payload = new StorageEntriesPayload(containerId, kind.storage,
-                    sync.reset() && from == 0, sync.header(), part);
-            // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
-            if (viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
-                PacketDistributor.sendToPlayer(viewer, payload);
+            if (!part.isEmpty() && (part.size() >= StorageEntriesPayload.MAX_ENTRIES
+                    || bytes + size > StorageEntriesPayload.MAX_BYTES)) {
+                sendPart(sync, first, part);
+                first = false;
+                part = new ArrayList<>();
+                bytes = 0;
             }
-            from = to;
-        } while (from < changes.size());
+            part.add((StorageListView.Entry<Object>) (StorageListView.Entry<?>) entry);
+            bytes += size;
+        }
+        if (first || !part.isEmpty()) {
+            sendPart(sync, first, part);
+        }
+    }
+
+    private void sendPart(Sync<K> sync, boolean first, List<StorageListView.Entry<Object>> part) {
+        StorageEntriesPayload payload = new StorageEntriesPayload(containerId, kind.storage, sync.reset() && first,
+                sync.header(), part);
+        // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
+        if (viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
+            PacketDistributor.sendToPlayer(viewer, payload);
+        }
     }
 
     /** Cliente: um pacote do servidor. */

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.ListKind;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListView;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.packet.StorageActionPayload;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -28,8 +29,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -227,8 +227,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox.setBordered(false);
         searchBox.setMaxLength(64);
         searchBox.setTextColor(GuiPaint.FG);
-        searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        searchBox.setHint(tr("search.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         searchBox.setValue(lastSearch);
         searchBox.setResponder(value -> {
             lastSearch = value;
@@ -331,7 +331,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         if (key instanceof ItemStack stack) {
             return stack.getHoverName();
         } else if (key instanceof FluidStack fluid) {
-            return fluid.getHoverName();
+            return fluid.getDisplayName();
         } else if (key instanceof ResourceLocation id) {
             return Chemicals.name(id);
         }
@@ -453,7 +453,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         if (key instanceof ItemStack stack) {
             ingredient = stack.copyWithCount(1);
         } else if (key instanceof FluidStack fluid) {
-            ingredient = fluid.copyWithAmount(1_000);
+            ingredient = new FluidStack(fluid, 1_000);
         } else if (key instanceof ResourceLocation id) {
             ingredient = Chemicals.ingredient(id);
         }
@@ -526,7 +526,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                     && !menu.getCarried().isEmpty()) {
                 long now = Util.getMillis();
                 boolean doubleClick = now - lastClickTime < DOUBLE_CLICK_MS
-                        && ItemStack.isSameItemSameComponents(lastClickKey, stack);
+                        && ItemStack.isSameItemSameTags(lastClickKey, stack);
                 lastClickKey = doubleClick ? ItemStack.EMPTY : stack;
                 lastClickTime = now;
                 send(doubleClick ? StorageActionPayload.Action.TAKE_ALL_TO_INVENTORY
@@ -577,7 +577,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         if (shiftDragTaken != null && button == 0) {
             if (Screen.hasShiftDown() && menu.getCarried().isEmpty() && inGrid(mouseX, mouseY)
                     && keyAt(mouseX, mouseY) instanceof ItemStack key
-                    && shiftDragTaken.stream().noneMatch(taken -> ItemStack.isSameItemSameComponents(taken, key))) {
+                    && shiftDragTaken.stream().noneMatch(taken -> ItemStack.isSameItemSameTags(taken, key))) {
                 shiftDragTaken.add(key);
                 send(StorageActionPayload.Action.TAKE_TO_INVENTORY, key);
             }
@@ -609,7 +609,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         // Rodinha do Baú, no sentido do Mouse Tweaks: para baixo empurra um item para o outro lado
         // (da grade para o inventário, do slot para o Baú), para cima puxa um de volta. Sobre uma
         // célula vazia ou a barra, a rodinha rola a lista.
@@ -630,7 +630,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             scrollRow = Math.max(0, Math.min(maxScroll(), scrollRow - (int) Math.signum(scrollY)));
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     @Override
@@ -660,6 +660,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         rebuild();
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, mouseX, mouseY, partialTick);
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {

@@ -12,19 +12,19 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.net.ForgePayloadContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.common.Mod;
 
 /** Registros só do cliente. As classes de tela nunca são carregadas no servidor dedicado. */
-// bus explícito: o FML já o deduz do evento e marcou o atributo para remoção, mas aqui ele deixa claro
-@SuppressWarnings("removal")
-@EventBusSubscriber(modid = WirelessAutomate.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
     private ClientSetup() {
     }
@@ -34,7 +34,9 @@ public final class ClientSetup {
      * {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      */
     @SubscribeEvent
-    static void clientSetup(FMLClientSetupEvent event) {
+    public static void clientSetup(FMLClientSetupEvent event) {
+        // pacotes do servidor para o cliente: o IPayloadContext.player() do lado do cliente
+        ForgePayloadContext.setClientPlayer(() -> Minecraft.getInstance().player);
         event.enqueueWork(() -> {
             ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
                     (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal());
@@ -42,22 +44,23 @@ public final class ClientSetup {
                 ItemProperties.register(ModItems.STORAGE.get(kind).get(), WirelessAutomate.id("tier"),
                         (stack, level, entity, seed) -> StorageBlockItem.tierOf(stack).ordinal());
             }
+            registerScreens();
         });
     }
 
-    @SubscribeEvent
-    static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(ModMenus.ROUTER.get(),
+    /** Telas dos menus (o 1.20.1 não tem o RegisterMenuScreensEvent: o registro é no enqueueWork do setup). */
+    private static void registerScreens() {
+        MenuScreens.register(ModMenus.ROUTER.get(),
                 (RouterMenu menu, Inventory inventory, Component title) -> new RouterScreen(menu, inventory, title));
-        event.register(ModMenus.STORAGE_LIST.get(), (StorageListMenu<?> menu, Inventory inventory, Component title)
+        MenuScreens.register(ModMenus.STORAGE_LIST.get(), (StorageListMenu<?> menu, Inventory inventory, Component title)
                 -> new StorageListScreen(menu, inventory, title));
-        event.register(ModMenus.STORAGE_SCALAR.get(), (StorageScalarMenu menu, Inventory inventory, Component title)
+        MenuScreens.register(ModMenus.STORAGE_SCALAR.get(), (StorageScalarMenu menu, Inventory inventory, Component title)
                 -> new StorageScalarScreen(menu, inventory, title));
-        event.register(ModMenus.FILTER.get(),
+        MenuScreens.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
-        event.register(ModMenus.LINKER.get(),
+        MenuScreens.register(ModMenus.LINKER.get(),
                 (LinkerMenu menu, Inventory inventory, Component title) -> new LinkerScreen(menu, inventory, title));
-        event.register(ModMenus.NETWORK_TABLET.get(),
+        MenuScreens.register(ModMenus.NETWORK_TABLET.get(),
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
     }
 }

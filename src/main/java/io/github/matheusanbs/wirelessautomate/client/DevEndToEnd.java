@@ -55,7 +55,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.screens.GenericMessageScreen;
+import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.tutorial.TutorialSteps;
@@ -91,12 +91,12 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.client.ClientCommandHandler;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.TickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
@@ -110,7 +110,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEnti
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Teste de ponta a ponta num mundo de verdade (cliente + servidor integrado). Só roda com a
@@ -161,7 +161,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * de redes usa a geometria da {@link RouterScreen} (altura da linha, {@link #DROPDOWN_ROW}, e o
  * título da lista na primeira linha).
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevEndToEnd {
     /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
     private static final String SHOWCASE = System.getenv("WA_SHOWCASE");
@@ -245,7 +245,10 @@ public final class DevEndToEnd {
     // ------------------------------------------------------------------ ciclo
 
     @SubscribeEvent
-    static void onTick(ClientTickEvent.Post event) {
+    public static void onTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         if (OUTPUT == null || phase == Phase.DONE) {
             return;
         }
@@ -417,7 +420,7 @@ public final class DevEndToEnd {
                     minecraft.screen.onClose();
                 }
                 minecraft.level.disconnect();
-                minecraft.disconnect(new GenericMessageScreen(Component.translatable("menu.savingLevel")));
+                minecraft.clearLevel(new GenericDirtMessageScreen(Component.translatable("menu.savingLevel")));
             }
             minecraft.stop();
         });
@@ -444,8 +447,7 @@ public final class DevEndToEnd {
         record("criar mundo", "plano, criativo, com cheats, em " + dir);
         minecraft.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(0L, false, false),
                 registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
-                        .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
-                parent);
+                        .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions());
     }
 
     // ------------------------------------------------------------------ roteiro
@@ -524,7 +526,7 @@ public final class DevEndToEnd {
             int[] row = filterScreen().candidateCenter(index);
             click(Minecraft.getInstance().screen, row[0], row[1]);
         }, () -> filterScreen().checkedLabels().equals(List.of(TAG_RULE))
-                && find(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action"))) instanceof AbstractWidget add
+                && (Object) find(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action"))) instanceof AbstractWidget add
                 && add.active,
                 () -> "marcadas " + filterScreen().checkedLabels()));
         list.add(new Step("filtro: adicionar a tag", STEP_TIMEOUT_MS,
@@ -560,18 +562,18 @@ public final class DevEndToEnd {
         list.add(capture("filtro-regra-lista"));
         list.add(new Step("filtro: digitar prot no encantamento", STEP_TIMEOUT_MS, () -> type("prot"), () -> filterScreen().enchantBox().getValue().equals("prot")
                 && filterScreen().suggestionLabels().contains(enchantmentName(
-                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION)),
+                        PROTECTION_KEY)),
                 () -> "campo '" + filterScreen().enchantBox().getValue() + "', sugestões " + filterScreen().suggestionLabels()));
         list.add(capture("filtro-regra-sugestoes"));
         list.add(clipCheck("filtro: sugestões"));
         list.add(new Step("filtro: escolher com Enter", STEP_TIMEOUT_MS,
                 () -> filterScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
                 () -> filterScreen().ruleDraft().enchantment()
-                        .map(e -> e.id().equals(net.minecraft.world.item.enchantment.Enchantments.PROTECTION.location()))
+                        .map(e -> e.id().equals(PROTECTION_KEY.location()))
                         .orElse(false)
                         && filterScreen().suggestionLabels().isEmpty()
                         && filterScreen().enchantBox().getValue().equals(enchantmentName(
-                                net.minecraft.world.item.enchantment.Enchantments.PROTECTION)),
+                                PROTECTION_KEY)),
                 () -> "rascunho " + filterScreen().ruleDraft() + ", campo '" + filterScreen().enchantBox().getValue() + "'"));
         list.add(new Step("filtro: nível 37", STEP_TIMEOUT_MS, () -> {
             EditBox level = filterScreen().levelBox();
@@ -579,7 +581,7 @@ public final class DevEndToEnd {
             type("37");
         }, () -> filterScreen().ruleDraft().enchantment()
                 .map(e -> e.minLevel() == 37
-                        && e.id().equals(net.minecraft.world.item.enchantment.Enchantments.PROTECTION.location()))
+                        && e.id().equals(PROTECTION_KEY.location()))
                 .orElse(false) && filterScreen().levelBox().getValue().equals("37"),
                 () -> "rascunho " + filterScreen().ruleDraft() + ", nível '" + filterScreen().levelBox().getValue() + "'"));
         list.add(capture("filtro-regra-nivel"));
@@ -595,7 +597,7 @@ public final class DevEndToEnd {
             type("zzz");
         }, () -> filterScreen().suggestionLabels().isEmpty() && filterScreen().enchantBox().getValue().equals("zzz")
                 && filterScreen().levelBox().getValue().equals("0")
-                && find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add"))) instanceof AbstractWidget add
+                && (Object) find(byMessage(Component.translatable("gui.wirelessautomate.filter.rule.add"))) instanceof AbstractWidget add
                 && !add.active,
                 () -> "campo '" + filterScreen().enchantBox().getValue() + "', nível '" + filterScreen().levelBox().getValue()
                         + "', sugestões " + filterScreen().suggestionLabels()));
@@ -604,7 +606,7 @@ public final class DevEndToEnd {
                 () -> filterScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
                 () -> Minecraft.getInstance().screen instanceof FilterScreen
                         && filterScreen().enchantBox().getValue().equals(enchantmentName(
-                                net.minecraft.world.item.enchantment.Enchantments.PROTECTION))
+                                PROTECTION_KEY))
                         && filterScreen().ruleDraft().enchantment().map(e -> e.minLevel() == 37).orElse(false),
                 () -> "campo '" + filterScreen().enchantBox().getValue() + "', rascunho " + filterScreen().ruleDraft()));
         list.add(new Step("filtro: desmarcar Encantamento", STEP_TIMEOUT_MS,
@@ -1151,9 +1153,9 @@ public final class DevEndToEnd {
             Minecraft minecraft = Minecraft.getInstance();
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(routerA), Direction.UP, routerA, false);
             minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
-        }, () -> onServer(server -> serverWand(server).has(ModDataComponents.PRESET.get())
+        }, () -> onServer(server -> ModDataComponents.PRESET.has(serverWand(server))
                 && Blocks.CHEST.builtInRegistryHolder().key().location().equals(ConfiguratorItem.machine(serverWand(server)))),
-                () -> "varinha: " + onServer(server -> String.valueOf(serverWand(server).get(ModDataComponents.PRESET.get())))));
+                () -> "varinha: " + onServer(server -> String.valueOf(ModDataComponents.PRESET.get(serverWand(server))))));
         list.add(new Step("Shift + clique no ar: modo Área", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
@@ -1957,23 +1959,22 @@ public final class DevEndToEnd {
      * só as que vão para o reparo.
      */
     private static void showcaseInventory(MinecraftServer server, ServerPlayer player) {
-        var enchantments = server.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
         ItemStack wornPick = new ItemStack(Items.DIAMOND_PICKAXE);
-        wornPick.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE), 3);
+        wornPick.enchant(net.minecraft.world.item.enchantment.Enchantments.BLOCK_FORTUNE, 3);
         wornPick.setDamageValue(1300);
         ItemStack newPick = new ItemStack(Items.DIAMOND_PICKAXE);
-        newPick.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY), 5);
+        newPick.enchant(net.minecraft.world.item.enchantment.Enchantments.BLOCK_EFFICIENCY, 5);
         ItemStack wornSword = new ItemStack(Items.NETHERITE_SWORD);
-        wornSword.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS), 5);
+        wornSword.enchant(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS, 5);
         wornSword.setDamageValue(1500);
         ItemStack plainWorn = new ItemStack(Items.IRON_PICKAXE);
         plainWorn.setDamageValue(200);
         ItemStack wornChest = new ItemStack(Items.DIAMOND_CHESTPLATE);
-        wornChest.enchant(enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.PROTECTION), 4);
+        wornChest.enchant(net.minecraft.world.item.enchantment.Enchantments.ALL_DAMAGE_PROTECTION, 4);
         wornChest.setDamageValue(400);
         ItemStack[] items = {wornPick, newPick, wornSword, plainWorn, wornChest,
                 net.minecraft.world.item.EnchantedBookItem.createForEnchantment(new net.minecraft.world.item.enchantment.EnchantmentInstance(
-                        enchantments.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.MENDING), 1)),
+                        net.minecraft.world.item.enchantment.Enchantments.MENDING, 1)),
                 new ItemStack(Items.RAW_IRON, 48), new ItemStack(Items.RAW_GOLD, 23), new ItemStack(Items.COAL, 64),
                 new ItemStack(Items.IRON_ORE, 12), new ItemStack(Items.DEEPSLATE_DIAMOND_ORE, 3), new ItemStack(Items.TORCH, 40)};
         player.getInventory().clearContent();
@@ -2792,10 +2793,14 @@ public final class DevEndToEnd {
         list.add(language("en_us"));
     }
 
-    /** Nome traduzido de um encantamento, pelo registro do mundo do cliente. */
+    /** A chave do encantamento Proteção (no 1.20.1 o {@code Enchantments.PROTECTION} é o objeto, não a chave). */
+    private static final net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> PROTECTION_KEY =
+            net.minecraft.resources.ResourceKey.create(Registries.ENCHANTMENT, new ResourceLocation("protection"));
+
+    /** Nome traduzido de um encantamento, pelo registro (fixo no 1.20.1). */
     private static String enchantmentName(net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> key) {
-        return Minecraft.getInstance().level.registryAccess().registryOrThrow(Registries.ENCHANTMENT)
-                .getHolderOrThrow(key).value().description().getString();
+        return Component.translatable(net.minecraft.core.registries.BuiltInRegistries.ENCHANTMENT.getOrThrow(key)
+                .getDescriptionId()).getString();
     }
 
     /**

@@ -71,6 +71,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, mouseX, mouseY, partialTick);
         if (onBar(mouseX, mouseY) && menu.received()) {
             Component exact = menu.capacity() <= 0

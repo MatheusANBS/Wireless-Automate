@@ -12,6 +12,7 @@ import com.mojang.math.Axis;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Hit;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Ring;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorWheelPayload;
@@ -31,7 +32,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
@@ -203,7 +203,7 @@ public final class ConfiguratorWheelScreen extends Screen {
             pasteType = types.get(hit.index());
         }
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        if (connection != null && connection.hasChannel(ConfiguratorWheelPayload.TYPE)) {
+        if (connection != null && PacketDistributor.hasChannel(connection.getConnection(), ConfiguratorWheelPayload.TYPE)) {
             PacketDistributor.sendToServer(new ConfiguratorWheelPayload(mode, Optional.ofNullable(pasteType)));
         }
         return true;
@@ -288,7 +288,7 @@ public final class ConfiguratorWheelScreen extends Screen {
 
     /** Sem o fundo padrão (blur e escurecido da tela inteira): só o disco da roda. */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics g) {
     }
 
     @Override
@@ -345,8 +345,8 @@ public final class ConfiguratorWheelScreen extends Screen {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES,
-                DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().getBuilder();
+        buffer.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
         Matrix4f matrix = g.pose().last().pose();
 
         sector(buffer, matrix, 0, layout.outerRadius() + layout.gap() + 1, 0, 2 * Math.PI, 0, DISC, 64);
@@ -365,7 +365,7 @@ public final class ConfiguratorWheelScreen extends Screen {
         sector(buffer, matrix, 0, r, 0, 2 * Math.PI, 0, GuiPaint.FG, 48);
         sector(buffer, matrix, 0, r - BORDER, 0, 2 * Math.PI, 0, hot != null ? GuiPaint.FG : GuiPaint.PANEL, 48);
 
-        BufferUploader.drawWithShader(buffer.buildOrThrow());
+        BufferUploader.drawWithShader(buffer.end());
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
     }
@@ -436,7 +436,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     }
 
     private static void vertex(BufferBuilder buffer, Matrix4f matrix, double[] point, int color) {
-        buffer.addVertex(matrix, (float) point[0], (float) point[1], 0).setColor(color);
+        buffer.vertex(matrix, (float) point[0], (float) point[1], 0).color(color).endVertex();
     }
 
     // ------------------------------------------------------------------ conteúdo

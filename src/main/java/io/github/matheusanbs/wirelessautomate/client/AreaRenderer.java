@@ -20,10 +20,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * bloco mirado. Cada item tem a sua cor. Uma caixa de linhas por quadro, só com o item na mão e na
  * dimensão da área; nada de busca no mundo.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class AreaRenderer {
     /** Cor do contorno do Configurador: coral; o Vinculador usa a cor da tela dele (a mesma). */
     private static final int CONFIGURATOR_COLOR = GuiPaint.ACCENT & 0xFFFFFF;
@@ -41,7 +41,7 @@ public final class AreaRenderer {
     }
 
     @SubscribeEvent
-    static void onRender(RenderLevelStageEvent event) {
+    public static void onRender(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
         }

@@ -31,12 +31,12 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.fml.ModList;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -289,7 +289,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox.setBordered(false);
         renameBox.setMaxLength(RenameRouterPayload.MAX_LENGTH);
         renameBox.setTextColor(GuiPaint.FG);
-        renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
         renameBox.setValue(renameDraft);
         renameBox.setResponder(value -> renameDraft = value);
         renameBox.visible = renaming;
@@ -495,7 +495,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         titleButton.visible = !renaming;
         renameBox.setWidth(titleW - 8);
         renameBox.visible = renaming;
-        renameBox.setHint(displayName().copy().withColor(GuiPaint.DISABLED));
+        renameBox.setHint(displayName().copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
 
         FaceView v = view();
         for (FlatButton button : modeButtons) {
@@ -626,21 +626,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         ChunkLoadState state = chunkLoadState();
         if (state == ChunkLoadState.NONE) {
             return tr("upgrade.tooltip").copy()
-                    .append("\n").append(tr("upgrade.tooltip.effect").copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                    .append("\n").append(tr("upgrade.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                    .append("\n").append(tr("upgrade.tooltip.effect").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                    .append("\n").append(tr("upgrade.tooltip.add").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         }
         String key = "upgrade.state." + state.name().toLowerCase(Locale.ROOT);
         return GHOST_UPGRADE.getHoverName().copy()
-                .append("\n").append(tr(key).copy().withColor(chunkLoadColor(state)))
-                .append("\n").append(tr(key + ".detail").copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                .append("\n").append(tr("upgrade.tooltip.remove").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                .append("\n").append(tr(key).copy().withStyle(style -> style.withColor(chunkLoadColor(state))))
+                .append("\n").append(tr(key + ".detail").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                .append("\n").append(tr("upgrade.tooltip.remove").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
     }
 
     /** Dica de um slot de cartão vazio: o tipo, a regra do conjunto e como pôr um cartão. */
     private Component cardSlotTooltip() {
         return tr("cards.tooltip", typeName(type)).copy()
-                .append("\n").append(tr("cards.tooltip.rule").copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                .append("\n").append(tr("cards.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                .append("\n").append(tr("cards.tooltip.rule").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                .append("\n").append(tr("cards.tooltip.add").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
     }
 
     private void changePriority(int direction) {
@@ -677,7 +677,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         networkListOpen = false;
         renameDraft = snapshot().name();
         renameBox.setValue(renameDraft);
-        renameBox.moveCursorToEnd(false);
+        renameBox.moveCursorToEnd();
         setFocused(renameBox);
         refresh();
     }
@@ -800,7 +800,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         if (networkListOpen && dropdownContains(mouseX, mouseY)) {
             networkScroll -= (int) Math.signum(scrollY);
             refresh();
@@ -809,7 +809,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (!networkListOpen && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     @Override
@@ -850,6 +850,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiText.beginFrame();
         boolean overList = networkListOpen && dropdownContains(mouseX, mouseY);
         // com a lista de redes aberta, os botões embaixo dela não ficam realçados
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, overList ? -1 : mouseX, overList ? -1 : mouseY, partialTick);
         if (networkListOpen) {
             renderNetworkList(g, mouseX, mouseY);
@@ -901,7 +902,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private Component machineTooltip() {
         ItemStack machine = snapshot().machine();
         Component name = machine.isEmpty() ? tr("machine.none") : machine.getHoverName();
-        return name.copy().append("\n").append(tr("view.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return name.copy().append("\n").append(tr("view.hint").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
     }
 
     @Override
@@ -1077,11 +1078,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private Component networkTooltip() {
         Component hint = tr("network.tab.tooltip", typeName(type));
         Component name = networkLabel();
-        Component head = tr("network.label").copy().withColor(GuiPaint.TOOLTIP_MUTED);
+        Component head = tr("network.label").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED));
         if (font.width(name) <= netTextMax) {
             return head.copy().append("\n").append(hint);
         }
-        return head.copy().append("\n").append(name).append("\n").append(hint.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return head.copy().append("\n").append(name).append("\n").append(hint.copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
     }
 
     private void paintNetwork(GuiGraphics g, FlatButton b, boolean hovered) {

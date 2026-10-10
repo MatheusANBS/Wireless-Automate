@@ -24,7 +24,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
-import net.neoforged.neoforge.network.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -284,10 +284,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         nameBox.setBordered(false);
         nameBox.setMaxLength(LinkerActionPayload.MAX_NAME_LENGTH);
         nameBox.setTextColor(GuiPaint.FG);
-        nameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
         nameBox.setValue(draft);
         nameBox.setResponder(value -> draft = value);
-        nameBox.setHint(tr("network.name").copy().withColor(GuiPaint.DISABLED));
+        nameBox.setHint(tr("network.name").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         addRenderableWidget(nameBox);
         if (creating) {
             setFocused(nameBox);
@@ -560,14 +560,14 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         if (mouseX >= leftPos + X0 && mouseX < leftPos + X0 + LW && mouseY >= topPos + LIST_Y
                 && mouseY < topPos + LIST_Y + listH()) {
             scroll -= (int) Math.signum(scrollY);
             refresh();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     @Override
@@ -603,6 +603,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         refresh();
         GuiText.beginFrame();
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, mouseX, mouseY, partialTick);
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
@@ -678,7 +679,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private void renderSingle(GuiGraphics g, int x, int y) {
         int lineY = y;
         Component main = unlink() ? tr("single.unlink.body")
-                : tr("single.body", Component.literal(activeName().getString()).withColor(activeColor()));
+                : tr("single.body", Component.literal(activeName().getString()).withStyle(style -> style.withColor(activeColor())));
         lineY += GuiText.wrap(g, font, main, x, lineY, rw(), 4, GuiPaint.FG);
         lineY += 6;
         Component typeHint = unlink()
@@ -881,7 +882,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (o.unlink()) {
             return tr("outcome.unlinked", o.linked(), tabsName(o.tabs(), snapshot().available().types()));
         }
-        Component network = Component.literal(o.network()).withColor(0xFF000000 | o.color());
+        Component network = Component.literal(o.network()).withStyle(style -> style.withColor(0xFF000000 | o.color()));
         return tr("outcome", o.linked(), network);
     }
 
@@ -979,16 +980,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         NetworkEntry entry = entryAt(index);
         if (entry == null) {
             return tr("network.unlink").copy().append("\n")
-                    .append(tr("network.unlink.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                    .append(tr("network.unlink.tooltip").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         }
         Component name = Component.literal(entry.name());
         if (!entry.owned()) {
-            return name.copy().append("\n").append(tr("network.foreign").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            return name.copy().append("\n").append(tr("network.foreign").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         }
         if (!unlink() && Optional.of(entry.id()).equals(snapshot().active())) {
-            return name.copy().append("\n").append(tr("network.active").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            return name.copy().append("\n").append(tr("network.active").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         }
-        return name.copy().append("\n").append(tr("network.choose").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return name.copy().append("\n").append(tr("network.choose").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
     }
 
     private void paintChoice(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected) {

@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
@@ -130,7 +131,12 @@ public class LinkerMenu extends AbstractContainerMenu {
                 buf -> {
                     buf.writeEnum(hand);
                     LinkerSnapshot.STREAM_CODEC.encode(buf, snapshot);
-                });
+                },
+                buf -> {
+                    buf.writeEnum(hand);
+                    LinkerSnapshot.STREAM_CODEC.encode(buf, snapshot.reduced());
+                },
+                id -> List.of(new LinkerSnapshotPayload(id, snapshot)));
     }
 
     public InteractionHand hand() {

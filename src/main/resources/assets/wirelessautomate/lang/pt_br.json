@@ -423,6 +423,7 @@
   "gui.wirelessautomate.source_tank.loading": "Lendo…",
   "gui.wirelessautomate.source_tank.hint": "Sourcelinks e máquinas do Ars por perto usam este tanque como uma Source Jar.",
   "gui.wirelessautomate.storage.amount": "Quantidade: %s",
+  "gui.wirelessautomate.storage.truncated": "Dados demais para mostrar aqui: o NBT fica no armazenamento",
   "gui.wirelessautomate.storage.click.hint": "Clique: uma pilha · Direito: metade · Shift: para o inventário",
   "gui.wirelessautomate.storage.empty": "Vazio. Shift + clique no inventário guarda",
   "gui.wirelessautomate.storage.no_match": "Nada encontrado",

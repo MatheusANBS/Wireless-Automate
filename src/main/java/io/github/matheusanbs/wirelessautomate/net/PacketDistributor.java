@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.net;
 
+import java.util.List;
 import java.util.function.Function;
 import net.minecraft.network.Connection;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,19 +13,22 @@ import org.jetbrains.annotations.Nullable;
  * usa) sobre o {@link SimpleChannel} do mod, para quem manda mudar só o import. O {@link PayloadRegistrar} liga
  * o canal com {@link #bind} ao registrá-lo; cada payload precisa estar registrado naquela direção (senão é
  * {@link IllegalArgumentException}), e vai dentro do envelope da direção. Um payload acima do teto do vanilla
- * não sai (aviso no log; ver {@link PayloadRegistrar}), em vez de derrubar a conexão.
+ * vai em partes, que o outro lado junta (ver {@link PayloadRegistrar}), em vez de derrubar a conexão.
  */
 public final class PacketDistributor {
     private static SimpleChannel channel;
-    private static Function<CustomPacketPayload, @Nullable Object> toServer;
-    private static Function<CustomPacketPayload, @Nullable Object> toClient;
+    private static Function<CustomPacketPayload, List<Object>> toServer;
+    private static Function<CustomPacketPayload, List<Object>> toClient;
 
     private PacketDistributor() {
     }
 
-    /** O canal do mod, depois de registrados os pacotes, e o envelope de cada direção (nulo: grande demais). */
-    public static void bind(SimpleChannel simpleChannel, Function<CustomPacketPayload, @Nullable Object> serverbound,
-            Function<CustomPacketPayload, @Nullable Object> clientbound) {
+    /**
+     * O canal do mod, depois de registrados os pacotes, e as mensagens de cada direção para um payload (o envelope
+     * inteiro ou as partes; vazio: grande demais até em partes).
+     */
+    public static void bind(SimpleChannel simpleChannel, Function<CustomPacketPayload, List<Object>> serverbound,
+            Function<CustomPacketPayload, List<Object>> clientbound) {
         channel = simpleChannel;
         toServer = serverbound;
         toClient = clientbound;
@@ -47,15 +51,14 @@ public final class PacketDistributor {
         }
     }
 
-    private static void send(@Nullable Object envelope,
+    private static void send(List<Object> messages,
             net.minecraftforge.network.PacketDistributor.@Nullable PacketTarget target) {
-        if (envelope == null) {
-            return;
-        }
-        if (target == null) {
-            channel().sendToServer(envelope);
-        } else {
-            channel().send(target, envelope);
+        for (Object message : messages) {
+            if (target == null) {
+                channel().sendToServer(message);
+            } else {
+                channel().send(target, message);
+            }
         }
     }
 

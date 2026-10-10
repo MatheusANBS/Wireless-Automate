@@ -26,9 +26,12 @@ import org.slf4j.Logger;
  * escritos e medidos, e o Forge recebe esse mesmo menu.
  *
  * <p><b>Tamanho:</b> o Forge recusa dados de abertura acima de 32600 bytes com uma exceção (o NeoForge 1.21
- * divide o pacote). Acima do teto, se quem abre deu uma versão reduzida ({@code reducedWriter}), ela vai na
- * abertura e o resto chega logo depois pelos pacotes de {@code followUp} (o mesmo caminho das atualizações da
- * tela). Sem versão reduzida, ou se nem ela cabe, a tela não abre e fica um aviso no log.
+ * divide o pacote). Toda tela cujos dados podem crescer dá uma versão reduzida ({@code reducedWriter}) que cabe
+ * no teto por construção (só o cabeçalho e o que tem tamanho limitado): se os dados completos passam do teto, ela
+ * vai na abertura e o resto chega logo depois pelos pacotes de {@code followUp} (o mesmo caminho das atualizações
+ * da tela, que vão em partes quando passam do teto de um pacote). As outras telas abrem com dados de tamanho fixo.
+ * Nenhuma tela deixa de abrir por tamanho; uma versão reduzida acima do teto é erro de programação
+ * ({@link IllegalStateException}).
  */
 public final class ServerMenus {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -38,13 +41,15 @@ public final class ServerMenus {
     private ServerMenus() {
     }
 
+    /** Tela com dados de abertura de tamanho fixo (sem versão reduzida). */
     public static void openMenu(ServerPlayer player, MenuProvider provider,
             Consumer<RegistryFriendlyByteBuf> extraDataWriter) {
         openMenu(player, provider, extraDataWriter, null, id -> List.of());
     }
 
     /**
-     * @param reducedWriter dados menores para quando os completos passam de {@link #MAX_OPEN_DATA}, ou nulo
+     * @param reducedWriter dados que cabem no teto por construção, para quando os completos passam de
+     *                      {@link #MAX_OPEN_DATA}; nulo só se os completos têm tamanho fixo
      * @param followUp      pacotes que completam a tela aberta com os dados reduzidos (recebe o {@code containerId})
      */
     public static void openMenu(ServerPlayer player, MenuProvider provider,
@@ -62,11 +67,14 @@ public final class ServerMenus {
         boolean reduced = false;
         if (data.readableBytes() > MAX_OPEN_DATA) {
             int full = data.readableBytes();
-            data = reducedWriter == null ? null : write(reducedWriter);
-            if (data == null || data.readableBytes() > MAX_OPEN_DATA) {
-                LOGGER.warn("Tela {} não abriu para {}: dados de abertura com {} bytes passam do teto de {}",
-                        provider.getDisplayName().getString(), player.getScoreboardName(), full, MAX_OPEN_DATA);
-                return;
+            if (reducedWriter == null) {
+                throw new IllegalStateException("Tela " + provider.getDisplayName().getString()
+                        + " sem versão reduzida com " + full + " bytes de abertura (teto " + MAX_OPEN_DATA + ")");
+            }
+            data = write(reducedWriter);
+            if (data.readableBytes() > MAX_OPEN_DATA) {
+                throw new IllegalStateException("Versão reduzida da tela " + provider.getDisplayName().getString()
+                        + " com " + data.readableBytes() + " bytes passa do teto de " + MAX_OPEN_DATA);
             }
             reduced = true;
         }

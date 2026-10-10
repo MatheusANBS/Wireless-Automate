@@ -264,10 +264,16 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         send(action, key, -1);
     }
 
+    /**
+     * Manda a ação. Porte 1.20.1: um tipo com referência (chave grande, ou o substituto sem NBT de uma enorme) vai
+     * pela referência, sem mandar o NBT de volta ({@link StorageActionPayload#ref()}).
+     */
     private void send(StorageActionPayload.Action action, @Nullable Object key, int slot) {
         if (!preview) {
-            PacketDistributor.sendToServer(new StorageActionPayload(menu.containerId, storageKind(), action,
-                    Optional.ofNullable(key), slot));
+            int ref = key == null ? 0 : view().ref(key);
+            PacketDistributor.sendToServer(ref > 0
+                    ? new StorageActionPayload(menu.containerId, storageKind(), action, Optional.empty(), slot, ref)
+                    : new StorageActionPayload(menu.containerId, storageKind(), action, Optional.ofNullable(key), slot));
         }
     }
 
@@ -379,6 +385,9 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                         : String.valueOf(key);
                 lines.add(Component.literal(id).withStyle(ChatFormatting.DARK_GRAY));
             }
+        }
+        if (view().truncated(key)) {
+            lines.add(tr("truncated").withStyle(ChatFormatting.GOLD));
         }
         lines.add(amountLine(view().count(key)).copy().withStyle(ChatFormatting.AQUA));
         lines.add(tr(items() ? "click.hint" : "click.hint.tank").withStyle(ChatFormatting.DARK_GRAY));
@@ -724,6 +733,9 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int cy = y + GRID_Y + (i / cols) * CELL;
             renderKey(g, key, cx, cy, trim);
             drawCount(g, view().count(key), cx, cy);
+            if (view().truncated(key)) {
+                drawTruncatedMark(g, cx, cy);
+            }
         }
         Object hovered = keyAt(mouseX, mouseY);
         if (hovered != null || inGrid(mouseX, mouseY) && !menu.getCarried().isEmpty()) {
@@ -804,6 +816,17 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         int tx = (cx + 16) * 2 - font.width(text) - 1;
         int ty = (cy + 16) * 2 - 8;
         g.drawString(font, text, tx, ty, COUNT_TEXT, true);
+        g.pose().popPose();
+    }
+
+    /**
+     * Porte 1.20.1: marca de um tipo que chegou sem o NBT (grande demais para a tela; a dica explica): um "*" no
+     * canto de cima, à esquerda, acima do item como a quantidade.
+     */
+    private void drawTruncatedMark(GuiGraphics g, int cx, int cy) {
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 200);
+        g.drawString(font, "*", cx, cy - 1, GuiPaint.WARN, true);
         g.pose().popPose();
     }
 

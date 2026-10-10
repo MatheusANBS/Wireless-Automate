@@ -14,9 +14,13 @@ import java.util.Optional;
  * não dependem de tipo), no formato do armazenamento ({@link ListKind}); {@code slot} é o índice do
  * slot do inventário no menu, nas ações de rodinha sobre um slot ({@code -1} nas outras). O servidor
  * confere o menu aberto, a distância, se o tipo existe e se o slot é do menu.
+ *
+ * <p>Porte 1.20.1: {@code ref} &gt; 0 manda o tipo pela referência que o servidor deu a ele na lista
+ * ({@link io.github.matheusanbs.wirelessautomate.menu.StorageListView.Entry#ref()}), no lugar da chave: uma chave
+ * grande (NBT enorme) não volta ao servidor, e a que a tela recebeu sem o NBT (o substituto) também age.
  */
-public record StorageActionPayload(int containerId, StorageKind kind, Action action, Optional<Object> key, int slot)
-        implements CustomPacketPayload {
+public record StorageActionPayload(int containerId, StorageKind kind, Action action, Optional<Object> key, int slot,
+        int ref) implements CustomPacketPayload {
     public enum Action {
         /** Baú: uma pilha do tipo para o cursor (ou completa a do cursor). Tanques: enche o recipiente do cursor com o tipo. */
         TAKE_STACK,
@@ -54,12 +58,33 @@ public record StorageActionPayload(int containerId, StorageKind kind, Action act
         this(containerId, kind, action, key, -1);
     }
 
+    public StorageActionPayload(int containerId, StorageKind kind, Action action, Optional<Object> key, int slot) {
+        this(containerId, kind, action, key, slot, 0);
+    }
+
+    /** A ação sobre o tipo de referência {@code ref} (sem a chave). */
+    public static StorageActionPayload byRef(int containerId, StorageKind kind, Action action, int ref) {
+        return new StorageActionPayload(containerId, kind, action, Optional.empty(), -1, ref);
+    }
+
+    public StorageActionPayload {
+        if (ref < 0 || ref > 0 && key.isPresent()) {
+            throw new IllegalArgumentException("Chave e referência juntas, ou referência inválida: " + ref);
+        }
+    }
+
     private static void write(RegistryFriendlyByteBuf buf, StorageActionPayload payload) {
         buf.writeVarInt(payload.containerId);
         buf.writeEnum(payload.kind);
         buf.writeEnum(payload.action);
-        buf.writeBoolean(payload.key.isPresent());
-        payload.key.ifPresent(key -> ListKind.of(payload.kind).codec.encode(buf, key));
+        // 0: sem tipo; 1: a chave; 2: a referência.
+        if (payload.ref > 0) {
+            buf.writeVarInt(2);
+            buf.writeVarInt(payload.ref);
+        } else {
+            buf.writeVarInt(payload.key.isPresent() ? 1 : 0);
+            payload.key.ifPresent(key -> ListKind.of(payload.kind).codec.encode(buf, key));
+        }
         buf.writeVarInt(payload.slot + 1);
     }
 
@@ -70,9 +95,23 @@ public record StorageActionPayload(int containerId, StorageKind kind, Action act
             throw new DecoderException("Armazenamento sem lista: " + kind);
         }
         Action action = buf.readEnum(Action.class);
-        Optional<Object> key = buf.readBoolean() ? Optional.of(ListKind.of(kind).codec.decode(buf)) : Optional.empty();
+        int form = buf.readVarInt();
+        Optional<Object> key = Optional.empty();
+        int ref = 0;
+        switch (form) {
+            case 0 -> {
+            }
+            case 1 -> key = Optional.of(ListKind.of(kind).codec.decode(buf));
+            case 2 -> {
+                ref = buf.readVarInt();
+                if (ref <= 0) {
+                    throw new DecoderException("Referência inválida: " + ref);
+                }
+            }
+            default -> throw new DecoderException("Forma de tipo inválida: " + form);
+        }
         int slot = buf.readVarInt() - 1;
-        return new StorageActionPayload(containerId, kind, action, key, slot);
+        return new StorageActionPayload(containerId, kind, action, key, slot, ref);
     }
 
     @Override

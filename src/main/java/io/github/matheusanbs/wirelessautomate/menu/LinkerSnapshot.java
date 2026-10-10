@@ -111,6 +111,18 @@ public record LinkerSnapshot(
         return null;
     }
 
+    /**
+     * Porte 1.20.1: a versão da abertura quando a inteira passa do teto do Forge ({@code ServerMenus}). Das redes
+     * (a lista não tem limite), só a ativa, para o nome dela aparecer já na abertura; o resto tem tamanho limitado
+     * (a prévia vai até {@link #MAX_DOTS} pontos). O estado inteiro chega logo depois ({@code LinkerSnapshotPayload}).
+     */
+    public LinkerSnapshot reduced() {
+        NetworkEntry entry = activeEntry();
+        return new LinkerSnapshot(entry == null ? List.of() : List.of(entry), active, unlink, tabs, available, mode,
+                first, second, otherDimension, inside, already, unloadedChunks, routers, problem, maxVolume,
+                maxDistance, outcome);
+    }
+
     /** Monta o estado da tela para o jogador e o Vinculador na mão dele. Só no servidor. */
     public static LinkerSnapshot capture(ServerPlayer player, ItemStack stack, @Nullable Outcome outcome) {
         NetworkSavedData data = NetworkSavedData.get(player.server);

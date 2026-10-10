@@ -67,6 +67,32 @@ public final class GuiText {
         return shown * 10;
     }
 
+    /** Como {@link #wrap}, com cada linha centrada em {@code centerX}. Devolve a altura usada. */
+    public static int wrapCentered(GuiGraphics g, Font font, Component text, int centerX, int y, int width, int maxLines,
+            int color) {
+        if (width <= 0 || maxLines <= 0) {
+            return 0;
+        }
+        List<FormattedCharSequence> lines = font.split(text, width);
+        int shown = Math.min(lines.size(), maxLines);
+        boolean cut = lines.size() > maxLines;
+        for (int i = 0; i < shown; i++) {
+            FormattedCharSequence line = cut && i == shown - 1
+                    ? GuiPaint.ellipsize(font, Component.literal(remainder(font, text, width, i)), width)
+                    : lines.get(i);
+            GuiPaint.text(g, font, line, centerX - font.width(line) / 2, y + i * 10, color);
+        }
+        if (cut) {
+            CLIPS.add(new Clip(centerX - width / 2, y - 1, width, maxLines * 10 + 1, text));
+        }
+        return shown * 10;
+    }
+
+    /** Quantas linhas o texto ocupa na quebra em {@code width}, no máximo {@code maxLines}. */
+    public static int lineCount(Font font, Component text, int width, int maxLines) {
+        return width <= 0 ? 0 : Math.min(font.split(text, width).size(), maxLines);
+    }
+
     /** O texto a partir da linha {@code line} da quebra (para abreviar a última linha visível). */
     private static String remainder(Font font, Component text, int width, int line) {
         String plain = text.getString();

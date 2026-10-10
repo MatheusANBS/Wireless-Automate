@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -250,7 +251,10 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
-    /** Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. */
+    /**
+     * Soma o que o nó moveu como origem. Chamado pelo motor, uma vez por visita que moveu algo. Pode
+     * dar a volta no {@code long}: as telas só usam a diferença entre amostras ({@link RateMath}).
+     */
     public void addMoved(ResourceType type, long amount) {
         moved[type.ordinal()] += amount;
     }

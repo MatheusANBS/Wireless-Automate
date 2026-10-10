@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
@@ -620,9 +621,7 @@ public class RouterMenu extends AbstractContainerMenu {
             long total = router.moved(type);
             long delta = total - sampleTotals[i];
             sampleTotals[i] = total;
-            long rate = type.ratePerTick()
-                    ? (delta + elapsed / 2) / elapsed
-                    : (delta * 20 + elapsed / 2) / elapsed;
+            long rate = RateMath.rate(delta, elapsed, type.ratePerTick());
             if (rate != sentThroughput[i]) {
                 sentThroughput[i] = rate;
                 changed = true;

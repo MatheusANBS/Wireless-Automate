@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -131,7 +132,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         }
 
         // variação: por tick na Bateria, por segundo no Tanque de Source
-        long rate = source() ? menu.rate() * 20 : menu.rate();
+        long rate = source() ? RateMath.perSecond(menu.rate()) : menu.rate();
         Component flow = rate > 0 ? tr("charging", RateFormat.abbreviate(rate))
                 : rate < 0 ? tr("draining", RateFormat.abbreviate(-rate))
                 : tr("idle");

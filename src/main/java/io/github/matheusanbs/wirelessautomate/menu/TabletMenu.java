@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
@@ -500,7 +501,7 @@ public class TabletMenu extends AbstractContainerMenu {
                 moved = true;
                 Totals network = totalsOf(totals, entry.network(type));
                 if (network != null) {
-                    network.moved[t] += delta;
+                    network.moved[t] = RateMath.add(network.moved[t], delta);
                 }
             }
         }
@@ -681,8 +682,7 @@ public class TabletMenu extends AbstractContainerMenu {
             ResourceType[] types = ResourceType.values();
             long[] rates = new long[types.length];
             for (int t = 0; t < types.length; t++) {
-                long perTick = types[t].ratePerTick() ? moved[t] : moved[t] * 20;
-                rates[t] = (perTick + elapsed / 2) / elapsed;
+                rates[t] = RateMath.rate(moved[t], elapsed, types[t].ratePerTick());
             }
             return rates;
         }

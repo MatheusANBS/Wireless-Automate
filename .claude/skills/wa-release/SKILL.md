@@ -24,7 +24,7 @@ Se a release e os dois changelogs da versão atual já existem e o que mudou des
 
 ## Arquivos
 
-1. **`gradle.properties`:** `mod_version` e, se o escopo mudou, `mod_description`. Nunca suba `neo_version` (é a mínima exigida e precisa continuar 21.1.251, a do ATM10).
+1. **`gradle.properties`:** `mod_version` e, se o escopo mudou, `mod_description`. Nunca suba `neo_version` (é a mínima exigida e precisa continuar 21.1.248, a mais antiga que o dono usa; o ATM10 traz a 21.1.251).
 2. **Changelog separado:** `docs/curseforge/changelog-<versão>.md`, em inglês, com o público do CurseForge em mente:
    - primeira linha com o resumo da versão;
    - blocos em negrito por tema ("**Ars Nouveau Source** (optional, needs …)"), bullets curtos com números reais (vazões e capacidades da config padrão);

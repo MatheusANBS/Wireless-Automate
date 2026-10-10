@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
@@ -1622,7 +1623,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             int sleeping = 0;
             for (NetworkView n : snapshot().networks()) {
                 TabletSnapshot.TypeStats s = n.type(t);
-                rate += s.rate();
+                rate = RateMath.add(rate, s.rate());
                 sources += s.sources();
                 destinations += s.destinations();
                 sleeping += s.sleeping();

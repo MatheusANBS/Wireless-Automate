@@ -107,4 +107,4 @@ Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChem
 - **Primeiro build:** leva uns 4 minutos (baixa e decompila o Minecraft). O erro `Failed to load properties from file: server.properties` no `runGameTestServer` é normal. Os GameTests rodam em `run/gametest`, com o mundo apagado a cada rodada.
 - **Wrapper:** `gradle-wrapper.properties` usa `validateDistributionUrl=false`, porque a validação falha atrás do proxy do ambiente na nuvem.
 - **Commits:** sem linhas de atribuição (`Co-Authored-By`, `Claude-Session`) e com o autor do dono; o repositório é público.
-- **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O `neo_version` vira a versão **mínima** exigida no `neoforge.mods.toml`: não suba além da que o ATM10 usa (hoje 21.1.251), senão o mod não carrega no pack. O plugin ModDevGradle fica no `build.gradle`.
+- **Versões:** NeoForge, Parchment e mod ficam no `gradle.properties`. O `neo_version` vira a versão **mínima** exigida no `neoforge.mods.toml`: não suba: hoje é 21.1.248 (a de um pack do dono; o ATM10 traz a 21.1.251), senão o mod não carrega nesses packs. O plugin ModDevGradle fica no `build.gradle`.

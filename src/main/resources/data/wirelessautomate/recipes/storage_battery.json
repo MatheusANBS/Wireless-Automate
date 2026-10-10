@@ -21,7 +21,7 @@
     }
   },
   "result": {
-    "id": "wirelessautomate:storage_battery",
+    "item": "wirelessautomate:storage_battery",
     "count": 1
   }
 }

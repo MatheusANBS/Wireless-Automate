@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "allthemodium"
     }
   ],
@@ -14,20 +14,20 @@
   ],
   "key": {
     "I": {
-      "tag": "c:ingots/vibranium"
+      "tag": "forge:ingots/vibranium"
     },
     "A": {
-      "tag": "c:ingots/vibranium_allthemodium_alloy"
+      "tag": "forge:ingots/vibranium_allthemodium_alloy"
     },
     "B": {
-      "tag": "c:storage_blocks/vibranium"
+      "tag": "forge:storage_blocks/vibranium"
     },
     "C": {
       "item": "wirelessautomate:tier_core_allthemodium"
     }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_vibranium",
+    "item": "wirelessautomate:tier_core_vibranium",
     "count": 1
   }
 }

@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "allthemodium"
     }
   ],
@@ -14,20 +14,20 @@
   ],
   "key": {
     "I": {
-      "tag": "c:ingots/unobtainium"
+      "tag": "forge:ingots/unobtainium"
     },
     "A": {
-      "tag": "c:ingots/unobtainium_vibranium_alloy"
+      "tag": "forge:ingots/unobtainium_vibranium_alloy"
     },
     "B": {
-      "tag": "c:storage_blocks/unobtainium"
+      "tag": "forge:storage_blocks/unobtainium"
     },
     "C": {
       "item": "wirelessautomate:tier_core_vibranium"
     }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_unobtainium",
+    "item": "wirelessautomate:tier_core_unobtainium",
     "count": 1
   }
 }

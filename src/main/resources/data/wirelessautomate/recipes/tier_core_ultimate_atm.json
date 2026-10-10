@@ -1,13 +1,13 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "allthemodium"
     },
     {
-      "type": "neoforge:not",
+      "type": "forge:not",
       "value": {
-        "type": "neoforge:mod_loaded",
+        "type": "forge:mod_loaded",
         "modid": "allthetweaks"
       }
     }
@@ -34,7 +34,7 @@
     }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_ultimate",
+    "item": "wirelessautomate:tier_core_ultimate",
     "count": 1
   }
 }

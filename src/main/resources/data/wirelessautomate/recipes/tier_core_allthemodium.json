@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "allthemodium"
     }
   ],
@@ -14,17 +14,17 @@
   ],
   "key": {
     "I": {
-      "tag": "c:ingots/allthemodium"
+      "tag": "forge:ingots/allthemodium"
     },
     "B": {
-      "tag": "c:storage_blocks/allthemodium"
+      "tag": "forge:storage_blocks/allthemodium"
     },
     "C": {
       "item": "wirelessautomate:tier_core_emerald"
     }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_allthemodium",
+    "item": "wirelessautomate:tier_core_allthemodium",
     "count": 1
   }
 }

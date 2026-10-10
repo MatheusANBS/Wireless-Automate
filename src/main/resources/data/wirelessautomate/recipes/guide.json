@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "guideme"
     }
   ],
@@ -16,10 +16,10 @@
     }
   ],
   "result": {
-    "id": "guideme:guide",
+    "item": "guideme:guide",
     "count": 1,
-    "components": {
-      "guideme:guide_id": "wirelessautomate:guide"
+    "nbt": {
+      "guideId": "wirelessautomate:guide"
     }
   }
 }

@@ -11,7 +11,7 @@
       "item": "minecraft:iron_ingot"
     },
     "G": {
-      "tag": "c:glass_blocks"
+      "tag": "forge:glass"
     },
     "B": {
       "item": "minecraft:bucket"
@@ -21,7 +21,7 @@
     }
   },
   "result": {
-    "id": "wirelessautomate:storage_tank",
+    "item": "wirelessautomate:storage_tank",
     "count": 1
   }
 }

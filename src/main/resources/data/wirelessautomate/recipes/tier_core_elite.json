@@ -12,7 +12,7 @@
     "A": { "item": "wirelessautomate:tier_core_advanced" }
   },
   "result": {
-    "id": "wirelessautomate:tier_core_elite",
+    "item": "wirelessautomate:tier_core_elite",
     "count": 1
   }
 }

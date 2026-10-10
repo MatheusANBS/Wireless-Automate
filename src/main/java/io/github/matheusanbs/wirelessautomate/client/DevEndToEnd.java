@@ -178,7 +178,11 @@ public final class DevEndToEnd {
     private static final String OTHER_NETWORK = "E2E Outra";
     private static final String ENERGY_NETWORK = "E2E Energia";
     private static final String NODE_NAME = "Baú B E2E";
-    private static final String TAG_RULE = "#c:stones";
+    /**
+     * Porte 1.20.1: as tags comuns são {@code forge:} (a {@code c:stones} do main não existe). A busca digita o id
+     * inteiro ({@code forge:stone}): só "stone" lista mais tags do que cabem e a linha fica fora da tela.
+     */
+    private static final String TAG_RULE = "#forge:stone";
     /** Altura de uma linha da lista de redes da {@link RouterScreen}. */
     private static final int DROPDOWN_ROW = 12;
     private static final long STEP_TIMEOUT_MS = 20_000;
@@ -516,7 +520,7 @@ public final class DevEndToEnd {
                 () -> filterScreen().tab() == FilterScreen.Tab.TAGS && filterScreen().tagSearchBox().isFocused()
                         && filterScreen().tagSearchBox().isVisible(),
                 () -> "aba " + filterScreen().tab()));
-        list.add(new Step("filtro: buscar a tag", STEP_TIMEOUT_MS, () -> type(TAG_RULE.substring(3)),
+        list.add(new Step("filtro: buscar a tag", STEP_TIMEOUT_MS, () -> type(TAG_RULE.substring(1)),
                 () -> filterScreen().candidateLabels().contains(TAG_RULE),
                 () -> "linhas " + filterScreen().candidateLabels() + ", busca '" + filterScreen().tagSearchBox().getValue()
                         + "', foco " + filterScreen().getFocused() + ", tags do registro "

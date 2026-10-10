@@ -12,7 +12,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Tanque de Source: Source em {@code long} ({@link ScalarStore}). Para o roteador, a {@link BulkSource};
- * para o Ars, a {@code ISourceCap} e o provider do {@code SourceManager} ({@code compat/arsnouveau}).
+ * para o Ars, o {@code ISourceTile} (porte 1.20.1: a subclasse {@code ArsStorage.SourceTank}, criada pelo
+ * {@link Sources#newSourceTank} quando o Ars está presente) e o provider do {@code SourceManager}
+ * ({@code compat/arsnouveau}).
  * O nível da coluna ({@link StorageSourceTankBlock#FILL}) acompanha o conteúdo, e o estado do bloco só
  * muda quando o nível muda.
  */
@@ -79,7 +81,7 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
 
     /**
      * A {@link BulkSource} (para o roteador, em {@code long}). Porte 1.20.1: o lado do Ars (D5, o
-     * {@code ISourceTile}) é da tarefa 8, em {@code compat/arsnouveau}.
+     * {@code ISourceTile}) é a subclasse {@code ArsStorage.SourceTank}, não uma capability.
      */
     @Override
     protected @Nullable Object exposed(Capability<?> capability) {

@@ -4,7 +4,9 @@ import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsSources;
 import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import java.util.function.Function;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,8 +22,7 @@ public final class Sources {
     /**
      * Porte 1.20.1 (Ars 4.12, D5, sem capability de Source): o {@code ISourceTile} de um block entity (como
      * {@code Object}, ou {@code null} se não for um), ou a função {@code null} sem o Ars. O
-     * {@code RouterBlockEntity.arsSource} guarda o resultado num {@code CapCache.ofBlockEntity}. (A tarefa 8
-     * implementa {@code ArsSources.sourceTile}.)
+     * {@code RouterBlockEntity.arsSource} guarda o resultado num {@code CapCache.ofBlockEntity}.
      */
     public static @Nullable Function<BlockEntity, @Nullable Object> sourceTile() {
         return LOADED ? ArsSources::sourceTile : null;
@@ -30,6 +31,14 @@ public final class Sources {
     /** Uma visita de uma origem de Source; sem o Ars não há portas de Source. */
     static boolean move(Port source, long now) {
         return LOADED && ScalarTransfer.move(source, now, ArsSources.ACCESS);
+    }
+
+    /**
+     * O block entity do Tanque de Source. Porte 1.20.1 (D5): com o Ars, a subclasse que implementa o
+     * {@code ISourceTile} dele ({@code ArsStorage.SourceTank}); sem ele, o tanque comum.
+     */
+    public static StorageSourceTankBlockEntity newSourceTank(BlockPos pos, BlockState state) {
+        return LOADED ? ArsStorage.newTank(pos, state) : new StorageSourceTankBlockEntity(pos, state);
     }
 
     /** Põe o Tanque de Source no {@code SourceManager} do Ars (as máquinas dele tiram dali); sem o Ars, nada. */

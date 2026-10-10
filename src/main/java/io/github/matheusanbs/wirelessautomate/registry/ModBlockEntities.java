@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
@@ -33,7 +34,7 @@ public final class ModBlockEntities {
                     StorageChemicalTankBlockEntity::new, ModBlocks.STORAGE.get(StorageKind.CHEMICAL_TANK).get()).build(null));
     public static final Supplier<BlockEntityType<StorageSourceTankBlockEntity>> SOURCE_TANK =
             BLOCK_ENTITY_TYPES.register("storage_source_tank", () -> BlockEntityType.Builder.of(
-                    StorageSourceTankBlockEntity::new, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get()).build(null));
+                    Sources::newSourceTank, ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get()).build(null));
 
     private ModBlockEntities() {
     }

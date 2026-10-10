@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -85,7 +86,7 @@ public class StorageBlock extends BaseEntityBlock {
             case TANK -> new StorageTankBlockEntity(pos, state);
             case BATTERY -> new StorageBatteryBlockEntity(pos, state);
             case CHEMICAL_TANK -> new StorageChemicalTankBlockEntity(pos, state);
-            case SOURCE_TANK -> new StorageSourceTankBlockEntity(pos, state);
+            case SOURCE_TANK -> Sources.newSourceTank(pos, state);
         };
     }
 

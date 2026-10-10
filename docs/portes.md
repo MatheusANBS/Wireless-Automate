@@ -63,7 +63,10 @@ O ATM9 é um pack grande e estável, com muito jogador.
 O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou dos mods dessa versão:
 - **Químicos:** o Mekanism 10.4 tem quatro tipos (gás, infusão, pigmento, slurry), cada um com a sua
   capability. O mod os trata como o tipo Químicos, numa fila única de tanques por face (os tanques dos
-  quatro tipos em sequência) e com a vazão somada.
+  quatro tipos em sequência) e com a vazão somada. Destino que tem químicos, mas não o tipo oferecido, é pulado
+  sem dormir; a origem dorme esperando destino e acorda quando ele passa a oferecer o tipo. Provado pelos
+  `ChemicalGameTests` nos quatro tipos (inclusive com uma Câmara de Dissolução Química de verdade, gás entrando e
+  slurry saindo pela mesma face). O exemplo 5x da especificação usa `#forge:ores`.
 - **Source:** o Ars 4.12 não tem capability de Source; o roteador acha o `ISourceTile` pelo block entity.
   Os Relays do Ars 4.12 só ligam em `AbstractSourceMachine`: um mixin (`compat/arsnouveau/mixin`) entrega a
   eles a `RelayView` do Tanque de Source, e eles ligam e transferem nos dois sentidos como no `main`. Origem e

@@ -157,7 +157,7 @@ Redes divididas por fluxo, não por máquina: cria-se uma rede nova quando o mes
 
 | Rede | Tipo | Extrai | Insere |
 | --- | --- | --- | --- |
-| Minério | Itens | Buffer do minerador | Dissolução (`#c:ores`) |
+| Minério | Itens | Buffer do minerador | Dissolução (`#forge:ores`) |
 | Slurries | Químicos | Dissolução e lavadoras | Lavadoras (suja) e cristalizadores (limpa) |
 | Intermediários | Itens | Cada máquina da cadeia | A próxima, filtrada por tag; lingotes vão para o armazenamento |
 | Utilidades | Fluidos e químicos | Separadores, infusores, bomba | Água, O₂, HCl e ácido sulfúrico para os consumidores |

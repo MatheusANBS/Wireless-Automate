@@ -20,6 +20,8 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.netty.buffer.Unpooled;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -32,9 +34,12 @@ import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.registries.ForgeRegistries;
 
 /**
  * Químicos do Mekanism: tanques de químico de teste ({@link ChemicalTestTanks}, um tanque da API
@@ -305,5 +310,323 @@ public final class ChemicalGameTests {
         fill(helper, A, OXYGEN, 1_000);
         GameTestCompat.assertValueEqual(helper, tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ os quatro tipos (porte 1.20.1, etapa 2)
+
+    /** Índices dos subtipos em {@code Chemicals.capabilities()} (gás, infusão, pigmento, slurry). */
+    private static final int GAS = 0;
+    private static final int INFUSION = 1;
+    private static final int PIGMENT = 2;
+    private static final int SLURRY = 3;
+    private static final BlockPos C = new BlockPos(2, 1, 0);
+    private static final BlockPos D = new BlockPos(0, 1, 2);
+    private static final ResourceLocation SULFURIC_ACID = new ResourceLocation("mekanism", "sulfuric_acid");
+    private static final ResourceLocation CARBON_INFUSION = new ResourceLocation("mekanism", "carbon");
+    private static final ResourceLocation BLACK_PIGMENT = new ResourceLocation("mekanism", "black");
+    private static final ResourceLocation BLUE_PIGMENT = new ResourceLocation("mekanism", "blue");
+    private static final ResourceLocation DIRTY_IRON = new ResourceLocation("mekanism", "dirty_iron");
+    private static final ResourceLocation CLEAN_IRON = new ResourceLocation("mekanism", "clean_iron");
+    /** Uma origem que já dormiu várias vezes seguidas tem o próximo sono pelo menos assim (ticks), como no WakeGameTests. */
+    private static final int DEEP_SLEEP = 32;
+
+    /** Falha (não passa) sem os tanques de teste: este namespace só roda na run de químicos, que os liga. */
+    private static boolean needsTestTanks(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.fail("precisa do Mekanism e de -Dwirelessautomate.chemicalTests=true (run gameTestServerChemicals)");
+            return false;
+        }
+        return true;
+    }
+
+    private static void assertSubtype(GameTestHelper helper, ResourceLocation chemical, int subtype) {
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.subtypeOf(chemical), subtype, "subtipo de " + chemical);
+    }
+
+    private static void waitRegistered(GameTestHelper helper, RouterBlockEntity... routers) {
+        for (RouterBlockEntity router : routers) {
+            helper.assertTrue(NetworkManager.get().contains(router), "roteador não registrado");
+        }
+    }
+
+    private static long stored(GameTestHelper helper, BlockPos pos, ResourceLocation chemical) {
+        return ChemicalTestSupport.stored(helper.absolutePos(pos), chemical);
+    }
+
+    /** Pigmento (um químico que não é gás nem infusão) anda entre tanques de teste, pela capability de pigmento. */
+    @GameTest(template = "empty")
+    public static void pigmentMovesBetweenTanks(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        assertSubtype(helper, BLACK_PIGMENT, PIGMENT);
+        UUID network = newNetwork(helper, "teste-quimico-pigmento");
+        RouterBlockEntity source = tank(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> fill(helper, A, BLACK_PIGMENT, 2_000))
+                .thenWaitUntil(() -> {
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, BLACK_PIGMENT), 2_000L, "pigmento no destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, BLACK_PIGMENT), 0L, "pigmento na origem");
+                })
+                .thenSucceed();
+    }
+
+    /** Slurry anda entre tanques de teste, pela capability de slurry. */
+    @GameTest(template = "empty")
+    public static void slurryMovesBetweenTanks(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        assertSubtype(helper, DIRTY_IRON, SLURRY);
+        UUID network = newNetwork(helper, "teste-quimico-slurry");
+        RouterBlockEntity source = tank(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> fill(helper, A, DIRTY_IRON, 2_000))
+                .thenWaitUntil(() -> {
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, DIRTY_IRON), 2_000L, "slurry no destino");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, DIRTY_IRON), 0L, "slurry na origem");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Tanque Químico com gás e slurry: cada capability vê só o seu tipo (o {@code IGasHandler} mostra o hidrogênio e um
+     * tanque vazio, o {@code ISlurryHandler} a slurry e um vazio, os outros dois só o vazio), e o roteador tira os dois
+     * pela mesma face, cada um para o destino do seu tipo (um tanque de teste só de gás, outro só de slurry).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chemicalTankGasAndSlurryBySeparateCapabilities(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-tanque-quimico-gas-slurry");
+        StorageChemicalTankBlockEntity from = chemicalTank(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity source = GameTestCompat.getBlockEntity(helper, A.above());
+        RouterBlockEntity gasTarget = tank(helper, B, network, PortMode.INSERT);
+        ChemicalTestSupport.exposeOnly(helper.absolutePos(B), GAS);
+        RouterBlockEntity slurryTarget = tank(helper, C, network, PortMode.INSERT);
+        ChemicalTestSupport.exposeOnly(helper.absolutePos(C), SLURRY);
+        GameTestCompat.assertValueEqual(helper, from.storage().insert(HYDROGEN, 2_000, false), 2_000L, "hidrogênio no tanque");
+        GameTestCompat.assertValueEqual(helper, from.storage().insert(DIRTY_IRON, 3_000, false), 3_000L, "slurry no tanque");
+
+        var level = helper.getLevel();
+        BlockPos tankPos = helper.absolutePos(A);
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.tanksSeenBy(level, tankPos, GAS),
+                Arrays.asList(HYDROGEN, null), "o IGasHandler do tanque");
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.tanksSeenBy(level, tankPos, SLURRY),
+                Arrays.asList(DIRTY_IRON, null), "o ISlurryHandler do tanque");
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.tanksSeenBy(level, tankPos, INFUSION),
+                Collections.singletonList((ResourceLocation) null), "o IInfusionHandler do tanque");
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.tanksSeenBy(level, tankPos, PIGMENT),
+                Collections.singletonList((ResourceLocation) null), "o IPigmentHandler do tanque");
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, gasTarget, slurryTarget))
+                .thenWaitUntil(() -> {
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, HYDROGEN), 2_000L, "hidrogênio no destino de gás");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, C, DIRTY_IRON), 3_000L, "slurry no destino de slurry");
+                    helper.assertTrue(from.storage().isEmpty(), "o Tanque Químico não esvaziou");
+                })
+                .thenExecute(() -> {
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, DIRTY_IRON), 0L, "slurry no destino só de gás");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, C, HYDROGEN), 0L, "gás no destino só de slurry");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Encher e esvaziar um tanque do Mekanism (item, que expõe as quatro capabilities) pelo Tanque Químico, o caminho
+     * da tela ({@link Chemicals#fillContainer}, {@link Chemicals#emptyContainer}), com um químico de cada tipo. O tanque
+     * do Mekanism guarda um tipo por vez: cheio de gás, não aceita slurry. O tanque básico passa no máximo 1.000 mB por
+     * operação (o limite de vazão do item no Mekanism; no {@code main} também: cada clique da tela é uma operação).
+     */
+    @GameTest(template = "empty")
+    public static void chemicalTankFillsAndEmptiesMekanismTankByType(GameTestHelper helper) {
+        if (!Chemicals.LOADED) {
+            helper.fail("precisa do Mekanism (run gameTestServerChemicals)");
+            return;
+        }
+        helper.setBlock(A, ModBlocks.STORAGE.get(StorageKind.CHEMICAL_TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.BASIC));
+        StorageChemicalTankBlockEntity tank = GameTestCompat.getBlockEntity(helper, A);
+        var storage = tank.storage();
+        ItemStack container = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation("mekanism", "basic_chemical_tank")));
+        helper.assertTrue(!container.isEmpty(), "sem o item mekanism:basic_chemical_tank");
+        for (int subtype = GAS; subtype <= SLURRY; subtype++) {
+            helper.assertTrue(ChemicalTestSupport.itemExposes(container, subtype), "o tanque do Mekanism sem a capability " + subtype);
+        }
+        List<ResourceLocation> chemicals = List.of(HYDROGEN, REDSTONE_INFUSION, BLACK_PIGMENT, DIRTY_IRON);
+        for (int subtype = GAS; subtype <= SLURRY; subtype++) {
+            ResourceLocation id = chemicals.get(subtype);
+            assertSubtype(helper, id, subtype);
+            GameTestCompat.assertValueEqual(helper, storage.insert(id, 1_000, false), 1_000L, "no Tanque Químico: " + id);
+            GameTestCompat.assertValueEqual(helper, Chemicals.fillContainer(container, storage, id), 1_000L, "encher com " + id);
+            GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.itemAmount(container, id), 1_000L, "no item: " + id);
+            GameTestCompat.assertValueEqual(helper, storage.count(id), 0L, "sobrou no Tanque Químico: " + id);
+            GameTestCompat.assertValueEqual(helper, Chemicals.emptyContainer(container, storage), 1_000L, "esvaziar " + id);
+            GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.itemAmount(container, id), 0L, "ficou no item: " + id);
+            GameTestCompat.assertValueEqual(helper, storage.count(id), 1_000L, "voltou ao Tanque Químico: " + id);
+        }
+        // Com gás no item, a slurry não entra (o tanque do Mekanism é de um tipo por vez) e nada sai do Tanque Químico.
+        GameTestCompat.assertValueEqual(helper, Chemicals.fillContainer(container, storage, HYDROGEN), 1_000L, "encher de novo com gás");
+        GameTestCompat.assertValueEqual(helper, Chemicals.fillContainer(container, storage, DIRTY_IRON), 0L, "slurry num item com gás");
+        GameTestCompat.assertValueEqual(helper, storage.count(DIRTY_IRON), 1_000L, "slurry no Tanque Químico");
+        helper.succeed();
+    }
+
+    /**
+     * Máquina real do Mekanism (Câmara de Dissolução Química) com a face de cima configurada como entrada de gás (o
+     * padrão dela) e saída de slurry (mudada pela configuração de lados): o roteador nessa face, em entrada e saída,
+     * põe ácido sulfúrico na câmara e tira a slurry dela, pela mesma face; o proxy do Mekanism aplica a regra por tipo
+     * (o ácido não volta a sair, a slurry não entra).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void mekanismMachineFaceTakesGasAndGivesSlurry(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        Block chamberBlock = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("mekanism", "chemical_dissolution_chamber"));
+        helper.assertTrue(chamberBlock != null && chamberBlock != Blocks.AIR, "sem a Câmara de Dissolução Química");
+        UUID network = newNetwork(helper, "teste-quimico-maquina");
+        helper.setBlock(A, chamberBlock);
+        BlockEntity chamber = helper.getBlockEntity(A);
+        var level = helper.getLevel();
+        BlockPos chamberPos = helper.absolutePos(A);
+        helper.assertTrue(ChemicalTestSupport.tanksSeenBy(level, chamberPos, GAS) != null, "a face de cima não recebe gás");
+        helper.assertTrue(ChemicalTestSupport.tanksSeenBy(level, chamberPos, SLURRY) == null, "slurry na face de cima antes de configurar");
+        ChemicalTestSupport.setSideData(chamber, "SLURRY", "OUTPUT", Direction.UP);
+        helper.assertTrue(ChemicalTestSupport.tanksSeenBy(level, chamberPos, SLURRY) != null, "a face de cima não dá slurry");
+        GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.fillMachineTank(chamber, 0, DIRTY_IRON, 1_000), 0L,
+                "sobra ao pôr slurry na câmara");
+        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity machine = GameTestCompat.getBlockEntity(helper, A.above());
+        machine.setNetworkId(network);
+        machine.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.BOTH);
+        RouterBlockEntity gasSource = tank(helper, B, network, PortMode.EXTRACT);
+        RouterBlockEntity slurryTarget = tank(helper, C, network, PortMode.INSERT);
+        ChemicalTestSupport.exposeOnly(helper.absolutePos(C), SLURRY);
+        fill(helper, B, SULFURIC_ACID, 1_000);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, machine, gasSource, slurryTarget))
+                .thenWaitUntil(() -> {
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, SULFURIC_ACID), 1_000L,
+                            "ácido na câmara");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, C, DIRTY_IRON), 1_000L, "slurry no destino");
+                })
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, SULFURIC_ACID), 0L, "ácido de volta na origem");
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, SULFURIC_ACID), 1_000L,
+                            "ácido saiu da câmara");
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, DIRTY_IRON), 0L,
+                            "slurry na câmara");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Destino sem o tipo: a origem tem slurry e o único destino é um tanque só de gás. Ele é pulado sem dormir, nada
+     * anda e a origem dorme esperando destino (ofereceu algo que o filtro do destino aceitaria). Quando o destino passa
+     * a expor slurry (sem trocar de block entity, com o aviso aos vizinhos de uma máquina do Mekanism que muda o lado),
+     * a origem acorda na hora (só quem espera destino acorda: uma origem vazia continuaria no sono fundo) e a slurry
+     * entra.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void destinationWithoutTypeIsSkippedAndSourceWaits(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-quimico-sem-tipo");
+        RouterBlockEntity source = tank(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        BlockPos targetPos = helper.absolutePos(B);
+        ChemicalTestSupport.exposeOnly(targetPos, GAS);
+        fill(helper, A, DIRTY_IRON, 1_000);
+        long[] exposedAt = {0};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> {
+                    int interval = NetworkManager.get().sourceSleepInterval(source, ResourceType.CHEMICAL, Direction.UP);
+                    helper.assertTrue(interval >= DEEP_SLEEP, "a origem ainda não dorme fundo: próximo sono de " + interval);
+                })
+                .thenExecute(() -> {
+                    GameTestCompat.assertValueEqual(helper, stored(helper, B, DIRTY_IRON), 0L, "slurry no destino só de gás");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, DIRTY_IRON), 1_000L, "slurry na origem");
+                    ChemicalTestSupport.exposeAlso(helper.getLevel(), targetPos, SLURRY);
+                    exposedAt[0] = helper.getTick();
+                    GameTestCompat.assertValueEqual(helper,
+                            NetworkManager.get().sourceSleepInterval(source, ResourceType.CHEMICAL, Direction.UP), 1,
+                            "próximo sono da origem, que esperava destino");
+                })
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, stored(helper, B, DIRTY_IRON), 1_000L,
+                        "slurry no destino"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - exposedAt[0] < 10,
+                        "a origem demorou " + (helper.getTick() - exposedAt[0]) + " ticks para entregar"))
+                .thenSucceed();
+    }
+
+    /**
+     * Filtro por químico com os quatro tipos: a origem (muitos tanques, dois químicos de cada tipo) tem lista branca
+     * com um id de cada tipo, e só esses quatro vão para o Tanque Químico; os outros quatro ficam. Trocada por
+     * {@code @mekanism}, os outros também vão.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void chemicalFilterByIdAndModWithFourTypes(GameTestHelper helper) {
+        if (!needsTestTanks(helper)) {
+            return;
+        }
+        List<ResourceLocation> picked = List.of(HYDROGEN, REDSTONE_INFUSION, BLACK_PIGMENT, DIRTY_IRON);
+        List<ResourceLocation> others = List.of(OXYGEN, CARBON_INFUSION, BLUE_PIGMENT, CLEAN_IRON);
+        for (int subtype = GAS; subtype <= SLURRY; subtype++) {
+            assertSubtype(helper, picked.get(subtype), subtype);
+            assertSubtype(helper, others.get(subtype), subtype);
+        }
+        UUID network = newNetwork(helper, "teste-quimico-filtro-quatro");
+        BlockPos machine = helper.absolutePos(A);
+        ChemicalTestSupport.reset(machine);
+        helper.setBlock(A, ChemicalTestTanks.MANY_TANKS_BLOCK.get());
+        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+        RouterBlockEntity source = GameTestCompat.getBlockEntity(helper, A.above());
+        source.setNetworkId(network);
+        source.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.EXTRACT);
+        for (int subtype = GAS; subtype <= SLURRY; subtype++) {
+            // Tanques diferentes por químico (o 0 e o 5 de cada tipo).
+            GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.fillTank(machine, 0, picked.get(subtype), 1_000), 0L, "sobra");
+            GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.fillTank(machine, 5, others.get(subtype), 1_000), 0L, "sobra");
+        }
+        source.setFilter(ResourceType.CHEMICAL, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false, List.of(
+                new FilterEntry.ChemicalEntry(HYDROGEN, 0), new FilterEntry.ChemicalEntry(REDSTONE_INFUSION, 0),
+                new FilterEntry.ChemicalEntry(BLACK_PIGMENT, 0), new FilterEntry.ChemicalEntry(DIRTY_IRON, 0))));
+        StorageChemicalTankBlockEntity target = chemicalTank(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+        RouterBlockEntity targetRouter = GameTestCompat.getBlockEntity(helper, B.above());
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, targetRouter))
+                .thenWaitUntil(() -> {
+                    for (ResourceLocation id : picked) {
+                        GameTestCompat.assertValueEqual(helper, target.storage().count(id), 1_000L, "no destino: " + id);
+                    }
+                })
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    for (ResourceLocation id : others) {
+                        GameTestCompat.assertValueEqual(helper, target.storage().count(id), 0L, "o filtro deixou passar " + id);
+                    }
+                    source.setFilter(ResourceType.CHEMICAL, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
+                            List.of(new FilterEntry.ModEntry("mekanism", 0))));
+                })
+                .thenWaitUntil(() -> {
+                    for (ResourceLocation id : others) {
+                        GameTestCompat.assertValueEqual(helper, target.storage().count(id), 1_000L, "pelo @mekanism: " + id);
+                    }
+                })
+                .thenSucceed();
     }
 }

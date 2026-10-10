@@ -383,13 +383,7 @@ public final class RouterChunkLoader {
 
     // ------------------------------------------------------------------ carga do mundo
 
-    /**
-     * Ao carregar o mundo, antes de reativar os tickets salvos: tira os de roteadores que não
-     * existem mais ou não têm mais o upgrade, os que sobraram de antes de girar o roteador e todos,
-     * se o upgrade está desligado. Ler o block entity carrega o chunk dele, que o ticket carregaria
-     * de qualquer jeito. O limite por jogador é conferido quando cada roteador carrega.
-     */
-    /** Registra a validação dos tickets salvos (no setup comum do mod). */
+    /** Registra a validação dos tickets salvos ({@link #validateTickets}), no setup comum do mod. */
     public static void registerValidation() {
         ForgeChunkManager.setForcedChunkLoadingCallback(WirelessAutomate.MODID, RouterChunkLoader::validateTickets);
     }
@@ -404,6 +398,12 @@ public final class RouterChunkLoader {
         }
     }
 
+    /**
+     * Ao carregar o mundo, antes de reativar os tickets salvos: tira os de roteadores que não
+     * existem mais ou não têm mais o upgrade, os que sobraram de antes de girar o roteador e todos,
+     * se o upgrade está desligado. Ler o block entity carrega o chunk dele, que o ticket carregaria
+     * de qualquer jeito. O limite por jogador é conferido quando cada roteador carrega.
+     */
     private static void validateTickets(ServerLevel level, TicketHelper helper) {
         boolean enabled = enabled();
         helper.getBlockTickets().forEach((pos, tickets) -> {

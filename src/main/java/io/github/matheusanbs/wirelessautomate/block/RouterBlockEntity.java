@@ -125,6 +125,8 @@ public class RouterBlockEntity extends BlockEntity {
     private final CapCache<Object>[][] chemicalCaches = new CapCache[CHEMICAL_SUBTYPES][FACES];
     /** Source do Ars Nouveau (o block entity da máquina, sem capability no Ars 4.12); como {@code Object}. */
     private final CapCache<Object>[] sourceCaches = newCaches();
+    /** Todos os vetores de caches acima, para percorrer sem alocar (os caches não criados ficam {@code null}). */
+    private final CapCache<?>[][] allCaches = allCaches();
     private @Nullable Direction cacheFacing;
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
@@ -251,12 +253,10 @@ public class RouterBlockEntity extends BlockEntity {
         if (level == null) {
             return;
         }
-        // Porte 1.20.1: o Forge não invalida capability quando o block entity da máquina aparece, some ou
-        // muda de lados; o aviso do vizinho invalida os caches (a consulta seguinte busca de novo e, se o
-        // cache já tinha entregado algo, o motor acorda a porta da face, como no NeoForge).
-        invalidateCaches();
         Block block = level.getBlockState(machinePos()).getBlock();
         if (block != machineBlock) {
+            // Porte 1.20.1: bloco novo, todos os caches (inclusive os negativos) buscam de novo.
+            invalidateCaches();
             machineBlock = block;
             machineChanged();
             if (!level.isClientSide) {
@@ -264,6 +264,11 @@ public class RouterBlockEntity extends BlockEntity {
                 // troca não invalide nenhuma capability já consultada.
                 NetworkManager.get().wake(this);
             }
+        } else if (!level.isClientSide) {
+            // Porte 1.20.1: o Forge não avisa quando o block entity da máquina aparece, some ou é trocado.
+            // Mesmo bloco: só os caches cujo block entity mudou ficam sujos (e avisam o motor, como o
+            // BlockCapabilityCache do NeoForge); só o estado mudou (fornalha acesa): nada, nem acordar.
+            revalidateCaches(level.getBlockEntity(machinePos()));
         }
     }
 
@@ -731,17 +736,9 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
-    /** Os vetores de caches do roteador (os caches ainda não criados ficam {@code null} neles). */
-    private List<CapCache<?>[]> cacheArrays() {
-        List<CapCache<?>[]> arrays = new ArrayList<>(List.of(itemCaches, bulkItemCaches, bulkEnergyCaches,
-                bulkFluidCaches, bulkSourceCaches, fluidCaches, energyCaches, sourceCaches));
-        arrays.addAll(Arrays.asList(chemicalCaches));
-        return arrays;
-    }
-
-    /** Marca todos os caches sujos (a máquina pode ter mudado); os que já entregaram algo avisam o motor. */
+    /** Marca todos os caches sujos (o bloco da máquina mudou); os que já entregaram algo avisam o motor. */
     private void invalidateCaches() {
-        for (CapCache<?>[] caches : cacheArrays()) {
+        for (CapCache<?>[] caches : allCaches) {
             for (CapCache<?> cache : caches) {
                 if (cache != null) {
                     cache.invalidate();
@@ -750,9 +747,20 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
+    /** {@link CapCache#revalidate} em cada cache: só os de block entity diferente de {@code current} ficam sujos. */
+    private void revalidateCaches(@Nullable BlockEntity current) {
+        for (CapCache<?>[] caches : allCaches) {
+            for (CapCache<?> cache : caches) {
+                if (cache != null) {
+                    cache.revalidate(current);
+                }
+            }
+        }
+    }
+
     /** Descarta os caches (girado ou removido), tirando os listeners deles dos {@code LazyOptional}. */
     private void clearCaches() {
-        for (CapCache<?>[] caches : cacheArrays()) {
+        for (CapCache<?>[] caches : allCaches) {
             for (int i = 0; i < caches.length; i++) {
                 if (caches[i] != null) {
                     caches[i].close();
@@ -761,6 +769,14 @@ public class RouterBlockEntity extends BlockEntity {
             }
         }
         cacheFacing = null;
+    }
+
+    private CapCache<?>[][] allCaches() {
+        CapCache<?>[][] fixed = {itemCaches, bulkItemCaches, bulkEnergyCaches, bulkFluidCaches, bulkSourceCaches,
+                fluidCaches, energyCaches, sourceCaches};
+        CapCache<?>[][] all = Arrays.copyOf(fixed, fixed.length + chemicalCaches.length);
+        System.arraycopy(chemicalCaches, 0, all, fixed.length, chemicalCaches.length);
+        return all;
     }
 
     @SuppressWarnings("unchecked")

@@ -39,6 +39,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -116,6 +117,8 @@ public final class DevScreenshot {
 
     private static RouterScreen screen;
     private static int ticks;
+    /** Tiques contados só sem a tela de carregamento por cima. */
+    private static int ready;
     private static int mouseX = -1;
     private static int mouseY = -1;
 
@@ -191,7 +194,7 @@ public final class DevScreenshot {
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps(), coverSteps())
+                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -947,6 +950,55 @@ public final class DevScreenshot {
         pose.popPose();
     }
 
+    // ------------------------------------------------------------------ roda do Configurador
+
+    /** A roda desenhada sobre a tela de título ({@code WA_SCREENSHOT_ONLY=roda}). */
+    private static @Nullable ConfiguratorWheelScreen wheelScreen;
+    private static boolean wheelGallery = ONLY != null && ONLY.startsWith("roda");
+
+    /**
+     * Roda do Configurador em escala de GUI 2 e 3: sem nada sob o mouse, com o mouse num modo e num tipo
+     * (o centro mostra o nome e a descrição). Modo atual Área (qualquer máquina) e tipo atual Itens, para
+     * aparecerem os contornos de destaque. Com {@code WA_SCREENSHOT_LANG=pt_br}, em português.
+     */
+    private static List<Step> wheelSteps() {
+        List<Step> steps = new ArrayList<>();
+        for (int scale : new int[] {2, 3}) {
+            steps.add(new Step(() -> {
+                linkerScreen = null;
+                tabletScreen = null;
+                filterScreen = null;
+                spinGallery = blockGallery = coverGallery = false;
+                wheelGallery = true;
+                Minecraft minecraft = Minecraft.getInstance();
+                minecraft.options.guiScale().set(scale);
+                minecraft.resizeDisplay();
+                wheelScreen = new ConfiguratorWheelScreen();
+                wheelScreen.choose(wheelScreen.hitOf(PasteMode.AREA_ANY));
+                wheelScreen.choose(wheelScreen.hitOf(ResourceType.ITEM));
+                mouseX = mouseY = -1;
+            }, "roda-g" + scale + "-centro"));
+            steps.add(new Step(() -> wheelMouse(WheelLayout.Ring.INNER, PasteMode.AREA_ANY.ordinal()),
+                    "roda-g" + scale + "-modo"));
+            steps.add(new Step(() -> wheelMouse(WheelLayout.Ring.OUTER, wheelScreen.types().size() - 1),
+                    "roda-g" + scale + "-tipo"));
+        }
+        return steps;
+    }
+
+    /** Mouse no meio da fatia {@code index} do anel {@code ring}. */
+    private static void wheelMouse(WheelLayout.Ring ring, int index) {
+        Minecraft minecraft = Minecraft.getInstance();
+        int width = minecraft.getWindow().getGuiScaledWidth();
+        int height = minecraft.getWindow().getGuiScaledHeight();
+        if (wheelScreen.width != width || wheelScreen.height != height) {
+            wheelScreen.init(minecraft, width, height);
+        }
+        int[] point = wheelScreen.pointOf(new WheelLayout.Hit(ring, index));
+        mouseX = point[0];
+        mouseY = point[1];
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -955,6 +1007,22 @@ public final class DevScreenshot {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
+        if (wheelGallery && wheelScreen != null) {
+            if (wheelScreen.width != title.width || wheelScreen.height != title.height) {
+                wheelScreen.init(minecraft, title.width, title.height);
+            }
+            event.getGuiGraphics().flush();
+            RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+            wheelScreen.render(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
+            if (GuiText.clipCount() > 0) {
+                WirelessAutomate.LOGGER.warn("Roda: {} texto(s) cortado(s)", GuiText.clipCount());
+            }
+            drawCursor(event.getGuiGraphics());
+            return;
+        }
+        if (wheelGallery) {
+            return;
+        }
         if (spinGallery || blockGallery || coverGallery) {
             event.getGuiGraphics().flush();
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
@@ -1009,15 +1077,26 @@ public final class DevScreenshot {
             minecraft.getWindow().setWindowed(1280, 800);
             // sem options.txt o jogo abre a tela de acessibilidade no lugar da de título (como no e2e)
             minecraft.options.onboardAccessibility = false;
+            String language = System.getenv("WA_SCREENSHOT_LANG");
+            if (language != null) {
+                // só nesta sessão: o options.txt não é salvo
+                minecraft.getLanguageManager().setSelected(language);
+                minecraft.reloadResourcePacks();
+            }
         }
+        if (minecraft.getOverlay() != null) {
+            return; // carregando recursos (a troca de idioma acima): os passos esperam
+        }
+        ready++;
         if (minecraft.screen instanceof AccessibilityOnboardingScreen) {
             // a flag acima chega tarde quando a tela já foi escolhida: troca pela de título
             minecraft.setScreen(new TitleScreen(true));
         }
-        if (screen == null && !spinGallery && !blockGallery && !coverGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
+        if (screen == null && !spinGallery && !blockGallery && !coverGallery && !wheelGallery
+                || ready < 60 || ready % STEP_TICKS != 0) {
             return;
         }
-        int step = (ticks - 60) / STEP_TICKS;
+        int step = (ready - 60) / STEP_TICKS;
         // o último quadro mostra o estado do passo anterior: salva, depois prepara o próximo
         if (step > 0) {
             save(minecraft, SEQUENCE.get(step - 1).file());

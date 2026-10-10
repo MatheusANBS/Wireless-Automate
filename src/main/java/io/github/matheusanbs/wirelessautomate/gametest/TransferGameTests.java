@@ -20,13 +20,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -56,7 +56,7 @@ public final class TransferGameTests {
         helper.setBlock(machine, machineState);
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         return router;
     }
@@ -68,7 +68,7 @@ public final class TransferGameTests {
     }
 
     private static ChestBlockEntity chestAt(GameTestHelper helper, BlockPos pos) {
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Item item) {
@@ -84,7 +84,7 @@ public final class TransferGameTests {
     }
 
     private static void assertCount(GameTestHelper helper, BlockPos pos, Item item, int expected) {
-        helper.assertValueEqual(count(helper, pos, item), expected, item + " em " + pos.toShortString());
+        GameTestCompat.assertValueEqual(helper, count(helper, pos, item), expected, item + " em " + pos.toShortString());
     }
 
     private static void waitRegistered(GameTestHelper helper, RouterBlockEntity... routers) {
@@ -102,8 +102,8 @@ public final class TransferGameTests {
         chestAt(helper, A).setItem(5, new ItemStack(Items.COBBLESTONE, 5));
 
         helper.onEachTick(() -> {
-            helper.assertValueEqual(count(helper, A, Items.DIAMOND) + count(helper, B, Items.DIAMOND), 10, "diamantes");
-            helper.assertValueEqual(count(helper, A, Items.COBBLESTONE) + count(helper, B, Items.COBBLESTONE), 5, "pedregulho");
+            GameTestCompat.assertValueEqual(helper, count(helper, A, Items.DIAMOND) + count(helper, B, Items.DIAMOND), 10, "diamantes");
+            GameTestCompat.assertValueEqual(helper, count(helper, A, Items.COBBLESTONE) + count(helper, B, Items.COBBLESTONE), 5, "pedregulho");
         });
         helper.succeedWhen(() -> {
             assertCount(helper, B, Items.DIAMOND, 10);
@@ -185,16 +185,16 @@ public final class TransferGameTests {
         target.setItem(7, new ItemStack(Items.COBBLESTONE, 62));
         chestAt(helper, A).setItem(0, new ItemStack(Items.COBBLESTONE, 30));
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 count(helper, A, Items.COBBLESTONE) + count(helper, B, Items.COBBLESTONE), 152, "pedregulho"));
         helper.succeedWhen(() -> {
             assertCount(helper, A, Items.COBBLESTONE, 0);
-            helper.assertValueEqual(target.getItem(3).getCount(), 64, "slot 3");
-            helper.assertValueEqual(target.getItem(7).getCount(), 64, "slot 7");
+            GameTestCompat.assertValueEqual(helper, target.getItem(3).getCount(), 64, "slot 3");
+            GameTestCompat.assertValueEqual(helper, target.getItem(7).getCount(), 64, "slot 7");
             helper.assertTrue(target.getItem(1).is(Items.COBBLESTONE), "slot 1 sem pedregulho");
-            helper.assertValueEqual(target.getItem(1).getCount(), 24, "slot 1");
+            GameTestCompat.assertValueEqual(helper, target.getItem(1).getCount(), 24, "slot 1");
             helper.assertTrue(target.getItem(2).isEmpty(), "slot 2 deveria estar vazio");
-            helper.assertValueEqual(target.getItem(0).getCount(), 64, "terra");
+            GameTestCompat.assertValueEqual(helper, target.getItem(0).getCount(), 64, "terra");
         });
     }
 
@@ -277,19 +277,41 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Tanque de teste em {@code pos} ({@link TestMachines#SIMPLE_TANK}, com {@code water} mB de água), com um
+     * roteador em cima. Porte 1.20.1: no {@code main} os testes de fluido usavam caldeirões, que o NeoForge expõe
+     * como handler de fluido e o Forge 1.20.1 não.
+     */
+    private static RouterBlockEntity simpleTank(GameTestHelper helper, BlockPos pos, int water, @Nullable UUID network) {
+        BlockPos machine = helper.absolutePos(pos);
+        TestMachines.reset(machine);
+        if (water > 0) {
+            TestMachines.simpleTank(machine).fill(new FluidStack(Fluids.WATER, water), IFluidHandler.FluidAction.EXECUTE);
+        }
+        return place(helper, pos, TestMachines.SIMPLE_TANK.get().defaultBlockState(), network);
+    }
+
+    /** Água no tanque de teste em {@code pos}. */
+    private static int water(GameTestHelper helper, BlockPos pos) {
+        FluidStack stored = TestMachines.simpleTank(helper.absolutePos(pos)).getFluid();
+        return stored.getFluid() == Fluids.WATER ? stored.getAmount() : 0;
+    }
+
     @GameTest(template = "empty")
     public static void fluidMovesBetweenCauldrons(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
         UUID network = newNetwork(helper, "teste-fluido");
-        RouterBlockEntity source = place(helper, A,
-                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), network);
+        RouterBlockEntity source = simpleTank(helper, A, 1_000, network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
+        RouterBlockEntity target = simpleTank(helper, B, 0, network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.succeedWhen(() -> {
-            helper.assertBlockPresent(Blocks.CAULDRON, A);
-            helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
-            helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
+            GameTestCompat.assertValueEqual(helper, water(helper, A), 0, "água na origem");
+            GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino");
         });
     }
 
@@ -308,14 +330,14 @@ public final class TransferGameTests {
         BlockPos machine = helper.absolutePos(A);
         TestMachines.reset(machine);
         TestMachines.bigSlot(machine).set(Items.COBBLESTONE, 10_000);
-        RouterBlockEntity source = place(helper, A, TestMachines.BIG_SLOT.defaultBlockState(), network);
+        RouterBlockEntity source = place(helper, A, TestMachines.BIG_SLOT.get().defaultBlockState(), network);
         helper.setBlock(A.above(), helper.getBlockState(A.above()).setValue(RouterBlock.TIER, RouterTier.ELITE));
         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
         int capacity = 27 * 64;
         long[] started = new long[1];
 
-        helper.onEachTick(() -> helper.assertValueEqual(TestMachines.bigSlot(machine).count() + count(helper, B, Items.COBBLESTONE),
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count() + count(helper, B, Items.COBBLESTONE),
                 10_000, "pedregulho"));
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
@@ -324,7 +346,7 @@ public final class TransferGameTests {
                 .thenExecute(() -> {
                     long ticks = helper.getTick() - started[0];
                     helper.assertTrue(ticks <= 10, "baú levou " + ticks + " ticks para encher: o slot não repetiu");
-                    helper.assertValueEqual(TestMachines.bigSlot(machine).count(), 10_000 - capacity, "na origem");
+                    GameTestCompat.assertValueEqual(helper, TestMachines.bigSlot(machine).count(), 10_000 - capacity, "na origem");
                 })
                 .thenSucceed();
     }
@@ -352,9 +374,9 @@ public final class TransferGameTests {
                 .thenWaitUntil(() -> assertCount(helper, B, Items.COBBLESTONE, 4 * 64 + 10))
                 .thenExecute(() -> {
                     for (int slot = 0; slot < 4; slot++) {
-                        helper.assertValueEqual(destination.getItem(slot).getCount(), 64, "slot " + slot);
+                        GameTestCompat.assertValueEqual(helper, destination.getItem(slot).getCount(), 64, "slot " + slot);
                     }
-                    helper.assertValueEqual(destination.getItem(4).getCount(), 10, "slot 4");
+                    GameTestCompat.assertValueEqual(helper, destination.getItem(4).getCount(), 10, "slot 4");
                     helper.assertTrue(destination.getItem(5).isEmpty(), "slot 5 vazio");
                     assertCount(helper, A, Items.COBBLESTONE, 0);
                 })
@@ -372,17 +394,16 @@ public final class TransferGameTests {
         BlockPos machine = helper.absolutePos(A);
         TestMachines.reset(machine);
         TestMachines.manyTanks(machine).set(18, new FluidStack(Fluids.WATER, 1_000));
-        RouterBlockEntity source = place(helper, A, TestMachines.MANY_TANKS.defaultBlockState(), network);
+        RouterBlockEntity source = place(helper, A, TestMachines.MANY_TANKS.get().defaultBlockState(), network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
+        RouterBlockEntity target = simpleTank(helper, B, 0, network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
                 .thenWaitUntil(() -> {
-                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
-                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
-                    helper.assertValueEqual(TestMachines.manyTanks(machine).amount(18), 0, "tanque 18");
+                    GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino");
+                    GameTestCompat.assertValueEqual(helper, TestMachines.manyTanks(machine).amount(18), 0, "tanque 18");
                 })
                 .thenSucceed();
     }
@@ -401,18 +422,15 @@ public final class TransferGameTests {
         BlockPos machine = helper.absolutePos(A);
         TestMachines.reset(machine);
         TestMachines.liveTank(machine).set(new FluidStack(Fluids.WATER, 1_000));
-        RouterBlockEntity source = place(helper, A, TestMachines.LIVE_TANK.defaultBlockState(), network);
+        RouterBlockEntity source = place(helper, A, TestMachines.LIVE_TANK.get().defaultBlockState(), network);
         source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity target = place(helper, B, Blocks.CAULDRON.defaultBlockState(), network);
+        RouterBlockEntity target = simpleTank(helper, B, 0, network);
         target.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.liveTank(machine).amount(), 0, "tanque vivo"))
-                .thenExecute(() -> {
-                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
-                    helper.assertBlockProperty(B, LayeredCauldronBlock.LEVEL, 3);
-                })
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, TestMachines.liveTank(machine).amount(), 0, "tanque vivo"))
+                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, water(helper, B), 1_000, "água no destino"))
                 .thenSucceed();
     }
 

@@ -22,17 +22,15 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.RegistryOps;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -41,16 +39,16 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.TagsUpdatedEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.event.TagsUpdatedEvent;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -65,7 +63,7 @@ public final class FilterGameTests {
     private static final BlockPos B = new BlockPos(2, 1, 2);
     private static final BlockPos C = new BlockPos(2, 1, 0);
     private static final BlockPos D = new BlockPos(0, 1, 2);
-    private static final ResourceLocation LOGS = ResourceLocation.withDefaultNamespace("logs");
+    private static final ResourceLocation LOGS = new ResourceLocation("logs");
 
     private static UUID newNetwork(GameTestHelper helper, String name) {
         return NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
@@ -76,7 +74,7 @@ public final class FilterGameTests {
         helper.setBlock(machine, machineState);
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         return router;
     }
@@ -90,7 +88,7 @@ public final class FilterGameTests {
     }
 
     private static ChestBlockEntity chestAt(GameTestHelper helper, BlockPos pos) {
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Predicate<ItemStack> which) {
@@ -106,7 +104,7 @@ public final class FilterGameTests {
     }
 
     private static void assertCount(GameTestHelper helper, BlockPos pos, Item item, int expected) {
-        helper.assertValueEqual(count(helper, pos, stack -> stack.is(item)), expected, item + " em " + pos.toShortString());
+        GameTestCompat.assertValueEqual(helper, count(helper, pos, stack -> stack.is(item)), expected, item + " em " + pos.toShortString());
     }
 
     private static void waitRegistered(GameTestHelper helper, RouterBlockEntity... routers) {
@@ -137,7 +135,7 @@ public final class FilterGameTests {
 
     private static ItemStack named(Item item, int count) {
         ItemStack stack = new ItemStack(item, count);
-        stack.set(DataComponents.CUSTOM_NAME, Component.literal("Joia"));
+        stack.setHoverName(Component.literal("Joia"));
         return stack;
     }
 
@@ -152,7 +150,7 @@ public final class FilterGameTests {
 
         for (Filter empty : new Filter[] {Filter.EMPTY, blacklist()}) {
             helper.assertTrue(empty.testItem(stone) && empty.testFluid(lava), "sem entradas não passou tudo");
-            helper.assertValueEqual(empty.itemStock(stone), 0L, "estoque sem entradas");
+            GameTestCompat.assertValueEqual(helper, empty.itemStock(stone), 0L, "estoque sem entradas");
         }
 
         Filter exact = whitelist(item(Items.DIAMOND));
@@ -186,18 +184,18 @@ public final class FilterGameTests {
 
         Filter stocked = whitelist(new FilterEntry.TagEntry(LOGS, 5), item(new ItemStack(Items.OAK_LOG), 9),
                 item(new ItemStack(Items.DIAMOND), 3));
-        helper.assertValueEqual(stocked.itemStock(log), 5L, "estoque da primeira entrada que casa");
-        helper.assertValueEqual(stocked.itemStock(diamond), 3L, "estoque do exato");
-        helper.assertValueEqual(stocked.itemStock(stone), 0L, "estoque de quem não casa");
-        helper.assertValueEqual(stocked.withListMode(Filter.ListMode.BLACKLIST).itemStock(log), 0L,
+        GameTestCompat.assertValueEqual(helper, stocked.itemStock(log), 5L, "estoque da primeira entrada que casa");
+        GameTestCompat.assertValueEqual(helper, stocked.itemStock(diamond), 3L, "estoque do exato");
+        GameTestCompat.assertValueEqual(helper, stocked.itemStock(stone), 0L, "estoque de quem não casa");
+        GameTestCompat.assertValueEqual(helper, stocked.withListMode(Filter.ListMode.BLACKLIST).itemStock(log), 0L,
                 "estoque em lista negra");
 
         Filter fluids = whitelist(new FilterEntry.FluidEntry(water, 0));
         helper.assertTrue(fluids.testFluid(water) && !fluids.testFluid(lava), "fluido exato");
         helper.assertTrue(!fluids.testItem(diamond), "entrada de fluido casou com item");
-        Filter waterTag = whitelist(new FilterEntry.TagEntry(ResourceLocation.withDefaultNamespace("water"), 250));
+        Filter waterTag = whitelist(new FilterEntry.TagEntry(new ResourceLocation("water"), 250));
         helper.assertTrue(waterTag.testFluid(water) && !waterTag.testFluid(lava), "tag de fluido");
-        helper.assertValueEqual(waterTag.fluidStock(water), 250L, "estoque de fluido");
+        GameTestCompat.assertValueEqual(helper, waterTag.fluidStock(water), 250L, "estoque de fluido");
         helper.succeed();
     }
 
@@ -296,11 +294,11 @@ public final class FilterGameTests {
         chestAt(helper, C).setItem(0, new ItemStack(Items.DIAMOND, 5));
         chestAt(helper, C).setItem(1, named(Items.DIAMOND, 2));
 
-        Predicate<ItemStack> isJewel = stack -> stack.has(DataComponents.CUSTOM_NAME);
+        Predicate<ItemStack> isJewel = stack -> stack.hasCustomHoverName();
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, strict, strictTarget, loose, looseTarget))
                 .thenWaitUntil(() -> {
-                    helper.assertValueEqual(count(helper, B, isJewel), 2, "nomeados no destino");
+                    GameTestCompat.assertValueEqual(helper, count(helper, B, isJewel), 2, "nomeados no destino");
                     assertCount(helper, D, Items.DIAMOND, 7);
                 })
                 .thenIdle(10)
@@ -429,22 +427,44 @@ public final class FilterGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Tanque de teste em {@code pos} ({@link TestMachines#SIMPLE_TANK}, com {@code content}), com um roteador em
+     * cima. Porte 1.20.1: no {@code main} este teste usava caldeirões, que o NeoForge expõe como handler de fluido e
+     * o Forge 1.20.1 não.
+     */
+    private static RouterBlockEntity simpleTank(GameTestHelper helper, BlockPos pos, FluidStack content, UUID network) {
+        BlockPos machine = helper.absolutePos(pos);
+        TestMachines.reset(machine);
+        if (!content.isEmpty()) {
+            TestMachines.simpleTank(machine).fill(content, IFluidHandler.FluidAction.EXECUTE);
+        }
+        return place(helper, pos, TestMachines.SIMPLE_TANK.get().defaultBlockState(), network);
+    }
+
+    private static int amount(GameTestHelper helper, BlockPos pos, net.minecraft.world.level.material.Fluid fluid) {
+        FluidStack stored = TestMachines.simpleTank(helper.absolutePos(pos)).getFluid();
+        return stored.getFluid() == fluid ? stored.getAmount() : 0;
+    }
+
     @GameTest(template = "empty")
     public static void fluidFilterOnCauldrons(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
         UUID waterNetwork = newNetwork(helper, "filtro-agua");
-        RouterBlockEntity water = place(helper, A,
-                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), waterNetwork);
+        RouterBlockEntity water = simpleTank(helper, A, new FluidStack(Fluids.WATER, 1_000), waterNetwork);
         water.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
         water.setFilter(ResourceType.FLUID, Direction.UP,
                 whitelist(new FilterEntry.FluidEntry(new FluidStack(Fluids.WATER, 1), 0)));
-        RouterBlockEntity waterTarget = place(helper, B, Blocks.CAULDRON.defaultBlockState(), waterNetwork);
+        RouterBlockEntity waterTarget = simpleTank(helper, B, FluidStack.EMPTY, waterNetwork);
         waterTarget.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         // A lava sai livre, mas o destino só aceita água.
         UUID lavaNetwork = newNetwork(helper, "filtro-lava");
-        RouterBlockEntity lava = place(helper, C, Blocks.LAVA_CAULDRON.defaultBlockState(), lavaNetwork);
+        RouterBlockEntity lava = simpleTank(helper, C, new FluidStack(Fluids.LAVA, 1_000), lavaNetwork);
         lava.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity lavaTarget = place(helper, D, Blocks.CAULDRON.defaultBlockState(), lavaNetwork);
+        RouterBlockEntity lavaTarget = simpleTank(helper, D, FluidStack.EMPTY, lavaNetwork);
         lavaTarget.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
         lavaTarget.setFilter(ResourceType.FLUID, Direction.UP,
                 whitelist(new FilterEntry.FluidEntry(new FluidStack(Fluids.WATER, 1), 0)));
@@ -452,20 +472,19 @@ public final class FilterGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, water, waterTarget, lava, lavaTarget))
                 .thenWaitUntil(() -> {
-                    helper.assertBlockPresent(Blocks.CAULDRON, A);
-                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
+                    GameTestCompat.assertValueEqual(helper, amount(helper, A, Fluids.WATER), 0, "água na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, B, Fluids.WATER), 1_000, "água no destino");
                 })
                 .thenIdle(20)
                 .thenExecute(() -> {
-                    helper.assertBlockPresent(Blocks.LAVA_CAULDRON, C);
-                    helper.assertBlockPresent(Blocks.CAULDRON, D);
+                    GameTestCompat.assertValueEqual(helper, amount(helper, C, Fluids.LAVA), 1_000, "lava na origem");
+                    GameTestCompat.assertValueEqual(helper, amount(helper, D, Fluids.LAVA), 0, "lava no destino");
                 })
                 .thenSucceed();
     }
 
     @GameTest(template = "empty")
     public static void filterSurvivesSaveLoadAndConfigurator(GameTestHelper helper) {
-        RegistryAccess registries = helper.getLevel().registryAccess();
         RouterBlockEntity node = place(helper, A, Blocks.CHEST.defaultBlockState(), null);
         RouterBlockEntity target = place(helper, B, Blocks.CHEST.defaultBlockState(), null);
         Filter itemFilter = filter(Filter.ListMode.BLACKLIST, true, item(named(Items.DIAMOND, 1), 3),
@@ -476,23 +495,23 @@ public final class FilterGameTests {
         node.setFilter(ResourceType.FLUID, Direction.NORTH, fluidFilter);
 
         // Block entity.
-        CompoundTag saved = node.saveWithoutMetadata(registries);
+        CompoundTag saved = node.saveWithoutMetadata();
         RouterBlockEntity copy = new RouterBlockEntity(node.getBlockPos(), node.getBlockState());
-        copy.loadWithComponents(saved, registries);
-        helper.assertValueEqual(copy.face(ResourceType.ITEM, Direction.UP).filter(), itemFilter, "filtro de itens");
-        helper.assertValueEqual(copy.face(ResourceType.FLUID, Direction.NORTH).filter(), fluidFilter, "filtro de fluidos");
+        copy.load(saved);
+        GameTestCompat.assertValueEqual(helper, copy.face(ResourceType.ITEM, Direction.UP).filter(), itemFilter, "filtro de itens");
+        GameTestCompat.assertValueEqual(helper, copy.face(ResourceType.FLUID, Direction.NORTH).filter(), fluidFilter, "filtro de fluidos");
 
         // Tag antiga, sem filtro, e entradas que não leem (item que não existe, tipo desconhecido).
         CompoundTag old = new CompoundTag();
         old.putString("mode", "EXTRACT");
-        FaceConfig parsedOld = FaceConfig.load(old, registries);
-        helper.assertValueEqual(parsedOld.mode(), PortMode.EXTRACT, "modo da tag antiga");
-        helper.assertValueEqual(parsedOld.filter(), Filter.EMPTY, "tag antiga ganhou filtro");
-        CompoundTag withFilter = new FaceConfig().save(registries);
+        FaceConfig parsedOld = FaceConfig.load(old);
+        GameTestCompat.assertValueEqual(helper, parsedOld.mode(), PortMode.EXTRACT, "modo da tag antiga");
+        GameTestCompat.assertValueEqual(helper, parsedOld.filter(), Filter.EMPTY, "tag antiga ganhou filtro");
+        CompoundTag withFilter = new FaceConfig().save();
         helper.assertTrue(withFilter.isEmpty(), "face padrão salvou algo");
         FaceConfig configured = new FaceConfig();
         configured.setFilter(whitelist(item(Items.DIAMOND)));
-        CompoundTag faceTag = configured.save(registries);
+        CompoundTag faceTag = configured.save();
         ListTag entries = faceTag.getCompound("filter").getList("entries", Tag.TAG_COMPOUND);
         CompoundTag missing = new CompoundTag();
         missing.putString("kind", "item");
@@ -501,32 +520,32 @@ public final class FilterGameTests {
         CompoundTag unknown = new CompoundTag();
         unknown.putString("kind", "quimico");
         entries.add(unknown);
-        FaceConfig lenient = FaceConfig.load(faceTag, registries);
-        helper.assertValueEqual(lenient.filter(), whitelist(item(Items.DIAMOND)), "entradas inválidas não foram puladas");
+        FaceConfig lenient = FaceConfig.load(faceTag);
+        GameTestCompat.assertValueEqual(helper, lenient.filter(), whitelist(item(Items.DIAMOND)), "entradas inválidas não foram puladas");
 
         // Preset: codecs com registros.
         RouterPreset preset = RouterPreset.copyOf(node);
-        RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
-        Tag presetTag = RouterPreset.CODEC.encodeStart(ops, preset).getOrThrow();
-        helper.assertValueEqual(RouterPreset.CODEC.parse(ops, presetTag).getOrThrow(), preset, "codec do preset");
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+        DynamicOps<Tag> ops = NbtOps.INSTANCE;
+        Tag presetTag = RouterPreset.CODEC.encodeStart(ops, preset).getOrThrow(false, error -> {});
+        GameTestCompat.assertValueEqual(helper, RouterPreset.CODEC.parse(ops, presetTag).getOrThrow(false, error -> {}), preset, "codec do preset");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
         try {
             RouterPreset.STREAM_CODEC.encode(buf, preset);
-            helper.assertValueEqual(RouterPreset.STREAM_CODEC.decode(buf), preset, "stream codec do preset");
+            GameTestCompat.assertValueEqual(helper, RouterPreset.STREAM_CODEC.decode(buf), preset, "stream codec do preset");
         } finally {
             buf.release();
         }
 
         // Configurador: copia de um roteador e cola no outro.
         @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
         helper.assertTrue(use(player, node, true), "copiar não agiu");
-        helper.assertTrue(configurator.has(ModDataComponents.PRESET.get()), "nada copiado");
+        helper.assertTrue(ModDataComponents.PRESET.has(configurator), "nada copiado");
         helper.assertTrue(use(player, target, false), "colar não agiu");
-        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.UP).filter(), itemFilter, "filtro colado");
-        helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.NORTH).filter(), fluidFilter,
+        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.ITEM, Direction.UP).filter(), itemFilter, "filtro colado");
+        GameTestCompat.assertValueEqual(helper, target.face(ResourceType.FLUID, Direction.NORTH).filter(), fluidFilter,
                 "filtro de fluido colado");
         helper.succeed();
     }

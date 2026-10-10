@@ -14,12 +14,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Testes dentro do jogo. Rodam com {@code ./gradlew runGameTestServer} ou com {@code /test runall}
- * num mundo de dev. A estrutura {@code empty} fica em data/wirelessautomate/structure/empty.nbt.
+ * num mundo de dev. A estrutura {@code empty} fica em data/wirelessautomate/structures/empty.nbt.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -31,7 +31,7 @@ public final class RouterGameTests {
     public static void routerRegistersWithManager(GameTestHelper helper) {
         helper.setBlock(MACHINE, Blocks.CHEST);
         helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity node = helper.getBlockEntity(ROUTER);
+        RouterBlockEntity node = GameTestCompat.getBlockEntity(helper, ROUTER);
 
         // onLoad de block entities recém-colocados roda no tick seguinte, por isso a espera.
         helper.startSequence()
@@ -67,10 +67,10 @@ public final class RouterGameTests {
                 .setValue(RouterBlock.TIER, RouterTier.ELITE));
         BlockPos router = helper.absolutePos(ROUTER);
 
-        helper.assertValueEqual(RouterTier.ELITE.next(), RouterTier.EMERALD, "depois do Elite");
-        helper.assertValueEqual(RouterTier.EMERALD.next(), RouterTier.ULTIMATE, "depois da Esmeralda");
-        helper.assertValueEqual(RouterTier.ULTIMATE.previous(), RouterTier.EMERALD, "antes do Ultimate");
-        helper.assertValueEqual(RouterTier.VIBRANIUM.next(), RouterTier.ULTIMATE, "bloco que ficou no Vibranium");
+        GameTestCompat.assertValueEqual(helper, RouterTier.ELITE.next(), RouterTier.EMERALD, "depois do Elite");
+        GameTestCompat.assertValueEqual(helper, RouterTier.EMERALD.next(), RouterTier.ULTIMATE, "depois da Esmeralda");
+        GameTestCompat.assertValueEqual(helper, RouterTier.ULTIMATE.previous(), RouterTier.EMERALD, "antes do Ultimate");
+        GameTestCompat.assertValueEqual(helper, RouterTier.VIBRANIUM.next(), RouterTier.ULTIMATE, "bloco que ficou no Vibranium");
         helper.assertFalse(RouterTier.ALLTHEMODIUM.loaded(), "Allthemodium carregado sem o mod");
         helper.assertTrue(RouterTier.EMERALD.loaded(), "Esmeralda não carregada");
 
@@ -104,13 +104,13 @@ public final class RouterGameTests {
             chest.set(1_073_741_824L);
             Config.BALANCE_VERSION.set(0);
             helper.assertTrue(Config.migrateBalance() >= 3, "nada migrou");
-            helper.assertValueEqual(elite.get(), 2_048L, "Elite itens/s");
-            helper.assertValueEqual(advanced.get(), 9_999L, "valor do dono mudou");
-            helper.assertValueEqual(basicRange.get(), 64, "alcance do Básico");
-            helper.assertValueEqual(chest.get(), 2_097_152L, "Baú Elite");
-            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+            GameTestCompat.assertValueEqual(helper, elite.get(), 2_048L, "Elite itens/s");
+            GameTestCompat.assertValueEqual(helper, advanced.get(), 9_999L, "valor do dono mudou");
+            GameTestCompat.assertValueEqual(helper, basicRange.get(), 64, "alcance do Básico");
+            GameTestCompat.assertValueEqual(helper, chest.get(), 2_097_152L, "Baú Elite");
+            GameTestCompat.assertValueEqual(helper, Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
             elite.set(131_072L);
-            helper.assertValueEqual(Config.migrateBalance(), 0, "migrou duas vezes");
+            GameTestCompat.assertValueEqual(helper, Config.migrateBalance(), 0, "migrou duas vezes");
         } finally {
             elite.set(ResourceType.ITEM.defaultRate(RouterTier.ELITE.ordinal()));
             advanced.set(ResourceType.ITEM.defaultRate(RouterTier.ADVANCED.ordinal()));

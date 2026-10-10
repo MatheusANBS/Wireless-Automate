@@ -19,13 +19,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Tiers do Allthemodium, num servidor de testes com o Allthemodium e o All The Tweaks na pasta mods
@@ -50,8 +49,8 @@ public final class AtmGameTests {
         RouterTier[] tiers = RouterTier.values();
         for (int i = 0; i < tiers.length - 1; i++) {
             helper.assertTrue(tiers[i].loaded(), "tier não carregado: " + tiers[i]);
-            helper.assertValueEqual(tiers[i].next(), tiers[i + 1], "depois de " + tiers[i]);
-            helper.assertValueEqual(tiers[i + 1].previous(), tiers[i], "antes de " + tiers[i + 1]);
+            GameTestCompat.assertValueEqual(helper, tiers[i].next(), tiers[i + 1], "depois de " + tiers[i]);
+            GameTestCompat.assertValueEqual(helper, tiers[i + 1].previous(), tiers[i], "antes de " + tiers[i + 1]);
         }
         helper.setBlock(MACHINE, Blocks.FURNACE);
         helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
@@ -130,26 +129,26 @@ public final class AtmGameTests {
     }
 
     private static Item item(GameTestHelper helper, String id) {
-        ResourceLocation key = ResourceLocation.parse(id);
+        ResourceLocation key = new ResourceLocation(id);
         if (!BuiltInRegistries.ITEM.containsKey(key)) {
             throw new GameTestAssertException("item não existe: " + id);
         }
         return BuiltInRegistries.ITEM.get(key);
     }
 
-    private static CraftingInput grid(Item... items) {
-        return CraftingInput.of(3, 3, Arrays.stream(items).map(ItemStack::new).toList());
+    private static CraftingContainer grid(Item... items) {
+        return GameTestCompat.craftingInput(3, 3, Arrays.stream(items).map(ItemStack::new).toList());
     }
 
-    private static Optional<RecipeHolder<CraftingRecipe>> find(GameTestHelper helper, CraftingInput input) {
+    private static Optional<CraftingRecipe> find(GameTestHelper helper, CraftingContainer input) {
         return helper.getLevel().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel());
     }
 
-    private static void assertCrafts(GameTestHelper helper, String id, CraftingInput input, Item result) {
-        RecipeHolder<CraftingRecipe> holder = find(helper, input)
+    private static void assertCrafts(GameTestHelper helper, String id, CraftingContainer input, Item result) {
+        CraftingRecipe holder = find(helper, input)
                 .orElseThrow(() -> new GameTestAssertException("nenhuma receita para " + id));
-        helper.assertValueEqual(holder.id(), WirelessAutomate.id(id), "receita");
-        ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
+        GameTestCompat.assertValueEqual(helper, holder.getId(), WirelessAutomate.id(id), "receita");
+        ItemStack out = holder.assemble(input, helper.getLevel().registryAccess());
         helper.assertTrue(out.is(result) && out.getCount() == 1, "resultado de " + id + ": " + out);
     }
 }

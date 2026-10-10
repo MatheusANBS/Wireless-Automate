@@ -25,17 +25,16 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Upgrade de chunk loading: o slot da tela (Shift + clique leva e traz, dono = quem pôs), os tickets
@@ -60,7 +59,7 @@ public final class ChunkLoaderGameTests {
         helper.setBlock(machine, Blocks.CHEST);
         BlockPos pos = machine.relative(facing);
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, facing));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     /** O mesmo com posições absolutas, para montagens fora da área do teste. */
@@ -83,7 +82,7 @@ public final class ChunkLoaderGameTests {
     }
 
     private static void assertState(GameTestHelper helper, RouterBlockEntity router, ChunkLoadState expected, String what) {
-        helper.assertValueEqual(router.chunkLoadState(), expected, what);
+        GameTestCompat.assertValueEqual(helper, router.chunkLoadState(), expected, what);
     }
 
     /** Começo do chunk seguinte (em x) ao da origem da área, 20 blocos acima: fora da área e noutro chunk. */
@@ -94,7 +93,7 @@ public final class ChunkLoaderGameTests {
 
     @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }
@@ -122,11 +121,11 @@ public final class ChunkLoaderGameTests {
                     menu.clicked(hotbar0, 0, ClickType.QUICK_MOVE, player);
                     helper.assertTrue(router.hasChunkUpgrade(), "o upgrade não foi para o roteador");
                     helper.assertTrue(menu.getSlot(hotbar0).getItem().isEmpty(), "o upgrade ficou no inventário");
-                    helper.assertValueEqual(router.upgradeOwner(), player.getUUID(), "dono do upgrade");
+                    GameTestCompat.assertValueEqual(helper, router.upgradeOwner(), player.getUUID(), "dono do upgrade");
                     assertState(helper, router, ChunkLoadState.ACTIVE, "estado com o upgrade");
                     helper.assertTrue(hasTicket(helper, router, router.getBlockPos()), "sem ticket no chunk do roteador");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(player.getUUID()), 1, "chunks do dono");
-                    helper.assertValueEqual(RouterSnapshot.capture(router, player).chunkLoad(), ChunkLoadState.ACTIVE,
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(player.getUUID()), 1, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterSnapshot.capture(router, player).chunkLoad(), ChunkLoadState.ACTIVE,
                             "estado no snapshot");
 
                     // Shift + clique no slot de upgrade traz de volta e libera.
@@ -134,7 +133,7 @@ public final class ChunkLoaderGameTests {
                     helper.assertFalse(router.hasChunkUpgrade(), "o upgrade ficou no roteador");
                     helper.assertTrue(player.getInventory().contains(upgrade()), "o upgrade não voltou ao inventário");
                     helper.assertFalse(hasTicket(helper, router, router.getBlockPos()), "ticket ficou sem o upgrade");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(player.getUUID()), 0, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(player.getUUID()), 0, "chunks do dono");
                     assertState(helper, router, ChunkLoadState.NONE, "estado sem o upgrade");
                     player.containerMenu = player.inventoryMenu;
                 })
@@ -155,7 +154,7 @@ public final class ChunkLoaderGameTests {
                     helper.assertItemEntityPresent(ModItems.CHUNK_LOADER_UPGRADE.get(), relative, 2.0);
                     helper.assertFalse(RouterChunkLoader.hasTicket(helper.getLevel(), helper.absolutePos(relative),
                             chunk(helper.absolutePos(relative))), "ticket ficou com o roteador quebrado");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono");
                 })
                 .thenSucceed();
     }
@@ -169,9 +168,9 @@ public final class ChunkLoaderGameTests {
                     router.setUpgrade(upgrade(), owner);
                     helper.assertTrue(RouterBlock.tryUpgrade(helper.getLevel(), router.getBlockPos(), RouterTier.ADVANCED),
                             "upgrade de tier recusado");
-                    RouterBlockEntity after = helper.getBlockEntity(new BlockPos(1, 2, 1));
+                    RouterBlockEntity after = GameTestCompat.getBlockEntity(helper, new BlockPos(1, 2, 1));
                     helper.assertTrue(after == router, "o block entity foi trocado");
-                    helper.assertValueEqual(after.tier(), RouterTier.ADVANCED, "tier");
+                    GameTestCompat.assertValueEqual(helper, after.tier(), RouterTier.ADVANCED, "tier");
                     helper.assertTrue(after.hasChunkUpgrade(), "o upgrade de chunk loading saiu no upgrade de tier");
                     assertState(helper, after, ChunkLoadState.ACTIVE, "estado depois do upgrade de tier");
                     helper.assertTrue(hasTicket(helper, after, after.getBlockPos()), "ticket saiu no upgrade de tier");
@@ -187,23 +186,23 @@ public final class ChunkLoaderGameTests {
         helper.startSequence()
                 .thenExecuteAfter(1, () -> {
                     router.setUpgrade(upgrade(), owner);
-                    CompoundTag tag = router.saveWithoutMetadata(helper.getLevel().registryAccess());
+                    CompoundTag tag = router.saveWithoutMetadata();
                     helper.assertTrue(tag.contains("upgrade"), "upgrade não foi salvo");
-                    helper.assertValueEqual(tag.getUUID("upgrade_owner"), owner, "dono salvo");
+                    GameTestCompat.assertValueEqual(helper, tag.getUUID("upgrade_owner"), owner, "dono salvo");
 
                     RouterBlockEntity copy = new RouterBlockEntity(router.getBlockPos(), router.getBlockState());
-                    copy.loadWithComponents(tag, helper.getLevel().registryAccess());
+                    copy.load(tag);
                     helper.assertTrue(copy.hasChunkUpgrade(), "upgrade não foi lido");
-                    helper.assertValueEqual(copy.upgradeOwner(), owner, "dono lido");
+                    GameTestCompat.assertValueEqual(helper, copy.upgradeOwner(), owner, "dono lido");
 
                     tag.remove("upgrade");
-                    router.loadWithComponents(tag, helper.getLevel().registryAccess());
+                    router.load(tag);
                     helper.assertFalse(router.hasChunkUpgrade(), "upgrade ficou depois de relido sem ele");
                 })
                 // A releitura só enfileira: o ticket sai no tick seguinte.
                 .thenWaitUntil(() -> helper.assertFalse(hasTicket(helper, router, router.getBlockPos()),
                         "ticket ficou depois de relido sem o upgrade"))
-                .thenExecute(() -> helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono"))
+                .thenExecute(() -> GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono"))
                 .thenSucceed();
     }
 
@@ -230,7 +229,7 @@ public final class ChunkLoaderGameTests {
                     assertState(helper, router, ChunkLoadState.ACTIVE, "estado");
                     helper.assertTrue(hasTicket(helper, router, routerPos), "sem ticket no chunk do roteador");
                     helper.assertTrue(hasTicket(helper, router, machine), "sem ticket no chunk da máquina");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 2, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 2, "chunks do dono");
 
                     // Sai do mundo (trocado por ar, sem drop): os dois tickets saem.
                     level.removeBlock(routerPos, false);
@@ -239,7 +238,7 @@ public final class ChunkLoaderGameTests {
                             "ticket do chunk do roteador ficou");
                     helper.assertFalse(RouterChunkLoader.hasTicket(level, routerPos, machineChunk.toLong()),
                             "ticket do chunk da máquina ficou");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono");
                     for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(routerPos).inflate(3))) {
                         item.discard();
                     }
@@ -263,7 +262,7 @@ public final class ChunkLoaderGameTests {
         RouterBlockEntity a = chestWithRouter(helper, new BlockPos(0, 1, 1), Direction.UP);
         helper.setBlock(new BlockPos(0, 0, 1),
                 ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.DOWN));
-        RouterBlockEntity b = helper.getBlockEntity(new BlockPos(0, 0, 1));
+        RouterBlockEntity b = GameTestCompat.getBlockEntity(helper, new BlockPos(0, 0, 1));
         BlockPos farMachine = nextChunkAbove(helper);
         ChunkPos farChunk = new ChunkPos(farMachine);
         List<RouterBlockEntity> far = new ArrayList<>();
@@ -283,7 +282,7 @@ public final class ChunkLoaderGameTests {
                     assertState(helper, b, ChunkLoadState.ACTIVE, "B (mesmo chunk de A)");
                     assertState(helper, c, ChunkLoadState.LIMIT, "C (outro chunk)");
                     helper.assertFalse(hasTicket(helper, c, c.getBlockPos()), "C no limite com ticket");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 1, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 1, "chunks do dono");
                     a.setUpgrade(ItemStack.EMPTY, null);
                 })
                 .thenIdle(2)
@@ -297,13 +296,13 @@ public final class ChunkLoaderGameTests {
                 .thenExecute(() -> {
                     RouterBlockEntity c = far.get(0);
                     helper.assertTrue(hasTicket(helper, c, c.getBlockPos()), "C ativo sem ticket");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 1, "chunks do dono");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 1, "chunks do dono");
                     c.setUpgrade(ItemStack.EMPTY, null);
                     level.removeBlock(c.getBlockPos(), false);
                     level.removeBlock(farMachine, false);
                     helper.assertFalse(RouterChunkLoader.hasTicket(level, c.getBlockPos(), farChunk.toLong()),
                             "ticket de C ficou");
-                    helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono no fim");
+                    GameTestCompat.assertValueEqual(helper, RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono no fim");
                     level.setChunkForced(farChunk.x, farChunk.z, false);
                     RouterChunkLoader.overrideLimit(owner, null);
                 })
@@ -317,12 +316,12 @@ public final class ChunkLoaderGameTests {
         for (ItemLike item : new ItemLike[] {o, Items.ENDER_EYE, o, Items.REDSTONE, Items.DIAMOND, Items.REDSTONE, o, o, o}) {
             stacks.add(new ItemStack(item));
         }
-        CraftingInput input = CraftingInput.of(3, 3, stacks);
-        RecipeHolder<CraftingRecipe> holder = helper.getLevel().getRecipeManager()
+        CraftingContainer input = GameTestCompat.craftingInput(3, 3, stacks);
+        CraftingRecipe holder = helper.getLevel().getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel())
                 .orElseThrow(() -> new GameTestAssertException("nenhuma receita para o upgrade"));
-        helper.assertValueEqual(holder.id(), WirelessAutomate.id("chunk_loader_upgrade"), "receita");
-        ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
+        GameTestCompat.assertValueEqual(helper, holder.getId(), WirelessAutomate.id("chunk_loader_upgrade"), "receita");
+        ItemStack out = holder.assemble(input, helper.getLevel().registryAccess());
         helper.assertTrue(out.is(ModItems.CHUNK_LOADER_UPGRADE.get()) && out.getCount() == 1, "resultado: " + out);
         helper.succeed();
     }

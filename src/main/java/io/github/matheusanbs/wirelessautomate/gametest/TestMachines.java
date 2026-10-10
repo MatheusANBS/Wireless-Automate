@@ -4,58 +4,80 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.registries.RegisterEvent;
 
 /**
  * Máquinas de teste dos GameTests que o vanilla não tem: um slot com pilha enorme (como uma gaveta
  * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita e um
  * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism).
- * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
- * {@code -Dwirelessautomate.gameTests=true} (a run {@code gameTestServer} liga).
+ * Com o estado guardado por posição. Só existem com {@code -Dwirelessautomate.gameTests=true} (a run
+ * {@code gameTestServer} liga).
+ *
+ * <p>Porte 1.20.1 (D3): no {@code main} eram blocos vanilla com a capability presa pelo NeoForge; aqui são
+ * {@link TestCapabilityBlock}s (um block entity mínimo, com as propriedades do bloco vanilla de antes),
+ * registrados só com a propriedade ligada. Por isso os campos viraram {@link Supplier}.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class TestMachines {
+    private static final TestCapabilityBlock.Group MACHINES = new TestCapabilityBlock.Group("test_machine")
+            .add("big_slot", Blocks.SPONGE, (cap, pos, side) -> cap == ForgeCapabilities.ITEM_HANDLER ? bigSlot(pos) : null)
+            .add("many_tanks", Blocks.WET_SPONGE,
+                    (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? manyTanks(pos) : null)
+            .add("live_tank", Blocks.SLIME_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? liveTank(pos) : null)
+            .add("naive_slots", Blocks.CLAY, (cap, pos, side) -> cap == ForgeCapabilities.ITEM_HANDLER ? naiveSlots(pos) : null)
+            .add("simple_tank", Blocks.CAULDRON, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? simpleTank(pos) : null);
+
     /** Um slot só, que guarda até {@link BigSlot#LIMIT} itens e entrega no máximo uma pilha por extração. */
-    public static final Block BIG_SLOT = Blocks.SPONGE;
+    public static final Supplier<Block> BIG_SLOT = () -> MACHINES.block("big_slot");
     /** {@link ManyTanks#TANKS} tanques de fluido, só de saída. */
-    public static final Block MANY_TANKS = Blocks.WET_SPONGE;
+    public static final Supplier<Block> MANY_TANKS = () -> MACHINES.block("many_tanks");
     /** Um tanque de saída que devolve a pilha interna em {@code getFluidInTank} ({@link LiveTank}). */
-    public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
+    public static final Supplier<Block> LIVE_TANK = () -> MACHINES.block("live_tank");
     /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
-    public static final Block NAIVE_SLOTS = Blocks.CLAY;
+    public static final Supplier<Block> NAIVE_SLOTS = () -> MACHINES.block("naive_slots");
+    /**
+     * Porte 1.20.1: um tanque comum de {@link #SIMPLE_TANK_CAPACITY} mB, de entrada e saída, de qualquer fluido. Faz o
+     * papel do caldeirão dos testes de fluido do {@code main}: o NeoForge dá ao caldeirão vanilla um handler de fluido,
+     * o Forge 1.20.1 não.
+     */
+    public static final Supplier<Block> SIMPLE_TANK = () -> MACHINES.block("simple_tank");
+    static final int SIMPLE_TANK_CAPACITY = 1_000;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, FluidTank> SIMPLE_TANKS = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
     }
 
     @SubscribeEvent
-    static void register(RegisterCapabilitiesEvent event) {
+    public static void register(RegisterEvent event) {
         if (!ENABLED) {
             return;
         }
-        WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas em {}, {} e {}", BIG_SLOT, MANY_TANKS, LIVE_TANK);
-        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> bigSlot(pos), BIG_SLOT);
-        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
-        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
-        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> naiveSlots(pos), NAIVE_SLOTS);
+        if (event.getRegistryKey().equals(Registries.BLOCK)) {
+            WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas (big_slot, many_tanks, live_tank, naive_slots, simple_tank)");
+        }
+        MACHINES.register(event);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -71,6 +93,10 @@ public final class TestMachines {
         return NAIVE.computeIfAbsent(pos.immutable(), key -> new NaiveSlots());
     }
 
+    static FluidTank simpleTank(BlockPos pos) {
+        return SIMPLE_TANKS.computeIfAbsent(pos.immutable(), key -> new FluidTank(SIMPLE_TANK_CAPACITY));
+    }
+
     static LiveTank liveTank(BlockPos pos) {
         return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
     }
@@ -81,6 +107,7 @@ public final class TestMachines {
         TANKS.remove(pos.immutable());
         LIVE_TANKS.remove(pos.immutable());
         NAIVE.remove(pos.immutable());
+        SIMPLE_TANKS.remove(pos.immutable());
     }
 
     static final class BigSlot implements IItemHandler {
@@ -132,7 +159,7 @@ public final class TestMachines {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            int taken = Math.min(Math.min(amount, count), item.getDefaultMaxStackSize());
+            int taken = Math.min(Math.min(amount, count), item.getMaxStackSize());
             if (taken <= 0) {
                 return ItemStack.EMPTY;
             }
@@ -202,7 +229,7 @@ public final class TestMachines {
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             largestCall = Math.max(largestCall, stack.getCount());
             ItemStack in = stacks[slot];
-            if (stack.isEmpty() || !in.isEmpty() && (!ItemStack.isSameItemSameComponents(in, stack) || in.getCount() >= 64)) {
+            if (stack.isEmpty() || !in.isEmpty() && (!ItemStack.isSameItemSameTags(in, stack) || in.getCount() >= 64)) {
                 return stack;
             }
             if (!simulate) {
@@ -272,7 +299,7 @@ public final class TestMachines {
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
             for (int tank = 0; tank < TANKS; tank++) {
-                if (!tanks[tank].isEmpty() && FluidStack.isSameFluidSameComponents(tanks[tank], resource)) {
+                if (!tanks[tank].isEmpty() && tanks[tank].isFluidEqual(resource)) {
                     return drainTank(tank, resource.getAmount(), action);
                 }
             }
@@ -294,10 +321,10 @@ public final class TestMachines {
             if (taken <= 0) {
                 return FluidStack.EMPTY;
             }
-            FluidStack out = tanks[tank].copyWithAmount(taken);
+            FluidStack out = new FluidStack(tanks[tank], taken);
             if (action.execute()) {
                 tanks[tank] = tanks[tank].getAmount() == taken ? FluidStack.EMPTY
-                        : tanks[tank].copyWithAmount(tanks[tank].getAmount() - taken);
+                        : new FluidStack(tanks[tank], tanks[tank].getAmount() - taken);
             }
             return out;
         }
@@ -347,7 +374,7 @@ public final class TestMachines {
 
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            return FluidStack.isSameFluidSameComponents(stored, resource) ? drain(resource.getAmount(), action) : FluidStack.EMPTY;
+            return stored.isFluidEqual(resource) ? drain(resource.getAmount(), action) : FluidStack.EMPTY;
         }
 
         @Override
@@ -356,7 +383,7 @@ public final class TestMachines {
             if (taken <= 0) {
                 return FluidStack.EMPTY;
             }
-            FluidStack out = stored.copyWithAmount(taken);
+            FluidStack out = new FluidStack(stored, taken);
             if (action.execute()) {
                 stored.shrink(taken);
             }

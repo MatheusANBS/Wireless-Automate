@@ -12,7 +12,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 /**
  * Uma tarefa do benchmark: um cenário, um tamanho e algumas repetições. Avança um passo por tick,
@@ -446,7 +446,7 @@ final class BenchRun {
         long total = 0;
         for (Thread thread : Thread.getAllStackTraces().keySet()) {
             if (thread.getName().startsWith(WORKER_PREFIX)) {
-                long cpu = bean.getThreadCpuTime(thread.threadId());
+                long cpu = bean.getThreadCpuTime(thread.getId());
                 if (cpu > 0) {
                     total += cpu;
                 }

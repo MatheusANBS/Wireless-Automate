@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -36,9 +35,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -59,7 +58,7 @@ public final class CardSlotGameTests {
         helper.setBlock(machine, Blocks.CHEST);
         BlockPos pos = machine.above();
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(pos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, pos);
         router.setNetworkId(network);
         return router;
     }
@@ -81,7 +80,7 @@ public final class CardSlotGameTests {
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Item item) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             if (chest.getItem(i).is(item)) {
@@ -92,12 +91,12 @@ public final class CardSlotGameTests {
     }
 
     private static void assertCount(GameTestHelper helper, BlockPos pos, Item item, int expected) {
-        helper.assertValueEqual(count(helper, pos, item), expected, item + " em " + pos.toShortString());
+        GameTestCompat.assertValueEqual(helper, count(helper, pos, item), expected, item + " em " + pos.toShortString());
     }
 
     @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }
@@ -154,12 +153,12 @@ public final class CardSlotGameTests {
                 List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 64)));
         Filter stockedLess = new Filter(Filter.ListMode.WHITELIST, false,
                 List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 8)));
-        helper.assertValueEqual(FilterSet.of(stocked, List.of(stockedLess)).itemStock(diamond), 64L, "embutido primeiro");
-        helper.assertValueEqual(FilterSet.of(onlyStone, List.of(stockedLess)).itemStock(diamond), 8L,
+        GameTestCompat.assertValueEqual(helper, FilterSet.of(stocked, List.of(stockedLess)).itemStock(diamond), 64L, "embutido primeiro");
+        GameTestCompat.assertValueEqual(helper, FilterSet.of(onlyStone, List.of(stockedLess)).itemStock(diamond), 8L,
                 "estoque do cartão");
-        helper.assertValueEqual(FilterSet.of(onlyDiamond, List.of(stockedLess)).itemStock(diamond), 0L,
+        GameTestCompat.assertValueEqual(helper, FilterSet.of(onlyDiamond, List.of(stockedLess)).itemStock(diamond), 0L,
                 "regra sem estoque vem antes");
-        helper.assertValueEqual(FilterSet.of(onlyDiamond, List.of(stockedLess)).itemStock(stone), 0L,
+        GameTestCompat.assertValueEqual(helper, FilterSet.of(onlyDiamond, List.of(stockedLess)).itemStock(stone), 0L,
                 "estoque de quem não casa");
 
         Filter water = new Filter(Filter.ListMode.WHITELIST, false,
@@ -167,7 +166,7 @@ public final class CardSlotGameTests {
         FilterSet fluids = FilterSet.of(Filter.EMPTY, List.of(water));
         helper.assertTrue(fluids.testFluid(new FluidStack(Fluids.WATER, 1000))
                 && !fluids.testFluid(new FluidStack(Fluids.LAVA, 1000)), "cartão de fluido");
-        helper.assertValueEqual(fluids.fluidStock(new FluidStack(Fluids.WATER, 1000)), 500L, "estoque de fluido");
+        GameTestCompat.assertValueEqual(helper, fluids.fluidStock(new FluidStack(Fluids.WATER, 1000)), 500L, "estoque de fluido");
         helper.succeed();
     }
 
@@ -179,7 +178,7 @@ public final class CardSlotGameTests {
         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         source.setFilter(ResourceType.ITEM, Direction.UP, whitelist(Items.COBBLESTONE));
         target.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-        ChestBlockEntity chest = helper.getBlockEntity(A);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, A);
         chest.setItem(0, new ItemStack(Items.COBBLESTONE, 3));
         chest.setItem(1, new ItemStack(Items.DIAMOND, 10));
         chest.setItem(2, new ItemStack(Items.GOLD_INGOT, 4));
@@ -195,7 +194,7 @@ public final class CardSlotGameTests {
                     // Cartão de diamante: passa se o embutido ou o cartão aceitar.
                     source.setCard(ResourceType.ITEM, side(source, Direction.UP), 1,
                             card(ResourceType.ITEM, whitelist(Items.DIAMOND)));
-                    helper.assertValueEqual(source.cardCount(ResourceType.ITEM, Direction.UP), 1, "cartões da face");
+                    GameTestCompat.assertValueEqual(helper, source.cardCount(ResourceType.ITEM, Direction.UP), 1, "cartões da face");
                 })
                 .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 10))
                 .thenIdle(10)
@@ -234,9 +233,9 @@ public final class CardSlotGameTests {
             helper.assertTrue(placed.is(ModItems.FILTER_CARD.get()) && placed.getCount() == 1, "cartão no slot 0");
             helper.assertTrue(router.card(ResourceType.ITEM, side(router, Direction.UP), 1).isEmpty(),
                     "mais de um cartão por clique");
-            helper.assertValueEqual(menu.getSlot(inventorySlotOf(menu, ResourceType.ITEM)).getItem().getCount(), 2,
+            GameTestCompat.assertValueEqual(helper, menu.getSlot(inventorySlotOf(menu, ResourceType.ITEM)).getItem().getCount(), 2,
                     "cartões no inventário");
-            helper.assertValueEqual(FilterCardItem.contents(placed).filter(), whitelist(Items.DIAMOND), "filtro do cartão");
+            GameTestCompat.assertValueEqual(helper, FilterCardItem.contents(placed).filter(), whitelist(Items.DIAMOND), "filtro do cartão");
 
             // Na aba de fluidos o cartão de fluidos entra.
             helper.assertTrue(ModPayloads.handleSelectFace(player,
@@ -256,7 +255,7 @@ public final class CardSlotGameTests {
             ModPayloads.handleSelectFace(player, new SelectFacePayload(menu.containerId, ResourceType.ITEM, Direction.UP));
             menu.clicked(0, 0, ClickType.QUICK_MOVE, player);
             helper.assertTrue(router.card(ResourceType.ITEM, side(router, Direction.UP), 0).isEmpty(), "cartão não saiu");
-            helper.assertValueEqual(menu.getSlot(inventorySlotOf(menu, ResourceType.ITEM)).getItem().getCount(), 3,
+            GameTestCompat.assertValueEqual(helper, menu.getSlot(inventorySlotOf(menu, ResourceType.ITEM)).getItem().getCount(), 3,
                     "cartão não voltou ao inventário");
         } finally {
             close(player);
@@ -266,7 +265,6 @@ public final class CardSlotGameTests {
 
     @GameTest(template = "empty")
     public static void cardsSurviveSaveAndLoad(GameTestHelper helper) {
-        RegistryAccess registries = helper.getLevel().registryAccess();
         RouterBlockEntity router = chestWithRouter(helper, A, null);
         ItemStack itemCard = card(ResourceType.ITEM, whitelist(Items.DIAMOND, Items.EMERALD));
         ItemStack fluidCard = card(ResourceType.FLUID, new Filter(Filter.ListMode.BLACKLIST, false,
@@ -274,9 +272,9 @@ public final class CardSlotGameTests {
         router.setCard(ResourceType.ITEM, RelativeSide.BACK, 1, itemCard.copy());
         router.setCard(ResourceType.FLUID, RelativeSide.LEFT, 0, fluidCard.copy());
 
-        CompoundTag saved = router.saveWithoutMetadata(registries);
+        CompoundTag saved = router.saveWithoutMetadata();
         RouterBlockEntity copy = new RouterBlockEntity(router.getBlockPos(), router.getBlockState());
-        copy.loadWithComponents(saved, registries);
+        copy.load(saved);
         helper.assertTrue(ItemStack.matches(copy.card(ResourceType.ITEM, RelativeSide.BACK, 1), itemCard),
                 "cartão de itens");
         helper.assertTrue(ItemStack.matches(copy.card(ResourceType.FLUID, RelativeSide.LEFT, 0), fluidCard),
@@ -286,7 +284,7 @@ public final class CardSlotGameTests {
 
         // Uma carga sem cartões esvazia os slots.
         router.removeAllCards();
-        copy.loadWithComponents(router.saveWithoutMetadata(registries), registries);
+        copy.load(router.saveWithoutMetadata());
         helper.assertTrue(copy.card(ResourceType.ITEM, RelativeSide.BACK, 1).isEmpty(), "carga não esvaziou");
         helper.succeed();
     }
@@ -314,7 +312,7 @@ public final class CardSlotGameTests {
         RouterMenu menu = openMenu(player, router);
         try {
             // Começa na aba de itens e na face onde o roteador está preso, como a tela.
-            helper.assertValueEqual(menu.selectedFace(), Direction.UP, "face inicial");
+            GameTestCompat.assertValueEqual(helper, menu.selectedFace(), Direction.UP, "face inicial");
             helper.assertTrue(menu.getSlot(0).getItem() == up && menu.getSlot(1).getItem().isEmpty(),
                     "slots da face inicial");
 
@@ -339,7 +337,7 @@ public final class CardSlotGameTests {
             // Pacote com outro containerId (ou sem a tela) é recusado.
             helper.assertFalse(ModPayloads.handleSelectFace(player,
                     new SelectFacePayload(menu.containerId + 1, ResourceType.ITEM, Direction.UP)), "containerId errado");
-            helper.assertValueEqual(menu.selectedFace(), Direction.DOWN, "seleção mudou com pacote recusado");
+            GameTestCompat.assertValueEqual(helper, menu.selectedFace(), Direction.DOWN, "seleção mudou com pacote recusado");
         } finally {
             close(player);
         }

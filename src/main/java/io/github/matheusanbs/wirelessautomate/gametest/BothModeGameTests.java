@@ -17,8 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Modo Ambos: uma face Ambos não entrega para outra face Ambos; extrai para faces que só inserem e
@@ -39,14 +39,14 @@ public final class BothModeGameTests {
         helper.setBlock(pos, Blocks.CHEST);
         BlockPos routerPos = pos.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         router.setMode(ResourceType.ITEM, Direction.UP, mode);
         return router;
     }
 
     private static int diamonds(GameTestHelper helper, BlockPos pos) {
-        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, pos);
         int total = 0;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack stack = chest.getItem(i);
@@ -58,7 +58,7 @@ public final class BothModeGameTests {
     }
 
     private static void assertDiamonds(GameTestHelper helper, BlockPos pos, int expected) {
-        helper.assertValueEqual(diamonds(helper, pos), expected, "diamantes em " + pos.toShortString());
+        GameTestCompat.assertValueEqual(helper, diamonds(helper, pos), expected, "diamantes em " + pos.toShortString());
     }
 
     private static void waitRegistered(GameTestHelper helper, RouterBlockEntity... routers) {
@@ -72,7 +72,7 @@ public final class BothModeGameTests {
         UUID network = newNetwork(helper, "teste-ambos-ambos");
         RouterBlockEntity a = chest(helper, A, network, PortMode.BOTH);
         RouterBlockEntity b = chest(helper, B, network, PortMode.BOTH);
-        ((ChestBlockEntity) helper.getBlockEntity(A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        ((ChestBlockEntity) GameTestCompat.getBlockEntity(helper, A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, a, b))
@@ -88,7 +88,7 @@ public final class BothModeGameTests {
         UUID network = newNetwork(helper, "teste-ambos-insere");
         chest(helper, A, network, PortMode.BOTH);
         chest(helper, B, network, PortMode.INSERT);
-        ((ChestBlockEntity) helper.getBlockEntity(A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        ((ChestBlockEntity) GameTestCompat.getBlockEntity(helper, A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
 
         helper.succeedWhen(() -> {
             assertDiamonds(helper, A, 0);
@@ -101,7 +101,7 @@ public final class BothModeGameTests {
         UUID network = newNetwork(helper, "teste-extrai-ambos");
         chest(helper, A, network, PortMode.EXTRACT);
         chest(helper, B, network, PortMode.BOTH);
-        ((ChestBlockEntity) helper.getBlockEntity(A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        ((ChestBlockEntity) GameTestCompat.getBlockEntity(helper, A)).setItem(0, new ItemStack(Items.DIAMOND, 10));
 
         helper.succeedWhen(() -> {
             assertDiamonds(helper, A, 0);
@@ -116,9 +116,9 @@ public final class BothModeGameTests {
         chest(helper, A, network, PortMode.EXTRACT);
         chest(helper, B, network, PortMode.BOTH);
         chest(helper, C, network, PortMode.INSERT);
-        ((ChestBlockEntity) helper.getBlockEntity(A)).setItem(0, new ItemStack(Items.DIAMOND, 20));
+        ((ChestBlockEntity) GameTestCompat.getBlockEntity(helper, A)).setItem(0, new ItemStack(Items.DIAMOND, 20));
 
-        helper.onEachTick(() -> helper.assertValueEqual(
+        helper.onEachTick(() -> GameTestCompat.assertValueEqual(helper, 
                 diamonds(helper, A) + diamonds(helper, B) + diamonds(helper, C), 20, "diamantes"));
         helper.succeedWhen(() -> {
             assertDiamonds(helper, A, 0);

@@ -26,8 +26,8 @@ import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Sono, despertar e remontagem: o que acorda uma origem dormindo, o que suja a rede e o que conta
@@ -52,7 +52,7 @@ public final class WakeGameTests {
         helper.setBlock(machine, machineState);
         BlockPos routerPos = machine.above();
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, routerPos);
         router.setNetworkId(network);
         return router;
     }
@@ -64,7 +64,7 @@ public final class WakeGameTests {
     }
 
     private static ChestBlockEntity chestAt(GameTestHelper helper, BlockPos pos) {
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     private static int count(GameTestHelper helper, BlockPos pos, Item item) {
@@ -109,7 +109,7 @@ public final class WakeGameTests {
                 .thenWaitUntil(() -> waitRegistered(helper, a, b, e))
                 .thenWaitUntil(() -> assertDeepSleep(helper, e, "E"))
                 .thenExecute(() -> chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10)))
-                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
                 .thenExecute(() -> assertDeepSleep(helper, e, "E vazia"))
                 .thenSucceed();
     }
@@ -145,10 +145,10 @@ public final class WakeGameTests {
                 .thenExecute(() -> {
                     chestAt(helper, B).setItem(5, ItemStack.EMPTY);
                     freedAt[0] = helper.getTick();
-                    helper.assertValueEqual(interval(a), 1, "próximo sono de A, que esperava destino");
+                    GameTestCompat.assertValueEqual(helper, interval(a), 1, "próximo sono de A, que esperava destino");
                     assertDeepSleep(helper, e, "E vazia");
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
                 .thenExecute(() -> helper.assertTrue(helper.getTick() - freedAt[0] < 10,
                         "A demorou " + (helper.getTick() - freedAt[0]) + " ticks para entregar"))
                 .thenSucceed();
@@ -173,8 +173,8 @@ public final class WakeGameTests {
                 .thenWaitUntil(() -> {
                     NetworkStats stats = stats(helper, network);
                     helper.assertTrue(stats != null && stats.destinationsSleeping() == 1, "o destino sem máquina não dormiu");
-                    helper.assertValueEqual(stats.destinationsFull(), 0, "destinos cheios");
-                    helper.assertValueEqual(NodeProbe.fullDestinations(d, ResourceType.ITEM, helper.getTick()), 0,
+                    GameTestCompat.assertValueEqual(helper, stats.destinationsFull(), 0, "destinos cheios");
+                    GameTestCompat.assertValueEqual(helper, NodeProbe.fullDestinations(d, ResourceType.ITEM, helper.getTick()), 0,
                             "cheios no Tablet");
                 })
                 .thenIdle(10)
@@ -182,7 +182,7 @@ public final class WakeGameTests {
                     helper.setBlock(B, Blocks.CHEST);
                     placedAt[0] = helper.getTick();
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
                 .thenExecute(() -> helper.assertTrue(helper.getTick() - placedAt[0] < 10,
                         "a entrega demorou " + (helper.getTick() - placedAt[0]) + " ticks"))
                 .thenSucceed();
@@ -302,7 +302,7 @@ public final class WakeGameTests {
                 .thenExecute(() -> {
                     version[0] = router.changeVersion();
                     helper.setBlock(A, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.LIT, true));
-                    helper.assertValueEqual(router.changeVersion(), version[0], "versão depois de acender a fornalha");
+                    GameTestCompat.assertValueEqual(helper, router.changeVersion(), version[0], "versão depois de acender a fornalha");
                     helper.setBlock(A, Blocks.BLAST_FURNACE.defaultBlockState());
                     helper.assertTrue(router.changeVersion() != version[0], "trocar a máquina não mudou a versão");
                 })

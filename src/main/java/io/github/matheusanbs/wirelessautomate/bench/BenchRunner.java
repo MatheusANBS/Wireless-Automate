@@ -18,20 +18,20 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.MinecraftServer;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.event.TickEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Roda as tarefas do benchmark, uma de cada vez, e mede cada tick do servidor: do começo do
- * {@code ServerTickEvent.Pre} (prioridade mais alta) ao fim do {@code Post} (mais baixa). O laço do
- * mod roda no {@code Post}, depois que o vanilla já fechou a conta do MSPT dele, então o MSPT do
- * vanilla (e o do {@code /neoforge tps}) não inclui o mod; esta medição inclui.
+ * {@code ServerTickEvent} (fase {@code START}) (prioridade mais alta) ao fim da fase {@code END} (mais baixa). O laço do
+ * mod roda na fase {@code END}, depois que o vanilla já fechou a conta do MSPT dele, então o MSPT do
+ * vanilla (e o do {@code /forge tps}) não inclui o mod; esta medição inclui.
  *
  * <p>Cada tarefa diz quem transporta ({@link BenchTransport}); ao começar uma tarefa, o runner ajusta o
  * orçamento do Wireless Automate ({@code wa-full}) ou o modo assíncrono do Logistics Network
@@ -43,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  * {@code WA_BENCH_BASELINE}, {@code WA_BENCH_WARMUP} e {@code WA_BENCH_MEASURE} (ticks), e
  * {@code WA_BENCH_SPRINT} (roda com {@code /tick sprint}, para perfis).
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class BenchRunner {
     static final int DEFAULT_BASELINE = 100;
     static final int DEFAULT_MEASURE = 200;
@@ -131,7 +131,10 @@ public final class BenchRunner {
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    static void onTickStart(ServerTickEvent.Pre event) {
+    public static void onTickStart(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
         tickStart = System.nanoTime();
         BenchRun run = current;
         if (run != null) {
@@ -140,7 +143,10 @@ public final class BenchRunner {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    static void onTickEnd(ServerTickEvent.Post event) {
+    public static void onTickEnd(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         long tickNanos = System.nanoTime() - tickStart;
         if (!busy()) {
             return;
@@ -207,7 +213,7 @@ public final class BenchRunner {
     }
 
     @SubscribeEvent
-    static void onServerStarted(ServerStartedEvent event) {
+    public static void onServerStarted(ServerStartedEvent event) {
         String spec = System.getenv("WA_BENCH");
         if (spec == null || spec.isBlank()) {
             return;
@@ -250,7 +256,7 @@ public final class BenchRunner {
     }
 
     @SubscribeEvent
-    static void onServerStopping(ServerStoppingEvent event) {
+    public static void onServerStopping(ServerStoppingEvent event) {
         stop();
         finished.clear();
         feedback = null;

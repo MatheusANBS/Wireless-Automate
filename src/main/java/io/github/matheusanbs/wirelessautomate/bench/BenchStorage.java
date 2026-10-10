@@ -5,7 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -44,7 +44,7 @@ public enum BenchStorage {
     }
 
     private static Block soph(String path) {
-        return BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath(SOPH_MOD, path));
+        return BuiltInRegistries.BLOCK.get(new ResourceLocation(SOPH_MOD, path));
     }
 
     public static @Nullable BenchStorage byId(String id) {

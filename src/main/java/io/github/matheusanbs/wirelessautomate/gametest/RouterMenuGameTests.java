@@ -25,15 +25,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Lado do servidor da tela do roteador: o snapshot, os handlers dos pacotes do cliente, a versão
@@ -54,12 +54,12 @@ public final class RouterMenuGameTests {
         helper.setBlock(machine, Blocks.CHEST);
         BlockPos pos = machine.above();
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        return helper.getBlockEntity(pos);
+        return GameTestCompat.getBlockEntity(helper, pos);
     }
 
     @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = GameTestCompat.makeMockServerPlayerInLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }
@@ -88,25 +88,25 @@ public final class RouterMenuGameTests {
         router.setName("  Baú de minérios  ");
 
         RouterSnapshot snapshot = RouterSnapshot.capture(router, player);
-        helper.assertValueEqual(snapshot.pos(), router.getBlockPos(), "posição");
-        helper.assertValueEqual(snapshot.name(), "Baú de minérios", "nome aparado");
-        helper.assertValueEqual(snapshot.tier(), RouterTier.BASIC, "tier");
-        helper.assertValueEqual(snapshot.facing(), Direction.UP, "facing");
-        helper.assertValueEqual(snapshot.network(ResourceType.ITEM), Optional.of(own.id()), "rede");
+        GameTestCompat.assertValueEqual(helper, snapshot.pos(), router.getBlockPos(), "posição");
+        GameTestCompat.assertValueEqual(helper, snapshot.name(), "Baú de minérios", "nome aparado");
+        GameTestCompat.assertValueEqual(helper, snapshot.tier(), RouterTier.BASIC, "tier");
+        GameTestCompat.assertValueEqual(helper, snapshot.facing(), Direction.UP, "facing");
+        GameTestCompat.assertValueEqual(helper, snapshot.network(ResourceType.ITEM), Optional.of(own.id()), "rede");
         helper.assertTrue(snapshot.networks().contains(new RouterSnapshot.NetworkEntry(own.id(), own.name(),
                 own.color(), true)), "rede própria fora do seletor");
         helper.assertFalse(snapshot.networks().stream().anyMatch(e -> e.id().equals(foreign.id())),
                 "rede alheia que não é a do roteador no seletor");
         helper.assertTrue(snapshot.machine().is(Items.CHEST), "ícone da máquina");
-        helper.assertValueEqual(snapshot.faces().size(), ResourceType.values().length * 6, "faces");
-        helper.assertValueEqual(snapshot.face(ResourceType.ITEM, Direction.UP),
+        GameTestCompat.assertValueEqual(helper, snapshot.faces().size(), ResourceType.values().length * 6, "faces");
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.ITEM, Direction.UP),
                 new RouterSnapshot.FaceView(PortMode.EXTRACT, 5, RedstoneMode.HIGH, 27, 0, false), "itens em cima");
-        helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.INSERT,
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.INSERT,
                 "fluido ao norte");
-        helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).slots(), -1, "baú sem tanque");
-        helper.assertValueEqual(snapshot.face(ResourceType.ENERGY, Direction.UP).slots(), -1, "baú sem energia");
-        helper.assertValueEqual(snapshot.face(ResourceType.CHEMICAL, Direction.UP).slots(), -1, "químicos");
-        helper.assertValueEqual(snapshot.face(ResourceType.SOURCE, Direction.UP).slots(), -1, "Source");
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.FLUID, Direction.NORTH).slots(), -1, "baú sem tanque");
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.ENERGY, Direction.UP).slots(), -1, "baú sem energia");
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.CHEMICAL, Direction.UP).slots(), -1, "químicos");
+        GameTestCompat.assertValueEqual(helper, snapshot.face(ResourceType.SOURCE, Direction.UP).slots(), -1, "Source");
 
         // Rede de outro dono como rede atual: aparece no seletor, sem ser do jogador.
         router.setNetworkId(foreign.id());
@@ -116,17 +116,16 @@ public final class RouterMenuGameTests {
 
         // Rede removida: o snapshot fica sem rede.
         data.remove(foreign.id());
-        helper.assertValueEqual(RouterSnapshot.capture(router, player).network(ResourceType.ITEM), Optional.<UUID>empty(),
+        GameTestCompat.assertValueEqual(helper, RouterSnapshot.capture(router, player).network(ResourceType.ITEM), Optional.<UUID>empty(),
                 "rede removida");
 
         // Ida e volta pelo codec de rede.
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
-                helper.getLevel().registryAccess());
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
         RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
         RouterSnapshot decoded = RouterSnapshot.STREAM_CODEC.decode(buf);
-        helper.assertValueEqual(decoded.faces(), snapshot.faces(), "faces pelo codec");
-        helper.assertValueEqual(decoded.networks(), snapshot.networks(), "redes pelo codec");
-        helper.assertValueEqual(decoded.name(), snapshot.name(), "nome pelo codec");
+        GameTestCompat.assertValueEqual(helper, decoded.faces(), snapshot.faces(), "faces pelo codec");
+        GameTestCompat.assertValueEqual(helper, decoded.networks(), snapshot.networks(), "redes pelo codec");
+        GameTestCompat.assertValueEqual(helper, decoded.name(), snapshot.name(), "nome pelo codec");
         helper.succeed();
     }
 
@@ -139,9 +138,9 @@ public final class RouterMenuGameTests {
             helper.assertTrue(ModPayloads.handleSetFace(player, new SetFacePayload(menu.containerId,
                     ResourceType.ITEM, Direction.UP, PortMode.INSERT, 5000, RedstoneMode.LOW)), "recusou com a tela aberta");
             FaceConfig face = router.face(ResourceType.ITEM, Direction.UP);
-            helper.assertValueEqual(face.mode(), PortMode.INSERT, "modo");
-            helper.assertValueEqual(face.priority(), RouterMenu.MAX_PRIORITY, "prioridade limitada");
-            helper.assertValueEqual(face.redstone(), RedstoneMode.LOW, "redstone");
+            GameTestCompat.assertValueEqual(helper, face.mode(), PortMode.INSERT, "modo");
+            GameTestCompat.assertValueEqual(helper, face.priority(), RouterMenu.MAX_PRIORITY, "prioridade limitada");
+            GameTestCompat.assertValueEqual(helper, face.redstone(), RedstoneMode.LOW, "redstone");
 
             SetFacePayload other = new SetFacePayload(menu.containerId + 1, ResourceType.ITEM, Direction.UP,
                     PortMode.EXTRACT, 0, RedstoneMode.IGNORE);
@@ -159,7 +158,7 @@ public final class RouterMenuGameTests {
             close(player);
             helper.assertFalse(ModPayloads.handleSetFace(player, new SetFacePayload(player.inventoryMenu.containerId,
                     ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0, RedstoneMode.IGNORE)), "aceitou sem a tela");
-            helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT,
+            GameTestCompat.assertValueEqual(helper, router.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT,
                     "face mudou sem a tela");
         } finally {
             close(player);
@@ -179,22 +178,22 @@ public final class RouterMenuGameTests {
             helper.assertFalse(player.hasPermissions(2), "jogador falso é operador");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(own.id()))), "recusou a própria rede");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede própria");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), own.id(), "rede própria");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(foreign.id()))), "aceitou rede alheia");
             helper.assertFalse(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(UUID.randomUUID()))), "aceitou rede inexistente");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede mudou numa recusa");
+            GameTestCompat.assertValueEqual(helper, router.networkId(ResourceType.ITEM), own.id(), "rede mudou numa recusa");
             helper.assertTrue(ModPayloads.handleSetNetwork(player,
                     new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.empty())), "recusou tirar da rede");
             helper.assertTrue(router.networkId(ResourceType.ITEM) == null, "continuou na rede");
 
             helper.assertTrue(ModPayloads.handleRename(player, new RenameRouterPayload(menu.containerId, " Forno ")),
                     "recusou o nome");
-            helper.assertValueEqual(router.name(), "Forno", "nome");
+            GameTestCompat.assertValueEqual(helper, router.name(), "Forno", "nome");
             helper.assertFalse(ModPayloads.handleRename(player, new RenameRouterPayload(menu.containerId,
                     "x".repeat(RenameRouterPayload.MAX_LENGTH + 1))), "aceitou nome comprido");
-            helper.assertValueEqual(router.name(), "Forno", "nome mudou numa recusa");
+            GameTestCompat.assertValueEqual(helper, router.name(), "Forno", "nome mudou numa recusa");
         } finally {
             close(player);
         }
@@ -220,10 +219,10 @@ public final class RouterMenuGameTests {
 
         version = router.changeVersion();
         router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-        helper.assertValueEqual(router.changeVersion(), version, "versão mudou sem mudança");
+        GameTestCompat.assertValueEqual(helper, router.changeVersion(), version, "versão mudou sem mudança");
         router.setName("Nó");
         helper.assertTrue(router.changeVersion() != version, "versão não mudou com o nome");
-        helper.assertValueEqual(menu.pollSnapshot().name(), "Nó", "nome no snapshot");
+        GameTestCompat.assertValueEqual(helper, menu.pollSnapshot().name(), "Nó", "nome no snapshot");
 
         // Rede nova do jogador muda o seletor.
         WaNetwork created = NetworkSavedData.get(helper.getLevel().getServer()).create(player.getUUID(), "Nova");
@@ -254,7 +253,7 @@ public final class RouterMenuGameTests {
         RouterSnapshot withNetwork = menu.pollSnapshot();
         helper.assertTrue(withNetwork != null && withNetwork.networks().stream().anyMatch(e -> e.id().equals(own.id())),
                 "seletor sem a rede nova");
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer());
         RouterSnapshot.NETWORKS_CODEC.encode(buf, withNetwork.networks());
         client.applyNetworks(RouterSnapshot.NETWORKS_CODEC.decode(buf));
         router.setName("Corpo");
@@ -277,7 +276,7 @@ public final class RouterMenuGameTests {
         target.setNetworkId(network);
         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         target.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-        ChestBlockEntity chest = helper.getBlockEntity(A);
+        ChestBlockEntity chest = GameTestCompat.getBlockEntity(helper, A);
         chest.setItem(0, new ItemStack(Items.DIAMOND, 10));
         ServerPlayer player = playerNear(helper, source);
         RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), source,
@@ -286,15 +285,15 @@ public final class RouterMenuGameTests {
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source), "não registrado"))
-                .thenWaitUntil(() -> helper.assertValueEqual(source.moved(ResourceType.ITEM), 10L, "movidos pela origem"))
+                .thenWaitUntil(() -> GameTestCompat.assertValueEqual(helper, source.moved(ResourceType.ITEM), 10L, "movidos pela origem"))
                 .thenExecute(() -> {
-                    helper.assertValueEqual(target.moved(ResourceType.ITEM), 0L, "destino contou como origem");
+                    GameTestCompat.assertValueEqual(helper, target.moved(ResourceType.ITEM), 0L, "destino contou como origem");
                     helper.assertTrue(menu.pollThroughput(start + RouterMenu.SAMPLE_TICKS - 1) == null,
                             "amostra antes de um segundo");
                     long[] rates = menu.pollThroughput(start + RouterMenu.SAMPLE_TICKS);
                     helper.assertTrue(rates != null, "sem amostra depois de um segundo");
-                    helper.assertValueEqual(rates[ResourceType.ITEM.ordinal()], 10L, "itens/s");
-                    helper.assertValueEqual(rates[ResourceType.FLUID.ordinal()], 0L, "mB/s");
+                    GameTestCompat.assertValueEqual(helper, rates[ResourceType.ITEM.ordinal()], 10L, "itens/s");
+                    GameTestCompat.assertValueEqual(helper, rates[ResourceType.FLUID.ordinal()], 0L, "mB/s");
                     long[] idle = menu.pollThroughput(start + 2 * RouterMenu.SAMPLE_TICKS);
                     helper.assertTrue(idle != null && idle[ResourceType.ITEM.ordinal()] == 0, "vazão não zerou");
                     helper.assertTrue(menu.pollThroughput(start + 3 * RouterMenu.SAMPLE_TICKS) == null,

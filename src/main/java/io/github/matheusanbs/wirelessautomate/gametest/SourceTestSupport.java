@@ -1,30 +1,30 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
-import com.hollingsworth.arsnouveau.api.source.ISourceCap;
+import com.hollingsworth.arsnouveau.api.source.ISourceTile;
 import com.hollingsworth.arsnouveau.api.source.ISpecialSourceProvider;
 import com.hollingsworth.arsnouveau.api.util.SourceUtil;
-import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsSources;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 
 /**
  * A parte dos testes de Source que usa a API do Ars Nouveau. Não é {@code @GameTestHolder} nem
- * {@code @EventBusSubscriber}: o NeoForge inspeciona essas classes por reflexão, e um tipo do Ars numa
+ * {@code @EventBusSubscriber}: o Forge inspeciona essas classes por reflexão, e um tipo do Ars numa
  * assinatura impede o mod de carregar sem ele. Só é chamada por {@link SourceGameTests} com o Ars presente.
+ *
+ * <p>Porte 1.20.1 (D5): o Ars 4.12 não tem capability de Source; quem guarda Source é um block entity
+ * {@link ISourceTile} (a Source Jar e o Tanque de Source), lido direto do mundo.
  */
 final class SourceTestSupport {
-    private static ISourceCap cap(ServerLevel level, BlockPos pos) {
-        ISourceCap cap = level.getCapability(ArsSources.BLOCK, pos, Direction.UP);
-        if (cap == null) {
-            throw new IllegalStateException("sem capability de Source em " + pos.toShortString());
+    private static ISourceTile cap(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof ISourceTile tile)) {
+            throw new IllegalStateException("sem ISourceTile em " + pos.toShortString());
         }
-        return cap;
+        return tile;
     }
 
     static boolean hasSource(ServerLevel level, BlockPos pos) {
-        return level.getCapability(ArsSources.BLOCK, pos, Direction.UP) != null;
+        return level.getBlockEntity(pos) instanceof ISourceTile;
     }
 
     static int amount(ServerLevel level, BlockPos pos) {
@@ -36,7 +36,7 @@ final class SourceTestSupport {
     }
 
     static int capacity(ServerLevel level, BlockPos pos) {
-        return cap(level, pos).getSourceCapacity();
+        return cap(level, pos).getMaxSource();
     }
 
     /** Há um provider válido do {@code SourceManager} (ou uma jarra) exatamente em {@code pos}. */
@@ -49,9 +49,13 @@ final class SourceTestSupport {
         return false;
     }
 
-    /** O que uma máquina do Ars faz para gastar Source: tira {@code amount} das fontes no raio. */
+    /**
+     * O que uma máquina do Ars faz para gastar Source: tira {@code amount} de uma fonte no raio. Porte 1.20.1: o Ars
+     * 4.12 não tem o {@code takeSourceMultiple} (que juntava várias fontes e devolvia o que tirou se não bastasse);
+     * o {@code takeSource} tira tudo de uma fonte só que tenha o bastante, ou nada.
+     */
     static boolean takeNearby(ServerLevel level, BlockPos center, int range, int amount) {
-        return SourceUtil.takeSourceMultiple(center, level, range, amount) != null;
+        return SourceUtil.takeSource(center, level, range, amount) != null;
     }
 
     /** As posições que aceitam Source no raio (o que um Sourcelink procura). */

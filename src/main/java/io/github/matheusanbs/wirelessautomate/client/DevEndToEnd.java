@@ -117,7 +117,7 @@ import net.minecraftforge.fluids.FluidStack;
  * variável de ambiente {@code WA_E2E} (diretório de saída); sem ela, não faz nada.
  *
  * <pre>./scripts/e2e.sh                     # roda tudo e sai com 0 (OK) ou 1 (falha)
- * WA_E2E=$PWD/run/e2e xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient</pre>
+ * WA_E2E=$PWD/run-1.20.1/e2e xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient</pre>
  *
  * <p>Na tela de título cria o mundo {@value #WORLD} (plano, criativo, com cheats; apaga o anterior)
  * pelo caminho normal do jogo ({@code createFreshLevel}) e, já no mundo, roda um roteiro, um passo

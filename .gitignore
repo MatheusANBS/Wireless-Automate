@@ -27,6 +27,7 @@ Thumbs.db
 
 ### Minecraft ###
 run/
+run-1.20.1/
 runs/
 !**/src/**/run/
 **/src/generated/**/.cache/

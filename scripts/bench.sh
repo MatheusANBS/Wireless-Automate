@@ -7,19 +7,19 @@
 # Variáveis opcionais (ticks): WA_BENCH_BASELINE (100), WA_BENCH_WARMUP (do cenário), WA_BENCH_MEASURE (200).
 # WA_BENCH_SPRINT=1 roda os ticks sem pausa (/tick sprint): só para perfis, os números de vazão por
 # segundo de jogo continuam valendo, mas o MSPT sobe com a disputa de CPU.
-# WA_BENCH_JFR=1 grava também um perfil do Java Flight Recorder (local) em run/bench/reports/<data>.jfr.
+# WA_BENCH_JFR=1 grava também um perfil do Java Flight Recorder (local) em run-1.20.1/bench/reports/<data>.jfr.
 #
 # Benchmark comparativo (docs/benchmark-logistics-network.md): um quinto campo diz quem transporta, wa (padrão),
 # wa-full, ln, ln-rr ou ln-async, como em "many:500:3:vanilla:ln". "./scripts/bench.sh comparativo" roda a lista
-# COMPARATIVE_SPEC abaixo. Com alguma tarefa ln, o script põe o jar do Logistics Network em run/bench/mods
-# (baixado uma vez para run/bench-ln/, fora do git; o mod é All Rights Reserved e não vai para o repositório);
+# COMPARATIVE_SPEC abaixo. Com alguma tarefa ln, o script põe o jar do Logistics Network em run-1.20.1/bench/mods
+# (baixado uma vez para run-1.20.1/bench-ln/, fora do git; o mod é All Rights Reserved e não vai para o repositório);
 # sem nenhuma, tira o jar, para as rodadas só do mod continuarem com o mesmo conjunto de mods.
 #
 # O que ele faz:
-#   - prepara run/bench: eula, server.properties com mundo plano novo, porta 25599, sem mobs;
+#   - prepara run-1.20.1/bench: eula, server.properties com mundo plano novo, porta 25599, sem mobs;
 #   - sobe ./gradlew runBenchServer (com Sophisticated Storage e Spark; ver build.gradle) com WA_BENCH;
 #   - o mod mede o servidor vazio, roda as tarefas em sequência e para o servidor no fim;
-#   - o relatório fica em run/bench/reports/<data>.md e o log do servidor ao lado.
+#   - o relatório fica em run-1.20.1/bench/reports/<data>.md e o log do servidor ao lado.
 # Cenários e números em docs/benchmark.md. Use uma máquina sem outra carga: os tempos são de parede.
 set -euo pipefail
 
@@ -27,7 +27,7 @@ set -euo pipefail
 {
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUN_DIR="$ROOT/run/bench"
+RUN_DIR="$ROOT/run-1.20.1/bench"
 DEFAULT_SPEC="many:500:3:vanilla;many:500:3:soph;idle:500:3:vanilla;idle:500:3:soph;full:100:3:vanilla;full:500:3:vanilla;raw:2:3:vanilla;raw:2:3:soph;big:20:3:vanilla;big:20:3:soph;bigfull:20:3:vanilla;bigfull:20:3:soph;types:20:3:soph;mixed:498:3:vanilla;rebuild:500:3:vanilla;sparse:500:3:vanilla;sparse:500:3:soph;stock:20:3:soph;bigstack:2:3:vanilla;redstone:100:3:vanilla;tablet:1000:3:vanilla"
 # Cada cenário comparável nos cinco transportes, um atrás do outro (mesma ordem em todas as rodadas).
 COMPARATIVE_SPEC=""
@@ -83,14 +83,14 @@ EOF
 mkdir -p "$RUN_DIR/mods"
 rm -f "$RUN_DIR"/mods/LogisticsNetworks-*.jar
 if printf '%s' "$SPEC" | grep -Eq ':ln(-async)?([;,]|$)'; then
-    LN_JAR="$ROOT/run/bench-ln/LogisticsNetworks-$LN_VERSION.jar"
+    LN_JAR="$ROOT/run-1.20.1/bench-ln/LogisticsNetworks-$LN_VERSION.jar"
     if [ ! -s "$LN_JAR" ]; then
         log "Baixando o Logistics Network $LN_VERSION (só para o benchmark local)"
         mkdir -p "$(dirname "$LN_JAR")"
         curl -fsSL -o "$LN_JAR" "$LN_URL"
     fi
     cp "$LN_JAR" "$RUN_DIR/mods/"
-    log "Logistics Network $LN_VERSION em run/bench/mods"
+    log "Logistics Network $LN_VERSION em run-1.20.1/bench/mods"
 fi
 
 log "Tarefas: $SPEC"

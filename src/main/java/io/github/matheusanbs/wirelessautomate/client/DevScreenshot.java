@@ -94,7 +94,7 @@ import org.lwjgl.opengl.GL11;
  * Modo de captura para conferir a tela sem monitor. Só roda com a variável de ambiente
  * {@code WA_SCREENSHOT} (diretório de saída):
  *
- * <pre>WA_SCREENSHOT=$PWD/run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient</pre>
+ * <pre>WA_SCREENSHOT=$PWD/run-1.20.1/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient</pre>
  *
  * Na tela de título desenha uma {@link RouterScreen} com um snapshot de exemplo (fornalha com Itens
  * na rede "Linha 5x", Fluidos sem rede e Energia na "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com

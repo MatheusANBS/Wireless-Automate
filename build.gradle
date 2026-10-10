@@ -135,6 +135,13 @@ dependencies {
     modCompileOnly("com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}") {
         transitive = false
     }
+    // GeckoLib: só na compilação dos GameTests de Source (gametest/SourceTestSupport), que chamam métodos dos
+    // Relays do Ars (block entities GeoBlockEntity); o javac precisa da hierarquia para resolver a chamada.
+    modCompileOnly "curse.maven:geckolib-388172:${geckolib_file}"
+
+    // Processador de anotações do Mixin: gera o refmap (nomes mojmap -> SRG) dos alvos do Minecraft nos
+    // mixins do mod (bloco mixin abaixo). O Mixin em si já vem com o Forge.
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // GuideME: só na compilação (item/GuideBook); o livro em si é data-driven.
     modCompileOnly "maven.modrinth:guideme:${guideme_version}"
@@ -354,6 +361,21 @@ legacyForge.runs {
             jvmArgument "-XX:StartFlightRecording=filename=${project.property('benchJfr')},settings=profile,method-profiling=max"
         }
     }
+}
+
+// Mixins (LEGACY.md do ModDevGradle, seção Mixins). Cada config cobre um pacote só de mixins (o Mixin
+// recusa carregar como classe comum qualquer coisa num pacote de mixins, então não dá para usar o pacote
+// raiz do mod): wirelessautomate.mixins.json é o de compat/arsnouveau/mixin. Um pacote novo (como o
+// client/mixin) ganha um config próprio nesta lista, com o mesmo plugin (mixin/WaMixinPlugin), que só aplica
+// os mixins de um mod opcional com ele carregado. A lista vira os --mixin.config das runs (pelo bloco
+// mixin) e o MixinConfigs do manifesto do jar.
+def mixinConfigs = ['wirelessautomate.mixins.json']
+mixin {
+    add sourceSets.main, 'wirelessautomate.refmap.json'
+    mixinConfigs.each { config it }
+}
+tasks.named('jar', Jar).configure {
+    manifest.attributes('MixinConfigs': mixinConfigs.join(','))
 }
 
 // Preenche os ${...} do META-INF/mods.toml com os valores do gradle.properties.

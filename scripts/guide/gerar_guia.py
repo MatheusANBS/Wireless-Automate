@@ -2158,7 +2158,7 @@ Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são reca
 | **Onde fica** | As edições ficam em `config/wirelessautomate/recipes/`, uma pasta só para a instância. Valem em todos os mundos dela e, num servidor, no servidor. Sobrevivem às atualizações do mod. |
 | **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
 | **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
-| **Voltar tudo** | Apague a pasta `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
+| **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
 ''', front('Recipe editor', 'minecraft:writable_book', 19) + '''
 # Recipe editor
 
@@ -2210,7 +2210,7 @@ If you close the screen with saved changes that haven't been applied, they are r
 | **Where it lives** | Edits are kept in `config/wirelessautomate/recipes/`, a folder for the instance. They apply to every world in it and, on a server, to the server. They survive mod updates. |
 | **Other datapacks and KubeJS** | If another datapack or KubeJS changes the same recipe, theirs wins, and the screen warns that the recipe differs from what is loaded. |
 | **What is not listed** | Other mods' recipes, the Filter Card copy and the router upgrade in the crafting table. You can't create new recipes either. |
-| **Undo everything** | Delete the folder `config/wirelessautomate/recipes/` and reload (`/reload`). |
+| **Undo everything** | Delete the `data` folder inside `config/wirelessautomate/recipes/` and reload (`/reload`). |
 ''')
 
 page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 20) + '''

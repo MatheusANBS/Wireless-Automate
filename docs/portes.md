@@ -36,7 +36,7 @@ Vale reavaliar se a manutenção de três ramos começar a pesar (por exemplo, s
 | Alvo | Ramo | Packs | Loader | Estado | Espelha |
 | --- | --- | --- | --- | --- | --- |
 | 1.21.1 | `main` | ATM10, ATM10 To the Sky | NeoForge 21.1.248+ | Publicado | 1.6.0 |
-| 1.20.1 | `mc/1.20.1-forge` (a criar) | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47 (o ATM9 To the Sky usa o 47.4.10) | Investigado ([relatório](portes/1.20.1-forge-impacto.md)): porte grande; aguarda o ok do dono e a decisão do Mekanism | — |
+| 1.20.1 | `mc/1.20.1-forge` | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47.4.10+ | Etapa 1: compila e abre; GameTests na etapa 2 ([relatório](portes/1.20.1-forge-impacto.md)) | 1.6.0 |
 | 26.1 | `mc/26.1-neoforge` (a criar) | ATM11 (alfa, Minecraft 26.1.2) | NeoForge 26.1 | A investigar | — |
 
 ## O que já se sabe (a confirmar pela investigação)
@@ -58,6 +58,20 @@ e dos payloads atuais: é o porte mais trabalhoso. Pontos que devem pesar:
 
 O ATM9 é um pack grande e estável, com muito jogador.
 
+## Desvios do 1.20.1
+
+O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou dos mods dessa versão:
+- **Químicos:** o Mekanism 10.4 tem quatro tipos (gás, infusão, pigmento, slurry), cada um com a sua
+  capability. O mod os trata como o tipo Químicos, numa fila única de tanques por face (os tanques dos
+  quatro tipos em sequência) e com a vazão somada.
+- **Source:** o Ars 4.12 não tem capability de Source; o roteador acha o `ISourceTile` pelo block entity.
+  Os Relays do Ars só ligam em máquinas do Ars, então **não ligam no Tanque de Source** (Sourcelinks e
+  máquinas a 5 blocos, sim).
+- **JEI 15:** sem o Shift + clique de um ingrediente do JEI para o filtro; arrastar funciona.
+- **Caldeirão:** o Forge não dá handler de fluido ao caldeirão vanilla, então o roteador não move fluido
+  de e para ele. Os GameTests de fluido usam um tanque de teste (`TestMachines.SIMPLE_TANK`).
+- **Campos de texto:** o `EditBox` do 1.20.1 desenha o texto com sombra.
+
 ## Ordem sugerida
 
 1. **Investigar os dois alvos** com a `wa-porte`, só relatórios, sem código.
@@ -73,3 +87,4 @@ O ATM9 é um pack grande e estável, com muito jogador.
 | --- | --- |
 | 2026-10-10 | Estratégia de ramos por alvo e a skill `wa-porte` para investigar o impacto de cada porte. |
 | 2026-10-10 | 1.20.1 Forge investigado: projeto mínimo (MDG 2.0.148 `legacyforge`, Java 17, Gradle 9.2.1) compila e abre; relatório em `docs/portes/1.20.1-forge-impacto.md`. |
+| 2026-10-10 | 1.20.1, etapa 1 (ramo `mc/1.20.1-forge`, espelha a 1.6.0): o mod inteiro compila no Forge 47.4.10, JUnit verde, 170 de 172 GameTests da run comum passando na primeira rodada e o cliente de dev abre sem os mods opcionais, com as telas nas capturas. GameTests, runs com os mods opcionais remapeados e e2e ficam para a etapa 2. |

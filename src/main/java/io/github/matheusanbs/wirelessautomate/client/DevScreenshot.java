@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ModEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.TagEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
@@ -39,6 +40,7 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -97,7 +99,8 @@ import org.lwjgl.opengl.GL11;
  * na rede "Linha 5x", Fluidos sem rede e Energia na "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com
  * {@code setScreen} porque, sem mundo, o {@code tick} de uma tela de contêiner falha sem jogador.
  * Com {@code WA_SCREENSHOT_ONLY=giro} tira só a galeria do giro do roteador ({@code giro-parede}); com
- * {@code WA_SCREENSHOT_ONLY=blocos}, só a galeria dos armazenamentos ({@code blocos-galeria}).
+ * {@code WA_SCREENSHOT_ONLY=blocos}, só a galeria dos armazenamentos, com o contorno da colisão e a fileira
+ * dos itens como aparecem no inventário ({@code blocos-galeria}).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevScreenshot {
@@ -817,21 +820,25 @@ public final class DevScreenshot {
     }
 
     /**
-     * Quatro linhas: Básico e Ultimate vistos de frente e do alto (como o jogador vê um bloco no chão), e os
-     * mesmos vistos quase de cima (o Olho e as tampas). Sete colunas: Baú, Tanque, Bateria, Tanque Químico
-     * e o Tanque de Source nos níveis 0, 5 e 10. Pelo renderizador de blocos do jogo, com os modelos reais.
+     * Quatro linhas de blocos: Básico e Ultimate vistos de frente e do alto (como o jogador vê um bloco no
+     * chão), e os mesmos vistos quase de cima (o Olho e as tampas), com o contorno da colisão em preto.
+     * Sete colunas: Baú, Tanque, Bateria, Tanque Químico e o Tanque de Source nos níveis 0, 5 e 10. Pelo
+     * renderizador de blocos do jogo, com os modelos reais. A quinta linha são os itens como aparecem no
+     * inventário ({@code GuiGraphics.renderItem}, a vista {@code gui} do modelo): o roteador em cada tier
+     * (de frente: a fenda do Olho e o interior da parabólica) e os cinco armazenamentos.
      */
     private static void renderBlockGallery(GuiGraphics g, int width, int height) {
         g.fill(0, 0, width, height, 0xFF2A2F38);
         var font = Minecraft.getInstance().font;
         String[] titles = {"Basico, de frente e do alto", "Ultimate, de frente e do alto", "Basico, de cima", "Ultimate, de cima"};
-        float size = Math.min(width / 11f, height / 8f);
+        int rows = 5;
+        float size = Math.min(width / 11f, height / (2f * rows));
         for (int row = 0; row < 4; row++) {
             RouterTier tier = row % 2 == 0 ? RouterTier.BASIC : RouterTier.ULTIMATE;
             float pitch = row < 2 ? 30 : 70;
             float yaw = 20;
-            float cy = height * (row + 0.5f) / 4f;
-            g.drawString(font, titles[row], 8, (int) (cy - height / 8f) + 3, 0xFFFFFF);
+            float cy = height * (row + 0.5f) / rows;
+            g.drawString(font, titles[row], 8, (int) (cy - height / (2f * rows)) + 3, 0xFFFFFF);
             List<BlockState> states = galleryStates(tier);
             for (int col = 0; col < states.size(); col++) {
                 float cx = width * (col + 1) / (states.size() + 1f);
@@ -847,10 +854,36 @@ public final class DevScreenshot {
                 Minecraft.getInstance().getBlockRenderer().renderSingleBlock(states.get(col), pose, buffers,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
                 buffers.endBatch();
+                VertexConsumer lines = buffers.getBuffer(RenderType.lines());
+                for (AABB box : states.get(col).getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs()) {
+                    LevelRenderer.renderLineBox(pose, lines, box, 0f, 0f, 0f, 1f);
+                }
+                buffers.endBatch();
                 pose.popPose();
             }
         }
         Lighting.setupFor3DItems();
+        // Itens no inventário: o roteador por tier e os armazenamentos.
+        float cy = height * (rows - 0.5f) / rows;
+        g.drawString(font, "Itens no inventario (vista gui): roteador por tier e armazenamentos", 8,
+                (int) (cy - height / (2f * rows)) + 3, 0xFFFFFF);
+        List<ItemStack> items = new ArrayList<>();
+        for (RouterTier tier : RouterTier.values()) {
+            items.add(RouterBlockItem.withTier(ModItems.ROUTER.get(), tier));
+        }
+        for (StorageKind kind : StorageKind.values()) {
+            items.add(StorageBlockItem.withTier(ModItems.STORAGE.get(kind).get(), RouterTier.ELITE));
+        }
+        float scale = Math.min(width / (items.size() + 1f), height / (float) rows) / 20f;
+        for (int col = 0; col < items.size(); col++) {
+            float cx = width * (col + 1) / (items.size() + 1f);
+            PoseStack pose = g.pose();
+            pose.pushPose();
+            pose.translate(cx - 8 * scale, cy - 8 * scale, 0);
+            pose.scale(scale, scale, 1);
+            g.renderItem(items.get(col), 0, 0);
+            pose.popPose();
+        }
     }
 
     // ------------------------------------------------------------------ eventos

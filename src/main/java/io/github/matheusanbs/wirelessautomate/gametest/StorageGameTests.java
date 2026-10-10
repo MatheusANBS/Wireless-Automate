@@ -55,11 +55,13 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -136,6 +138,33 @@ public final class StorageGameTests {
     }
 
     /** Guardar e tirar por tipo, com o total somado de todos os tipos e o tipo zerado saindo da lista. */
+    /**
+     * A colisão e a seleção de cada armazenamento ({@code StorageShapes}) abraçam o modelo: dentro do bloco,
+     * encostadas no chão e com o topo a pelo menos 15/16 (o jogador anda por cima), no Tanque de Source em
+     * todos os níveis; e, como os blocos parciais do vanilla, a forma não é um cubo cheio.
+     */
+    @GameTest(template = "empty")
+    public static void storageShapesHugTheModel(GameTestHelper helper) {
+        for (StorageKind kind : StorageKind.values()) {
+            BlockState base = ModBlocks.STORAGE.get(kind).get().defaultBlockState();
+            List<BlockState> states = kind == StorageKind.SOURCE_TANK
+                    ? java.util.stream.IntStream.rangeClosed(0, 10).mapToObj(f -> base.setValue(StorageSourceTankBlock.FILL, f)).toList()
+                    : List.of(base, base.setValue(RouterBlock.TIER, RouterTier.ULTIMATE));
+            for (BlockState state : states) {
+                VoxelShape shape = state.getCollisionShape(helper.getLevel(), helper.absolutePos(new BlockPos(1, 1, 1)));
+                helper.assertFalse(shape.isEmpty(), kind + " sem colisão");
+                AABB bounds = shape.bounds();
+                helper.assertTrue(bounds.minX >= 0 && bounds.minY >= 0 && bounds.minZ >= 0
+                        && bounds.maxX <= 1 && bounds.maxY <= 1 && bounds.maxZ <= 1, kind + " fora do bloco: " + bounds);
+                helper.assertTrue(bounds.minY == 0, kind + " não encosta no chão");
+                helper.assertTrue(bounds.maxY >= 15 / 16.0, kind + " sem topo para pisar: " + bounds.maxY);
+                helper.assertFalse(state.isCollisionShapeFullBlock(helper.getLevel(), helper.absolutePos(new BlockPos(1, 1, 1))),
+                        kind + " é um cubo cheio");
+            }
+        }
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void storesByTypeAndCount(GameTestHelper helper) {
         ItemStorage storage = storageChest(helper, A, RouterTier.ULTIMATE).storage();

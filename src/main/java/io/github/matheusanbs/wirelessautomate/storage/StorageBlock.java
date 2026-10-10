@@ -15,6 +15,7 @@ import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -24,6 +25,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.fluids.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,10 +46,13 @@ public class StorageBlock extends BaseEntityBlock {
             propertiesCodec()).apply(instance, StorageBlock::new));
 
     private final StorageKind kind;
+    /** A forma do tipo ({@link StorageShapes}), a mesma em todos os tiers (e níveis). */
+    private final VoxelShape shape;
 
     public StorageBlock(StorageKind kind, Properties properties) {
         super(properties);
         this.kind = kind;
+        this.shape = shape(StorageShapes.boxes(kind.id));
         registerDefaultState(stateDefinition.any().setValue(RouterBlock.TIER, RouterTier.BASIC));
     }
 
@@ -66,6 +73,21 @@ public class StorageBlock extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    /** Colisão e seleção abraçando o modelo: a união das caixas do tipo em {@link StorageShapes}. */
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return shape;
+    }
+
+    /** A união das caixas em pixels. */
+    static VoxelShape shape(double[][] boxes) {
+        VoxelShape shape = Shapes.empty();
+        for (double[] b : boxes) {
+            shape = Shapes.or(shape, Block.box(b[0], b[1], b[2], b[3], b[4], b[5]));
+        }
+        return shape;
     }
 
     @Override

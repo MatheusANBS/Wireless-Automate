@@ -23,9 +23,9 @@ import org.jetbrains.annotations.Nullable;
  * tela fechada. Ao fechar com pendências, o servidor recarrega as receitas.
  */
 public class RecipeEditorMenu extends AbstractContainerMenu {
-    public static final int INVENTORY_X = 81;
-    public static final int INVENTORY_Y = 180;
-    public static final int HOTBAR_Y = 238;
+    public static final int INVENTORY_X = 98;
+    public static final int INVENTORY_Y = 195;
+    public static final int HOTBAR_Y = 253;
 
     private RecipeEditorSnapshot snapshot;
     private @Nullable Consumer<RecipeEditorSnapshot> listener;

@@ -27,8 +27,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
@@ -199,7 +200,7 @@ public final class MachineView3D {
         g.enableScissor(x, y, x + width, y + height);
         PoseStack pose = g.pose();
         pose.pushPose();
-        pose.mulPose(local);
+        mulPose(pose, local);
         drawn.set(pose.last().pose());
         drawn.invert(inverse);
         pickReady = true;
@@ -235,6 +236,21 @@ public final class MachineView3D {
         // o que vier depois (dicas, textos) não fica atrás dos blocos; o scissor limita a limpeza ao visor
         RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         g.disableScissor();
+    }
+
+    /**
+     * O {@code PoseStack.mulPose(Matrix4f)} do 1.21: multiplica a matriz e refaz as normais (o
+     * {@code mulPoseMatrix} do 1.20.1 não mexe nelas), pela inversa transposta com a escala tirada, porque
+     * no 1.20.1 o shader não normaliza a normal e a vista tem escala (o zoom).
+     */
+    private static void mulPose(PoseStack pose, Matrix4f matrix) {
+        PoseStack.Pose last = pose.last();
+        last.pose().mul(matrix);
+        Matrix3f normal = last.normal().set(last.pose()).invert().transpose();
+        float scale = (float) Math.cbrt(Math.abs(normal.determinant()));
+        if (scale > 0) {
+            normal.scale(1 / scale);
+        }
     }
 
     /**
@@ -319,7 +335,7 @@ public final class MachineView3D {
             case WEST -> { px = -lift; py = u; pz = v; }
             default -> { px = 1 + lift; py = u; pz = v; }
         }
-        out.addVertex(m, px, py, pz).setColor(argb);
+        out.vertex(m, px, py, pz).color(argb).endVertex();
     }
 
     // ------------------------------------------------------------------ vista

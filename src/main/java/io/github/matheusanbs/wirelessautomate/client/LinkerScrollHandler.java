@@ -6,13 +6,13 @@ import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerTypePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.InputEvent;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 
 /**
  * Shift + roda do mouse com o Vinculador na mão principal troca as abas que ele vincula pelos
@@ -21,19 +21,19 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * hotbar. Como na hotbar, rolar para baixo vai para o próximo. O servidor troca o tipo e mostra o
  * novo na action bar.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class LinkerScrollHandler {
     private LinkerScrollHandler() {
     }
 
     @SubscribeEvent
-    static void onScroll(InputEvent.MouseScrollingEvent event) {
+    public static void onScroll(InputEvent.MouseScrollingEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen != null || minecraft.player == null || event.getScrollDeltaY() == 0
+        if (minecraft.screen != null || minecraft.player == null || event.getScrollDelta() == 0
                 || !minecraft.options.keyShift.isDown()) {
             return;
         }
-        int direction = event.getScrollDeltaY() > 0 ? -1 : 1;
+        int direction = event.getScrollDelta() > 0 ? -1 : 1;
         ItemStack held = minecraft.player.getMainHandItem();
         CustomPacketPayload payload;
         if (held.is(ModItems.LINKER.get())) {
@@ -44,7 +44,7 @@ public final class LinkerScrollHandler {
             return;
         }
         ClientPacketListener connection = minecraft.getConnection();
-        if (connection == null || !connection.hasChannel(payload.type())) {
+        if (connection == null || !PacketDistributor.hasChannel(connection.getConnection(), payload.type())) {
             return;
         }
         PacketDistributor.sendToServer(payload);

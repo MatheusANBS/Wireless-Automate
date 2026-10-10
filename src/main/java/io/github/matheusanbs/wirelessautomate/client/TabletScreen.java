@@ -39,14 +39,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.network.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -254,13 +254,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         List<Component> labels = new ArrayList<>();
         for (ResourceType type : MOVE_TYPES) {
             if ((roles & NodeIndex.role(type, NodeIndex.EXTRACT)) != 0) {
-                labels.add(tr("label.extract", typeWord(type)).copy().withColor(GuiPaint.modeColor(PortMode.EXTRACT)));
+                labels.add(tr("label.extract", typeWord(type)).copy().withStyle(style -> style.withColor(GuiPaint.modeColor(PortMode.EXTRACT))));
             }
             if ((roles & NodeIndex.role(type, NodeIndex.INSERT)) != 0) {
-                labels.add(tr("label.insert", typeWord(type)).copy().withColor(GuiPaint.modeColor(PortMode.INSERT)));
+                labels.add(tr("label.insert", typeWord(type)).copy().withStyle(style -> style.withColor(GuiPaint.modeColor(PortMode.INSERT))));
             }
             if ((roles & NodeIndex.role(type, NodeIndex.STORAGE)) != 0) {
-                labels.add(tr("label.storage", typeWord(type)).copy().withColor(GuiPaint.modeColor(PortMode.BOTH)));
+                labels.add(tr("label.storage", typeWord(type)).copy().withStyle(style -> style.withColor(GuiPaint.modeColor(PortMode.BOTH))));
             }
         }
         return labels;
@@ -270,7 +270,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (id.isEmpty()) {
             return tr("network.none");
         }
-        return snapshot().network(id.get()).<Component>map(n -> Component.literal(n.name()).withColor(n.color()))
+        return snapshot().network(id.get()).<Component>map(n -> Component.literal(n.name()).withStyle(style -> style.withColor(n.color())))
                 .orElse(tr("network.hidden"));
     }
 
@@ -345,8 +345,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_SEARCH);
         searchBox.setTextColor(GuiPaint.FG);
-        searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        searchBox.setHint(tr("search").copy().withColor(GuiPaint.DISABLED));
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        searchBox.setHint(tr("search").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         searchBox.setValue(search);
         searchBox.setResponder(value -> {
             if (!value.equals(search)) {
@@ -427,13 +427,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         newBox.setBordered(false);
         newBox.setMaxLength(32);
         newBox.setTextColor(GuiPaint.FG);
-        newBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
         addRenderableWidget(newBox);
         renameBox = new EditBox(font, x + RX + 4, y + BODY_Y + 3, rw() - 8, 9, tr("rename"));
         renameBox.setBordered(false);
         renameBox.setMaxLength(32);
         renameBox.setTextColor(GuiPaint.FG);
-        renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
         addRenderableWidget(renameBox);
         refresh();
     }
@@ -738,7 +738,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private void startRename(Rename what, String current) {
         renaming = what;
         renameBox.setValue(current);
-        renameBox.moveCursorToEnd(false);
+        renameBox.moveCursorToEnd();
         refresh();
         setFocused(renameBox);
     }
@@ -1167,7 +1167,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         int step = -(int) Math.signum(scrollY);
         switch (tab) {
             case LIST -> listScroll = Mth.clamp(listScroll + step, 0, Math.max(0, snapshot().nodes().size() - nodeRows()));
@@ -1224,6 +1224,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         refresh();
         GuiText.beginFrame();
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, mouseX, mouseY, partialTick);
         renderNotice(g);
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
@@ -1301,28 +1302,28 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Nome, onde fica, tier, máquina, rede de cada aba, papéis e status. */
     private Component nodeTooltip(NodeView node, boolean clickOpens) {
         MutableComponent text = nodeName(node).copy();
-        text.append("\n").append(coords(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
-        text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                .append(Component.literal(" · ").withColor(GuiPaint.TOOLTIP_MUTED))
-                .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        text.append("\n").append(coords(node).copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
+        text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                .append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                .append(RouterBlock.machineName(machineBlock(node)).copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         for (ResourceType type : MOVE_TYPES) {
-            text.append("\n").append(typeName(type).copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                    .append(Component.literal(": ").withColor(GuiPaint.TOOLTIP_MUTED)).append(networkName(node.network(type)));
+            text.append("\n").append(typeName(type).copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)))
+                    .append(Component.literal(": ").withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED))).append(networkName(node.network(type)));
         }
         List<Component> roles = roleLabels(node.roles());
         if (!roles.isEmpty()) {
             MutableComponent line = Component.empty();
             for (int i = 0; i < roles.size(); i++) {
                 if (i > 0) {
-                    line.append(Component.literal(" · ").withColor(GuiPaint.TOOLTIP_MUTED));
+                    line.append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
                 }
                 line.append(roles.get(i));
             }
             text.append("\n").append(line);
         }
-        text.append("\n").append(statusName(node.status()).copy().withColor(statusColor(node.status())));
+        text.append("\n").append(statusName(node.status()).copy().withStyle(style -> style.withColor(statusColor(node.status()))));
         if (clickOpens) {
-            text.append("\n").append(tr("open.click").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            text.append("\n").append(tr("open.click").copy().withStyle(style -> style.withColor(GuiPaint.TOOLTIP_MUTED)));
         }
         return text;
     }
@@ -1406,9 +1407,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             GuiPaint.dot(g, x + x1() - statusW - 2, ry + 4, statusColor(node.status()));
             GuiPaint.text(g, font, status, x + x1() - statusW + 6, ry + 3, statusColor(node.status()));
             GuiText.draw(g, font, nodeName(node), textX, ry + 3, x + x1() - statusW - 8 - textX, GuiPaint.FG);
-            MutableComponent line = coords(node).copy().withColor(GuiPaint.MUTED);
+            MutableComponent line = coords(node).copy().withStyle(style -> style.withColor(GuiPaint.MUTED));
             for (Component label : roleLabels(node.roles())) {
-                line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
+                line.append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.MUTED))).append(label);
             }
             GuiText.draw(g, font, line, textX, ry + 12, x + x1() - 4 - textX, GuiPaint.MUTED);
         }
@@ -1503,7 +1504,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             int statusW = font.width(status);
             GuiPaint.text(g, font, status, x0 + w - 56 - statusW, infoY + 4, statusColor(chosen.status()));
             MutableComponent text = nodeName(chosen).copy().append(Component.literal("  ")
-                    .append(coords(chosen)).withColor(GuiPaint.MUTED));
+                    .append(coords(chosen)).withStyle(style -> style.withColor(GuiPaint.MUTED)));
             GuiText.draw(g, font, text, x0 + 5, infoY + 4, w - 66 - statusW, GuiPaint.FG);
         } else {
             Component hint = otherDimension > 0 ? tr("map.hint.other", otherDimension) : tr("map.hint");
@@ -1586,20 +1587,20 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             GuiText.draw(g, font, rates, x + X0 + 5, cy + 12, x1() - X0 - 10, GuiPaint.MUTED);
             MutableComponent line = Component.empty();
             if (n.paused()) {
-                appendPart(line, tr("status.paused").copy().withColor(statusColor(NodeStatus.PAUSED)));
+                appendPart(line, tr("status.paused").copy().withStyle(style -> style.withColor(statusColor(NodeStatus.PAUSED))));
             }
             if (n.full() > 0) {
-                appendPart(line, plural("stats.full", n.full()).copy().withColor(statusColor(NodeStatus.FULL)));
+                appendPart(line, plural("stats.full", n.full()).copy().withStyle(style -> style.withColor(statusColor(NodeStatus.FULL))));
             }
             if (n.sleeping() > 0) {
-                appendPart(line, tr("stats.sleeping", n.sleeping()).copy().withColor(GuiPaint.MUTED));
+                appendPart(line, tr("stats.sleeping", n.sleeping()).copy().withStyle(style -> style.withColor(GuiPaint.MUTED)));
             }
             if (n.unloaded() > 0) {
                 appendPart(line, plural("stats.unloaded", n.unloaded()).copy()
-                        .withColor(statusColor(NodeStatus.UNLOADED)));
+                        .withStyle(style -> style.withColor(statusColor(NodeStatus.UNLOADED))));
             }
             if (line.getSiblings().isEmpty()) {
-                line.append(tr("stats.network.ok").copy().withColor(GuiPaint.DISABLED));
+                line.append(tr("stats.network.ok").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
             }
             GuiText.draw(g, font, line, x + X0 + 5, cy + 21, x1() - X0 - 10, GuiPaint.FG);
         }
@@ -1649,13 +1650,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private void appendWarning(MutableComponent line, int count, String key, int color) {
         if (count > 0) {
-            appendPart(line, plural(key, count).copy().withColor(color));
+            appendPart(line, plural(key, count).copy().withStyle(style -> style.withColor(color)));
         }
     }
 
     private static void appendPart(MutableComponent line, Component part) {
         if (!line.getSiblings().isEmpty()) {
-            line.append(Component.literal(" · ").withColor(GuiPaint.MUTED));
+            line.append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.MUTED)));
         }
         line.append(part);
     }
@@ -1788,11 +1789,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 nodes += n.get().nodes();
             }
         }
-        Component summary = (group.paused() ? tr("status.paused") : tr("group.running")).copy().withColor(color)
-                .append(Component.literal(" · ").withColor(GuiPaint.MUTED))
-                .append(plural("meta.networks", group.networks().size()).copy().withColor(GuiPaint.MUTED))
-                .append(Component.literal(" · ").withColor(GuiPaint.MUTED))
-                .append(plural("meta.nodes", nodes).copy().withColor(GuiPaint.MUTED));
+        Component summary = (group.paused() ? tr("status.paused") : tr("group.running")).copy().withStyle(style -> style.withColor(color))
+                .append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.MUTED)))
+                .append(plural("meta.networks", group.networks().size()).copy().withStyle(style -> style.withColor(GuiPaint.MUTED)))
+                .append(Component.literal(" · ").withStyle(style -> style.withColor(GuiPaint.MUTED)))
+                .append(plural("meta.nodes", nodes).copy().withStyle(style -> style.withColor(GuiPaint.MUTED)));
         GuiText.draw(g, font, summary, x, y + BODY_Y + 15, rw(), GuiPaint.FG);
 
         GuiPaint.text(g, font, tr("group.networks"), x, y + GROUP_NET_Y - 11, GuiPaint.FG);

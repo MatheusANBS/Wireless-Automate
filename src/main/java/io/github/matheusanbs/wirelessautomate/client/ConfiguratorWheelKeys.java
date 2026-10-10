@@ -5,12 +5,12 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
  * principal e sem tela aberta, abre a {@link ConfiguratorWheelScreen}. Soltar a tecla na tela escolhe
  * e fecha. O tick só lê {@code consumeClick}.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class ConfiguratorWheelKeys {
     public static final KeyMapping WHEEL = new KeyMapping("key.wirelessautomate.configurator_wheel",
             KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_ALT,
@@ -28,7 +28,10 @@ public final class ConfiguratorWheelKeys {
     }
 
     @SubscribeEvent
-    static void onTick(ClientTickEvent.Post event) {
+    public static void onTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         Minecraft minecraft = Minecraft.getInstance();
         while (WHEEL.consumeClick()) {
             if (minecraft.player == null || minecraft.screen != null
@@ -40,15 +43,13 @@ public final class ConfiguratorWheelKeys {
     }
 
     /** Registro da tecla, no barramento do mod. */
-    // bus explícito: o FML já o deduz do evento e marcou o atributo para remoção, mas aqui ele deixa claro
-    @SuppressWarnings("removal")
-    @EventBusSubscriber(modid = WirelessAutomate.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Registration {
         private Registration() {
         }
 
         @SubscribeEvent
-        static void register(RegisterKeyMappingsEvent event) {
+        public static void register(RegisterKeyMappingsEvent event) {
             event.register(WHEEL);
         }
     }

@@ -79,13 +79,13 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
@@ -105,7 +105,7 @@ import org.lwjgl.opengl.GL11;
  * renders do roteador sobre magenta para a capa do CurseForge ({@code capa-renders}, ver
  * {@code scripts/curseforge/gerar_capa.py}).
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevScreenshot {
     private static final String OUTPUT = System.getenv("WA_SCREENSHOT");
     /** Prefixo opcional ({@code WA_SCREENSHOT_ONLY=giro}): só as capturas cujo nome começa com ele. */
@@ -1002,7 +1002,7 @@ public final class DevScreenshot {
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
-    static void onRender(ScreenEvent.Render.Post event) {
+    public static void onRender(ScreenEvent.Render.Post event) {
         if (OUTPUT == null || !(event.getScreen() instanceof TitleScreen title)) {
             return;
         }
@@ -1067,7 +1067,10 @@ public final class DevScreenshot {
     }
 
     @SubscribeEvent
-    static void onTick(ClientTickEvent.Post event) {
+    public static void onTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         if (OUTPUT == null) {
             return;
         }

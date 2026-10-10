@@ -58,11 +58,10 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidUtil;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -504,7 +503,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             searchDraft = value;
             scroll = 0;
         });
-        searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
+        searchBox.setHint(tr("search.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
 
         // aba Entrada
         minusButton = add(new FlatButton(0, 0, 14, BTN_H, tr("stock.decrease"),
@@ -515,7 +514,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 () -> stepStock(1)).tooltip(() -> stepTooltip("stock.increase.tooltip")));
         stockBox = box(tr("stock"), 15, stockDraft, value -> stockDraft = value);
         stockBox.setFilter(s -> s.chars().allMatch(Character::isDigit));
-        stockBox.setHint(tr("stock.none").copy().withColor(GuiPaint.DISABLED));
+        stockBox.setHint(tr("stock.none").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         removeButton = add(new FlatButton(0, 0, 40, BTN_H, tr("remove"),
                 (g, b, hovered) -> paintDangerButton(g, b, hovered, tr("remove"), false), this::removeSelected)
                 .tooltip(() -> tr("remove.tooltip")));
@@ -531,7 +530,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             tagSearchDraft = value;
             candScroll = 0;
         });
-        tagSearchBox.setHint(tr(isChemical() ? "tags.search.chemical" : "tags.search.hint").copy().withColor(GuiPaint.DISABLED));
+        tagSearchBox.setHint(tr(isChemical() ? "tags.search.chemical" : "tags.search.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         addTagsButton = add(new FlatButton(0, 0, IW, BTN_H, tr("tags.add.action"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, addLabel()), this::addChecked)
                 .tooltip(() -> uncheckedCount() == 0 ? tr("tags.add.empty") : null));
@@ -558,7 +557,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 openSuggestions();
             }
         });
-        enchantBox.setHint(tr("rule.enchantment.hint").copy().withColor(GuiPaint.DISABLED));
+        enchantBox.setHint(tr("rule.enchantment.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         levelBox = box(tr("rule.level"), 3, levelText, this::typedLevel);
         levelBox.setFilter(value -> value.chars().allMatch(c -> c >= '0' && c <= '9'));
         for (int v = 0; v < 3; v++) {
@@ -573,7 +572,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                         draft.durability().map(d -> d.percent() + "%").orElse("")), false), () -> stepPercent(10))
                 .tooltip(() -> tr("rule.percent.tooltip")));
         scopeBox = box(tr("rule.scope"), ItemRule.MAX_SCOPE, draft.scope(), value -> setDraft(draft.withScope(value)));
-        scopeBox.setHint(tr("rule.scope.hint").copy().withColor(GuiPaint.DISABLED));
+        scopeBox.setHint(tr("rule.scope.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         ruleResetButton = add(new FlatButton(0, 0, 40, BTN_H, Component.empty(),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, editing >= 0 ? tr("rule.cancel") : tr("rule.reset"), false),
                 this::resetRule).tooltip(() -> editing >= 0 ? tr("rule.cancel.tooltip") : tr("rule.reset.tooltip")));
@@ -611,7 +610,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         box.setBordered(false);
         box.setMaxLength(max);
         box.setTextColor(GuiPaint.FG);
-        box.setTextShadow(false); // tinta sobre porcelana, sem sombra
+        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
         box.setValue(value);
         box.setResponder(responder);
         return addRenderableWidget(box);
@@ -986,7 +985,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (!isFluid() || stack.isEmpty()) {
             return;
         }
-        inspectedFluid = stack.copyWithAmount(1000);
+        inspectedFluid = new FluidStack(stack, 1000);
         afterInspect();
     }
 
@@ -1230,10 +1229,10 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (enchantments == null) {
             List<Holder<Enchantment>> list = new ArrayList<>();
             if (minecraft != null && minecraft.level != null) {
-                minecraft.level.registryAccess().registry(Registries.ENCHANTMENT)
-                        .ifPresent(registry -> registry.holders().forEach(list::add));
+                // no 1.20.1 os encantamentos são um registro fixo (os de mods entram nele pelo Forge)
+                BuiltInRegistries.ENCHANTMENT.holders().forEach(list::add);
             }
-            list.sort(Comparator.comparing(h -> h.value().description().getString()));
+            list.sort(Comparator.comparing(h -> enchantName(h)));
             enchantments = list;
         }
         return enchantments;
@@ -1268,7 +1267,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private static String enchantName(Holder<Enchantment> holder) {
-        return holder.value().description().getString();
+        return Component.translatable(holder.value().getDescriptionId()).getString();
     }
 
     private static String enchantId(Holder<Enchantment> holder) {
@@ -1357,7 +1356,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private static void selectAll(EditBox box) {
-        box.moveCursorToEnd(false);
+        box.moveCursorToEnd();
         box.setHighlightPos(0);
     }
 
@@ -1710,7 +1709,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         int step = (int) -Math.signum(scrollY);
         if (overSuggestions(mouseX, mouseY)) {
             suggestTop = Math.max(0, Math.min(suggestions.size() - SUGGEST_ROWS, suggestTop + step));
@@ -1725,8 +1724,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return true;
         }
         if (tab == Tab.RULE && overLevelField(mouseX, mouseY)) {
-            // Shift + roda vira roda horizontal em alguns sistemas
-            double amount = scrollY != 0 ? scrollY : scrollX;
+            // no 1.20.1 a tela só recebe a roda vertical (o Shift + roda horizontal de alguns sistemas se perde)
+            double amount = scrollY;
             if (amount != 0) {
                 stepLevel((int) Math.signum(amount) * (hasShiftDown() ? 10 : 1));
             }
@@ -1736,7 +1735,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             stepPercent(-step * 5);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     @Override
@@ -1812,6 +1811,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         refresh();
         GuiText.beginFrame();
         hoveredCandidate = candidateAt(mouseX, mouseY);
+        renderBackground(g); // no 1.20.1 o super.render não escurece o fundo
         super.render(g, mouseX, mouseY, partialTick);
         renderSuggestions(g, mouseX, mouseY);
         if (resizeHandle.dragging()) {
@@ -1822,7 +1822,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             if (index >= 0) {
                 Holder<Enchantment> holder = suggestions.get(index);
                 setTooltipForNextRenderPass(List.of(Component.literal(enchantName(holder)).getVisualOrderText(),
-                        Component.literal(enchantId(holder)).withColor(GuiPaint.DISABLED).getVisualOrderText()));
+                        Component.literal(enchantId(holder)).withStyle(style -> style.withColor(GuiPaint.DISABLED)).getVisualOrderText()));
             }
             return;
         }
@@ -2094,7 +2094,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 sub = tr("inspect.tags", inspected.getTags().count());
             } else if (!inspectedFluid.isEmpty()) {
                 GuiPaint.fluid(g, inspectedFluid, x, y + INSPECT_Y);
-                name = inspectedFluid.getHoverName();
+                name = inspectedFluid.getDisplayName();
                 sub = tr("inspect.tags", fluidTags(inspectedFluid.getFluid()).count());
             } else {
                 name = tr("inspect");
@@ -2461,7 +2461,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (entry instanceof ItemEntry e) {
             return e.stack().getHoverName();
         } else if (entry instanceof FluidEntry e) {
-            return e.stack().getHoverName();
+            return e.stack().getDisplayName();
         } else if (entry instanceof TagEntry e) {
             return Component.literal("#" + e.tag());
         } else if (entry instanceof ModEntry e) {
@@ -2516,13 +2516,29 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         throw new IllegalStateException("Entrada de filtro desconhecida: " + entry);
     }
 
+    /**
+     * A chave de tradução de uma tag pela convenção comum ({@code tag.item.c.ingots}): o
+     * {@code Tags.getTagTranslationKey} do NeoForge, que o Forge 1.20.1 não tem.
+     */
+    private static String tagTranslationKey(TagKey<?> tagKey) {
+        StringBuilder key = new StringBuilder("tag.");
+        ResourceLocation registry = tagKey.registry().location();
+        ResourceLocation tag = tagKey.location();
+        if (!registry.getNamespace().equals("minecraft")) {
+            key.append(registry.getNamespace()).append('.');
+        }
+        key.append(registry.getPath().replace('/', '.')).append('.').append(tag.getNamespace()).append('.')
+                .append(tag.getPath().replace('/', '.').replace(':', '.'));
+        return key.toString();
+    }
+
     private List<FormattedCharSequence> entryTooltip(FilterEntry entry) {
         List<FormattedCharSequence> lines = new ArrayList<>(font.split(entryName(entry), 220));
         if (!entryId(entry).isEmpty()) {
             lines.add(Component.literal(entryId(entry)).withStyle(ChatFormatting.DARK_GRAY).getVisualOrderText());
         }
         if (entry instanceof TagEntry e) {
-            Component name = Component.translatableWithFallback(Tags.getTagTranslationKey(isFluid()
+            Component name = Component.translatableWithFallback(tagTranslationKey(isFluid()
                     ? TagKey.create(Registries.FLUID, e.tag()) : TagKey.create(Registries.ITEM, e.tag())), "");
             if (!name.getString().isEmpty()) {
                 lines.add(name.copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());
@@ -2545,7 +2561,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         List<FormattedCharSequence> lines = new ArrayList<>();
         lines.add(Component.literal(c.label()).getVisualOrderText());
         if (c.entry() instanceof TagEntry e) {
-            Component name = Component.translatableWithFallback(Tags.getTagTranslationKey(isFluid()
+            Component name = Component.translatableWithFallback(tagTranslationKey(isFluid()
                     ? TagKey.create(Registries.FLUID, e.tag()) : TagKey.create(Registries.ITEM, e.tag())), "");
             if (!name.getString().isEmpty()) {
                 lines.add(name.copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());

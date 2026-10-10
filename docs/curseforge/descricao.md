@@ -76,6 +76,7 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 - Upgrade with the same Upgrade Cards as the router, without losing the contents.
 - **Break it and the contents go with the item**, like a shulker box, tier included.
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
+- Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
 
 ![Wireless Chest](https://media.forgecdn.net/attachments/2028/261/feature-10-chest-png.png)
 
@@ -149,7 +150,7 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 ## Requirements
 
 - Minecraft **1.21.1**
-- **NeoForge** 21.1.251 or newer (works with All the Mods 10)
+- **NeoForge** 21.1.248 or newer (works with All the Mods 10)
 
 ## Source code
 

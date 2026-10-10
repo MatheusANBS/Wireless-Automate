@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Etapa atual (9/10/2026): 1.4.0: upgrade direto de tier e JEI por tier. O Cartão de Upgrade sobe roteador ou armazenamento de qualquer tier abaixo direto para o dele (no clique e na bancada), com tooltip só do tier de destino; o JEI lista cada tier separado, com uma receita de upgrade por par de tiers. Sugestão do jogador taccio3 no CurseForge. Versão 1.4.0 com changelog separado e unificado (`docs/curseforge/changelog-1.4.0.md`), descrição e README em dia.** Build com 145 JUnit e 165 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK.
+**Etapa atual (9/10/2026): 1.5.0: controles do Baú no estilo do Mouse Tweaks e do vanilla (Shift + arrastar, rodinha sobre a grade e sobre o inventário, Shift + duplo clique com item no cursor), correção do criativo que apagava do Baú o que não cabia no inventário, vazão do Tablet sem estouro (`RateMath`) e NeoForge mínimo 21.1.248. Protocolo `10`. Versão 1.5.0 com changelog separado e unificado (`docs/curseforge/changelog-1.5.0.md`), descrição e READMEs em dia.** Build com 155 JUnit e 166 + 7 + 15 + 2 GameTests (comuns, químicos, Source e Allthemodium) passando, e2e OK (1018 passos, com o Mouse Tweaks no cliente).
 
 O motor move itens, fluidos e energia por redes, com prioridade, round-robin, redstone, vazão e alcance por tier, destinos dormindo e orçamento de tempo por tick, já otimizado pelo benchmark. Cada aba do roteador escolhe a sua rede. Há tela do roteador (visor 3D, faces, filtro, cartões, upgrade), filtros com tela e Cartão de Filtro, JEI opcional, receitas vanilla, upgrade de chunk loading, Tablet de rede (lista, mapa, estatísticas, redes, grupos com pausar), Vinculador com modo Área, abas marcadas (inclusive Químicos) e desvincular, e Configurador sem tela (pincel e colar em área na mesma máquina, todas as abas ou um tipo só). Roteador colocado nasce sem rede. Químicos do Mekanism, livro-guia do GuideME e texturas por script também estão prontos. Falta: o teste manual do JEI e AE2/RS2.
 
@@ -43,7 +43,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 ## Próximo passo
 
 0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.
-1. Responder o comentário do taccio3 no CurseForge (texto pronto na conversa de 9/10/2026) e subir o jar da 1.4.0.
+1. Subir o jar da 1.5.0 no CurseForge com o `changelog-1.5.0.md` (e responder o comentário do taccio3, se ainda não respondeu).
 1b. Testar num ATM10 real: receitas do ATM no JEI (com o fragmento de ATM Star), tooltip dos cartões, cores, e a migração da config num servidor que já tinha a 1.1. Sem teste automático: Allthemodium sem o All The Tweaks (a terceira versão do Ultimate).
 2. Acompanhar o retorno de quem usa, principalmente com o Mekanism. O projeto foi aprovado no CurseForge em 9/10/2026: [página do mod](https://www.curseforge.com/minecraft/mc-mods/wireless-automate).
 3. Rodar o `./scripts/bench.sh` na máquina local para ter os números de antes e depois da auditoria lá também (os de `docs/benchmark.md` são do container da nuvem).
@@ -99,6 +99,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 
 | Data | O que foi feito |
 | --- | --- |
+| 2026-10-09 | Fechamento da 1.5.0 (minor: o protocolo mudou para `10` com as ações do Baú): `mod_version`, changelog separado e unificado, descrição do CurseForge e READMEs (gestos do Baú e NeoForge 21.1.248). |
 | 2026-10-09 | NeoForge mínimo baixado para 21.1.248 (um pack do dono não carregava o mod; `neo_version`, `CLAUDE.md` e `wa-release`), com build e as quatro runs de GameTest nessa versão. Vazão negativa no Tablet com quantidades absurdas ("-426P items/s"): o `× 20` e as somas entre nós e redes estouravam o `long`; agora passam pelo `RateMath` (puro, com JUnit), que satura. Os contadores dos nós podem dar a volta, porque só a diferença entre amostras é usada. |
 | 2026-10-09 | Baú, gestos do Mouse Tweaks na grade: rodinha (sobre um tipo tira ou guarda um; sobre um slot do inventário guarda um dele ou puxa um do Baú; sobre o vazio rola a lista) e, com um item no cursor, Shift + duplo clique, como no vanilla (o máximo do tipo que couber no inventário, o cursor fica; sem item no cursor o duplo clique não faz nada a mais, para não encher o inventário sem querer). Ações novas no `StorageActionPayload`, agora com o slot (protocolo `10`). Corrigido: no criativo, mandar para o inventário cheio apagava do Baú o que não cabia (`Inventory.add`); agora só sai o que entra. GameTest `wheelAndDoubleClickMoveItems`, 166 na run comum e as outras três OK. `runClient` com o Mouse Tweaks. |
 | 2026-10-09 | Baú: Shift + arrastar pela grade manda uma pilha de cada tipo por onde passar para o inventário (o Mouse Tweaks só age sobre slots, e a grade não tem). Só cliente (`StorageListScreen`), mesma ação `TAKE_TO_INVENTORY` do Shift + clique; guia atualizado. |

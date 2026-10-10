@@ -100,7 +100,7 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste can touch only routers on the **same kind of machine**, so you can configure a whole production line in a few clicks, or every router in the area. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the mode and the pasted type.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 
-![Configurator wheel](ENVIAR:feature-16-wheel.png)
+![Configurator wheel](https://media.forgecdn.net/attachments/2035/213/feature-16-wheel-png.png)
 
 ![Linker by type](https://media.forgecdn.net/attachments/2034/647/feature-13-linker-png.png)
 

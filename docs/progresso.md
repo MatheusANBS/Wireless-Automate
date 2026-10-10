@@ -42,6 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
+00b. **Portes** (`docs/portes.md`, skill `wa-porte`): investigar o 1.20.1 Forge (ATM9 e ATM9 To the Sky) e o 26.1 (ATM11), só os relatórios de impacto, e decidir a ordem.
 000. **1.6.0 publicada (10/10):** GitHub e CurseForge, com o jar, o changelog e a descrição nova com a imagem da roda (`feature-16-wheel`).
 00. **Imagens do CurseForge com o visual novo: feitas e no ar (10/10).** Falta só o dono colar a `descricao.md` nova na página do projeto e apagar da galeria as imagens antigas (attachments 2027/2028).
 0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.

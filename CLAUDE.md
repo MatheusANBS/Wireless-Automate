@@ -15,6 +15,7 @@ Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o
 - `wa-feature`: feature, tela ou item novo, do mockup aprovado ao commit, com um subagente por tarefa.
 - `wa-mod-opcional`: integrar outro mod opcional (como Mekanism e Ars), sem quebrar o mod quando ele não está instalado.
 - `wa-release`: fechar uma versão (changelog separado e unificado, tag, release com o jar).
+- `wa-porte`: portar o mod para outra versão de Minecraft (26.1 do ATM11, 1.20.1 Forge do ATM9): investiga as mudanças com fontes, mede o impacto no código e planeja o ramo `mc/<versão>-<loader>`. Estratégia e estado dos ramos em `docs/portes.md`.
 - `wa-curseforge-imagens`: imagens da página do CurseForge pela vitrine e troca dos links na descrição.
 
 ## Mapa do código

@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -59,5 +60,7 @@ public final class ClientSetup {
                 (LinkerMenu menu, Inventory inventory, Component title) -> new LinkerScreen(menu, inventory, title));
         event.register(ModMenus.NETWORK_TABLET.get(),
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
+        event.register(ModMenus.RECIPE_EDITOR.get(), (RecipeEditorMenu menu, Inventory inventory, Component title)
+                -> new RecipeEditorScreen(menu, inventory, title));
     }
 }

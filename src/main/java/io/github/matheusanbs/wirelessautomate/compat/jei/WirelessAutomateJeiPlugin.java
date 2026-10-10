@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.compat.jei;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
@@ -121,6 +122,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(FilterScreen.class, new FilterGhostHandler());
+        registration.addGhostIngredientHandler(RecipeEditorScreen.class, new RecipeEditorGhostHandler());
         // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...).
         IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
         registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {

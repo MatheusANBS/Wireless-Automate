@@ -14,7 +14,8 @@ import java.util.Locale;
  * Codec tolerante do {@link Filter}, para dados salvos no mundo e em itens: mesmo formato do
  * {@link Filter#CODEC}, mas uma entrada que não lê (item de um mod removido, tipo desconhecido) é
  * descartada com aviso no log, em vez de derrubar o filtro inteiro, e campos inválidos voltam ao padrão.
- * Use com {@code RegistryOps} (as entradas de item e fluido salvam componentes).
+ * Porte 1.20.1: funciona com o {@code NbtOps} puro (as entradas de item e fluido salvam o NBT da pilha); o
+ * {@code optionalFieldOf} do DFU 6 já é tolerante (um campo inválido volta ao padrão).
  */
 public final class FilterCodecs {
     private static final Codec<Filter.ListMode> LIST_MODE = Codec.STRING.xmap(FilterCodecs::parseListMode,
@@ -49,9 +50,9 @@ public final class FilterCodecs {
     };
 
     public static final Codec<Filter> LENIENT = RecordCodecBuilder.create(i -> i.group(
-            LIST_MODE.lenientOptionalFieldOf("list", Filter.ListMode.WHITELIST).forGetter(Filter::listMode),
-            Codec.BOOL.lenientOptionalFieldOf("components", false).forGetter(Filter::matchComponents),
-            LENIENT_ENTRIES.lenientOptionalFieldOf("entries", List.of()).forGetter(Filter::entries))
+            LIST_MODE.optionalFieldOf("list", Filter.ListMode.WHITELIST).forGetter(Filter::listMode),
+            Codec.BOOL.optionalFieldOf("components", false).forGetter(Filter::matchComponents),
+            LENIENT_ENTRIES.optionalFieldOf("entries", List.of()).forGetter(Filter::entries))
             .apply(i, Filter::new));
 
     private static Filter.ListMode parseListMode(String name) {

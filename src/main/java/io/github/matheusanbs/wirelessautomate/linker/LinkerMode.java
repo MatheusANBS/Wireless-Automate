@@ -2,10 +2,10 @@ package io.github.matheusanbs.wirelessautomate.linker;
 
 import com.mojang.serialization.Codec;
 import java.util.Locale;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.util.StringRepresentable;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
 
 /** Modo do Vinculador: um roteador por clique ou todos de uma área. */
 public enum LinkerMode implements StringRepresentable {

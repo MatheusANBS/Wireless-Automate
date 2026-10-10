@@ -1,23 +1,18 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -28,7 +23,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.fluids.FluidUtil;
+import net.minecraftforge.fluids.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,10 +36,6 @@ import org.jetbrains.annotations.Nullable;
  * {@link #playerWillDestroy}).
  */
 public class StorageBlock extends BaseEntityBlock {
-    public static final MapCodec<StorageBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            StringRepresentable.fromEnum(StorageKind::values).fieldOf("kind").forGetter(StorageBlock::kind),
-            propertiesCodec()).apply(instance, StorageBlock::new));
-
     private final StorageKind kind;
     /** A forma do tipo ({@link StorageShapes}), a mesma em todos os tiers (e níveis). */
     private final VoxelShape shape;
@@ -61,23 +52,20 @@ public class StorageBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
-    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(RouterBlock.TIER);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    @SuppressWarnings("deprecation")
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     /** Colisão e seleção abraçando o modelo: a união das caixas do tipo em {@link StorageShapes}. */
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    @SuppressWarnings("deprecation")
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return shape;
     }
 
@@ -103,24 +91,24 @@ public class StorageBlock extends BaseEntityBlock {
 
     /**
      * O Cartão de Upgrade age pelo próprio {@code useOn}. No Tanque, um recipiente de fluido enche ou
-     * esvazia direto (o mesmo caminho dos tanques comuns). O resto segue para o clique sem item.
+     * esvazia direto (o mesmo caminho dos tanques comuns). O resto abre a tela (a lista com busca, ou a
+     * da Bateria). Porte 1.20.1: o {@code use} junta o {@code useItemOn} e o {@code useWithoutItem} do
+     * 1.21; como lá, só a mão principal abre a tela.
      */
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
-            Player player, InteractionHand hand, BlockHitResult hitResult) {
+    @SuppressWarnings("deprecation")
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
+            BlockHitResult hitResult) {
+        ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() instanceof TierCoreItem) {
-            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.PASS;
         }
         if (kind == StorageKind.TANK && FluidUtil.interactWithFluidHandler(player, hand, level, pos, hitResult.getDirection())) {
-            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    /** Clique direito abre a tela (a lista com busca, ou a da Bateria). */
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
-            BlockHitResult hitResult) {
+        if (hand != InteractionHand.MAIN_HAND) {
+            return InteractionResult.PASS;
+        }
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof StorageBlockEntity storage) {
             storage.open(serverPlayer);
@@ -148,12 +136,14 @@ public class StorageBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
+    @SuppressWarnings("deprecation")
+    public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    @SuppressWarnings("deprecation")
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof StorageBlockEntity storage ? storage.signal() : 0;
     }
 
@@ -163,16 +153,16 @@ public class StorageBlock extends BaseEntityBlock {
      * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui não se faz nada.
      */
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageBlockEntity storage
                 && !storage.isEmptyContents() && !lootWillDrop(player, state, level, pos)) {
             ItemStack stack = StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
-            stack.applyComponents(storage.collectComponents());
+            storage.writeToItem(stack);
             ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
             drop.setDefaultPickUpDelay();
             level.addFreshEntity(drop);
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     /**
@@ -190,7 +180,8 @@ public class StorageBlock extends BaseEntityBlock {
      * por aqui.
      */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    @SuppressWarnings("deprecation")
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof StorageBlockEntity storage) {
             storage.stash();
         }
@@ -199,7 +190,7 @@ public class StorageBlock extends BaseEntityBlock {
 
     /** Clique do meio (criativo): o bloco no tier dele, vazio. */
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
     }
 

@@ -7,6 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.Capability;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Tanque de Source: Source em {@code long} ({@link ScalarStore}). Para o roteador, a {@link BulkSource};
@@ -71,9 +73,17 @@ public class StorageSourceTankBlockEntity extends ScalarStorageBlockEntity {
 
     /** Colocado a partir de um item cheio: o conteúdo voltou, então o nível também. */
     @Override
-    protected void applyImplicitComponents(DataComponentInput input) {
-        super.applyImplicitComponents(input);
+    protected void appliedFromItem() {
         refreshFill();
+    }
+
+    /**
+     * A {@link BulkSource} (para o roteador, em {@code long}). Porte 1.20.1: o lado do Ars (D5, o
+     * {@code ISourceTile}) é da tarefa 8, em {@code compat/arsnouveau}.
+     */
+    @Override
+    protected @Nullable Object exposed(Capability<?> capability) {
+        return capability == BulkSource.BLOCK ? store() : null;
     }
 
     @Override

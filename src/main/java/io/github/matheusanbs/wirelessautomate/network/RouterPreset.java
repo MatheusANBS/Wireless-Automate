@@ -13,9 +13,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -54,7 +54,7 @@ public final class RouterPreset {
             UUIDUtil.CODEC.optionalFieldOf("network").forGetter(preset -> Optional.empty())
     ).apply(instance, RouterPreset::fromMaps));
 
-    /** Pelo {@link #CODEC} com registros (as entradas de filtro levam componentes). */
+    /** Pelo {@link #CODEC} (porte 1.20.1: em NBT, sem registros). */
     public static final StreamCodec<RegistryFriendlyByteBuf, RouterPreset> STREAM_CODEC =
             ByteBufCodecs.fromCodecWithRegistries(CODEC);
 

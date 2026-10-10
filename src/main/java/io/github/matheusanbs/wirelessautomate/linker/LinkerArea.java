@@ -5,9 +5,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -23,9 +24,10 @@ public record LinkerArea(ResourceKey<Level> dimension, BlockPos first, Optional<
             BlockPos.CODEC.optionalFieldOf("second").forGetter(LinkerArea::second))
             .apply(instance, LinkerArea::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, LinkerArea> STREAM_CODEC = StreamCodec.composite(
-            ResourceKey.streamCodec(Registries.DIMENSION), LinkerArea::dimension,
-            BlockPos.STREAM_CODEC, LinkerArea::first,
-            ByteBufCodecs.optional(BlockPos.STREAM_CODEC), LinkerArea::second,
+            GameCodecs.RESOURCE_LOCATION.map(id -> ResourceKey.create(Registries.DIMENSION, id), ResourceKey::location),
+            LinkerArea::dimension,
+            GameCodecs.BLOCK_POS, LinkerArea::first,
+            ByteBufCodecs.optional(GameCodecs.BLOCK_POS), LinkerArea::second,
             LinkerArea::new);
 
     public LinkerArea {

@@ -166,7 +166,7 @@ public class FilterCardItem extends Item {
         if (entry instanceof FilterEntry.ItemEntry e) {
             name = e.stack().getHoverName();
         } else if (entry instanceof FilterEntry.FluidEntry e) {
-            name = e.stack().getHoverName();
+            name = e.stack().getDisplayName();
         } else if (entry instanceof FilterEntry.TagEntry e) {
             name = Component.literal("#" + e.tag());
         } else if (entry instanceof FilterEntry.ModEntry e) {

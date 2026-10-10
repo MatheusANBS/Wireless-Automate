@@ -1,8 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.fluids.FluidStack;
 
 /**
@@ -12,9 +10,12 @@ import net.minecraftforge.fluids.FluidStack;
  * numa chamada. As chaves têm 1 mB e não podem ser alteradas.
  */
 public interface BulkFluids {
-    /** A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). */
-    Capability<BulkFluids> BLOCK = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    /**
+     * A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). Criada no
+     * {@link StorageCapabilities}: assim esta interface não depende do Forge para carregar (o JUnit do
+     * {@code ScalarStore} roda sem ele).
+     */
+    Capability<BulkFluids> BLOCK = StorageCapabilities.FLUIDS;
 
     int types();
 

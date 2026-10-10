@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
 
 /**
  * A Bateria vista como um {@link IEnergyStorage} comum. A API é em {@code int}: cada chamada passa

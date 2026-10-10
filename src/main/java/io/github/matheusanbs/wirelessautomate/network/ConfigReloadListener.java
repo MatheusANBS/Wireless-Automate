@@ -3,15 +3,15 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.config.ModConfigEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 /**
  * Config do servidor carregada (migração do balanceamento) ou recarregada: vazão e alcance dos tiers são
- * lidos na montagem, então tudo é remontado. O FML põe a classe no barramento do mod sozinho, porque o evento é {@code IModBusEvent}.
+ * lidos na montagem, então tudo é remontado. Porte 1.20.1: no Forge a classe vai para o barramento do mod pelo {@code bus = MOD}.
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ConfigReloadListener {
     /** Primeira carga da config do mundo: aplica o balanceamento novo aos valores ainda no padrão antigo. */
     @SubscribeEvent

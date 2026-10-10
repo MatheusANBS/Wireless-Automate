@@ -7,18 +7,23 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -30,8 +35,15 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Ao quebrar: o drop leva só a referência ({@link StorageContents}) e o filtro, e o conteúdo vai
  * para o {@link StorageSavedData} ({@link #stash}, chamado pelo bloco). Ao colocar o item, o
- * conteúdo volta para cá ({@link #applyImplicitComponents}); uma cópia do item (criativo, dupe)
+ * conteúdo volta para cá ({@link #applyFromItem}); uma cópia do item (criativo, dupe)
  * encontra o conteúdo já tirado e nasce vazia.
+ *
+ * <p>Porte 1.20.1 (sem componentes de item): o NBT do bloco leva também {@value #CONTENTS_KEY} (a
+ * referência e o resumo, só com conteúdo), que a loot table copia para o item ({@code copy_nbt}, com o
+ * {@code filter} indo para {@code storage_filter}); o drop sem loot table usa o {@link #writeToItem}.
+ * Ao colocar, o {@link StorageBlockItem} chama o {@link #applyFromItem}. As capabilities são expostas
+ * pelo {@link #getCapability} (D3), cada uma num {@link LazyOptional} guardado e invalidado no
+ * {@link #invalidateCaps()}; cada tipo diz o que expõe no {@link #exposed}.
  *
  * <p>Filtro de entrada: só nos que guardam vários tipos ({@link StorageKind#hasTypes}); a admissão
  * de cada subclasse o aplica a qualquer caminho de entrada.
@@ -44,6 +56,11 @@ public abstract class StorageBlockEntity extends BlockEntity {
     private Filter filter = Filter.EMPTY;
     /** Sobe quando o filtro muda: a tela de filtro aberta reenvia a visão. */
     private int filterVersion;
+    /** Porte 1.20.1 (D3): as capabilities já pedidas, guardadas até o {@link #invalidateCaps()}. */
+    private final Map<Capability<?>, LazyOptional<?>> capabilities = new HashMap<>();
+
+    /** Porte 1.20.1: chave da referência ao conteúdo no NBT do bloco, que a loot table copia para o item. */
+    public static final String CONTENTS_KEY = "storage_contents";
 
     protected StorageBlockEntity(BlockEntityType<?> type, StorageKind kind, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -76,10 +93,10 @@ public abstract class StorageBlockEntity extends BlockEntity {
     /** Sobe a cada mudança do conteúdo (a tela compara). */
     public abstract int contentsVersion();
 
-    protected abstract Tag saveContents(HolderLookup.Provider registries);
+    protected abstract Tag saveContents();
 
     /** Troca o conteúdo pelo salvo, sem avisar; aceita {@code null} (vazio). */
-    protected abstract void loadContents(@Nullable Tag tag, HolderLookup.Provider registries);
+    protected abstract void loadContents(@Nullable Tag tag);
 
     /** Esvazia sem avisar. */
     protected abstract void clearContents();
@@ -89,6 +106,42 @@ public abstract class StorageBlockEntity extends BlockEntity {
 
     /** Abre a tela do bloco para o jogador. */
     public abstract void open(ServerPlayer player);
+
+    // ------------------------------------------------------------------ capabilities (porte 1.20.1, D3)
+
+    /**
+     * O objeto que este armazenamento expõe para a capability, ou {@code null} se não a expõe (vale para
+     * qualquer lado). No main isso ficava no {@code StorageCapabilities}; aqui cada tipo sobrescreve.
+     */
+    protected @Nullable Object exposed(Capability<?> capability) {
+        return null;
+    }
+
+    @Override
+    public <T> @NotNull LazyOptional<T> getCapability(@NotNull Capability<T> capability, @Nullable Direction side) {
+        if (!remove) {
+            LazyOptional<?> cached = capabilities.get(capability);
+            if (cached == null) {
+                Object value = exposed(capability);
+                if (value != null) {
+                    cached = LazyOptional.of(() -> value);
+                    capabilities.put(capability, cached);
+                }
+            }
+            if (cached != null) {
+                return cached.cast();
+            }
+        }
+        return super.getCapability(capability, side);
+    }
+
+    /** O bloco saiu (ou o chunk descarregou): quem guardou a capability (o {@code CapCache} do roteador) fica sabendo. */
+    @Override
+    public void invalidateCaps() {
+        super.invalidateCaps();
+        capabilities.values().forEach(LazyOptional::invalidate);
+        capabilities.clear();
+    }
 
     // ------------------------------------------------------------------ filtro de entrada
 
@@ -138,72 +191,82 @@ public abstract class StorageBlockEntity extends BlockEntity {
         if (isEmptyContents() || !(level instanceof ServerLevel server)) {
             return;
         }
-        StorageSavedData.get(server.getServer()).put(storageId(), kind, tier(), saveContents(server.registryAccess()));
+        StorageSavedData.get(server.getServer()).put(storageId(), kind, tier(), saveContents());
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.put(contentsKey(), saveContents(registries));
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.put(contentsKey(), saveContents());
         if (storageId != null) {
             tag.putUUID("storage_id", storageId);
         }
         if (!filter.isEmpty()) {
-            FilterCodecs.LENIENT.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), filter)
+            FilterCodecs.LENIENT.encodeStart(NbtOps.INSTANCE, filter)
                     .resultOrPartial(error -> WirelessAutomate.LOGGER.error("Falha ao salvar o filtro de {}: {}", kind, error))
                     .ifPresent(encoded -> tag.put("filter", encoded));
+        }
+        // Porte 1.20.1: a referência que a loot table (copy_nbt) leva para o item; o "filter" vai como "storage_filter".
+        if (!isEmptyContents()) {
+            StorageContents.CODEC.encodeStart(NbtOps.INSTANCE, contentsRef())
+                    .resultOrPartial(error -> WirelessAutomate.LOGGER.error("Falha ao salvar a referência de {}: {}", kind, error))
+                    .ifPresent(encoded -> tag.put(CONTENTS_KEY, encoded));
         }
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        loadContents(tag.get(contentsKey()), registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        loadContents(tag.get(contentsKey()));
         storageId = tag.hasUUID("storage_id") ? tag.getUUID("storage_id") : null;
         filter = tag.contains("filter")
-                ? FilterCodecs.LENIENT.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag.get("filter"))
+                ? FilterCodecs.LENIENT.parse(NbtOps.INSTANCE, tag.get("filter"))
                         .resultOrPartial(error -> WirelessAutomate.LOGGER.warn("Filtro de {} inválido: {}", kind, error))
                         .orElse(Filter.EMPTY)
                 : Filter.EMPTY;
     }
 
-    /** O drop leva a referência, o resumo e o filtro; vazio e sem filtro, não leva nada (e empilha). */
-    @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder components) {
-        super.collectImplicitComponents(components);
+    private StorageContents contentsRef() {
+        return new StorageContents(storageId(), types(), total());
+    }
+
+    /**
+     * O drop leva a referência, o resumo e o filtro; vazio e sem filtro, não leva nada (e empilha).
+     * Porte 1.20.1: no lugar do {@code collectImplicitComponents}, grava no NBT do item ({@link ModDataComponents}).
+     */
+    public void writeToItem(ItemStack stack) {
         if (!isEmptyContents()) {
-            components.set(ModDataComponents.STORAGE_CONTENTS.get(), new StorageContents(storageId(), types(), total()));
+            ModDataComponents.STORAGE_CONTENTS.set(stack, contentsRef());
         }
         if (!filter.isEmpty()) {
-            components.set(ModDataComponents.STORAGE_FILTER.get(), filter);
+            ModDataComponents.STORAGE_FILTER.set(stack, filter);
         }
     }
 
     /**
      * Colocado a partir de um item cheio: tira o conteúdo do {@link StorageSavedData}. Se ele já
      * foi tirado (cópia do item), nasce vazio e com id novo, para não dividir o id com o original.
+     *
+     * <p>Porte 1.20.1: no lugar do {@code applyImplicitComponents}; o {@link StorageBlockItem} chama ao
+     * colocar. O id é sempre refeito, porque um {@code BlockEntityTag} copiado (clique do meio no
+     * criativo) traz o id do original.
      */
-    @Override
-    protected void applyImplicitComponents(DataComponentInput input) {
-        super.applyImplicitComponents(input);
-        filter = input.getOrDefault(ModDataComponents.STORAGE_FILTER.get(), Filter.EMPTY);
-        StorageContents contents = input.get(ModDataComponents.STORAGE_CONTENTS.get());
-        if (contents == null || !(level instanceof ServerLevel server)) {
-            return;
+    public void applyFromItem(ItemStack stack) {
+        filter = ModDataComponents.STORAGE_FILTER.getOrDefault(stack, Filter.EMPTY);
+        storageId = null;
+        StorageContents contents = ModDataComponents.STORAGE_CONTENTS.get(stack);
+        if (contents != null && level instanceof ServerLevel server) {
+            Tag stored = StorageSavedData.get(server.getServer()).take(contents.id(), kind);
+            if (stored != null) {
+                loadContents(stored);
+                storageId = contents.id();
+            }
         }
-        Tag stored = StorageSavedData.get(server.getServer()).take(contents.id(), kind);
-        if (stored != null) {
-            loadContents(stored, server.registryAccess());
-            storageId = contents.id();
-            setChanged();
-        }
+        setChanged();
+        appliedFromItem();
     }
 
-    @Override
-    public void removeComponentsFromTag(CompoundTag tag) {
-        super.removeComponentsFromTag(tag);
-        tag.remove(contentsKey());
-        tag.remove("storage_id");
-        tag.remove("filter");
+    /** Gancho: o {@link #applyFromItem} terminou (o Tanque de Source refaz o nível). */
+    protected void appliedFromItem() {
     }
 }

@@ -2,8 +2,6 @@ package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
 
 /**
  * Itens por tipo e quantidade {@code long}, sem o teto de uma pilha por chamada do
@@ -14,9 +12,12 @@ import net.minecraftforge.common.capabilities.CapabilityToken;
  * ({@code index}) valem até a próxima mudança: um tipo que zera sai da lista.
  */
 public interface BulkItems {
-    /** A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). */
-    Capability<BulkItems> BLOCK = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    /**
+     * A capability (no Forge 1.20.1, pelo tipo; registrada no {@code RegisterCapabilitiesEvent}). Criada no
+     * {@link StorageCapabilities}: assim esta interface não depende do Forge para carregar (o JUnit do
+     * {@code ScalarStore} roda sem ele).
+     */
+    Capability<BulkItems> BLOCK = StorageCapabilities.ITEMS;
 
     /** Quantos tipos há guardados. */
     int types();

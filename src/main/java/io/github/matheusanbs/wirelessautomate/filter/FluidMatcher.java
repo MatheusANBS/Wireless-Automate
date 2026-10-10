@@ -5,7 +5,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /** {@link Filter} compilado para fluidos; mesmo esquema do {@link ItemMatcher}, com {@link Fluid} de chave. */
@@ -14,12 +14,12 @@ final class FluidMatcher extends CompiledMatcher<Fluid> {
     static final Hash.Strategy<FluidStack> FLUID_AND_COMPONENTS = new Hash.Strategy<>() {
         @Override
         public int hashCode(@Nullable FluidStack stack) {
-            return stack == null ? 0 : FluidStack.hashFluidAndComponents(stack);
+            return stack == null ? 0 : stack.hashCode();
         }
 
         @Override
         public boolean equals(@Nullable FluidStack a, @Nullable FluidStack b) {
-            return a == b || a != null && b != null && FluidStack.isSameFluidSameComponents(a, b);
+            return a == b || a != null && b != null && a.isFluidEqual(b);
         }
     };
 

@@ -24,7 +24,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Colar em área do Configurador, no servidor: marcar os cantos com a varinha no modo Área e colar a
- * cópia em todos os roteadores da área presos ao mesmo tipo de máquina do roteador copiado. A área
+ * cópia em todos os roteadores da área presos ao mesmo tipo de máquina do roteador copiado ou, no
+ * modo Área (qualquer máquina) ({@link PasteMode#AREA_ANY}), em todos eles. A área
  * segue as regras e os limites do Vinculador ({@link LinkerActions#checkArea}, config
  * {@code linker.maxAreaVolume} e {@code linker.maxDistance}) e a busca é a mesma ({@link LinkerScan}:
  * só chunks carregados, sem visitar bloco a bloco).
@@ -83,6 +84,9 @@ public final class ConfiguratorArea {
         if (!stack.has(ModDataComponents.PRESET.get())) {
             return Component.translatable(KEY + "corner2_no_copy", size, scan.routers().size());
         }
+        if (ConfiguratorItem.pasteMode(stack).anyMachine()) {
+            return Component.translatable(KEY + "corner2_any", size, scan.routers().size());
+        }
         int same = 0;
         for (RouterBlockEntity router : scan.routers()) {
             if (machine == null || machine.equals(machine(level, router))) {
@@ -98,7 +102,7 @@ public final class ConfiguratorArea {
 
     /**
      * Cola a cópia da varinha em todos os roteadores carregados da área presos à mesma máquina do
-     * roteador copiado (sem máquina gravada, em todos). As redes seguem {@link PresetApplier}. Com um
+     * roteador copiado (sem máquina gravada, ou no modo qualquer máquina, em todos). As redes seguem {@link PresetApplier}. Com um
      * tipo no seletor da varinha, só aquela aba é colada.
      * Quem chama já conferiu que a varinha tem uma cópia.
      */
@@ -110,7 +114,9 @@ public final class ConfiguratorArea {
         }
         ResourceType type = ConfiguratorItem.type(stack);
         PresetApplier.Checked checked = PresetApplier.check(player, preset, type);
-        ResourceLocation machine = ConfiguratorItem.machine(stack);
+        // Em "qualquer máquina" a máquina da cópia não filtra: todos os roteadores da área.
+        ResourceLocation machine = ConfiguratorItem.pasteMode(stack).anyMachine()
+                ? null : ConfiguratorItem.machine(stack);
         ServerLevel level = player.serverLevel();
         LinkerScan scan = LinkerScan.of(level, area.box());
         int applied = 0;

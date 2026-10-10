@@ -371,15 +371,15 @@ public final class ModPayloads {
             return false;
         }
         FilterTarget target = menu.target();
-        FilterEntry entry = switch (payload.entry()) {
-            case FilterEntry.ItemEntry e when target.type() == ResourceType.ITEM && !e.stack().isEmpty() ->
-                    new FilterEntry.ItemEntry(e.stack(), 0);
-            case FilterEntry.FluidEntry e when target.type() == ResourceType.FLUID && !e.stack().isEmpty() ->
-                    new FilterEntry.FluidEntry(e.stack(), 0);
-            case FilterEntry.ChemicalEntry e when target.type() == ResourceType.CHEMICAL && Chemicals.exists(e.chemical()) ->
-                    new FilterEntry.ChemicalEntry(e.chemical(), 0);
-            default -> null;
-        };
+        FilterEntry entry = null;
+        FilterEntry sent = payload.entry();
+        if (sent instanceof FilterEntry.ItemEntry e && target.type() == ResourceType.ITEM && !e.stack().isEmpty()) {
+            entry = new FilterEntry.ItemEntry(e.stack(), 0);
+        } else if (sent instanceof FilterEntry.FluidEntry e && target.type() == ResourceType.FLUID && !e.stack().isEmpty()) {
+            entry = new FilterEntry.FluidEntry(e.stack(), 0);
+        } else if (sent instanceof FilterEntry.ChemicalEntry e && target.type() == ResourceType.CHEMICAL && Chemicals.exists(e.chemical())) {
+            entry = new FilterEntry.ChemicalEntry(e.chemical(), 0);
+        }
         if (entry == null) {
             return false;
         }
@@ -416,24 +416,22 @@ public final class ModPayloads {
         if (entries.size() != 1 || !validIndex(filter, payload.replace())) {
             return false;
         }
-        target.setFilter(filter.withReplaced(payload.replace(), entries.getFirst()));
+        target.setFilter(filter.withReplaced(payload.replace(), entries.get(0)));
         return true;
     }
 
     /** A entrada normalizada (sem estoque) se ela é uma tag, mod ou regra que vale para {@code type}. */
     private static @Nullable FilterEntry validRule(ResourceType type, FilterEntry entry) {
-        return switch (entry) {
-            case FilterEntry.TagEntry e when type == ResourceType.ITEM || type == ResourceType.FLUID -> {
-                ResourceLocation tag = parseTag(e.tag().toString());
-                yield tag == null ? null : new FilterEntry.TagEntry(tag, 0);
-            }
-            case FilterEntry.ModEntry e -> {
-                String mod = parseMod(e.modId());
-                yield mod == null ? null : new FilterEntry.ModEntry(mod, 0);
-            }
-            case FilterEntry.RuleEntry e when type == ResourceType.ITEM && e.rule().isValid() -> new FilterEntry.RuleEntry(e.rule(), 0);
-            default -> null;
-        };
+        if (entry instanceof FilterEntry.TagEntry e && (type == ResourceType.ITEM || type == ResourceType.FLUID)) {
+            ResourceLocation tag = parseTag(e.tag().toString());
+            return tag == null ? null : new FilterEntry.TagEntry(tag, 0);
+        } else if (entry instanceof FilterEntry.ModEntry e) {
+            String mod = parseMod(e.modId());
+            return mod == null ? null : new FilterEntry.ModEntry(mod, 0);
+        } else if (entry instanceof FilterEntry.RuleEntry e && type == ResourceType.ITEM && e.rule().isValid()) {
+            return new FilterEntry.RuleEntry(e.rule(), 0);
+        }
+        return null;
     }
 
     /** {@code c:ingots} ou {@code #c:ingots}, em minúsculas; {@code null} se não for um id válido. */

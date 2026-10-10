@@ -808,7 +808,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return;
         }
         if (preview) {
-            applyLocally(replace < 0 ? filter().withEntries(entries) : filter().withReplaced(replace, entries.getFirst()));
+            applyLocally(replace < 0 ? filter().withEntries(entries) : filter().withReplaced(replace, entries.get(0)));
             return;
         }
         List<FilterEntry> rules = new ArrayList<>();
@@ -946,12 +946,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     /** Item (ou fluido) selecionado vai para o inspetor, na aba Tags. */
     private void seeTags() {
-        switch (selected) {
-            case ItemEntry e -> inspect(e.stack());
-            case FluidEntry e -> inspectFluid(e.stack());
-            case null, default -> {
-                return;
-            }
+        if (selected instanceof ItemEntry e) {
+            inspect(e.stack());
+        } else if (selected instanceof FluidEntry e) {
+            inspectFluid(e.stack());
+        } else {
+            return;
         }
         openTab(Tab.TAGS);
     }
@@ -1054,7 +1054,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         FilterEntry typed = typedEntry(tagSearchDraft);
         if (typed == null) {
             if (candidates.size() == 1) {
-                typed = candidates.getFirst().entry();
+                typed = candidates.get(0).entry();
             } else {
                 return;
             }
@@ -1117,7 +1117,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 }
                 FilterEntry typed = typedEntry(search);
                 if (typed instanceof TagEntry t && list.stream().noneMatch(c -> c.entry().sameTarget(t))) {
-                    list.addFirst(new Candidate(typed, "#" + t.tag(), 0));
+                    list.add(0, new Candidate(typed, "#" + t.tag(), 0));
                 }
             }
         } else if (!inspected.isEmpty()) {
@@ -1263,7 +1263,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
         Holder<Enchantment> first = list.stream()
                 .filter(h -> h.unwrapKey().map(k -> k.location().getPath().equals("fortune")).orElse(false))
-                .findFirst().orElse(list.getFirst());
+                .findFirst().orElse(list.get(0));
         setDraft(draft.withEnchantment(Optional.of(new ItemRule.Enchant(first.unwrapKey().orElseThrow().location(), 1))));
     }
 
@@ -2020,19 +2020,16 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(entryId(selected)), IW), x, ty, GuiPaint.DISABLED);
         ty += 12;
         int stockLabelY = y + innerBottom() - BTN_H - 4 - BTN_H - 11;
-        switch (selected) {
-            case TagEntry e -> ty = renderMembers(g, e, x, ty, stockLabelY);
-            case ModEntry e -> ty = renderMembers(g, e, x, ty, stockLabelY);
-            case RuleEntry e -> {
-                int n = inventoryMatches(currentHighlight());
-                wrapped(g, tr("rule.inventory", n), x, ty, IW, 2, ACCENT);
-            }
-            case ItemEntry e -> {
-                long tags = e.stack().getTags().count();
-                wrapped(g, tr("entry.item", tags), x, ty, IW, 3, GuiPaint.MUTED);
-            }
-            default -> {
-            }
+        if (selected instanceof TagEntry e) {
+            ty = renderMembers(g, e, x, ty, stockLabelY);
+        } else if (selected instanceof ModEntry e) {
+            ty = renderMembers(g, e, x, ty, stockLabelY);
+        } else if (selected instanceof RuleEntry) {
+            int n = inventoryMatches(currentHighlight());
+            wrapped(g, tr("rule.inventory", n), x, ty, IW, 2, ACCENT);
+        } else if (selected instanceof ItemEntry e) {
+            long tags = e.stack().getTags().count();
+            wrapped(g, tr("entry.item", tags), x, ty, IW, 3, GuiPaint.MUTED);
         }
         // estoque
         boolean white = filter().listMode() == Filter.ListMode.WHITELIST;
@@ -2354,13 +2351,18 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     // ------------------------------------------------------------------ entradas
 
     private void renderEntryIcon(GuiGraphics g, FilterEntry entry, int x, int y) {
-        switch (entry) {
-            case ItemEntry e -> g.renderItem(e.stack(), x, y);
-            case FluidEntry e -> GuiPaint.fluid(g, e.stack(), x, y);
-            case TagEntry e -> renderMark(g, e, "#", x, y);
-            case ModEntry e -> renderMark(g, e, "@", x, y);
-            case ChemicalEntry e -> GuiPaint.chemical(g, font, e.chemical(), x, y, trim);
-            case RuleEntry e -> renderRuleIcon(g, x, y);
+        if (entry instanceof ItemEntry e) {
+            g.renderItem(e.stack(), x, y);
+        } else if (entry instanceof FluidEntry e) {
+            GuiPaint.fluid(g, e.stack(), x, y);
+        } else if (entry instanceof TagEntry e) {
+            renderMark(g, e, "#", x, y);
+        } else if (entry instanceof ModEntry e) {
+            renderMark(g, e, "@", x, y);
+        } else if (entry instanceof ChemicalEntry e) {
+            GuiPaint.chemical(g, font, e.chemical(), x, y, trim);
+        } else if (entry instanceof RuleEntry) {
+            renderRuleIcon(g, x, y);
         }
     }
 
@@ -2406,14 +2408,15 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private List<ItemStack> itemMembers(FilterEntry entry) {
-        return switch (entry) {
-            case TagEntry e -> itemIcons.computeIfAbsent("#" + e.tag(), k -> {
+        if (entry instanceof TagEntry e) {
+            return itemIcons.computeIfAbsent("#" + e.tag(), k -> {
                 List<ItemStack> list = new ArrayList<>();
                 BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, e.tag()))
                         .ifPresent(set -> set.stream().limit(64).forEach(h -> list.add(new ItemStack(h))));
                 return list;
             });
-            case ModEntry e -> itemIcons.computeIfAbsent("@" + e.modId(), k -> {
+        } else if (entry instanceof ModEntry e) {
+            return itemIcons.computeIfAbsent("@" + e.modId(), k -> {
                 List<ItemStack> list = new ArrayList<>();
                 for (Item item : BuiltInRegistries.ITEM) {
                     if (list.size() < 64 && BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(e.modId())) {
@@ -2422,20 +2425,21 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 }
                 return list;
             });
-            default -> List.of();
-        };
+        }
+        return List.of();
     }
 
     private List<FluidStack> fluidMembers(FilterEntry entry) {
-        return switch (entry) {
-            case TagEntry e -> fluidIcons.computeIfAbsent("#" + e.tag(), k -> {
+        if (entry instanceof TagEntry e) {
+            return fluidIcons.computeIfAbsent("#" + e.tag(), k -> {
                 List<FluidStack> list = new ArrayList<>();
                 BuiltInRegistries.FLUID.getTag(TagKey.create(Registries.FLUID, e.tag())).map(HolderSet::stream)
                         .ifPresent(stream -> stream.map(Holder::value).filter(FilterScreen::isSource).limit(64)
                                 .forEach(f -> list.add(new FluidStack(f, 1000))));
                 return list;
             });
-            case ModEntry e -> fluidIcons.computeIfAbsent("@" + e.modId(), k -> {
+        } else if (entry instanceof ModEntry e) {
+            return fluidIcons.computeIfAbsent("@" + e.modId(), k -> {
                 List<FluidStack> list = new ArrayList<>();
                 for (Fluid fluid : BuiltInRegistries.FLUID) {
                     if (list.size() < 64 && isSource(fluid)
@@ -2445,8 +2449,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 }
                 return list;
             });
-            default -> List.of();
-        };
+        }
+        return List.of();
     }
 
     private static boolean isSource(Fluid fluid) {
@@ -2454,27 +2458,39 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private Component entryName(FilterEntry entry) {
-        return switch (entry) {
-            case ItemEntry e -> e.stack().getHoverName();
-            case FluidEntry e -> e.stack().getHoverName();
-            case TagEntry e -> Component.literal("#" + e.tag());
-            case ModEntry e -> Component.literal(ModList.get().getModContainerById(e.modId())
+        if (entry instanceof ItemEntry e) {
+            return e.stack().getHoverName();
+        } else if (entry instanceof FluidEntry e) {
+            return e.stack().getHoverName();
+        } else if (entry instanceof TagEntry e) {
+            return Component.literal("#" + e.tag());
+        } else if (entry instanceof ModEntry e) {
+            return Component.literal(ModList.get().getModContainerById(e.modId())
                     .map(c -> c.getModInfo().getDisplayName()).orElse("@" + e.modId()));
-            case ChemicalEntry e -> Chemicals.name(e.chemical());
-            case RuleEntry e -> ruleText(e.rule());
-        };
+        } else if (entry instanceof ChemicalEntry e) {
+            return Chemicals.name(e.chemical());
+        } else if (entry instanceof RuleEntry e) {
+            return ruleText(e.rule());
+        }
+        throw new IllegalStateException("Entrada de filtro desconhecida: " + entry);
     }
 
     /** Segunda linha da entrada na lista: o tipo e quanto ela pega. */
     private Component entryKind(FilterEntry entry) {
-        return switch (entry) {
-            case ItemEntry e -> filter().matchComponents() ? tr("kind.item.components") : tr("kind.item");
-            case FluidEntry e -> tr("kind.fluid");
-            case ChemicalEntry e -> tr("kind.chemical");
-            case TagEntry e -> isChemical() ? tr("kind.tag.plain") : tr("kind.tag", memberCount(e));
-            case ModEntry e -> isChemical() ? tr("kind.mod.plain") : tr("kind.mod", modCounts().getOrDefault(e.modId(), 0));
-            case RuleEntry e -> tr("kind.rule");
-        };
+        if (entry instanceof ItemEntry) {
+            return filter().matchComponents() ? tr("kind.item.components") : tr("kind.item");
+        } else if (entry instanceof FluidEntry) {
+            return tr("kind.fluid");
+        } else if (entry instanceof ChemicalEntry) {
+            return tr("kind.chemical");
+        } else if (entry instanceof TagEntry e) {
+            return isChemical() ? tr("kind.tag.plain") : tr("kind.tag", memberCount(e));
+        } else if (entry instanceof ModEntry e) {
+            return isChemical() ? tr("kind.mod.plain") : tr("kind.mod", modCounts().getOrDefault(e.modId(), 0));
+        } else if (entry instanceof RuleEntry) {
+            return tr("kind.rule");
+        }
+        throw new IllegalStateException("Entrada de filtro desconhecida: " + entry);
     }
 
     private int memberCount(TagEntry e) {
@@ -2484,14 +2500,20 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     private static String entryId(FilterEntry entry) {
-        return switch (entry) {
-            case ItemEntry e -> BuiltInRegistries.ITEM.getKey(e.stack().getItem()).toString();
-            case FluidEntry e -> BuiltInRegistries.FLUID.getKey(e.stack().getFluid()).toString();
-            case TagEntry e -> "#" + e.tag();
-            case ModEntry e -> "@" + e.modId();
-            case ChemicalEntry e -> e.chemical().toString();
-            case RuleEntry e -> e.rule().scope();
-        };
+        if (entry instanceof ItemEntry e) {
+            return BuiltInRegistries.ITEM.getKey(e.stack().getItem()).toString();
+        } else if (entry instanceof FluidEntry e) {
+            return BuiltInRegistries.FLUID.getKey(e.stack().getFluid()).toString();
+        } else if (entry instanceof TagEntry e) {
+            return "#" + e.tag();
+        } else if (entry instanceof ModEntry e) {
+            return "@" + e.modId();
+        } else if (entry instanceof ChemicalEntry e) {
+            return e.chemical().toString();
+        } else if (entry instanceof RuleEntry e) {
+            return e.rule().scope();
+        }
+        throw new IllegalStateException("Entrada de filtro desconhecida: " + entry);
     }
 
     private List<FormattedCharSequence> entryTooltip(FilterEntry entry) {
@@ -2563,13 +2585,14 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
      * Vazio se não serve.
      */
     public Optional<FilterEntry> ghostEntry(Object ingredient) {
-        return switch (ingredient) {
-            case ItemStack stack -> FilterMenu.entryFor(view().type(), stack);
-            case FluidStack stack when isFluid() && !stack.isEmpty() -> Optional.of(new FluidEntry(stack, 0));
-            default -> isChemical()
-                    ? Chemicals.ingredientId(ingredient).map(id -> new ChemicalEntry(id, 0))
-                    : Optional.empty();
-        };
+        if (ingredient instanceof ItemStack stack) {
+            return FilterMenu.entryFor(view().type(), stack);
+        } else if (ingredient instanceof FluidStack stack && isFluid() && !stack.isEmpty()) {
+            return Optional.of(new FluidEntry(stack, 0));
+        }
+        return isChemical()
+                ? Chemicals.ingredientId(ingredient).map(id -> new ChemicalEntry(id, 0))
+                : Optional.empty();
     }
 
     /** Onde soltar um ingrediente para acrescentá-lo: a lista de entradas, em coordenadas da tela. */
@@ -2584,21 +2607,22 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     /** O ingrediente serve para o inspetor (item num filtro de itens; fluido ou balde num de fluidos)? */
     public boolean canInspect(Object ingredient) {
-        return switch (ingredient) {
-            case ItemStack stack when isItem() -> !stack.isEmpty();
-            case ItemStack stack when isFluid() -> FluidUtil.getFluidContained(stack).filter(f -> !f.isEmpty()).isPresent();
-            case FluidStack stack when isFluid() -> !stack.isEmpty();
-            default -> false;
-        };
+        if (ingredient instanceof ItemStack stack && isItem()) {
+            return !stack.isEmpty();
+        } else if (ingredient instanceof ItemStack stack && isFluid()) {
+            return FluidUtil.getFluidContained(stack).filter(f -> !f.isEmpty()).isPresent();
+        } else if (ingredient instanceof FluidStack stack && isFluid()) {
+            return !stack.isEmpty();
+        }
+        return false;
     }
 
     /** Põe um ingrediente de fora no inspetor (só a tela; nada vai ao servidor). */
     public void inspectGhost(Object ingredient) {
-        switch (ingredient) {
-            case ItemStack stack -> inspect(stack);
-            case FluidStack stack -> inspectFluid(stack);
-            default -> {
-            }
+        if (ingredient instanceof ItemStack stack) {
+            inspect(stack);
+        } else if (ingredient instanceof FluidStack stack) {
+            inspectFluid(stack);
         }
     }
 

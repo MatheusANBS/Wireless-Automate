@@ -84,6 +84,7 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.material.Fluids;
@@ -1785,32 +1786,30 @@ public final class DevEndToEnd {
             level.setBlockAndUpdate(pos, ModBlocks.STORAGE.get(kinds[i]).get().defaultBlockState()
                     .setValue(RouterBlock.TIER, tiers[i]));
             showStorage.add(pos);
-            switch (level.getBlockEntity(pos)) {
-                case StorageChestBlockEntity chest -> {
-                    Item[] items = {Items.COBBLESTONE, Items.IRON_INGOT, Items.GOLD_INGOT, Items.COPPER_INGOT, Items.DIAMOND,
-                            Items.EMERALD, Items.REDSTONE, Items.LAPIS_LAZULI, Items.COAL, Items.QUARTZ, Items.OAK_LOG,
-                            Items.SPRUCE_LOG, Items.BIRCH_LOG, Items.DIRT, Items.SAND, Items.GRAVEL, Items.GLASS,
-                            Items.RAW_IRON, Items.RAW_GOLD, Items.RAW_COPPER, Items.NETHERITE_INGOT, Items.ANCIENT_DEBRIS,
-                            Items.OBSIDIAN, Items.GLOWSTONE_DUST, Items.AMETHYST_SHARD, Items.BONE, Items.STRING,
-                            Items.GUNPOWDER, Items.ENDER_PEARL, Items.BLAZE_ROD, Items.SLIME_BALL, Items.WHEAT,
-                            Items.CARROT, Items.POTATO, Items.SUGAR_CANE, Items.BAMBOO, Items.KELP, Items.CLAY_BALL,
-                            Items.FLINT, Items.LEATHER, Items.FEATHER, Items.EGG, Items.APPLE, Items.TORCH};
-                    long amount = 126_000_000L;
-                    for (Item item : items) {
-                        chest.storage().insert(new ItemStack(item), amount, false);
-                        amount = Math.max(1, amount * 6 / 10);
-                    }
+            BlockEntity shown = level.getBlockEntity(pos);
+            if (shown instanceof StorageChestBlockEntity chest) {
+                Item[] items = {Items.COBBLESTONE, Items.IRON_INGOT, Items.GOLD_INGOT, Items.COPPER_INGOT, Items.DIAMOND,
+                        Items.EMERALD, Items.REDSTONE, Items.LAPIS_LAZULI, Items.COAL, Items.QUARTZ, Items.OAK_LOG,
+                        Items.SPRUCE_LOG, Items.BIRCH_LOG, Items.DIRT, Items.SAND, Items.GRAVEL, Items.GLASS,
+                        Items.RAW_IRON, Items.RAW_GOLD, Items.RAW_COPPER, Items.NETHERITE_INGOT, Items.ANCIENT_DEBRIS,
+                        Items.OBSIDIAN, Items.GLOWSTONE_DUST, Items.AMETHYST_SHARD, Items.BONE, Items.STRING,
+                        Items.GUNPOWDER, Items.ENDER_PEARL, Items.BLAZE_ROD, Items.SLIME_BALL, Items.WHEAT,
+                        Items.CARROT, Items.POTATO, Items.SUGAR_CANE, Items.BAMBOO, Items.KELP, Items.CLAY_BALL,
+                        Items.FLINT, Items.LEATHER, Items.FEATHER, Items.EGG, Items.APPLE, Items.TORCH};
+                long amount = 126_000_000L;
+                for (Item item : items) {
+                    chest.storage().insert(new ItemStack(item), amount, false);
+                    amount = Math.max(1, amount * 6 / 10);
                 }
-                case StorageTankBlockEntity tank -> {
-                    tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
-                    tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
-                }
-                case StorageBatteryBlockEntity battery -> battery.store().insert(60_000_000_000L, false);
-                case StorageChemicalTankBlockEntity chemical ->
-                        chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 100_000_000L, false);
-                case StorageSourceTankBlockEntity source -> source.store().insert(4_000_000L, false);
-                default -> {
-                }
+            } else if (shown instanceof StorageTankBlockEntity tank) {
+                tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
+                tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
+            } else if (shown instanceof StorageBatteryBlockEntity battery) {
+                battery.store().insert(60_000_000_000L, false);
+            } else if (shown instanceof StorageChemicalTankBlockEntity chemical) {
+                chemical.storage().insert(ResourceLocation.parse("mekanism:hydrogen"), 100_000_000L, false);
+            } else if (shown instanceof StorageSourceTankBlockEntity source) {
+                source.store().insert(4_000_000L, false);
             }
             ResourceType type = kinds[i].resource;
             placeShowRouter(server, level, pos, "advanced", names[i], network);

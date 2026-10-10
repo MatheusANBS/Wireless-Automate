@@ -89,7 +89,7 @@ public final class FilterSet {
             return EMPTY;
         }
         if (kept.size() == 1) {
-            return kept.getFirst().asSet();
+            return kept.get(0).asSet();
         }
         return new FilterSet(kept.toArray(new Filter[0]));
     }

@@ -140,7 +140,7 @@ public record LinkerSnapshot(
         if (box != null && problem != LinkerProblem.TOO_BIG) {
             LinkerScan scan = LinkerScan.of(player.serverLevel(), box);
             unloaded = scan.unloadedChunks();
-            ResourceType colorType = types.isEmpty() ? ResourceType.ITEM : types.getFirst();
+            ResourceType colorType = types.isEmpty() ? ResourceType.ITEM : types.get(0);
             for (RouterBlockEntity router : scan.routers()) {
                 inside++;
                 boolean linked = unlink ? LinkerActions.inTarget(router, types, null)

@@ -58,22 +58,21 @@ abstract class CompiledMatcher<K> {
         for (int i = 0, n = entries.size(); i < n; i++) {
             FilterEntry entry = entries.get(i);
             boolean applies = true;
-            switch (entry) {
-                case FilterEntry.TagEntry tag -> {
-                    tagKeys.add(TagKey.create(registryKey, tag.tag()));
-                    tagIndexes.add(i);
-                }
-                case FilterEntry.ModEntry mod -> mods.putIfAbsent(mod.modId(), i);
-                case FilterEntry.RuleEntry rule -> applies = addRule(rule, i);
-                default -> {
-                    K key = exactKey(entry);
-                    if (key == null) {
-                        applies = false;
-                    } else if (exactByKey) {
-                        byKey.putIfAbsent(key, i);
-                    } else {
-                        addExact(entry, i);
-                    }
+            if (entry instanceof FilterEntry.TagEntry tag) {
+                tagKeys.add(TagKey.create(registryKey, tag.tag()));
+                tagIndexes.add(i);
+            } else if (entry instanceof FilterEntry.ModEntry mod) {
+                mods.putIfAbsent(mod.modId(), i);
+            } else if (entry instanceof FilterEntry.RuleEntry rule) {
+                applies = addRule(rule, i);
+            } else {
+                K key = exactKey(entry);
+                if (key == null) {
+                    applies = false;
+                } else if (exactByKey) {
+                    byKey.putIfAbsent(key, i);
+                } else {
+                    addExact(entry, i);
                 }
             }
             stock |= applies && entry.stock() > 0;

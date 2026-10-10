@@ -1,0 +1,392 @@
+<title>Editor de receitas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a tela do jogo no alto (escala em pixels de GUI via --u), notas em colunas abaixo. Tela com as cores do GuiPaint (fixas); página em volta segue o tema. */
+:root {
+  --u: 2.4px;
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  /* GuiPaint */
+  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-hover: #F8F3E8;
+  --g-ink: #2A2730; --g-mu: #7A7366; --g-dis: #B5AC9D; --g-ring: #1B1920; --g-ac: #F0603E; --g-acd: #C2442A;
+  --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-danger: #D5453A; --g-tier: #7B4FE0;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+@media (min-width: 1500px) { :root { --u: 2.8px } }
+@media (max-width: 860px) { :root { --u: calc((100vw - 40px) / 324) } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 56px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 30px; margin: 0; text-wrap: balance }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 72ch; margin: 6px 0 22px }
+.lede code, .notes code { font-family: var(--pix); color: var(--page-fg); font-size: .95em }
+.stage { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start }
+.howto { flex: 1 1 260px; min-width: 0; font-size: 14px; color: var(--page-mu) }
+.howto h2, .notes h2 { font-family: var(--pix); font-weight: 500; font-size: 18px; color: var(--page-fg); margin: 0 0 8px }
+.howto ol { margin: 0; padding-left: 20px } .howto li { margin-bottom: 6px } .howto b, .notes b { color: var(--page-fg) }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 28px; margin-top: 38px; border-top: 1px solid var(--page-line); padding-top: 26px }
+.notes ul { margin: 0; padding-left: 18px; color: var(--page-mu) } .notes li { margin-bottom: 6px }
+.files { font-family: var(--pix); font-size: 13px; background: var(--page-card); border: 1px solid var(--page-line); padding: 10px 12px; overflow-x: auto; white-space: pre; color: var(--page-fg); margin: 8px 0 0 }
+
+/* ---- a tela do jogo ---- */
+.gui { position: relative; flex: none; width: calc(var(--u) * 324); height: calc(var(--u) * 250); background: var(--g-panel);
+  border: var(--u) solid var(--g-ink); box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-dark);
+  font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--g-ink); user-select: none }
+.a { position: absolute } .t { position: absolute; white-space: nowrap }
+.mu { color: var(--g-mu) } .dis { color: var(--g-dis) }
+.stripe { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--u) * 3); background: var(--g-ac) }
+.eye { position: absolute; width: calc(var(--u) * 9); height: calc(var(--u) * 9); border-radius: 50%; background: var(--g-tier); box-shadow: 0 0 0 var(--u) var(--g-ring) }
+.eye::after { content: ""; position: absolute; left: calc(var(--u) * 2); top: calc(var(--u) * 2); width: calc(var(--u) * 2); height: calc(var(--u) * 2); background: #fff }
+.inset { position: absolute; background: var(--g-inset); box-shadow: inset var(--u) var(--u) 0 var(--g-dark) }
+.pill { position: absolute; padding: 0 calc(var(--u) * 3); height: calc(var(--u) * 10); line-height: calc(var(--u) * 10); border: var(--u) solid currentColor; background: var(--g-light); font-size: calc(var(--u) * 7) }
+button.a { font: inherit; color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-ink); padding: 0 calc(var(--u) * 3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2); white-space: nowrap }
+button.a:hover { border-color: var(--g-ac) }
+button.a:focus-visible, .slot:focus-visible, .row:focus-visible { outline: var(--u) solid var(--g-ac); outline-offset: var(--u) }
+button.a.on { background: var(--g-ink); color: var(--g-light); border-color: var(--g-ink) }
+button.a.primary { background: var(--g-ac); color: #fff; border-color: var(--g-acd) }
+button.a.primary:hover { border-color: var(--g-ink) }
+button.a:disabled { color: var(--g-dis); border-color: var(--g-dis); cursor: default; background: var(--g-panel) }
+.slot { position: absolute; width: calc(var(--u) * 18); height: calc(var(--u) * 18); background: var(--g-inset); box-shadow: inset var(--u) var(--u) 0 var(--g-dark);
+  border: 0; padding: 0; cursor: pointer }
+.slot:hover { background: var(--g-hover) }
+.slot.sel { box-shadow: inset 0 0 0 var(--u) var(--g-ac); background: var(--g-light) }
+.slot.big { width: calc(var(--u) * 26); height: calc(var(--u) * 26) }
+.slot.big .spr { left: calc(var(--u) * 5); top: calc(var(--u) * 5) }
+.slot.ghost .spr { opacity: .55 }
+.slot.off .spr { opacity: .25; filter: grayscale(1) }
+.spr { position: absolute; left: var(--u); top: var(--u); width: calc(var(--u) * 16); height: calc(var(--u) * 16); image-rendering: pixelated; background-size: 100% 100% }
+.tagmark { position: absolute; left: 0; top: 0; padding: 0 var(--u); background: var(--g-ac); color: #fff; font-size: calc(var(--u) * 6); line-height: calc(var(--u) * 7) }
+.qty { position: absolute; right: 0; bottom: 0; color: #fff; text-shadow: var(--u) var(--u) 0 #3f3f3f }
+.list { position: absolute; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--g-dark) transparent }
+.row { position: relative; display: flex; align-items: center; gap: calc(var(--u) * 3); width: 100%; height: calc(var(--u) * 18); padding: 0 calc(var(--u) * 2);
+  background: transparent; border: 0; font: inherit; color: var(--g-ink); text-align: left; cursor: pointer }
+.row:hover { background: var(--g-hover) }
+.row.sel { background: var(--g-light); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
+.row .spr { position: relative; left: 0; top: 0; flex: none }
+.row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.row .st { flex: none; width: calc(var(--u) * 5); height: calc(var(--u) * 5); border-radius: 50% }
+.field { position: absolute; font: inherit; color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-dark); padding: 0 calc(var(--u) * 3); outline: none }
+.field:focus { border-color: var(--g-ac) }
+.field::placeholder { color: var(--g-dis) }
+.arrow { position: absolute; width: calc(var(--u) * 20); height: calc(var(--u) * 13) }
+.toast { position: absolute; left: 0; right: 0; text-align: center; color: var(--g-ok); font-size: calc(var(--u) * 7) }
+#tip { position: fixed; z-index: 10; pointer-events: none; font-family: var(--pix); font-size: 15px; line-height: 19px; background: rgba(16, 0, 16, .94);
+  border: 2px solid #2b0f5c; padding: 3px 7px; max-width: 340px; color: #fff }
+#tip .g { color: #A8A8A8 } #tip .c { color: #FFB39E }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Editor de receitas</h1>
+    <span class="status">Proposta · aguardando aprovação</span>
+  </header>
+  <p class="lede">Uma tela, aberta por <code>/wa recipes</code> (só operadores), para trocar as receitas de bancada do Wireless Automate dentro do jogo. A mudança vira um datapack global da instância, então vale para todos os mundos e sobrevive a atualizações do mod. O exemplo é um pack com o Mekanism e o GuideME, sem o Allthemodium: por isso aparecem 15 das 21 receitas.</p>
+
+  <div class="stage">
+    <div class="gui" id="gui" role="application" aria-label="Tela do editor de receitas"></div>
+    <div class="howto">
+      <h2>Experimente</h2>
+      <ol>
+        <li>Escolha uma receita na lista. A bolinha diz o estado: <b>verde</b> é o padrão do mod, <b>coral</b> foi editada e <b>cinza</b> está desativada.</li>
+        <li>Clique num slot da grade e depois num item do inventário. O item <b>não sai do inventário</b>: a grade guarda só uma cópia fantasma. No jogo, também dá para arrastar do JEI.</li>
+        <li>Com um slot escolhido, <b>Tag</b> troca o item exato pelas tags dele. As setas percorrem as tags que o item tem. Clique direito no slot limpa.</li>
+        <li>Os botões <b>−</b> e <b>+</b> mudam a quantidade do resultado (de 1 a 64).</li>
+        <li><b>Salvar</b> grava o arquivo. A recarga acontece uma vez só, pelo botão <b>Recarregar</b> ou ao fechar a tela, porque num pack grande ela trava o servidor por alguns segundos.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Como funciona por baixo</h2>
+      <ul>
+        <li>O mod registra a pasta <code>config/wirelessautomate/recipes/</code> como um <b>datapack global</b>, sempre ligado e acima do jar. Ele carrega em todo mundo da instância e, num servidor, na pasta do servidor.</li>
+        <li><b>Salvar</b> grava um JSON com o mesmo id da receita do mod. O nosso arquivo deixa de valer e o novo passa a valer.</li>
+        <li><b>Desativar</b> grava um override com a condição <code>neoforge:false</code>: o item fica sem receita de bancada.</li>
+        <li><b>Restaurar padrão</b> apaga o override, e a receita do jar volta.</li>
+        <li>A recarga é a mesma do <code>/reload</code>. Os jogadores conectados recebem as receitas novas e o JEI se atualiza.</li>
+        <li>O servidor confere de novo, a cada pacote, se quem mandou é operador (nível 2) e se a receita é do mod.</li>
+      </ul>
+      <div class="files">config/wirelessautomate/recipes/
+├─ pack.mcmeta
+└─ data/wirelessautomate/recipe/
+   ├─ filter_card.json          ← editada
+   └─ tier_core_ultimate.json   ← desativada</div>
+    </section>
+    <section>
+      <h2>Decisões</h2>
+      <ul>
+        <li><b>Comando <code>/wa recipes</code></b>, em inglês como os outros do <code>/wa</code>. Exige permissão 2.</li>
+        <li><b>Só as receitas do mod que estão carregadas no pack.</b> O Ultimate aparece uma vez, na variante que vale ali, e o override <b>mantém as condições dela</b>. Assim ele não quebra se o pack perder o Allthemodium depois.</li>
+        <li>As duas receitas especiais (cópia de Cartão de Filtro e upgrade na bancada) não são uma grade fixa e ficam fora da lista.</li>
+        <li>A receita continua com ou sem forma, como era. A grade com forma é exatamente a 3×3 desenhada. A sem forma ignora a posição dos itens.</li>
+        <li>Tag só entre as tags que o item tem. Não há campo de texto livre, então não dá para errar a digitação.</li>
+        <li>Se o KubeJS ou outro datapack mexer na mesma receita, ele ganha. A tela avisa quando a receita carregada difere do que foi salvo.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Fica de fora</h2>
+      <ul>
+        <li>Receitas de outros mods. O KubeJS já faz isso melhor.</li>
+        <li>Criar receitas novas, ou uma segunda receita para o mesmo item.</li>
+        <li>Trocar entre com forma e sem forma.</li>
+        <li>Itens com componentes (encantamentos, NBT) como ingrediente.</li>
+        <li>Fornalha, Mekanism e outras máquinas: só bancada.</li>
+        <li>Ramo 1.20.1: a feature nasce no main e desce depois do porte.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const SPR = {"chunk_loader_upgrade": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFklEQVR4nGNkwAH4+YT+o4t9/PSOEV2MEZdmbw8/DPGtOzZhGMKCz+YnT58wHDq6h9HO2uU/sjyyIYzomj+8fQjnf/7wCsXw1y8egWkj62C4S5iwaQZpRNcMAqIScmB63eIOuEtZUFTsWM3AcP0sAy8DbvDv2mUGYWwS/HxC/7XUDf5/+/P///ln7+AY5H9kPgiD1MFcwIRu0M1X7+HsvV97GT4mSYBpXICJgQBwsHyHwj9w7gpxBuz92svw+Pd5hkj5NDCNyxVMhFyAz3acBuz92suw+BAiPYAAiP9XfSeGWkYYAxSq+rpGRLvm4uVz4MSEkRKlJSGJBR94+vwRPCVi5IWPnz4Q7QoQwMiN2LIxpiWIzAQAd12SDQ022RAAAAAASUVORK5CYII=", "configurator": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsUlEQVR4nGNkIAHw8wn9R+Z//PSOkYUUzd4efgxPnj4B89+8eQOi/jORq/lqsjXxNn9/vPD/3T0x/7f06f1vSJL5/3/zvP/o3sEKQIr+//4Mxp9e3/1/9/J+yjTz8wlRppmBGMBPb82M+KLq6fNH4MSCzwAmSjSjOPvT67uk+5mBgQGclL8z8jDMPXkeLNAQFUyczchemLnjMJhz+tQZYvWhGkCuZhAAOxXZz6Q4H6QeACzcvoVG5ToZAAAAAElFTkSuQmCC", "filter_card": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsklEQVR4nGNgoBAwwhj8fEL/idHw8dM7RgwD+PmE/n94+5AoGwWE5VEMYUQ24POHVwQNeP3iEYORdTDcEEZkA74z8jDM3HEYrDDZXBpM887vQzj/2mUGpu75KIawIJsO03z61Bm4AZ8Ti+DyTFhcxIQuANJMCmBB5oBshdlMLGBCF+BluwamLWyC8dJkxwIIIAciE8PwccG5o2uJsh0EHty7zRAUWwF2AcmZCQbQMxXZAACO6GnlhyIcvgAAAABJRU5ErkJggg==", "guide": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA7UlEQVR4nGNgoBAwwhj8fEL/idX08dM7uD5GmGZ9XSOGN2/eMFztySNogEB0CdwQFpiJFy+f+y8tKQdRcf0sbtuvXWY4d3Qtg5F18H+QPiZkF5ADWLC6AApk+rfC2U8KvXEbwI8UBsianzy6zPD5wysIX88ZqyFMSC7AkIRpPn1sL04vMCG7ABvApxlvGDwp9AY7G5lPUhjg00RcLBR2wMMABF6/eMSgtH0N8S64d+MMisIH924zKBHrAlBqE752GUWhMEicgYHh0pM3DNLoBsAMYWBg+A9K56CkiguANINcAwPwXIUMiMmZsMwEAL6CjCMJ4HI3AAAAAElFTkSuQmCC", "linker": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA8klEQVR4nGNgwAL4+YT+gzADEYAJm2ZvDz8GfV0jMJtkA0DgydMnDG/evGEgBjChC3z89I7x4uVzDMQCFnQBmLNFREQYnj5/hOENkAU4TePnE/r///dnnPju5f0YgcuCzSB7h0A4e8fB3QwzdxwGs/3kiQxEENi5IhZMwzSfPnWGARtgwSYIigFjl344H5dmEGBE5oD892FpDwPD9bNYFX+8dplBft0VlIBkwVDlEcoQffoDhvCMXH+Gty8eMTCsCyYcBqUZCQzEAiZsgupigkQbhDMWiDUIIxDPHV2LU/GDe7cZgmIrUAIRI1kSyoHoSRkAKr1ySS95SQYAAAAASUVORK5CYII=", "network_tablet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3UlEQVR4nGNkwAH4+YT+w9gfP71jxKWOEZsGENDXNYKzL14+h6IJ2UAmmOYPbx8yIGNkgCx+7uhaFMtYkBVq69hidSay+OY1/ShyTNg0GITHgfGZq+fhbFyACZvm0owEFDFTMxOchjBhE+yesQDFkNOnzhDvAlk5WTBesW0vTk14DXj86DGDhIQ4mE5p6ifdAEJOJmjAhZWLsCrEJc5CimKCBpw4shYhIajEMHPHYTA72VwaLv76xSMUA7CGAQjANBMKD7gL7t1AV8gM14xs64N7t1FU4cyN+ABybgQAAAViNWTaDL8AAAAASUVORK5CYII=", "tier_core_advanced": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABE0lEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z/D68W64uHdBDYarQICFAQcQ+nmGQezHAQauP48ZGBhUcSljwHABDLxjN2H4ySTMwPPnLoO+wAPSDRD6eYaB/d9bsCEXPyiQ7wL2f28H0AVfWJQJuoAFmyDn/y9gOr/6MIO7FQ/DOxWQC94wEAT8fEL/P72+C8fSkgoo/LuX92MkKEZkzd4efgxPnj7BacGbNxBXPH3+CJ60WZAVgDTDFGEDHz99YPjy9RPufAFyxffHC8HOBOG7e2LAGMbf0qeH4QWMQHx2E5H+r1+6hCJ35so7nK5DcQUyG52Prh4Ab8ahZNq74aoAAAAASUVORK5CYII=", "tier_core_allthemodium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABB0lEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z/D+1m64uHdBDYarsBoAA2IfzjBIvTnAoPR8PQM+wIRL4pWACcMPNmEGvq93GYzYHpBugNiHMwwcv96CDTn3S4F8F3D8ejuALvjErUyeCzj/fwHTmZ2HGZYe/YTXBSgAFM+fXt+FY2lJBRT+3cv7MRIUI7Jmbw8/hidPnzDgAm/evAHTT58/gidtFmQFIM0wRdjAx08fGL58/YQ7X4Bc8f9QFdiZIPyihAuMYfxZXqwYXkBxAQi83DSBgYGBA8zedO03VBTCJwog2wCzGZscDAAAp+ad7btr6/YAAAAASUVORK5CYII=", "tier_core_elite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABCElEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z7Dn9Uu4uHdBDYarQICFAQd4zPiL4Q7jT4YPDH9xKcHuAhiQ/c/GwP2fieEN4x8GBnE+BpINeMz4i+Er4z+wIQwvP5Hvgq+M/wbQBSL/WchzAef/L2B6R341w+MNO/G6AAWA4vnT67tgLC2pgEKD8N3L+zESFCOyZm8PP4YnT58w4AJv3rwB00+fP4InbRZkBSDNMEXYwMdPHxi+fP2EO1+AXPH98UKwM0H47p4YMIbxt/TpYXgBIyk/u7kbzr5+6RKK3Jkr73C6DsUVyGx0Prp6ACJBnWH+weT3AAAAAElFTkSuQmCC", "tier_core_emerald": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABC0lEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z7DrzXm4uHdBDYarQICFAQd4yPSA4TbzDYb3jO8YGBjYcCljwHABDMj/U2Dg/s/D8IbpFcM/yc+kG/CQ6QHDV8YvYEOYnvOS74KvjF8G0AUi/8TIcwHn/y9genfuEoan627hdQEKAMXzp9d3/0tLKmCl717ej5GgGJE1e3v4MTx5+oQBF3jz5g2Yfvr8ETxpsyArAGmGKcIGPn76wPDl6yfc+QLkiu+PF4KdCcJ398SAMYy/pU8PwwsYSfnZzd1w9vVLl1DkzlwBJWsCANkGmM3Y5GAAACGongJMRMCGAAAAAElFTkSuQmCC", "tier_core_ultimate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABDUlEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z3D10he4uHdBDYarQICFAQf484KV4c8jdoZ/n5hxKcHuAhhgkfjNwMj5j+HfBxYGyX+SDCQb8OcFK8P/70xgQ54zPSffBf+/Mw2gC5gE/hB0AQs2Qc7/kOibOC2LwVDDlYHFTJaBKMDPJ/RfWlLh/6fXd7HSdy/vx0hQjMiavT38GJ48fYLTgjdv3oDpp88fwZM2C7ICkGaYImzg46cPDF++fsKdL0Cu+P54IdiZIHx3TwwYw/hb+vQwvIARiM9u7oazr1+6hCJ35so7nK5DcQUyG52Prh4Az/iYf7+RWtcAAAAASUVORK5CYII=", "tier_core_unobtainium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z/D07Ce4uHdBDYarQICFAQfgeczMwHeXhYHtA4Yd+F0AA19k/zL84frPwPGWiUHzlzgDLsCCzwUs3xjBhlxneUm+C1i+MQ6gC34I/yPPBZz/v4Dpyrm5DA4qzgxfreQZiAL8fEL/P72++19aUgErfffyfowExYis2dvDj+HJ0yc4LXjz5g2Yfvr8ETxpsyArAGmGKcIGPn76wPDl6yfc+QLkipfLvoKdCcKb7C+AMYyfr9yC4QWMQDw58zacvffJFpyuwQmQbYDZjE0OBgCce5ZPFLSh0gAAAABJRU5ErkJggg==", "tier_core_vibranium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR4nGNkwAH4+YT+I/M/fnrHiEstVs3f/vwH4/PP3v3v33LoP7qBMMCETfPzd28Zbr56z7Dj3R24uHdBDYarQICFAQe4z/KW4QbbS4Z3zN9wKcHuAhhQ/CPMwPOPneEV82eGP9KMpBtwn+Utwxemn2BDWJ7+J98FX5h+DqALxP7ykucCzv9fwPS+zH6GF6tP4nUBCgDF86fXd8FYWlIBhQbhu5f3YyQoRmTN3h5+DE+ePmHABd68eQOmnz5/BE/aLMgKQJphirCBj58+MHz5+gl3vgC5ou3DEbAzQVhiaxUYw/h8eV4YXsBIypOOboOzv+28gOpPYgCyDTCbscnBAACMqJslw9ISzAAAAABJRU5ErkJggg=="};
+
+/* ---- ícones dos itens vanilla e blocos do mod, desenhados em 16×16 ---- */
+const ICON = {};
+function px(ctx, c, x, y, w = 1, h = 1) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h) }
+const SHAPES = {
+  ingot(c, [l, m, d]) { for (let y = 0; y < 5; y++) px(c, y == 0 ? l : y == 4 ? d : m, 3 - Math.min(y, 1), 6 + y, 10 + 2 * Math.min(y, 1), 1); px(c, d, 2, 10, 12, 1) },
+  gem(c, [l, m, d]) { const r = [[7,2],[5,6],[3,10],[2,12],[3,10],[5,6],[7,2]]; r.forEach(([x, w], i) => px(c, i < 2 ? l : i > 4 ? d : m, x, 4 + i, w, 1)); px(c, '#fff', 6, 5, 2, 1) },
+  block(c, [l, m, d]) { px(c, d, 1, 1, 14, 14); px(c, m, 2, 2, 12, 12); px(c, l, 2, 2, 12, 2); px(c, l, 2, 2, 2, 12); px(c, d, 5, 6, 6, 1); px(c, d, 7, 9, 5, 1) },
+  dust(c, [l, m, d]) { px(c, d, 4, 9, 9, 4); px(c, m, 5, 8, 7, 4); px(c, l, 7, 7, 3, 2); px(c, l, 3, 12, 2, 1); px(c, m, 11, 6, 2, 2) },
+  stick(c, [l, m, d]) { for (let i = 0; i < 10; i++) { px(c, m, 3 + i, 12 - i, 2, 1); px(c, d, 3 + i, 13 - i, 2, 1) } },
+  orb(c, [l, m, d], pupil) { px(c, d, 4, 4, 8, 8); px(c, m, 5, 3, 6, 10); px(c, m, 3, 5, 10, 6); px(c, l, 5, 5, 3, 2); if (pupil) px(c, pupil, 7, 7, 2, 2) },
+  star(c, [l, m, d]) { px(c, m, 7, 2, 2, 12); px(c, m, 2, 7, 12, 2); px(c, l, 6, 6, 4, 4); px(c, d, 7, 10, 2, 3); px(c, '#fff', 7, 7, 1, 1) },
+  egg(c, [l, m, d]) { px(c, d, 5, 3, 6, 11); px(c, m, 4, 5, 8, 8); px(c, m, 6, 2, 4, 2); px(c, l, 6, 5, 2, 3); px(c, d, 8, 9, 2, 2) },
+  shard(c, [l, m, d]) { for (let i = 0; i < 8; i++) { px(c, m, 4 + i, 11 - i, 3, 1); px(c, l, 4 + i, 10 - i, 1, 1); px(c, d, 6 + i, 12 - i, 1, 1) } },
+  paper(c, [l, m, d]) { px(c, d, 3, 2, 10, 12); px(c, l, 4, 3, 8, 10); px(c, m, 5, 5, 6, 1); px(c, m, 5, 8, 5, 1) },
+  slab(c, [l, m, d]) { px(c, d, 1, 8, 14, 6); px(c, m, 2, 8, 12, 4); px(c, '#E0372B', 4, 5, 2, 3); px(c, '#E0372B', 10, 5, 2, 3); px(c, '#7a1a12', 7, 9, 2, 2) },
+  pane(c, [l, m, d]) { px(c, d, 2, 1, 12, 14); px(c, l, 3, 2, 10, 12); px(c, m, 3, 2, 1, 12); px(c, '#fff', 5, 4, 1, 3) },
+  bucket(c, [l, m, d]) { px(c, d, 3, 4, 10, 10); px(c, m, 4, 5, 8, 8); px(c, l, 4, 5, 2, 7); px(c, d, 4, 2, 8, 1) },
+  bottle(c, [l, m, d]) { px(c, d, 6, 2, 4, 2); px(c, l, 7, 4, 2, 3); px(c, d, 4, 7, 8, 7); px(c, l, 5, 8, 6, 5) },
+  chest(c, [l, m, d]) { px(c, d, 1, 3, 14, 11); px(c, m, 2, 4, 12, 9); px(c, l, 2, 4, 12, 2); px(c, d, 2, 7, 12, 1); px(c, '#BFC3C8', 7, 6, 2, 3) },
+  book(c, [l, m, d]) { px(c, d, 3, 2, 10, 12); px(c, m, 4, 3, 8, 10); px(c, '#F3E9D2', 11, 3, 1, 10); px(c, l, 5, 5, 4, 1) },
+  machine(c, [l, m, d], lens) { px(c, '#2A2730', 2, 12, 12, 2); px(c, '#BDB19A', 2, 3, 12, 9); px(c, '#FFFBF3', 3, 4, 10, 7); px(c, '#F0603E', 3, 8, 10, 1); px(c, '#1B1920', 6, 1, 4, 4); px(c, lens, 7, 2, 2, 2) },
+};
+function icon(id) {
+  if (ICON[id]) return ICON[id];
+  const it = ITEMS[id]; let url;
+  if (it.spr) url = SPR[it.spr];
+  else {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16; const c = cv.getContext('2d');
+    SHAPES[it.shape](c, it.col, it.extra); url = cv.toDataURL();
+  }
+  return ICON[id] = url;
+}
+
+/* ---- catálogo: nome, desenho e tags ---- */
+const ITEMS = {
+  'minecraft:iron_ingot': { n: 'Barra de Ferro', shape: 'ingot', col: ['#FFFFFF', '#D8D8D8', '#8E8E8E'], tags: ['c:ingots/iron', 'c:ingots'] },
+  'minecraft:gold_ingot': { n: 'Barra de Ouro', shape: 'ingot', col: ['#FFF4A3', '#F5CD32', '#B07F12'], tags: ['c:ingots/gold', 'c:ingots'] },
+  'minecraft:copper_ingot': { n: 'Barra de Cobre', shape: 'ingot', col: ['#F5B08A', '#D8784E', '#8C4428'], tags: ['c:ingots/copper', 'c:ingots'] },
+  'minecraft:netherite_ingot': { n: 'Barra de Netherita', shape: 'ingot', col: ['#6E6468', '#4A4146', '#2A2427'], tags: ['c:ingots/netherite', 'c:ingots'] },
+  'minecraft:diamond': { n: 'Diamante', shape: 'gem', col: ['#D6FFF9', '#4EE2D2', '#1C9488'], tags: ['c:gems/diamond', 'c:gems'] },
+  'minecraft:amethyst_shard': { n: 'Fragmento de Ametista', shape: 'shard', col: ['#F1D2FF', '#B47AE8', '#6B3C9C'], tags: ['c:gems/amethyst', 'c:gems'] },
+  'minecraft:echo_shard': { n: 'Fragmento de Eco', shape: 'shard', col: ['#7DE3E8', '#1F5E68', '#0B2A30'], tags: [] },
+  'minecraft:redstone': { n: 'Redstone', shape: 'dust', col: ['#FF6A50', '#D8231A', '#7A0E09'], tags: ['c:dusts/redstone', 'c:dusts'] },
+  'minecraft:stick': { n: 'Graveto', shape: 'stick', col: ['#C9A26A', '#8E6A3A', '#5A4020'], tags: ['c:rods/wooden', 'c:rods'] },
+  'minecraft:ender_pearl': { n: 'Pérola do Ender', shape: 'orb', col: ['#9FF2DA', '#2E8C77', '#0E3B33'], tags: ['c:ender_pearls'] },
+  'minecraft:ender_eye': { n: 'Olho do Ender', shape: 'orb', col: ['#C9F7A8', '#4F9B3A', '#1D3E15'], extra: '#1B1920', tags: [] },
+  'minecraft:nether_star': { n: 'Estrela do Nether', shape: 'star', col: ['#FFFFFF', '#E8EEF8', '#A6B3C9'], tags: ['c:nether_stars'] },
+  'minecraft:dragon_egg': { n: 'Ovo do Dragão', shape: 'egg', col: ['#5A3A72', '#2A1838', '#120A18'], tags: [] },
+  'minecraft:paper': { n: 'Papel', shape: 'paper', col: ['#FFFFFF', '#CFCFCF', '#9A9A9A'], tags: [] },
+  'minecraft:comparator': { n: 'Comparador de Redstone', shape: 'slab', col: ['#E4E4E4', '#B9B9B9', '#7A7A7A'], tags: [] },
+  'minecraft:glass_pane': { n: 'Painel de Vidro', shape: 'pane', col: ['#EAF6FA', '#BFDDE6', '#6E8E99'], tags: ['c:glass_panes'] },
+  'minecraft:glass': { n: 'Vidro', shape: 'pane', col: ['#F4FBFD', '#CDE6EE', '#7C9AA4'], tags: ['c:glass_blocks', 'c:glass_blocks/colorless'] },
+  'minecraft:bucket': { n: 'Balde', shape: 'bucket', col: ['#F2F2F2', '#BDBDBD', '#5E5E5E'], tags: ['c:buckets/empty'] },
+  'minecraft:glass_bottle': { n: 'Frasco de Vidro', shape: 'bottle', col: ['#F4FBFD', '#CDE6EE', '#6E8E99'], tags: [] },
+  'minecraft:chest': { n: 'Baú', shape: 'chest', col: ['#D6A25A', '#A36F2E', '#5A3A14'], tags: ['c:chests/wooden', 'c:chests'] },
+  'minecraft:book': { n: 'Livro', shape: 'book', col: ['#D9A066', '#8C4F22', '#4A2610'], tags: [] },
+  'minecraft:obsidian': { n: 'Obsidiana', shape: 'block', col: ['#3E2C5C', '#1E1430', '#0C0814'], tags: ['c:obsidians'] },
+  'minecraft:crying_obsidian': { n: 'Obsidiana Chorona', shape: 'block', col: ['#A24CF0', '#2A1446', '#0C0814'], tags: [] },
+  'minecraft:gold_block': { n: 'Bloco de Ouro', shape: 'block', col: ['#FFF4A3', '#F5CD32', '#B07F12'], tags: ['c:storage_blocks/gold', 'c:storage_blocks'] },
+  'minecraft:emerald_block': { n: 'Bloco de Esmeralda', shape: 'block', col: ['#A9F7BE', '#2FCB60', '#13692F'], tags: ['c:storage_blocks/emerald', 'c:storage_blocks'] },
+  'minecraft:netherite_block': { n: 'Bloco de Netherita', shape: 'block', col: ['#6E6468', '#4A4146', '#2A2427'], tags: ['c:storage_blocks/netherite', 'c:storage_blocks'] },
+  'minecraft:copper_block': { n: 'Bloco de Cobre', shape: 'block', col: ['#F5B08A', '#D8784E', '#8C4428'], tags: ['c:storage_blocks/copper', 'c:storage_blocks'] },
+  'minecraft:redstone_block': { n: 'Bloco de Redstone', shape: 'block', col: ['#FF6A50', '#C81E14', '#6E0C08'], tags: ['c:storage_blocks/redstone', 'c:storage_blocks'] },
+  'minecraft:diamond_block': { n: 'Bloco de Diamante', shape: 'block', col: ['#D6FFF9', '#4EE2D2', '#1C9488'], tags: ['c:storage_blocks/diamond', 'c:storage_blocks'] },
+  'wirelessautomate:router': { n: 'Roteador Wireless', shape: 'machine', col: [], extra: '#6E7480', tags: [] },
+  'wirelessautomate:storage_chest': { n: 'Baú Wireless', shape: 'machine', col: [], extra: '#B57A3A', tags: [] },
+  'wirelessautomate:storage_tank': { n: 'Tanque Wireless', shape: 'machine', col: [], extra: '#2F6FD6', tags: [] },
+  'wirelessautomate:storage_battery': { n: 'Bateria Wireless', shape: 'machine', col: [], extra: '#D9931A', tags: [] },
+  'wirelessautomate:storage_chemical_tank': { n: 'Tanque Químico Wireless', shape: 'machine', col: [], extra: '#5E9A2B', tags: [] },
+  'wirelessautomate:configurator': { n: 'Configurador', spr: 'configurator', tags: [] },
+  'wirelessautomate:linker': { n: 'Vinculador', spr: 'linker', tags: [] },
+  'wirelessautomate:network_tablet': { n: 'Tablet de Rede', spr: 'network_tablet', tags: [] },
+  'wirelessautomate:filter_card': { n: 'Cartão de Filtro', spr: 'filter_card', tags: [] },
+  'wirelessautomate:chunk_loader_upgrade': { n: 'Upgrade de Chunk Loading', spr: 'chunk_loader_upgrade', tags: [] },
+  'guideme:guide': { n: 'Guia do Wireless Automate', spr: 'guide', tags: [] },
+  'wirelessautomate:tier_core_advanced': { n: 'Cartão de Upgrade Avançado', spr: 'tier_core_advanced', tags: [] },
+  'wirelessautomate:tier_core_elite': { n: 'Cartão de Upgrade Elite', spr: 'tier_core_elite', tags: [] },
+  'wirelessautomate:tier_core_emerald': { n: 'Cartão de Upgrade Esmeralda', spr: 'tier_core_emerald', tags: [] },
+  'wirelessautomate:tier_core_ultimate': { n: 'Cartão de Upgrade Ultimate', spr: 'tier_core_ultimate', tags: [] },
+};
+const TAG_ICON = { 'c:glass_blocks': 'minecraft:glass' };
+
+/* ---- receitas carregadas no pack de exemplo (as reais do mod, data/wirelessautomate/recipe) ---- */
+function shaped(pattern, key) { return pattern.split('').map(ch => ch === ' ' ? null : key[ch]) }
+const I = id => ({ item: id }), T = t => ({ tag: t });
+const RECIPES = [
+  ['router', 'wirelessautomate:router', 1, shaped(' E IRIIII', { E: I('minecraft:ender_eye'), R: I('minecraft:redstone'), I: I('minecraft:iron_ingot') })],
+  ['linker', 'wirelessautomate:linker', 1, shaped(' P CRCCCC', { P: I('minecraft:ender_pearl'), C: I('minecraft:copper_ingot'), R: I('minecraft:redstone') })],
+  ['configurator', 'wirelessautomate:configurator', 1, shaped('  A S S  ', { A: I('minecraft:amethyst_shard'), S: I('minecraft:stick') })],
+  ['network_tablet', 'wirelessautomate:network_tablet', 1, shaped('IGIIEIIRI', { I: I('minecraft:iron_ingot'), G: I('minecraft:glass_pane'), E: I('minecraft:ender_eye'), R: I('minecraft:redstone') })],
+  ['filter_card', 'wirelessautomate:filter_card', 2, shaped('PRPPCP   ', { P: I('minecraft:paper'), R: I('minecraft:redstone'), C: I('minecraft:comparator') })],
+  ['chunk_loader_upgrade', 'wirelessautomate:chunk_loader_upgrade', 1, shaped('OEORDROOO', { O: I('minecraft:obsidian'), E: I('minecraft:ender_eye'), R: I('minecraft:redstone'), D: I('minecraft:diamond') })],
+  ['tier_core_advanced', 'wirelessautomate:tier_core_advanced', 1, shaped('GDGDBDGDG', { G: I('minecraft:gold_ingot'), D: I('minecraft:diamond'), B: I('minecraft:gold_block') })],
+  ['tier_core_elite', 'wirelessautomate:tier_core_elite', 1, shaped(' S NAN N ', { S: I('minecraft:nether_star'), N: I('minecraft:netherite_ingot'), A: I('wirelessautomate:tier_core_advanced') })],
+  ['tier_core_emerald', 'wirelessautomate:tier_core_emerald', 1, shaped('BYBRCRBYB', { B: I('minecraft:emerald_block'), Y: I('minecraft:ender_eye'), R: I('minecraft:crying_obsidian'), C: I('wirelessautomate:tier_core_elite') })],
+  ['tier_core_ultimate', 'wirelessautomate:tier_core_ultimate', 1, shaped('XDXBEBXBX', { D: I('minecraft:dragon_egg'), E: I('wirelessautomate:tier_core_emerald'), B: I('minecraft:netherite_block'), X: I('minecraft:echo_shard') })],
+  ['storage_chest', 'wirelessautomate:storage_chest', 1, shaped('IPICRCIII', { I: I('minecraft:iron_ingot'), P: I('minecraft:ender_pearl'), C: I('minecraft:chest'), R: I('minecraft:redstone_block') })],
+  ['storage_tank', 'wirelessautomate:storage_tank', 1, shaped('IGIGBGIPI', { I: I('minecraft:iron_ingot'), G: T('c:glass_blocks'), B: I('minecraft:bucket'), P: I('minecraft:ender_pearl') })],
+  ['storage_battery', 'wirelessautomate:storage_battery', 1, shaped('IRIRCRIPI', { I: I('minecraft:iron_ingot'), R: I('minecraft:redstone_block'), C: I('minecraft:copper_block'), P: I('minecraft:ender_pearl') })],
+  ['storage_chemical_tank', 'wirelessautomate:storage_chemical_tank', 1, shaped('IBIBTBIBI', { I: I('minecraft:iron_ingot'), B: I('minecraft:glass_bottle'), T: I('wirelessautomate:storage_tank') })],
+  ['guide', 'guideme:guide', 1, [I('minecraft:book'), I('minecraft:redstone'), null, null, null, null, null, null, null], 'shapeless'],
+].map(([id, out, count, grid, kind]) => ({ id: 'wirelessautomate:' + id, out, def: { count, grid, off: false }, cur: null, kind: kind || 'shaped' }));
+for (const r of RECIPES) r.cur = clone(r.def);
+/* estado de exemplo: o Cartão de Filtro já foi editado antes (dá 4) */
+const fc = RECIPES.find(r => r.id.endsWith('filter_card')); fc.saved = clone(fc.def); fc.saved.count = 4; fc.cur = clone(fc.saved);
+
+const INV = ['minecraft:iron_ingot', 'minecraft:gold_ingot', 'minecraft:copper_ingot', 'minecraft:netherite_ingot', 'minecraft:diamond', 'minecraft:amethyst_shard', 'minecraft:echo_shard', 'minecraft:redstone', 'minecraft:stick',
+  'minecraft:ender_pearl', 'minecraft:ender_eye', 'minecraft:nether_star', 'minecraft:dragon_egg', 'minecraft:paper', 'minecraft:comparator', 'minecraft:glass_pane', 'minecraft:glass', 'minecraft:bucket',
+  'minecraft:glass_bottle', 'minecraft:chest', 'minecraft:book', 'minecraft:obsidian', 'minecraft:crying_obsidian', 'minecraft:gold_block', 'minecraft:emerald_block', 'minecraft:netherite_block', 'minecraft:copper_block',
+  'minecraft:redstone_block', 'minecraft:diamond_block', 'wirelessautomate:tier_core_advanced', 'wirelessautomate:tier_core_elite', 'wirelessautomate:tier_core_emerald', 'wirelessautomate:storage_tank', null, null, null];
+
+function clone(o) { return JSON.parse(JSON.stringify(o)) }
+function same(a, b) { return JSON.stringify(a) === JSON.stringify(b) }
+function stateOf(r) { const base = r.saved || r.def; if (base.off) return 'off'; return same(base, r.def) ? 'def' : 'edit' }
+const STATE = { def: ['Padrão do mod', 'var(--g-ok)'], edit: ['Editada', 'var(--g-ac)'], off: ['Desativada', 'var(--g-dis)'] };
+
+let sel = 9, slot = 4, filter = '', pending = 1, toast = '';
+const gui = document.getElementById('gui');
+const U = v => `calc(var(--u) * ${v})`;
+const pos = (x, y, w, h) => `left:${U(x)};top:${U(y)}` + (w != null ? `;width:${U(w)}` : '') + (h != null ? `;height:${U(h)}` : '');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const nameOf = ing => !ing ? '' : ing.tag ? '#' + ing.tag : ITEMS[ing.item].n;
+const iconOf = ing => !ing ? null : icon(ing.tag ? (ing.from || TAG_ICON[ing.tag]) : ing.item);
+
+function render() {
+  const r = RECIPES[sel], c = r.cur, base = r.saved || r.def, dirty = !same(c, base), st = stateOf(r);
+  const visible = RECIPES.map((x, i) => [x, i]).filter(([x]) => !filter || ITEMS[x.out].n.toLowerCase().includes(filter.toLowerCase()));
+  let h = `<div class="stripe"></div><div class="eye" style="${pos(7, 8)}"></div>
+  <span class="t" style="${pos(21, 9)}">Receitas do Wireless Automate</span>
+  <span class="pill" style="${pos(274, 6)};color:var(--g-ink)">Operador</span>
+  <input class="field" id="busca" style="${pos(6, 22, 116, 13)}" placeholder="Buscar receita" value="${esc(filter)}" aria-label="Buscar receita">
+  <div class="inset" style="${pos(6, 37, 116, 98)}"></div>
+  <div class="list" id="lista" style="${pos(7, 38, 115, 96)}">`;
+  for (const [x, i] of visible) {
+    const s = stateOf(x);
+    h += `<button class="row${i === sel ? ' sel' : ''}" data-r="${i}" title="${esc(ITEMS[x.out].n)}"><span class="spr" style="background-image:url(${icon(x.out)})"></span><span class="nm">${esc(ITEMS[x.out].n)}</span><span class="st" style="background:${STATE[s][1]}" aria-label="${STATE[s][0]}"></span></button>`;
+  }
+  if (!visible.length) h += `<div class="t mu" style="${pos(4, 6)}">Nenhuma receita</div>`;
+  h += `</div>`;
+  // recarga pendente
+  h += pending
+    ? `<span class="t" style="${pos(6, 140)};color:var(--g-warn)">${pending} salva${pending > 1 ? 's' : ''}, falta recarregar</span>
+       <button class="a" id="reload" style="${pos(6, 150, 116, 14)}">Recarregar agora</button>`
+    : `<span class="t mu" style="${pos(6, 140)}">Tudo aplicado</span>`;
+
+  // painel da receita
+  h += `<span class="t" style="${pos(130, 22)}">${esc(ITEMS[r.out].n)}</span>
+  <span class="t mu" style="${pos(130, 32)};font-size:${U(7)}">${r.kind === 'shaped' ? 'Com forma' : 'Sem forma'} · ${esc(r.id)}</span>
+  <span class="pill" style="${pos(318 - 6 - 50, 21, 50)};color:${dirty ? 'var(--g-warn)' : STATE[st][1]};text-align:center">${dirty ? 'Não salva' : STATE[st][0]}</span>`;
+  const gx = 134, gy = 44;
+  c.grid.forEach((ing, k) => {
+    const x = gx + (k % 3) * 18, y = gy + Math.floor(k / 3) * 18, ic = iconOf(ing);
+    h += `<button class="slot ghost${k === slot ? ' sel' : ''}${c.off ? ' off' : ''}" data-s="${k}" style="${pos(x, y)}" aria-label="Slot ${k + 1}: ${esc(nameOf(ing) || 'vazio')}">${ic ? `<span class="spr" style="background-image:url(${ic})"></span>` : ''}${ing && ing.tag ? '<span class="tagmark">#</span>' : ''}</button>`;
+  });
+  h += `<svg class="arrow" style="${pos(196, 64)}" viewBox="0 0 20 13" aria-hidden="true"><path d="M1 5h12V1l6 5.5-6 5.5V8H1z" fill="${c.off ? 'var(--g-dis)' : 'var(--g-mu)'}"/></svg>
+  <button class="slot big${c.off ? ' off' : ''}" data-out="1" style="${pos(222, 58)}" aria-label="Resultado: ${c.count} × ${esc(ITEMS[r.out].n)}"><span class="spr" style="background-image:url(${icon(r.out)})"></span>${c.count > 1 ? `<span class="qty" style="right:${U(2)};bottom:${U(1)}">${c.count}</span>` : ''}</button>
+  <button class="a" id="menos" style="${pos(254, 58, 12, 12)}" ${c.off || c.count <= 1 ? 'disabled' : ''} aria-label="Menos">−</button>
+  <button class="a" id="mais" style="${pos(254, 72, 12, 12)}" ${c.off || c.count >= 64 ? 'disabled' : ''} aria-label="Mais">+</button>
+  <span class="t mu" style="${pos(270, 66)};font-size:${U(7)}">${c.count} ${c.count > 1 ? 'itens' : 'item'}</span>`;
+  if (c.off) {
+    h += `<div class="t" style="${pos(134, 104)};white-space:normal;width:${U(178)};line-height:${U(10)};color:var(--g-mu)">Desativada: o item fica sem receita de bancada. Reative para editar.</div>`;
+  } else {
+    const ing = c.grid[slot], it = ing && ITEMS[ing.from || ing.item || TAG_ICON[ing.tag]];
+    h += `<div class="inset" style="${pos(130, 102, 182, 34)}"></div>
+    <span class="t" style="${pos(135, 106)}">Slot ${slot + 1}: <span class="${ing ? '' : 'mu'}">${ing ? esc(ing.tag ? '#' + ing.tag : it.n) : 'vazio'}</span></span>`;
+    const tags = ing ? (ing.tag ? (it ? it.tags : [ing.tag]) : it.tags) : [];
+    h += `<button class="a${ing && !ing.tag ? ' on' : ''}" id="modo-item" style="${pos(135, 118, 32, 13)}" ${!ing || (!ing.from && ing.tag && !TAG_ICON[ing.tag]) ? 'disabled' : ''}>Item</button>
+    <button class="a${ing && ing.tag ? ' on' : ''}" id="modo-tag" style="${pos(169, 118, 28, 13)}" ${!tags.length ? 'disabled' : ''}>Tag</button>`;
+    if (ing && ing.tag && tags.length > 1)
+      h += `<button class="a" id="tag-prev" style="${pos(201, 118, 12, 13)}" aria-label="Tag anterior">‹</button>
+      <span class="t mu" style="${pos(216, 121)};font-size:${U(7)}">${tags.indexOf(ing.tag) + 1}/${tags.length}</span>
+      <button class="a" id="tag-next" style="${pos(232, 118, 12, 13)}" aria-label="Próxima tag">›</button>`;
+    else if (ing && !tags.length)
+      h += `<span class="t dis" style="${pos(201, 121)};font-size:${U(7)}">sem tags</span>`;
+    h += `<button class="a" id="limpar" style="${pos(270, 118, 38, 13)}" ${ing ? '' : 'disabled'}>Limpar</button>`;
+  }
+  h += `<button class="a primary" id="salvar" style="${pos(130, 142, 50, 16)}" ${dirty ? '' : 'disabled'}>Salvar</button>
+  <button class="a" id="restaurar" style="${pos(184, 142, 72, 16)}" ${st === 'def' && !dirty ? 'disabled' : ''}>Restaurar padrão</button>
+  <button class="a" id="desativar" style="${pos(260, 142, 52, 16)}">${c.off ? 'Reativar' : 'Desativar'}</button>`;
+  if (toast) h += `<div class="toast" style="${pos(0, 160)};width:100%">${esc(toast)}</div>`;
+
+  // inventário do jogador
+  const ix = 81, iy = 172;
+  h += `<span class="t mu" style="${pos(ix, iy - 2)}">Inventário · clique para pôr no slot ${slot + 1}</span>`;
+  INV.forEach((id, k) => {
+    const row = Math.floor(k / 9), x = ix + (k % 9) * 18, y = iy + 8 + row * 18 + (row === 3 ? 4 : 0);
+    h += `<button class="slot" data-inv="${k}" style="${pos(x, y)}" ${id ? `aria-label="${esc(ITEMS[id].n)}"` : 'aria-label="vazio"'}>${id ? `<span class="spr" style="background-image:url(${icon(id)})"></span>` : ''}</button>`;
+  });
+  const keepScroll = document.getElementById('lista')?.scrollTop || 0, focusSearch = document.activeElement?.id === 'busca';
+  gui.innerHTML = h;
+  document.getElementById('lista').scrollTop = keepScroll;
+  if (focusSearch) { const b = document.getElementById('busca'); b.focus(); b.setSelectionRange(b.value.length, b.value.length) }
+}
+
+function flash(msg) { toast = msg; render(); clearTimeout(flash.t); flash.t = setTimeout(() => { toast = ''; render() }, 2600) }
+gui.addEventListener('input', e => { if (e.target.id === 'busca') { filter = e.target.value; render() } });
+gui.addEventListener('contextmenu', e => {
+  const s = e.target.closest('[data-s]'); if (!s) return; e.preventDefault();
+  const r = RECIPES[sel]; if (r.cur.off) return; slot = +s.dataset.s; r.cur.grid[slot] = null; render();
+});
+gui.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const r = RECIPES[sel], c = r.cur;
+  if (b.dataset.r) { sel = +b.dataset.r; const g = RECIPES[sel].cur.grid; slot = g.findIndex(Boolean); if (slot < 0) slot = 0; toast = ''; return render() }
+  if (b.dataset.s) { slot = +b.dataset.s; return render() }
+  if (b.dataset.inv) { const id = INV[+b.dataset.inv]; if (!id || c.off) return; c.grid[slot] = { item: id }; return render() }
+  const ing = c.grid[slot];
+  switch (b.id) {
+    case 'menos': c.count = Math.max(1, c.count - 1); break;
+    case 'mais': c.count = Math.min(64, c.count + 1); break;
+    case 'limpar': c.grid[slot] = null; break;
+    case 'modo-item': if (ing && ing.tag) c.grid[slot] = { item: ing.from || TAG_ICON[ing.tag] }; break;
+    case 'modo-tag': if (ing && !ing.tag) c.grid[slot] = { tag: ITEMS[ing.item].tags[0], from: ing.item }; break;
+    case 'tag-prev': case 'tag-next': {
+      const tags = ITEMS[ing.from || TAG_ICON[ing.tag]].tags, k = tags.indexOf(ing.tag), d = b.id === 'tag-next' ? 1 : -1;
+      ing.tag = tags[(k + d + tags.length) % tags.length]; break;
+    }
+    case 'salvar': r.saved = clone(c); pending++; return flash(`Salvo em config/wirelessautomate/recipes · recarregue para aplicar`);
+    case 'restaurar': r.saved = null; r.cur = clone(r.def); pending++; return flash('Override apagado · a receita do mod volta ao recarregar');
+    case 'desativar': c.off = !c.off; r.saved = clone(c); pending++; return flash(c.off ? 'Desativada · o item fica sem receita ao recarregar' : 'Reativada');
+    case 'reload': pending = 0; return flash('Receitas recarregadas para todos os jogadores');
+  }
+  render();
+});
+
+/* tooltip no estilo do jogo */
+const tip = document.getElementById('tip');
+gui.addEventListener('mousemove', e => {
+  const b = e.target.closest('[data-s],[data-inv],[data-out]'); if (!b) { tip.hidden = true; return }
+  const r = RECIPES[sel]; let html = '';
+  if (b.dataset.inv) { const id = INV[+b.dataset.inv]; if (!id) { tip.hidden = true; return } html = `${esc(ITEMS[id].n)}<br><span class="g">${esc(id)}</span>`; const t = ITEMS[id].tags; if (t.length) html += `<br><span class="g">${t.map(x => '#' + esc(x)).join('<br>')}</span>` }
+  else if (b.dataset.out) html = `${esc(ITEMS[r.out].n)} ×${r.cur.count}<br><span class="g">${esc(r.out)}</span>`;
+  else { const ing = r.cur.grid[+b.dataset.s]; if (!ing) { html = '<span class="g">Vazio</span><br><span class="c">Clique e escolha um item no inventário</span>' } else html = ing.tag ? `<span class="c">Qualquer item de</span><br>#${esc(ing.tag)}` : `${esc(ITEMS[ing.item].n)}<br><span class="g">${esc(ing.item)}</span>`; html += '<br><span class="g">Clique direito: limpar</span>' }
+  tip.innerHTML = html; tip.hidden = false;
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + 'px'; tip.style.top = (e.clientY - 10) + 'px';
+});
+gui.addEventListener('mouseleave', () => tip.hidden = true);
+render();
+</script>

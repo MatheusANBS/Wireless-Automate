@@ -2137,7 +2137,7 @@ Escolha uma receita na lista: a grade 3 × 3 e o resultado aparecem à direita.
 | Pôr um item num slot | Clique no slot e depois num item do seu inventário (o item não sai de lá), ou clique no slot com o item no cursor. Com o JEI, arraste o item para o slot. |
 | Esvaziar um slot | Clique com o botão direito nele. |
 | Aceitar qualquer item de uma tag | Escolha o slot e clique em **Tag**. As setas trocam entre as tags do item. **Item** volta para o item exato. |
-| Esvaziar a grade | **Limpar**. |
+| Esvaziar o slot escolhido | **Limpar** (ou clique direito no slot). |
 | Mudar a quantidade do resultado | **−** e **+**, até o tamanho da pilha do item (no máximo 64). |
 
 ## Salvar e recarregar
@@ -2189,7 +2189,7 @@ Pick a recipe in the list: the 3 × 3 grid and the result show up on the right.
 | Put an item in a slot | Click the slot, then an item in your inventory (the item stays there), or click the slot with the item on your cursor. With JEI, drag the item onto the slot. |
 | Empty a slot | Right-click it. |
 | Accept any item of a tag | Pick the slot and click **Tag**. The arrows cycle through the item's tags. **Item** goes back to the exact item. |
-| Empty the grid | **Clear**. |
+| Empty the chosen slot | **Clear** (or right click the slot). |
 | Change the result's amount | **−** and **+**, up to the item's stack size (64 at most). |
 
 ## Saving and reloading

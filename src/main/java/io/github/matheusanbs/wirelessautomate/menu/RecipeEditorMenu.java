@@ -88,18 +88,40 @@ public class RecipeEditorMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        // Fechar ao sair do jogo ou com o servidor parando também passa aqui: só recarrega com ele rodando.
-        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.pending() > 0 && serverPlayer.server.isRunning()) {
-            MinecraftServer server = serverPlayer.server;
-            RecipeEditor.reload(server).thenRunAsync(() -> broadcast(server, false), server);
+        // Fechar ao sair do jogo ou com o servidor parando também passa aqui: só recarrega com ele rodando. Sem
+        // permissão (o stillValid fecha o menu de quem a perdeu), fechar não recarrega.
+        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.pending() > 0 && serverPlayer.server.isRunning()
+                && serverPlayer.hasPermissions(2)) {
+            reloadAndBroadcast(serverPlayer.server, false);
         }
+    }
+
+    /**
+     * Servidor: recarrega os recursos e, na thread do servidor, manda o snapshot aos editores abertos (com a
+     * mensagem de recarga, se pedida); se a recarga falhar, avisa os editores abertos.
+     */
+    public static void reloadAndBroadcast(MinecraftServer server, boolean announce) {
+        RecipeEditor.reload(server).whenCompleteAsync((ignored, error) -> {
+            if (error != null) {
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    if (player.containerMenu instanceof RecipeEditorMenu) {
+                        player.displayClientMessage(Component.translatable("gui.wirelessautomate.recipes.reload_failed"), true);
+                    }
+                }
+            }
+            broadcast(server, announce && error == null);
+        }, server);
     }
 
     /** Servidor: manda o snapshot atual a todo jogador com o editor aberto (e a mensagem de recarga, se pedida). */
     public static void broadcast(MinecraftServer server, boolean announce) {
-        RecipeEditorSnapshot snapshot = RecipeEditorSnapshot.of(server);
+        RecipeEditorSnapshot snapshot = null;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.containerMenu instanceof RecipeEditorMenu) {
+                // Só monta o snapshot (lê os arquivos) se houver um editor aberto.
+                if (snapshot == null) {
+                    snapshot = RecipeEditorSnapshot.of(server);
+                }
                 RecipeEditorStatePayload.send(player, snapshot);
                 if (announce) {
                     player.displayClientMessage(Component.translatable("gui.wirelessautomate.recipes.reloaded"), true);

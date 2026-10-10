@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +25,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.Resource;
@@ -34,6 +37,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 
 /**
  * Serviço do servidor do editor de receitas: lista as receitas editáveis do mod, grava e apaga os overrides
@@ -64,10 +69,30 @@ public final class RecipeEditor {
         PENDING.set(0);
     }
 
-    /** Recarrega os recursos com os packs selecionados; zera as pendências. */
+    /**
+     * Recarrega os recursos com os packs selecionados. Só o sucesso zera as pendências (o fim de toda recarga,
+     * inclusive a do {@code /reload}, também zera, por {@link #onDatapackSync}); a falha vai ao log.
+     */
     public static CompletableFuture<Void> reload(MinecraftServer server) {
+        return server.reloadResources(server.getPackRepository().getSelectedIds()).whenComplete((ignored, error) -> {
+            if (error != null) {
+                WirelessAutomate.LOGGER.error("A recarga das receitas falhou", error);
+            } else {
+                PENDING.set(0);
+            }
+        });
+    }
+
+    /**
+     * Fim de uma recarga do servidor (o evento vem sem jogador uma vez por recarga, pelo botão ou pelo
+     * {@code /reload}): zera as pendências e manda o estado novo aos editores abertos.
+     */
+    public static void onDatapackSync(OnDatapackSyncEvent event) {
+        if (event.getPlayer() != null) {
+            return;
+        }
         PENDING.set(0);
-        return server.reloadResources(server.getPackRepository().getSelectedIds());
+        RecipeEditorMenu.broadcast(event.getPlayerList().getServer(), false);
     }
 
     // ---------------------------------------------------------------- leitura
@@ -96,7 +121,7 @@ public final class RecipeEditor {
         Optional<RecipeDraft> override = readOverride(id);
         RecipeDraft current = override.orElse(defaults.get().draft());
         State state = override.isEmpty() ? State.DEFAULT : (current.disabled() ? State.DISABLED : State.EDITED);
-        boolean divergent = override.isPresent() && diverges(server, id, defaults.get().resultItem(), current);
+        boolean divergent = override.isPresent() && diverges(server, id, defaults.get(), current);
         return Optional.of(new Entry(id, defaults.get().resultItem(), defaults.get().draft(), current, state, divergent));
     }
 
@@ -128,13 +153,19 @@ public final class RecipeEditor {
         return out;
     }
 
-    /** O JSON do jar (o último recurso que não é do pack de overrides), se for uma receita editável. */
+    /**
+     * Id do pack do jar do mod: o NeoForge ({@code ResourcePackLoader}) dá a cada jar de mod o pack
+     * {@code mod/<ids do jar>}, filho do {@code mod_data} e expandido na pilha com esse id próprio.
+     */
+    private static final String MOD_PACK_ID = "mod/" + WirelessAutomate.MODID;
+
+    /** O JSON do próprio jar do mod (nunca o de outro datapack ou do pack de overrides), se for uma receita editável. */
     private static Optional<Defaults> readDefaults(MinecraftServer server, ResourceLocation id) {
         ResourceLocation file = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath() + ".json");
         List<Resource> stack = server.getResourceManager().getResourceStack(file);
         for (int i = stack.size() - 1; i >= 0; i--) {
             Resource resource = stack.get(i);
-            if (RecipeOverridePack.PACK_ID.equals(resource.sourcePackId())) {
+            if (!MOD_PACK_ID.equals(resource.sourcePackId())) {
                 continue;
             }
             try (Reader reader = resource.openAsReader()) {
@@ -171,14 +202,15 @@ public final class RecipeEditor {
 
     // -------------------------------------------------------------- divergência
 
-    private static boolean diverges(MinecraftServer server, ResourceLocation id, ResourceLocation resultItem,
-            RecipeDraft current) {
+    private static boolean diverges(MinecraftServer server, ResourceLocation id, Defaults defaults, RecipeDraft current) {
+        ResourceLocation resultItem = defaults.resultItem();
         Optional<RecipeHolder<?>> loaded = server.getRecipeManager().byKey(id);
         if (current.disabled()) {
             return loaded.isPresent();
         }
         if (loaded.isEmpty()) {
-            return true;
+            // O override guarda as condições do padrão: se elas não passam (mod_loaded de um mod ausente), não carregar é o certo.
+            return conditionsPass(server, defaults.json());
         }
         Recipe<?> recipe = loaded.get().value();
         ItemStack result = recipe.getResultItem(server.registryAccess());
@@ -201,6 +233,22 @@ public final class RecipeEditor {
             }
         }
         return false;
+    }
+
+    /** As condições do NeoForge no JSON, avaliadas no contexto da última recarga; sem condições ou ilegíveis, passa. */
+    private static boolean conditionsPass(MinecraftServer server, JsonObject json) {
+        if (!json.has(RecipeJson.CONDITIONS)) {
+            return true;
+        }
+        try {
+            ICondition.IContext context = server.getServerResources().managers().getConditionContext();
+            List<ICondition> conditions = ICondition.LIST_CODEC
+                    .parse(RegistryOps.create(JsonOps.INSTANCE, server.registryAccess()), json.get(RecipeJson.CONDITIONS))
+                    .getOrThrow();
+            return conditions.stream().allMatch(c -> c.test(context));
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 
     /** O item do slot, ou o primeiro item da tag. */
@@ -297,7 +345,9 @@ public final class RecipeEditor {
                 if (id == null || !BuiltInRegistries.ITEM.containsKey(id) || BuiltInRegistries.ITEM.get(id) == Items.AIR) {
                     return Optional.of(error("unknown_item", slot.id()));
                 }
-            } else if (id == null) {
+            } else if (id == null || BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, id))
+                    .map(tag -> tag.size() == 0).orElse(true)) {
+                // Uma tag que não existe ou vazia deixaria a receita sem ingrediente válido.
                 return Optional.of(error("bad_tag", slot.id()));
             }
         }

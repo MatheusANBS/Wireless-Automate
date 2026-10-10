@@ -731,5 +731,6 @@
   "gui.wirelessautomate.recipes.divergent": "Diferente do que está carregado (outro datapack ou falta recarregar)",
   "gui.wirelessautomate.recipes.tooltip.any_of": "Qualquer item de",
   "gui.wirelessautomate.recipes.tooltip.clear": "Clique direito: limpar",
-  "gui.wirelessautomate.recipes.tooltip.pick": "Clique e escolha um item no inventário"
+  "gui.wirelessautomate.recipes.tooltip.pick": "Clique e escolha um item no inventário",
+  "gui.wirelessautomate.recipes.reload_failed": "A recarga falhou; veja o log do servidor"
 }

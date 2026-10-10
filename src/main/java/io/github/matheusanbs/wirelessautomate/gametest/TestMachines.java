@@ -33,11 +33,14 @@ public final class TestMachines {
     public static final Block MANY_TANKS = Blocks.WET_SPONGE;
     /** Um tanque de saída que devolve a pilha interna em {@code getFluidInTank} ({@link LiveTank}). */
     public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
+    /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
+    public static final Block NAIVE_SLOTS = Blocks.CLAY;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -52,6 +55,7 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> bigSlot(pos), BIG_SLOT);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> naiveSlots(pos), NAIVE_SLOTS);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -63,6 +67,10 @@ public final class TestMachines {
         return TANKS.computeIfAbsent(pos.immutable(), key -> new ManyTanks());
     }
 
+    static NaiveSlots naiveSlots(BlockPos pos) {
+        return NAIVE.computeIfAbsent(pos.immutable(), key -> new NaiveSlots());
+    }
+
     static LiveTank liveTank(BlockPos pos) {
         return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
     }
@@ -72,12 +80,19 @@ public final class TestMachines {
         BIG_SLOTS.remove(pos.immutable());
         TANKS.remove(pos.immutable());
         LIVE_TANKS.remove(pos.immutable());
+        NAIVE.remove(pos.immutable());
     }
 
     static final class BigSlot implements IItemHandler {
         static final int LIMIT = 1_000_000;
         private Item item = Items.AIR;
         private int count;
+        /** Chamadas de inserção de verdade que entraram algo. */
+        private int inserts;
+
+        int inserts() {
+            return inserts;
+        }
 
         void set(Item item, int count) {
             this.item = item;
@@ -110,6 +125,7 @@ public final class TestMachines {
             if (!simulate) {
                 item = stack.getItem();
                 count += accepted;
+                inserts++;
             }
             return stack.copyWithCount(stack.getCount() - accepted);
         }
@@ -130,6 +146,79 @@ public final class TestMachines {
         @Override
         public int getSlotLimit(int slot) {
             return LIMIT;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
+    }
+
+    /**
+     * Um inventário mal feito: declara limite 64 por slot, mas o {@code insertItem} aceita a pilha
+     * inteira sem limitar (como uma máquina que confia em quem chama). Anota a maior pilha recebida
+     * numa chamada, para o teste conferir que o roteador nunca manda mais que o tamanho do item.
+     */
+    static final class NaiveSlots implements IItemHandler {
+        static final int SLOTS = 4;
+        private final ItemStack[] stacks = new ItemStack[SLOTS];
+        private int largestCall;
+
+        NaiveSlots() {
+            Arrays.fill(stacks, ItemStack.EMPTY);
+        }
+
+        int largestCall() {
+            return largestCall;
+        }
+
+        int total() {
+            int total = 0;
+            for (ItemStack stack : stacks) {
+                total += stack.getCount();
+            }
+            return total;
+        }
+
+        int largestSlot() {
+            int largest = 0;
+            for (ItemStack stack : stacks) {
+                largest = Math.max(largest, stack.getCount());
+            }
+            return largest;
+        }
+
+        @Override
+        public int getSlots() {
+            return SLOTS;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return stacks[slot];
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            largestCall = Math.max(largestCall, stack.getCount());
+            ItemStack in = stacks[slot];
+            if (stack.isEmpty() || !in.isEmpty() && (!ItemStack.isSameItemSameComponents(in, stack) || in.getCount() >= 64)) {
+                return stack;
+            }
+            if (!simulate) {
+                stacks[slot] = stack.copyWithCount(in.getCount() + stack.getCount());
+            }
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 64;
         }
 
         @Override

@@ -257,3 +257,17 @@ Leitura:
 - **mixed:** orçamento esgotado cai de 58% para 27,5% dos ticks com a mesma vazão; **many soph** move 15% mais (97,6 mil → 112 mil itens/s); **tablet** −26% no Tablet aberto e +11% de vazão.
 - **raw vanilla:** esta rodada mostrou uma piora (115 → 141 µs/visita). A causa era o #14, que no baú vanilla nunca reconhecia a pilha cheia (o `getSlotLimit` é 99, a pilha para em 64) e só somava trabalho; corrigido em `ae302ec` (o máximo do item decide). Rodadas alternadas de `raw:2:5:vanilla` depois da correção, medianas de µs/visita: base 121 e 136, antes da correção 120 e 137, com a correção 111 e 117 (8–15% abaixo da base). A vazão bruta fica em ~69 mil itens/s, o teto do Ultimate.
 - O resto fica dentro do ruído da máquina (idle, full, big, bigfull, types).
+
+## Pilhas grandes para inventários comuns (10 de outubro de 2026)
+
+O roteador entregava a um inventário comum (`IItemHandler`) no máximo uma pilha (64) por chamada de `insertItem`, mesmo quando o slot aceitava muito mais. Agora, do Baú do mod para um inventário comum, uma entrega simulada leva tudo o que o destino aceita, e cada slot recebe numa chamada até o próprio limite quando o `getSlotLimit` dele passa de 99 (`Item.ABSOLUTE_MAX_STACK_SIZE`, o limite comum do vanilla e do `ItemStackHandler`). Slots com limite até 99 continuam recebendo no máximo uma pilha por chamada, mesmo os que não limitam a pilha que recebem (`ItemTransfer.InsertPlan.insert`).
+
+Medido com um cenário temporário (não versionado): Baú do mod (Ultimate) com 2,1 bilhões de pedregulhos para um barril de madeira do Sophisticated Storage com o Upgrade de Pilha Ômega, tier Ultimate, orçamento padrão de 1 ms, contêiner Linux com 4 CPUs.
+
+| | Antes | Depois |
+| --- | --- | --- |
+| Itens/s | 314 a 338 mil | 2,1 bilhões num tick |
+| 2,1 bilhões levam | ~1h45min de jogo | **1 tick**, 0,9 a 1,0 ms do mod (7,5 ms na primeira repetição, com o JIT frio) |
+
+Os cenários antigos (`many` com 500 no vanilla, `raw` vanilla, `big` e `bigfull` no Sophisticated) ficaram dentro do ruído da máquina, antes e depois. A origem do Sophisticated para o Sophisticated não muda: o `extractItem` dele entrega uma pilha por chamada.
+

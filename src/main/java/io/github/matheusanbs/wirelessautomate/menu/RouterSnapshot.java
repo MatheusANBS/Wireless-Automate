@@ -195,10 +195,7 @@ public record RouterSnapshot(
                 IEnergyStorage energy = router.energy(face);
                 yield energy == null ? -1 : 1;
             }
-            case CHEMICAL -> {
-                Object chemicals = router.chemicals(face);
-                yield chemicals == null ? -1 : Chemicals.tanks(chemicals);
-            }
+            case CHEMICAL -> Chemicals.tanks(router, face);
             case SOURCE -> router.arsSource(face) == null ? -1 : 1;
         };
     }

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismStorage;
 import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
@@ -29,15 +30,38 @@ public final class Chemicals {
     /**
      * Porte 1.20.1 (Mekanism 10.4, D4): as capabilities de handler de químico, uma por subtipo, na ordem gás,
      * infusão, pigmento, slurry; vazia sem o Mekanism. O {@code RouterBlockEntity.chemicals(face, subtipo)}
-     * indexa esta lista. (A tarefa 7 implementa {@code MekanismChemicals.CAPABILITIES}.)
+     * indexa esta lista ({@code MekanismChemicals.CAPABILITIES}).
      */
     public static List<Capability<?>> capabilities() {
         return LOADED ? MekanismChemicals.CAPABILITIES : List.of();
     }
 
-    /** Tanques de um handler de químico (o objeto de {@code RouterBlockEntity.chemicals}). */
+    /** Tanques de um handler de químico de qualquer subtipo (o objeto de {@code RouterBlockEntity.chemicals}). */
     public static int tanks(Object handler) {
         return MekanismChemicals.tanks(handler);
+    }
+
+    /**
+     * Tanques de químico que a máquina oferece pela face, somando os subtipos (gás, infusão, pigmento, slurry),
+     * ou -1 se ela não tem nenhum (ou sem o Mekanism).
+     */
+    public static int tanks(RouterBlockEntity router, Direction face) {
+        int total = -1;
+        for (int subtype = 0, n = capabilities().size(); subtype < n; subtype++) {
+            Object handler = router.chemicals(face, subtype);
+            if (handler != null) {
+                total = Math.max(total, 0) + MekanismChemicals.tanks(handler);
+            }
+        }
+        return total;
+    }
+
+    /**
+     * O handler do Tanque Químico para a capability (um por subtipo, cada um vendo só os químicos do seu tipo),
+     * ou {@code null} se ela não é de químico ou sem o Mekanism.
+     */
+    public static @Nullable Object storageHandler(Capability<?> capability, ChemicalStorage storage) {
+        return LOADED ? MekanismStorage.handler(capability, storage) : null;
     }
 
     /** O primeiro químico guardado num item (tanque do Mekanism), se houver. */

@@ -39,6 +39,8 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -94,7 +96,8 @@ import org.lwjgl.opengl.GL11;
  * Na tela de título desenha uma {@link RouterScreen} com um snapshot de exemplo (fornalha com Itens
  * na rede "Linha 5x", Fluidos sem rede e Energia na "Base"), passa por alguns estados, salva um PNG de cada e fecha o jogo. A tela não é aberta com
  * {@code setScreen} porque, sem mundo, o {@code tick} de uma tela de contêiner falha sem jogador.
- * Com {@code WA_SCREENSHOT_ONLY=giro} tira só a galeria do giro do roteador ({@code giro-parede}).
+ * Com {@code WA_SCREENSHOT_ONLY=giro} tira só a galeria do giro do roteador ({@code giro-parede}); com
+ * {@code WA_SCREENSHOT_ONLY=blocos}, só a galeria dos armazenamentos ({@code blocos-galeria}).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevScreenshot {
@@ -183,7 +186,7 @@ public final class DevScreenshot {
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps())
+                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -783,6 +786,73 @@ public final class DevScreenshot {
         Lighting.setupFor3DItems();
     }
 
+    // ------------------------------------------------------------------ galeria dos armazenamentos
+
+    /** Com {@code true}, a tela de título mostra os armazenamentos em vez das telas. */
+    private static boolean blockGallery = ONLY != null && ONLY.startsWith("blocos");
+
+    /** Galeria dos armazenamentos: os cinco blocos (o Tanque de Source em três níveis) nos tiers Básico e Ultimate. */
+    private static List<Step> blockSteps() {
+        return List.of(new Step(() -> {
+            linkerScreen = null;
+            tabletScreen = null;
+            filterScreen = null;
+            mouseX = mouseY = -1;
+            spinGallery = false;
+            blockGallery = true;
+        }, "blocos-galeria"));
+    }
+
+    /** Os estados mostrados na galeria, na ordem das colunas. */
+    private static List<BlockState> galleryStates(RouterTier tier) {
+        List<BlockState> states = new ArrayList<>();
+        for (StorageKind kind : List.of(StorageKind.CHEST, StorageKind.TANK, StorageKind.BATTERY, StorageKind.CHEMICAL_TANK)) {
+            states.add(ModBlocks.STORAGE.get(kind).get().defaultBlockState().setValue(RouterBlock.TIER, tier));
+        }
+        for (int fill : new int[] {0, 5, 10}) {
+            states.add(ModBlocks.STORAGE.get(StorageKind.SOURCE_TANK).get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, tier).setValue(StorageSourceTankBlock.FILL, fill));
+        }
+        return states;
+    }
+
+    /**
+     * Quatro linhas: Básico e Ultimate vistos de frente e do alto (como o jogador vê um bloco no chão), e os
+     * mesmos vistos quase de cima (o Olho e as tampas). Sete colunas: Baú, Tanque, Bateria, Tanque Químico
+     * e o Tanque de Source nos níveis 0, 5 e 10. Pelo renderizador de blocos do jogo, com os modelos reais.
+     */
+    private static void renderBlockGallery(GuiGraphics g, int width, int height) {
+        g.fill(0, 0, width, height, 0xFF2A2F38);
+        var font = Minecraft.getInstance().font;
+        String[] titles = {"Basico, de frente e do alto", "Ultimate, de frente e do alto", "Basico, de cima", "Ultimate, de cima"};
+        float size = Math.min(width / 11f, height / 8f);
+        for (int row = 0; row < 4; row++) {
+            RouterTier tier = row % 2 == 0 ? RouterTier.BASIC : RouterTier.ULTIMATE;
+            float pitch = row < 2 ? 30 : 70;
+            float yaw = 20;
+            float cy = height * (row + 0.5f) / 4f;
+            g.drawString(font, titles[row], 8, (int) (cy - height / 8f) + 3, 0xFFFFFF);
+            List<BlockState> states = galleryStates(tier);
+            for (int col = 0; col < states.size(); col++) {
+                float cx = width * (col + 1) / (states.size() + 1f);
+                g.flush();
+                PoseStack pose = g.pose();
+                pose.pushPose();
+                pose.translate(cx, cy + size * 0.1f, 150);
+                pose.scale(size, -size, size);
+                pose.mulPose(Axis.XP.rotationDegrees(pitch));
+                pose.mulPose(Axis.YP.rotationDegrees(yaw));
+                pose.translate(-0.5f, -0.5f, -0.5f);
+                MultiBufferSource.BufferSource buffers = g.bufferSource();
+                Minecraft.getInstance().getBlockRenderer().renderSingleBlock(states.get(col), pose, buffers,
+                        LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                buffers.endBatch();
+                pose.popPose();
+            }
+        }
+        Lighting.setupFor3DItems();
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -791,10 +861,14 @@ public final class DevScreenshot {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (spinGallery) {
+        if (spinGallery || blockGallery) {
             event.getGuiGraphics().flush();
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
-            renderSpinGallery(event.getGuiGraphics(), title.width, title.height);
+            if (blockGallery) {
+                renderBlockGallery(event.getGuiGraphics(), title.width, title.height);
+            } else {
+                renderSpinGallery(event.getGuiGraphics(), title.width, title.height);
+            }
             return;
         }
         if (screen == null) {
@@ -844,7 +918,7 @@ public final class DevScreenshot {
             // a flag acima chega tarde quando a tela já foi escolhida: troca pela de título
             minecraft.setScreen(new TitleScreen(true));
         }
-        if (screen == null && !spinGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
+        if (screen == null && !spinGallery && !blockGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
             return;
         }
         int step = (ticks - 60) / STEP_TICKS;

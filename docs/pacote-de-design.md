@@ -102,3 +102,11 @@ Texturas, modelos 3D (com elementos; nada de cubo liso) e blockstates do roteado
 armazenamentos saem de `scripts/textures/blocos.py`, pela mesma `identidade.py`. A forma de cada
 bloco está na tabela "Os blocos" de `identidade-visual.md`; o `gerar_texturas.py` só chama
 `blocos.sprites()`, `blocos.modelos()` e `blocos.previas()` e monta a folha.
+
+Cada modelo passa por `validar_modelo` (texturas, UVs, ângulos) e por `validar_geometria`, que falha a
+geração se duas faces desenhadas dividirem o mesmo plano com área em comum (pisca no jogo), se duas
+caixas se atravessarem (salvo as marcadas `dentro=True`, o conteúdo das colunas de vidro) ou se uma face
+omitida não estiver inteiramente coberta por um vizinho encostado (buraco). Para conferir no jogo:
+`WA_SCREENSHOT=... WA_SCREENSHOT_ONLY=giro` (roteador na parede e no chão, nos quatro giros) e
+`WA_SCREENSHOT_ONLY=blocos` (os armazenamentos em dois tiers e dois ângulos), com o `runClient` sob Xvfb;
+a prévia isométrica `docs/preview/blocos-preview.png` sai do próprio script.

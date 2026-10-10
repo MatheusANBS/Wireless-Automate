@@ -18,12 +18,21 @@ import java.util.List;
  * {@link #MAX_ENTRIES} tipos e cerca de {@link #MAX_BYTES} bytes (o 1.20.1 não divide pacotes e recusa os de
  * mais de 1 MiB; pilhas com NBT grande, como caixas cheias, enchem um pacote rápido); só o primeiro leva
  * {@code reset}.
+ *
+ * <p>Porte 1.20.1: cada tipo leva também a sua referência no menu do servidor ({@link StorageListView.Entry#ref()},
+ * 0 = nenhuma). Uma chave acima de {@link #REF_BYTES} ganha referência, e as ações sobre ela vão por ela (o pacote do
+ * cliente tem teto de 32767 bytes); uma acima de {@link #MAX_KEY_BYTES} vai como o substituto sem NBT
+ * ({@link ListKind#truncated}).
  */
 public record StorageEntriesPayload(int containerId, StorageKind kind, boolean reset, StorageListView.Header header,
         List<StorageListView.Entry<Object>> entries) implements CustomPacketPayload {
     public static final int MAX_ENTRIES = 256;
     /** Teto de bytes das entradas de um pacote (metade do 1 MiB do vanilla, com folga para o cabeçalho). */
     public static final int MAX_BYTES = 512 * 1024;
+    /** Chave (codificada) acima disso ganha uma referência: a ação do cliente vai por ela, não pelo NBT. */
+    public static final int REF_BYTES = 8 * 1024;
+    /** Chave (codificada) acima disso vai como o substituto sem NBT, com a marca da referência. */
+    public static final int MAX_KEY_BYTES = MAX_BYTES;
     public static final Type<StorageEntriesPayload> TYPE = new Type<>(WirelessAutomate.id("storage_entries"));
     public static final StreamCodec<RegistryFriendlyByteBuf, StorageEntriesPayload> STREAM_CODEC =
             StreamCodec.of(StorageEntriesPayload::write, StorageEntriesPayload::read);
@@ -38,6 +47,7 @@ public record StorageEntriesPayload(int containerId, StorageKind kind, boolean r
         for (StorageListView.Entry<Object> entry : payload.entries) {
             kind.codec.encode(buf, entry.key());
             buf.writeVarLong(entry.count());
+            buf.writeVarInt(entry.ref());
         }
     }
 
@@ -56,7 +66,13 @@ public record StorageEntriesPayload(int containerId, StorageKind kind, boolean r
         }
         List<StorageListView.Entry<Object>> entries = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            entries.add(new StorageListView.Entry<>(kind.codec.decode(buf), buf.readVarLong()));
+            Object key = kind.codec.decode(buf);
+            long count = buf.readVarLong();
+            int ref = buf.readVarInt();
+            if (ref < 0) {
+                throw new DecoderException("Referência inválida: " + ref);
+            }
+            entries.add(new StorageListView.Entry<>(key, count, ref));
         }
         return new StorageEntriesPayload(containerId, storage, reset, header, entries);
     }

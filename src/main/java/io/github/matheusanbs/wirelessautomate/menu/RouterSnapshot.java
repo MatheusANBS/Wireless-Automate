@@ -78,6 +78,17 @@ public record RouterSnapshot(
                 faces, chunkLoad);
     }
 
+    /**
+     * Porte 1.20.1: a versão da abertura quando a inteira passa do teto do Forge ({@code ServerMenus}). Sem as
+     * redes do seletor (a lista não tem limite) e com o ícone da máquina sem NBT (o de um mod pode ser grande); o
+     * resto tem tamanho limitado. O que falta chega logo depois ({@link RouterMenu#followUp}).
+     */
+    public RouterSnapshot reduced() {
+        ItemStack icon = machine.hasTag() ? new ItemStack(machine.getItem(), machine.getCount()) : machine;
+        return new RouterSnapshot(pos, name, tier, facing, typeNetworks, List.of(), powered, icon, machineState,
+                faces, chunkLoad);
+    }
+
     /** Tudo igual menos, talvez, as redes do seletor. */
     public boolean sameBody(RouterSnapshot other) {
         return pos.equals(other.pos) && name.equals(other.name) && tier == other.tier && facing == other.facing

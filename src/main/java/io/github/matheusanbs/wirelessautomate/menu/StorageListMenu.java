@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
-import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
 import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
@@ -18,6 +17,8 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEn
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import io.netty.buffer.Unpooled;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -42,7 +43,6 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
 
 /**
  * Menu da tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico). Os únicos slots
@@ -56,7 +56,6 @@ import org.slf4j.Logger;
  * na hora). Um armazenamento com milhões chegando não inunda o cliente.
  */
 public class StorageListMenu<K> extends AbstractContainerMenu {
-    private static final Logger LOGGER = LogUtils.getLogger();
     public static final double MAX_DISTANCE = 8.0;
     /** Ticks mínimos entre dois envios de diferenças. */
     public static final int SYNC_INTERVAL = 5;
@@ -75,6 +74,9 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     private int sentVersion = -1;
     private StorageListView.Header sentHeader = StorageListView.Header.EMPTY;
     private long lastSync = Long.MIN_VALUE;
+    /** Referências das chaves grandes mandadas à tela ({@link StorageListView.Entry#ref()}); valem até ela fechar. */
+    private final Object2IntOpenCustomHashMap<K> refs;
+    private final Int2ObjectOpenHashMap<K> refKeys = new Int2ObjectOpenHashMap<>();
 
     /** Servidor. */
     public StorageListMenu(int containerId, Inventory inventory, KeyedStorageBlockEntity<K> storage) {
@@ -101,6 +103,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         this.storage = storage;
         this.viewer = storage != null && inventory.player instanceof ServerPlayer player ? player : null;
         this.sent = new Object2LongOpenCustomHashMap<>(kind.strategy);
+        this.refs = new Object2IntOpenCustomHashMap<>(kind.strategy);
         addInventory(inventory);
     }
 
@@ -287,9 +290,10 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     /**
      * Manda em pacotes de até {@link StorageEntriesPayload#MAX_ENTRIES} tipos e
      * {@link StorageEntriesPayload#MAX_BYTES} bytes (cada chave é medida pelo codec); só o primeiro leva o
-     * {@code reset}. Porte 1.20.1: o vanilla recusa pacote de mais de 1 MiB e o Forge não divide. Um tipo que
-     * sozinho passa do teto não vai (aviso no log): some da lista da tela, mas continua no armazenamento, e o
-     * roteador e os mods de automação ainda o tiram.
+     * {@code reset}. Porte 1.20.1: o vanilla recusa pacote de mais de 1 MiB e o Forge não divide. Uma chave acima de
+     * {@link StorageEntriesPayload#REF_BYTES} ganha uma referência ({@link #refFor}), pela qual a tela age; uma acima
+     * de {@link StorageEntriesPayload#MAX_KEY_BYTES} vai como o substituto sem NBT ({@link ListKind#truncated}): o
+     * tipo aparece na lista com a quantidade e uma marca, e as ações sobre ele funcionam pela referência.
      */
     @SuppressWarnings("unchecked")
     private void send(Sync<K> sync) {
@@ -300,13 +304,18 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         for (StorageListView.Entry<K> entry : sync.changes()) {
             scratch.clear();
             kind.codec.encode(scratch, entry.key());
-            // A quantidade vai num VarLong: até 10 bytes.
-            int size = scratch.readableBytes() + 10;
-            if (size > StorageEntriesPayload.MAX_BYTES) {
-                LOGGER.warn("Tipo de {} com {} bytes fora da lista da tela de {}: passa do teto de {} por pacote",
-                        kind.storage, size, viewer.getScoreboardName(), StorageEntriesPayload.MAX_BYTES);
-                continue;
+            K key = entry.key();
+            int ref = 0;
+            if (scratch.readableBytes() > StorageEntriesPayload.REF_BYTES) {
+                ref = refFor(key);
+                if (scratch.readableBytes() > StorageEntriesPayload.MAX_KEY_BYTES) {
+                    key = kind.truncated(key, ref);
+                    scratch.clear();
+                    kind.codec.encode(scratch, key);
+                }
             }
+            // A quantidade vai num VarLong (até 10 bytes) e a referência num VarInt (até 5).
+            int size = scratch.readableBytes() + 15;
             if (!part.isEmpty() && (part.size() >= StorageEntriesPayload.MAX_ENTRIES
                     || bytes + size > StorageEntriesPayload.MAX_BYTES)) {
                 sendPart(sync, first, part);
@@ -314,12 +323,30 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 part = new ArrayList<>();
                 bytes = 0;
             }
-            part.add((StorageListView.Entry<Object>) (StorageListView.Entry<?>) entry);
+            part.add((StorageListView.Entry<Object>) (StorageListView.Entry<?>) new StorageListView.Entry<>(key,
+                    entry.count(), ref));
             bytes += size;
         }
         if (first || !part.isEmpty()) {
             sendPart(sync, first, part);
         }
+    }
+
+    /** A referência de uma chave grande (a mesma enquanto a tela estiver aberta). */
+    private int refFor(K key) {
+        int ref = refs.getInt(key);
+        if (ref == 0) {
+            ref = refKeys.size() + 1;
+            K copy = kind.copy(key);
+            refs.put(copy, ref);
+            refKeys.put(ref, copy);
+        }
+        return ref;
+    }
+
+    /** A chave de uma referência dada à tela, ou {@code null}. Só no servidor. */
+    public @Nullable K keyOfRef(int ref) {
+        return refKeys.get(ref);
     }
 
     private void sendPart(Sync<K> sync, boolean first, List<StorageListView.Entry<Object>> part) {
@@ -357,6 +384,13 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             return true;
         }
         Optional<Object> key = payload.key();
+        if (payload.ref() > 0) {
+            Object byRef = menu.keyOfRef(payload.ref());
+            if (byRef == null) {
+                return false;
+            }
+            key = Optional.of(byRef);
+        }
         return switch (menu.kind.storage) {
             case CHEST -> menu.handleItems(player, payload.action(), key.map(ItemStack.class::cast).orElse(ItemStack.EMPTY),
                     payload.slot());

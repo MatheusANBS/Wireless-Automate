@@ -190,8 +190,20 @@ public class RouterMenu extends AbstractContainerMenu {
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new RouterMenu(containerId, inventory, router, snapshot), title),
                 buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot),
-                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot.withNetworks(List.of())),
-                id -> List.of(new RouterNetworksPayload(id, snapshot.networks())));
+                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot.reduced()),
+                id -> followUp(id, snapshot));
+    }
+
+    /**
+     * Porte 1.20.1: o que completa uma tela aberta com o {@link RouterSnapshot#reduced()} (os dados inteiros
+     * passaram do teto do Forge): o corpo, se o ícone da máquina tinha NBT, e as redes do seletor. Pelos mesmos
+     * pacotes das atualizações, que vão em partes se passarem do teto de um pacote.
+     */
+    static List<CustomPacketPayload> followUp(int containerId, RouterSnapshot snapshot) {
+        RouterNetworksPayload networks = new RouterNetworksPayload(containerId, snapshot.networks());
+        return snapshot.machine().hasTag()
+                ? List.of(new RouterSnapshotPayload(containerId, snapshot), networks)
+                : List.of(networks);
     }
 
     /** O roteador; só existe no servidor. */

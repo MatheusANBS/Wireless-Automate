@@ -164,6 +164,16 @@ public record TabletSnapshot(
                 page.totalNodes(), page.matchingNodes(), networks, groups, page.nodes(), notice, noticeId);
     }
 
+    /**
+     * Porte 1.20.1: a versão da abertura quando a inteira passa do teto do Forge ({@code ServerMenus}). Sem as
+     * redes, os grupos (as listas não têm limite) e a página; o resto tem tamanho limitado. O cabeçalho inteiro e a
+     * página chegam logo depois ({@code TabletHeaderPayload}, {@code TabletPagePayload}).
+     */
+    public TabletSnapshot reduced() {
+        return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, Page.EMPTY.query(),
+                0, 0, List.of(), List.of(), List.of(), notice, noticeId);
+    }
+
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
     public boolean sameHeader(TabletSnapshot other) {
         return withPage(Page.EMPTY).equals(other.withPage(Page.EMPTY));

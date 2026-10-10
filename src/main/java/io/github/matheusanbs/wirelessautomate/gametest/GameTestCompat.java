@@ -1,8 +1,16 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.PacketParts;
+import io.github.matheusanbs.wirelessautomate.net.PayloadRegistrar;
 import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.AttributeKey;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -21,6 +29,8 @@ import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.network.MCRegisterPacketHandler;
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PlayMessages;
 import org.jetbrains.annotations.Nullable;
 
@@ -122,6 +132,72 @@ final class GameTestCompat {
             }
         }
         return last;
+    }
+
+    /**
+     * Faz o jogador de {@link #makeMockServerPlayerInLevel} parecer um cliente com o mod: o canal do mod passa a
+     * constar como registrado do outro lado da conexão (a lista {@code minecraft:register} que o Forge guarda no
+     * canal netty), então {@code PacketDistributor.hasChannel} dá verdadeiro e os pacotes do mod vão de verdade
+     * para a fila de saída ({@link #drain} os lê). Sem isso, como no {@code main}, os menus não mandam nada ao
+     * jogador falso.
+     */
+    static void negotiateModChannel(ServerPlayer player) {
+        io.netty.channel.Channel channel = player.connection.connection.channel();
+        AttributeKey<MCRegisterPacketHandler.ChannelList> key = AttributeKey.valueOf("minecraft:netregistry");
+        channel.attr(key).setIfAbsent(new MCRegisterPacketHandler.ChannelList());
+        byte[] name = (WirelessAutomate.id("main") + "\0").getBytes(StandardCharsets.UTF_8);
+        channel.attr(key).get().updateFrom(() -> null, new FriendlyByteBuf(Unpooled.wrappedBuffer(name)),
+                NetworkEvent.RegistrationChangeType.REGISTER);
+    }
+
+    /**
+     * O que foi mandado ao jogador de {@link #makeMockServerPlayerInLevel} desde a última leitura, como o cliente
+     * leria: os dados da última abertura de tela, os payloads do mod (as partes juntadas pelo mesmo leitor do
+     * canal) e o tamanho dos dados de cada pacote do canal do mod. Esvazia a fila.
+     */
+    record Sent(@Nullable RegistryFriendlyByteBuf openData, int openSize, List<CustomPacketPayload> payloads,
+            List<Integer> modPacketSizes) {
+        /** Os payloads de uma classe, na ordem em que chegaram. */
+        <T> List<T> of(Class<T> type) {
+            return payloads.stream().filter(type::isInstance).map(type::cast).toList();
+        }
+    }
+
+    static Sent drain(ServerPlayer player) {
+        if (!(player.connection.connection.channel() instanceof EmbeddedChannel channel)) {
+            throw new GameTestAssertException("jogador sem canal embutido");
+        }
+        ResourceLocation mod = WirelessAutomate.id("main");
+        PacketParts.Assembly assembly = new PacketParts.Assembly(PayloadRegistrar.MAX_ASSEMBLED_TO_CLIENT);
+        RegistryFriendlyByteBuf openData = null;
+        int openSize = -1;
+        List<CustomPacketPayload> payloads = new ArrayList<>();
+        List<Integer> sizes = new ArrayList<>();
+        Object message;
+        while ((message = channel.readOutbound()) != null) {
+            if (!(message instanceof ClientboundCustomPayloadPacket packet)) {
+                continue;
+            }
+            if (FORGE_PLAY.equals(packet.getIdentifier())) {
+                FriendlyByteBuf data = new FriendlyByteBuf(packet.getData().copy());
+                if (data.readUnsignedByte() == OPEN_CONTAINER) {
+                    FriendlyByteBuf extra = PlayMessages.OpenContainer.decode(data).getAdditionalData();
+                    openSize = extra.readableBytes();
+                    openData = new RegistryFriendlyByteBuf(extra);
+                }
+            } else if (mod.equals(packet.getIdentifier())) {
+                FriendlyByteBuf data = new FriendlyByteBuf(packet.getData().copy());
+                sizes.add(data.readableBytes());
+                CustomPacketPayload payload = PayloadRegistrar.receive(false, assembly, data);
+                if (payload != null) {
+                    payloads.add(payload);
+                }
+            }
+        }
+        if (assembly.pending()) {
+            throw new GameTestAssertException("partes de um pacote do mod sem a última");
+        }
+        return new Sent(openData, openSize, payloads, sizes);
     }
 
     /**

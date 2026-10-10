@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import net.minecraft.core.BlockPos;
-
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;

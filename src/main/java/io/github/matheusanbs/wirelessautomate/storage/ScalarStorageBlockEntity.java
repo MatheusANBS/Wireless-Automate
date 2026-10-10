@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import net.minecraft.core.BlockPos;
-
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.Tag;

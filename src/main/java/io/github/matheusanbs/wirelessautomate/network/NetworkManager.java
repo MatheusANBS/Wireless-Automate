@@ -302,10 +302,20 @@ public final class NetworkManager {
         return result;
     }
 
+    /** Porte 1.20.1: o {@code getAverageTickTimeNanos} do 1.21, a média das 100 últimas de {@code tickTimes}. */
+    private static long averageTickTimeNanos(MinecraftServer server) {
+        long[] times = server.tickTimes;
+        long sum = 0;
+        for (long time : times) {
+            sum += time;
+        }
+        return times.length == 0 ? 0 : sum / times.length;
+    }
+
     public void tick(MinecraftServer server) {
         budget.setBaseNanos((long) (Config.TICK_BUDGET_MS.get() * 1_000_000L));
         if (Config.ADAPTIVE_BUDGET.get()) {
-            budget.adapt(server.getAverageTickTime()); // porte 1.20.1: média móvel em ms (o 1.21 dá a média em ns)
+            budget.adapt(averageTickTimeNanos(server) / 1_000_000.0);
         } else {
             budget.adapt(0);
         }

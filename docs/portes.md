@@ -65,8 +65,10 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
   capability. O mod os trata como o tipo Químicos, numa fila única de tanques por face (os tanques dos
   quatro tipos em sequência) e com a vazão somada.
 - **Source:** o Ars 4.12 não tem capability de Source; o roteador acha o `ISourceTile` pelo block entity.
-  Os Relays do Ars só ligam em máquinas do Ars, então **não ligam no Tanque de Source** (Sourcelinks e
-  máquinas a 5 blocos, sim).
+  Os Relays do Ars 4.12 só ligam em `AbstractSourceMachine`: um mixin (`compat/arsnouveau/mixin`) entrega a
+  eles a `RelayView` do Tanque de Source, e eles ligam e transferem nos dois sentidos como no `main`. Origem e
+  destino seguem a capability do `main` (Imbuement Chamber não é drenada, Sourcelink não recebe, Creative Jar
+  é ralo e fonte).
 - **JEI 15:** sem o Shift + clique de um ingrediente do JEI para o filtro; arrastar funciona.
 - **Caldeirão:** o Forge não dá handler de fluido ao caldeirão vanilla, então o roteador não move fluido
   de e para ele. Os GameTests de fluido usam um tanque de teste (`TestMachines.SIMPLE_TANK`).

@@ -46,6 +46,15 @@ final class ChemicalTransfer {
      * fluidos ({@link FluidTransfer#move}).
      */
     static boolean move(Port source, long now) {
+        try {
+            return visit(source, now);
+        } finally {
+            // Mesmo com exceção de um handler do Mekanism: os handlers não prendem block entities removidos.
+            clear();
+        }
+    }
+
+    private static boolean visit(Port source, long now) {
         Object[] handlers = HANDLERS;
         int[] tanksOf = TANKS;
         boolean any = false;
@@ -56,18 +65,15 @@ final class ChemicalTransfer {
         }
         RoundRobinOrder<Port> order = source.order;
         if (!any || order == null) {
-            clear();
             SourceSleep.nothingToMove(source, now);
             return false;
         }
         long tokens = source.limiter.available(now);
         if (tokens <= 0) {
-            clear();
             return false;
         }
         List<Port> pass = order.pass();
         if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            clear();
             SourceSleep.untilDestinations(source, pass, now);
             return false;
         }
@@ -78,7 +84,6 @@ final class ChemicalTransfer {
             tanks += n;
         }
         if (tanks <= 0) {
-            clear();
             SourceSleep.nothingToMove(source, now);
             return false;
         }
@@ -115,7 +120,6 @@ final class ChemicalTransfer {
                 break;
             }
         }
-        clear();
         source.slotCursor = tank;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
@@ -197,12 +201,13 @@ final class ChemicalTransfer {
                 rule = accept.chemicalStockFilter(id);
             }
             Object rawTarget = destination.node.chemicals(destination.face, type.index);
+            // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono). Vale também para a
+            // máquina sem este tipo: a origem dorme esperando destino e acorda quando a capability dele muda.
+            source.offered = true;
             if (rawTarget == null && destination.node.chemicals(destination.face) != null) {
                 // A máquina tem químicos, mas não deste tipo: pula sem dormir.
                 continue;
             }
-            // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
-            source.offered = true;
             if (rawTarget == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.

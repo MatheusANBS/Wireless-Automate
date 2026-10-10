@@ -23,6 +23,10 @@ base {
 // O Minecraft 1.20.1 roda em Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+// Pasta de jogo do ramo (cliente, servidores, GameTests e benchmark). A run/ é do main, com jars e mundos
+// do 1.21.1: o ramo nunca escreve lá.
+def runRoot = 'run-1.20.1'
+
 sourceSets.main.resources {
     // Recursos gerados pelo runData.
     srcDir('src/generated/resources')
@@ -63,11 +67,13 @@ legacyForge {
     runs {
         client {
             client()
+            gameDirectory = project.file(runRoot)
             systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         server {
             server()
+            gameDirectory = project.file(runRoot)
             programArgument '--nogui'
             systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
@@ -78,7 +84,7 @@ legacyForge {
             type = 'gameTestServer'
             // Pasta própria, com o mundo apagado antes de cada rodada (tarefa abaixo): dados salvos de
             // rodadas antigas (redes, índice de nós, tickets de chunk) faziam testes falharem.
-            gameDirectory = project.file('run/gametest')
+            gameDirectory = project.file("${runRoot}/gametest")
             systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
             // Liga as máquinas de teste (gametest/TestMachines): slot de pilha enorme e muitos tanques.
             systemProperty 'wirelessautomate.gameTests', 'true'
@@ -86,6 +92,7 @@ legacyForge {
 
         data {
             data()
+            gameDirectory = project.file(runRoot)
             programArguments.addAll '--mod', project.mod_id, '--all',
                     '--output', file('src/generated/resources/').getAbsolutePath(),
                     '--existing', file('src/main/resources/').getAbsolutePath()
@@ -144,9 +151,9 @@ tasks.named('test', Test).configure {
 
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo CurseForge (cursemaven),
-// copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
+// copiados para run-1.20.1/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
 // dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau,
-// o GuideME e o Mouse Tweaks, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
+// o GuideME e o Mouse Tweaks, copiados para run-1.20.1/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
@@ -182,47 +189,63 @@ configurations {
     }
 }
 
-// Os jars dos mods do pack (Forge, nomes SRG) vão para as pastas mods das runs. Ainda sem remapear para
-// os nomes de dev: provar as runs com mods é a etapa 2 do porte (TODO etapa 2).
+// Os jars dos mods do pack são publicados com os nomes SRG do Forge; o jogo de dev roda com os nomes
+// oficiais (mojmap). Cada configuração acima ganha uma irmã remapeada (modBenchMods, modClientMods...):
+// o que entra por ela é remapeado de SRG para mojmap ao resolver a configuração original, que o Sync
+// copia para a pasta mods. O remapeamento não é transitivo: as dependências obrigatórias de cada mod
+// estão declaradas à mão. Os refmaps dos mixins dos mods o MDG remapeia na própria run
+// (-Dmixin.env.remapRefMap).
+obfuscation {
+    createRemappingConfiguration(configurations.benchMods)
+    createRemappingConfiguration(configurations.clientMods)
+    createRemappingConfiguration(configurations.chemicalTestMods)
+    createRemappingConfiguration(configurations.sourceTestMods)
+    createRemappingConfiguration(configurations.atmTestMods)
+}
+
 dependencies {
-    benchMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
-    benchMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
-    benchMods "curse.maven:spark-361579:${spark_file}"
-    clientMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
-    clientMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
+    modBenchMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
+    modBenchMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
+    modBenchMods "curse.maven:spark-361579:${spark_file}"
+    modClientMods "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
+    modClientMods "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
     // Observable (perfil de lag por bloco e entidade, desenhado no mundo) e as dependências dele.
-    clientMods "curse.maven:observable-509575:${observable_file}"
-    clientMods "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
-    clientMods "curse.maven:architectury-api-419699:${architectury_file}"
-    clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    modClientMods "curse.maven:observable-509575:${observable_file}"
+    modClientMods "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
+    modClientMods "curse.maven:architectury-api-419699:${architectury_file}"
+    modClientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // GuideME: o livro-guia do mod (data-driven, em assets/wirelessautomate/guides); opcional.
-    clientMods "maven.modrinth:guideme:${guideme_version}"
+    modClientMods "maven.modrinth:guideme:${guideme_version}"
     // Mouse Tweaks: para testar a lista do Baú junto com os arrastos dele nos slots.
-    clientMods "curse.maven:mouse-tweaks-60089:${mousetweaks_file}"
-    chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    modClientMods "curse.maven:mouse-tweaks-60089:${mousetweaks_file}"
+    modChemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
     // Ars Nouveau (Source) e as dependências obrigatórias dele.
-    clientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
-    clientMods "curse.maven:geckolib-388172:${geckolib_file}"
-    clientMods "curse.maven:curios-309927:${curios_file}"
-    sourceTestMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
-    sourceTestMods "curse.maven:geckolib-388172:${geckolib_file}"
-    sourceTestMods "curse.maven:curios-309927:${curios_file}"
+    modClientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
+    modClientMods "curse.maven:geckolib-388172:${geckolib_file}"
+    modClientMods "curse.maven:curios-309927:${curios_file}"
+    modSourceTestMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
+    modSourceTestMods "curse.maven:geckolib-388172:${geckolib_file}"
+    modSourceTestMods "curse.maven:curios-309927:${curios_file}"
+    // O jar do Ars no Maven não traz o MixinExtras embutido (o do CurseForge traz, por jar-in-jar), e o
+    // plugin de mixin do Ars chama o MixinExtrasBootstrap. Não tem classe do Minecraft: entra sem remapear.
+    clientMods "io.github.llamalad7:mixinextras-forge:${mixinextras_version}"
+    sourceTestMods "io.github.llamalad7:mixinextras-forge:${mixinextras_version}"
     // Allthemodium (tiers Allthemodium, Vibranium e Unobtainium) e All The Tweaks (fragmento de ATM Star).
-    clientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
-    clientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
-    atmTestMods "curse.maven:allthemodium-364466:${allthemodium_file}"
-    atmTestMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    modClientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
+    modClientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    modAtmTestMods "curse.maven:allthemodium-364466:${allthemodium_file}"
+    modAtmTestMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
     // O Allthemodium 2.5 exige o All The Ores e o GeckoLib.
-    clientMods "curse.maven:alltheores-405593:${alltheores_file}"
-    atmTestMods "curse.maven:alltheores-405593:${alltheores_file}"
-    atmTestMods "curse.maven:geckolib-388172:${geckolib_file}"
+    modClientMods "curse.maven:alltheores-405593:${alltheores_file}"
+    modAtmTestMods "curse.maven:alltheores-405593:${alltheores_file}"
+    modAtmTestMods "curse.maven:geckolib-388172:${geckolib_file}"
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
 // classpath do source set ou na pasta mods.
 var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     from configurations.benchMods
-    into layout.projectDirectory.dir('run/bench/mods')
+    into layout.projectDirectory.dir("${runRoot}/bench/mods")
     // O jar do Logistics Network (benchmark comparativo, All Rights Reserved): o scripts/bench.sh põe e
     // tira, só na máquina local. Nunca vira dependência do build.
     preserve {
@@ -230,23 +253,24 @@ var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     }
 }
 
-// run/mods do cliente: troca as versões dos mods acima quando mudam e preserva o que o dono
+// run-1.20.1/mods do cliente: troca as versões dos mods acima quando mudam e preserva o que o dono
 // puser ali à mão.
 var prepareClientMods = tasks.register('prepareClientMods', Sync) {
     from configurations.clientMods
-    into layout.projectDirectory.dir('run/mods')
+    into layout.projectDirectory.dir("${runRoot}/mods")
     preserve {
         include '**'
         exclude 'sophisticated-*.jar', 'observable-*.jar', 'kotlin-for-forge-*.jar', 'architectury-api-*.jar',
                 'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar',
-                'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'alltheores-*.jar', 'mouse-tweaks-*.jar', 'spark-*.jar'
+                'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'alltheores-*.jar', 'mouse-tweaks-*.jar', 'spark-*.jar',
+                'mixinextras-*.jar'
     }
 }
 
 // O Observable publica cada perfil em observable.tas.sh por padrão; com uploadURL vazio ele não
 // envia nada. Só cria o arquivo se ele não existir (não sobrescreve o que o dono mudar).
 var prepareObservableConfig = tasks.register('prepareObservableConfig') {
-    var file = layout.projectDirectory.file('run/config/observable.json').asFile
+    var file = layout.projectDirectory.file("${runRoot}/config/observable.json").asFile
     outputs.upToDateWhen { file.exists() }
     doLast {
         if (!file.exists()) {
@@ -262,13 +286,13 @@ legacyForge.runs.client.taskBefore prepareClientMods
 // namespace wirelessautomate_chemicals (gametest/ChemicalGameTests). ./gradlew runGameTestServerChemicals
 var prepareChemicalTestMods = tasks.register('prepareChemicalTestMods', Sync) {
     from configurations.chemicalTestMods
-    into layout.projectDirectory.dir('run/gametest-chemicals/mods')
+    into layout.projectDirectory.dir("${runRoot}/gametest-chemicals/mods")
 }
 
 legacyForge.runs {
     gameTestServerChemicals {
         type = 'gameTestServer'
-        gameDirectory = project.file('run/gametest-chemicals')
+        gameDirectory = project.file("${runRoot}/gametest-chemicals")
         systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_chemicals'
         // Liga os tanques de químico de teste (gametest/ChemicalTestTanks).
         systemProperty 'wirelessautomate.chemicalTests', 'true'
@@ -282,13 +306,13 @@ legacyForge.runs.client.taskBefore prepareObservableConfig
 // ./gradlew runGameTestServerSource
 var prepareSourceTestMods = tasks.register('prepareSourceTestMods', Sync) {
     from configurations.sourceTestMods
-    into layout.projectDirectory.dir('run/gametest-source/mods')
+    into layout.projectDirectory.dir("${runRoot}/gametest-source/mods")
 }
 
 legacyForge.runs {
     gameTestServerSource {
         type = 'gameTestServer'
-        gameDirectory = project.file('run/gametest-source')
+        gameDirectory = project.file("${runRoot}/gametest-source")
         systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_source'
         systemProperty 'wirelessautomate.sourceTests', 'true'
         taskBefore prepareSourceTestMods
@@ -300,25 +324,25 @@ legacyForge.runs {
 // ./gradlew runGameTestServerAllthemodium
 var prepareAtmTestMods = tasks.register('prepareAtmTestMods', Sync) {
     from configurations.atmTestMods
-    into layout.projectDirectory.dir('run/gametest-atm/mods')
+    into layout.projectDirectory.dir("${runRoot}/gametest-atm/mods")
 }
 
 legacyForge.runs {
     gameTestServerAllthemodium {
         type = 'gameTestServer'
-        gameDirectory = project.file('run/gametest-atm')
+        gameDirectory = project.file("${runRoot}/gametest-atm")
         systemProperty 'forge.enabledGameTestNamespaces', 'wirelessautomate_atm'
         taskBefore prepareAtmTestMods
     }
 }
 
 legacyForge.runs {
-    // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado
+    // Servidor dedicado de benchmark num diretório próprio (run-1.20.1/bench), com mundo plano preparado
     // pelo scripts/bench.sh. A propriedade wirelessautomate.bench liga as máquinas de teste de
     // fluido e energia (bench/BenchCapabilities.java).
     benchServer {
         server()
-        gameDirectory = project.file('run/bench')
+        gameDirectory = project.file("${runRoot}/bench")
         programArgument '--nogui'
         jvmArgument '-Xmx2G'
         systemProperty 'wirelessautomate.bench', 'true'
@@ -368,27 +392,27 @@ idea {
 }
 
 // GameTests sempre num mundo novo (ver a run gameTestServer).
-def gameTestWorld = layout.projectDirectory.dir('run/gametest/world').asFile
+def gameTestWorld = layout.projectDirectory.dir("${runRoot}/gametest/world").asFile
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
     doFirst {
         gameTestWorld.deleteDir()
     }
 }
-def chemicalTestWorld = layout.projectDirectory.dir('run/gametest-chemicals/world').asFile
+def chemicalTestWorld = layout.projectDirectory.dir("${runRoot}/gametest-chemicals/world").asFile
 tasks.matching { it.name == 'runGameTestServerChemicals' }.configureEach {
     doFirst {
         chemicalTestWorld.deleteDir()
     }
 }
 
-def sourceTestWorld = layout.projectDirectory.dir('run/gametest-source/world').asFile
+def sourceTestWorld = layout.projectDirectory.dir("${runRoot}/gametest-source/world").asFile
 tasks.matching { it.name == 'runGameTestServerSource' }.configureEach {
     doFirst {
         sourceTestWorld.deleteDir()
     }
 }
 
-def atmTestWorld = layout.projectDirectory.dir('run/gametest-atm/world').asFile
+def atmTestWorld = layout.projectDirectory.dir("${runRoot}/gametest-atm/world").asFile
 tasks.matching { it.name == 'runGameTestServerAllthemodium' }.configureEach {
     doFirst {
         atmTestWorld.deleteDir()
@@ -405,8 +429,8 @@ tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 
 
 // O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
 // Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.
-[runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals', runGameTestServerSource: 'run/gametest-source',
- runGameTestServerAllthemodium: 'run/gametest-atm'].each { name, dir ->
+[runGameTestServer: "${runRoot}/gametest", runGameTestServerChemicals: "${runRoot}/gametest-chemicals",
+ runGameTestServerSource: "${runRoot}/gametest-source", runGameTestServerAllthemodium: "${runRoot}/gametest-atm"].each { name, dir ->
     def log = layout.projectDirectory.file("${dir}/logs/latest.log").asFile
     tasks.matching { it.name == name }.configureEach {
         doFirst {

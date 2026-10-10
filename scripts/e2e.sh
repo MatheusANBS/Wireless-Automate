@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Teste de ponta a ponta num mundo de verdade: cliente + servidor integrado (client/DevEndToEnd.java).
 #
-#   ./scripts/e2e.sh                 roda o teste e guarda tudo em run/e2e
+#   ./scripts/e2e.sh                 roda o teste e guarda tudo em run-1.20.1/e2e
 #   ./scripts/e2e.sh <dir>           guarda em <dir>
 #   E2E_TIMEOUT=900 ./scripts/e2e.sh tempo-limite total em segundos (padrão 600)
 #
@@ -13,11 +13,11 @@
 # 1 (falha, sem resultado ou tempo esgotado). O log do jogo fica em <dir>/client.log.
 #
 # Precisa de xvfb-run (pacote xvfb) e do JDK 21; o CI não roda este teste porque não garante o Xvfb.
-# Não rode junto de outro runClient do mesmo diretório (dividem run/).
+# Não rode junto de outro runClient do mesmo diretório (dividem run-1.20.1/).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="${1:-$ROOT/run/e2e}"
+OUT="${1:-$ROOT/run-1.20.1/e2e}"
 TIMEOUT="${E2E_TIMEOUT:-600}"
 
 case "$OUT" in

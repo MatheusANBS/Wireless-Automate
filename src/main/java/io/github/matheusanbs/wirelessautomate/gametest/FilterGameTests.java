@@ -449,7 +449,9 @@ public final class FilterGameTests {
     @GameTest(template = "empty")
     public static void fluidFilterOnCauldrons(GameTestHelper helper) {
         if (!TestMachines.enabled()) {
-            helper.succeed();
+            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
+            // teste não prova nada, então falha em vez de passar.
+            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
             return;
         }
         UUID waterNetwork = newNetwork(helper, "filtro-agua");

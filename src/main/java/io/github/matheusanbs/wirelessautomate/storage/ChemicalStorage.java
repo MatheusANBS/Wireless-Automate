@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import it.unimi.dsi.fastutil.Hash;
 import java.util.Objects;
 import java.util.function.LongSupplier;
-
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;

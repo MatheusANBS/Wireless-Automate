@@ -76,7 +76,6 @@ public final class Chemicals {
         return LOADED ? MekanismChemicals.tint(id) : 0xFFFFFF;
     }
 
-
     /** Enche o recipiente do Mekanism com o químico do Tanque Químico; devolve quanto passou (0 sem ele). */
     public static long fillContainer(ItemStack container, ChemicalStorage storage, ResourceLocation id) {
         return LOADED && !container.isEmpty() ? MekanismStorage.fillContainer(container, storage, id) : 0;

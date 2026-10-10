@@ -32,7 +32,6 @@ public final class Sources {
         return LOADED && ScalarTransfer.move(source, now, ArsSources.ACCESS);
     }
 
-
     /** Põe o Tanque de Source no {@code SourceManager} do Ars (as máquinas dele tiram dali); sem o Ars, nada. */
     public static void registerProvider(StorageSourceTankBlockEntity tank) {
         if (LOADED) {

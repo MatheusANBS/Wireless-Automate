@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.filter;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
@@ -186,11 +187,27 @@ public sealed interface FilterEntry {
 
     Codec<Long> STOCK = Codec.LONG;
 
+    /**
+     * Porte 1.20.1: o {@code ItemStack.CODEC} e o {@code FluidStack.CODEC} leem um id desconhecido (mod removido)
+     * como pilha vazia, sem erro. Aqui a pilha vazia vira erro, para o {@link FilterCodecs#LENIENT} descartar a
+     * entrada com aviso, como no main.
+     */
+    Codec<ItemStack> NON_EMPTY_ITEM = ItemStack.CODEC.flatXmap(FilterEntry::nonEmptyItem, FilterEntry::nonEmptyItem);
+    Codec<FluidStack> NON_EMPTY_FLUID = FluidStack.CODEC.flatXmap(FilterEntry::nonEmptyFluid, FilterEntry::nonEmptyFluid);
+
+    private static DataResult<ItemStack> nonEmptyItem(ItemStack stack) {
+        return stack.isEmpty() ? DataResult.error(() -> "Item vazio ou desconhecido") : DataResult.success(stack);
+    }
+
+    private static DataResult<FluidStack> nonEmptyFluid(FluidStack stack) {
+        return stack.isEmpty() ? DataResult.error(() -> "Fluido vazio ou desconhecido") : DataResult.success(stack);
+    }
+
     MapCodec<ItemEntry> ITEM_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemStack.CODEC.fieldOf("item").forGetter(ItemEntry::stack),
+            NON_EMPTY_ITEM.fieldOf("item").forGetter(ItemEntry::stack),
             STOCK.optionalFieldOf("stock", 0L).forGetter(ItemEntry::stock)).apply(i, ItemEntry::new));
     MapCodec<FluidEntry> FLUID_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            FluidStack.CODEC.fieldOf("fluid").forGetter(FluidEntry::stack),
+            NON_EMPTY_FLUID.fieldOf("fluid").forGetter(FluidEntry::stack),
             STOCK.optionalFieldOf("stock", 0L).forGetter(FluidEntry::stock)).apply(i, FluidEntry::new));
     MapCodec<ChemicalEntry> CHEMICAL_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ResourceLocation.CODEC.fieldOf("chemical").forGetter(ChemicalEntry::chemical),
@@ -221,7 +238,7 @@ public sealed interface FilterEntry {
     private static void encode(RegistryFriendlyByteBuf buf, FilterEntry entry) {
         if (entry instanceof ItemEntry e) {
             buf.writeByte(0);
-            GameCodecs.ITEM_STACK.encode(buf, e.stack());
+            GameCodecs.EXACT_ITEM_STACK.encode(buf, e.stack());
         } else if (entry instanceof FluidEntry e) {
             buf.writeByte(1);
             GameCodecs.FLUID_STACK.encode(buf, e.stack());
@@ -244,7 +261,7 @@ public sealed interface FilterEntry {
     private static FilterEntry decode(RegistryFriendlyByteBuf buf) {
         byte kind = buf.readByte();
         return switch (kind) {
-            case 0 -> new ItemEntry(GameCodecs.ITEM_STACK.decode(buf), 0).withStock(buf.readVarLong());
+            case 0 -> new ItemEntry(GameCodecs.EXACT_ITEM_STACK.decode(buf), 0).withStock(buf.readVarLong());
             case 1 -> new FluidEntry(GameCodecs.FLUID_STACK.decode(buf), 0).withStock(buf.readVarLong());
             case 2 -> new TagEntry(buf.readResourceLocation(), buf.readVarLong());
             case 3 -> new ModEntry(buf.readUtf(64), buf.readVarLong());

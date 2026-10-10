@@ -23,12 +23,17 @@ import gerar_capa as capa  # noqa: E402
 SAIDA = RAIZ / "docs" / "curseforge"
 VITRINE = RAIZ / "run" / "showcase"
 
-FUNDO = (14, 20, 28)
-FAIXA = (20, 30, 41)
-CIANO = (69, 214, 204)
-CIANO_CLARO = (159, 245, 238)
-TEXTO = (226, 233, 240)
-MUTED = (147, 160, 174)
+# Identidade "Porcelana e Sinal" (docs/identidade-visual.md): fundo de porcelana, tinta de grafite e a
+# listra coral; as fotos levam moldura de grafite.
+FUNDO = capa.PORCELANA[3]
+FAIXA = capa.PORCELANA[4]
+LISTRA = capa.CORAL[2]
+TITULO = capa.GRAFITE[1]
+SOMBRA_TITULO = capa.PORCELANA[2]
+TEXTO = capa.GRAFITE[3]
+MUTED = capa.PORCELANA[0]
+MOLDURA = capa.GRAFITE[2]
+ZEBRA = capa.PORCELANA[2]
 
 # ------------------------------------------------------------------ fonte em pixel (5x7)
 
@@ -97,27 +102,25 @@ def fonte(tamanho: int) -> ImageFont.FreeTypeFont:
 
 # ------------------------------------------------------------------ banner
 
-def banner() -> Image.Image:
+
+def banner(paleta: str = capa.PALETA_ATIVA) -> Image.Image:
+    """1600x400, a composição do primeiro banner: o mesmo fundo da capa (degradê com o centro atrás do
+    roteador e grade de pontos), a arte da capa sem o fundo à esquerda, o título em pixel e duas linhas."""
+    pal = capa.PALETAS[paleta]
     w, h = 1600, 400
-    img = Image.new("RGB", (w, h), FUNDO)
-    # O mesmo fundo da capa (degradê com o centro atrás do roteador e grade de pontos), gerado já
-    # na proporção do banner em 1/4 do tamanho e ampliado 4x, como a capa.
-    fundo = capa.fundo(w // 4, h // 4, cx=55, cy=45).resize((w, h), Image.NEAREST)
-    img.paste(fundo.convert("RGB"))
-    # A arte da capa (roteador, ondas e faíscas) sem o fundo dela, à esquerda.
-    arte = capa.capa(com_fundo=False).resize((360, 360), Image.NEAREST)
+    img = capa.fundo(pal, w // 4, h // 4, cx=55, cy=45).resize((w, h), Image.NEAREST).convert("RGB")
+    arte = capa.arte(paleta, lado=360)
     img.paste(arte, (40, 20), arte)
-    # Título em pixel e a linha de descrição.
     titulo = "Wireless Automate"
     px = 10
     x = 450
     assert x + largura_pixel(titulo, px) < w - 40, "título passa da borda"
-    escreve_pixel(img, titulo, x, 92, px, CIANO_CLARO, sombra=(8, 40, 44))
+    escreve_pixel(img, titulo, x, 92, px, pal["titulo"], sombra=pal["titulo_sombra"])
     d = ImageDraw.Draw(img)
     d.text((x + 4, 92 + 7 * px + 34), "Wireless items, fluids, energy, chemicals and Source.",
-           fill=TEXTO, font=fonte(40))
+           fill=pal["texto"], font=fonte(40))
     d.text((x + 4, 92 + 7 * px + 90), "No pipes. Light on TPS. Built for big modpacks.",
-           fill=MUTED, font=fonte(32))
+           fill=pal["muted"], font=fonte(32))
     return img
 
 
@@ -164,21 +167,21 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
         x, y = foto.width - tela.width - u(18), foto.height - tela.height - u(18)
         b = u(3)
         ImageDraw.Draw(foto).rectangle([x - b, y - b, x + tela.width + b - 1, y + tela.height + b - 1],
-                                       fill=(46, 64, 82))
+                                       fill=MOLDURA)
         foto.paste(tela, (x, y))
     faixa = u(150)
     img = Image.new("RGB", (largura, faixa + foto.height + u(24)), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
-    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=CIANO)
+    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=LISTRA)
     px = u(6)
-    escreve_pixel(img, titulo, u(32), u(34), px, CIANO_CLARO, sombra=(8, 40, 44))
+    escreve_pixel(img, titulo, u(32), u(34), px, TITULO, sombra=SOMBRA_TITULO)
     assert d.textlength(subtitulo, font=fonte(u(30))) < largura - u(60), f"subtítulo de {nome} passa da borda"
     d.text((u(34), u(34) + 7 * px + u(24)), subtitulo, fill=TEXTO, font=fonte(u(30)))
     # Moldura de 3 px (no layout de 1280) em volta da captura, centrada.
     x0, y0 = (largura - foto.width) // 2, faixa + u(8)
     b = u(3)
-    d.rectangle([x0 - b, y0 - b, x0 + foto.width + b - 1, y0 + foto.height + b - 1], fill=(46, 64, 82))
+    d.rectangle([x0 - b, y0 - b, x0 + foto.width + b - 1, y0 + foto.height + b - 1], fill=MOLDURA)
     img.paste(foto, (x0, y0))
     return img
 
@@ -186,15 +189,20 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
 # (tier, nome, cor do nome, só com o Allthemodium) na ordem do RouterTier, e as vazões padrão do ResourceType
 # (os químicos dividem a vazão com os fluidos); 0 = sem limite. Alcance: o padrão do RouterTier.
 TIERS = [
-    ("basic", "Basic", (200, 204, 210), False),
-    ("advanced", "Advanced", (226, 179, 71), False),
-    ("elite", "Elite", (69, 214, 204), False),
-    ("emerald", "Emerald", (47, 220, 98), False),
-    ("allthemodium", "Allthemodium", (255, 139, 4), True),
-    ("vibranium", "Vibranium", (38, 222, 136), True),
-    ("unobtainium", "Unobtainium", (209, 82, 227), True),
-    ("ultimate", "Ultimate", (164, 108, 255), False),
+    ("basic", "Basic", (74, 70, 80), False),
+    ("advanced", "Advanced", (170, 112, 10), False),
+    ("elite", "Elite", (16, 130, 122), False),
+    ("emerald", "Emerald", (24, 140, 62), False),
+    ("allthemodium", "Allthemodium", (205, 98, 0), True),
+    ("vibranium", "Vibranium", (16, 138, 86), True),
+    ("unobtainium", "Unobtainium", (140, 44, 160), True),
+    ("ultimate", "Ultimate", (96, 56, 190), False),
 ]
+# Os oito roteadores no salão dos tiers (s15-tiers.png), da esquerda para a direita: centro de cada um em
+# coordenadas de 1280x800 e o recorte em volta (o cartão flutuando em cima e o bloco do material embaixo).
+TIER_HALL_X = [309, 403, 497, 592, 687, 782, 877, 972]
+TIER_HALL_Y = (338, 430)
+TIER_HALL_MEIA_LARGURA = 37
 VAZOES = [
     ("Items/s", [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0]),
     ("Fluids (mB/s)", [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0]),
@@ -212,8 +220,8 @@ def tiers() -> Image.Image:
     img = Image.new("RGB", (largura, faixa + u(680)), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
-    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=CIANO)
-    escreve_pixel(img, "Eight tiers", u(32), u(34), u(6), CIANO_CLARO, sombra=(8, 40, 44))
+    d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=LISTRA)
+    escreve_pixel(img, "Eight tiers", u(32), u(34), u(6), TITULO, sombra=SOMBRA_TITULO)
     d.text((u(34), u(34 + 42 + 24)), "Upgrade cards raise throughput and range. Allthemodium (ATM10) adds three steps.",
            fill=TEXTO, font=fonte(u(28)))
     x0 = rotulo_w
@@ -221,32 +229,33 @@ def tiers() -> Image.Image:
     atm = [i for i, t in enumerate(TIERS) if t[3]]
     # a borda fica um pouco fora das colunas: "Allthemodium" ocupa quase a coluna inteira
     ax0, ax1 = x0 + atm[0] * coluna - u(8), x0 + (atm[-1] + 1) * coluna + u(8)
-    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), fill=(26, 24, 20))
-    sprites = capa.tex.gerar()
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), fill=(250, 232, 212))
     for i, (tier, nome, cor, _) in enumerate(TIERS):
         cx = x0 + i * coluna + coluna // 2
-        sprites[f"block/router_{tier}_front"] = capa.acende_leds(sprites[f"block/router_{tier}_front"])
-        arte = capa.tex.roteador_montado(tier, sprites, s=3)
-        arte = arte.crop(arte.getbbox())
-        escala = min(u(2), (coluna - u(16)) // arte.width)
-        arte = arte.resize((arte.width * escala, arte.height * escala), Image.NEAREST)
-        img.paste(arte, (cx - arte.width // 2, faixa + u(190) - arte.height), arte)
-        d.text((cx, faixa + u(204)), nome, fill=cor, font=fonte(u(22 if len(nome) < 11 else 18)), anchor="mt")
+        hx, (hy0, hy1) = TIER_HALL_X[i], TIER_HALL_Y
+        arte = recorta(VITRINE / "s15-tiers.png",
+                       (hx - TIER_HALL_MEIA_LARGURA, hy0, hx + TIER_HALL_MEIA_LARGURA, hy1))
+        arte = ajusta(arte, coluna - u(20))
+        b = u(2)
+        ax, ay = cx - arte.width // 2, faixa + u(194) - arte.height
+        d.rectangle([ax - b, ay - b, ax + arte.width + b - 1, ay + arte.height + b - 1], fill=MOLDURA)
+        img.paste(arte, (ax, ay))
+        d.text((cx, faixa + u(206)), nome, fill=cor, font=fonte(u(22 if len(nome) < 11 else 18)), anchor="mt")
     y = faixa + u(256)
     linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
     linhas.append(("Range", ALCANCE))
     for n, (rotulo, valores) in enumerate(linhas):
         if n % 2 == 0:
-            d.rectangle([u(24), y - u(12), largura - margem, y + u(50)], fill=(18, 27, 37))
-            d.rectangle([ax0, y - u(12), ax1, y + u(50)], fill=(34, 30, 24))
+            d.rectangle([u(24), y - u(12), largura - margem, y + u(50)], fill=ZEBRA)
+            d.rectangle([ax0, y - u(12), ax1, y + u(50)], fill=(236, 214, 190))
         d.text((u(34), y + u(19)), rotulo, fill=MUTED, font=fonte(u(22)), anchor="lm")
         for i, valor in enumerate(valores):
             cx = x0 + i * coluna + coluna // 2
             d.text((cx, y + u(19)), valor, fill=TEXTO, font=fonte(u(20)), anchor="mm")
         y += u(72)
     # borda e título do bloco do Allthemodium por cima das faixas
-    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), outline=(120, 74, 20), width=u(2))
-    d.text(((ax0 + ax1) // 2, faixa + u(30)), "Only with Allthemodium", fill=(255, 176, 80), font=fonte(u(20)),
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), outline=(205, 98, 0), width=u(2))
+    d.text(((ax0 + ax1) // 2, faixa + u(30)), "Only with Allthemodium", fill=(170, 80, 0), font=fonte(u(20)),
            anchor="mt")
     d.text((u(34), faixa + u(640)), "Per face and per resource type; chemicals use the fluid rate. "
            "Without Allthemodium, Emerald upgrades straight to Ultimate.", fill=MUTED, font=fonte(u(20)))

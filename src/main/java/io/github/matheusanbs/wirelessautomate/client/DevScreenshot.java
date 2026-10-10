@@ -100,7 +100,9 @@ import org.lwjgl.opengl.GL11;
  * {@code setScreen} porque, sem mundo, o {@code tick} de uma tela de contêiner falha sem jogador.
  * Com {@code WA_SCREENSHOT_ONLY=giro} tira só a galeria do giro do roteador ({@code giro-parede}); com
  * {@code WA_SCREENSHOT_ONLY=blocos}, só a galeria dos armazenamentos, com o contorno da colisão e a fileira
- * dos itens como aparecem no inventário ({@code blocos-galeria}).
+ * dos itens como aparecem no inventário ({@code blocos-galeria}); com {@code WA_SCREENSHOT_ONLY=capa}, só os
+ * renders do roteador sobre magenta para a capa do CurseForge ({@code capa-renders}, ver
+ * {@code scripts/curseforge/gerar_capa.py}).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevScreenshot {
@@ -189,7 +191,7 @@ public final class DevScreenshot {
 
     /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps())
+                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps(), coverSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -886,6 +888,65 @@ public final class DevScreenshot {
         }
     }
 
+    // ------------------------------------------------------------------ renders para a capa
+
+    /** Com {@code true}, a tela de título mostra os renders do roteador sobre magenta. */
+    private static boolean coverGallery = ONLY != null && ONLY.startsWith("capa");
+
+    private static List<Step> coverSteps() {
+        return List.of(new Step(() -> {
+            linkerScreen = null;
+            tabletScreen = null;
+            filterScreen = null;
+            mouseX = mouseY = -1;
+            spinGallery = false;
+            blockGallery = false;
+            coverGallery = true;
+        }, "capa-renders"));
+    }
+
+    /**
+     * Renders do roteador pelo renderizador de blocos do jogo, com os modelos e as texturas reais, sobre magenta
+     * puro ({@code #FF00FF}) para o {@code gerar_capa.py} recortar: na linha de cima o Elite em quatro tamanhos
+     * (a mesma vista "de frente e do alto" da galeria dos armazenamentos), na de baixo os oito tiers, e na
+     * terceira o Elite de novo, mais de lado. Luz cheia, sem contorno.
+     */
+    private static void renderCoverGallery(GuiGraphics g, int width, int height) {
+        g.fill(0, 0, width, height, 0xFFFF00FF);
+        BlockState elite = ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.ELITE);
+        float[] sizes = {height * 0.06f, height * 0.10f, height * 0.16f, height * 0.26f};
+        float x = width * 0.05f;
+        for (float size : sizes) {
+            x += size * 1.1f;
+            renderBlock(g, elite, x, height * 0.20f, size, 30, 20);
+            x += size * 1.1f;
+        }
+        RouterTier[] tiers = RouterTier.values();
+        for (int i = 0; i < tiers.length; i++) {
+            BlockState state = ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.TIER, tiers[i]);
+            renderBlock(g, state, width * (i + 1) / (tiers.length + 1f), height * 0.56f, height * 0.10f, 30, 20);
+        }
+        renderBlock(g, elite, width * 0.25f, height * 0.85f, height * 0.16f, 25, 40);
+        renderBlock(g, elite, width * 0.55f, height * 0.85f, height * 0.16f, 35, -25);
+        renderBlock(g, elite, width * 0.85f, height * 0.85f, height * 0.16f, 20, 0);
+    }
+
+    private static void renderBlock(GuiGraphics g, BlockState state, float cx, float cy, float size, float pitch, float yaw) {
+        g.flush();
+        PoseStack pose = g.pose();
+        pose.pushPose();
+        pose.translate(cx, cy + size * 0.1f, 150);
+        pose.scale(size, -size, size);
+        pose.mulPose(Axis.XP.rotationDegrees(pitch));
+        pose.mulPose(Axis.YP.rotationDegrees(yaw));
+        pose.translate(-0.5f, -0.5f, -0.5f);
+        MultiBufferSource.BufferSource buffers = g.bufferSource();
+        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, pose, buffers,
+                LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+        buffers.endBatch();
+        pose.popPose();
+    }
+
     // ------------------------------------------------------------------ eventos
 
     @SubscribeEvent
@@ -894,10 +955,12 @@ public final class DevScreenshot {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (spinGallery || blockGallery) {
+        if (spinGallery || blockGallery || coverGallery) {
             event.getGuiGraphics().flush();
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
-            if (blockGallery) {
+            if (coverGallery) {
+                renderCoverGallery(event.getGuiGraphics(), title.width, title.height);
+            } else if (blockGallery) {
                 renderBlockGallery(event.getGuiGraphics(), title.width, title.height);
             } else {
                 renderSpinGallery(event.getGuiGraphics(), title.width, title.height);
@@ -951,7 +1014,7 @@ public final class DevScreenshot {
             // a flag acima chega tarde quando a tela já foi escolhida: troca pela de título
             minecraft.setScreen(new TitleScreen(true));
         }
-        if (screen == null && !spinGallery && !blockGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
+        if (screen == null && !spinGallery && !blockGallery && !coverGallery || ticks < 60 || ticks % STEP_TICKS != 0) {
             return;
         }
         int step = (ticks - 60) / STEP_TICKS;

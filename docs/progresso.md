@@ -42,7 +42,7 @@ Feitos: Tablet de rede (`network/NodeIndex.java`, `menu/Tablet*`, `client/Tablet
 
 ## Próximo passo
 
-000. **1.6.0 publicada no GitHub:** subir o jar no CurseForge com o `changelog-1.6.0.md` e colar a `descricao.md` nova (imagem nova da roda pela skill `wa-curseforge-imagens`).
+000. **1.6.0 publicada (10/10):** GitHub e CurseForge, com o jar, o changelog e a descrição nova com a imagem da roda (`feature-16-wheel`).
 00. **Imagens do CurseForge com o visual novo: feitas e no ar (10/10).** Falta só o dono colar a `descricao.md` nova na página do projeto e apagar da galeria as imagens antigas (attachments 2027/2028).
 0. **CI do GitHub parado** (o dono): os jobs não rodam desde o merge da 1.3.0, recusados por cobrança da conta ("recent account payments have failed or your spending limit needs to be increased"), não por erro no código; resolver em Billing & plans.
 1. Subir o jar da 1.5.2 no CurseForge com o `changelog-1.5.2.md` (e responder o comentário do taccio3, se ainda não respondeu).

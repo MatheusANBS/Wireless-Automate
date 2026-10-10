@@ -321,6 +321,8 @@ public final class ChemicalGameTests {
     private static final int SLURRY = 3;
     private static final BlockPos C = new BlockPos(2, 1, 0);
     private static final BlockPos D = new BlockPos(0, 1, 2);
+    /** O meio da estrutura: não encosta em nenhuma das quatro posições dos cantos. */
+    private static final BlockPos MID = new BlockPos(1, 1, 1);
     private static final ResourceLocation SULFURIC_ACID = new ResourceLocation("mekanism", "sulfuric_acid");
     private static final ResourceLocation CARBON_INFUSION = new ResourceLocation("mekanism", "carbon");
     private static final ResourceLocation BLACK_PIGMENT = new ResourceLocation("mekanism", "black");
@@ -431,6 +433,7 @@ public final class ChemicalGameTests {
                     GameTestCompat.assertValueEqual(helper, stored(helper, C, DIRTY_IRON), 3_000L, "slurry no destino de slurry");
                     helper.assertTrue(from.storage().isEmpty(), "o Tanque Químico não esvaziou");
                 })
+                .thenIdle(10)
                 .thenExecute(() -> {
                     GameTestCompat.assertValueEqual(helper, stored(helper, B, DIRTY_IRON), 0L, "slurry no destino só de gás");
                     GameTestCompat.assertValueEqual(helper, stored(helper, C, HYDROGEN), 0L, "gás no destino só de slurry");
@@ -481,10 +484,12 @@ public final class ChemicalGameTests {
     /**
      * Máquina real do Mekanism (Câmara de Dissolução Química) com a face de cima configurada como entrada de gás (o
      * padrão dela) e saída de slurry (mudada pela configuração de lados): o roteador nessa face, em entrada e saída,
-     * põe ácido sulfúrico na câmara e tira a slurry dela, pela mesma face; o proxy do Mekanism aplica a regra por tipo
-     * (o ácido não volta a sair, a slurry não entra).
+     * põe ácido sulfúrico na câmara e tira a slurry dela, pela mesma face. Depois, os dois sentidos proibidos, com a
+     * rede oferecendo o caminho: um destino de gás vivo (recebe o oxigênio que a câmara recusa) não recebe o ácido da
+     * câmara nem o hidrogênio do tanque de saída de gás dela (a face de cima é só entrada de gás: este é o negativo que
+     * depende da configuração de lados), e a slurry de uma origem de fora, que só tem a câmara como destino, não entra.
      */
-    @GameTest(template = "empty", timeoutTicks = 200)
+    @GameTest(template = "empty", timeoutTicks = 400)
     public static void mekanismMachineFaceTakesGasAndGivesSlurry(GameTestHelper helper) {
         if (!needsTestTanks(helper)) {
             return;
@@ -507,24 +512,53 @@ public final class ChemicalGameTests {
         machine.setNetworkId(network);
         machine.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.BOTH);
         RouterBlockEntity gasSource = tank(helper, B, network, PortMode.EXTRACT);
+        // Destino da slurry da câmara: só slurry e só a dirty_iron (a clean_iron de fora não tem outro destino que a câmara).
         RouterBlockEntity slurryTarget = tank(helper, C, network, PortMode.INSERT);
         ChemicalTestSupport.exposeOnly(helper.absolutePos(C), SLURRY);
+        slurryTarget.setFilter(ResourceType.CHEMICAL, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
+                List.of(new FilterEntry.ChemicalEntry(DIRTY_IRON, 0))));
+        // Origem de slurry de fora: o único destino que aceitaria a clean_iron é a câmara, pela face de saída de slurry.
+        RouterBlockEntity slurrySource = tank(helper, D, network, PortMode.EXTRACT);
+        fill(helper, D, CLEAN_IRON, 1_000);
         fill(helper, B, SULFURIC_ACID, 1_000);
+        RouterBlockEntity[] gasTarget = {null};
 
         helper.startSequence()
-                .thenWaitUntil(() -> waitRegistered(helper, machine, gasSource, slurryTarget))
+                .thenWaitUntil(() -> waitRegistered(helper, machine, gasSource, slurryTarget, slurrySource))
                 .thenWaitUntil(() -> {
                     GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, SULFURIC_ACID), 1_000L,
                             "ácido na câmara");
                     GameTestCompat.assertValueEqual(helper, stored(helper, C, DIRTY_IRON), 1_000L, "slurry no destino");
                 })
-                .thenIdle(20)
                 .thenExecute(() -> {
-                    GameTestCompat.assertValueEqual(helper, stored(helper, B, SULFURIC_ACID), 0L, "ácido de volta na origem");
+                    // Com a slurry fora, o tanque de saída da câmara (um tipo por vez) recebe hidrogênio, por dentro.
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.fillMachineTank(chamber, 1, HYDROGEN, 1_000), 0L,
+                            "sobra ao pôr hidrogênio na saída de gás da câmara");
+                    // Destino de gás que aceita tudo; o oxigênio (que a câmara não aceita) prova que ele recebe.
+                    gasTarget[0] = tank(helper, MID, network, PortMode.INSERT);
+                    ChemicalTestSupport.exposeOnly(helper.absolutePos(MID), GAS);
+                    fill(helper, B, OXYGEN, 500);
+                })
+                .thenWaitUntil(() -> {
+                    // O tanque de teste tem um tanque de gás só: o que vazasse da câmara tomaria o lugar do oxigênio,
+                    // então o vazamento é conferido antes (a mensagem do tempo esgotado aponta para ele).
+                    GameTestCompat.assertValueEqual(helper, stored(helper, MID, HYDROGEN), 0L,
+                            "hidrogênio tirado pela face de entrada de gás");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, MID, SULFURIC_ACID), 0L, "ácido tirado da câmara");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, MID, OXYGEN), 500L, "oxigênio no destino de gás");
+                })
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    GameTestCompat.assertValueEqual(helper, stored(helper, MID, SULFURIC_ACID), 0L, "ácido tirado da câmara");
                     GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, SULFURIC_ACID), 1_000L,
-                            "ácido saiu da câmara");
-                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, DIRTY_IRON), 0L,
-                            "slurry na câmara");
+                            "ácido sumiu da câmara");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, MID, HYDROGEN), 0L,
+                            "hidrogênio tirado pela face de entrada de gás");
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, HYDROGEN), 1_000L,
+                            "hidrogênio sumiu da câmara");
+                    GameTestCompat.assertValueEqual(helper, ChemicalTestSupport.machineAmount(chamber, CLEAN_IRON), 0L,
+                            "slurry de fora entrou na câmara");
+                    GameTestCompat.assertValueEqual(helper, stored(helper, D, CLEAN_IRON), 1_000L, "slurry de fora saiu da origem");
                 })
                 .thenSucceed();
     }

@@ -124,7 +124,7 @@ Cada face da máquina, para cada tipo, tem um filtro embutido sem limite de entr
 | Regra | Exemplo | Vale para |
 | --- | --- | --- |
 | Exato | Lingote de ferro, água | Itens, fluidos, químicos |
-| Tag | `#c:ingots`, `#c:ores` | Itens, fluidos |
+| Tag | `#forge:ingots`, `#forge:ores` | Itens, fluidos |
 | Mod | `@mekanism` | Itens, fluidos, químicos |
 | Regra por propriedade | Qualquer item encantado | Itens |
 

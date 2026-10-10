@@ -23,10 +23,15 @@ import org.jetbrains.annotations.Nullable;
  *       capability ou chamou {@code invalidateCaps}): o cache se registra nele com {@code addListener};</li>
  *   <li>quando o block entity guardado foi removido ({@link BlockEntity#isRemoved()}, checado a cada
  *       consulta; cobre quem não invalida as capabilities);</li>
- *   <li>quando o dono chama {@link #invalidate()}. O Forge 1.20.1 não avisa quando aparece um block entity
- *       onde não havia nenhum, nem quando o chunk do alvo carrega: o roteador chama {@link #invalidate()} no
- *       {@code neighborChanged}/{@code onNeighborChange} do bloco e quando a face muda.</li>
+ *   <li>quando o dono chama {@link #invalidate()} ou {@link #revalidate} (este só se o block entity no alvo
+ *       não é mais o da última consulta). O Forge 1.20.1 não avisa quando aparece um block entity onde não
+ *       havia nenhum, nem quando o chunk do alvo carrega: o roteador chama {@link #revalidate} no
+ *       {@code neighborChanged} da máquina e {@link #invalidate()} quando o bloco dela muda.</li>
  * </ul>
+ * <b>Cache negativo:</b> sem block entity no alvo, ou com um block entity sem a capability, não há
+ * {@link LazyOptional} para ouvir; o cache só se refaz por {@link #invalidate()} ou {@link #revalidate} do dono
+ * (ou pelo {@code isRemoved()} de um block entity guardado). Um block entity que passa a oferecer a capability
+ * sem trocar de objeto nem chamar {@code invalidateCaps} não é visto até o dono invalidar.
  * Sujo, a próxima {@link #get()} busca de novo: {@code level.getBlockEntity(pos)} e
  * {@code getCapability(cap, side)}, só se o chunk do alvo estiver carregado ({@code level.isLoaded(pos)}); com
  * o chunk descarregado devolve {@code null} e continua sujo.
@@ -168,6 +173,17 @@ public final class CapCache<T> {
         if (handedOut && isValid.getAsBoolean()) {
             handedOut = false;
             onInvalidate.run();
+        }
+    }
+
+    /**
+     * O vizinho avisou mudança: invalida só se o block entity no alvo ({@code current}) não é o da última
+     * consulta (apareceu, sumiu ou foi trocado). Mudança só de estado, com o mesmo block entity, não faz
+     * nada (nem avisa o dono). Um cache já sujo fica como está.
+     */
+    public void revalidate(@Nullable BlockEntity current) {
+        if (!dirty && blockEntity != current) {
+            invalidate();
         }
     }
 

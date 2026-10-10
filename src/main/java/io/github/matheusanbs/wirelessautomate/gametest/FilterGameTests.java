@@ -39,6 +39,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
@@ -46,7 +47,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TagsUpdatedEvent;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -427,46 +427,22 @@ public final class FilterGameTests {
                 .thenSucceed();
     }
 
-    /**
-     * Tanque de teste em {@code pos} ({@link TestMachines#SIMPLE_TANK}, com {@code content}), com um roteador em
-     * cima. Porte 1.20.1: no {@code main} este teste usava caldeirões, que o NeoForge expõe como handler de fluido e
-     * o Forge 1.20.1 não.
-     */
-    private static RouterBlockEntity simpleTank(GameTestHelper helper, BlockPos pos, FluidStack content, UUID network) {
-        BlockPos machine = helper.absolutePos(pos);
-        TestMachines.reset(machine);
-        if (!content.isEmpty()) {
-            TestMachines.simpleTank(machine).fill(content, IFluidHandler.FluidAction.EXECUTE);
-        }
-        return place(helper, pos, TestMachines.SIMPLE_TANK.get().defaultBlockState(), network);
-    }
-
-    private static int amount(GameTestHelper helper, BlockPos pos, net.minecraft.world.level.material.Fluid fluid) {
-        FluidStack stored = TestMachines.simpleTank(helper.absolutePos(pos)).getFluid();
-        return stored.getFluid() == fluid ? stored.getAmount() : 0;
-    }
-
     @GameTest(template = "empty")
     public static void fluidFilterOnCauldrons(GameTestHelper helper) {
-        if (!TestMachines.enabled()) {
-            // Porte 1.20.1: o tanque de teste (TestMachines.SIMPLE_TANK) faz o papel do caldeirão; sem ele o
-            // teste não prova nada, então falha em vez de passar.
-            helper.fail("precisa das máquinas de teste (-Dwirelessautomate.gameTests=true)");
-            return;
-        }
         UUID waterNetwork = newNetwork(helper, "filtro-agua");
-        RouterBlockEntity water = simpleTank(helper, A, new FluidStack(Fluids.WATER, 1_000), waterNetwork);
+        RouterBlockEntity water = place(helper, A,
+                Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3), waterNetwork);
         water.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
         water.setFilter(ResourceType.FLUID, Direction.UP,
                 whitelist(new FilterEntry.FluidEntry(new FluidStack(Fluids.WATER, 1), 0)));
-        RouterBlockEntity waterTarget = simpleTank(helper, B, FluidStack.EMPTY, waterNetwork);
+        RouterBlockEntity waterTarget = place(helper, B, Blocks.CAULDRON.defaultBlockState(), waterNetwork);
         waterTarget.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         // A lava sai livre, mas o destino só aceita água.
         UUID lavaNetwork = newNetwork(helper, "filtro-lava");
-        RouterBlockEntity lava = simpleTank(helper, C, new FluidStack(Fluids.LAVA, 1_000), lavaNetwork);
+        RouterBlockEntity lava = place(helper, C, Blocks.LAVA_CAULDRON.defaultBlockState(), lavaNetwork);
         lava.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
-        RouterBlockEntity lavaTarget = simpleTank(helper, D, FluidStack.EMPTY, lavaNetwork);
+        RouterBlockEntity lavaTarget = place(helper, D, Blocks.CAULDRON.defaultBlockState(), lavaNetwork);
         lavaTarget.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
         lavaTarget.setFilter(ResourceType.FLUID, Direction.UP,
                 whitelist(new FilterEntry.FluidEntry(new FluidStack(Fluids.WATER, 1), 0)));
@@ -474,13 +450,13 @@ public final class FilterGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, water, waterTarget, lava, lavaTarget))
                 .thenWaitUntil(() -> {
-                    GameTestCompat.assertValueEqual(helper, amount(helper, A, Fluids.WATER), 0, "água na origem");
-                    GameTestCompat.assertValueEqual(helper, amount(helper, B, Fluids.WATER), 1_000, "água no destino");
+                    helper.assertBlockPresent(Blocks.CAULDRON, A);
+                    helper.assertBlockPresent(Blocks.WATER_CAULDRON, B);
                 })
                 .thenIdle(20)
                 .thenExecute(() -> {
-                    GameTestCompat.assertValueEqual(helper, amount(helper, C, Fluids.LAVA), 1_000, "lava na origem");
-                    GameTestCompat.assertValueEqual(helper, amount(helper, D, Fluids.LAVA), 0, "lava no destino");
+                    helper.assertBlockPresent(Blocks.LAVA_CAULDRON, C);
+                    helper.assertBlockPresent(Blocks.CAULDRON, D);
                 })
                 .thenSucceed();
     }

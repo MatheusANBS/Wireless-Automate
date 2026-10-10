@@ -3,10 +3,12 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -40,7 +42,8 @@ public final class TestMachines {
                     (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? manyTanks(pos) : null)
             .add("live_tank", Blocks.SLIME_BLOCK, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? liveTank(pos) : null)
             .add("naive_slots", Blocks.CLAY, (cap, pos, side) -> cap == ForgeCapabilities.ITEM_HANDLER ? naiveSlots(pos) : null)
-            .add("simple_tank", Blocks.CAULDRON, (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER ? simpleTank(pos) : null);
+            .add("switch_tank", Blocks.IRON_BLOCK,
+                    (cap, pos, side) -> cap == ForgeCapabilities.FLUID_HANDLER && switchedOn(pos) ? switchTank(pos) : null);
 
     /** Um slot só, que guarda até {@link BigSlot#LIMIT} itens e entrega no máximo uma pilha por extração. */
     public static final Supplier<Block> BIG_SLOT = () -> MACHINES.block("big_slot");
@@ -51,19 +54,20 @@ public final class TestMachines {
     /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
     public static final Supplier<Block> NAIVE_SLOTS = () -> MACHINES.block("naive_slots");
     /**
-     * Porte 1.20.1: um tanque comum de {@link #SIMPLE_TANK_CAPACITY} mB, de entrada e saída, de qualquer fluido. Faz o
-     * papel do caldeirão dos testes de fluido do {@code main}: o NeoForge dá ao caldeirão vanilla um handler de fluido,
-     * o Forge 1.20.1 não.
+     * Porte 1.20.1: um tanque de {@link #SWITCH_TANK_CAPACITY} mB que só oferece a capability de fluido quando
+     * ligado ({@link #switchOn}), sem trocar de block entity: o caso de uma máquina cujo lado passa de "nenhum" para
+     * entrada (a configuração de lados do Mekanism), que o cache negativo do roteador precisa ver.
      */
-    public static final Supplier<Block> SIMPLE_TANK = () -> MACHINES.block("simple_tank");
-    static final int SIMPLE_TANK_CAPACITY = 1_000;
+    public static final Supplier<Block> SWITCH_TANK = () -> MACHINES.block("switch_tank");
+    static final int SWITCH_TANK_CAPACITY = 1_000;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
-    private static final Map<BlockPos, FluidTank> SIMPLE_TANKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, FluidTank> SWITCH_TANKS = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> SWITCHED_ON = ConcurrentHashMap.newKeySet();
 
     public static boolean enabled() {
         return ENABLED;
@@ -75,7 +79,7 @@ public final class TestMachines {
             return;
         }
         if (event.getRegistryKey().equals(Registries.BLOCK)) {
-            WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas (big_slot, many_tanks, live_tank, naive_slots, simple_tank)");
+            WirelessAutomate.LOGGER.info("GameTests: máquinas de teste ligadas (big_slot, many_tanks, live_tank, naive_slots, switch_tank)");
         }
         MACHINES.register(event);
     }
@@ -93,8 +97,24 @@ public final class TestMachines {
         return NAIVE.computeIfAbsent(pos.immutable(), key -> new NaiveSlots());
     }
 
-    static FluidTank simpleTank(BlockPos pos) {
-        return SIMPLE_TANKS.computeIfAbsent(pos.immutable(), key -> new FluidTank(SIMPLE_TANK_CAPACITY));
+    static FluidTank switchTank(BlockPos pos) {
+        return SWITCH_TANKS.computeIfAbsent(pos.immutable(), key -> new FluidTank(SWITCH_TANK_CAPACITY));
+    }
+
+    static boolean switchedOn(BlockPos pos) {
+        return SWITCHED_ON.contains(pos);
+    }
+
+    /**
+     * Liga a capability do tanque de {@code pos} (posição absoluta) sem trocar de block entity e avisa como uma
+     * máquina real: o Mekanism 10.4, ao mudar o lado ({@code TileComponentConfig.sideChanged}), invalida a capability
+     * do lado e chama {@code WorldUtils.notifyNeighborOfChange}, que dá {@code onNeighborChange} e
+     * {@code neighborChanged} ao vizinho daquele lado. Aqui não há {@code LazyOptional} velho para invalidar (o lado
+     * não oferecia nada), então só o aviso aos vizinhos ({@code updateNeighborsAt}, o {@code neighborChanged}).
+     */
+    static void switchOn(ServerLevel level, BlockPos pos) {
+        SWITCHED_ON.add(pos.immutable());
+        level.updateNeighborsAt(pos, level.getBlockState(pos).getBlock());
     }
 
     static LiveTank liveTank(BlockPos pos) {
@@ -107,7 +127,8 @@ public final class TestMachines {
         TANKS.remove(pos.immutable());
         LIVE_TANKS.remove(pos.immutable());
         NAIVE.remove(pos.immutable());
-        SIMPLE_TANKS.remove(pos.immutable());
+        SWITCH_TANKS.remove(pos.immutable());
+        SWITCHED_ON.remove(pos.immutable());
     }
 
     static final class BigSlot implements IItemHandler {

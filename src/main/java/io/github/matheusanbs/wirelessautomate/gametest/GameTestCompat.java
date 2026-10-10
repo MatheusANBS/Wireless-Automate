@@ -30,9 +30,12 @@ import org.jetbrains.annotations.Nullable;
  * {@code GameTestCompat.x(helper, ...)}.
  */
 final class GameTestCompat {
-    /** O canal do Forge que leva o pacote de abertura de tela ({@code NetworkHooks.openScreen}). */
-    private static final ResourceLocation FORGE_PLAY = new ResourceLocation("forge", "play");
-    /** O índice do {@code PlayMessages.OpenContainer} no canal {@code forge:play} ({@code NetworkInitialization}). */
+    /**
+     * O canal do Forge que leva o pacote de abertura de tela ({@code NetworkHooks.openScreen}): o
+     * {@code NetworkConstants.FML_PLAY_RESOURCE}, que é {@code fml:play} (não {@code forge:play}) e não é público.
+     */
+    private static final ResourceLocation FORGE_PLAY = new ResourceLocation("fml", "play");
+    /** O índice do {@code PlayMessages.OpenContainer} no canal {@code fml:play} ({@code NetworkInitialization}). */
     private static final int OPEN_CONTAINER = 1;
 
     private GameTestCompat() {

@@ -57,7 +57,7 @@ O dono não gosta de imagens montadas a partir de capturas soltas do e2e ("ficou
    - Seção nova para cada novidade grande. Não repita o mesmo texto em duas seções.
    - Mostre a imagem geral e duas ou três novas ao dono (SendUserFile) e liste o que mudou.
 6. **Commit.** Quando o dono pedir, commite as imagens, o script, a vitrine e a descrição, e faça o push. Isso **não** é uma versão nova: não crie release nem changelog (ver `wa-release`).
-7. **Troque os links.** O dono sobe os PNGs no CurseForge e manda os links.
+7. **Troque os links.** O dono sobe os PNGs no CurseForge e manda os links. Para pegar todos de uma vez, ele cola `scripts/links-console.js` (desta skill) no console do navegador na página Images do projeto: sai `arquivo.png -> link` por linha, já copiado para a área de transferência.
    - Troque cada `ENVIAR:<arquivo>.png` pelo link dele e confira que não sobrou nenhum (`grep ENVIAR`).
    - Imagem que ele não mandou continua com o link antigo. Avise qual, e se o conteúdo dela mudou (o banner mudou de frase, por exemplo).
    - Commit e push de novo.

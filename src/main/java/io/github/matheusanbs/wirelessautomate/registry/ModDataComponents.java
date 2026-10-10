@@ -91,6 +91,15 @@ public final class ModDataComponents {
                     .persistent(LinkerMode.CODEC)
                     .networkSynchronized(LinkerMode.STREAM_CODEC));
 
+    /**
+     * Área do Configurador em "qualquer máquina": colar vale para todos os roteadores da área. Só
+     * gravado quando {@code true} (sem o componente, mesma máquina) e removido no pincel.
+     */
+    public static final Supplier<DataComponentType<Boolean>> CONFIGURATOR_ANY_MACHINE =
+            DATA_COMPONENTS.registerComponentType("configurator_any_machine", builder -> builder
+                    .persistent(Codec.BOOL)
+                    .networkSynchronized(ByteBufCodecs.BOOL));
+
     /** Cantos da área marcados com o Configurador em modo Área (o mesmo formato do Vinculador). */
     public static final Supplier<DataComponentType<LinkerArea>> CONFIGURATOR_AREA =
             DATA_COMPONENTS.registerComponentType("configurator_area", builder -> builder

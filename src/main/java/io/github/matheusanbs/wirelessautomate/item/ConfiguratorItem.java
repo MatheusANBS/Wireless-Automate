@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
+import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.preset.PasteTypes;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
@@ -44,12 +45,13 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Configurador (varinha), sem tela. Guarda uma cópia só, no próprio item: Shift + clique direito
  * num roteador copia a configuração (faces, filtros, prioridades, redstone e a rede de cada aba,
- * relativa ao {@code facing}) e o bloco da máquina dele. Dois modos, trocados com Shift + clique
- * direito no ar, como no Vinculador:
+ * relativa ao {@code facing}) e o bloco da máquina dele. Três modos ({@link PasteMode}), em ciclo
+ * com Shift + clique direito no ar:
  * <ul>
  *   <li><b>Pincel</b> (padrão): clique direito num roteador cola nele.</li>
- *   <li><b>Área</b>: clique direito em dois blocos marca os cantos; clique direito no ar cola em
- *       todos os roteadores da área presos ao mesmo tipo de máquina ({@link ConfiguratorArea});
+ *   <li><b>Área (mesma máquina)</b>: clique direito em dois blocos marca os cantos; clique direito no
+ *       ar cola em todos os roteadores da área presos ao mesmo tipo de máquina ({@link ConfiguratorArea});</li>
+ *   <li><b>Área (qualquer máquina)</b>: a mesma área, colando em todos os roteadores dela.</li>
  * </ul>
  * Shift + clique direito num bloco que não é roteador limpa a varinha (a cópia e a área).
  * A rede de cada aba só é colada se o jogador puder usá-la ({@link PresetApplier}).
@@ -126,14 +128,34 @@ public class ConfiguratorItem extends Item {
 
     public static void setMode(ItemStack stack, LinkerMode mode) {
         if (mode == LinkerMode.SINGLE) {
+            // O pincel não guarda o "qualquer máquina" da área (estado invisível no item).
             stack.remove(ModDataComponents.CONFIGURATOR_MODE.get());
+            stack.remove(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get());
         } else {
             stack.set(ModDataComponents.CONFIGURATOR_MODE.get(), mode);
         }
     }
 
-    public static Component modeName(LinkerMode mode) {
-        return Component.translatable(KEY + "mode." + (mode == LinkerMode.AREA ? "area" : "brush"));
+    /**
+     * Modo de colar: o {@link #mode} com o {@link ModDataComponents#CONFIGURATOR_ANY_MACHINE} (que o
+     * pincel ignora). Sem os componentes, pincel; Área sem o {@code any_machine}, mesma máquina.
+     */
+    public static PasteMode pasteMode(ItemStack stack) {
+        return PasteMode.of(mode(stack), stack.getOrDefault(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false));
+    }
+
+    /** Grava o modo; o {@code any_machine} só fica no item quando {@code true} (sai no pincel). */
+    public static void setPasteMode(ItemStack stack, PasteMode mode) {
+        setMode(stack, mode.linkerMode());
+        if (mode.anyMachine()) {
+            stack.set(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), true);
+        } else {
+            stack.remove(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get());
+        }
+    }
+
+    public static Component modeName(PasteMode mode) {
+        return Component.translatable(KEY + "mode." + mode.key());
     }
 
     public static @Nullable LinkerArea area(ItemStack stack) {
@@ -206,7 +228,10 @@ public class ConfiguratorItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** No ar: Shift + clique troca o modo; no modo Área, clique cola na área marcada. */
+    /**
+     * No ar: Shift + clique avança o modo (Pincel → Área mesma máquina → Área qualquer máquina); no
+     * modo Área, clique cola na área marcada.
+     */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -215,8 +240,8 @@ public class ConfiguratorItem extends Item {
         }
         if (player instanceof ServerPlayer serverPlayer) {
             if (player.isSecondaryUseActive()) {
-                LinkerMode mode = mode(stack).toggled();
-                setMode(stack, mode);
+                PasteMode mode = pasteMode(stack).next();
+                setPasteMode(stack, mode);
                 serverPlayer.displayClientMessage(Component.translatable(KEY + "mode", modeName(mode)), true);
             } else {
                 RouterPreset preset = stack.get(ModDataComponents.PRESET.get());
@@ -340,23 +365,27 @@ public class ConfiguratorItem extends Item {
                         RouterBlock.machineName(BuiltInRegistries.BLOCK.get(machine))).withStyle(ChatFormatting.AQUA));
             }
         }
-        LinkerMode mode = mode(stack);
+        PasteMode mode = pasteMode(stack);
         String size = ConfiguratorArea.size(stack);
-        tooltip.add((mode == LinkerMode.AREA && size != null
+        tooltip.add((mode.area() && size != null
                 ? Component.translatable(KEY + "tooltip.mode_area", modeName(mode), size)
                 : Component.translatable(KEY + "tooltip.mode", modeName(mode))).withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable(KEY + "tooltip.type", typeName(type(stack))).withStyle(ChatFormatting.GOLD));
 
-        // Comandos do modo atual, na ordem de uso: copiar, colar, limpar, trocar de modo e de tipo.
+        // Comandos do modo atual, na ordem de uso: copiar, (marcar), colar, limpar, a roda, o próximo
+        // modo e o tipo. A tecla da roda vai por Component.keybind (sem classe de cliente aqui).
         tooltip.add(Component.translatable(KEY + "tooltip.copy").withStyle(ChatFormatting.DARK_GRAY));
-        if (mode == LinkerMode.AREA) {
+        if (mode.area()) {
             tooltip.add(Component.translatable(KEY + "tooltip.mark").withStyle(ChatFormatting.DARK_GRAY));
-            tooltip.add(Component.translatable(KEY + "tooltip.paste_area").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable(KEY + (mode.anyMachine() ? "tooltip.paste_area_any" : "tooltip.paste_area"))
+                    .withStyle(ChatFormatting.DARK_GRAY));
         } else {
             tooltip.add(Component.translatable(KEY + "tooltip.paste").withStyle(ChatFormatting.DARK_GRAY));
         }
         tooltip.add(Component.translatable(KEY + "tooltip.clear").withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable(KEY + (mode == LinkerMode.AREA ? "tooltip.to_brush" : "tooltip.to_area"))
+        tooltip.add(Component.translatable(KEY + "tooltip.wheel",
+                Component.keybind("key.wirelessautomate.configurator_wheel")).withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable(KEY + "tooltip.next_mode", modeName(mode.next()))
                 .withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(KEY + "tooltip.cycle").withStyle(ChatFormatting.DARK_GRAY));
     }

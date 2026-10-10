@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorWheelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
@@ -26,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -659,6 +661,48 @@ public final class ConfiguratorGameTests {
             helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
                     "aceitou sem o Configurador na mão");
             helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
+        } finally {
+            helper.getLevel().getServer().getPlayerList().remove(player);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A roda do Configurador grava o modo de colar e o tipo de uma vez; vazio é Todos. Recusa outra
+     * coisa na mão e um tipo que não está carregado, sem mexer no item.
+     */
+    @GameTest(template = "empty")
+    public static void wheelPayloadSetsModeAndType(GameTestHelper helper) {
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+            helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
+                    new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.of(ResourceType.FLUID))), "recusou");
+            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY, "modo");
+            helper.assertValueEqual(ConfiguratorItem.type(configurator), ResourceType.FLUID, "tipo");
+
+            helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
+                    new ConfiguratorWheelPayload(PasteMode.BRUSH, Optional.empty())), "recusou o pincel");
+            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel");
+            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o tipo");
+            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
+                    "pincel guardou o qualquer máquina");
+
+            if (!Chemicals.LOADED) {
+                helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
+                        new ConfiguratorWheelPayload(PasteMode.AREA_SAME, Optional.of(ResourceType.CHEMICAL))),
+                        "aceitou Químicos sem o Mekanism");
+                helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "mudou ao recusar");
+            }
+
+            ItemStack linker = new ItemStack(ModItems.LINKER.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+            helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
+                    new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.empty())), "aceitou sem o Configurador");
+            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get())
+                    || linker.has(ModDataComponents.CONFIGURATOR_MODE.get()), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }

@@ -88,6 +88,8 @@ public final class ConfiguratorWheelScreen extends Screen {
     private int centerY;
     private double lastMouseX = -1;
     private double lastMouseY = -1;
+    /** Fatia realçada à força nas capturas (o cursor de verdade da janela não mexe nela); {@code null} = a do mouse. */
+    private @Nullable Hit previewHover;
     /** Aberta pela tecla (não pelo e2e): o {@link #tick()} confere se a tecla ainda está apertada. */
     private boolean openedByKey;
     /** Já chegou o {@code keyReleased}/{@code mouseReleased} da tecla da roda. */
@@ -161,6 +163,11 @@ public final class ConfiguratorWheelScreen extends Screen {
     /** Escala da roda na tela (o desenho tem raio externo {@link #DESIGN_RADIUS}). */
     public float wheelScale() {
         return wheelScale;
+    }
+
+    /** Capturas (e2e e vitrine): realça a fatia {@code hit} como se o mouse estivesse nela. */
+    public void previewHover(@Nullable Hit hit) {
+        previewHover = hit;
     }
 
     /** A fatia no ponto da tela, ou {@code null} no centro e fora da roda. */
@@ -287,7 +294,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         GuiText.beginFrame();
-        Hit hot = hitAt(mouseX, mouseY);
+        Hit hot = previewHover != null ? previewHover : hitAt(mouseX, mouseY);
         float eased = easeOutBack(Mth.clamp((Util.getMillis() - openedAt) / (float) OPEN_MS, 0, 1));
         float scale = wheelScale * (0.6f + 0.4f * eased);
         PoseStack pose = g.pose();

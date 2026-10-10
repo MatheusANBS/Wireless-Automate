@@ -1204,6 +1204,7 @@ public final class DevEndToEnd {
         list.add(new Step(label + "roda: mouse no modo Área (qualquer máquina)", STEP_TIMEOUT_MS, () -> {
             int[] point = wheelScreen().pointOf(wheelScreen().hitOf(PasteMode.AREA_ANY));
             moveMouse(point[0], point[1]);
+            wheelScreen().previewHover(wheelScreen().hitOf(PasteMode.AREA_ANY));
         }, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             var window = minecraft.getWindow();
@@ -1290,6 +1291,31 @@ public final class DevEndToEnd {
         list.add(wait("tela do Vinculador", 5));
         list.add(capture("s13-vinculador"));
         list.add(close("fechar o Vinculador"));
+        // Configurador na mão, em Área (qualquer máquina), com a mesma área sobre as fornalhas e a roda
+        // aberta, com o mouse no modo qualquer máquina.
+        list.add(new Step("área do Configurador", STEP_TIMEOUT_MS, () -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                ItemStack wand = new ItemStack(ModItems.CONFIGURATOR.get());
+                ConfiguratorItem.setPasteMode(wand, PasteMode.AREA_ANY);
+                ConfiguratorItem.setArea(wand, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
+                        java.util.Optional.of(showBase.offset(-8, 1, -7))));
+                player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+                return null;
+            });
+        }, () -> ConfiguratorItem.area(Minecraft.getInstance().player.getMainHandItem()) != null,
+                () -> "Configurador na mão"));
+        list.add(showLook("câmera nas fornalhas (roda)", -5, 2.6, -7, -10.5, 0.6, -11.5, false));
+        list.add(new Step("abrir a roda", STEP_TIMEOUT_MS, () -> {
+            ConfiguratorWheelScreen wheel = new ConfiguratorWheelScreen();
+            Minecraft.getInstance().setScreen(wheel);
+            wheel.previewHover(wheel.hitOf(PasteMode.AREA_ANY));
+        }, () -> Minecraft.getInstance().screen instanceof ConfiguratorWheelScreen, () -> "tela "
+                + describe(Minecraft.getInstance().screen)));
+        list.add(wait("abertura da roda", 10));
+        list.add(capture("s16-roda"));
+        list.add(close("fechar a roda"));
         list.add(new Step("mão vazia e interface", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             UUID playerId = Minecraft.getInstance().player.getUUID();

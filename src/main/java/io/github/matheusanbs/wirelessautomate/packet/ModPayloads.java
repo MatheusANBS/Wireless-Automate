@@ -50,7 +50,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "10";
+    public static final String VERSION = "11";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -82,6 +82,8 @@ public final class ModPayloads {
                 (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
         registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
+        registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
+                (payload, context) -> handleConfiguratorWheel(serverPlayer(context), payload));
         // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
@@ -228,6 +230,26 @@ public final class ModPayloads {
         ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
         player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
                 ConfiguratorItem.typeName(type)), true);
+        return true;
+    }
+
+    /**
+     * Escolha na roda do Configurador: grava o modo de colar e o tipo colado e mostra os dois na
+     * action bar. Recusa outra coisa na mão principal e um tipo que não está carregado.
+     */
+    public static boolean handleConfiguratorWheel(@Nullable ServerPlayer player, ConfiguratorWheelPayload payload) {
+        if (player == null) {
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        ResourceType type = payload.pasteType().orElse(null);
+        if (!(stack.getItem() instanceof ConfiguratorItem) || (type != null && !LoadedTypes.LIST.contains(type))) {
+            return false;
+        }
+        ConfiguratorItem.setPasteMode(stack, payload.mode());
+        ConfiguratorItem.setType(stack, type);
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.wheel",
+                ConfiguratorItem.modeName(payload.mode()), ConfiguratorItem.typeName(type)), true);
         return true;
     }
 

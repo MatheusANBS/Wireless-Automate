@@ -81,6 +81,7 @@
   "item.wirelessautomate.configurator.tooltip.preset_network": "Copy: %s configured faces and the network",
   "item.wirelessautomate.configurator.tooltip.preset_networks": "Copy: %s configured faces and each tab's network",
   "item.wirelessautomate.configurator.mode": "Configurator: %s mode",
+  "item.wirelessautomate.configurator.wheel": "Configurator: %s mode · pastes %s",
   "item.wirelessautomate.configurator.mode.brush": "Brush",
   "item.wirelessautomate.configurator.mode.area_same": "Area (same machine)",
   "item.wirelessautomate.configurator.mode.area_any": "Area (any machine)",

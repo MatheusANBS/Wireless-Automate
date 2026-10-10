@@ -60,7 +60,7 @@ Upgrade Cards raise a router's throughput and range along the ladder Basic → A
 
 ![Storage of its own](https://media.forgecdn.net/attachments/2028/260/feature-9-storage-png.png)
 
-Five storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with the optional mods, the **Wireless Chemical Tank** (Mekanism) and the **Wireless Source Tank** (Ars Nouveau). Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery.
+Five storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with the optional mods, the **Wireless Chemical Tank** (Mekanism) and the **Wireless Source Tank** (Ars Nouveau). Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery, and the Chest fills big-stack slots (Sophisticated Storage stack upgrades, drawers) a whole slot per insert: **2.1 billion items into an Omega-upgraded barrel in one tick**.
 
 | Tier | Chest (items) | Tank and Chemical Tank | Battery | Source Tank |
 | --- | --- | --- | --- | --- |

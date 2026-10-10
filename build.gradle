@@ -111,6 +111,8 @@ dependencies {
     // JEI: só a API na compilação; o JEI completo no classpath das execuções de dev (modRuntimeOnly,
     // remapeado pelo MDG; o modo legacyforge não tem o localRuntime), sem virar dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
     modCompileOnly "mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"
+    // No 1.20.1 a API comum (mezz.jei.api.*) é um artefato à parte e não vem pela forge-api na compilação.
+    modCompileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
     modRuntimeOnly "mezz.jei:jei-${minecraft_version}-forge:${jei_version}"
 
     // Mekanism: só a API na compilação (IChemicalHandler, ChemicalStack). O mod completo vai para a

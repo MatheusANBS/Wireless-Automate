@@ -11,9 +11,9 @@ import net.minecraft.client.renderer.Rect2i;
  * Ingredientes fantasmas na tela de filtro. Um item serve num filtro de itens; um fluido, ou um
  * item que contém fluido (balde), num de fluidos ({@link FilterScreen#ghostEntry}). Na aba Tags, soltar
  * no slot do inspetor mostra as tags do ingrediente ({@link FilterScreen#inspectGhost}). Arrastar para a
- * lista de entradas acrescenta; Shift + clique na lista do JEI também ({@link #quickMove}, JEI 19.28+;
- * nas versões anteriores o método não é chamado e só o arrastar funciona). O clique simples continua
- * sendo do JEI (ver receitas).
+ * lista de entradas acrescenta. O clique simples continua sendo do JEI (ver receitas). Porte 1.20.1: o
+ * JEI 15.20 não tem o {@code quickMove} (do JEI 19.28+), então o Shift + clique na lista do JEI não
+ * acrescenta; só o arrastar.
  */
 final class FilterGhostHandler implements IGhostIngredientHandler<FilterScreen> {
     @Override
@@ -48,14 +48,6 @@ final class FilterGhostHandler implements IGhostIngredientHandler<FilterScreen> 
             });
         }
         return targets;
-    }
-
-    @Override
-    public <I> boolean quickMove(FilterScreen screen, ITypedIngredient<I> ingredient) {
-        return screen.ghostEntry(ingredient.getIngredient()).map(entry -> {
-            screen.addGhost(entry);
-            return true;
-        }).orElse(false);
     }
 
     @Override

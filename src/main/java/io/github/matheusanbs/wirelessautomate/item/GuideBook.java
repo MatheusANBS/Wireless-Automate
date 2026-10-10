@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.item;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.Optional;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -12,33 +11,33 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 /**
- * O livro-guia (GuideME, opcional): o item genérico dele ({@code guideme:guide}) com o componente
- * {@code guideme:guide_id} apontando para o nosso guia. Só pelos registros, sem classes do
- * GuideME; sem ele, não há livro. Vai na aba criativa e é entregue uma vez a cada jogador no
+ * O livro-guia (GuideME, opcional): o item genérico dele ({@code guideme:guide}) com o id do nosso guia
+ * no NBT (porte 1.20.1: o GuideME 20.1 lê a chave {@code guideId}, string, no lugar do componente
+ * {@code guideme:guide_id}). Só pelo registro, sem classes do GuideME; sem ele, não há livro. Vai na aba criativa e é entregue uma vez a cada jogador no
  * primeiro login (config {@code guide.giveOnFirstJoin}).
  */
-@EventBusSubscriber(modid = WirelessAutomate.MODID)
+@Mod.EventBusSubscriber(modid = WirelessAutomate.MODID)
 public final class GuideBook {
     /** Marca nos dados persistentes do jogador (sobrevivem à morte): o livro já foi entregue. */
     private static final String GIVEN = WirelessAutomate.MODID + ":guide_given";
 
+    /** A chave do id do guia no NBT do livro ({@code GuideItem.TAG_GUIDE_ID} do GuideME 20.1). */
+    private static final String GUIDE_ID = "guideId";
+
     /** O livro, ou vazio sem o GuideME. */
-    @SuppressWarnings("unchecked")
     public static Optional<ItemStack> create() {
-        Item item = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("guideme", "guide"));
-        DataComponentType<?> guideId = BuiltInRegistries.DATA_COMPONENT_TYPE.get(
-                ResourceLocation.fromNamespaceAndPath("guideme", "guide_id"));
-        if (item == Items.AIR || guideId == null) {
+        Item item = BuiltInRegistries.ITEM.get(new ResourceLocation("guideme", "guide"));
+        if (item == Items.AIR) {
             return Optional.empty();
         }
         ItemStack stack = new ItemStack(item);
-        stack.set((DataComponentType<ResourceLocation>) guideId, WirelessAutomate.id("guide"));
+        stack.getOrCreateTag().putString(GUIDE_ID, WirelessAutomate.id("guide").toString());
         return Optional.of(stack);
     }
 
@@ -47,8 +46,9 @@ public final class GuideBook {
         return player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).getBoolean(GIVEN);
     }
 
+    /** Público: o Forge não chama um {@code @SubscribeEvent} que não seja. */
     @SubscribeEvent
-    static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+    public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer
                 || !Config.SPEC.isLoaded() || !Config.GIVE_GUIDE_ON_FIRST_JOIN.get()) {
             return;

@@ -16,12 +16,11 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
-import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
+import mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
-import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.runtime.IClickableIngredient;
 import mezz.jei.api.runtime.IIngredientManager;
 import java.util.Optional;
@@ -31,7 +30,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 
 /**
@@ -52,8 +50,9 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     }
 
     /**
-     * O tier fica no componente {@code BLOCK_STATE}; sem um interpretador, o JEI junta todas as variantes
-     * do mesmo item numa só (a Básica). O item sem o componente conta como Básico, como no jogo.
+     * O tier fica no {@code BlockStateTag} do item (porte 1.20.1: no lugar do componente {@code BLOCK_STATE});
+     * sem um interpretador, o JEI junta todas as variantes do mesmo item numa só (a Básica). O item sem a
+     * chave conta como Básico, como no jogo.
      */
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
@@ -64,16 +63,11 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     }
 
     /** O roteador e os armazenamentos guardam o tier do mesmo jeito ({@link StorageBlockItem#tierOf}). */
-    private enum TierSubtype implements ISubtypeInterpreter<ItemStack> {
+    private enum TierSubtype implements IIngredientSubtypeInterpreter<ItemStack> {
         INSTANCE;
 
         @Override
-        public Object getSubtypeData(ItemStack stack, UidContext context) {
-            return StorageBlockItem.tierOf(stack);
-        }
-
-        @Override
-        public String getLegacyStringSubtypeInfo(ItemStack stack, UidContext context) {
+        public String apply(ItemStack stack, UidContext context) {
             return StorageBlockItem.tierOf(stack).getSerializedName();
         }
     }
@@ -85,7 +79,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
      */
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        List<RecipeHolder<CraftingRecipe>> upgrades = new ArrayList<>();
+        List<CraftingRecipe> upgrades = new ArrayList<>();
         for (RouterTier from : RouterTier.values()) {
             if (!from.loaded()) {
                 continue;
@@ -98,9 +92,8 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
                 NonNullList<Ingredient> ingredients = NonNullList.of(Ingredient.EMPTY,
                         Ingredient.of(RouterBlockItem.withTier(ModItems.ROUTER.get(), from)),
                         Ingredient.of(ModItems.TIER_CORES.get(to).get()));
-                upgrades.add(new RecipeHolder<>(WirelessAutomate.id("jei/router_upgrade_" + ids),
-                        new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
-                                RouterBlockItem.withTier(ModItems.ROUTER.get(), to), ingredients)));
+                upgrades.add(new ShapelessRecipe(WirelessAutomate.id("jei/router_upgrade_" + ids), "router_upgrade",
+                        CraftingBookCategory.MISC, RouterBlockItem.withTier(ModItems.ROUTER.get(), to), ingredients));
                 for (StorageKind kind : StorageKind.values()) {
                     if (!kind.loaded()) {
                         continue;
@@ -109,9 +102,8 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
                     NonNullList<Ingredient> storage = NonNullList.of(Ingredient.EMPTY,
                             Ingredient.of(StorageBlockItem.withTier(item, from)),
                             Ingredient.of(ModItems.TIER_CORES.get(to).get()));
-                    upgrades.add(new RecipeHolder<>(WirelessAutomate.id("jei/" + kind.id + "_upgrade_" + ids),
-                            new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
-                                    StorageBlockItem.withTier(item, to), storage)));
+                    upgrades.add(new ShapelessRecipe(WirelessAutomate.id("jei/" + kind.id + "_upgrade_" + ids),
+                            "router_upgrade", CraftingBookCategory.MISC, StorageBlockItem.withTier(item, to), storage));
                 }
             }
         }
@@ -121,18 +113,20 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(FilterScreen.class, new FilterGhostHandler());
-        // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...).
+        // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...). Porte
+        // 1.20.1 (JEI 15.20): o IIngredientManager acha o tipo do ingrediente pela classe (item, fluido ou
+        // um dos quatro químicos do Mekanism, cuja pilha vem da ponte Chemicals) e monta o clicável.
         IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
         registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {
             @Override
-            public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(
-                    IClickableIngredientFactory factory, StorageListScreen screen, double mouseX, double mouseY) {
+            public Optional<IClickableIngredient<?>> getClickableIngredientUnderMouse(StorageListScreen screen,
+                    double mouseX, double mouseY) {
                 StorageListScreen.Hovered hovered = screen.ingredientAt(mouseX, mouseY);
                 if (hovered == null) {
                     return Optional.empty();
                 }
-                return ingredients.createTypedIngredient(hovered.ingredient(), true)
-                        .flatMap(typed -> factory.createBuilder(typed).buildWithArea(hovered.x(), hovered.y(), 16, 16));
+                return ingredients.createClickableIngredient(hovered.ingredient(),
+                        new Rect2i(hovered.x(), hovered.y(), 16, 16), true).map(clickable -> clickable);
             }
         });
         registration.addGuiContainerHandler(FilterScreen.class, new IGuiContainerHandler<FilterScreen>() {

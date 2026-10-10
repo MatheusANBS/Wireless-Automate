@@ -13,11 +13,20 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * (a do para-raios): {@code up} sem rotação, {@code down} x=180, laterais x=90 e y pela direção.
  */
 final class RouterShapes {
-    /** Caixas do modelo com o roteador virado para cima, em pixels: corpo e duas antenas. */
+    /**
+     * Caixas do modelo com o roteador virado para cima, em pixels, abraçando o desenho de
+     * {@code scripts/textures/blocos.py} (as mesmas de {@code HITBOXES["router"]} lá, conferidas contra os
+     * elementos na geração; {@code docs/preview/hitboxes.txt} lista as envolventes): o prato da base com os
+     * para-choques, o corpo, as duas hastes de trás (norte), o mastro e a envolvente da parabólica
+     * inclinada para trás, com o braço e o receptor.
+     */
     private static final double[][] UP_BOXES = {
-            {1, 0, 2, 15, 6, 14},
-            {1.5, 6, 2.5, 3.5, 16, 4.5},
-            {12.5, 6, 2.5, 14.5, 16, 4.5},
+            {1, 0, 2, 15, 3, 14},
+            {3, 1, 4, 13, 5, 12},
+            {2, 3, 2.5, 3, 12, 3.5},
+            {13, 3, 2.5, 14, 12, 3.5},
+            {7, 5, 7, 9, 9, 9},
+            {5, 9, 2.75, 11, 14.5, 8.25},
     };
 
     private static final Map<Direction, VoxelShape[]> SHAPES = new EnumMap<>(Direction.class);

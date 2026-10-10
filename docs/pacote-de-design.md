@@ -108,5 +108,45 @@ geração se duas faces desenhadas dividirem o mesmo plano com área em comum (p
 caixas se atravessarem (salvo as marcadas `dentro=True`, o conteúdo das colunas de vidro) ou se uma face
 omitida não estiver inteiramente coberta por um vizinho encostado (buraco). Para conferir no jogo:
 `WA_SCREENSHOT=... WA_SCREENSHOT_ONLY=giro` (roteador na parede e no chão, nos quatro giros) e
-`WA_SCREENSHOT_ONLY=blocos` (os armazenamentos em dois tiers e dois ângulos), com o `runClient` sob Xvfb;
-a prévia isométrica `docs/preview/blocos-preview.png` sai do próprio script.
+`WA_SCREENSHOT_ONLY=blocos` (os armazenamentos em dois tiers e dois ângulos, com o contorno da colisão,
+e a fileira dos itens como aparecem no inventário), com o `runClient` sob Xvfb; a prévia isométrica
+`docs/preview/blocos-preview.png` sai do próprio script.
+
+### A vista de GUI do roteador (`display`)
+
+O roteador é o único bloco com frente (a fenda do Olho e o interior da parabólica ficam no sul do modelo
+`up`), e a vista `gui` padrão do `block/block` vanilla (`rotation [30, 225, 0]`) mostrava o lado de trás
+no inventário, na aba criativa e no JEI. Os modelos `router_<tier>.json` levam um bloco `display`
+próprio (`DISPLAY_ROTEADOR` em `blocos.py`): as entradas do vanilla copiadas (mão em primeira e terceira
+pessoa, chão e moldura, que já é de frente com `rotation [0, 0, 0]`) e a `gui` girada 180° em y,
+`rotation [30, 45, 0]`, com a mesma inclinação de 30° e a escala 0,625. Os `router_<tier>_spinN` herdam.
+Os armazenamentos têm as quatro laterais iguais e ficam com o `display` do vanilla.
+
+### As caixas de colisão e seleção (hitboxes)
+
+As caixas abraçam o desenho, sem ar sobrando nem nada do modelo de fora, como o Source Jar do Ars.
+Estão em dois lugares que precisam andar juntos: `HITBOXES` em `blocos.py` (a fonte para conferir: a
+geração falha se algum elemento, a parabólica pela caixa envolvente do prato rotacionado, ficar fora da
+união das caixas, se uma caixa não tocar nenhum elemento ou sair de 0..16) e o Java que o jogo usa:
+`block/RouterShapes.UP_BOXES` (roteador com `facing=up` e `spin=0`; a classe gira por spin e facing) e
+`storage/StorageShapes.java` (por id do bloco, lógica pura com `StorageShapesTest`; o `StorageBlock`
+monta o `VoxelShape`, o mesmo em todos os tiers e, no Tanque de Source, nos 11 níveis). A cada geração o
+script grava `docs/preview/hitboxes.txt` com a envolvente de cada elemento e do bloco inteiro ao lado das
+caixas. Em pixels (`x0 y0 z0  x1 y1 z1`):
+
+| Bloco | Caixas |
+| --- | --- |
+| Roteador (6) | prato da base com os para-choques `1 0 2  15 3 14`; corpo `3 1 4  13 5 12`; hastes de trás `2 3 2,5  3 12 3,5` e `13 3 2,5  14 12 3,5`; mastro `7 5 7  9 9 9`; parabólica, braço e receptor `5 9 2,75  11 14,5 8,25` (envolvente do prato a −45°: y até 14,3, z 2,76..8,06) |
+| Baú (10) | quatro pés `1 0 1  4 2 4` e espelhos; corpo `1 2 1  15 14 15`; tampa `0 14 0  16 16 16`; uma caixa de gavetas por lado, `2 2 15  14 13 16` e as outras três |
+| Tanque (3) | pés e base `2 0 2  14 4 14`; anéis, coluna de vidro e réguas `3 4 3  13 14 13`; tampa `2 14 2  14 16 14` |
+| Bateria (10) | pés e plinto `1 0 1  15 2 15`; células `2 2 2  14 13 14`; quatro visores `6 2 14  10 13 15` e os outros três; cornija `1 13 1  15 14 15`; tampa `2 14 2  14 15 14`; terminais `3 15 3  5 16 5` e `11 15 11  13 16 13` |
+| Tanque Químico (6) | pés e anel `3 0 3  13 2 13`; pescoço `4 2 4  12 3 12`; ombro de baixo `3 3 3  13 5 13`; equador `2 5 2  14 11 14`; ombro de cima `3 11 3  13 13 13`; calota e volante `4 13 4  12 15 12` |
+| Tanque de Source (4) | para-choques `2 0 2  14 1 14`; base, trilhos, coluna e tampa `3 0 3  13 13 13`; colar `6 13 6  10 14 10`; gema `6,5 14 6,5  9,5 16 9,5` |
+
+O ar que sobra é o que fica entre pés (até 2 px de altura, debaixo do corpo), entre os para-choques do
+roteador e nos cantos das colunas (as réguas e os trilhos de 1 px). Os GameTests `shapeFollowsSpin` e
+`shapeMatchesRelativeSides` (`RouterConfigGameTests`) conferem que a forma do roteador acompanha o
+`spin` e os lados relativos (hastes no BOTTOM, parabólica inclinada para o BOTTOM, nada do lado TOP) e
+`storageShapesHugTheModel` (`StorageGameTests`) que os armazenamentos ficam dentro do bloco, encostam no
+chão, têm topo para pisar (≥ 15 px) e não são um cubo cheio. Os armazenamentos continuam com
+`noOcclusion()`.

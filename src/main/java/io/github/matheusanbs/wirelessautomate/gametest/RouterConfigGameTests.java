@@ -172,20 +172,29 @@ public final class RouterConfigGameTests {
                 .anyMatch(box -> box.contains(point));
     }
 
-    /** Colisão com facing=up e spin 1: a antena do norte (x 1,5..3,5, z 2,5..4,5) vai para o leste. */
+    /**
+     * Colisão com facing=up e spin 1: a haste de trás do oeste (x 2..3, z 2,5..3,5, até y 12) vai para o
+     * nordeste (x 12,5..13,5, z 2..3), e a parabólica (inclinada para o norte, z 2,75..8,25) deixa de
+     * cobrir o lado norte para cobrir o leste.
+     */
     @GameTest(template = "empty")
     public static void shapeFollowsSpin(GameTestHelper helper) {
         BlockState spin0 = router(Direction.UP);
         BlockState spin1 = spin0.setValue(RouterBlock.SPIN, 1);
-        helper.assertTrue(shapeHas(spin0, 2.5, 10, 3.5), "antena no norte com spin 0");
-        helper.assertTrue(shapeHas(spin1, 12.5, 10, 2.5), "antena girada para x 11,5..13,5, z 1,5..3,5");
-        helper.assertFalse(shapeHas(spin1, 2.5, 10, 3.5), "antena ainda no lugar do spin 0");
+        helper.assertTrue(shapeHas(spin0, 2.5, 10, 3), "haste no noroeste com spin 0");
+        helper.assertTrue(shapeHas(spin1, 13, 10, 2.5), "haste girada para x 12,5..13,5, z 2..3");
+        helper.assertFalse(shapeHas(spin1, 2.5, 10, 3), "haste ainda no lugar do spin 0");
+        helper.assertTrue(shapeHas(spin0, 8, 13, 4), "parabólica inclinada para o norte com spin 0");
+        helper.assertFalse(shapeHas(spin1, 8, 13, 4), "parabólica ainda no norte com spin 1");
+        helper.assertTrue(shapeHas(spin1, 12, 13, 8), "parabólica inclinada para o leste com spin 1");
+        helper.assertFalse(shapeHas(spin0, 8, 13, 12), "nada da parabólica do lado dos LEDs");
         helper.succeed();
     }
 
     /**
-     * Para os 24 (facing, spin), a forma bate com o {@link RelativeSide}: as antenas saem do corpo para o
-     * FRONT, encostadas no lado BOTTOM (o oposto dos LEDs), uma de cada lado do eixo LEFT/RIGHT.
+     * Para os 24 (facing, spin), a forma bate com o {@link RelativeSide}: as hastes saem do corpo para o
+     * FRONT, encostadas no lado BOTTOM (o oposto dos LEDs), uma de cada lado do eixo LEFT/RIGHT, e a
+     * parabólica se inclina para o BOTTOM; do lado TOP não há nada acima do corpo.
      */
     @GameTest(template = "empty")
     public static void shapeMatchesRelativeSides(GameTestHelper helper) {
@@ -197,12 +206,17 @@ public final class RouterConfigGameTests {
                 Vec3i left = RelativeSide.LEFT.toAbsolute(facing, spin).getNormal();
                 String where = facing + " spin " + spin;
                 for (int lado : new int[] {-1, 1}) {
-                    // Centro das antenas do caso up/spin 0: (2,5 ou 13,5; 11; 3,5) = centro + 3 FRONT + 4,5 BOTTOM ± 5,5.
-                    double[] antena = point(front, 3, bottom, 4.5, left, 5.5 * lado);
-                    double[] espelho = point(front, 3, bottom, -4.5, left, 5.5 * lado);
-                    helper.assertTrue(shapeHas(state, antena[0], antena[1], antena[2]), "antena com " + where);
-                    helper.assertFalse(shapeHas(state, espelho[0], espelho[1], espelho[2]), "antena do lado TOP com " + where);
+                    // Centro das hastes do caso up/spin 0: (2,5 ou 13,5; 11; 3) = centro + 3 FRONT + 5 BOTTOM ± 5,5.
+                    double[] haste = point(front, 3, bottom, 5, left, 5.5 * lado);
+                    double[] espelho = point(front, 3, bottom, -5, left, 5.5 * lado);
+                    helper.assertTrue(shapeHas(state, haste[0], haste[1], haste[2]), "haste com " + where);
+                    helper.assertFalse(shapeHas(state, espelho[0], espelho[1], espelho[2]), "haste do lado TOP com " + where);
                 }
+                // A parabólica do caso up/spin 0: (8; 13; 4) = centro + 5 FRONT + 4 BOTTOM; nada no espelho (8; 13; 12).
+                double[] prato = point(front, 5, bottom, 4, left, 0);
+                double[] espelho = point(front, 5, bottom, -4, left, 0);
+                helper.assertTrue(shapeHas(state, prato[0], prato[1], prato[2]), "parabólica com " + where);
+                helper.assertFalse(shapeHas(state, espelho[0], espelho[1], espelho[2]), "parabólica do lado TOP com " + where);
             }
         }
         helper.succeed();

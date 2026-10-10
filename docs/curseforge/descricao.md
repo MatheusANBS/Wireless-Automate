@@ -1,16 +1,16 @@
-![Wireless Automate](https://media.forgecdn.net/attachments/2027/603/banner-png.png)
+![Wireless Automate](ENVIAR:banner.png)
 
 **Wireless Automate** moves items, fluids, energy, Mekanism chemicals and Ars Nouveau Source between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far. It also brings **storage blocks of its own** that move billions per operation, and filters that pick tags in one click or match **any enchanted item**.
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-![Everything wireless](https://media.forgecdn.net/attachments/2028/251/feature-0-overview-png.png)
+![Everything wireless](ENVIAR:feature-0-overview.png)
 
 ---
 
 ## Features
 
-![Connect machines without pipes](https://media.forgecdn.net/attachments/2028/252/feature-1-network-png.png)
+![Connect machines without pipes](ENVIAR:feature-1-network.png)
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
 - **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). Each resource tab of a router can join a different network, so a furnace's items can go to your ore line while its energy comes from your base grid.
@@ -18,7 +18,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 - **Priority, round-robin and redstone control** for every face and resource type.
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
 
-![Configure every face](https://media.forgecdn.net/attachments/2028/253/feature-2-router-png.png)
+![Configure every face](ENVIAR:feature-2-router.png)
 
 ### Filters with no entry limit
 
@@ -27,19 +27,19 @@ Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or bl
 - **Tag inspector:** put any item in the inspector and every tag it has shows up, ready to check and add. Or search every tag in the game, with how many items each one matches and a preview.
 - A resizable window with the entries in a searchable list.
 
-![Tags in one click](https://media.forgecdn.net/attachments/2028/254/feature-3-filters-png.png)
+![Tags in one click](ENVIAR:feature-3-filters.png)
 
 ### Property rules
 
 Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (type its name and pick from the suggestions, any level from 1 to 255: Fortune ≥ III, Efficiency ≥ 37) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
 
-![Property rules](https://media.forgecdn.net/attachments/2028/259/feature-8-rules-png.png)
+![Property rules](ENVIAR:feature-8-rules.png)
 
 ### Five tiers, eight with Allthemodium
 
 Upgrade Cards raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate, and each card takes a router from **any lower tier** straight to its own (a Basic router + the Emerald Card is an Emerald router). With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate Card takes **ATM Star shards**. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
 
-![Eight tiers](https://media.forgecdn.net/attachments/2028/255/feature-4-tiers-png.png)
+![Eight tiers](ENVIAR:feature-4-tiers.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
 | --- | --- | --- | --- | --- | --- |
@@ -54,11 +54,11 @@ Upgrade Cards raise a router's throughput and range along the ladder Basic → A
 
 *Per face and per resource type. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
-![From iron to Unobtainium](https://media.forgecdn.net/attachments/2028/266/feature-15-tier-hall-png.png)
+![From iron to Unobtainium](ENVIAR:feature-15-tier-hall.png)
 
 ### Wireless storage
 
-![Storage of its own](https://media.forgecdn.net/attachments/2028/260/feature-9-storage-png.png)
+![Storage of its own](ENVIAR:feature-9-storage.png)
 
 Five storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with the optional mods, the **Wireless Chemical Tank** (Mekanism) and the **Wireless Source Tank** (Ars Nouveau). Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery, and the Chest fills big-stack slots (Sophisticated Storage stack upgrades, drawers) a whole slot per insert: **2.1 billion items into an Omega-upgraded barrel in one tick**.
 
@@ -78,39 +78,39 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
 - Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
 
-![Wireless Chest](https://media.forgecdn.net/attachments/2028/261/feature-10-chest-png.png)
+![Wireless Chest](ENVIAR:feature-10-chest.png)
 
 ### Ars Nouveau Source
 
 With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Relays and the Imbuement Chamber connect straight to a router, so Source travels wirelessly between them like any other resource, at the Source/s of the router's tier.
 
-![Ars Nouveau Source](https://media.forgecdn.net/attachments/2028/262/feature-11-source-png.png)
+![Ars Nouveau Source](ENVIAR:feature-11-source.png)
 
 The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
 
-![Wireless Source Tank](https://media.forgecdn.net/attachments/2028/263/feature-12-source-tank-png.png)
+![Wireless Source Tank](ENVIAR:feature-12-source-tank.png)
 
 ### Tools for big builds
 
-![The toolkit](https://media.forgecdn.net/attachments/2028/265/feature-14-toolkit-png.png)
+![The toolkit](ENVIAR:feature-14-toolkit.png)
 
-![Link whole areas at once](https://media.forgecdn.net/attachments/2028/256/feature-5-area-png.png)
+![Link whole areas at once](ENVIAR:feature-5-area.png)
 
 - **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs you check (Items, Fluids, Energy and, with the optional mods, Chemicals and Source). Pick **None (unlink)** to take those tabs out of their network instead.
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste only touches routers on the **same kind of machine**, so you can configure a whole production line in a few clicks. Paste every tab or just one type (Shift + mouse wheel), leaving the other tabs alone.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 
-![Linker by type](https://media.forgecdn.net/attachments/2028/264/feature-13-linker-png.png)
+![Linker by type](ENVIAR:feature-13-linker.png)
 
 ### Network Tablet
 
-![Network Tablet](https://media.forgecdn.net/attachments/2028/257/feature-6-tablet-png.png)
+![Network Tablet](ENVIAR:feature-6-tablet.png)
 
 Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 
 ### Built-in guide book
 
-![Built-in guide book](https://media.forgecdn.net/attachments/2028/258/feature-7-guide-png.png)
+![Built-in guide book](ENVIAR:feature-7-guide.png)
 
 Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
 

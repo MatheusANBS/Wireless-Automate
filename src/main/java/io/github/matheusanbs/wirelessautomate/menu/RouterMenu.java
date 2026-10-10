@@ -189,7 +189,9 @@ public class RouterMenu extends AbstractContainerMenu {
                 : Component.literal(router.name());
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new RouterMenu(containerId, inventory, router, snapshot), title),
-                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot));
+                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot),
+                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot.withNetworks(List.of())),
+                id -> List.of(new RouterNetworksPayload(id, snapshot.networks())));
     }
 
     /** O roteador; só existe no servidor. */

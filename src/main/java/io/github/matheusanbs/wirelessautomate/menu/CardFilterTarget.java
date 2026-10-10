@@ -4,7 +4,9 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.FilterViewPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -45,7 +47,9 @@ public final class CardFilterTarget implements FilterTarget {
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, target, view),
                         stack.getHoverName()),
-                buf -> FilterView.STREAM_CODEC.encode(buf, view));
+                buf -> FilterView.STREAM_CODEC.encode(buf, view),
+                buf -> FilterView.STREAM_CODEC.encode(buf, view.reduced()),
+                id -> List.of(new FilterViewPayload(id, view)));
     }
 
     public InteractionHand hand() {

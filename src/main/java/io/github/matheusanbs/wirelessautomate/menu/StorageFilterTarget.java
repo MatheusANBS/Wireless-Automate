@@ -4,7 +4,9 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.FilterViewPayload;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,7 +26,9 @@ public record StorageFilterTarget(StorageBlockEntity storage) implements FilterT
                 storage.getBlockState().getBlock().getName());
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
-                buf -> FilterView.STREAM_CODEC.encode(buf, view));
+                buf -> FilterView.STREAM_CODEC.encode(buf, view),
+                buf -> FilterView.STREAM_CODEC.encode(buf, view.reduced()),
+                id -> List.of(new FilterViewPayload(id, view)));
     }
 
     @Override

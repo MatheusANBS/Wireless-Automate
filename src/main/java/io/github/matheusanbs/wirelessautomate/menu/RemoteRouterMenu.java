@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
+import io.github.matheusanbs.wirelessautomate.packet.RouterNetworksPayload;
+import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -30,7 +32,9 @@ public class RemoteRouterMenu extends RouterMenu {
                 : Component.literal(router.name());
         ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new RemoteRouterMenu(containerId, inventory, router, snapshot), title),
-                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot));
+                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot),
+                buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot.withNetworks(List.of())),
+                id -> List.of(new RouterNetworksPayload(id, snapshot.networks())));
     }
 
     @Override

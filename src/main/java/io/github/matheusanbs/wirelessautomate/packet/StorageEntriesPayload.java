@@ -15,11 +15,15 @@ import java.util.List;
  * Servidor → cliente: tipos do armazenamento da tela em lista aberta que mudaram (quantidade nova;
  * 0 = saiu) e o cabeçalho. A chave viaja pelo codec do tipo de armazenamento ({@link ListKind}):
  * item, fluido ou id de químico. Uma sincronização grande vai em vários pacotes de até
- * {@link #MAX_ENTRIES} tipos; só o primeiro leva {@code reset}.
+ * {@link #MAX_ENTRIES} tipos e cerca de {@link #MAX_BYTES} bytes (o 1.20.1 não divide pacotes e recusa os de
+ * mais de 1 MiB; pilhas com NBT grande, como caixas cheias, enchem um pacote rápido); só o primeiro leva
+ * {@code reset}.
  */
 public record StorageEntriesPayload(int containerId, StorageKind kind, boolean reset, StorageListView.Header header,
         List<StorageListView.Entry<Object>> entries) implements CustomPacketPayload {
     public static final int MAX_ENTRIES = 256;
+    /** Teto de bytes das entradas de um pacote (metade do 1 MiB do vanilla, com folga para o cabeçalho). */
+    public static final int MAX_BYTES = 512 * 1024;
     public static final Type<StorageEntriesPayload> TYPE = new Type<>(WirelessAutomate.id("storage_entries"));
     public static final StreamCodec<RegistryFriendlyByteBuf, StorageEntriesPayload> STREAM_CODEC =
             StreamCodec.of(StorageEntriesPayload::write, StorageEntriesPayload::read);

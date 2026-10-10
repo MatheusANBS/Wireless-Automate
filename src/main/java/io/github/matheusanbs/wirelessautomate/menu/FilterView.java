@@ -25,6 +25,14 @@ public record FilterView(ResourceType type, Optional<BlockPos> router, Optional<
         return router.isEmpty();
     }
 
+    /**
+     * A mesma visão sem as entradas do filtro: vai na abertura da tela quando a completa passa do teto do Forge
+     * ({@code ServerMenus}); as entradas chegam logo depois num {@code FilterViewPayload}.
+     */
+    public FilterView reduced() {
+        return new FilterView(type, router, face, filter.cleared(), hasCard);
+    }
+
     public static final StreamCodec<RegistryFriendlyByteBuf, FilterView> STREAM_CODEC = StreamCodec.composite(
             NeoForgeStreamCodecs.enumCodec(ResourceType.class), FilterView::type,
             ByteBufCodecs.optional(GameCodecs.BLOCK_POS), FilterView::router,

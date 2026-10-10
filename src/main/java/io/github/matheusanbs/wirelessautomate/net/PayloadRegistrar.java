@@ -1,5 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.net;
 
+import com.mojang.logging.LogUtils;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import java.util.ArrayList;
@@ -13,6 +16,8 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * Registro dos pacotes do mod. Imita o {@code net.neoforged.neoforge.network.registration.PayloadRegistrar}
@@ -28,11 +33,24 @@ import net.minecraftforge.network.simple.SimpleChannel;
  * classe de cada payload (o {@link CustomPacketPayload.Type} do 1.21 só tem o id) e não tem o teto de 256
  * mensagens do discriminador de um byte do {@code SimpleChannel}.
  *
+ * <p><b>Tamanho:</b> o 1.20.1 não divide pacotes grandes como o NeoForge 1.21. O vanilla recusa um pacote do
+ * servidor acima de 1 MiB (exceção no envio) e o servidor derruba o cliente que manda mais de 32767 bytes. Por
+ * isso cada payload é codificado uma vez, no envio ({@link PacketDistributor}), e medido: acima de
+ * {@link #MAX_TO_CLIENT} ou {@link #MAX_TO_SERVER} ele não sai, com um aviso no log (a ação se perde, a conexão
+ * fica). Os bytes medidos vão no envelope, sem codificar de novo. Quem pode passar do teto em uso normal manda
+ * em lotes menores (a lista do Baú) ou reduz os dados (a abertura das telas, {@link ServerMenus}).
+ *
  * <p>Os handlers rodam na thread principal ({@code consumerMainThread}, que também marca o pacote como
  * tratado), como o padrão {@code HandlerThread.MAIN} do NeoForge. A versão do canal é a do registrador,
  * aceita só igual dos dois lados.
  */
 public final class PayloadRegistrar {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    /** Teto de um payload servidor → cliente: o 1 MiB do vanilla menos uma folga para o discriminador do canal. */
+    public static final int MAX_TO_CLIENT = 1048576 - 64;
+    /** Teto de um payload cliente → servidor: os 32767 bytes do vanilla menos a folga. */
+    public static final int MAX_TO_SERVER = 32767 - 64;
+
     private final String version;
     private final List<Entry<?>> toServer = new ArrayList<>();
     private final List<Entry<?>> toClient = new ArrayList<>();
@@ -65,17 +83,22 @@ public final class PayloadRegistrar {
         SimpleChannel channel = NetworkRegistry.newSimpleChannel(name, () -> version, version::equals,
                 version::equals);
         channel.messageBuilder(ToServer.class, 0, NetworkDirection.PLAY_TO_SERVER)
-                .encoder((message, buf) -> encode(serverById, message.payload(), buf))
-                .decoder(buf -> new ToServer(decode(toServer, buf)))
+                .encoder((message, buf) -> write(serverById, message.payload(), message.encoded(), buf))
+                .decoder(buf -> new ToServer(decode(toServer, buf), null))
                 .consumerMainThread((message, context) -> handle(serverById, message.payload(), context))
                 .add();
         channel.messageBuilder(ToClient.class, 1, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder((message, buf) -> encode(clientById, message.payload(), buf))
-                .decoder(buf -> new ToClient(decode(toClient, buf)))
+                .encoder((message, buf) -> write(clientById, message.payload(), message.encoded(), buf))
+                .decoder(buf -> new ToClient(decode(toClient, buf), null))
                 .consumerMainThread((message, context) -> handle(clientById, message.payload(), context))
                 .add();
-        PacketDistributor.bind(channel, payload -> new ToServer(checked(serverById, payload)),
-                payload -> new ToClient(checked(clientById, payload)));
+        PacketDistributor.bind(channel, payload -> {
+            ByteBuf encoded = measured(serverById, payload, MAX_TO_SERVER, "cliente → servidor");
+            return encoded == null ? null : new ToServer(payload, encoded);
+        }, payload -> {
+            ByteBuf encoded = measured(clientById, payload, MAX_TO_CLIENT, "servidor → cliente");
+            return encoded == null ? null : new ToClient(payload, encoded);
+        });
         return channel;
     }
 
@@ -90,11 +113,33 @@ public final class PayloadRegistrar {
         byId.put(type.id(), entry);
     }
 
-    private static CustomPacketPayload checked(Map<ResourceLocation, Entry<?>> byId, CustomPacketPayload payload) {
+    /**
+     * O payload codificado (índice + corpo), ou {@code null} com um aviso no log se passa de {@code max}. Um
+     * payload não registrado nessa direção é {@link IllegalArgumentException}, como no NeoForge.
+     */
+    private static @Nullable ByteBuf measured(Map<ResourceLocation, Entry<?>> byId, CustomPacketPayload payload,
+            int max, String direction) {
         if (!byId.containsKey(payload.type().id())) {
             throw new IllegalArgumentException("Pacote não registrado nessa direção: " + payload.type().id());
         }
-        return payload;
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        encode(byId, payload, buf);
+        if (buf.readableBytes() > max) {
+            LOGGER.warn("Pacote {} ({}) com {} bytes passa do teto de {}; não foi enviado", payload.type().id(),
+                    direction, buf.readableBytes(), max);
+            return null;
+        }
+        return buf;
+    }
+
+    /** Os bytes já medidos no envio; sem eles (quem usa o canal direto), codifica aqui. */
+    private static void write(Map<ResourceLocation, Entry<?>> byId, CustomPacketPayload payload,
+            @Nullable ByteBuf encoded, FriendlyByteBuf buf) {
+        if (encoded != null) {
+            buf.writeBytes(encoded, encoded.readerIndex(), encoded.readableBytes());
+        } else {
+            encode(byId, payload, buf);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -134,11 +179,11 @@ public final class PayloadRegistrar {
             IPayloadHandler<T> handler) {
     }
 
-    /** Envelope cliente → servidor. */
-    public record ToServer(CustomPacketPayload payload) {
+    /** Envelope cliente → servidor; {@code encoded} são os bytes medidos no envio (nulo no recebido). */
+    public record ToServer(CustomPacketPayload payload, @Nullable ByteBuf encoded) {
     }
 
-    /** Envelope servidor → cliente. */
-    public record ToClient(CustomPacketPayload payload) {
+    /** Envelope servidor → cliente; {@code encoded} são os bytes medidos no envio (nulo no recebido). */
+    public record ToClient(CustomPacketPayload payload, @Nullable ByteBuf encoded) {
     }
 }

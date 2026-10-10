@@ -177,7 +177,9 @@ public class TabletMenu extends AbstractContainerMenu {
             created[0] = new TabletMenu(containerId, inventory, player);
             return created[0];
         }, Component.translatable("item.wirelessautomate.network_tablet")),
-                buf -> TabletSnapshot.STREAM_CODEC.encode(buf, created[0].snapshot));
+                buf -> TabletSnapshot.STREAM_CODEC.encode(buf, created[0].snapshot),
+                buf -> TabletSnapshot.STREAM_CODEC.encode(buf, created[0].snapshot.withPage(TabletSnapshot.Page.EMPTY)),
+                id -> List.of(new TabletPagePayload(id, created[0].snapshot.page())));
     }
 
     /** O jogador tem um Tablet no inventário (mochila, barra, armadura ou mão secundária). */

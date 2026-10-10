@@ -9,6 +9,11 @@ import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeJson;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeSlot;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderException;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorSnapshot;
+import io.github.matheusanbs.wirelessautomate.packet.RecipeEditorActionPayload;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +21,8 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -190,6 +197,17 @@ public final class RecipeEditorGameTests {
             helper.assertTrue(RecipeEditor.setDisabled(server, special, true).isPresent(),
                     "desativar id especial deve dar erro");
 
+            ResourceLocation escape = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID, "../../escape");
+            boolean threw = false;
+            try {
+                RecipeOverridePack.recipeFile(escape);
+            } catch (IllegalArgumentException e) {
+                threw = true;
+            }
+            helper.assertTrue(threw, "recipeFile deve recusar um id que sai da pasta");
+            helper.assertTrue(RecipeEditor.save(server, escape, base).isPresent(), "id fora da pasta deve dar erro");
+            helper.assertTrue(RecipeEditor.setDisabled(server, escape, true).isPresent(), "desativar id fora da pasta deve dar erro");
+            helper.assertTrue(RecipeEditor.restore(server, escape).isPresent(), "restaurar id fora da pasta deve dar erro");
             helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "nada gravado para " + id);
             helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(special)), "nada gravado para " + special);
             helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(configurator)), "nada gravado para " + configurator);
@@ -222,6 +240,78 @@ public final class RecipeEditorGameTests {
                 "a condição mod_loaded deve ser mantida: " + conditions);
         helper.assertFalse(conditions.contains(RecipeJson.FALSE_CONDITION), "sem neoforge:false");
         helper.assertValueEqual(out.getAsJsonObject("result").get("count").getAsInt(), 2, "count do override");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void actionNeedsOperator(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation id = id("chunk_loader_upgrade");
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            helper.assertFalse(player.hasPermissions(2), "o jogador de teste não deve ser operador");
+            RecipeDraft draft = require(server, id).current().withCount(2);
+            RecipeEditorActionPayload save = RecipeEditorActionPayload.save(id, draft);
+
+            // Sem o editor aberto.
+            RecipeEditorActionPayload.handle(player, save);
+            helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "sem menu aberto nada é gravado");
+
+            // Com o editor aberto, mas sem permissão.
+            player.containerMenu = new RecipeEditorMenu(1, player.getInventory(), RecipeEditorSnapshot.of(server));
+            RecipeEditorActionPayload.handle(player, save);
+            RecipeEditorActionPayload.handle(player, RecipeEditorActionPayload.of(
+                    RecipeEditorActionPayload.Action.DISABLE, id));
+            helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "sem permissão nada é gravado");
+            helper.assertFalse(new RecipeEditorMenu(2, player.getInventory(), RecipeEditorSnapshot.of(server))
+                    .stillValid(player), "o menu não vale sem permissão");
+        } finally {
+            clean(id);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void snapshotRoundTrip(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        RecipeEditorSnapshot snapshot = RecipeEditorSnapshot.of(server);
+        helper.assertFalse(snapshot.rows().isEmpty(), "o snapshot deve ter receitas");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), server.registryAccess());
+        RecipeEditorSnapshot.STREAM_CODEC.encode(buf, snapshot);
+        helper.assertValueEqual(RecipeEditorSnapshot.STREAM_CODEC.decode(buf), snapshot, "snapshot decodificado");
+        helper.assertValueEqual(buf.readableBytes(), 0, "bytes que sobraram");
+
+        RecipeDraft draft = snapshot.rows().get(0).current();
+        RegistryFriendlyByteBuf draftBuf = new RegistryFriendlyByteBuf(Unpooled.buffer(), server.registryAccess());
+        RecipeEditorActionPayload.STREAM_CODEC.encode(draftBuf,
+                RecipeEditorActionPayload.save(snapshot.rows().get(0).id(), draft));
+        RecipeEditorActionPayload back = RecipeEditorActionPayload.STREAM_CODEC.decode(draftBuf);
+        helper.assertValueEqual(back.draft(), draft, "rascunho da ação");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void snapshotClampsCount(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), server.registryAccess());
+        RecipeEditorSnapshot.DRAFT_CODEC.encode(buf, RecipeDraft.fromShapeless(List.of(RecipeSlot.item("minecraft:stick")), 5));
+        // Troca o count (penúltimo varint, antes do boolean) por um valor fora do limite.
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.getBytes(buf.readerIndex(), bytes);
+        bytes[bytes.length - 2] = 100;
+        RegistryFriendlyByteBuf edited = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(bytes), server.registryAccess());
+        helper.assertValueEqual(RecipeEditorSnapshot.DRAFT_CODEC.decode(edited).count(), RecipeDraft.MAX_COUNT,
+                "count preso a 64");
+        byte[] bad = bytes.clone();
+        bad[0] = 9;
+        boolean threw = false;
+        try {
+            RecipeEditorSnapshot.DRAFT_CODEC.decode(new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(bad),
+                    server.registryAccess()));
+        } catch (DecoderException e) {
+            threw = true;
+        }
+        helper.assertTrue(threw, "forma inválida deve dar DecoderException");
         helper.succeed();
     }
 }

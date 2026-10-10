@@ -2,11 +2,11 @@ package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import java.util.List;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Servidor → cliente: as redes do seletor da tela do roteador aberta mudaram. Vão à parte do

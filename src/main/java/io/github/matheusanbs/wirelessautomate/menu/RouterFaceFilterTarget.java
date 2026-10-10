@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
         Component title = Component.translatable("container.wirelessautomate.filter.face",
                 FilterCardItem.typeName(type),
                 Component.translatable("gui.wirelessautomate.router.face." + face.getName()));
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
                 buf -> FilterView.STREAM_CODEC.encode(buf, view));
     }

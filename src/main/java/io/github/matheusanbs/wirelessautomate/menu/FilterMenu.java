@@ -8,15 +8,15 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.FilterViewPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Optional;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.fluids.FluidUtil;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -160,7 +160,7 @@ public class FilterMenu extends AbstractContainerMenu {
         if (changed != null && viewer != null) {
             FilterViewPayload payload = new FilterViewPayload(containerId, changed);
             // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
-            if (viewer.connection != null && viewer.connection.hasChannel(payload)) {
+            if (viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
                 PacketDistributor.sendToPlayer(viewer, payload);
             }
         }

@@ -2,10 +2,10 @@ package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 
 /** Cliente → servidor: busca, filtro por papel ou página da lista do Tablet aberto. */
 public record TabletQueryPayload(int containerId, TabletSnapshot.Query query) implements CustomPacketPayload {

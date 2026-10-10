@@ -3,13 +3,13 @@ package io.github.matheusanbs.wirelessautomate.packet;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.ListKind;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListView;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Servidor → cliente: tipos do armazenamento da tela em lista aberta que mudaram (quantidade nova;

@@ -1,11 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenCustomHashMap;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 
 /**
  * O que a tela em lista mostra, no cliente: os tipos com a quantidade, montados a partir das

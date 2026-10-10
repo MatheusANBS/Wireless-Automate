@@ -38,6 +38,11 @@ import net.minecraftforge.fluids.FluidStack;
  * 127). {@link #ITEM_STACK} grava como o 1.21: a contagem em VarInt, o item pelo id do registro e o NBT de
  * compartilhamento ({@code getShareTag}/{@code readShareTag}, o mesmo do {@code writeItem}); serve para as
  * pilhas do Baú com contagem acima de 127.
+ *
+ * <p><b>Pilha como chave:</b> o share tag pode ser só parte do NBT (um mod que sobrescreve o {@code getShareTag}
+ * para esconder ou encurtar dados). Onde a pilha é chave que volta ao servidor e precisa casar com a do
+ * servidor (a lista do Baú, as entradas de item do filtro), use {@link #EXACT_ITEM_STACK}, que manda o NBT
+ * inteiro ({@code getTag}), como o 1.21 manda todos os componentes.
  */
 public final class GameCodecs {
     /** Pilha não vazia (vazia é erro, como no 1.21). */
@@ -57,6 +62,36 @@ public final class GameCodecs {
                 throw new EncoderException("Empty ItemStack not allowed");
             }
             writeItem(buffer, value);
+        }
+    };
+
+    /**
+     * Pilha não vazia com o NBT inteiro ({@code getTag}/{@code setTag}), sem o share tag: para pilhas que são
+     * chave (vão ao cliente e voltam, ou o cliente manda como entrada exata de filtro).
+     */
+    public static final StreamCodec<RegistryFriendlyByteBuf, ItemStack> EXACT_ITEM_STACK = new StreamCodec<>() {
+        @Override
+        public ItemStack decode(RegistryFriendlyByteBuf buffer) {
+            int count = ByteBufCodecs.Bufs.readVarInt(buffer);
+            if (count <= 0) {
+                throw new DecoderException("Empty ItemStack not allowed");
+            }
+            ItemStack stack = new ItemStack(buffer.readById(BuiltInRegistries.ITEM), count);
+            stack.setTag(buffer.readNbt());
+            if (stack.isEmpty()) {
+                throw new DecoderException("Empty ItemStack not allowed");
+            }
+            return stack;
+        }
+
+        @Override
+        public void encode(RegistryFriendlyByteBuf buffer, ItemStack value) {
+            if (value.isEmpty()) {
+                throw new EncoderException("Empty ItemStack not allowed");
+            }
+            ByteBufCodecs.Bufs.writeVarInt(buffer, value.getCount());
+            buffer.writeId(BuiltInRegistries.ITEM, value.getItem());
+            buffer.writeNbt(value.getTag());
         }
     };
 

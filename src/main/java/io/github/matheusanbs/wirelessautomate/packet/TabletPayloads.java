@@ -1,10 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PayloadRegistrar;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.jetbrains.annotations.Nullable;
 
 /**

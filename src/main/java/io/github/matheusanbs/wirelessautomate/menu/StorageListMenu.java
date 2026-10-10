@@ -1,6 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.packet.StorageActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.StorageEntriesPayload;
@@ -18,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -31,12 +35,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.FluidActionResult;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.fluids.FluidActionResult;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidUtil;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -78,7 +80,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     /** Cliente: o buffer de abertura traz o tipo e a posição; os tipos chegam pelos {@link StorageEntriesPayload}. */
     public static StorageListMenu<?> fromNetwork(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
         StorageKind kind = buf.readEnum(StorageKind.class);
-        return new StorageListMenu<>(containerId, inventory, ListKind.of(kind), BlockPos.STREAM_CODEC.decode(buf), null);
+        return new StorageListMenu<>(containerId, inventory, ListKind.of(kind), GameCodecs.BLOCK_POS.decode(buf), null);
     }
 
     /** Cliente (e a captura de tela de desenvolvimento). */
@@ -99,12 +101,12 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     }
 
     public static void open(ServerPlayer player, KeyedStorageBlockEntity<?> storage) {
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new StorageListMenu<>(containerId, inventory, storage),
                         storage.getBlockState().getBlock().getName()),
                 buf -> {
                     buf.writeEnum(storage.kind());
-                    BlockPos.STREAM_CODEC.encode(buf, storage.getBlockPos());
+                    GameCodecs.BLOCK_POS.encode(buf, storage.getBlockPos());
                 });
     }
 
@@ -293,7 +295,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             StorageEntriesPayload payload = new StorageEntriesPayload(containerId, kind.storage,
                     sync.reset() && from == 0, sync.header(), part);
             // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
-            if (viewer.connection != null && viewer.connection.hasChannel(payload)) {
+            if (viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
                 PacketDistributor.sendToPlayer(viewer, payload);
             }
             from = to;
@@ -345,7 +347,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         switch (action) {
             case TAKE_STACK, TAKE_HALF -> {
                 long present = key.isEmpty() ? 0 : items.count(key);
-                if (present <= 0 || !carried.isEmpty() && !ItemStack.isSameItemSameComponents(carried, key)) {
+                if (present <= 0 || !carried.isEmpty() && !ItemStack.isSameItemSameTags(carried, key)) {
                     return false;
                 }
                 int max = key.getMaxStackSize();
@@ -397,7 +399,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             }
             case INSERT_ONE_FROM_INVENTORY -> {
                 Slot from = key.isEmpty() ? null : slots.stream()
-                        .filter(s -> s.mayPickup(player) && ItemStack.isSameItemSameComponents(s.getItem(), key))
+                        .filter(s -> s.mayPickup(player) && ItemStack.isSameItemSameTags(s.getItem(), key))
                         .findFirst().orElse(null);
                 if (from == null || items.insert(from.getItem(), 1, false) <= 0) {
                     return false;
@@ -557,7 +559,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 break;
             }
             ItemStack there = inventory.getItem(slot);
-            int max = Math.min(stack.getMaxStackSize(), inventory.getMaxStackSize(stack));
+            int max = Math.min(stack.getMaxStackSize(), inventory.getMaxStackSize());
             int moving = Math.min(stack.getCount(), there.isEmpty() ? max : max - there.getCount());
             if (moving <= 0) {
                 break;
@@ -585,7 +587,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
 
         @Override
         public FluidStack getFluidInTank(int tank) {
-            return key.copyWithAmount((int) Math.min(storage.count(key), Integer.MAX_VALUE));
+            return new FluidStack(key, (int) Math.min(storage.count(key), Integer.MAX_VALUE));
         }
 
         @Override
@@ -605,13 +607,13 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
 
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            return FluidStack.isSameFluidSameComponents(resource, key) ? drain(resource.getAmount(), action) : FluidStack.EMPTY;
+            return resource.isFluidEqual(key) ? drain(resource.getAmount(), action) : FluidStack.EMPTY;
         }
 
         @Override
         public FluidStack drain(int maxDrain, FluidAction action) {
             long taken = storage.extract(key, maxDrain, action.simulate());
-            return taken <= 0 ? FluidStack.EMPTY : key.copyWithAmount((int) taken);
+            return taken <= 0 ? FluidStack.EMPTY : new FluidStack(key, (int) taken);
         }
     }
 

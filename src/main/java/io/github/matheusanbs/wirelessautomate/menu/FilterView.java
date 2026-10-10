@@ -1,14 +1,15 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * O que a tela de filtro mostra. Filtro de uma face de roteador ({@code router} e {@code face}
@@ -26,8 +27,8 @@ public record FilterView(ResourceType type, Optional<BlockPos> router, Optional<
 
     public static final StreamCodec<RegistryFriendlyByteBuf, FilterView> STREAM_CODEC = StreamCodec.composite(
             NeoForgeStreamCodecs.enumCodec(ResourceType.class), FilterView::type,
-            ByteBufCodecs.optional(BlockPos.STREAM_CODEC), FilterView::router,
-            ByteBufCodecs.optional(Direction.STREAM_CODEC), FilterView::face,
+            ByteBufCodecs.optional(GameCodecs.BLOCK_POS), FilterView::router,
+            ByteBufCodecs.optional(GameCodecs.DIRECTION), FilterView::face,
             Filter.STREAM_CODEC, FilterView::filter,
             ByteBufCodecs.BOOL, FilterView::hasCard,
             FilterView::new);

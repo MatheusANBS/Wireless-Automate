@@ -7,13 +7,16 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Objects;
 import java.util.Optional;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerChunkCache;
@@ -25,8 +28,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -123,7 +124,7 @@ public class LinkerMenu extends AbstractContainerMenu {
     /** Abre a tela do Vinculador que está na mão {@code hand}. */
     public static void open(ServerPlayer player, InteractionHand hand) {
         LinkerSnapshot snapshot = LinkerSnapshot.capture(player, player.getItemInHand(hand), null);
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new LinkerMenu(containerId, inventory, hand, snapshot),
                         Component.translatable("item.wirelessautomate.linker")),
                 buf -> {
@@ -192,7 +193,7 @@ public class LinkerMenu extends AbstractContainerMenu {
         if (changed != null && viewer != null && viewer.connection != null) {
             LinkerSnapshotPayload payload = new LinkerSnapshotPayload(containerId, changed);
             // Jogadores falsos (GameTests) não negociam os canais do mod.
-            if (viewer.connection.hasChannel(payload)) {
+            if (PacketDistributor.hasChannel(viewer.connection, payload)) {
                 PacketDistributor.sendToPlayer(viewer, payload);
             }
         }

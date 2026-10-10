@@ -1,28 +1,29 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
 import io.github.matheusanbs.wirelessautomate.storage.FluidStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import it.unimi.dsi.fastutil.Hash;
 import java.util.function.UnaryOperator;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackLinkedSet;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Como a tela em lista trata a chave de cada armazenamento por tipo: como ela viaja na rede, como
  * se compara e como se copia. Itens no Baú, fluidos no Tanque, ids de químico no Tanque Químico.
  */
 public final class ListKind<K> {
-    public static final ListKind<ItemStack> ITEMS = new ListKind<>(StorageKind.CHEST, ItemStack.STREAM_CODEC,
+    public static final ListKind<ItemStack> ITEMS = new ListKind<>(StorageKind.CHEST, GameCodecs.EXACT_ITEM_STACK,
             ItemStackLinkedSet.TYPE_AND_TAG, ItemStack::copy);
-    public static final ListKind<FluidStack> FLUIDS = new ListKind<>(StorageKind.TANK, FluidStack.STREAM_CODEC,
+    public static final ListKind<FluidStack> FLUIDS = new ListKind<>(StorageKind.TANK, GameCodecs.FLUID_STACK,
             FluidStorage.FLUID_AND_COMPONENTS, FluidStack::copy);
     public static final ListKind<ResourceLocation> CHEMICALS = new ListKind<>(StorageKind.CHEMICAL_TANK,
-            ResourceLocation.STREAM_CODEC, ChemicalStorage.IDS, id -> id);
+            GameCodecs.RESOURCE_LOCATION, ChemicalStorage.IDS, id -> id);
 
     public final StorageKind storage;
     public final StreamCodec<? super RegistryFriendlyByteBuf, K> codec;

@@ -4,6 +4,9 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -17,17 +20,16 @@ import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackLinkedSet;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
 
 /**
  * Tudo que a tela do roteador mostra, montado no servidor e enviado ao cliente só com a tela
@@ -93,7 +95,7 @@ public record RouterSnapshot(
     @Override
     public int hashCode() {
         return java.util.Objects.hash(pos, name, tier, facing, typeNetworks, networks, powered,
-                ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad);
+                ItemStackLinkedSet.TYPE_AND_TAG.hashCode(machine), machine.getCount(), machineState, faces, chunkLoad);
     }
 
     /**
@@ -244,7 +246,7 @@ public record RouterSnapshot(
             buf.writeOptional(network, (b, id) -> b.writeUUID(id));
         }
         buf.writeBoolean(s.powered);
-        ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.machine);
+        GameCodecs.OPTIONAL_ITEM_STACK.encode(buf, s.machine);
         buf.writeVarInt(Block.getId(s.machineState));
         buf.writeVarInt(s.faces.size());
         for (FaceView face : s.faces) {
@@ -269,7 +271,7 @@ public record RouterSnapshot(
             typeNetworks.add(buf.readOptional(b -> b.readUUID()));
         }
         boolean powered = buf.readBoolean();
-        ItemStack machine = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+        ItemStack machine = GameCodecs.OPTIONAL_ITEM_STACK.decode(buf);
         BlockState machineState = Block.stateById(buf.readVarInt());
         int faceCount = buf.readVarInt();
         List<FaceView> faces = new ArrayList<>(faceCount);

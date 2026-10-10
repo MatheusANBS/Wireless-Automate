@@ -2,10 +2,10 @@ package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 
 /**
  * Cliente → servidor: acrescenta ao filtro da tela aberta um item ou fluido exato que o jogador não

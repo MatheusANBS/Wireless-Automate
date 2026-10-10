@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
 import java.util.Optional;
@@ -21,7 +22,7 @@ public record StorageFilterTarget(StorageBlockEntity storage) implements FilterT
         FilterView view = view(player);
         Component title = Component.translatable("container.wirelessautomate.filter.chest",
                 storage.getBlockState().getBlock().getName());
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
                 buf -> FilterView.STREAM_CODEC.encode(buf, view));
     }

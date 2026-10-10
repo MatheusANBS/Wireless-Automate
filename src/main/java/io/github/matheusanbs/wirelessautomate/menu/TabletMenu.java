@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -39,15 +40,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -55,7 +56,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -172,7 +173,7 @@ public class TabletMenu extends AbstractContainerMenu {
     /** Abre o Tablet para o jogador; o snapshot inicial vai no buffer de abertura. */
     public static void open(ServerPlayer player) {
         TabletMenu[] created = new TabletMenu[1];
-        player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> {
+        ServerMenus.openMenu(player, new SimpleMenuProvider((containerId, inventory, p) -> {
             created[0] = new TabletMenu(containerId, inventory, player);
             return created[0];
         }, Component.translatable("item.wirelessautomate.network_tablet")),
@@ -260,7 +261,7 @@ public class TabletMenu extends AbstractContainerMenu {
 
     private void send(CustomPacketPayload payload) {
         // Jogadores falsos (GameTests) não negociam os canais do mod.
-        if (viewer != null && viewer.connection != null && viewer.connection.hasChannel(payload)) {
+        if (viewer != null && viewer.connection != null && PacketDistributor.hasChannel(viewer.connection, payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
         }
     }
@@ -930,7 +931,7 @@ public class TabletMenu extends AbstractContainerMenu {
 
     /** Nome sem caracteres inválidos e sem espaços nas pontas, de 1 a {@link WaCommand#MAX_NAME_LENGTH}; senão {@code null}. */
     public static @Nullable String cleanName(String text) {
-        String name = StringUtil.filterText(text).strip();
+        String name = SharedConstants.filterText(text).strip();
         return name.isEmpty() || name.length() > WaCommand.MAX_NAME_LENGTH ? null : name;
     }
 }

@@ -1,14 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.net.ByteBufCodecs;
+import io.github.matheusanbs.wirelessautomate.net.CustomPacketPayload;
+import io.github.matheusanbs.wirelessautomate.net.GameCodecs;
+import io.github.matheusanbs.wirelessautomate.net.NeoForgeStreamCodecs;
+import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
+import io.github.matheusanbs.wirelessautomate.net.StreamCodec;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * Cliente → servidor: uma ação na tela do Vinculador aberta ({@code containerId}).
@@ -44,7 +44,7 @@ public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network
     public static final StreamCodec<RegistryFriendlyByteBuf, LinkerActionPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, LinkerActionPayload::containerId,
             NeoForgeStreamCodecs.enumCodec(Op.class), LinkerActionPayload::op,
-            ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC), LinkerActionPayload::network,
+            ByteBufCodecs.optional(GameCodecs.UUID), LinkerActionPayload::network,
             ByteBufCodecs.stringUtf8(MAX_NAME_LENGTH * 4), LinkerActionPayload::text,
             ByteBufCodecs.VAR_INT, LinkerActionPayload::value,
             LinkerActionPayload::new);

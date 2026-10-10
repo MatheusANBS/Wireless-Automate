@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
@@ -17,6 +18,8 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
+import io.github.matheusanbs.wirelessautomate.net.IPayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PayloadRegistrar;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -33,17 +36,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Registro dos pacotes do mod e os handlers. Código comum: os handlers do cliente só mexem no
  * {@link RouterMenu} e no {@link FilterMenu}, sem classes de tela.
  *
- * <p>Os handlers rodam na thread principal (o padrão do {@link PayloadRegistrar} é
- * {@code HandlerThread.MAIN}). Os do servidor só agem se o jogador está com a tela daquele roteador
+ * <p>Os handlers rodam na thread principal (o {@link PayloadRegistrar} registra no {@code SimpleChannel}
+ * com {@code consumerMainThread}). Os do servidor só agem se o jogador está com a tela daquele roteador
  * aberta ({@code containerId} igual e {@link RouterMenu#stillValid}) e validam os valores; depois de
  * aplicar, o {@link RouterMenu#broadcastChanges()} do próprio menu manda o snapshot novo. A tela
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
@@ -52,8 +53,13 @@ public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
     public static final String VERSION = "11";
 
-    public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar(VERSION);
+    /**
+     * Cria o canal do mod ({@code wirelessautomate:main}, versão {@link #VERSION}, aceita só igual dos dois
+     * lados) com todos os pacotes. No {@code FMLCommonSetupEvent}: o Forge fecha o registro de canais depois
+     * dele ({@code NETWORK_LOCK}), antes de qualquer conexão.
+     */
+    public static void register(FMLCommonSetupEvent event) {
+        PayloadRegistrar registrar = new PayloadRegistrar(VERSION);
         registrar.playToClient(RouterSnapshotPayload.TYPE, RouterSnapshotPayload.STREAM_CODEC,
                 ModPayloads::onSnapshot);
         registrar.playToClient(RouterNetworksPayload.TYPE, RouterNetworksPayload.STREAM_CODEC,
@@ -95,6 +101,7 @@ public final class ModPayloads {
         registrar.playToClient(ScalarStatePayload.TYPE, ScalarStatePayload.STREAM_CODEC, StorageScalarMenu::onState);
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
+        registrar.register(WirelessAutomate.id("main"));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

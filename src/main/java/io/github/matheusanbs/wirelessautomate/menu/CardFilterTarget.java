@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.Optional;
@@ -30,7 +31,7 @@ public final class CardFilterTarget implements FilterTarget {
         this.hand = hand;
         this.stack = player.getItemInHand(hand);
         this.type = FilterCardItem.contents(stack).type();
-        this.seen = stack.get(ModDataComponents.CARD_FILTER.get());
+        this.seen = ModDataComponents.CARD_FILTER.get(stack);
     }
 
     /** Abre a tela de filtro do cartão na mão {@code hand}, se houver um. */
@@ -41,7 +42,7 @@ public final class CardFilterTarget implements FilterTarget {
         }
         CardFilterTarget target = new CardFilterTarget(player, hand);
         FilterView view = target.view(player);
-        player.openMenu(new SimpleMenuProvider(
+        ServerMenus.openMenu(player, new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, target, view),
                         stack.getHoverName()),
                 buf -> FilterView.STREAM_CODEC.encode(buf, view));
@@ -81,7 +82,7 @@ public final class CardFilterTarget implements FilterTarget {
 
     @Override
     public int version() {
-        Object current = stack.get(ModDataComponents.CARD_FILTER.get());
+        Object current = ModDataComponents.CARD_FILTER.get(stack);
         if (current != seen) {
             seen = current;
             version++;

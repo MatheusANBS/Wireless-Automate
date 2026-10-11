@@ -23,6 +23,8 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -51,7 +53,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "12";
+    public static final String VERSION = "13";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -74,6 +76,13 @@ public final class ModPayloads {
                 (payload, context) -> handleEditFilter(serverPlayer(context), payload));
         registrar.playToServer(SelectFacePayload.TYPE, SelectFacePayload.STREAM_CODEC,
                 (payload, context) -> handleSelectFace(serverPlayer(context), payload));
+        // Roteador de alcance: alvo de edição, voltar ao perfil e desvincular pela tela.
+        registrar.playToServer(SelectTargetPayload.TYPE, SelectTargetPayload.STREAM_CODEC,
+                (payload, context) -> handleSelectTarget(serverPlayer(context), payload));
+        registrar.playToServer(RevertMachinePayload.TYPE, RevertMachinePayload.STREAM_CODEC,
+                (payload, context) -> handleRevertMachine(serverPlayer(context), payload));
+        registrar.playToServer(UnlinkMachinePayload.TYPE, UnlinkMachinePayload.STREAM_CODEC,
+                (payload, context) -> handleUnlinkMachine(serverPlayer(context), payload));
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
@@ -145,15 +154,66 @@ public final class ModPayloads {
 
     // Servidor. Públicos para os GameTests; devolvem se aplicaram.
 
-    /** Configura uma face. Recusa químicos sem o Mekanism e limita a prioridade. */
+    /**
+     * Configura uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina
+     * remota). Recusa químicos sem o Mekanism, limita a prioridade e ignora a ação se o alvo deixou de
+     * existir ({@link RouterMenu#actionTarget()}).
+     */
     public static boolean handleSetFace(@Nullable ServerPlayer player, SetFacePayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
         if (router == null || !LoadedTypes.contains(payload.resource())) {
             return false;
         }
+        EditTarget target = openMenu(player, payload.containerId()).actionTarget();
+        if (target == null) {
+            return false;
+        }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);
-        router.configureFace(payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
+        router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
         return true;
+    }
+
+    /**
+     * Troca o alvo de edição da tela. Um grupo precisa existir com o mesmo bloco; uma máquina, estar no
+     * mesmo índice com a mesma posição; os dois só com o Upgrade de Alcance valendo. Um alvo inválido é
+     * ignorado (o menu fica no que estava).
+     */
+    public static boolean handleSelectTarget(@Nullable ServerPlayer player, SelectTargetPayload payload) {
+        RouterMenu menu = openMenu(player, payload.containerId());
+        if (router(player, payload.containerId()) == null || menu == null) {
+            return false;
+        }
+        return menu.selectTarget(new EditTarget(payload.kind(), payload.id()), payload.machinePos().orElse(null),
+                payload.block().orElse(null));
+    }
+
+    /** Voltar ao perfil: tira a exceção da máquina remota {@code index}, se ela ainda está na posição {@code pos}. */
+    public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
+        RouterBlockEntity router = router(player, payload.containerId());
+        if (router == null || !sameMachine(router, payload.index(), payload.pos())) {
+            return false;
+        }
+        return router.revertToProfile(payload.index());
+    }
+
+    /**
+     * Desvincula a máquina remota {@code index}, se ela ainda está na posição {@code pos}; os cartões de
+     * um grupo que esvazia caem no roteador. A máquina presa não tem índice e não sai por aqui.
+     */
+    public static boolean handleUnlinkMachine(@Nullable ServerPlayer player, UnlinkMachinePayload payload) {
+        RouterBlockEntity router = router(player, payload.containerId());
+        if (router == null || !sameMachine(router, payload.index(), payload.pos())) {
+            return false;
+        }
+        boolean unlinked = router.unlinkMachine(payload.index());
+        // Os índices depois dela mudaram: o alvo segue pela posição, ou volta para a presa.
+        openMenu(player, payload.containerId()).validTarget();
+        return unlinked;
+    }
+
+    private static boolean sameMachine(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
+        RemoteMachine machine = router.remoteMachines().machine(index);
+        return machine != null && machine.pos().equals(pos);
     }
 
     /**
@@ -270,7 +330,11 @@ public final class ModPayloads {
         if (router == null || !RouterFaceFilterTarget.hasFilter(payload.resource())) {
             return false;
         }
-        new RouterFaceFilterTarget(router, payload.resource(), payload.face()).open(player);
+        RouterMenu menu = openMenu(player, payload.containerId());
+        if (menu.actionTarget() == null) {
+            return false;
+        }
+        new RouterFaceFilterTarget(router, payload.resource(), payload.face(), menu.targetRef()).open(player);
         return true;
     }
 
@@ -354,7 +418,7 @@ public final class ModPayloads {
             }
             case BACK -> {
                 if (target instanceof RouterFaceFilterTarget face) {
-                    RouterMenu.open(player, face.router());
+                    RouterMenu.open(player, face.router(), face.target());
                 } else if (target instanceof StorageFilterTarget storage) {
                     storage.storage().open(player);
                 } else {

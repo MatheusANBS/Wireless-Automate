@@ -655,4 +655,115 @@ public final class RangeGameTests {
                 })
                 .thenSucceed();
     }
+
+    /** Uma máquina fora do raio vinculada primeiro não gasta vaga: as N de dentro do raio movem todas. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void outOfRangeDoesNotTakeASlot(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        int radius = Config.machineRadius(RouterTier.ADVANCED);
+        int max = Config.maxMachines(RouterTier.ADVANCED);
+        helper.assertTrue(max >= 1 && max <= 18, "teste pensado para até 18 máquinas, config com " + max);
+        BlockPos outside = new BlockPos(1, 3 + radius, 1);
+        helper.setBlock(outside, Blocks.BARREL);
+        BlockPos[] barrels = new BlockPos[max];
+        for (int i = 0; i < barrels.length; i++) {
+            barrels[i] = new BlockPos(i % 3, 4 + i / 9, i / 3 % 3);
+            helper.setBlock(barrels[i], Blocks.BARREL);
+        }
+        Container chest = container(helper, CHEST);
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            chest.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        }
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, outside);
+                    for (BlockPos barrel : barrels) {
+                        link(helper, router, barrel);
+                    }
+                    profile(helper, router, outside, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> {
+                    for (int i = 0; i < max; i++) {
+                        helper.assertTrue(count(helper, barrels[i]) > 0, "a máquina " + (i + 1) + " no raio não recebeu");
+                    }
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(count(helper, outside) == 0, "a máquina fora do raio recebeu");
+                    helper.assertTrue(remotePort(helper, router, barrels[max - 1], Direction.UP), "a última no raio sem porta");
+                    helper.assertFalse(remotePort(helper, router, outside, Direction.UP), "porta fora do raio");
+                })
+                .thenSucceed();
+    }
+
+    /** Desvincular tira as portas da máquina na remontagem e nada mais chega a ela. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void unlinkRemovesPorts(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 1));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota não recebeu"))
+                .thenExecute(() -> {
+                    helper.assertTrue(router.unlinkMachine(helper.absolutePos(REMOTE_CHEST)), "não desvinculou");
+                    container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 16));
+                })
+                .thenExecuteAfter(40, () -> {
+                    helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a máquina desvinculada recebeu");
+                    helper.assertTrue(count(helper, CHEST) == 16, "o baú preso perdeu itens");
+                    helper.assertFalse(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da desvinculada");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Baixar o raio na config (num Elite, que nenhum outro teste usa com remotas) relê as portas na
+     * remontagem: a remota a 4 blocos para de mover. O raio só é lido na remontagem, então a config
+     * fica baixa por alguns ticks e volta no {@code finally} do passo que confere.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void configRadiusRereadsPorts(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ELITE);
+        router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "raio").id());
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 1));
+        var radius = Config.TIERS.get(RouterTier.ELITE).machineRadius();
+        int[] original = new int[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota não recebeu"))
+                .thenExecute(() -> {
+                    original[0] = radius.get();
+                    helper.assertTrue(original[0] >= 4, "o raio do Elite já não alcança a remota: " + original[0]);
+                    radius.set(2);
+                    NetworkManager.configChanged();
+                    container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 16));
+                })
+                .thenExecuteAfter(20, () -> {
+                    try {
+                        helper.assertFalse(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta fora do raio novo");
+                        helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota recebeu fora do raio novo");
+                        helper.assertTrue(count(helper, CHEST) == 16, "o baú preso perdeu itens");
+                    } finally {
+                        radius.set(original[0]);
+                        NetworkManager.configChanged();
+                    }
+                })
+                .thenSucceed();
+    }
 }

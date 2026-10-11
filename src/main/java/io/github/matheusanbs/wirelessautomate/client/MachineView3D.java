@@ -180,12 +180,14 @@ public final class MachineView3D {
     /**
      * Desenha o visor dentro do retângulo de {@link #setBounds}.
      *
+     * @param facing   face da máquina onde o roteador está preso; {@code null} numa máquina remota: sem
+     *                 roteador, com a frente (Norte, no quadro canônico) virada para quem olha
      * @param faces    a configuração de cada face da máquina no tipo da aba atual
      * @param selected face selecionada na tela
      * @param pointedOutside face apontada fora do visor (o botão dela sob o mouse), realçada como a
      *                       face sob o mouse; {@code null} se nenhuma
      */
-    public void render(GuiGraphics g, BlockState machine, Direction facing, RouterTier tier,
+    public void render(GuiGraphics g, BlockState machine, @Nullable Direction facing, RouterTier tier,
             Function<Direction, FaceView> faces, Direction selected, @Nullable Direction pointedOutside,
             int mouseX, int mouseY) {
         hasMachine = machine.getRenderShape() != RenderShape.INVISIBLE;
@@ -215,14 +217,16 @@ public final class MachineView3D {
         if (hasMachine) {
             renderBlock(blocks, pose, buffers, machine);
         }
-        pose.pushPose();
-        pose.translate(facing.getStepX(), facing.getStepY(), facing.getStepZ());
-        BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
-                .setValue(RouterBlock.FACING, facing)
-                .setValue(RouterBlock.TIER, tier);
-        blocks.renderSingleBlock(router, pose, buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-                ModelData.EMPTY, null);
-        pose.popPose();
+        if (facing != null) {
+            pose.pushPose();
+            pose.translate(facing.getStepX(), facing.getStepY(), facing.getStepZ());
+            BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
+                    .setValue(RouterBlock.FACING, facing)
+                    .setValue(RouterBlock.TIER, tier);
+            blocks.renderSingleBlock(router, pose, buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                    ModelData.EMPTY, null);
+            pose.popPose();
+        }
         buffers.endBatch();
 
         if (hasMachine) {
@@ -324,11 +328,17 @@ public final class MachineView3D {
 
     // ------------------------------------------------------------------ vista
 
-    /** Ângulo inicial: o roteador de frente, um pouco de lado, e de cima (ou de baixo, se ele estiver embaixo). */
-    private void resetAngles(Direction facing, BlockState machine) {
+    /**
+     * Ângulo inicial: o roteador de frente, um pouco de lado, e de cima (ou de baixo, se ele estiver
+     * embaixo). Numa remota ({@code facing} nulo), a frente da máquina (Norte), de cima e um pouco de lado.
+     */
+    private void resetAngles(@Nullable Direction facing, BlockState machine) {
         viewFacing = facing;
         viewMachine = machine;
-        if (facing.getAxis().isHorizontal()) {
+        if (facing == null) {
+            yaw = faceYaw(Direction.NORTH) + 35f;
+            pitch = 24f;
+        } else if (facing.getAxis().isHorizontal()) {
             yaw = faceYaw(facing) + 35f;
             pitch = 22f;
         } else {
@@ -361,10 +371,15 @@ public final class MachineView3D {
      * Vista do bloco da máquina (cubo {@code [0,1]³}) para a GUI: centro do visor, escala com o Y
      * invertido (a GUI cresce para baixo), pitch, yaw e o pivô entre a máquina e o roteador.
      */
-    private Matrix4f buildMatrix(Matrix4f out, Direction facing) {
-        float reach = hasMachine ? 0.45f : 1f;
-        pivot.set(0.5f + facing.getStepX() * reach, 0.5f + facing.getStepY() * reach,
-                0.5f + facing.getStepZ() * reach);
+    private Matrix4f buildMatrix(Matrix4f out, @Nullable Direction facing) {
+        if (facing == null) {
+            // remota: só a máquina, no centro do visor
+            pivot.set(0.5f, 0.5f, 0.5f);
+        } else {
+            float reach = hasMachine ? 0.45f : 1f;
+            pivot.set(0.5f + facing.getStepX() * reach, 0.5f + facing.getStepY() * reach,
+                    0.5f + facing.getStepZ() * reach);
+        }
         float scale = Math.min(width, height) / 2.5f * zoom;
         out.translation(x + width / 2f, y + height / 2f, DEPTH)
                 .scale(scale, -scale, scale)
@@ -422,7 +437,7 @@ public final class MachineView3D {
     // ------------------------------------------------------------------ captura de desenvolvimento
 
     /** Volta ao ângulo inicial de {@code facing} e {@code machine} e ao zoom normal, já neste quadro. */
-    void previewReset(Direction facing, BlockState machine) {
+    void previewReset(@Nullable Direction facing, BlockState machine) {
         resetAngles(facing, machine);
         zoom = targetZoom = 1f;
     }
@@ -435,7 +450,7 @@ public final class MachineView3D {
     }
 
     /** Ponto da tela no centro da face {@code face} da máquina, com a vista atual. */
-    int[] previewProject(Direction face, Direction facing, BlockState machine) {
+    int[] previewProject(Direction face, @Nullable Direction facing, BlockState machine) {
         hasMachine = machine.getRenderShape() != RenderShape.INVISIBLE;
         Matrix4f m = buildMatrix(new Matrix4f(), facing);
         Vector3f p = m.transformPosition(0.5f + face.getStepX() * 0.5f, 0.5f + face.getStepY() * 0.5f,

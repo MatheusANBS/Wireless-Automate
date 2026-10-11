@@ -732,5 +732,6 @@
   "gui.wirelessautomate.recipes.tooltip.any_of": "Qualquer item de",
   "gui.wirelessautomate.recipes.tooltip.clear": "Clique direito: limpar",
   "gui.wirelessautomate.recipes.tooltip.pick": "Clique e escolha um item no inventário",
-  "gui.wirelessautomate.recipes.reload_failed": "A recarga falhou; veja o log do servidor"
+  "gui.wirelessautomate.recipes.reload_failed": "A recarga falhou; veja o log do servidor",
+  "gui.wirelessautomate.recipes.reload_busy": "Uma recarga já está em andamento"
 }

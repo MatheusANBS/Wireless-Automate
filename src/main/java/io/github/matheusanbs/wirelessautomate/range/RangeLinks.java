@@ -25,13 +25,19 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.CommonHooks;
+import net.neoforged.neoforge.common.util.TriState;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -180,7 +186,8 @@ public final class RangeLinks {
     /**
      * O Vincular da tela no modo Máquinas: vincula ao roteador escolhido as máquinas da área marcada
      * (só block entities de chunks carregados) que têm capability de um tipo marcado nas abas. Pula as
-     * já vinculadas, as protegidas, roteadores e a máquina presa; as de fora do raio e as que passam do
+     * já vinculadas, as protegidas ({@code mayInteract} e o evento de clique, ver {@link #clickAllowed}),
+     * roteadores e a máquina presa; as de fora do raio e as que passam do
      * limite ficam de fora e são contadas. As mais perto do roteador entram primeiro. Mostra o
      * resultado na action bar ({@code Vinculadas 9 · 3 fora do alcance · 2 além do limite}).
      */
@@ -232,6 +239,8 @@ public final class RangeLinks {
         int[] counts = new int[5]; // vinculadas, já, fora do raio, além do limite, protegidas
         int radius = radius(router);
         int max = max(router);
+        InteractionHand hand = player.getItemInHand(InteractionHand.MAIN_HAND) == stack
+                ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         router.batchChanges(() -> {
             int used = used(router);
             for (BlockPos pos : candidates) {
@@ -246,6 +255,8 @@ public final class RangeLinks {
                     counts[2]++;
                 } else if (used >= max) {
                     counts[3]++;
+                } else if (!clickAllowed(player, hand, pos)) {
+                    counts[4]++;
                 } else if (router.linkMachine(pos)) {
                     counts[0]++;
                     used++;
@@ -277,6 +288,22 @@ public final class RangeLinks {
         if (count > 0) {
             text.append(" · ").append(Component.translatable(KEY + key, count));
         }
+    }
+
+    /**
+     * O clique simulado em {@code pos} passa pelas proteções de outros mods. O {@code mayInteract} só
+     * cobre a proteção do spawn e a borda do mundo; claims (FTB Chunks e afins) agem no
+     * {@link PlayerInteractEvent.RightClickBlock}. O clique de verdade num bloco já passa por esse
+     * evento antes do {@code onItemUseFirst} do Vinculador (o {@code ServerPlayerGameMode.useItemOn} o
+     * posta e não chama o item se ele vem cancelado ou com {@code useItem} negado), mas o Vincular da
+     * área não clica em nada: por isso postamos o mesmo evento, como o jogo, para cada máquina que de
+     * fato seria vinculada (depois das recusas baratas, para não acordar listeners à toa). Cancelado,
+     * ou com {@code useBlock} ou {@code useItem} negados, conta como protegida.
+     */
+    private static boolean clickAllowed(ServerPlayer player, InteractionHand hand, BlockPos pos) {
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos).add(0, 0.5, 0), Direction.UP, pos, false);
+        PlayerInteractEvent.RightClickBlock event = CommonHooks.onRightClickBlock(player, hand, pos, hit);
+        return !event.isCanceled() && event.getUseBlock() != TriState.FALSE && event.getUseItem() != TriState.FALSE;
     }
 
     // ------------------------------------------------------------------ regras

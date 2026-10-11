@@ -617,6 +617,7 @@
   "gui.wirelessautomate.router.range.state.inactive": "Inactive: this tier's range is 0 on the server",
   "item.wirelessautomate.linker.corner1": "Corner 1: %s · Shift + click corner 2",
   "item.wirelessautomate.linker.corner2": "Corner 2: %s · %s×%s×%s area with %s routers",
+  "item.wirelessautomate.linker.corner2_machines": "Corner 2: %s · %s×%s×%s area · Link joins its machines to the chosen router",
   "item.wirelessautomate.linker.too_big": "Area too big: %s blocks (max %s). Corner 2 was not set.",
   "item.wirelessautomate.linker.area_hint": "Single mode: Shift + click in the air switches to Area",
   "item.wirelessautomate.linker.foreign": "The active network %s belongs to another player",

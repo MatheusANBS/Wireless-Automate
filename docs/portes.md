@@ -36,7 +36,7 @@ Vale reavaliar se a manutenção de três ramos começar a pesar (por exemplo, s
 | Alvo | Ramo | Packs | Loader | Estado | Espelha |
 | --- | --- | --- | --- | --- | --- |
 | 1.21.1 | `main` | ATM10, ATM10 To the Sky | NeoForge 21.1.248+ | Publicado | 1.6.0 |
-| 1.20.1 | `mc/1.20.1-forge` | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47.4.10+ | Etapa 1: compila e abre; GameTests na etapa 2 ([relatório](portes/1.20.1-forge-impacto.md)) | 1.6.0 |
+| 1.20.1 | `mc/1.20.1-forge` | ATM9, ATM9 To the Sky (os dois na mesma versão, um ramo só) | Forge 47.4.10+ | Etapa 2 pausada: tarefas 1 a 6 de 9 feitas ([relatório](portes/1.20.1-forge-impacto.md), [estado](portes/1.20.1-etapa-2-estado.md)) | 1.6.0 |
 | 26.1 | `mc/26.1-neoforge` (a criar) | ATM11 (alfa, Minecraft 26.1.2) | NeoForge 26.1 | A investigar | — |
 
 ## O que já se sabe (a confirmar pela investigação)
@@ -109,3 +109,4 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
 | 2026-10-10 | Estratégia de ramos por alvo e a skill `wa-porte` para investigar o impacto de cada porte. |
 | 2026-10-10 | 1.20.1 Forge investigado: projeto mínimo (MDG 2.0.148 `legacyforge`, Java 17, Gradle 9.2.1) compila e abre; relatório em `docs/portes/1.20.1-forge-impacto.md`. |
 | 2026-10-10 | 1.20.1, etapa 1 (ramo `mc/1.20.1-forge`, espelha a 1.6.0): o mod inteiro compila no Forge 47.4.10, JUnit verde, 170 de 172 GameTests da run comum passando na primeira rodada e o cliente de dev abre sem os mods opcionais, com as telas nas capturas. GameTests, runs com os mods opcionais remapeados e e2e ficam para a etapa 2. |
+| 2026-10-10 | 1.20.1, etapa 2 pausada com as tarefas 1 a 6 de 9 (paridade com o main: runs com mods, Ars por mixin, `CapCache`, químicos, pacotes grandes, cliente); estado em `docs/portes/1.20.1-etapa-2-estado.md`. |

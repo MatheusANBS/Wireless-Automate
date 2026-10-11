@@ -19,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
@@ -583,6 +584,7 @@ public class RouterBlockEntity extends BlockEntity {
     public void setRangeUpgrade(ItemStack stack) {
         rangeUpgrade = stack;
         pruneRemoteCaches();
+        remotesChanged();
         changed(NetworkManager.ALL_TYPES);
     }
 
@@ -619,6 +621,7 @@ public class RouterBlockEntity extends BlockEntity {
                 || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state))) {
             return false;
         }
+        remotesChanged();
         changed(NetworkManager.ALL_TYPES);
         return true;
     }
@@ -633,6 +636,7 @@ public class RouterBlockEntity extends BlockEntity {
         }
         dropAtRouter(remotes.unlink(index));
         pruneRemoteCaches();
+        remotesChanged();
         changed(NetworkManager.ALL_TYPES);
         return true;
     }
@@ -974,6 +978,35 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * As máquinas vinculadas ou o upgrade mudaram: refaz o registro no {@link RemoteIndex} (só se o nó
+     * está no motor e o upgrade vale; senão, só tira).
+     */
+    private void remotesChanged() {
+        if (level != null && !level.isClientSide) {
+            RemoteIndex.get().update(this);
+        }
+    }
+
+    /**
+     * A máquina remota {@code machine} avisou mudança (chamado pelo {@link RemoteIndex}: o
+     * {@code setChanged} dela, pelo mixin, ou a carga do chunk dela). Com o estado do bloco
+     * ({@code state}, nulo se não deu para ler sem carregar o chunk), relê a frente: girar a máquina
+     * (com chave inglesa, por exemplo) não invalida a capability, então é aqui que os lados relativos
+     * acompanham; se mudou, as rotas do nó são refeitas. Depois acorda as portas dela, pela regra do
+     * motor ({@link NetworkManager#wakeMachine}).
+     */
+    public void remoteMachineChanged(RemoteMachine machine, @Nullable BlockState state) {
+        if (state != null) {
+            int front = RemoteMachines.frontOf(state);
+            if (front != machine.front()) {
+                machine.setFront(front);
+                changed(NetworkManager.ALL_TYPES);
+            }
+        }
+        NetworkManager.get().wakeMachine(this, machine.pos());
+    }
+
+    /**
      * Um cache de capability de {@code caches} foi invalidado (chamado pela {@link MachineCaches}). Na
      * presa, a tela refaz o snapshot e o motor acorda só a porta dessa face e tipo, e as origens que
      * esperam por ela; nada é remontado. Numa remota, a frente é relida (só com o chunk carregado): se
@@ -1070,6 +1103,10 @@ public class RouterBlockEntity extends BlockEntity {
         if (changed && level != null && !level.isClientSide) {
             NetworkManager.get().nodeChanged(this);
             NodeIndex.track(this);
+            if (tier() != oldTier) {
+                // O raio do tier novo decide se o upgrade de alcance vale.
+                remotesChanged();
+            }
         }
     }
 
@@ -1243,6 +1280,8 @@ public class RouterBlockEntity extends BlockEntity {
         // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
         remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
         pruneRemoteCaches();
+        // As instâncias de RemoteMachine são outras: o índice do mixin aponta para as novas.
+        remotesChanged();
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {

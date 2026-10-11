@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,9 +42,13 @@ import org.jetbrains.annotations.Nullable;
  * considera os membros cujo tipo está nela. A sujeira também é por tipo: mudar a aba Itens remonta
  * só os itens da rede.
  *
- * <p>Sono e despertar: em volta de cada visita o gerenciador anota a origem visitada. Assim, quando
- * a máquina de um destino avisa mudança porque nós acabamos de inserir nela ({@link #wake}), só as
- * portas do próprio nó acordam, e não as origens que entregam ali (ganhar recursos não abre espaço).
+ * <p>Sono e despertar: em volta de cada visita o gerenciador anota a máquina da origem visitada
+ * (nível e posição). Assim, quando a máquina de um destino avisa mudança porque nós acabamos de
+ * inserir nela, só as portas dessa máquina acordam, e não as origens que entregam ali (ganhar
+ * recursos não abre espaço). A regra é a mesma para a máquina presa ({@link #wake}, pelo aviso de
+ * vizinho) e para as remotas ({@link #wakeMachine}, pelo mixin em {@code Level.blockEntityChanged} e
+ * pela carga do chunk, ver {@link RemoteIndex}), e compara sempre a máquina, nunca o nó: a origem
+ * remota de um nó entregando na presa do mesmo nó é uma entrega.
  * Quando a origem dorme, as transferências gravam o motivo ({@link SourceSleep},
  * {@link Port#waitsDestination}): espera destino (todos dormiam, ou ofereceu algo e foi recusada) ou
  * está vazia. Mudanças na máquina de um destino só acordam as que esperam destino.
@@ -69,6 +74,8 @@ public final class NetworkManager {
     private static @Nullable RouterBlockEntity visitNode;
     private static @Nullable Level visitLevel;
     private static BlockPos visitMachine = BlockPos.ZERO;
+    /** A origem da visita em andamento é a máquina presa de {@link #visitNode}. */
+    private static boolean visitAttached;
 
     private final Map<RouterBlockEntity, NodePorts> nodes = new Reference2ObjectOpenHashMap<>();
     private final Map<UUID, NetworkRoutes> networks = new HashMap<>();
@@ -128,6 +135,7 @@ public final class NetworkManager {
         for (ResourceType type : TYPES) {
             move(ports, type, node.networkId(type));
         }
+        RemoteIndex.get().update(node);
     }
 
     public void removeNode(RouterBlockEntity node) {
@@ -136,6 +144,7 @@ public final class NetworkManager {
             for (ResourceType type : TYPES) {
                 move(ports, type, null);
             }
+            RemoteIndex.get().remove(node);
         }
     }
 
@@ -174,24 +183,47 @@ public final class NetworkManager {
     }
 
     /**
-     * A máquina do nó avisou mudança: acorda as portas dele e as origens que esperam destino e
-     * entregam nos destinos dele. Se o aviso vem de uma entrega nossa (durante uma visita, numa
-     * máquina que não é a da origem visitada), só as portas do nó acordam.
+     * A máquina presa do nó avisou mudança: acorda as portas dela e as origens que esperam destino e
+     * entregam nos destinos dela. Se o aviso vem de uma entrega nossa (durante uma visita, numa
+     * máquina que não é a da origem visitada), só as portas da máquina acordam.
      */
     public void wake(RouterBlockEntity node) {
         NodePorts ports = nodes.get(node);
         if (ports != null) {
-            ports.wake(!deliveringInto(node));
+            ports.wake(!deliveringIntoAttached(node));
         }
     }
 
-    /** A visita em andamento está inserindo na máquina do nó (outra máquina que a da origem). */
-    private static boolean deliveringInto(RouterBlockEntity node) {
-        RouterBlockEntity source = visitNode;
-        if (source == null || node == source) {
+    /**
+     * A máquina remota do nó em {@code machinePos} avisou mudança ({@code setChanged} ou o chunk
+     * carregou): a mesma regra de {@link #wake}, só nas portas dessa máquina.
+     */
+    public void wakeMachine(RouterBlockEntity node, BlockPos machinePos) {
+        NodePorts ports = nodes.get(node);
+        if (ports != null) {
+            ports.wakeMachine(machinePos.asLong(), !deliveringInto(node.getLevel(), machinePos));
+        }
+    }
+
+    /**
+     * Como {@link #deliveringInto}, na máquina presa do nó. Atalho sem calcular a posição: se a origem
+     * visitada é a presa deste mesmo nó, o aviso vem dela e não é entrega (uma origem remota do nó não
+     * entra no atalho).
+     */
+    private static boolean deliveringIntoAttached(RouterBlockEntity node) {
+        if (visitNode == null || (node == visitNode && visitAttached)) {
             return false;
         }
-        return node.getLevel() != visitLevel || !node.machinePos().equals(visitMachine);
+        return deliveringInto(node.getLevel(), node.machinePos());
+    }
+
+    /**
+     * A visita em andamento está inserindo na máquina em {@code machine} de {@code level}: é outra
+     * máquina que a da origem. Compara a máquina, não o nó, porque um nó tem várias (a presa e as
+     * remotas): a remota de um nó entregando na presa dele é uma entrega.
+     */
+    private static boolean deliveringInto(@Nullable Level level, BlockPos machine) {
+        return visitNode != null && (level != visitLevel || !machine.equals(visitMachine));
     }
 
     /**
@@ -264,6 +296,67 @@ public final class NetworkManager {
         NodePorts ports = nodes.get(node);
         Port port = ports == null ? null : ports.peek(type, face);
         return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
+    }
+
+    /**
+     * Para GameTests e diagnóstico: como {@link #sourceSleepInterval}, na porta da máquina remota em
+     * {@code machinePos} (face absoluta); -1 se a porta não existe.
+     */
+    public int remoteSourceSleepInterval(RouterBlockEntity node, BlockPos machinePos, ResourceType type, Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
+    }
+
+    /**
+     * Para GameTests: põe a porta (da máquina presa com {@code machinePos} nulo, ou da remota) para
+     * dormir como origem e como destino até {@code ticks} ticks depois de {@code now}, como um sono
+     * longo do backoff. Devolve se a porta existe.
+     */
+    public boolean sleepForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
+            Direction face, long now, int ticks) {
+        Port port = portOrNull(node, machinePos, type, face);
+        if (port == null) {
+            return false;
+        }
+        port.sourceBackoff.sleepUntil(now, now + ticks);
+        port.destinationBackoff.sleepUntil(now, now + ticks);
+        return true;
+    }
+
+    /** Para GameTests: a porta (da presa com {@code machinePos} nulo, ou da remota) está acordada como origem. */
+    public boolean sourceAwake(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
+            Direction face, long now) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port != null && port.sourceBackoff.isAwake(now);
+    }
+
+    /**
+     * Para GameTests: o tick em que a porta (da presa com {@code machinePos} nulo, ou da remota) acorda
+     * como origem ({@link Long#MIN_VALUE} se acordada desde sempre ou se não existe), e se ela dorme
+     * esperando destino.
+     */
+    public long sourceWakeAt(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port == null ? Long.MIN_VALUE : port.sourceBackoff.wakeAt();
+    }
+
+    /** Para GameTests: a porta (da presa com {@code machinePos} nulo, ou da remota) dorme esperando destino. */
+    public boolean waitsDestination(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port != null && port.waitsDestination;
+    }
+
+    private @Nullable Port portOrNull(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
+            Direction face) {
+        NodePorts ports = nodes.get(node);
+        if (ports == null) {
+            return null;
+        }
+        if (machinePos == null) {
+            return ports.peek(type, face);
+        }
+        Port[] byFace = ports.machinePorts(machinePos.asLong());
+        return byFace == null ? null : byFace[type.ordinal() * Direction.values().length + face.ordinal()];
     }
 
     /**
@@ -445,6 +538,7 @@ public final class NetworkManager {
         visitNode = source.node;
         visitLevel = source.node.getLevel();
         visitMachine = source.machinePos;
+        visitAttached = !source.machine.isRemote();
         int result;
         try {
             // Sem default: um tipo novo no ResourceType não compila até ganhar o seu caso aqui.
@@ -485,9 +579,15 @@ public final class NetworkManager {
         savedVersion = data.version();
         if (all) {
             // O raio e o limite das máquinas remotas (e se o upgrade vale) saem da config na leitura
-            // das portas: relê as faces de todos os nós. Só na recarga da config.
+            // das portas: relê as faces dos nós com o upgrade valendo ou com portas remotas (que podem
+            // ter deixado de valer). Os outros não dependem disso, e reler acordaria as origens deles.
+            // Só na recarga da config.
             for (NodePorts ports : nodes.values()) {
-                ports.invalidate(ALL_TYPES);
+                if (ports.hasRemotes() || ports.node.rangeActive()) {
+                    ports.invalidate(ALL_TYPES);
+                }
+                // O upgrade pode ter passado a valer ou deixado de valer (raio 0 no tier).
+                RemoteIndex.get().update(ports.node);
             }
         }
         for (int i = 0, n = networkList.size(); i < n; i++) {

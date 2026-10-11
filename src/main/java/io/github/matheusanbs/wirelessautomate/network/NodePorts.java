@@ -80,6 +80,11 @@ final class NodePorts {
         return port;
     }
 
+    /** O nó tem portas de máquinas remotas (de alguma leitura). */
+    boolean hasRemotes() {
+        return remotes != null;
+    }
+
     /** As portas da máquina remota em {@code machinePos} ({@code pos.asLong()}), ou {@code null}; não cria. */
     Port @Nullable [] machinePorts(long machinePos) {
         return remotes == null ? null : remotes.get(machinePos);
@@ -207,14 +212,29 @@ final class NodePorts {
     }
 
     /**
-     * A máquina mudou: acorda as portas do nó e, com {@code feeders}, as origens que esperam destino
-     * e entregam nos destinos dele. Sem {@code feeders} é uma entrega nossa na máquina: ela ganhou
-     * recursos, o que não abre espaço para ninguém, então só as portas do próprio nó acordam (a
-     * máquina pode ser origem de outra rota e agora ter o que dar).
+     * A máquina presa mudou: acorda as portas dela e, com {@code feeders}, as origens que esperam
+     * destino e entregam nos destinos dela. Sem {@code feeders} é uma entrega nossa na máquina: ela
+     * ganhou recursos, o que não abre espaço para ninguém, então só as portas da própria máquina
+     * acordam (ela pode ser origem de outra rota e agora ter o que dar). As remotas acordam pela
+     * própria máquina ({@link #wakeMachine}).
      */
     void wake(boolean feeders) {
-        // Só as portas da máquina presa: as remotas acordam pela própria máquina.
-        for (Port port : ports) {
+        wake(ports, feeders);
+    }
+
+    /**
+     * Como {@link #wake(boolean)}, nas portas da máquina remota em {@code machinePos}
+     * ({@code pos.asLong()}); nada se ela não tem porta (fora do raio ou do limite, ou ainda não lida).
+     */
+    void wakeMachine(long machinePos, boolean feeders) {
+        Port[] byFace = machinePorts(machinePos);
+        if (byFace != null) {
+            wake(byFace, feeders);
+        }
+    }
+
+    private static void wake(Port[] byFace, boolean feeders) {
+        for (Port port : byFace) {
             if (port == null) {
                 continue;
             }

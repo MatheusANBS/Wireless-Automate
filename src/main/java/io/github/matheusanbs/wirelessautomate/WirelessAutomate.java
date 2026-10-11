@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModCreativeTabs;
@@ -17,12 +18,14 @@ import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
@@ -49,6 +52,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
+        // Roteador de alcance: a carga de um chunk acorda as máquinas remotas vinculadas nele.
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
         // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
@@ -66,8 +71,15 @@ public final class WirelessAutomate {
 
     private static void onServerStopped(ServerStoppedEvent event) {
         NetworkManager.reset();
+        RemoteIndex.reset();
         SourceTankLevels.reset();
         RecipeEditor.reset();
+    }
+
+    private static void onChunkLoad(ChunkEvent.Load event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            RemoteIndex.get().chunkLoaded(level, event.getChunk());
+        }
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {

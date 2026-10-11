@@ -512,6 +512,14 @@ final class NetworkRoutes {
                 }
                 if (caches == null) {
                     caches = node.remoteCaches(pos);
+                    // A frente é relida aqui (uma vez por máquina com face ativa, só na remontagem):
+                    // girar a máquina sem setChanged não avisa ninguém. Se mudou, vale já nesta
+                    // leitura; os outros tipos do nó são relidos na próxima remontagem, sem laço
+                    // (lá a frente já bate).
+                    if (node.rereadFront(remote)) {
+                        front = remote.front();
+                        NetworkManager.get().nodeChanged(node, ALL_TYPES & ~NetworkManager.typeBit(type));
+                    }
                 }
                 Port port = member.remotePort(caches, type, DIRECTIONS[side.toAbsolute(front)]);
                 port.network = this;

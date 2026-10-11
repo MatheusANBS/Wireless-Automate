@@ -996,7 +996,8 @@ public class RouterBlockEntity extends BlockEntity {
      * motor ({@link NetworkManager#wakeMachine}).
      */
     public void remoteMachineChanged(RemoteMachine machine, @Nullable BlockState state) {
-        if (state != null) {
+        // Durante uma visita do motor o aviso é a nossa entrega ou extração, que nunca gira a máquina.
+        if (state != null && !NetworkManager.visiting()) {
             refreshFront(machine, state);
         }
         NetworkManager.get().wakeMachine(this, machine.pos());
@@ -1008,12 +1009,34 @@ public class RouterBlockEntity extends BlockEntity {
      * ({@link #remoteMachineChanged}) e a invalidação da capability ({@link #machineInvalidated}).
      */
     private boolean refreshFront(RemoteMachine machine, BlockState state) {
+        if (!storeFront(machine, state)) {
+            return false;
+        }
+        changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /**
+     * Relê a frente da máquina remota pelo mundo, só com o chunk carregado. Chamado pela remontagem das
+     * portas ({@code NetworkRoutes.readRemotePorts}): grava e devolve {@code true} se mudou, sem
+     * avisar o motor (quem chama decide o que remontar).
+     */
+    public boolean rereadFront(RemoteMachine machine) {
+        if (level == null || level.isClientSide || !level.isLoaded(machine.pos())) {
+            return false;
+        }
+        return storeFront(machine, level.getBlockState(machine.pos()));
+    }
+
+    /** Grava a frente de {@code state} na máquina, se mudou (salva e refaz o snapshot), sem avisar o motor. */
+    private boolean storeFront(RemoteMachine machine, BlockState state) {
         int front = RemoteMachines.frontOf(state);
         if (front == machine.front()) {
             return false;
         }
         machine.setFront(front);
-        changed(NetworkManager.ALL_TYPES);
+        changeVersion++;
+        setChanged();
         return true;
     }
 

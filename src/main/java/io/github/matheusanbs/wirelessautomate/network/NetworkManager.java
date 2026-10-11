@@ -120,6 +120,11 @@ public final class NetworkManager {
         configChanged = true;
     }
 
+    /** O laço está no meio de uma visita (os avisos das máquinas vêm da nossa entrega ou extração). */
+    public static boolean visiting() {
+        return visitNode != null;
+    }
+
     /** Bit do tipo nas máscaras de {@link #nodeChanged(RouterBlockEntity, int)}. */
     public static int typeBit(ResourceType type) {
         return 1 << type.ordinal();

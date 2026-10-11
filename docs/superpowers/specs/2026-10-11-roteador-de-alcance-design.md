@@ -19,7 +19,7 @@ Hoje cada roteador fica preso a uma máquina. Numa farm de pack grande (dezenas 
 5. **Lados relativos à frente da máquina** nas máquinas remotas que têm frente.
 6. **Sem chunk loading próprio** para as máquinas: quem usa FTB Chunks continua com ele. Máquina em chunk descarregado dorme e aparece com aviso.
 7. **Vazão cheia por máquina** (*provisório*, recomendado): cada máquina vinculada recebe a vazão do tier, como se tivesse o próprio roteador. O custo vai na receita do upgrade.
-8. **Acordar como a máquina presa** (decisão do dono, 11/10/2026): uma máquina remota não encosta no roteador, então o aviso de vizinho do `setChanged` dela não chega a ele. Um mixin em `Level.blockEntityChanged` confere a posição num conjunto das máquinas remotas vinculadas (`LongOpenHashSet` por nível, uma consulta por `setChanged`) e acorda as portas daquela máquina, com a mesma regra da presa (durante uma entrega, não acorda quem a abastece). A carga de um chunk acorda as máquinas vinculadas que estão nele. O teto de sono continua o de hoje (100 ticks); com o mixin, um gerador que enche acorda a porta na hora, sem esperar o backoff. É o primeiro mixin do mod.
+8. **Acordar como a máquina presa** (decisão do dono, 11/10/2026): uma máquina remota não encosta no roteador, então o aviso de vizinho do `setChanged` dela não chega a ele. Um mixin em `Level.blockEntityChanged` confere a posição num índice das máquinas remotas ativas (por nível, um `Long2ObjectOpenHashMap` posição → vínculos, porque uma máquina pode estar em vários roteadores, e chunk → posições para a carga de chunk; uma consulta por `setChanged`; fora do raio ou do limite a máquina não entra) e acorda as portas daquela máquina, com a mesma regra da presa (durante uma entrega, não acorda quem a abastece). A carga de um chunk acorda as máquinas vinculadas que estão nele. O teto de sono continua o de hoje (100 ticks); com o mixin, um gerador que enche acorda a porta na hora, sem esperar o backoff. É o primeiro mixin do mod.
 9. **Decisões do plano da etapa 1** (dono, 11/10/2026): os **cartões ficam só no perfil do grupo** (uma exceção muda modo, prioridade, redstone e filtro embutido, e usa os cartões do grupo; copiar cartões duplicaria itens); **Esquerda e Direita são as de quem olha a frente da máquina**; a **varredura de área só considera blocos com block entity**.
 
 ## 1. Custo (por que não dá lag)
@@ -96,7 +96,7 @@ Máquina recém-vinculada entra no grupo do tipo dela e já segue o perfil (seç
 
 ### Lados relativos à frente da máquina
 
-Numa farm, as máquinas ficam viradas para lados diferentes. Nas remotas, os lados do perfil são **Frente, Trás, Esquerda, Direita, Cima e Baixo**, relativos à frente de cada máquina: a propriedade `HORIZONTAL_FACING` (ou `FACING`, só o horizontal) do `BlockState`. Bloco sem frente usa os lados absolutos (Norte, Sul, Leste, Oeste, Cima, Baixo). A troca de "Trás" para a face absoluta acontece ao montar a porta e de novo quando o estado do bloco muda (a capability invalida). *Provisório:* relativo como padrão; a tela tem a alternância Relativo/Absoluto só para mostrar.
+Numa farm, as máquinas ficam viradas para lados diferentes. Nas remotas, os lados do perfil são **Frente, Trás, Esquerda, Direita, Cima e Baixo**, relativos à frente de cada máquina: a propriedade `HORIZONTAL_FACING` (ou `FACING`, só o horizontal) do `BlockState`. Bloco sem frente usa os lados absolutos (Norte, Sul, Leste, Oeste, Cima, Baixo). A troca de "Trás" para a face absoluta acontece ao montar a porta; a frente é relida no `setChanged` da máquina (pelo mixin da decisão 8), na carga do chunk dela e a cada remontagem das portas do roteador. O NeoForge não invalida a capability numa troca de estado do bloco, então girar a máquina não avisa por esse caminho. *Limitação:* uma máquina girada sem aviso nenhum (sem `setChanged`, como uma chave inglesa que só troca o estado) fica com os lados velhos até a próxima remontagem das portas ou o próximo `setChanged` dela. *Provisório:* relativo como padrão; a tela tem a alternância Relativo/Absoluto só para mostrar.
 
 ## 5. Tela do roteador com o Upgrade de Alcance
 
@@ -119,7 +119,7 @@ Sem o upgrade, a tela não muda. Com ele:
 
 - **`RouterBlockEntity`:** a máquina presa continua com as chaves de NBT de hoje. As remotas vão numa lista nova (`machines`: posição, grupo, exceção opcional) e os grupos noutra (`groups`: id do bloco, nome, perfil por tipo). Mundo antigo carrega igual; sem o upgrade a lista fica guardada, mas não vira porta.
 - **Caches** por máquina remota, criados na primeira consulta, como os de hoje (`capability(...)`), com o `isLoaded` antes.
-- **`Port`** ganha o índice da máquina (−1 ou 0 para a presa). Rotas, sono, backoff, round-robin, `EnergySplit` não mudam. O `isSameMachine` já compara a posição da máquina.
+- **`Port`** ganha a `MachineCaches` da máquina (a da presa ou a da remota) e a posição dela. Rotas, sono, backoff, round-robin, `EnergySplit` não mudam. O `isSameMachine` já compara a posição da máquina.
 - **Vazão por máquina:** cada porta usa a vazão do tier, como hoje.
 - **Mudar um perfil** é um `batchChanges` só (um aviso ao motor, não um por máquina).
 - **`RouterSnapshot`:** grupos (perfil, contagem, exceções, avisos), máquinas (estado, distância, exceção) e o `BlockState` só da máquina escolhida. Continua indo só com a tela aberta.

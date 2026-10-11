@@ -57,6 +57,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -767,8 +768,9 @@ public final class RangeGameTests {
 
     /**
      * Baixar o raio na config (num Elite, que nenhum outro teste usa com remotas) relê as portas na
-     * remontagem: a remota a 4 blocos para de mover. O raio só é lido na remontagem, então a config
-     * fica baixa por alguns ticks e volta no {@code finally} do passo que confere. Num lote próprio: a
+     * remontagem: a remota a 4 blocos para de mover. O raio só é lido na remontagem, então o passo que
+     * confere baixa a config, roda alguns ticks do motor à mão e restaura no {@code finally}, tudo
+     * síncrono (a config nunca fica baixa entre ticks do jogo). Num lote próprio: a
      * recarga da config relê (e acorda) as portas de todos os roteadores com alcance, o que atrapalharia
      * os testes de sono que rodariam em paralelo.
      */
@@ -792,12 +794,16 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     original[0] = radius.get();
                     helper.assertTrue(original[0] >= 4, "o raio do Elite já não alcança a remota: " + original[0]);
-                    radius.set(2);
-                    NetworkManager.configChanged();
                     container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 16));
-                })
-                .thenExecuteAfter(20, () -> {
+                    // A config baixa e volta no mesmo passo síncrono, para a restauração ser garantida pelo
+                    // finally. O raio só é lido na remontagem: os ticks do motor rodam aqui, com ele baixo.
+                    MinecraftServer server = helper.getLevel().getServer();
                     try {
+                        radius.set(2);
+                        NetworkManager.configChanged();
+                        for (int tick = 0; tick < 5; tick++) {
+                            NetworkManager.get().tick(server);
+                        }
                         helper.assertFalse(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta fora do raio novo");
                         helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota recebeu fora do raio novo");
                         helper.assertTrue(count(helper, CHEST) == 16, "o baú preso perdeu itens");
@@ -1070,6 +1076,47 @@ public final class RangeGameTests {
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, machine, Direction.NORTH), "Trás da frente Sul"))
                 .thenExecute(() -> {
+                    helper.assertFalse(remotePort(helper, router, machine, Direction.WEST), "porta no lado velho");
+                    TestMachines.reset(helper.absolutePos(machine));
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Revisão final I1: a máquina de teste sem block entity ({@link TestMachines#BACK_SLOT}) girada por
+     * {@code setBlock} não chama {@code setChanged} nem invalida a capability, então a frente fica a velha.
+     * Uma remontagem vinda de outra coisa (o modo de outra face do roteador) relê a frente e "Trás"
+     * passa para o lado novo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void rebuildRereadsFront(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos machine = new BlockPos(0, 1, 0);
+        helper.setBlock(machine, TestMachines.BACK_SLOT.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));
+        TestMachines.reset(helper.absolutePos(machine));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    link(helper, router, machine);
+                    profile(helper, router, machine, Direction.SOUTH, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, machine, Direction.WEST), "Trás da frente Leste"))
+                .thenExecute(() -> {
+                    BlockPos absolute = helper.absolutePos(machine);
+                    helper.setBlock(machine, TestMachines.BACK_SLOT.defaultBlockState()
+                            .setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertValueEqual(remotes.machine(remotes.index(absolute)).front(), Direction.EAST.ordinal(),
+                            "a frente mudou sem aviso nem remontagem");
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, machine, Direction.NORTH), "Trás da frente Sul"))
+                .thenExecute(() -> {
+                    BlockPos absolute = helper.absolutePos(machine);
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertValueEqual(remotes.machine(remotes.index(absolute)).front(), Direction.SOUTH.ordinal(), "frente relida");
                     helper.assertFalse(remotePort(helper, router, machine, Direction.WEST), "porta no lado velho");
                     TestMachines.reset(helper.absolutePos(machine));
                 })

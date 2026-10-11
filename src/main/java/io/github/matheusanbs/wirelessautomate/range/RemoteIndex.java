@@ -24,8 +24,9 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li>posição da máquina → os vínculos (roteador e {@link RemoteMachine}): uma máquina pode estar
  *       em vários roteadores. O mixin em {@code Level.blockEntityChanged} consulta este mapa a cada
- *       {@code setChanged} de qualquer block entity, então ele só tem as remotas que viram porta de fato
- *       (roteador no motor e com o upgrade valendo);
+ *       {@code setChanged} de qualquer block entity, então ele só tem as remotas que viram porta de fato:
+ *       roteador no motor, upgrade valendo e máquina ativa ({@link RouterBlockEntity#machineReach()}:
+ *       dentro do raio e do limite). Uma de fora não acorda nada nem tem a frente relida;
  *   <li>chunk → posições, para acordar as máquinas de um chunk que acabou de carregar.
  * </ul>
  *
@@ -64,14 +65,18 @@ public final class RemoteIndex {
         if (index == null || index.levels.isEmpty()) {
             return;
         }
+        // Antes de qualquer get: os mapas não são thread-safe, e um setChanged de outra thread (raro, de
+        // algum mod) os leria no meio de um rehash. Esse aviso não mexe no motor: a porta acorda pelo
+        // teto do sono.
+        if (!(level instanceof ServerLevel serverLevel) || !serverLevel.getServer().isSameThread()) {
+            return;
+        }
         LevelIndex byLevel = index.levels.get(level);
         if (byLevel == null) {
             return;
         }
         List<Link> links = byLevel.byPos.get(pos.asLong());
-        if (links == null || !(level instanceof ServerLevel serverLevel) || !serverLevel.getServer().isSameThread()) {
-            // Um setChanged fora da thread do servidor (raro, de algum mod) não mexe no motor: a porta
-            // acorda pelo teto do sono.
+        if (links == null) {
             return;
         }
         // O chunk está carregado (a máquina acabou de mudar), mas o getChunkNow garante que não carrega.
@@ -115,8 +120,8 @@ public final class RemoteIndex {
 
     /**
      * Refaz o registro de {@code router}: tira o anterior e, se ele está no motor e o upgrade de
-     * alcance vale, registra cada máquina vinculada. As de fora do raio ou do limite também entram (o
-     * motor não tem porta para elas, então o aviso não faz nada).
+     * alcance vale, registra as máquinas ativas (dentro do raio e do limite). Quem muda essa regra
+     * chama de novo: vincular, desvincular, o upgrade, a carga do NBT, o tier e a recarga da config.
      */
     public void update(RouterBlockEntity router) {
         remove(router);
@@ -126,7 +131,14 @@ public final class RemoteIndex {
             return;
         }
         List<RemoteMachine> machines = router.remoteMachines().machines();
-        if (machines.isEmpty()) {
+        RangeRules.Reach[] reach = router.machineReach();
+        int active = 0;
+        for (RangeRules.Reach r : reach) {
+            if (r == RangeRules.Reach.ACTIVE) {
+                active++;
+            }
+        }
+        if (active == 0) {
             return;
         }
         LevelIndex byLevel = levels.get(level);
@@ -134,11 +146,15 @@ public final class RemoteIndex {
             byLevel = new LevelIndex();
             levels.put(level, byLevel);
         }
-        long[] positions = new long[machines.size()];
-        for (int i = 0; i < positions.length; i++) {
+        long[] positions = new long[active];
+        int next = 0;
+        for (int i = 0; i < reach.length; i++) {
+            if (reach[i] != RangeRules.Reach.ACTIVE) {
+                continue;
+            }
             RemoteMachine machine = machines.get(i);
             long key = machine.pos().asLong();
-            positions[i] = key;
+            positions[next++] = key;
             byLevel.add(key, new Link(router, machine));
         }
         registered.put(router, new Registration(level, positions));

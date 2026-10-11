@@ -997,13 +997,24 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public void remoteMachineChanged(RemoteMachine machine, @Nullable BlockState state) {
         if (state != null) {
-            int front = RemoteMachines.frontOf(state);
-            if (front != machine.front()) {
-                machine.setFront(front);
-                changed(NetworkManager.ALL_TYPES);
-            }
+            refreshFront(machine, state);
         }
         NetworkManager.get().wakeMachine(this, machine.pos());
+    }
+
+    /**
+     * Relê a frente da máquina remota em {@code state}. Se mudou, grava e refaz as rotas do nó (os
+     * lados relativos mudaram) e devolve {@code true}. A regra num lugar só: o aviso da máquina
+     * ({@link #remoteMachineChanged}) e a invalidação da capability ({@link #machineInvalidated}).
+     */
+    private boolean refreshFront(RemoteMachine machine, BlockState state) {
+        int front = RemoteMachines.frontOf(state);
+        if (front == machine.front()) {
+            return false;
+        }
+        machine.setFront(front);
+        changed(NetworkManager.ALL_TYPES);
+        return true;
     }
 
     /**
@@ -1024,13 +1035,8 @@ public class RouterBlockEntity extends BlockEntity {
         BlockPos pos = caches.pos();
         if (level.isLoaded(pos)) {
             RemoteMachine machine = remotes.machine(remotes.index(pos));
-            if (machine != null) {
-                int front = RemoteMachines.frontOf(level.getBlockState(pos));
-                if (front != machine.front()) {
-                    machine.setFront(front);
-                    changed(NetworkManager.ALL_TYPES);
-                    return;
-                }
+            if (machine != null && refreshFront(machine, level.getBlockState(pos))) {
+                return;
             }
         }
         NetworkManager.get().capabilityChanged(this, pos, type, machineFace);

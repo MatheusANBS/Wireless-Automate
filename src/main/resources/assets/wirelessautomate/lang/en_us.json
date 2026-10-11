@@ -392,7 +392,7 @@
   "gui.wirelessautomate.storage.filter.on.tooltip": "Input filter on: only what it accepts gets in, by any path (router, hopper, this screen). Click to edit",
   "gui.wirelessautomate.storage.filter.off.tooltip": "No input filter: accepts any item. Click to create one (an entry's stock means \"store up to N\")",
   "gui.wirelessautomate.storage.search": "Search",
-  "gui.wirelessautomate.storage.search.hint": "Search… (@mod)",
+  "gui.wirelessautomate.storage.search.hint": "Search… @mod #tag",
   "gui.wirelessautomate.storage.sort.count": "Qty ↓",
   "gui.wirelessautomate.storage.sort.name": "Name",
   "gui.wirelessautomate.storage.sort.mod": "Mod",

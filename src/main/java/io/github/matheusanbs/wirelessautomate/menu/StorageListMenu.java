@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.storage.KeyedStorage;
 import io.github.matheusanbs.wirelessautomate.storage.KeyedStorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenCustomHashMap;
@@ -349,7 +350,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                     return false;
                 }
                 int max = key.getMaxStackSize();
-                int want = action == StorageActionPayload.Action.TAKE_HALF ? (max + 1) / 2 : max;
+                int want = action == StorageActionPayload.Action.TAKE_HALF ? StorageMath.halfTake(present, max) : max;
                 want = (int) Math.min(want, present);
                 want = Math.min(want, max - carried.getCount());
                 if (want <= 0) {

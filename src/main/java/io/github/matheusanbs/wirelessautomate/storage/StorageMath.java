@@ -54,4 +54,13 @@ public final class StorageMath {
 
     private StorageMath() {
     }
+
+    /**
+     * Quanto o botão direito pega de um tipo da lista: meia pilha cheia quando há pelo menos uma
+     * pilha guardada, ou a metade do que há (arredondada para cima, como no vanilla) quando há menos.
+     */
+    public static int halfTake(long present, int maxStackSize) {
+        long base = Math.min(present, maxStackSize);
+        return (int) Math.max(0, (base + 1) / 2);
+    }
 }

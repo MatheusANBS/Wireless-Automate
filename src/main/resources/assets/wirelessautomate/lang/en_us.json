@@ -423,6 +423,7 @@
   "gui.wirelessautomate.source_tank.loading": "Reading…",
   "gui.wirelessautomate.source_tank.hint": "Sourcelinks and Ars machines nearby use this tank like a Source Jar.",
   "gui.wirelessautomate.storage.amount": "Amount: %s",
+  "disconnect.wirelessautomate.invalid_part": "Invalid Wireless Automate packet",
   "gui.wirelessautomate.storage.truncated": "Too much data to show here: the NBT stays in the storage",
   "gui.wirelessautomate.storage.click.hint": "Click: a stack · Right: half · Shift: to inventory",
   "gui.wirelessautomate.storage.empty": "Empty. Shift + click in the inventory stores",

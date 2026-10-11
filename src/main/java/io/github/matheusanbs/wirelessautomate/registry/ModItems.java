@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
+import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
@@ -45,6 +46,9 @@ public final class ModItems {
             FilterCardItem::new, new Item.Properties().stacksTo(16));
     public static final DeferredItem<ChunkLoaderUpgradeItem> CHUNK_LOADER_UPGRADE = ITEMS.registerItem(
             "chunk_loader_upgrade", ChunkLoaderUpgradeItem::new, new Item.Properties().stacksTo(1));
+
+    public static final DeferredItem<RangeUpgradeItem> RANGE_UPGRADE = ITEMS.registerItem(
+            "range_upgrade", RangeUpgradeItem::new, new Item.Properties().stacksTo(1));
 
     /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);

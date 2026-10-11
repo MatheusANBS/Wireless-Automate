@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -39,7 +40,9 @@ import org.jetbrains.annotations.Nullable;
  * daquela face, por um {@link Container} que lê e grava direto no roteador. A sincronização vanilla
  * de slots leva o resultado ao cliente. Energia e químicos não têm cartões: os slots ficam inativos.
  * Depois do inventário vem o slot do Upgrade de chunk loading ({@link #UPGRADE_SLOT}), que lê e grava
- * direto no roteador; o dono do upgrade é o jogador da tela.
+ * direto no roteador; o dono do upgrade é o jogador da tela. Em seguida, o slot do Upgrade de Alcance
+ * ({@link #RANGE_SLOT}), à esquerda do outro no cabeçalho, que só aceita o upgrade se o raio do tier
+ * ({@code tiers.<tier>.machineRadius}) for maior que 0.
  *
  * <p>Sincronização (servidor): o vanilla só chama {@link #broadcastChanges()} no menu aberto de
  * cada jogador, então nada roda para roteadores sem tela aberta. A cada chamada o menu compara a
@@ -72,6 +75,10 @@ public class RouterMenu extends AbstractContainerMenu {
     /** Canto do item do slot de upgrade: no canto direito do cabeçalho, à direita do tier. */
     public static final int UPGRADE_X = 274;
     public static final int UPGRADE_Y = 6;
+    /** Índice do slot do Upgrade de Alcance, depois do de chunk loading. */
+    public static final int RANGE_SLOT = SLOTS_END + 1;
+    /** Canto do item do slot de alcance: à esquerda do slot de upgrade. */
+    public static final int RANGE_X = UPGRADE_X - 18;
 
     private final @Nullable RouterBlockEntity router;
     private RouterSnapshot snapshot;
@@ -107,7 +114,7 @@ public class RouterMenu extends AbstractContainerMenu {
             sampleTotals[type.ordinal()] = router.moved(type);
         }
         this.selectedFace = router.facing();
-        addSlots(new RouterCards(), new RouterUpgrade(inventory.player.getUUID()), inventory);
+        addSlots(new RouterCards(), new RouterUpgrade(inventory.player.getUUID()), new RouterRangeUpgrade(), inventory);
     }
 
     /** Cliente: o snapshot inicial vem no buffer de abertura. */
@@ -132,10 +139,15 @@ public class RouterMenu extends AbstractContainerMenu {
             public int getMaxStackSize() {
                 return 1;
             }
+        }, new SimpleContainer(1) {
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
         }, inventory);
     }
 
-    private void addSlots(Container cards, Container upgrade, Inventory inventory) {
+    private void addSlots(Container cards, Container upgrade, Container range, Inventory inventory) {
         for (int i = 0; i < CARD_SLOT_COUNT; i++) {
             addSlot(new CardSlot(cards, i, CARD_X + i * 18, CARD_Y));
         }
@@ -148,14 +160,16 @@ public class RouterMenu extends AbstractContainerMenu {
             addSlot(new Slot(inventory, col, INVENTORY_X + col * 18, INVENTORY_Y + 58));
         }
         addSlot(new UpgradeSlot(upgrade, UPGRADE_X, UPGRADE_Y));
+        addSlot(new RangeSlot(range, RANGE_X, UPGRADE_Y));
     }
 
     /**
      * Põe os slots no layout da tela (só no cliente, depois de redimensionar): cartões e inventário a
-     * partir de {@code rightX}, inventário com o topo em {@code inventoryY}, upgrade em {@code upgradeX}.
-     * A posição do {@link Slot} é final: cada slot é trocado por um igual, no mesmo índice.
+     * partir de {@code rightX}, inventário com o topo em {@code inventoryY}, upgrade de chunk loading em
+     * {@code upgradeX} e o de alcance em {@code rangeX}. A posição do {@link Slot} é final: cada slot é
+     * trocado por um igual, no mesmo índice.
      */
-    public void placeSlots(int rightX, int upgradeX, int inventoryY) {
+    public void placeSlots(int rightX, int upgradeX, int rangeX, int inventoryY) {
         for (int i = 0; i < slots.size(); i++) {
             Slot old = slots.get(i);
             Slot moved;
@@ -163,6 +177,8 @@ public class RouterMenu extends AbstractContainerMenu {
                 moved = new CardSlot(old.container, old.getContainerSlot(), rightX + old.getContainerSlot() * 18, CARD_Y);
             } else if (old instanceof UpgradeSlot) {
                 moved = new UpgradeSlot(old.container, upgradeX, UPGRADE_Y);
+            } else if (old instanceof RangeSlot) {
+                moved = new RangeSlot(old.container, rangeX, UPGRADE_Y);
             } else {
                 int c = old.getContainerSlot();
                 int sx = rightX + (c % 9) * 18;
@@ -247,6 +263,17 @@ public class RouterMenu extends AbstractContainerMenu {
         this.selectedFace = face;
     }
 
+    /**
+     * {@code stack} pode ir no slot de alcance: é o Upgrade de Alcance e o raio do tier é maior que 0.
+     * No cliente, pelo tier do snapshot e a config sincronizada pelo servidor.
+     */
+    public boolean acceptsRangeUpgrade(ItemStack stack) {
+        if (router != null) {
+            return router.acceptsRangeUpgradeHere(stack);
+        }
+        return RouterBlockEntity.acceptsRangeUpgrade(stack) && Config.machineRadius(snapshot.tier()) > 0;
+    }
+
     /** Os slots de cartão valem para o tipo selecionado (itens e fluidos). */
     public boolean cardSlotsActive() {
         return RouterBlockEntity.hasCardSlots(selectedType);
@@ -254,8 +281,8 @@ public class RouterMenu extends AbstractContainerMenu {
 
     /**
      * Shift + clique: um cartão do tipo da aba vai para o primeiro slot de cartão livre (um por
-     * clique) e o Upgrade de chunk loading vai para o slot de upgrade; os slots de cartão e de upgrade
-     * devolvem ao inventário; o resto troca entre mochila e barra.
+     * clique), o Upgrade de chunk loading vai para o slot de upgrade e o de Alcance para o slot de
+     * alcance; os slots de cartão e de upgrade devolvem ao inventário; o resto troca entre mochila e barra.
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -269,12 +296,15 @@ public class RouterMenu extends AbstractContainerMenu {
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
         boolean toCards = false;
-        if (index < INVENTORY_START || index == UPGRADE_SLOT) {
+        if (index < INVENTORY_START || index == UPGRADE_SLOT || index == RANGE_SLOT) {
             if (!moveItemStackTo(stack, INVENTORY_START, SLOTS_END, true)) {
                 return ItemStack.EMPTY;
             }
         } else if (RouterBlockEntity.acceptsUpgrade(stack) && !slots.get(UPGRADE_SLOT).hasItem()
                 && moveItemStackTo(stack, UPGRADE_SLOT, UPGRADE_SLOT + 1, false)) {
+            toCards = true;
+        } else if (acceptsRangeUpgrade(stack) && !slots.get(RANGE_SLOT).hasItem()
+                && moveItemStackTo(stack, RANGE_SLOT, RANGE_SLOT + 1, false)) {
             toCards = true;
         } else if (cardSlotsActive() && RouterBlockEntity.acceptsCard(selectedType, stack)
                 && moveItemStackTo(stack, 0, CARD_SLOT_COUNT, false)) {
@@ -302,7 +332,8 @@ public class RouterMenu extends AbstractContainerMenu {
     /** Clique duplo num cartão do inventário junta os iguais, mas não tira os que estão nos slots de cartão. */
     @Override
     public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
-        return !(slot instanceof CardSlot) && !(slot instanceof UpgradeSlot) && super.canTakeItemForPickAll(stack, slot);
+        return !(slot instanceof CardSlot) && !(slot instanceof UpgradeSlot) && !(slot instanceof RangeSlot)
+                && super.canTakeItemForPickAll(stack, slot);
     }
 
     /** Slot do Upgrade de chunk loading: só o upgrade, um só. */
@@ -324,6 +355,104 @@ public class RouterMenu extends AbstractContainerMenu {
         @Override
         public int getMaxStackSize(ItemStack stack) {
             return 1;
+        }
+    }
+
+    /** Slot do Upgrade de Alcance: só o upgrade, um só, e só num tier com raio maior que 0. */
+    private final class RangeSlot extends Slot {
+        RangeSlot(Container container, int x, int y) {
+            super(container, 0, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return acceptsRangeUpgrade(stack);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public int getMaxStackSize(ItemStack stack) {
+            return 1;
+        }
+    }
+
+    /** O slot do Upgrade de Alcance, lido e gravado direto no roteador (servidor). */
+    private final class RouterRangeUpgrade implements Container {
+        private boolean usable() {
+            return router != null && !router.isRemoved();
+        }
+
+        @Override
+        public int getContainerSize() {
+            return 1;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return getItem(0).isEmpty();
+        }
+
+        @Override
+        public ItemStack getItem(int slot) {
+            return usable() && slot == 0 ? router.rangeUpgrade() : ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack removeItem(int slot, int amount) {
+            ItemStack stack = getItem(slot);
+            if (stack.isEmpty() || amount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack taken = stack.split(amount);
+            router.setRangeUpgrade(stack.isEmpty() ? ItemStack.EMPTY : stack);
+            return taken;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int slot) {
+            ItemStack stack = getItem(slot);
+            if (!stack.isEmpty()) {
+                router.setRangeUpgrade(ItemStack.EMPTY);
+            }
+            return stack;
+        }
+
+        @Override
+        public void setItem(int slot, ItemStack stack) {
+            if (usable() && slot == 0) {
+                router.setRangeUpgrade(stack);
+            }
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return acceptsRangeUpgrade(stack);
+        }
+
+        @Override
+        public void setChanged() {
+            if (usable()) {
+                router.setChanged();
+            }
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return RouterMenu.this.stillValid(player);
+        }
+
+        @Override
+        public void clearContent() {
+            removeItemNoUpdate(0);
         }
     }
 

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
@@ -7,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -98,6 +100,8 @@ public class RouterBlockEntity extends BlockEntity {
     /** Upgrade de chunk loading no slot (ou vazio) e quem o pôs. */
     private ItemStack upgrade = ItemStack.EMPTY;
     private @Nullable UUID upgradeOwner;
+    /** Upgrade de Alcance no segundo slot (ou vazio). */
+    private ItemStack rangeUpgrade = ItemStack.EMPTY;
     /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
     private boolean chunkUnloading;
 
@@ -523,6 +527,49 @@ public class RouterBlockEntity extends BlockEntity {
         return removed;
     }
 
+    // ------------------------------------------------------------------ upgrade de alcance
+
+    /** {@code stack} é um Upgrade de Alcance (sem olhar o tier do roteador). */
+    public static boolean acceptsRangeUpgrade(ItemStack stack) {
+        return stack.getItem() instanceof RangeUpgradeItem;
+    }
+
+    /** {@code stack} pode ir no slot de alcance deste roteador: é o upgrade e o raio do tier é maior que 0. */
+    public boolean acceptsRangeUpgradeHere(ItemStack stack) {
+        return acceptsRangeUpgrade(stack) && Config.machineRadius(tier()) > 0;
+    }
+
+    /** O Upgrade de Alcance no slot; vazio se não houver. Não altere a pilha devolvida. */
+    public ItemStack rangeUpgrade() {
+        return rangeUpgrade;
+    }
+
+    /**
+     * O upgrade de alcance vale: está no slot e o raio do tier é maior que 0. Se a config baixar o
+     * raio para 0 com o upgrade já colocado, ele fica no slot e só deixa de valer.
+     */
+    public boolean rangeActive() {
+        return acceptsRangeUpgrade(rangeUpgrade) && Config.machineRadius(tier()) > 0;
+    }
+
+    /**
+     * Põe {@code stack} (guardada como está) no slot de alcance e avisa o motor para remontar as
+     * portas do nó. Não valida o item: quem chama (o slot do menu) já validou.
+     */
+    public void setRangeUpgrade(ItemStack stack) {
+        rangeUpgrade = stack;
+        changed(NetworkManager.ALL_TYPES);
+    }
+
+    /** Tira o upgrade de alcance (para soltar no mundo quando o roteador sai); vazio se não havia. */
+    public ItemStack removeRangeUpgrade() {
+        ItemStack removed = rangeUpgrade;
+        if (!removed.isEmpty()) {
+            setRangeUpgrade(ItemStack.EMPTY);
+        }
+        return removed;
+    }
+
     /** Estado do upgrade para a tela. Só no servidor; no cliente, {@link ChunkLoadState#NONE}. */
     public ChunkLoadState chunkLoadState() {
         if (level == null || level.isClientSide) {
@@ -888,6 +935,9 @@ public class RouterBlockEntity extends BlockEntity {
                 tag.putUUID("upgrade_owner", upgradeOwner);
             }
         }
+        if (!rangeUpgrade.isEmpty()) {
+            tag.put("range_upgrade", rangeUpgrade.save(registries));
+        }
     }
 
     @Override
@@ -935,6 +985,9 @@ public class RouterBlockEntity extends BlockEntity {
                 ? ItemStack.parse(registries, tag.getCompound("upgrade")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
         upgradeOwner = !upgrade.isEmpty() && tag.hasUUID("upgrade_owner") ? tag.getUUID("upgrade_owner") : null;
+        rangeUpgrade = tag.contains("range_upgrade", Tag.TAG_COMPOUND)
+                ? ItemStack.parse(registries, tag.getCompound("range_upgrade")).orElse(ItemStack.EMPTY)
+                : ItemStack.EMPTY;
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {

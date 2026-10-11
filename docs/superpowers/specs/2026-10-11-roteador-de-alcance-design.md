@@ -40,15 +40,17 @@ O raio não pesa por tick. Pode ser grande.
 | Tier | Raio (blocos, distância de Chebyshev) | Máquinas vinculadas |
 | --- | --- | --- |
 | Básico | — (não aceita o upgrade) | 1 (a presa) |
-| Avançado | 8 | 4 |
-| Elite | 16 | 8 |
-| Esmeralda | 24 | 16 |
-| Allthemodium | 32 | 24 |
-| Vibranium | 48 | 32 |
-| Unobtainium | 64 | 48 |
-| Ultimate | 96 | 64 |
+| Avançado | 6 | 8 |
+| Elite | 12 | 16 |
+| Esmeralda | 16 | 32 |
+| Allthemodium | 24 | 48 |
+| Vibranium | 32 | 64 |
+| Unobtainium | 48 | 96 |
+| Ultimate | 64 | 128 |
 
-- Config, seção `tiers.<tier>`: chaves novas `machineRadius` e `maxMachines`, com teto de 256 cada. A chave `range` que já existe é o alcance da **rede** e não muda.
+Rebalanceado pelo dono em 11/10/2026: raio menor, com 64 blocos no máximo (quatro chunks para cada lado), e mais máquinas.
+
+- Config, seção `tiers.<tier>`: chaves novas `machineRadius` (teto 64) e `maxMachines` (teto 512). A chave `range` que já existe é o alcance da **rede** e não muda.
 - Valores padrão por arrays pela posição do `RouterTier`, como vazão e capacidade (um tier novo pede um valor em cada array).
 - A máquina presa conta no limite? *Provisório:* **não**; o limite é das remotas, e a presa é sempre a primeira da lista.
 - Mesma dimensão sempre (o `crossDimension` é da rede, não do vínculo).
@@ -73,9 +75,9 @@ Regras do servidor (todas validadas no servidor, a cada pacote):
 - Não vincula o próprio roteador, outro roteador nem uma máquina já vinculada a ele.
 - Uma máquina pode estar vinculada a vários roteadores (como hoje dá para prender dois roteadores na mesma máquina).
 
-Action bar: `Linha de Minério · 12/16 máquinas`; recusas dizem o motivo (`Fora do alcance: 31 blocos (raio 24)`, `Limite do tier Esmeralda: 16 máquinas`).
+Action bar: `Linha de Minério · 12/32 máquinas`; recusas dizem o motivo (`Fora do alcance: 21 blocos (raio 16)`, `Limite do tier Esmeralda: 32 máquinas`).
 
-Tela do Vinculador no modo Máquinas: a coluna da direita mostra o roteador escolhido (nome, tier, raio, `7/16 máquinas`) e a prévia da área: na área com os tipos marcados, cabem no limite, passam do limite, fora do raio. O botão diz só o número (`Vincular 9`), com o detalhe no tooltip.
+Tela do Vinculador no modo Máquinas: a coluna da direita mostra o roteador escolhido (nome, tier, raio, `7/32 máquinas`) e a prévia da área: na área com os tipos marcados, cabem no limite, passam do limite, fora do raio. O botão diz só o número (`Vincular 9`), com o detalhe no tooltip.
 
 No mundo, com o Vinculador no modo Máquinas e um roteador escolhido (cliente, `AreaRenderer`): contorno do alcance na cor do tier, contorno das máquinas vinculadas e uma linha fina do roteador a cada uma. Sem o Vinculador na mão, nada.
 
@@ -98,7 +100,7 @@ Numa farm, as máquinas ficam viradas para lados diferentes. Nas remotas, os lad
 
 Sem o upgrade, a tela não muda. Com ele:
 
-- **Coluna da esquerda: lista agrupada.** Cabeçalho `Máquinas 63/64 · 5 tipos`, busca, e um item por grupo (`Triturador ×24`, com `1 exceção` e avisos), que abre (▸/▾) para as máquinas (`#3 · 12 blocos`, bolinha de estado, marca `exceção`). A máquina presa aparece no topo. Todo texto passa por `GuiText`.
+- **Coluna da esquerda: lista agrupada.** Cabeçalho `Máquinas 63/128 · 5 tipos`, busca, e um item por grupo (`Triturador ×24`, com `1 exceção` e avisos), que abre (▸/▾) para as máquinas (`#3 · 12 blocos`, bolinha de estado, marca `exceção`). A máquina presa aparece no topo. Todo texto passa por `GuiText`.
 - **Escolher o grupo** edita o perfil; o rodapé da coluna da direita diz `Vale para 23 de 24 · 1 exceção`. **Escolher uma máquina** mostra `segue o perfil` ou `exceção`. **Shift + clique** escolhe várias.
 - **Visor:** um bloco por vez (o tipo do grupo, com blocos atrás indicando quantidade, ou a máquina escolhida), faces clicáveis como hoje e uma marca na frente da máquina. Modo **Mapa**: vista de cima 2D com o alcance, todas as máquinas, o grupo escolhido em destaque; clique escolhe.
 - **Botões de face** com os nomes relativos (Cima, Frente, Dir., Baixo, Trás, Esq.) nas remotas.
@@ -134,7 +136,7 @@ Sem o upgrade, a tela não muda. Com ele:
 
 - Nome do item: "Upgrade de Alcance" (`range_upgrade`)?
 - Vazão por máquina (recomendado) ou dividida?
-- Os números da tabela, principalmente o Ultimate (raio 96, 64 máquinas).
+- Os números da tabela, principalmente o Ultimate (raio 64, 128 máquinas).
 - Linhas no mundo só com o Vinculador ou também com o Tablet (a "visualização" já planejada na especificação)?
 - O Básico fica sem alcance?
 - Grupo pelo id do bloco por padrão, e lados relativos à frente como padrão (os dois recomendados)?

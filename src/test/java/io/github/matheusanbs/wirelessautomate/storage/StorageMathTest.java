@@ -59,4 +59,16 @@ class StorageMathTest {
         assertEquals(10, StorageMath.fillLevel(1, 0));
         assertEquals(10, StorageMath.fillLevel(Long.MAX_VALUE, 0));
     }
+
+    @Test
+    void halfTakeIsHalfOfWhatIsThereBelowAStack() {
+        assertEquals(32, StorageMath.halfTake(1_000, 64));
+        assertEquals(32, StorageMath.halfTake(64, 64));
+        assertEquals(5, StorageMath.halfTake(10, 64));
+        assertEquals(2, StorageMath.halfTake(3, 64));
+        assertEquals(1, StorageMath.halfTake(1, 64));
+        assertEquals(1, StorageMath.halfTake(1, 1));
+        assertEquals(8, StorageMath.halfTake(100, 16));
+        assertEquals(0, StorageMath.halfTake(0, 64));
+    }
 }

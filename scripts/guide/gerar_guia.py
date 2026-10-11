@@ -1454,10 +1454,10 @@ número exato.
 
 | Quero... | Como |
 | --- | --- |
-| Achar um item | Digite na busca. **@mod** procura pelo mod (ex.: **@mekanism**). |
+| Achar um item | Digite na busca. **@mod** procura pelo mod (ex.: **@mekanism**) e **#** pelas tags e pelo texto do tooltip (ex.: **#ingots**, **#not yet eaten**). A busca começa vazia cada vez que abre. |
 | Mudar a ordem | O botão ao lado da busca alterna: quantidade, nome e mod. |
-| Pegar uma pilha | Clique no item. Botão direito: meia pilha. |
-| Mandar direto para o inventário | **Shift** + clique no item. Segure **Shift** e arraste pela lista: uma pilha de cada item por onde passar. |
+| Pegar uma pilha | Clique no item. Botão direito: meia pilha (com menos de uma pilha guardada, a metade do que tem). |
+| Mandar direto para o inventário | **Shift** + clique no item. Segure **Shift** e arraste pela lista: uma pilha de cada item por onde passar. Enquanto o **Shift** estiver apertado, os itens não trocam de lugar. |
 | Encher o inventário com um item | Com qualquer item no cursor, **Shift** + clique duas vezes no item. |
 | Mover um item por vez | Rodinha sobre o item: para baixo tira um, para cima guarda um do inventário. Sobre um item do inventário: para baixo guarda um, para cima puxa um do baú. |
 | Guardar o que está no cursor | Clique em qualquer lugar da lista. Botão direito: um só. |
@@ -1528,10 +1528,10 @@ exact number.
 
 | I want to... | How |
 | --- | --- |
-| Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**). |
+| Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**) and **#** by tags and tooltip text (e.g. **#ingots**, **#not yet eaten**). The search starts empty every time you open it. |
 | Change the order | The button next to the search box cycles: amount, name and mod. |
-| Take a stack | Click the item. Right click: half a stack. |
-| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. |
+| Take a stack | Click the item. Right click: half a stack (with less than a stack stored, half of what is there). |
+| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. While **Shift** is held, items keep their places. |
 | Fill the inventory with an item | With any item on the cursor, **Shift** + double-click the item. |
 | Move one item at a time | Mouse wheel over the item: down takes one, up stores one from your inventory. Over an item in your inventory: down stores one, up pulls one from the chest. |
 | Store what's on the cursor | Click anywhere on the list. Right click: just one. |

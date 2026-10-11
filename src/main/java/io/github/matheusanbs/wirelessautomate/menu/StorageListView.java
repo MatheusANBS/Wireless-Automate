@@ -62,6 +62,19 @@ public final class StorageListView<K> {
         return new ArrayList<>(counts.keySet());
     }
 
+    /**
+     * Os tipos com a quantidade, lidos percorrendo o mapa, sem busca pelo hash: o hash de uma pilha
+     * pode mudar se outro mod mexer nos componentes dela depois que ela chegou (ao pedir o nome, por
+     * exemplo), e aí a busca não acha mais o tipo.
+     */
+    public List<Entry<K>> entries() {
+        List<Entry<K>> list = new ArrayList<>(counts.size());
+        for (var entry : counts.object2LongEntrySet()) {
+            list.add(new Entry<>(entry.getKey(), entry.getLongValue()));
+        }
+        return list;
+    }
+
     /** Aplica um pacote do servidor; {@code reset} esvazia antes (o primeiro de uma sincronização inteira). */
     public void apply(boolean reset, Header header, List<Entry<K>> entries) {
         if (reset) {

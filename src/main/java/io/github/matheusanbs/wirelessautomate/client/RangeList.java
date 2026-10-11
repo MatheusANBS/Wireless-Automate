@@ -57,6 +57,8 @@ final class RangeList {
     private int width;
     private int height;
     private @Nullable EditTarget shownTarget;
+    private @Nullable RangeView cachedView;
+    private @Nullable List<Row> cachedRows;
 
     void setBounds(int x, int y, int width, int height) {
         this.x = x;
@@ -71,6 +73,11 @@ final class RangeList {
 
     /** As linhas na ordem da tela: a presa, e cada grupo seguido das máquinas dele se estiver aberto. */
     List<Row> rows(RangeView view) {
+        // as linhas só mudam com a visão (um snapshot novo é outro objeto) ou com os grupos abertos;
+        // o alvo não muda a lista. Montadas uma vez e reusadas nos vários usos de cada quadro.
+        if (view == cachedView && cachedRows != null) {
+            return cachedRows;
+        }
         List<Row> rows = new ArrayList<>();
         int top = 0;
         rows.add(new Row(Kind.ATTACHED, -1, -1, top, ATTACHED_H));
@@ -88,7 +95,14 @@ final class RangeList {
                 }
             }
         }
-        return rows;
+        cachedView = view;
+        cachedRows = List.copyOf(rows);
+        return cachedRows;
+    }
+
+    /** Os grupos abertos mudaram: as linhas são montadas de novo. */
+    private void invalidate() {
+        cachedRows = null;
     }
 
     private static int contentHeight(List<Row> rows) {
@@ -116,8 +130,8 @@ final class RangeList {
         }
         shownTarget = target;
         int group = groupOf(view, target);
-        if (group >= 0) {
-            open.add(group);
+        if (group >= 0 && open.add(group)) {
+            invalidate();
         }
         List<Row> rows = rows(view);
         for (Row row : rows) {
@@ -174,6 +188,7 @@ final class RangeList {
             if (!open.remove(row.group())) {
                 open.add(row.group());
             }
+            invalidate();
             scroll = Math.max(0, Math.min(scroll, maxScroll(rows(view))));
             return true;
         }

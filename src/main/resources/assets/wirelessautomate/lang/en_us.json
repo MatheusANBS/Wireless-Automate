@@ -185,7 +185,7 @@
   "gui.wirelessautomate.router.side.short.left": "Left",
   "gui.wirelessautomate.router.side.short.right": "Right",
   "gui.wirelessautomate.router.side.short.top": "Top",
-  "gui.wirelessautomate.router.side.short.bottom": "Bottom",
+  "gui.wirelessautomate.router.side.short.bottom": "Bot.",
   "gui.wirelessautomate.router.access.none": "no access",
   "gui.wirelessautomate.router.access.slot": "1 slot",
   "gui.wirelessautomate.router.access.slots": "%s slots",

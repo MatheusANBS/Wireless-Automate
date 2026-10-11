@@ -130,7 +130,7 @@ svg text { font-family: var(--pix) }
         <tr><td>Máquina em chunk descarregado</td><td>A porta confere <code>isLoaded</code> e dorme até o chunk carregar</td><td>Nada</td><td>Zero</td></tr>
         <tr><td>Estado das máquinas (aviso)</td><td>Só ao montar o snapshot da tela ou do Tablet</td><td>Máquinas do roteador aberto</td><td>Desprezível</td></tr>
         <tr><td>Visor 3D</td><td>Cliente, por frame, com a tela aberta</td><td>Uma máquina (modo Máquina) ou pontos 2D (modo Mapa)</td><td>Desprezível</td></tr>
-        <tr><td>Linhas no mundo</td><td>Cliente, por frame, com o Vinculador na mão</td><td>Máquinas do roteador escolhido (até 64)</td><td>Baixo</td></tr>
+        <tr><td>Linhas no mundo</td><td>Cliente, por frame, com o Vinculador na mão</td><td>Máquinas do roteador escolhido (até 128)</td><td>Baixo</td></tr>
       </tbody>
     </table></div>
     <p class="mu">Com raio grande, as máquinas de um roteador podem ficar em vários chunks. O motor não força nenhum a carregar: a porta de uma máquina descarregada dorme, como já acontece com uma máquina cheia ou vazia.</p>
@@ -140,7 +140,7 @@ svg text { font-family: var(--pix) }
   <section class="part" id="balanco">
     <div class="eyebrow">2 · Balanceamento</div>
     <h2>Raio e máquinas por tier</h2>
-    <p>O raio sobe bem mais que na proposta anterior, porque ele não custa por tick. As máquinas dobram mais ou menos a cada degrau, pensando em farms de pack grande. Os dois valores ficam na seção <code>tiers</code> da config, com teto de 256 blocos e 256 máquinas, para o dono do pack ajustar.</p>
+    <p>O raio vai até 64 blocos no Ultimate: quatro chunks para cada lado, o bastante para uma base grande sem espalhar as máquinas por chunks que ninguém carrega. Em troca, o número de máquinas sobe bem, pensando em farms de pack grande: o Ultimate vincula 128. Os dois valores ficam na seção <code>tiers</code> da config, com teto de 64 blocos no raio e 512 máquinas, para o dono do pack ajustar.</p>
     <div class="tbl"><table>
       <thead><tr><th>Tier</th><th>Raio (blocos)</th><th>Máquinas vinculadas</th><th>Área coberta</th></tr></thead>
       <tbody id="tierRows"></tbody>
@@ -148,7 +148,7 @@ svg text { font-family: var(--pix) }
     <div class="cols">
       <div>
         <h3>Vazão por máquina</h3>
-        <p class="mu">Cada máquina vinculada recebe a vazão cheia do tier, como se tivesse o próprio roteador. Sem isso, uma farm de 64 máquinas fica gargalada atrás de um roteador só. Por isso o Upgrade de Alcance tem receita cara.</p>
+        <p class="mu">Cada máquina vinculada recebe a vazão cheia do tier, como se tivesse o próprio roteador. Sem isso, uma farm de 128 máquinas fica gargalada atrás de um roteador só. Por isso o Upgrade de Alcance tem receita cara.</p>
       </div>
       <div>
         <h3>O Básico fica sem</h3>
@@ -208,7 +208,7 @@ svg text { font-family: var(--pix) }
         <ul class="tight mu">
           <li>Com o Vinculador no modo Máquinas e um roteador escolhido, o contorno do alcance na cor do tier, desenhado pelo <code>AreaRenderer</code>.</li>
           <li>As máquinas vinculadas com contorno na cor do tier e uma linha fina saindo do roteador. As vinculadas a outro roteador, em cinza.</li>
-          <li>A action bar diz o roteador e a conta: <i>"Linha de Minério · 12/16 máquinas"</i>.</li>
+          <li>A action bar diz o roteador e a conta: <i>"Linha de Minério · 12/32 máquinas"</i>.</li>
           <li>Nada disso existe sem o Vinculador na mão, então não custa nada no resto do tempo.</li>
           <li>Cada máquina vinculada entra no grupo do tipo dela e já segue o perfil. Vincular 20 trituradores novos não pede nenhum clique na tela.</li>
         </ul>
@@ -238,7 +238,7 @@ svg text { font-family: var(--pix) }
   <section class="part" id="tela">
     <div class="eyebrow">4 · Configurar em massa</div>
     <h2>Perfis por tipo de máquina</h2>
-    <p>Configurar 64 máquinas uma a uma não funciona. Por isso a unidade de configuração deixa de ser a máquina e passa a ser o <b>tipo de máquina</b>. As máquinas vinculadas do mesmo bloco formam um grupo ("Triturador ×24"), e o grupo tem um <b>perfil</b>: o modo de cada face, o filtro, a prioridade e o redstone, por aba. Configurou o perfil, configurou as 24.</p>
+    <p>Configurar 128 máquinas uma a uma não funciona. Por isso a unidade de configuração deixa de ser a máquina e passa a ser o <b>tipo de máquina</b>. As máquinas vinculadas do mesmo bloco formam um grupo ("Triturador ×24"), e o grupo tem um <b>perfil</b>: o modo de cada face, o filtro, a prioridade e o redstone, por aba. Configurou o perfil, configurou as 24.</p>
 
     <div class="answer" style="margin-top:16px">
       <div><b>Um perfil vale para o grupo todo</b>Escolha o grupo na lista e mude a face. Todas as máquinas do grupo seguem, menos as exceções.</div>
@@ -281,7 +281,7 @@ svg text { font-family: var(--pix) }
       <div>
         <h3>Por que isso também é mais leve</h3>
         <ul class="tight mu">
-          <li>O perfil é um objeto só. As máquinas que o seguem guardam só a posição, então o NBT e o snapshot da tela ficam pequenos mesmo com 64 máquinas.</li>
+          <li>O perfil é um objeto só. As máquinas que o seguem guardam só a posição, então o NBT e o snapshot da tela ficam pequenos mesmo com 128 máquinas.</li>
           <li>Mudar o perfil é um aviso só para o motor (<code>batchChanges</code>), não 64.</li>
         </ul>
       </div>
@@ -345,7 +345,7 @@ svg text { font-family: var(--pix) }
       <ul class="tight">
         <li><b>Nome do item.</b> "Upgrade de Alcance" (<code>range_upgrade</code>), no mesmo padrão do Upgrade de chunk loading?</li>
         <li><b>Vazão por máquina</b>, com o custo na receita. Recomendado.</li>
-        <li><b>Os números da tabela</b>: Ultimate com raio 96 e 64 máquinas, os dois configuráveis.</li>
+        <li><b>Os números da tabela</b>: Ultimate com raio 64 e 128 máquinas, os dois configuráveis.</li>
       </ul>
       <ul class="tight">
         <li><b>Linhas no mundo</b> só com o Vinculador na mão, ou também com o Tablet (o "visualização" já planejado na especificação)?</li>
@@ -394,13 +394,13 @@ function bindTip(node, html) {
 /* ---------- tiers ---------- */
 const TIERS = [
   { k: 'Básico', c: '#6E7480', r: 0, m: 1 },
-  { k: 'Avançado', c: '#D59A1E', r: 8, m: 4 },
-  { k: 'Elite', c: '#1FA9A0', r: 16, m: 8 },
-  { k: 'Esmeralda', c: '#22A84E', r: 24, m: 16 },
-  { k: 'Allthemodium', c: '#E8740A', r: 32, m: 24, atm: 1 },
-  { k: 'Vibranium', c: '#18B57A', r: 48, m: 32, atm: 1 },
-  { k: 'Unobtainium', c: '#B23FD0', r: 64, m: 48, atm: 1 },
-  { k: 'Ultimate', c: '#7B4FE0', r: 96, m: 64 },
+  { k: 'Avançado', c: '#D59A1E', r: 6, m: 8 },
+  { k: 'Elite', c: '#1FA9A0', r: 12, m: 16 },
+  { k: 'Esmeralda', c: '#22A84E', r: 16, m: 32 },
+  { k: 'Allthemodium', c: '#E8740A', r: 24, m: 48, atm: 1 },
+  { k: 'Vibranium', c: '#18B57A', r: 32, m: 64, atm: 1 },
+  { k: 'Unobtainium', c: '#B23FD0', r: 48, m: 96, atm: 1 },
+  { k: 'Ultimate', c: '#7B4FE0', r: 64, m: 128 },
 ];
 $('tierRows').innerHTML = TIERS.map(t => {
   const side = t.r * 2 + 1;
@@ -537,7 +537,7 @@ drawWorld(); sayDefault();
   el(g, 'div', 'inset', box(152, 24, 140, 104));
   el(g, 'div', 't gmu', { left: U(158), top: U(30), fontSize: U(7) }, 'Roteador escolhido');
   el(g, 'div', 'pill', { left: U(158), top: U(40), fontSize: U(7) }, '<span class="dot" style="background:#22A84E;margin-right:calc(var(--u)*2)"></span>Linha de Minério');
-  el(g, 'div', 't gmu', { left: U(158), top: U(56), fontSize: U(7) }, 'Esmeralda · raio 24 · 7/16 máquinas');
+  el(g, 'div', 't gmu', { left: U(158), top: U(56), fontSize: U(7) }, 'Esmeralda · raio 16 · 7/32 máquinas');
   const rows = [['Na área, com Itens ou Fluidos', '23', 'var(--g-ink)'], ['Cabem no limite', '9', 'var(--g-ok)'], ['Passam do limite', '11', 'var(--g-warn)'], ['Fora do raio', '3', 'var(--g-warn)']];
   rows.forEach(([n, v, c], i) => { el(g, 'div', 't', { left: U(158), top: U(70 + i * 12), fontSize: U(7), color: c }, n);
     el(g, 'div', 't', { right: U(14), top: U(70 + i * 12), fontSize: U(7), color: c }, v); });
@@ -606,7 +606,7 @@ function routerGui() {
   el(g, 'div', 'a', { left: U(8), right: U(8), top: U(39), height: U(1), background: 'var(--g-dark)' });
 
   // lista agrupada
-  el(g, 'div', 't', { left: U(8), top: U(45), fontSize: U(7) }, `Máquinas <span class="gmu">${total}/64 · ${GROUPS.length} tipos</span>`);
+  el(g, 'div', 't', { left: U(8), top: U(45), fontSize: U(7) }, `Máquinas <span class="gmu">${total}/128 · ${GROUPS.length} tipos</span>`);
   el(g, 'div', 'gbtn', { ...box(8, 54, 104, 12), borderColor: 'var(--g-dark)', color: 'var(--g-dis)', fontSize: U(7) }, 'Buscar');
   const list = el(g, 'div', 'list', box(8, 69, 104, 140));
   GROUPS.forEach((gr, gi) => {
@@ -760,7 +760,7 @@ function drawMap(g, x, y, w, h) {
     bindTip(r, () => `${esc(mName(m))}<br><span class="g">${mDist(m)} blocos · ${ST[m.st][1]}</span>`);
   }));
   add('rect', { x: -1.6, y: -1.6, width: 3.2, height: 3.2, fill: '#1B1920', stroke: '#7B4FE0', 'stroke-width': .6 });
-  el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + 4), fontSize: U(6.5) }, 'vista de cima · raio 96');
+  el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + 4), fontSize: U(6.5) }, 'vista de cima · raio 64');
 }
 routerGui();
 

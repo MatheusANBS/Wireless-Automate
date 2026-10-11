@@ -1,6 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.Direction;
@@ -20,8 +25,15 @@ final class NodePorts {
      * {@code node.networkId(type)} até o próximo {@code nodeChanged}.
      */
     private final UUID[] networks = new UUID[TYPES.length];
-    /** [tipo × 6 + face absoluta]. */
+    /** Portas da máquina presa: [tipo × 6 + face absoluta]. */
     private final Port[] ports = new Port[ResourceType.values().length * FACES];
+    /**
+     * Portas das máquinas remotas, por {@code pos.asLong()} da máquina, cada uma no mesmo arranjo
+     * [tipo × 6 + face absoluta]; {@code null} até a primeira remota (um nó sem remotas não paga nada).
+     * As de máquinas que deixaram de ser porta (desvinculadas, fora do raio ou do limite, sem o
+     * upgrade) saem na releitura do tipo ({@link #retainRemotes}).
+     */
+    private @Nullable Long2ObjectOpenHashMap<Port[]> remotes;
     /**
      * Portas ativas de cada tipo, com os campos da configuração da face já preenchidos, da última
      * leitura; {@code null} = ler de novo na próxima montagem. Toda mudança do nó que mexe nas rotas
@@ -37,10 +49,73 @@ final class NodePorts {
         int index = type.ordinal() * FACES + face.ordinal();
         Port port = ports[index];
         if (port == null) {
-            port = new Port(node, face, type);
+            port = new Port(node, node.attachedCaches(), face, type);
             ports[index] = port;
         }
         return port;
+    }
+
+    /**
+     * A porta da máquina remota {@code machine} na face (absoluta) e tipo, criada na primeira vez. A
+     * identidade é (nó, posição da máquina, tipo, face): sobrevive às remontagens enquanto a máquina
+     * continuar sendo porta.
+     */
+    Port remotePort(MachineCaches machine, ResourceType type, Direction face) {
+        if (remotes == null) {
+            remotes = new Long2ObjectOpenHashMap<>();
+        }
+        long key = machine.pos().asLong();
+        Port[] byFace = remotes.get(key);
+        if (byFace == null) {
+            byFace = new Port[TYPES.length * FACES];
+            remotes.put(key, byFace);
+        }
+        int index = type.ordinal() * FACES + face.ordinal();
+        Port port = byFace[index];
+        if (port == null || port.machine != machine) {
+            // Uma MachineCaches nova para a mesma posição (desvinculada e vinculada de novo): porta nova.
+            port = new Port(node, machine, face, type);
+            byFace[index] = port;
+        }
+        return port;
+    }
+
+    /** As portas da máquina remota em {@code machinePos} ({@code pos.asLong()}), ou {@code null}; não cria. */
+    Port @Nullable [] machinePorts(long machinePos) {
+        return remotes == null ? null : remotes.get(machinePos);
+    }
+
+    /**
+     * Na releitura do tipo: tira desse tipo as portas das máquinas remotas fora de {@code keep}
+     * (posições que continuam sendo porta) e descarta as máquinas que ficaram sem porta nenhuma.
+     */
+    void retainRemotes(ResourceType type, LongSet keep) {
+        if (remotes == null) {
+            return;
+        }
+        int first = type.ordinal() * FACES;
+        ObjectIterator<Long2ObjectMap.Entry<Port[]>> iterator = remotes.long2ObjectEntrySet().fastIterator();
+        while (iterator.hasNext()) {
+            Long2ObjectMap.Entry<Port[]> entry = iterator.next();
+            if (keep.contains(entry.getLongKey())) {
+                continue;
+            }
+            Port[] byFace = entry.getValue();
+            boolean empty = true;
+            for (int i = 0; i < byFace.length; i++) {
+                if (i >= first && i < first + FACES) {
+                    byFace[i] = null;
+                } else if (byFace[i] != null) {
+                    empty = false;
+                }
+            }
+            if (empty) {
+                iterator.remove();
+            }
+        }
+        if (remotes.isEmpty()) {
+            remotes = null;
+        }
     }
 
     /** A porta, se já foi criada; não cria. */
@@ -73,8 +148,17 @@ final class NodePorts {
     void clearRoutes(ResourceType type) {
         collected[type.ordinal()] = null;
         int first = type.ordinal() * FACES;
+        clearRoutes(ports, first);
+        if (remotes != null) {
+            for (Port[] byFace : remotes.values()) {
+                clearRoutes(byFace, first);
+            }
+        }
+    }
+
+    private static void clearRoutes(Port[] byFace, int first) {
         for (int i = first; i < first + FACES; i++) {
-            Port port = ports[i];
+            Port port = byFace[i];
             if (port != null) {
                 port.clearRoute();
             }
@@ -96,8 +180,17 @@ final class NodePorts {
      */
     void rememberOrders(ResourceType type) {
         int first = type.ordinal() * FACES;
+        rememberOrders(ports, first);
+        if (remotes != null) {
+            for (Port[] byFace : remotes.values()) {
+                rememberOrders(byFace, first);
+            }
+        }
+    }
+
+    private static void rememberOrders(Port[] byFace, int first) {
         for (int i = first; i < first + FACES; i++) {
-            Port port = ports[i];
+            Port port = byFace[i];
             if (port != null) {
                 port.previousOrder = port.order;
             }
@@ -120,6 +213,7 @@ final class NodePorts {
      * máquina pode ser origem de outra rota e agora ter o que dar).
      */
     void wake(boolean feeders) {
+        // Só as portas da máquina presa: as remotas acordam pela própria máquina.
         for (Port port : ports) {
             if (port == null) {
                 continue;
@@ -137,7 +231,18 @@ final class NodePorts {
      * capability, então nada é remontado.
      */
     void capabilityChanged(ResourceType type, Direction face) {
-        Port port = ports[type.ordinal() * FACES + face.ordinal()];
+        capabilityChanged(ports[type.ordinal() * FACES + face.ordinal()]);
+    }
+
+    /** Como {@link #capabilityChanged(ResourceType, Direction)}, numa máquina remota ({@code pos.asLong()}). */
+    void capabilityChanged(long machinePos, ResourceType type, Direction face) {
+        Port[] byFace = machinePorts(machinePos);
+        if (byFace != null) {
+            capabilityChanged(byFace[type.ordinal() * FACES + face.ordinal()]);
+        }
+    }
+
+    private static void capabilityChanged(@Nullable Port port) {
         if (port == null) {
             return;
         }

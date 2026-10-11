@@ -3,7 +3,14 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +72,7 @@ final class NetworkRoutes {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final RouterTier[] TIERS = RouterTier.values();
     private static final Port[] NO_PORTS = new Port[0];
+    private static final RemoteSide[] REMOTE_SIDES = RemoteSide.values();
     private static final double AVERAGE_WEIGHT = 0.05;
     private static final ToIntFunction<Port> PRIORITY = port -> port.priority;
 
@@ -430,7 +438,10 @@ final class NetworkRoutes {
         }
     }
 
-    /** Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas. */
+    /**
+     * Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas: as da
+     * máquina presa e, com o Upgrade de Alcance valendo, as das remotas (ver {@link #readRemotePorts}).
+     */
     private Port[] readPorts(NodePorts member, ResourceType type) {
         RouterBlockEntity node = member.node;
         boolean powered = node.powered();
@@ -461,7 +472,64 @@ final class NetworkRoutes {
             port.destination = config.mode().inserts();
             active[count++] = port;
         }
+        if (node.rangeActive() && !node.remoteMachines().machines().isEmpty()) {
+            return readRemotePorts(member, type, powered, count == active.length ? active : Arrays.copyOf(active, count));
+        }
+        member.retainRemotes(type, LongSets.EMPTY_SET);
         return count == active.length ? active : Arrays.copyOf(active, count);
+    }
+
+    /**
+     * Depois das faces da presa ({@code attached}), as das máquinas remotas: as primeiras
+     * {@code maxMachines} do tier dentro do raio, na ordem de vínculo (as de fora do raio ou do limite
+     * não viram porta). A face absoluta de cada lado sai da frente da máquina ({@link RemoteSide}); a
+     * configuração é a que vale para ela (exceção ou perfil do grupo), o filtro é o embutido mais os
+     * cartões do grupo naquele lado e o {@code powered} é o do roteador. O resto é como na presa.
+     */
+    private Port[] readRemotePorts(NodePorts member, ResourceType type, boolean powered, Port[] attached) {
+        RouterBlockEntity node = member.node;
+        RouterTier tier = node.tier();
+        int radius = Config.machineRadius(tier);
+        int max = Config.maxMachines(tier);
+        BlockPos router = node.getBlockPos();
+        RemoteMachines remotes = node.remoteMachines();
+        List<RemoteMachine> machines = remotes.machines();
+        LongOpenHashSet keep = new LongOpenHashSet(Math.min(machines.size(), max));
+        List<Port> active = new ArrayList<>(attached.length + Math.min(machines.size(), max) * 2);
+        active.addAll(Arrays.asList(attached));
+        int counted = 0;
+        for (int i = 0, n = machines.size(); i < n && counted < max; i++) {
+            RemoteMachine remote = machines.get(i);
+            BlockPos pos = remote.pos();
+            if (!RangeRules.withinRadius(router.getX(), router.getY(), router.getZ(),
+                    pos.getX(), pos.getY(), pos.getZ(), radius)) {
+                continue;
+            }
+            counted++;
+            keep.add(pos.asLong());
+            MachineConfig config = remotes.effective(remote);
+            MachineCaches caches = null;
+            int front = remote.front();
+            for (RemoteSide side : REMOTE_SIDES) {
+                FaceConfig face = config.face(type, side);
+                if (!face.isActive(powered)) {
+                    continue;
+                }
+                if (caches == null) {
+                    caches = node.remoteCaches(pos);
+                }
+                Port port = member.remotePort(caches, type, DIRECTIONS[side.toAbsolute(front)]);
+                port.network = this;
+                port.priority = face.priority();
+                port.filter = node.filterSet(remote, type, side);
+                port.tier = tier;
+                port.source = face.mode().extracts();
+                port.destination = face.mode().inserts();
+                active.add(port);
+            }
+        }
+        member.retainRemotes(type, keep);
+        return active.toArray(NO_PORTS);
     }
 
     /** As duas portas estão em Ambos: depois de {@link #collectPorts}, origem e destino ao mesmo tempo. */

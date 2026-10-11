@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
-import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.energy.IEnergyStorage;
@@ -16,9 +16,9 @@ final class EnergyAccess implements ScalarAccess {
     static final EnergyAccess INSTANCE = new EnergyAccess();
 
     @Override
-    public @Nullable Object handler(RouterBlockEntity node, Direction machineFace) {
-        BulkEnergy bulk = node.bulkEnergy(machineFace);
-        return bulk != null ? bulk : node.energy(machineFace);
+    public @Nullable Object handler(MachineCaches machine, Direction machineFace) {
+        BulkEnergy bulk = machine.bulkEnergy(machineFace);
+        return bulk != null ? bulk : machine.energy(machineFace);
     }
 
     @Override

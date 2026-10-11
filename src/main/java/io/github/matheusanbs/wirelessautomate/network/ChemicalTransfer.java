@@ -32,7 +32,7 @@ final class ChemicalTransfer {
      * fluidos ({@link FluidTransfer#move}).
      */
     static boolean move(Port source, long now) {
-        IChemicalHandler handler = (IChemicalHandler) source.node.chemicals(source.face);
+        IChemicalHandler handler = (IChemicalHandler) source.machine.chemicals(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
             SourceSleep.nothingToMove(source, now);
@@ -137,7 +137,7 @@ final class ChemicalTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
-            IChemicalHandler target = (IChemicalHandler) destination.node.chemicals(destination.face);
+            IChemicalHandler target = (IChemicalHandler) destination.machine.chemicals(destination.face);
             if (target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.

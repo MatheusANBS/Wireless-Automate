@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -17,9 +16,9 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Predicate;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -45,16 +45,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -116,19 +112,10 @@ public class RouterBlockEntity extends BlockEntity {
     /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
     private boolean chunkUnloading;
 
-    /** Caches por face absoluta da máquina, criados sob demanda e válidos para {@link #cacheFacing}. */
-    private final BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemCaches = newCaches();
-    private final BlockCapabilityCache<BulkItems, @Nullable Direction>[] bulkItemCaches = newCaches();
-    private final BlockCapabilityCache<BulkEnergy, @Nullable Direction>[] bulkEnergyCaches = newCaches();
-    private final BlockCapabilityCache<BulkFluids, @Nullable Direction>[] bulkFluidCaches = newCaches();
-    private final BlockCapabilityCache<BulkSource, @Nullable Direction>[] bulkSourceCaches = newCaches();
-    private final BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidCaches = newCaches();
-    private final BlockCapabilityCache<IEnergyStorage, @Nullable Direction>[] energyCaches = newCaches();
-    /** Químicos do Mekanism; o handler fica como {@code Object} para esta classe não depender dele. */
-    private final BlockCapabilityCache<Object, @Nullable Direction>[] chemicalCaches = newCaches();
-    /** Source do Ars Nouveau; o handler fica como {@code Object} para esta classe não depender dele. */
-    private final BlockCapabilityCache<Object, @Nullable Direction>[] sourceCaches = newCaches();
-    private @Nullable Direction cacheFacing;
+    /** Caches de capability da máquina presa; apontados de novo quando o roteador gira. */
+    private final MachineCaches attachedCaches = MachineCaches.attached(this, BlockPos.ZERO);
+    /** Caches das máquinas remotas, por {@code pos.asLong()}, criados sob demanda e descartados ao desvincular. */
+    private final Long2ObjectOpenHashMap<MachineCaches> remoteCaches = new Long2ObjectOpenHashMap<>();
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
     /** Profundidade de {@link #batchChanges} e os tipos que mudaram dentro dele. */
@@ -466,6 +453,30 @@ public class RouterBlockEntity extends BlockEntity {
         return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
     }
 
+    /**
+     * Os filtros do lado {@code side} da máquina remota para o tipo: o embutido da configuração que vale
+     * para ela (exceção ou perfil) e os cartões válidos do grupo, na ordem dos slots. Chamado pelo
+     * motor na montagem das rotas; sem cartões não aloca.
+     */
+    public FilterSet filterSet(RemoteMachine machine, ResourceType type, RemoteSide side) {
+        Filter embedded = remotes.effective(machine).face(type, side).filter();
+        if (MachineGroup.cardIndex(type) < 0) {
+            return embedded.asSet();
+        }
+        MachineGroup group = remotes.groupOf(machine);
+        List<Filter> fromCards = null;
+        for (int slot = 0; slot < CARD_SLOTS; slot++) {
+            ItemStack stack = group.card(type, side, slot);
+            if (acceptsCard(type, stack)) {
+                if (fromCards == null) {
+                    fromCards = new ArrayList<>(CARD_SLOTS);
+                }
+                fromCards.add(FilterCardItem.contents(stack).filter());
+            }
+        }
+        return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
+    }
+
     /** Tira todos os cartões (para soltar no mundo quando o roteador sai). */
     public NonNullList<ItemStack> removeAllCards() {
         NonNullList<ItemStack> removed = NonNullList.create();
@@ -619,6 +630,7 @@ public class RouterBlockEntity extends BlockEntity {
             return false;
         }
         dropAtRouter(remotes.unlink(index));
+        pruneRemoteCaches();
         changed(NetworkManager.ALL_TYPES);
         return true;
     }
@@ -844,7 +856,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
     public @Nullable IItemHandler items(Direction machineFace) {
-        return capability(itemCaches, Capabilities.ItemHandler.BLOCK, ResourceType.ITEM, machineFace);
+        return attachedCaches.items(machineFace);
     }
 
     /**
@@ -852,7 +864,7 @@ public class RouterBlockEntity extends BlockEntity {
      * O motor tenta esta antes de {@link #items}: entre dois baús do mod, um tipo inteiro numa chamada.
      */
     public @Nullable BulkItems bulkItems(Direction machineFace) {
-        return capability(bulkItemCaches, BulkItems.BLOCK, ResourceType.ITEM, machineFace);
+        return attachedCaches.bulkItems(machineFace);
     }
 
     /**
@@ -860,11 +872,11 @@ public class RouterBlockEntity extends BlockEntity {
      * tiver. O motor tenta esta antes de {@link #fluids}: sem o teto de {@link Integer#MAX_VALUE} mB.
      */
     public @Nullable BulkFluids bulkFluids(Direction machineFace) {
-        return capability(bulkFluidCaches, BulkFluids.BLOCK, ResourceType.FLUID, machineFace);
+        return attachedCaches.bulkFluids(machineFace);
     }
 
     public @Nullable IFluidHandler fluids(Direction machineFace) {
-        return capability(fluidCaches, Capabilities.FluidHandler.BLOCK, ResourceType.FLUID, machineFace);
+        return attachedCaches.fluids(machineFace);
     }
 
     /**
@@ -872,11 +884,11 @@ public class RouterBlockEntity extends BlockEntity {
      * motor tenta esta antes de {@link #energy}: sem o teto de {@link Integer#MAX_VALUE} FE por chamada.
      */
     public @Nullable BulkEnergy bulkEnergy(Direction machineFace) {
-        return capability(bulkEnergyCaches, BulkEnergy.BLOCK, ResourceType.ENERGY, machineFace);
+        return attachedCaches.bulkEnergy(machineFace);
     }
 
     public @Nullable IEnergyStorage energy(Direction machineFace) {
-        return capability(energyCaches, Capabilities.EnergyStorage.BLOCK, ResourceType.ENERGY, machineFace);
+        return attachedCaches.energy(machineFace);
     }
 
     /**
@@ -884,12 +896,8 @@ public class RouterBlockEntity extends BlockEntity {
      * capability ou sem o Mekanism. Devolvido como {@code Object}: só o código de
      * {@code compat/mekanism} e o {@code ChemicalTransfer} sabem o tipo.
      */
-    @SuppressWarnings("unchecked")
     public @Nullable Object chemicals(Direction machineFace) {
-        BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
-        return capability == null ? null
-                : capability(chemicalCaches, (BlockCapability<Object, @Nullable Direction>) capability,
-                        ResourceType.CHEMICAL, machineFace);
+        return attachedCaches.chemicals(machineFace);
     }
 
     /**
@@ -898,75 +906,79 @@ public class RouterBlockEntity extends BlockEntity {
      * chamada da capability do Ars.
      */
     public @Nullable BulkSource bulkSource(Direction machineFace) {
-        return capability(bulkSourceCaches, BulkSource.BLOCK, ResourceType.SOURCE, machineFace);
+        return attachedCaches.bulkSource(machineFace);
     }
 
     /**
      * Source do Ars Nouveau ({@code ISourceCap}) pela face, ou {@code null} sem a capability ou sem o
      * Ars. Devolvido como {@code Object}: só o código de {@code compat/arsnouveau} sabe o tipo.
      */
-    @SuppressWarnings("unchecked")
     public @Nullable Object arsSource(Direction machineFace) {
-        BlockCapability<?, @Nullable Direction> capability = Sources.capability();
-        return capability == null ? null
-                : capability(sourceCaches, (BlockCapability<Object, @Nullable Direction>) capability,
-                        ResourceType.SOURCE, machineFace);
+        return attachedCaches.arsSource(machineFace);
+    }
+
+    /** Os caches de capability da máquina presa (uma instância só, que acompanha o giro). */
+    public MachineCaches attachedCaches() {
+        return attachedCaches;
     }
 
     /**
-     * Devolve a capability pelo cache da face, criando o cache na primeira consulta. Se o roteador
-     * foi girado, a máquina mudou de lugar e os caches são refeitos. Só no servidor. Cada cache avisa
-     * a própria invalidação com o tipo e a face ({@link #capabilityInvalidated}).
+     * Os caches da máquina remota em {@code pos}, criados na primeira consulta. Só para máquinas
+     * vinculadas: o motor pede na leitura das portas; desvincular descarta.
      */
-    private <T> @Nullable T capability(BlockCapabilityCache<T, @Nullable Direction>[] caches,
-            BlockCapability<T, @Nullable Direction> capability, ResourceType type, Direction machineFace) {
-        if (!(level instanceof ServerLevel serverLevel) || isRemoved()) {
-            return null;
+    public MachineCaches remoteCaches(BlockPos pos) {
+        long key = pos.asLong();
+        MachineCaches caches = remoteCaches.get(key);
+        if (caches == null) {
+            caches = MachineCaches.remote(this, pos);
+            remoteCaches.put(key, caches);
         }
-        // Girar passa pelo setBlockState, que limpa os caches: o facing só é lido ao criar um.
-        BlockCapabilityCache<T, @Nullable Direction> cache = caches[machineFace.ordinal()];
-        if (cache == null) {
-            Direction facing = facing();
-            if (facing != cacheFacing) {
-                clearCaches();
-                cacheFacing = facing;
+        return caches;
+    }
+
+    /** Descarta os caches das remotas que não estão mais vinculadas. */
+    private void pruneRemoteCaches() {
+        if (remoteCaches.isEmpty()) {
+            return;
+        }
+        var iterator = remoteCaches.long2ObjectEntrySet().fastIterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (!remotes.contains(entry.getValue().pos())) {
+                entry.getValue().discard();
+                iterator.remove();
             }
-            cache = BlockCapabilityCache.create(capability, serverLevel, machinePos(), machineFace,
-                    () -> !isRemoved() && facing() == facing,
-                    () -> capabilityInvalidated(type, machineFace));
-            caches[machineFace.ordinal()] = cache;
         }
-        return cache.getCapability();
     }
 
     /**
-     * A capability de uma face mudou: a tela (slots, máquina) refaz o snapshot e o motor acorda só a
-     * porta dessa face e tipo, e as origens que esperam por ela. As rotas não dependem de capability,
-     * então nada é remontado.
+     * Um cache de capability de {@code caches} foi invalidado (chamado pela {@link MachineCaches}). Na
+     * presa, a tela refaz o snapshot e o motor acorda só a porta dessa face e tipo, e as origens que
+     * esperam por ela; nada é remontado. Numa remota, a frente é relida (só com o chunk carregado): se
+     * mudou, os lados relativos mudaram e as rotas do nó são refeitas; senão, acorda a porta da face.
      */
-    private void capabilityInvalidated(ResourceType type, Direction machineFace) {
+    public void machineInvalidated(MachineCaches caches, ResourceType type, Direction machineFace) {
         changeVersion++;
-        if (level != null && !level.isClientSide) {
-            NetworkManager.get().capabilityChanged(this, type, machineFace);
+        if (level == null || level.isClientSide) {
+            return;
         }
-    }
-
-    private void clearCaches() {
-        Arrays.fill(itemCaches, null);
-        Arrays.fill(bulkItemCaches, null);
-        Arrays.fill(bulkEnergyCaches, null);
-        Arrays.fill(bulkFluidCaches, null);
-        Arrays.fill(bulkSourceCaches, null);
-        Arrays.fill(fluidCaches, null);
-        Arrays.fill(energyCaches, null);
-        Arrays.fill(chemicalCaches, null);
-        Arrays.fill(sourceCaches, null);
-        cacheFacing = null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> BlockCapabilityCache<T, @Nullable Direction>[] newCaches() {
-        return (BlockCapabilityCache<T, @Nullable Direction>[]) new BlockCapabilityCache[FACES];
+        if (!caches.isRemote()) {
+            NetworkManager.get().capabilityChanged(this, type, machineFace);
+            return;
+        }
+        BlockPos pos = caches.pos();
+        if (level.isLoaded(pos)) {
+            RemoteMachine machine = remotes.machine(remotes.index(pos));
+            if (machine != null) {
+                int front = RemoteMachines.frontOf(level.getBlockState(pos));
+                if (front != machine.front()) {
+                    machine.setFront(front);
+                    changed(NetworkManager.ALL_TYPES);
+                    return;
+                }
+            }
+        }
+        NetworkManager.get().capabilityChanged(this, pos, type, machineFace);
     }
 
     /**
@@ -1025,7 +1037,7 @@ public class RouterBlockEntity extends BlockEntity {
         }
         if (rotated) {
             // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
-            clearCaches();
+            attachedCaches.retarget(machinePos());
             machineBlock = null;
             if (level != null && !level.isClientSide && hasChunkUpgrade()) {
                 // O chunk da máquina pode ser outro.

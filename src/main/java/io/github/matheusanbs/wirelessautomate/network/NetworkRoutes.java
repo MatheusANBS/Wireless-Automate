@@ -489,23 +489,18 @@ final class NetworkRoutes {
     private Port[] readRemotePorts(NodePorts member, ResourceType type, boolean powered, Port[] attached) {
         RouterBlockEntity node = member.node;
         RouterTier tier = node.tier();
-        int radius = Config.machineRadius(tier);
-        int max = Config.maxMachines(tier);
-        BlockPos router = node.getBlockPos();
         RemoteMachines remotes = node.remoteMachines();
         List<RemoteMachine> machines = remotes.machines();
-        LongOpenHashSet keep = new LongOpenHashSet(Math.min(machines.size(), max));
-        List<Port> active = new ArrayList<>(attached.length + Math.min(machines.size(), max) * 2);
+        RangeRules.Reach[] reach = node.machineReach();
+        LongOpenHashSet keep = new LongOpenHashSet();
+        List<Port> active = new ArrayList<>(attached.length + machines.size() * 2);
         active.addAll(Arrays.asList(attached));
-        int counted = 0;
-        for (int i = 0, n = machines.size(); i < n && counted < max; i++) {
-            RemoteMachine remote = machines.get(i);
-            BlockPos pos = remote.pos();
-            if (!RangeRules.withinRadius(router.getX(), router.getY(), router.getZ(),
-                    pos.getX(), pos.getY(), pos.getZ(), radius)) {
+        for (int i = 0, n = machines.size(); i < n; i++) {
+            if (reach[i] != RangeRules.Reach.ACTIVE) {
                 continue;
             }
-            counted++;
+            RemoteMachine remote = machines.get(i);
+            BlockPos pos = remote.pos();
             keep.add(pos.asLong());
             MachineConfig config = remotes.effective(remote);
             MachineCaches caches = null;

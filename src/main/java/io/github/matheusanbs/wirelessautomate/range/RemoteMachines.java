@@ -115,6 +115,19 @@ public final class RemoteMachines {
         return index >= 0 && index < machines.size() ? machines.get(index) : null;
     }
 
+    /**
+     * O estado de cada máquina no motor, na ordem de {@link #machines()}, para um roteador em
+     * {@code router} com o raio e o limite dados ({@link RangeRules#reach}). Não olha o upgrade.
+     */
+    public RangeRules.Reach[] reach(BlockPos router, int radius, int max) {
+        int[] distances = new int[machines.size()];
+        for (int i = 0; i < distances.length; i++) {
+            BlockPos pos = machines.get(i).pos();
+            distances[i] = RangeRules.chebyshev(router.getX(), router.getY(), router.getZ(), pos.getX(), pos.getY(), pos.getZ());
+        }
+        return RangeRules.reach(distances, radius, max);
+    }
+
     /** As máquinas, na ordem de vínculo. Só leitura. */
     public List<RemoteMachine> machines() {
         return Collections.unmodifiableList(machines);

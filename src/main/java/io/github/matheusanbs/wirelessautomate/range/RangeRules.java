@@ -20,6 +20,33 @@ public final class RangeRules {
         return chebyshev(x1, y1, z1, x2, y2, z2) <= radius;
     }
 
+    /** Estado de uma máquina vinculada no motor: ativa, fora do raio ou além do limite do tier. */
+    public enum Reach {
+        ACTIVE, OUT_OF_RANGE, OVER_LIMIT
+    }
+
+    /**
+     * O estado de cada máquina, na ordem de vínculo, a partir da distância de Chebyshev de cada uma ao
+     * roteador: as primeiras {@code max} dentro do raio ficam ativas; as de fora do raio não gastam
+     * vaga; as de dentro do raio depois da {@code max}-ésima passam do limite. A regra única do motor
+     * e da tela.
+     */
+    public static Reach[] reach(int[] distances, int radius, int max) {
+        Reach[] result = new Reach[distances.length];
+        int active = 0;
+        for (int i = 0; i < distances.length; i++) {
+            if (distances[i] > radius) {
+                result[i] = Reach.OUT_OF_RANGE;
+            } else if (active < max) {
+                result[i] = Reach.ACTIVE;
+                active++;
+            } else {
+                result[i] = Reach.OVER_LIMIT;
+            }
+        }
+        return result;
+    }
+
     /** Por que um vínculo foi recusado. {@code NONE} quer dizer que pode vincular. */
     public enum LinkRefusal {
         NONE, NO_UPGRADE, NO_RANGE, OTHER_DIMENSION, OUT_OF_RANGE, LIMIT, NOT_A_MACHINE, SELF, ROUTER, ATTACHED, PROTECTED;

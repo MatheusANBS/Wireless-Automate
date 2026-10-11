@@ -21,6 +21,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -115,7 +116,7 @@ public class RouterBlockEntity extends BlockEntity {
     /** Caches de capability da máquina presa; apontados de novo quando o roteador gira. */
     private final MachineCaches attachedCaches = MachineCaches.attached(this, BlockPos.ZERO);
     /** Caches das máquinas remotas, por {@code pos.asLong()}, criados sob demanda e descartados ao desvincular. */
-    private final Long2ObjectOpenHashMap<MachineCaches> remoteCaches = new Long2ObjectOpenHashMap<>();
+    private @Nullable Long2ObjectOpenHashMap<MachineCaches> remoteCaches;
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
     /** Profundidade de {@link #batchChanges} e os tipos que mudaram dentro dele. */
@@ -581,6 +582,7 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public void setRangeUpgrade(ItemStack stack) {
         rangeUpgrade = stack;
+        pruneRemoteCaches();
         changed(NetworkManager.ALL_TYPES);
     }
 
@@ -917,6 +919,16 @@ public class RouterBlockEntity extends BlockEntity {
         return attachedCaches.arsSource(machineFace);
     }
 
+    /**
+     * O estado de cada máquina remota no motor (ativa, fora do raio, além do limite), na ordem de
+     * {@link RemoteMachines#machines()}, com o raio e o limite do tier na config. Não olha o upgrade:
+     * sem ele ({@link #rangeActive()} falso) nenhuma vira porta.
+     */
+    public RangeRules.Reach[] machineReach() {
+        RouterTier tier = tier();
+        return remotes.reach(worldPosition, Config.machineRadius(tier), Config.maxMachines(tier));
+    }
+
     /** Os caches de capability da máquina presa (uma instância só, que acompanha o giro). */
     public MachineCaches attachedCaches() {
         return attachedCaches;
@@ -927,6 +939,9 @@ public class RouterBlockEntity extends BlockEntity {
      * vinculadas: o motor pede na leitura das portas; desvincular descarta.
      */
     public MachineCaches remoteCaches(BlockPos pos) {
+        if (remoteCaches == null) {
+            remoteCaches = new Long2ObjectOpenHashMap<>();
+        }
         long key = pos.asLong();
         MachineCaches caches = remoteCaches.get(key);
         if (caches == null) {
@@ -936,18 +951,25 @@ public class RouterBlockEntity extends BlockEntity {
         return caches;
     }
 
-    /** Descarta os caches das remotas que não estão mais vinculadas. */
+    /**
+     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas; sem o
+     * upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT e quando o upgrade sai.
+     */
     private void pruneRemoteCaches() {
-        if (remoteCaches.isEmpty()) {
+        if (remoteCaches == null) {
             return;
         }
+        boolean keepAny = rangeActive();
         var iterator = remoteCaches.long2ObjectEntrySet().fastIterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            if (!remotes.contains(entry.getValue().pos())) {
+            if (!keepAny || !remotes.contains(entry.getValue().pos())) {
                 entry.getValue().discard();
                 iterator.remove();
             }
+        }
+        if (remoteCaches.isEmpty()) {
+            remoteCaches = null;
         }
     }
 
@@ -1220,6 +1242,7 @@ public class RouterBlockEntity extends BlockEntity {
                 : ItemStack.EMPTY;
         // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
         remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
+        pruneRemoteCaches();
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {

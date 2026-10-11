@@ -483,6 +483,13 @@ public final class NetworkManager {
         configChanged = false;
         networksAdded = false;
         savedVersion = data.version();
+        if (all) {
+            // O raio e o limite das máquinas remotas (e se o upgrade vale) saem da config na leitura
+            // das portas: relê as faces de todos os nós. Só na recarga da config.
+            for (NodePorts ports : nodes.values()) {
+                ports.invalidate(ALL_TYPES);
+            }
+        }
         for (int i = 0, n = networkList.size(); i < n; i++) {
             NetworkRoutes network = networkList.get(i);
             // Rede pausada (grupo pausado no Tablet) conta como inexistente: fica sem rotas até retomar.

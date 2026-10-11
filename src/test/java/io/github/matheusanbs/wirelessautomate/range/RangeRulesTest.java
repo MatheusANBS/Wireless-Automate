@@ -58,4 +58,21 @@ class RangeRulesTest {
         assertEquals("range.refusal.out_of_range", LinkRefusal.OUT_OF_RANGE.key());
         assertEquals("range.refusal.none", LinkRefusal.NONE.key());
     }
+
+    @Test
+    void reachSkipsOutOfRangeWithoutSpendingSlots() {
+        RangeRules.Reach[] reach = RangeRules.reach(new int[] {9, 1, 2, 3, 0}, 6, 2);
+        assertEquals(RangeRules.Reach.OUT_OF_RANGE, reach[0]);
+        assertEquals(RangeRules.Reach.ACTIVE, reach[1]);
+        assertEquals(RangeRules.Reach.ACTIVE, reach[2]);
+        assertEquals(RangeRules.Reach.OVER_LIMIT, reach[3]);
+        assertEquals(RangeRules.Reach.OVER_LIMIT, reach[4]);
+    }
+
+    @Test
+    void reachWithZeroLimitOrRadius() {
+        assertEquals(RangeRules.Reach.OVER_LIMIT, RangeRules.reach(new int[] {1}, 6, 0)[0]);
+        assertEquals(RangeRules.Reach.OUT_OF_RANGE, RangeRules.reach(new int[] {1}, 0, 8)[0]);
+        assertEquals(RangeRules.Reach.ACTIVE, RangeRules.reach(new int[] {6}, 6, 1)[0]);
+    }
 }

@@ -210,6 +210,7 @@ svg text { font-family: var(--pix) }
           <li>As máquinas vinculadas com contorno na cor do tier e uma linha fina saindo do roteador. As vinculadas a outro roteador, em cinza.</li>
           <li>A action bar diz o roteador e a conta: <i>"Linha de Minério · 12/16 máquinas"</i>.</li>
           <li>Nada disso existe sem o Vinculador na mão, então não custa nada no resto do tempo.</li>
+          <li>Cada máquina vinculada entra no grupo do tipo dela e já segue o perfil. Vincular 20 trituradores novos não pede nenhum clique na tela.</li>
         </ul>
       </div>
       <div>
@@ -235,20 +236,54 @@ svg text { font-family: var(--pix) }
 
   <!-- ===================================================== TELA DO ROTEADOR -->
   <section class="part" id="tela">
-    <div class="eyebrow">4 · Tela do roteador</div>
-    <h2>Lista de máquinas, visor 3D e mapa</h2>
-    <p>Com o Upgrade de Alcance, a tela ganha uma coluna à esquerda com as máquinas vinculadas. Escolher uma máquina mostra as faces dela no visor e na coluna da direita, como hoje. Sem o upgrade, a tela fica exatamente como é.</p>
+    <div class="eyebrow">4 · Configurar em massa</div>
+    <h2>Perfis por tipo de máquina</h2>
+    <p>Configurar 64 máquinas uma a uma não funciona. Por isso a unidade de configuração deixa de ser a máquina e passa a ser o <b>tipo de máquina</b>. As máquinas vinculadas do mesmo bloco formam um grupo ("Triturador ×24"), e o grupo tem um <b>perfil</b>: o modo de cada face, o filtro, a prioridade e o redstone, por aba. Configurou o perfil, configurou as 24.</p>
+
+    <div class="answer" style="margin-top:16px">
+      <div><b>Um perfil vale para o grupo todo</b>Escolha o grupo na lista e mude a face. Todas as máquinas do grupo seguem, menos as exceções.</div>
+      <div><b>Lados relativos à frente</b>Numa farm, as máquinas ficam viradas para lados diferentes. "Trás: Extrair" vale para todas, cada uma pela própria frente. Bloco sem frente usa os lados absolutos.</div>
+      <div><b>Vincular já configura</b>Uma máquina nova entra no grupo do tipo dela e já sai com o perfil. Aumentar a farm é só vincular mais máquinas.</div>
+      <div><b>Exceção quando precisar</b>Mudar uma máquina sozinha cria uma exceção, marcada na lista. "Voltar ao perfil" desfaz. Shift + clique escolhe várias de uma vez.</div>
+    </div>
+
     <div class="stage">
       <div class="gui" id="routerGui" style="width:calc(var(--u)*344);height:calc(var(--u)*236)"></div>
       <div class="side">
         <h3>Experimente</h3>
         <ol>
-          <li>Clique numa máquina da lista. A bolinha diz o estado: <b style="color:var(--g-ok)">verde</b> carregada, <b style="color:var(--g-warn)">âmbar</b> chunk descarregado, <b style="color:var(--g-danger)">vermelha</b> a máquina sumiu.</li>
-          <li>No visor, clique numa face do bloco ou nos botões de face embaixo.</li>
-          <li>Troque o visor para <b>Mapa</b>: a vista de cima mostra o alcance e todas as máquinas. Clique num ponto para escolher.</li>
-          <li>Passe o mouse nas linhas para ver o tooltip com a posição e a distância.</li>
+          <li>Com o grupo <b>Triturador</b> escolhido, clique em <b>Extrair</b>. O rodapé mostra para quantas máquinas a mudança vale.</li>
+          <li>Abra o grupo (▸) e clique numa máquina. Ela mostra "segue o perfil". Mude uma face: ela vira <b>exceção</b>, e o grupo conta mais uma.</li>
+          <li>Segure <kbd>Shift</kbd> e clique em várias máquinas. A mudança vale para todas as escolhidas.</li>
+          <li>No visor, troque entre <b>Relativo</b> e <b>Absoluto</b>. A marca escura no bloco é a frente da máquina.</li>
+          <li>O <b>Mapa</b> mostra todas as máquinas, com o grupo escolhido em destaque.</li>
         </ol>
-        <p style="margin-top:12px">O visor desenha uma máquina por vez, então o custo no cliente é o mesmo de hoje com 1 ou com 64 máquinas. O Mapa é 2D, só pontos. A lista usa a busca e o <code>GuiText</code> como o Baú.</p>
+        <p style="margin-top:12px">A bolinha de cada máquina diz o estado: <b style="color:var(--g-ok)">verde</b> carregada, <b style="color:var(--g-warn)">âmbar</b> chunk descarregado, <b style="color:var(--g-danger)">vermelha</b> a máquina sumiu. O visor desenha um bloco só, então o custo no cliente é o mesmo com 1 ou com 64 máquinas.</p>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3>Ir além do grupo</h3>
+        <ul class="tight mu">
+          <li><b>Copiar perfil com o Configurador.</b> A cópia leva os perfis por tipo. Colar num roteador de outra farm configura os grupos que batem com o tipo e deixa os outros como estavam.</li>
+          <li><b>Copiar da máquina presa.</b> O botão "Usar como perfil" pega a configuração de uma máquina e a torna o perfil do grupo.</li>
+          <li><b>Pausar um grupo.</b> Desliga o grupo inteiro, por exemplo os geradores, sem mexer nas faces.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Juntar e separar grupos</h3>
+        <ul class="tight mu">
+          <li>Por padrão, o grupo é o id do bloco. Dá para renomear e separar: "Triturador (minério)" e "Triturador (pó)", com perfis diferentes.</li>
+          <li>Separar move as máquinas escolhidas para um grupo novo do mesmo tipo. Uma máquina vinculada depois entra no primeiro grupo do tipo, que o jogador pode trocar.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Por que isso também é mais leve</h3>
+        <ul class="tight mu">
+          <li>O perfil é um objeto só. As máquinas que o seguem guardam só a posição, então o NBT e o snapshot da tela ficam pequenos mesmo com 64 máquinas.</li>
+          <li>Mudar o perfil é um aviso só para o motor (<code>batchChanges</code>), não 64.</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -279,24 +314,25 @@ svg text { font-family: var(--pix) }
         <h3>Nó e portas</h3>
         <ul class="tight mu">
           <li>O <code>RouterBlockEntity</code> passa de uma máquina para uma lista. A máquina 0 é a presa, com as chaves de NBT de hoje. As remotas vão numa lista nova, então um mundo antigo carrega igual.</li>
-          <li>Cada máquina tem os próprios caches e a própria <code>FaceConfig</code>. Na presa, os lados continuam relativos ao <code>facing</code> + <code>spin</code>. Nas remotas são absolutos, porque o giro do roteador não as afeta.</li>
+          <li>Cada máquina tem os próprios caches. A configuração mora no <b>perfil do grupo</b> (um <code>FaceConfig</code> por lado e aba). A máquina guarda só a posição, o grupo e, se for exceção, a própria configuração.</li>
+          <li>Na presa, os lados continuam relativos ao <code>facing</code> + <code>spin</code> do roteador. Nas remotas, relativos à frente da máquina (a propriedade <code>facing</code> do bloco, que Mekanism, fornalhas e quase todas as máquinas têm). Sem ela, absolutos. Se a máquina girar, a configuração acompanha.</li>
           <li>A <code>Port</code> ganha o índice da máquina. Rotas, sono, backoff e round-robin não mudam.</li>
         </ul>
       </div>
       <div>
         <h3>Rede e telas</h3>
         <ul class="tight mu">
-          <li>O <code>RouterSnapshot</code> leva a lista de máquinas (estado, posição, <code>BlockState</code>) e as faces só da máquina escolhida. Ele continua indo só com a tela aberta.</li>
-          <li>Payloads novos: escolher a máquina na tela, vincular e desvincular. O <code>ModPayloads.VERSION</code> sobe.</li>
-          <li>O Configurador copia e cola a configuração por máquina, se o tipo de máquina bater. Fica para uma segunda etapa.</li>
+          <li>O <code>RouterSnapshot</code> leva os grupos (perfil, contagem, exceções), a lista de máquinas (estado, distância, se é exceção) e o <code>BlockState</code> só da escolhida. Continua indo só com a tela aberta.</li>
+          <li>Os payloads de configuração ganham o alvo: perfil do grupo ou uma lista de máquinas. O servidor aplica tudo num <code>batchChanges</code>. O <code>ModPayloads.VERSION</code> sobe.</li>
+          <li>O preset do Configurador passa a levar os perfis por tipo de bloco.</li>
         </ul>
       </div>
       <div>
         <h3>Etapas</h3>
         <ul class="tight mu">
-          <li><b>1.</b> O modelo de dados com várias máquinas, o Upgrade de Alcance, o Vinculador no modo Máquinas e as regras. GameTests de transferência com uma máquina remota.</li>
-          <li><b>2.</b> A tela do roteador com a lista e o Mapa, e o aviso no Tablet. E2E com capturas.</li>
-          <li><b>3.</b> As linhas no mundo, o Configurador por máquina e o guia.</li>
+          <li><b>1.</b> O modelo de dados com várias máquinas, grupos, perfis, exceções e lados relativos à frente. O Upgrade de Alcance, o Vinculador no modo Máquinas e as regras. GameTests de transferência com máquinas remotas giradas.</li>
+          <li><b>2.</b> A tela do roteador com a lista agrupada, seleção múltipla e o Mapa, e o aviso no Tablet. E2E com capturas.</li>
+          <li><b>3.</b> Separar e renomear grupos, pausar grupo, os perfis no Configurador, as linhas no mundo e o guia.</li>
         </ul>
       </div>
     </div>
@@ -314,6 +350,8 @@ svg text { font-family: var(--pix) }
       <ul class="tight">
         <li><b>Linhas no mundo</b> só com o Vinculador na mão, ou também com o Tablet (o "visualização" já planejado na especificação)?</li>
         <li><b>O Básico</b> fica mesmo sem alcance?</li>
+        <li><b>Grupo pelo id do bloco</b> por padrão, com separar e renomear na etapa 3? Recomendado.</li>
+        <li><b>Lados relativos à frente</b> como padrão nas máquinas remotas que têm frente? Recomendado.</li>
       </ul>
       <div>
         <h3>Fica de fora</h3>
@@ -507,107 +545,174 @@ drawWorld(); sayDefault();
   bindTip(go, 'Vincula 9 máquinas a Linha de Minério<br><span class="g">Itens + Fluidos · 11 passam do limite do tier</span>');
 })();
 
-/* ===================== tela do roteador ===================== */
-const RM = [
-  { k: 'crusher', name: 'Triturador', pos: [12, 63, -4], st: 'ok', home: true },
-  { k: 'crusher', name: 'Triturador', pos: [18, 63, -4], st: 'ok' },
-  { k: 'crusher', name: 'Triturador', pos: [24, 63, -4], st: 'ok' },
-  { k: 'enrich', name: 'Enriquecedor', pos: [12, 63, 2], st: 'ok' },
-  { k: 'enrich', name: 'Enriquecedor', pos: [18, 63, 2], st: 'ok' },
-  { k: 'enrich', name: 'Enriquecedor', pos: [24, 63, 2], st: 'ok' },
-  { k: 'furnace', name: 'Fornalha Elétrica', pos: [12, 63, 8], st: 'ok' },
-  { k: 'furnace', name: 'Fornalha Elétrica', pos: [18, 63, 8], st: 'ok' },
-  { k: 'gen', name: 'Gerador a Gás', pos: [-2, 64, -10], st: 'ok' },
-  { k: 'chest', name: 'Baú de Saída', pos: [6, 64, 14], st: 'gone' },
-  { k: 'crusher', name: 'Triturador Externo', pos: [33, 63, 20], st: 'unloaded' },
-  { k: 'furnace', name: 'Fornalha Elétrica', pos: [24, 63, 8], st: 'ok' },
-];
-const ROUTER_POS = [12, 64, -4];
-const ST = { ok: ['--g-ok', 'Carregada'], unloaded: ['--g-warn', 'Chunk descarregado'], gone: ['--g-danger', 'A máquina sumiu'] };
-const FACES = [['U', 'Cima'], ['N', 'Norte'], ['E', 'Leste'], ['D', 'Baixo'], ['S', 'Sul'], ['W', 'Oeste']];
+/* ===================== tela do roteador (perfis por tipo) ===================== */
+const FACES_REL = [['U', 'Cima'], ['F', 'Frente'], ['R', 'Direita'], ['D', 'Baixo'], ['B', 'Trás'], ['L', 'Esquerda']];
+const FACES_ABS = { U: ['U', 'Cima'], F: ['N', 'Norte'], R: ['E', 'Leste'], D: ['D', 'Baixo'], B: ['S', 'Sul'], L: ['W', 'Oeste'] };
 const MODES = [['Extrair', '--m-ext'], ['Inserir', '--m-ins'], ['Ambos', '--m-both'], ['Nenhum', '--m-none']];
-RM.forEach((m, i) => { m.faces = { U: i % 3 === 0 ? 1 : 3, N: 3, E: i % 2 ? 0 : 3, D: 3, S: i % 4 === 1 ? 2 : 3, W: 3 }; });
-let selM = 0, selF = 'U', view = 'machine';
-const dist = p => Math.max(...p.map((v, i) => Math.abs(v - ROUTER_POS[i])));
+const ST = { ok: ['--g-ok', 'Carregada'], unloaded: ['--g-warn', 'Chunk descarregado'], gone: ['--g-danger', 'A máquina sumiu'] };
+const blank = () => ({ U: 3, F: 3, R: 3, D: 3, B: 3, L: 3 });
+const GROUPS = [
+  { k: 'crusher', name: 'Triturador', n: 24, prof: { ...blank(), U: 1, B: 0 }, open: true },
+  { k: 'enrich', name: 'Enriquecedor', n: 16, prof: { ...blank(), U: 1, B: 0 } },
+  { k: 'furnace', name: 'Fornalha Elétrica', n: 16, prof: { ...blank(), U: 1, B: 0 } },
+  { k: 'gen', name: 'Gerador a Gás', n: 6, prof: { ...blank(), D: 0 } },
+  { k: 'chest', name: 'Baú de Saída', n: 1, prof: { ...blank(), U: 1 } },
+];
+let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+GROUPS.forEach((g, gi) => {
+  g.members = Array.from({ length: g.n }, (_, i) => ({ g: gi, i, ov: null, st: 'ok', home: gi === 0 && i === 0,
+    dx: Math.round((rnd() - .5) * 40), dz: Math.round(rnd() * 30 - 4) }));
+});
+GROUPS[0].members[0].dx = 0; GROUPS[0].members[0].dz = 0;
+GROUPS[0].members[5].ov = { ...GROUPS[0].prof, R: 0 };
+GROUPS[0].members[17].st = 'unloaded'; GROUPS[0].members[17].dx = 60; GROUPS[0].members[17].dz = 22;
+GROUPS[4].members[0].st = 'gone';
+GROUPS[2].members[3].ov = { ...GROUPS[2].prof, L: 1 };
+const total = GROUPS.reduce((a, g) => a + g.n, 0);
+let sel = { g: 0, m: [] }, selF = 'B', view = 'machine', rel = true;
+const faceName = f => rel ? FACES_REL.find(x => x[0] === f)[1] : FACES_ABS[f][1];
+const faceShort = f => rel ? FACES_REL.find(x => x[0] === f)[1].slice(0, f === 'R' || f === 'L' ? 3 : 6) + (f === 'R' || f === 'L' ? '.' : '') : FACES_ABS[f][0];
+const mName = m => `${GROUPS[m.g].name} #${m.i + 1}`;
+const mDist = m => Math.max(Math.abs(m.dx), Math.abs(m.dz), 1);
+const eff = m => m.ov || GROUPS[m.g].prof;
+const selected = () => sel.m.map(([g, i]) => GROUPS[g].members[i]);
+const exceptions = g => g.members.filter(m => m.ov).length;
+
+function setMode(modeIdx) {
+  if (!sel.m.length) { GROUPS[sel.g].prof[selF] = modeIdx; }
+  else selected().forEach(m => { m.ov = { ...eff(m), [selF]: modeIdx }; if (Object.keys(m.ov).every(k => m.ov[k] === GROUPS[m.g].prof[k])) m.ov = null; });
+  routerGui();
+}
+function pickMember(m, ev) {
+  const key = [m.g, m.i];
+  if (ev.shiftKey && sel.m.length && sel.m[0][0] === m.g) {
+    const at = sel.m.findIndex(k => k[0] === m.g && k[1] === m.i);
+    if (at >= 0) sel.m.splice(at, 1); else sel.m.push(key);
+    if (!sel.m.length) sel.g = m.g;
+  } else sel = { g: m.g, m: [key] };
+  routerGui();
+}
 
 function routerGui() {
   const g = $('routerGui'); g.innerHTML = '';
-  el(g, 'div', 'stripe');
+  el(g, 'div', 'stripe', { background: '#7B4FE0' });
   el(g, 'div', 't', { left: U(8), top: U(10) }, 'Linha de Minério');
-  el(g, 'div', 't gmu', { right: U(68), top: U(10), fontSize: U(7) }, 'vazão do tier por máquina');
-  el(g, 'div', 'pill', { right: U(8), top: U(7), fontSize: U(7) }, '<span class="dot" style="background:#22A84E;margin-right:calc(var(--u)*2)"></span>Esmeralda');
+  el(g, 'div', 't gmu', { right: U(70), top: U(10), fontSize: U(7) }, 'vazão do tier por máquina');
+  el(g, 'div', 'pill', { right: U(8), top: U(7), fontSize: U(7) }, '<span class="dot" style="background:#7B4FE0;margin-right:calc(var(--u)*2)"></span>Ultimate');
   [['Itens', '#E07A2E'], ['Fluidos', '#2F6FD6'], ['Energia', '#E3A21A'], ['Químicos', '#4F9A2E']].forEach(([n, c], i) =>
     el(g, 'button', 'gbtn' + (i === 0 ? ' sel' : ''), { ...box(8 + i * 44, 22, 42, 13), border: i === 0 ? '' : '0', background: i === 0 ? '' : 'transparent', fontSize: U(7) },
       `<span class="dot" style="background:${c}"></span>${n}`));
-  el(g, 'div', 'gbtn', { ...box(190, 22, 146, 13), borderColor: '#22A84E', fontSize: U(7) }, '<span class="dot" style="background:#22A84E"></span>Linha de Minério<span style="margin-left:auto">▾</span>');
+  el(g, 'div', 'gbtn', { ...box(190, 22, 146, 13), borderColor: '#7B4FE0', fontSize: U(7) }, '<span class="dot" style="background:#7B4FE0"></span>Linha de Minério<span style="margin-left:auto">▾</span>');
   el(g, 'div', 'a', { left: U(8), right: U(8), top: U(39), height: U(1), background: 'var(--g-dark)' });
 
-  // coluna das máquinas
-  const warn = RM.filter(m => m.st !== 'ok').length;
-  el(g, 'div', 't', { left: U(8), top: U(45), fontSize: U(7) }, `Máquinas <span class="gmu">${RM.length}/16</span>`);
-  el(g, 'div', 'gbtn', { ...box(8, 54, 92, 12), borderColor: 'var(--g-dark)', color: 'var(--g-dis)', fontSize: U(7) }, 'Buscar');
-  const list = el(g, 'div', 'list', box(8, 69, 92, 140));
-  RM.forEach((m, i) => {
-    const r = el(list, 'button', 'mrow' + (i === selM ? ' sel' : ''), null,
-      `<span class="ico" style="background:${KINDS[m.k].c}">${KINDS[m.k].l}</span><span class="nm">${esc(m.name)}<small>${m.home ? 'presa' : dist(m.pos) + ' blocos'}</small></span>`
-      + `<span class="dot" style="background:var(${ST[m.st][0]})"></span>`);
-    r.addEventListener('click', () => { selM = i; routerGui(); });
-    bindTip(r, () => `${esc(m.name)}<br><span class="g">${m.pos.join(', ')} · ${m.home ? 'presa ao roteador' : dist(m.pos) + ' blocos'}</span><br>`
-      + (m.st === 'ok' ? `<span class="g">${ST.ok[1]}</span>` : `<span class="w">${ST[m.st][1]}</span>`));
+  // lista agrupada
+  el(g, 'div', 't', { left: U(8), top: U(45), fontSize: U(7) }, `Máquinas <span class="gmu">${total}/64 · ${GROUPS.length} tipos</span>`);
+  el(g, 'div', 'gbtn', { ...box(8, 54, 104, 12), borderColor: 'var(--g-dark)', color: 'var(--g-dis)', fontSize: U(7) }, 'Buscar');
+  const list = el(g, 'div', 'list', box(8, 69, 104, 140));
+  GROUPS.forEach((gr, gi) => {
+    const ex = exceptions(gr), warn = gr.members.filter(m => m.st !== 'ok').length;
+    const h = el(list, 'button', 'mrow' + (sel.g === gi && !sel.m.length ? ' sel' : ''), null,
+      `<span style="width:calc(var(--u)*5);flex:none;color:var(--g-mu)">${gr.open ? '▾' : '▸'}</span>`
+      + `<span class="ico" style="background:${KINDS[gr.k].c}">${KINDS[gr.k].l}</span>`
+      + `<span class="nm">${esc(gr.name)} ×${gr.n}<small>${ex ? ex + (ex > 1 ? ' exceções' : ' exceção') : 'perfil'}${warn ? ` · <span style="color:var(--g-warn)">${warn} aviso</span>` : ''}</small></span>`);
+    h.addEventListener('click', ev => {
+      const r = h.getBoundingClientRect();
+      if (ev.clientX - r.left < r.width * .12 || (sel.g === gi && !sel.m.length)) gr.open = !gr.open;
+      sel = { g: gi, m: [] }; routerGui();
+    });
+    bindTip(h, `${esc(gr.name)} ×${gr.n}<br><span class="g">Clique: editar o perfil do grupo · ▸ abre a lista</span>`);
+    if (!gr.open) return;
+    gr.members.forEach(m => {
+      const on = sel.m.some(k => k[0] === m.g && k[1] === m.i);
+      const r = el(list, 'button', 'mrow' + (on ? ' sel' : ''), { height: U(14), paddingLeft: U(12) },
+        `<span class="dot" style="background:var(${ST[m.st][0]})"></span><span class="nm">#${m.i + 1} <span class="gmu" style="font-size:calc(var(--u)*6)">${m.home ? 'presa' : mDist(m) + ' blocos'}</span></span>`
+        + (m.ov ? `<span style="font-size:calc(var(--u)*5.5);color:var(--g-ac);border:calc(var(--u)*.7) solid var(--g-ac);padding:0 calc(var(--u)*1.5)">exceção</span>` : ''));
+      r.addEventListener('click', ev => pickMember(m, ev));
+      bindTip(r, () => `${esc(mName(m))}<br><span class="g">${m.home ? 'presa ao roteador' : mDist(m) + ' blocos'} · ${m.ov ? 'exceção' : 'segue o perfil'}</span>`
+        + (m.st !== 'ok' ? `<br><span class="w">${ST[m.st][1]}</span>` : '') + '<br><span class="g">Shift + clique: escolher várias</span>');
+    });
   });
-  if (warn) el(g, 'div', 't', { left: U(8), top: U(213), fontSize: U(6.5), color: 'var(--g-warn)' }, `${warn} com aviso`);
+  el(g, 'div', 't gmu', { left: U(8), top: U(213), fontSize: U(6.5) }, 'Shift + clique: várias');
 
   // visor
-  const vx = 106, vy = 45, vw = 132, vh = 128;
+  const vx = 118, vy = 45, vw = 120, vh = 128;
   el(g, 'div', 'a grid', box(vx, vy, vw, vh));
-  ['Máquina', 'Mapa'].forEach((n, i) => { const b = el(g, 'button', 'gbtn' + ((i === 0) === (view === 'machine') ? ' on' : ''), { ...box(vx + vw - 70 + i * 34, vy + 3, 33, 11), fontSize: U(6.5), justifyContent: 'center' }, n);
+  ['Máquina', 'Mapa'].forEach((n, i) => { const b = el(g, 'button', 'gbtn' + ((i === 0) === (view === 'machine') ? ' on' : ''), { ...box(vx + vw - 66 + i * 32, vy + 3, 31, 11), fontSize: U(6.5), justifyContent: 'center' }, n);
     b.addEventListener('click', () => { view = i ? 'map' : 'machine'; routerGui(); }); });
-  const m = RM[selM];
-  if (view === 'machine') drawMachine(g, vx, vy, vw, vh, m); else drawMap(g, vx, vy, vw, vh);
+  const gr = GROUPS[sel.g], ms = selected();
+  const shown = ms.length ? eff(ms[0]) : gr.prof;
+  if (view === 'machine') {
+    ['Relativo', 'Absoluto'].forEach((n, i) => { const b = el(g, 'button', 'gbtn' + ((i === 0) === rel ? ' on' : ''), { ...box(vx + 3 + i * 38, vy + vh - 14, 37, 11), fontSize: U(6), justifyContent: 'center' }, n);
+      b.addEventListener('click', () => { rel = i === 0; routerGui(); }); });
+    drawMachine(g, vx, vy, vw, vh, gr, shown, ms);
+  } else drawMap(g, vx, vy, vw, vh);
 
-  // botões de face
-  FACES.forEach(([f, nm], i) => {
-    const mo = MODES[m.faces[f]];
-    const b = el(g, 'button', 'facebtn' + (f === selF ? ' sel' : ''), { left: U(vx + (i % 3) * 44.7), top: U(vy + vh + 4 + Math.floor(i / 3) * 16), width: U(42) },
-      `<span class="sw" style="background:var(${mo[1]})"></span>${f}`);
+  FACES_REL.forEach(([f], i) => {
+    const mo = MODES[shown[f]];
+    const b = el(g, 'button', 'facebtn' + (f === selF ? ' sel' : ''), { left: U(vx + (i % 3) * 40.6), top: U(vy + vh + 4 + Math.floor(i / 3) * 16), width: U(38) },
+      `<span class="sw" style="background:var(${mo[1]})"></span>${faceShort(f)}`);
     b.addEventListener('click', () => { selF = f; routerGui(); });
-    bindTip(b, `${nm}<br><span class="g">${mo[0]}</span>`);
+    bindTip(b, `${faceName(f)}<br><span class="g">${mo[0]}</span>`);
   });
 
   // coluna da face
   const fx = 244;
-  const fname = FACES.find(f => f[0] === selF)[1];
-  el(g, 'div', 't', { left: U(fx), top: U(45) }, fname);
-  el(g, 'div', 't gmu', { left: U(fx), top: U(56), fontSize: U(7) }, m.st === 'ok' ? `${esc(m.name)}` : ST[m.st][1]);
+  el(g, 'div', 't', { left: U(fx), top: U(45) }, faceName(selF));
+  let scope;
+  if (!ms.length) scope = `Perfil de ${gr.name}`;
+  else if (ms.length === 1) scope = ms[0].ov ? `${mName(ms[0])} · exceção` : `${mName(ms[0])} · segue o perfil`;
+  else scope = `${ms.length} máquinas escolhidas`;
+  el(g, 'div', 't gmu', { left: U(fx), top: U(56), fontSize: U(6.5), maxWidth: U(92), overflow: 'hidden', textOverflow: 'ellipsis' }, esc(scope));
   MODES.forEach(([n, c], i) => {
+    const on = shown[selF] === i;
     const b = el(g, 'button', 'gbtn', { ...box(fx + (i % 2) * 47, 66 + Math.floor(i / 2) * 16, 45, 14), fontSize: U(7),
-      background: m.faces[selF] === i ? 'var(--g-ink)' : '', color: m.faces[selF] === i ? 'var(--g-light)' : '' }, `<span class="sw" style="background:var(${c})"></span>${n}`);
-    b.addEventListener('click', () => { m.faces[selF] = i; routerGui(); });
+      background: on ? 'var(--g-ink)' : '', color: on ? 'var(--g-light)' : '' }, `<span class="sw" style="background:var(${c})"></span>${n}`);
+    b.addEventListener('click', () => setMode(i));
   });
   el(g, 'div', 't gmu', { left: U(fx), top: U(104), fontSize: U(7) }, 'Filtro');
   el(g, 'button', 'gbtn', { ...box(fx + 58, 100, 34, 12), fontSize: U(7), justifyContent: 'center' }, 'Editar');
   el(g, 'div', 'inset', box(fx, 116, 18, 18)); el(g, 'div', 'inset', box(fx + 20, 116, 18, 18));
   el(g, 'div', 't gmu', { left: U(fx + 42), top: U(122), fontSize: U(7) }, 'Passa tudo');
-  el(g, 'div', 't gmu', { left: U(fx), top: U(146), fontSize: U(7) }, 'Upgrades');
-  el(g, 'div', 'inset', box(fx, 156, 18, 18));
-  const up = el(g, 'div', 'inset', { ...box(fx + 20, 156, 18, 18), boxShadow: 'inset 0 0 0 var(--u) #22A84E' },
-    '<svg viewBox="0 0 16 16" style="position:absolute;inset:calc(var(--u));width:calc(var(--u)*16)"><rect x="7" y="5" width="2" height="9" fill="#5A5660"/><circle cx="8" cy="4" r="3" fill="#22A84E"/><path d="M3 2a7 7 0 0 0 0 6M13 2a7 7 0 0 1 0 6" stroke="#22A84E" fill="none"/></svg>');
-  bindTip(up, 'Upgrade de Alcance<br><span class="g">Esmeralda: raio 24, até 16 máquinas</span>');
-  el(g, 'div', 't gmu', { left: U(fx + 42), top: U(162), fontSize: U(6.5) }, 'chunk · alcance');
+
+  if (!ms.length) {
+    const ex = exceptions(gr);
+    const b = el(g, 'button', 'gbtn', { ...box(fx, 142, 92, 13), fontSize: U(6.5), justifyContent: 'center' }, 'Pausar grupo');
+    bindTip(b, 'Para o grupo inteiro sem mexer nas faces');
+    el(g, 'div', 'warnbox', { left: U(fx), top: U(160), width: U(92), background: 'var(--g-light)', borderColor: '#7B4FE0' },
+      `Vale para <b>${gr.n - ex}</b> de ${gr.n}` + (ex ? ` · ${ex} ${ex > 1 ? 'exceções' : 'exceção'}` : ''));
+  } else {
+    const anyOv = ms.some(m => m.ov);
+    const back = el(g, 'button', 'gbtn', { ...box(fx, 142, 92, 13), fontSize: U(6.5), justifyContent: 'center', color: anyOv ? '' : 'var(--g-dis)', borderColor: anyOv ? '' : 'var(--g-dis)' }, 'Voltar ao perfil');
+    back.addEventListener('click', () => { ms.forEach(m => m.ov = null); routerGui(); });
+    if (ms.length === 1) {
+      const use = el(g, 'button', 'gbtn', { ...box(fx, 158, 92, 13), fontSize: U(6.5), justifyContent: 'center' }, 'Usar como perfil');
+      use.addEventListener('click', () => { const m = ms[0]; GROUPS[m.g].prof = { ...eff(m) }; m.ov = null; routerGui(); });
+      bindTip(use, 'A configuração desta máquina vira o perfil do grupo');
+    } else {
+      const sp = el(g, 'button', 'gbtn', { ...box(fx, 158, 92, 13), fontSize: U(6.5), justifyContent: 'center' }, 'Separar em grupo');
+      bindTip(sp, `Cria "${esc(gr.name)} (2)" com estas ${ms.length} máquinas e um perfil próprio`);
+    }
+  }
 }
-function iso(svg, cx, cy, s, col, faces, onFace, dim) {
+function iso(svg, cx, cy, s, col, faces, onFace, dim, front) {
   const h = s / 2, d = s * 1.05;
   const P = pts => pts.map(p => p.join(',')).join(' ');
   const shade = (c, k) => { const n = parseInt(c.slice(1), 16); const f = v => Math.round(Math.min(255, v * k)); return `rgb(${f(n >> 16)},${f(n >> 8 & 255)},${f(n & 255)})`; };
   const polys = [
     ['U', [[cx, cy - h], [cx + s, cy], [cx, cy + h], [cx - s, cy]], 1.15],
-    ['W', [[cx - s, cy], [cx, cy + h], [cx, cy + h + d], [cx - s, cy + d]], .85],
-    ['S', [[cx + s, cy], [cx, cy + h], [cx, cy + h + d], [cx + s, cy + d]], .65],
+    ['F', [[cx - s, cy], [cx, cy + h], [cx, cy + h + d], [cx - s, cy + d]], .85],
+    ['R', [[cx + s, cy], [cx, cy + h], [cx, cy + h + d], [cx + s, cy + d]], .65],
   ];
   polys.forEach(([f, pts, k]) => {
     const p = document.createElementNS(SVGNS, 'polygon');
     p.setAttribute('points', P(pts)); p.setAttribute('fill', dim ? '#B5AC9D' : shade(col, k)); p.setAttribute('stroke', '#1B1920'); p.setAttribute('stroke-width', '1.4');
     svg.appendChild(p);
+    if (front && f === 'F') {  // a frente da máquina: um painel escuro
+      const q = document.createElementNS(SVGNS, 'polygon');
+      const a = .3, b = .7, at = (u, v) => [cx - s + u * s, cy + u * h + v * d];
+      q.setAttribute('points', P([at(a, .3), at(b, .3), at(b, .7), at(a, .7)])); q.setAttribute('fill', '#1B1920'); q.setAttribute('fill-opacity', '.75');
+      svg.appendChild(q);
+    }
     if (faces) {
       const mo = MODES[faces[f]];
       if (faces[f] !== 3) { const o = p.cloneNode(); o.setAttribute('fill', css(mo[1])); o.setAttribute('fill-opacity', '.45'); svg.appendChild(o); }
@@ -617,38 +722,45 @@ function iso(svg, cx, cy, s, col, faces, onFace, dim) {
     }
   });
 }
-function drawMachine(g, x, y, w, h, m) {
+function drawMachine(g, x, y, w, h, gr, faces, ms) {
   const svg = document.createElementNS(SVGNS, 'svg');
-  svg.setAttribute('viewBox', '0 0 132 128'); Object.assign(svg.style, { position: 'absolute', ...box(x, y, w, h) });
+  svg.setAttribute('viewBox', '0 0 120 128'); Object.assign(svg.style, { position: 'absolute', ...box(x, y, w, h) });
   g.appendChild(svg);
-  if (m.st === 'gone') {
-    const t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', 66); t.setAttribute('y', 50); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', 30); t.setAttribute('fill', '#D5453A'); t.textContent = '?';
+  const one = ms.length === 1 ? ms[0] : null;
+  if (one && one.st === 'gone') {
+    const t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', 60); t.setAttribute('y', 50); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', 30); t.setAttribute('fill', '#D5453A'); t.textContent = '?';
     svg.appendChild(t);
-    const b = el(g, 'div', 'warnbox danger', { left: U(x + 6), top: U(y + 70), width: U(w - 12) }, 'A máquina sumiu desta posição. A configuração fica guardada até você desvincular.');
+    const b = el(g, 'div', 'warnbox danger', { left: U(x + 5), top: U(y + 62), width: U(w - 10) }, 'A máquina sumiu desta posição. A configuração fica guardada até você desvincular.');
     el(b, 'button', 'gbtn', { position: 'relative', marginTop: U(3), height: U(12), fontSize: U(7) }, 'Desvincular');
     return;
   }
-  iso(svg, 66, 52, 30, KINDS[m.k].c, m.st === 'ok' ? m.faces : null, f => { selF = f; routerGui(); }, m.st !== 'ok');
-  if (m.home) iso(svg, 66, 30, 9, '#2A2730', null, null, false);
-  if (m.st === 'unloaded') el(g, 'div', 'warnbox', { left: U(x + 6), top: U(y + 84), width: U(w - 12) }, 'Chunk descarregado. Volta a mover quando o chunk carregar.');
-  else el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + h - 11), fontSize: U(6.5) }, m.home ? 'presa ao roteador' : `${m.pos.join(', ')} · ${dist(m.pos)} blocos`);
+  const dim = one && one.st !== 'ok';
+  if (!one) {  // grupo ou várias: pilha de blocos atrás
+    iso(svg, 74, 40, 20, KINDS[gr.k].c, null, null, true, false);
+    iso(svg, 68, 46, 22, KINDS[gr.k].c, null, null, true, false);
+  }
+  iso(svg, 60, 54, 26, KINDS[gr.k].c, dim ? null : faces, f => { selF = f; routerGui(); }, dim, rel);
+  if (one && one.home) iso(svg, 60, 34, 8, '#2A2730', null, null, false, false);
+  const label = !ms.length ? `perfil · ${gr.n} máquinas` : ms.length > 1 ? `${ms.length} escolhidas` : one.home ? 'presa ao roteador' : `${mDist(one)} blocos`;
+  el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + 18), fontSize: U(6.5) }, label);
+  if (dim) el(g, 'div', 'warnbox', { left: U(x + 42), top: U(y + h - 26), width: U(w - 46), padding: U(2) }, 'Chunk descarregado');
 }
 function drawMap(g, x, y, w, h) {
   const svg = document.createElementNS(SVGNS, 'svg');
-  svg.setAttribute('viewBox', '-28 -28 56 56'); Object.assign(svg.style, { position: 'absolute', ...box(x + 6, y + 16, w - 12, h - 22) });
+  svg.setAttribute('viewBox', '-34 -34 68 68'); Object.assign(svg.style, { position: 'absolute', ...box(x + 6, y + 16, w - 12, h - 22) });
   g.appendChild(svg);
   const add = (tag, a) => { const e = document.createElementNS(SVGNS, tag); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
-  add('rect', { x: -24.5, y: -24.5, width: 49, height: 49, fill: '#22A84E', 'fill-opacity': .1, stroke: '#22A84E', 'stroke-width': .5, 'stroke-dasharray': '1.5 1' });
-  RM.forEach((m, i) => {
-    const dx = m.pos[0] - ROUTER_POS[0], dz = m.pos[2] - ROUTER_POS[2];
-    const cx = Math.max(-27, Math.min(27, dx)), cz = Math.max(-27, Math.min(27, dz));
-    add('line', { x1: 0, y1: 0, x2: cx, y2: cz, stroke: css(ST[m.st][0]), 'stroke-width': .2, 'stroke-opacity': .7 });
-    const r = add('rect', { x: cx - 1.4, y: cz - 1.4, width: 2.8, height: 2.8, fill: KINDS[m.k].c, stroke: i === selM ? css('--g-ac') : css(ST[m.st][0]), 'stroke-width': i === selM ? .8 : .45, style: 'cursor:pointer' });
-    r.addEventListener('click', () => { selM = i; view = 'machine'; routerGui(); });
-    bindTip(r, () => `${esc(m.name)}<br><span class="g">${dist(m.pos)} blocos · ${ST[m.st][1]}</span>`);
-  });
-  add('rect', { x: -1.6, y: -1.6, width: 3.2, height: 3.2, fill: '#1B1920', stroke: '#22A84E', 'stroke-width': .6 });
-  el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + 4), fontSize: U(6.5) }, 'vista de cima · raio 24');
+  add('rect', { x: -32, y: -32, width: 64, height: 64, fill: '#7B4FE0', 'fill-opacity': .08, stroke: '#7B4FE0', 'stroke-width': .5, 'stroke-dasharray': '1.5 1' });
+  GROUPS.forEach((gr, gi) => gr.members.forEach(m => {
+    const cx = Math.max(-31, Math.min(31, m.dx / 2)), cz = Math.max(-31, Math.min(31, m.dz / 2));
+    const hot = gi === sel.g;
+    const r = add('rect', { x: cx - 1.3, y: cz - 1.3, width: 2.6, height: 2.6, fill: KINDS[gr.k].c, 'fill-opacity': hot ? 1 : .35,
+      stroke: m.st !== 'ok' ? css(ST[m.st][0]) : hot ? '#1B1920' : 'none', 'stroke-width': .5, style: 'cursor:pointer' });
+    r.addEventListener('click', ev => { view = 'machine'; pickMember(m, ev); });
+    bindTip(r, () => `${esc(mName(m))}<br><span class="g">${mDist(m)} blocos · ${ST[m.st][1]}</span>`);
+  }));
+  add('rect', { x: -1.6, y: -1.6, width: 3.2, height: 3.2, fill: '#1B1920', stroke: '#7B4FE0', 'stroke-width': .6 });
+  el(g, 'div', 't gmu', { left: U(x + 5), top: U(y + 4), fontSize: U(6.5) }, 'vista de cima · raio 96');
 }
 routerGui();
 

@@ -37,18 +37,23 @@ public final class TabletKeys {
         }
         Minecraft minecraft = Minecraft.getInstance();
         while (OPEN_TABLET.consumeClick()) {
-            if (minecraft.player == null || minecraft.screen != null) {
-                continue;
-            }
-            if (!TabletMenu.hasTablet(minecraft.player)) {
-                minecraft.player.displayClientMessage(Component.translatable("key.wirelessautomate.open_tablet.missing"),
-                        true);
-                continue;
-            }
-            ClientPacketListener connection = minecraft.getConnection();
-            if (connection != null && PacketDistributor.hasChannel(connection.getConnection(), OpenTabletPayload.TYPE)) {
-                PacketDistributor.sendToServer(OpenTabletPayload.INSTANCE);
-            }
+            pressed(minecraft);
+        }
+    }
+
+    /** Um aperto da tecla (o e2e chama direto, porque a tecla vem sem atalho). */
+    static void pressed(Minecraft minecraft) {
+        if (minecraft.player == null || minecraft.screen != null) {
+            return;
+        }
+        if (!TabletMenu.hasTablet(minecraft.player)) {
+            minecraft.player.displayClientMessage(Component.translatable("key.wirelessautomate.open_tablet.missing"),
+                    true);
+            return;
+        }
+        ClientPacketListener connection = minecraft.getConnection();
+        if (connection != null && PacketDistributor.hasChannel(connection.getConnection(), OpenTabletPayload.TYPE)) {
+            PacketDistributor.sendToServer(OpenTabletPayload.INSTANCE);
         }
     }
 

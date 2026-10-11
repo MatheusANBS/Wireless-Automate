@@ -72,7 +72,9 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
   eles a `RelayView` do Tanque de Source, e eles ligam e transferem nos dois sentidos como no `main`. Origem e
   destino seguem a capability do `main` (Imbuement Chamber não é drenada, Sourcelink não recebe, Creative Jar
   é ralo e fonte).
-- **JEI 15:** sem o Shift + clique de um ingrediente do JEI para o filtro; arrastar funciona.
+- **JEI 15:** sem o `quickMove`; o Shift + clique de um ingrediente da lista ou dos favoritos do JEI para o filtro
+  vem do `compat/jei/FilterShiftClick` (ouvinte do clique com prioridade alta, antes do JEI). O atalho é fixo em
+  Shift + esquerdo (no `main` é a tecla configurável do JEI).
 - **Caldeirão e compostor:** o Forge não dá handler a esses blocos sem block entity; o ramo tem os do NeoForge
   (`network/VanillaBlockHandlers`, porte do `CauldronWrapper` e o handler do compostor), achados pelo `CapCache`
   na busca por bloco. Caldeirões de outros mods não entram (o 1.20.1 não tem o registro de conteúdo de caldeirão).
@@ -85,7 +87,11 @@ O que o ramo `mc/1.20.1-forge` faz diferente do `main`, por limite do jogo ou do
   tudo em até 10 ticks"; aqui, "uma visita moveu mais que `Integer.MAX_VALUE`" (ou mais que uma pilha), pelo
   `RouterBlockEntity.lastVisitMoved`. A medida em ticks dependia do orçamento do motor em ms e falhava com a CPU
   ocupada.
-- **Campos de texto:** o `EditBox` do 1.20.1 desenha o texto com sombra.
+- **Campos de texto:** o `EditBox` do 1.20.1 desenha o texto com sombra fixa; o mixin de cliente
+  `client/mixin/EditBoxMixin` dá a ele o `setTextShadow` do `main` (`client/TextShadow`).
+- **Roda horizontal:** o 1.20.1 só passa o x da roda à tela no macOS; o `client/HorizontalScroll` encaixa um
+  callback de roda do GLFW (encadeado com o do jogo) e repassa o x ao campo de nível do filtro, como o `scrollX` do
+  `main`.
 
 ## Ordem sugerida
 

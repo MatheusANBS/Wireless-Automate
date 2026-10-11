@@ -284,7 +284,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         nameBox.setBordered(false);
         nameBox.setMaxLength(LinkerActionPayload.MAX_NAME_LENGTH);
         nameBox.setTextColor(GuiPaint.FG);
-        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        TextShadow.setTextShadow(nameBox, false); // tinta sobre porcelana, sem sombra
         nameBox.setValue(draft);
         nameBox.setResponder(value -> draft = value);
         nameBox.setHint(tr("network.name").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));

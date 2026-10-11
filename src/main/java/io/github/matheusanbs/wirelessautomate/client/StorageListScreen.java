@@ -227,7 +227,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox.setBordered(false);
         searchBox.setMaxLength(64);
         searchBox.setTextColor(GuiPaint.FG);
-        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        TextShadow.setTextShadow(searchBox, false); // tinta sobre porcelana, sem sombra
         searchBox.setHint(tr("search.hint").copy().withStyle(style -> style.withColor(GuiPaint.DISABLED)));
         searchBox.setValue(lastSearch);
         searchBox.setResponder(value -> {

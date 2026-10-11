@@ -366,11 +366,12 @@ legacyForge.runs {
 
 // Mixins (LEGACY.md do ModDevGradle, seção Mixins). Cada config cobre um pacote só de mixins (o Mixin
 // recusa carregar como classe comum qualquer coisa num pacote de mixins, então não dá para usar o pacote
-// raiz do mod): wirelessautomate.mixins.json é o de compat/arsnouveau/mixin. Um pacote novo (como o
-// client/mixin) ganha um config próprio nesta lista, com o mesmo plugin (mixin/WaMixinPlugin), que só aplica
+// raiz do mod): wirelessautomate.mixins.json é o de compat/arsnouveau/mixin e wirelessautomate.client.mixins.json
+// o de client/mixin (só no cliente: o EditBox sem sombra). Um pacote novo
+// ganha um config próprio nesta lista, com o mesmo plugin (mixin/WaMixinPlugin), que só aplica
 // os mixins de um mod opcional com ele carregado. A lista vira os --mixin.config das runs (pelo bloco
 // mixin) e o MixinConfigs do manifesto do jar.
-def mixinConfigs = ['wirelessautomate.mixins.json']
+def mixinConfigs = ['wirelessautomate.mixins.json', 'wirelessautomate.client.mixins.json']
 mixin {
     add sourceSets.main, 'wirelessautomate.refmap.json'
     mixinConfigs.each { config it }

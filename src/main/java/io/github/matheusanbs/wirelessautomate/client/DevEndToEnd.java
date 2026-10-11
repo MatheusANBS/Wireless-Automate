@@ -99,6 +99,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.event.TickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWScrollCallback;
+import org.lwjgl.glfw.GLFWScrollCallbackI;
+import net.minecraftforge.client.ForgeHooksClient;
+import io.github.matheusanbs.wirelessautomate.net.PacketDistributor;
+import io.github.matheusanbs.wirelessautomate.packet.EditFilterPayload;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
@@ -546,6 +551,7 @@ public final class DevEndToEnd {
                         && filterScreen().candidateLabels().contains("@minecraft"),
                 () -> "tags " + filterScreen().candidateLabels()));
         list.add(capture("4b-filtro-inspetor"));
+        jeiShiftClickSteps(list);
         list.add(new Step("filtro: aba Regra", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.rule")), "aba Regra")),
                 () -> filterScreen().tab() == FilterScreen.Tab.RULE
@@ -590,6 +596,15 @@ public final class DevEndToEnd {
                 () -> "rascunho " + filterScreen().ruleDraft() + ", nível '" + filterScreen().levelBox().getValue() + "'"));
         list.add(capture("filtro-regra-nivel"));
         list.add(clipCheck("filtro: regra com nível"));
+        list.add(new Step("filtro: roda horizontal sobe o nível", STEP_TIMEOUT_MS,
+                () -> horizontalScroll(1.0),
+                () -> filterScreen().levelBox().getValue().equals("38"),
+                () -> "nível '" + filterScreen().levelBox().getValue() + "'"));
+        list.add(new Step("filtro: roda horizontal desce o nível", STEP_TIMEOUT_MS,
+                () -> horizontalScroll(-1.0),
+                () -> filterScreen().levelBox().getValue().equals("37")
+                        && filterScreen().ruleDraft().enchantment().map(e -> e.minLevel() == 37).orElse(false),
+                () -> "nível '" + filterScreen().levelBox().getValue() + "'"));
         list.add(new Step("filtro: encantamento e nível inválidos", STEP_TIMEOUT_MS, () -> {
             EditBox box = filterScreen().enchantBox();
             click(Minecraft.getInstance().screen, box.getX() + 4, box.getY() + 3);
@@ -980,6 +995,16 @@ public final class DevEndToEnd {
             });
         }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.NETWORK_TABLET.get()),
                 () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
+        // a tecla vem sem atalho: o aperto é o mesmo método do tick da tecla (pede a tela pelo canal do mod)
+        list.add(new Step("tecla do Tablet abre", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            TabletKeys.pressed(minecraft);
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(close("fechar o Tablet da tecla"));
         list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen != null) {
@@ -2857,6 +2882,19 @@ public final class DevEndToEnd {
         }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get()),
                 () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
         list.add(shift("Shift pressionado", true));
+        // a roda do jogo passa pelo ForgeHooksClient.onMouseScroll (sem tela aberta), como aqui
+        boolean[] scrollCanceled = new boolean[1];
+        list.add(new Step("Shift + roda: Vinculador em Itens", STEP_TIMEOUT_MS,
+                () -> scrollCanceled[0] = ForgeHooksClient.onMouseScroll(Minecraft.getInstance().mouseHandler, -1.0),
+                () -> scrollCanceled[0]
+                        && serverLinker(stack -> LinkerItem.effectiveTabs(stack).equals(List.of(ResourceType.ITEM))),
+                () -> "cancelado " + scrollCanceled[0] + ", abas no servidor "
+                        + serverLinker(stack -> LinkerItem.tabs(stack).toString())));
+        list.add(new Step("Shift + roda de volta: Vinculador em Todos", STEP_TIMEOUT_MS,
+                () -> scrollCanceled[0] = ForgeHooksClient.onMouseScroll(Minecraft.getInstance().mouseHandler, 1.0),
+                () -> scrollCanceled[0] && serverLinker(stack -> LinkerItem.tabs(stack).isAll(LoadedTypes.LIST)),
+                () -> "cancelado " + scrollCanceled[0] + ", abas no servidor "
+                        + serverLinker(stack -> LinkerItem.tabs(stack).toString())));
         list.add(new Step("Shift + clique no ar: modo Área", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
@@ -3107,6 +3145,80 @@ public final class DevEndToEnd {
             throw new StepFailure("sem tela para digitar");
         }
         text.codePoints().forEach(c -> screen.charTyped((char) c, 0));
+    }
+
+    /**
+     * Shift + clique do JEI na tela de filtro (porte 1.20.1: {@code compat/jei/FilterShiftClick}, que vê o
+     * clique antes do JEI). O e2e não segura o Shift de verdade (a tela lê o teclado), então chama o aperto e a
+     * soltura do ouvinte direto, por reflexão (o e2e não referencia o JEI), com o Shift: o cursor percorre a
+     * lista do JEI à direita do painel até o ouvinte achar um item sob o mouse ({@code getIngredientUnderMouse}
+     * do runtime de verdade). Confere que a entrada chegou ao servidor e à tela e depois a tira (os passos
+     * seguintes contam as entradas). Sem o JEI, não há passos.
+     */
+    private static void jeiShiftClickSteps(List<Step> list) {
+        if (!ModList.get().isLoaded("jei")) {
+            return;
+        }
+        List<FilterEntry> before = new ArrayList<>();
+        FilterEntry[] added = new FilterEntry[1];
+        list.add(new Step("filtro: Shift + clique num item do JEI", STEP_TIMEOUT_MS, () -> {
+            before.clear();
+            before.addAll(filterScreen().getMenu().view().filter().entries());
+            Class<?> listener = Class.forName("io.github.matheusanbs.wirelessautomate.compat.jei.FilterShiftClick");
+            java.lang.reflect.Method press = listener.getDeclaredMethod("press", Screen.class, int.class, boolean.class);
+            java.lang.reflect.Method release = listener.getDeclaredMethod("release", Screen.class, int.class);
+            press.setAccessible(true);
+            release.setAccessible(true);
+            FilterScreen screen = filterScreen();
+            int right = screen.extraAreas().get(0).getX() + screen.extraAreas().get(0).getWidth();
+            for (int y = 4; y < screen.height; y += 6) {
+                for (int x = screen.width - 4; x > right; x -= 6) {
+                    moveMouse(x, y);
+                    if ((boolean) press.invoke(null, screen, 0, true)) {
+                        if (!(boolean) release.invoke(null, screen, 0)) {
+                            throw new StepFailure("o aperto foi guardado, mas a soltura não acrescentou");
+                        }
+                        return;
+                    }
+                }
+            }
+            throw new StepFailure("nenhum item do JEI sob o cursor à direita do painel");
+        }, () -> {
+            List<FilterEntry> now = filterScreen().getMenu().view().filter().entries();
+            if (now.size() != before.size() + 1) {
+                return false;
+            }
+            added[0] = now.stream().filter(e -> !before.contains(e)).findFirst().orElse(null);
+            return added[0] instanceof FilterEntry.ItemEntry
+                    && onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().entries()
+                            .contains(added[0]));
+        }, () -> "entradas na tela " + filterScreen().getMenu().view().filter().entries()));
+        list.add(capture("4e-filtro-jei-shift-clique"));
+        list.add(new Step("filtro: tirar a entrada do JEI", STEP_TIMEOUT_MS, () -> {
+            int index = filterScreen().getMenu().view().filter().entries().indexOf(added[0]);
+            PacketDistributor.sendToServer(new EditFilterPayload(filterScreen().getMenu().containerId,
+                    EditFilterPayload.Op.REMOVE, index, 0, ""));
+        }, () -> filterScreen().getMenu().view().filter().entries().equals(before)
+                && onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).filter().entries()
+                        .equals(before)),
+                () -> "entradas na tela " + filterScreen().getMenu().view().filter().entries()));
+    }
+
+    /**
+     * Roda horizontal (porte 1.20.1: o callback do GLFW do {@code HorizontalScroll}) sobre o campo de nível:
+     * pega o callback de roda instalado na janela (trocando e devolvendo) e o chama como o GLFW, com y = 0;
+     * ele chama o do jogo e repassa o x à tela.
+     */
+    private static void horizontalScroll(double x) throws StepFailure {
+        EditBox level = filterScreen().levelBox();
+        moveMouse(level.getX() + 4, level.getY() + 3);
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        GLFWScrollCallback current = GLFW.glfwSetScrollCallback(window, (GLFWScrollCallbackI) null);
+        GLFW.glfwSetScrollCallback(window, current);
+        if (current == null) {
+            throw new StepFailure("a janela não tem callback de roda");
+        }
+        current.invoke(window, x, 0.0);
     }
 
     /**

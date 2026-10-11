@@ -90,7 +90,7 @@ import org.lwjgl.glfw.GLFW;
  * {@code compat/jei}: arrastar um ingrediente para a lista acrescenta a entrada exata, e para o
  * slot do inspetor (aba Tags) mostra as tags dele. Esta classe não conhece nenhuma classe do JEI.
  */
-public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
+public class FilterScreen extends AbstractContainerScreen<FilterMenu> implements HorizontalScroll {
     // tamanho: mínimo, padrão (lembrado na sessão) e máximo
     private static final int MIN_W = 344;
     private static final int MIN_H = 252;
@@ -610,7 +610,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         box.setBordered(false);
         box.setMaxLength(max);
         box.setTextColor(GuiPaint.FG);
-        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        TextShadow.setTextShadow(box, false); // tinta sobre porcelana, sem sombra
         box.setValue(value);
         box.setResponder(responder);
         return addRenderableWidget(box);
@@ -1724,7 +1724,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return true;
         }
         if (tab == Tab.RULE && overLevelField(mouseX, mouseY)) {
-            // no 1.20.1 a tela só recebe a roda vertical (o Shift + roda horizontal de alguns sistemas se perde)
+            // Shift + roda vira roda horizontal em alguns sistemas: no 1.20.1 ela chega por
+            // mouseScrolledHorizontal (aqui o y vem 0)
             double amount = scrollY;
             if (amount != 0) {
                 stepLevel((int) Math.signum(amount) * (hasShiftDown() ? 10 : 1));
@@ -1736,6 +1737,18 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollY);
+    }
+
+    /** A roda horizontal (porte 1.20.1, {@link HorizontalScroll}): o {@code scrollX} do main, só no campo de nível. */
+    @Override
+    public boolean mouseScrolledHorizontal(double mouseX, double mouseY, double scrollX) {
+        if (tab == Tab.RULE && overLevelField(mouseX, mouseY)) {
+            if (scrollX != 0) {
+                stepLevel((int) Math.signum(scrollX) * (hasShiftDown() ? 10 : 1));
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override

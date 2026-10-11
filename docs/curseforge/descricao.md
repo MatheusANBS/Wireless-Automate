@@ -77,6 +77,7 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 - **Break it and the contents go with the item**, like a shulker box, tier included.
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
 - Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
+- Search the Chest list by name, `@mod`, or `#` for tags and tooltip text (`#ingots`, `#not yet eaten`). Hold Shift and the list stops reordering while you pull items out, like the AE2 terminal.
 
 ![Wireless Chest](https://media.forgecdn.net/attachments/2034/644/feature-10-chest-png.png)
 

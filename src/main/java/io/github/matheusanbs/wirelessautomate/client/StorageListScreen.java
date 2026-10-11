@@ -15,12 +15,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
+import it.unimi.dsi.fastutil.Hash;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -35,7 +41,7 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico): os tipos guardados numa
- * grade com rolagem, busca (nome, ou {@code @mod}) e ordenação (quantidade, nome, mod), a ocupação
+ * grade com rolagem, busca (nome, {@code @mod} ou {@code #tag}) e ordenação (quantidade, nome, mod), a ocupação
  * do tier e o inventário do jogador. A lista vem da {@link StorageListView} e só é refeita quando
  * ela, a busca ou a ordem mudam. O que muda de um armazenamento para outro (desenhar, nomear e
  * clicar num tipo) está nos métodos por {@link ListKind}.
@@ -46,7 +52,7 @@ import org.lwjgl.glfw.GLFW;
  * é lembrado na sessão.
  *
  * <p>Baú: clique numa célula põe uma pilha no cursor; botão direito, meia pilha; Shift + clique,
- * uma pilha no inventário, e Shift + arrastar pela grade, uma pilha de cada tipo por onde passar;
+ * uma pilha no inventário (com o Shift apertado a ordem fica travada, como no AE2), e Shift + arrastar pela grade, uma pilha de cada tipo por onde passar;
  * com um item no cursor, Shift + duplo clique (como no vanilla), o máximo do tipo que couber no
  * inventário (o cursor fica como está). A rodinha sobre um tipo tira um item
  * (para baixo) ou guarda um do inventário (para cima); sobre um slot do inventário, guarda um dele
@@ -60,6 +66,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private static final int HEAD_Y = 6;
     /** Véu de grafite translúcido sobre a célula sob o mouse. */
     private static final int HOVER_VEIL = 0x282A2730;
+    /** Véu sobre um tipo que acabou enquanto a ordem está travada pelo Shift. */
+    private static final int GHOST_VEIL = 0xC0DDD3BF;
     /** Quantidade no canto da célula: branco com sombra, como as pilhas do próprio jogo. */
     private static final int COUNT_TEXT = 0xFFFFFFFF;
     private static final int SEARCH_Y = 21;
@@ -91,7 +99,6 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     }
 
     private static Sort sort = Sort.COUNT;
-    private static String lastSearch = "";
     /** Tamanho da grade escolhido pelo jogador; fica entre aberturas da tela na mesma sessão. */
     private static int savedCols = 13;
     private static int savedRows = 6;
@@ -103,9 +110,18 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private List<Object> shown = List.of();
     /** Quantidade de cada tipo mostrado, tirada junto com a lista (por identidade, como os nomes). */
     private final Map<Object, Long> shownCounts = new IdentityHashMap<>();
+    /** Texto procurado pelo {@code #} em cada tipo (tags e tooltip), refeito quando a busca muda. */
+    private final Map<Object, String> searchTexts = new IdentityHashMap<>();
     private int shownVersion = -1;
     private String shownSearch = "";
     private Sort shownSort = sort;
+    /**
+     * Ordem travada enquanto o Shift está apertado (como no AE2): as quantidades mudam, mas os tipos
+     * não trocam de lugar no meio da coleta; um tipo que acaba fica como célula apagada até soltar.
+     */
+    private boolean shownFrozen;
+    /** Shift simulado pelo teste de ponta a ponta, que não aperta teclas de verdade. */
+    static boolean e2eShift;
     private int scrollRow;
     private boolean draggingBar;
     /**
@@ -231,11 +247,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox.setTextColor(GuiPaint.FG);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
-        searchBox.setValue(lastSearch);
-        searchBox.setResponder(value -> {
-            lastSearch = value;
-            scrollRow = 0;
-        });
+        // A busca começa vazia a cada abertura (guardar a última deixava o campo rolado e confuso).
+        searchBox.setResponder(value -> scrollRow = 0);
         addRenderableWidget(searchBox);
         layout();
     }
@@ -278,28 +291,42 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     /** Refaz a lista mostrada se a visão, a busca ou a ordem mudaram. */
     private void rebuild() {
         String search = searchBox.getValue().trim().toLowerCase(Locale.ROOT);
-        if (view().version() == shownVersion && search.equals(shownSearch) && sort == shownSort) {
+        boolean sameQuery = search.equals(shownSearch) && sort == shownSort;
+        // Shift apertado trava a ordem; digitar maiúsculas na busca muda a busca e refaz tudo.
+        boolean frozen = (Screen.hasShiftDown() || e2eShift) && sameQuery && shownVersion >= 0;
+        if (view().version() == shownVersion && sameQuery && frozen == shownFrozen) {
             return;
         }
         shownVersion = view().version();
+        if (!search.equals(shownSearch)) {
+            searchTexts.clear();
+        }
         shownSearch = search;
         shownSort = sort;
+        shownFrozen = frozen;
         // Foto da quantidade e do nome de cada tipo antes de ordenar: o comparador não pode ver um
         // valor mudar no meio da ordenação ("Comparison method violates its general contract!"),
         // e o nome de alguns itens de outros mods mexe nos componentes da pilha, o que muda o hash
         // dela e faria a busca da quantidade devolver 0 no meio do caminho.
         List<StorageListView.Entry<Object>> entries = view().entries();
-        shownCounts.clear();
+        Map<Object, Long> counts = new IdentityHashMap<>();
         List<Object> keys = new ArrayList<>(entries.size());
         for (StorageListView.Entry<Object> entry : entries) {
             keys.add(entry.key());
-            shownCounts.put(entry.key(), entry.count());
+            counts.put(entry.key(), entry.count());
         }
-        names.keySet().retainAll(shownCounts.keySet());
+        StorageSearch query = StorageSearch.parse(search);
+        if (frozen) {
+            refreshFrozen(keys, counts, query);
+            return;
+        }
+        shownCounts.clear();
+        shownCounts.putAll(counts);
+        names.keySet().retainAll(counts.keySet());
+        searchTexts.keySet().retainAll(counts.keySet());
         List<Object> kept = new ArrayList<>(keys.size());
         for (Object key : keys) {
-            String name = name(key);
-            if (matches(key, name, search)) {
+            if (matches(key, query)) {
                 kept.add(key);
             }
         }
@@ -307,7 +334,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         for (Object key : kept) {
             mods.put(key, namespace(key));
         }
-        Comparator<Object> byName = Comparator.comparing(names::get);
+        Comparator<Object> byName = Comparator.comparing(this::name);
         Comparator<Object> order = switch (sort) {
             case COUNT -> Comparator.<Object>comparingLong(this::shownCount).reversed().thenComparing(byName);
             case NAME -> byName;
@@ -318,27 +345,99 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         scrollRow = Math.min(scrollRow, maxScroll());
     }
 
+    /**
+     * Com a ordem travada: cada tipo fica onde estava, com a quantidade nova (0 se acabou); um tipo
+     * que voltou toma o lugar da célula apagada dele, e um tipo novo entra no fim.
+     */
+    @SuppressWarnings("unchecked")
+    private void refreshFrozen(List<Object> keys, Map<Object, Long> counts, StorageSearch query) {
+        Hash.Strategy<Object> same = (Hash.Strategy<Object>) menu.kind().strategy;
+        List<Object> list = new ArrayList<>(shown);
+        java.util.Set<Object> placed = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        placed.addAll(list);
+        for (Object key : keys) {
+            if (placed.contains(key)) {
+                continue;
+            }
+            int ghost = -1;
+            for (int i = 0; i < list.size(); i++) {
+                if (!counts.containsKey(list.get(i)) && same.equals(list.get(i), key)) {
+                    ghost = i;
+                    break;
+                }
+            }
+            if (ghost >= 0) {
+                list.set(ghost, key);
+            } else if (matches(key, query)) {
+                list.add(key);
+            }
+            placed.add(key);
+        }
+        shownCounts.clear();
+        for (Object key : list) {
+            shownCounts.put(key, counts.getOrDefault(key, 0L));
+        }
+        shown = list;
+        scrollRow = Math.min(scrollRow, maxScroll());
+    }
+
     /** Quantidade do tipo na foto da última {@link #rebuild()}. */
     private long shownCount(Object key) {
         Long count = shownCounts.get(key);
         return count == null ? 0 : count;
     }
 
-    /** Busca: cada palavra precisa aparecer no nome; {@code @texto} procura no id do mod. */
-    private boolean matches(Object key, String name, String search) {
-        if (search.isEmpty()) {
+    /**
+     * Busca: cada palavra precisa aparecer no nome; {@code @texto} procura no id do mod e
+     * {@code #texto} nas tags e no tooltip (o {@code #} vale até o próximo {@code @} ou {@code #},
+     * então {@code #not yet eaten} procura a frase inteira).
+     */
+    private boolean matches(Object key, StorageSearch query) {
+        if (query.isEmpty()) {
             return true;
         }
-        for (String word : search.split("\\s+")) {
-            if (word.startsWith("@")) {
-                if (!namespace(key).contains(word.substring(1))) {
-                    return false;
-                }
-            } else if (!name.contains(word)) {
+        String name = name(key);
+        for (String word : query.words()) {
+            if (!name.contains(word)) {
                 return false;
             }
         }
+        for (String mod : query.mods()) {
+            if (!namespace(key).contains(mod)) {
+                return false;
+            }
+        }
+        if (!query.tags().isEmpty()) {
+            String text = searchTexts.computeIfAbsent(key, this::searchText);
+            for (String tag : query.tags()) {
+                if (!text.contains(tag)) {
+                    return false;
+                }
+            }
+        }
         return true;
+    }
+
+    /** As tags do tipo ({@code c:ingots/iron}) e as linhas do tooltip, em minúsculas, uma por linha. */
+    private String searchText(Object key) {
+        StringBuilder text = new StringBuilder();
+        Stream<? extends TagKey<?>> tags = switch (key) {
+            case ItemStack stack -> stack.getTags();
+            case FluidStack fluid -> fluid.getFluidHolder().tags();
+            default -> Stream.empty();
+        };
+        tags.forEach(tag -> text.append(tag.location()).append('\n'));
+        if (key instanceof ItemStack stack && minecraft != null) {
+            try {
+                for (Component line : stack.getTooltipLines(Item.TooltipContext.of(minecraft.level), minecraft.player,
+                        TooltipFlag.Default.NORMAL)) {
+                    text.append(line.getString()).append('\n');
+                }
+            } catch (RuntimeException e) {
+                // tooltip de outro mod que falha fora do lugar de costume: fica só com as tags
+            }
+        }
+        return text.toString().toLowerCase(Locale.ROOT);
     }
 
     /** Nome em minúsculas, guardado por tipo (o nome de um item com componentes pode ser caro). */
@@ -417,6 +516,16 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     int shownCount() {
         rebuild();
         return shown.size();
+    }
+
+    /** O tipo na posição {@code index} da lista mostrada e a quantidade dele (0 = apagado). */
+    Object shownKey(int index) {
+        rebuild();
+        return shown.get(index);
+    }
+
+    long shownAmount(int index) {
+        return shownCount(shown.get(index));
     }
 
     EditBox searchBox() {
@@ -739,7 +848,13 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int cx = x + GRID_X + (i % cols) * CELL;
             int cy = y + GRID_Y + (i / cols) * CELL;
             renderKey(g, key, cx, cy, trim);
-            drawCount(g, shownCount(key), cx, cy);
+            long count = shownCount(key);
+            if (count > 0) {
+                drawCount(g, count, cx, cy);
+            } else {
+                // acabou com a ordem travada pelo Shift: a célula fica apagada até soltar
+                g.fill(RenderType.guiOverlay(), cx, cy, cx + 16, cy + 16, GHOST_VEIL);
+            }
         }
         Object hovered = keyAt(mouseX, mouseY);
         if (hovered != null || inGrid(mouseX, mouseY) && !menu.getCarried().isEmpty()) {

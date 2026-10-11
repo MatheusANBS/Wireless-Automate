@@ -64,10 +64,10 @@ exact number.
 
 | I want to... | How |
 | --- | --- |
-| Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**). |
+| Find an item | Type in the search box. **@mod** searches by mod (e.g. **@mekanism**) and **#** by tags and tooltip text (e.g. **#ingots**, **#not yet eaten**). The search starts empty every time you open it. |
 | Change the order | The button next to the search box cycles: amount, name and mod. |
-| Take a stack | Click the item. Right click: half a stack. |
-| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. |
+| Take a stack | Click the item. Right click: half a stack (with less than a stack stored, half of what is there). |
+| Send it straight to the inventory | **Shift** + click the item. Hold **Shift** and drag across the list: one stack of each item you pass over. While **Shift** is held, items keep their places. |
 | Fill the inventory with an item | With any item on the cursor, **Shift** + double-click the item. |
 | Move one item at a time | Mouse wheel over the item: down takes one, up stores one from your inventory. Over an item in your inventory: down stores one, up pulls one from the chest. |
 | Store what's on the cursor | Click anywhere on the list. Right click: just one. |

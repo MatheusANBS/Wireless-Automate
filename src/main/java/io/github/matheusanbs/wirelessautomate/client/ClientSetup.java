@@ -13,12 +13,15 @@ import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.net.ForgePayloadContext;
+import io.github.matheusanbs.wirelessautomate.net.PayloadRegistrar;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -37,6 +40,8 @@ public final class ClientSetup {
     public static void clientSetup(FMLClientSetupEvent event) {
         // pacotes do servidor para o cliente: o IPayloadContext.player() do lado do cliente
         ForgePayloadContext.setClientPlayer(() -> Minecraft.getInstance().player);
+        // um pacote do servidor em partes, pela metade quando a conexão caiu, não fica guardado
+        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> PayloadRegistrar.resetClientParts());
         event.enqueueWork(() -> {
             ItemProperties.register(ModItems.ROUTER.get(), WirelessAutomate.id("tier"),
                     (stack, level, entity, seed) -> RouterBlockItem.tierOf(stack).ordinal());

@@ -11,9 +11,15 @@ import org.jetbrains.annotations.Nullable;
  * em partes de {@link Part} e o outro lado o decodifica quando chega a última.
  *
  * <p>Cada parte leva o tamanho total e o deslocamento dela. As partes de um pacote chegam em ordem e seguidas (uma
- * conexão é um fluxo só, e os handlers rodam em ordem na thread principal); uma parte com deslocamento 0 começa um
- * pacote novo e descarta o incompleto. Um deslocamento fora de ordem, um total diferente do começado ou um total
- * acima do teto do lado que recebe é erro ({@link IllegalStateException}), e a montagem recomeça vazia.
+ * conexão é um fluxo só, e os handlers rodam em ordem na thread principal), e quem manda nunca abandona um pacote
+ * pela metade. Por isso qualquer desvio é erro de protocolo ({@link IllegalStateException}, e a montagem fica
+ * vazia): uma parte com deslocamento 0 com outro pacote pela metade, um deslocamento fora de ordem (repetido ou
+ * pulado), um total diferente do começado ou acima do teto do lado que recebe. Quem usa trata o erro como o vanilla
+ * trata um pacote inválido: desconecta ({@link PayloadRegistrar}).
+ *
+ * <p><b>Memória:</b> o total declarado na primeira parte não é alocado de uma vez (um cliente hostil declararia o
+ * teto com um pacote de poucos bytes). O buffer começa do tamanho da primeira parte e dobra conforme os bytes
+ * chegam, até o total: a memória segue o que de fato chegou.
  */
 public final class PacketParts {
     private PacketParts() {
@@ -73,6 +79,7 @@ public final class PacketParts {
     public static final class Assembly {
         private final int max;
         private byte @Nullable [] buffer;
+        private int total;
         private int filled;
 
         /** @param max o maior pacote aceito, em bytes */
@@ -85,33 +92,52 @@ public final class PacketParts {
             return buffer != null;
         }
 
+        /** Bytes guardados agora (para os testes: segue o que chegou, não o total declarado). */
+        public int allocated() {
+            return buffer == null ? 0 : buffer.length;
+        }
+
+        /** Esvazia (a conexão caiu). */
+        public void reset() {
+            buffer = null;
+            total = 0;
+            filled = 0;
+        }
+
         /**
          * Junta a parte. Devolve o pacote inteiro quando ela é a última, ou {@code null}.
          *
-         * @throws IllegalStateException parte fora de ordem, de outro pacote ou acima do teto (a montagem recomeça)
+         * @throws IllegalStateException erro de protocolo (ver a classe); a montagem fica vazia
          */
         public byte @Nullable [] accept(Part part) {
             if (part.offset() == 0) {
+                if (buffer != null) {
+                    String state = "deslocamento " + filled + " de " + total;
+                    reset();
+                    throw new IllegalStateException("Pacote novo com outro pela metade (" + state + "): " + part);
+                }
                 if (part.total() > max) {
-                    buffer = null;
                     throw new IllegalStateException("Pacote de " + part.total() + " bytes passa do teto de " + max);
                 }
-                buffer = new byte[part.total()];
+                total = part.total();
                 filled = 0;
-            } else if (buffer == null || part.total() != buffer.length || part.offset() != filled) {
-                String expected = buffer == null ? "nenhum pacote começado"
-                        : "deslocamento " + filled + " de " + buffer.length;
-                buffer = null;
+                buffer = new byte[part.bytes().length];
+            } else if (buffer == null || part.total() != total || part.offset() != filled) {
+                String expected = buffer == null ? "nenhum pacote começado" : "deslocamento " + filled + " de " + total;
+                reset();
                 throw new IllegalStateException("Parte fora de ordem: " + part + " (esperava " + expected + ")");
             }
+            int end = filled + part.bytes().length;
+            if (end > buffer.length) {
+                buffer = Arrays.copyOf(buffer, (int) Math.min(total, Math.max(end, 2L * buffer.length)));
+            }
             System.arraycopy(part.bytes(), 0, buffer, filled, part.bytes().length);
-            filled += part.bytes().length;
-            if (filled < buffer.length) {
+            filled = end;
+            if (filled < total) {
                 return null;
             }
-            byte[] whole = buffer;
-            buffer = null;
-            filled = 0;
+            byte[] whole = buffer.length == total ? buffer : Arrays.copyOf(buffer, total);
+            reset();
             return whole;
         }
     }

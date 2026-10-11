@@ -74,9 +74,14 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     private int sentVersion = -1;
     private StorageListView.Header sentHeader = StorageListView.Header.EMPTY;
     private long lastSync = Long.MIN_VALUE;
-    /** Referências das chaves grandes mandadas à tela ({@link StorageListView.Entry#ref()}); valem até ela fechar. */
+    /**
+     * Referências das chaves grandes na lista da tela ({@link StorageListView.Entry#ref()}). Uma chave que sai do
+     * armazenamento solta a sua (os mapas só guardam as que estão na lista); números não se repetem enquanto a tela
+     * estiver aberta, então uma ação com a referência de uma chave que saiu é recusada.
+     */
     private final Object2IntOpenCustomHashMap<K> refs;
     private final Int2ObjectOpenHashMap<K> refKeys = new Int2ObjectOpenHashMap<>();
+    private int nextRef;
 
     /** Servidor. */
     public StorageListMenu(int containerId, Inventory inventory, KeyedStorageBlockEntity<K> storage) {
@@ -325,6 +330,10 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             }
             part.add((StorageListView.Entry<Object>) (StorageListView.Entry<?>) new StorageListView.Entry<>(key,
                     entry.count(), ref));
+            if (ref > 0 && entry.count() <= 0) {
+                // Saiu da lista: a tela tira o tipo com esta entrada e a referência fica sem uso.
+                refKeys.remove(refs.removeInt(entry.key()));
+            }
             bytes += size;
         }
         if (first || !part.isEmpty()) {
@@ -336,7 +345,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     private int refFor(K key) {
         int ref = refs.getInt(key);
         if (ref == 0) {
-            ref = refKeys.size() + 1;
+            ref = ++nextRef;
             K copy = kind.copy(key);
             refs.put(copy, ref);
             refKeys.put(ref, copy);

@@ -15,8 +15,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
@@ -47,6 +51,14 @@ import org.slf4j.Logger;
  * NeoForge. O lado que recebe limita o payload montado: o servidor não junta mais que
  * {@link #MAX_ASSEMBLED_TO_SERVER} de um cliente, e o cliente, {@link #MAX_ASSEMBLED_TO_CLIENT}. Só um payload
  * acima desse teto não sai (aviso no log).
+ *
+ * <p><b>Erros:</b> uma parte inválida (total acima do teto, tamanho fora do esperado) ou fora de ordem (repetida,
+ * pulada, um pacote novo com outro pela metade) é erro de protocolo, que quem manda nunca comete: o lado que recebe
+ * desconecta o outro, como o vanilla faz com um pacote mal formado, com um aviso só no log. Assim um cliente hostil
+ * não faz o servidor recomeçar montagens sem parar nem enche o log. Já um payload que não decodifica (inteiro ou
+ * montado) segue a política do vanilla para o conteúdo de um pacote de canal: erro no log, o pacote se perde e a
+ * conexão fica. A montagem não aloca o total declarado de uma vez ({@link PacketParts}) e é esvaziada quando a
+ * conexão cai (o jogador sai; no cliente, ao sair do servidor: {@link #resetClientParts}).
  *
  * <p>Os handlers rodam na thread principal ({@code consumerMainThread}, que também marca o pacote como
  * tratado), como o padrão {@code HandlerThread.MAIN} do NeoForge; as partes também são juntadas nela, na ordem
@@ -79,6 +91,8 @@ public final class PayloadRegistrar {
     private final Map<Connection, PacketParts.Assembly> serverAssemblies = new WeakHashMap<>();
     /** Partes recebidas do servidor (cliente; só a thread principal mexe). */
     private final PacketParts.Assembly clientAssembly = new PacketParts.Assembly(MAX_ASSEMBLED_TO_CLIENT);
+    /** O motivo da desconexão por parte inválida (traduzido no cliente que tem o mod). */
+    private static final Component INVALID_PART = Component.translatable("disconnect.wirelessautomate.invalid_part");
     private @Nullable SimpleChannel channel;
 
     public PayloadRegistrar(String version) {
@@ -117,28 +131,32 @@ public final class PayloadRegistrar {
                 .consumerMainThread((message, context) -> handle(clientById, message.payload(), context))
                 .add();
         channel.messageBuilder(PartToServer.class, 2, NetworkDirection.PLAY_TO_SERVER)
-                .encoder((message, buf) -> writePart(message.part(), buf))
+                .encoder((message, buf) -> writePart(message.read().part(), buf))
                 .decoder(buf -> new PartToServer(readPart(buf, MAX_ASSEMBLED_TO_SERVER, PART_TO_SERVER)))
                 .consumerMainThread((message, context) -> {
-                    Connection connection = context.get().getNetworkManager();
-                    PacketParts.Assembly assembly = serverAssemblies.computeIfAbsent(connection,
-                            c -> new PacketParts.Assembly(MAX_ASSEMBLED_TO_SERVER));
-                    CustomPacketPayload payload = assemble(toServer, assembly, message.part());
+                    CustomPacketPayload payload = receiveOnServer(context.get().getNetworkManager(), message.read());
                     if (payload != null) {
                         handle(serverById, payload, context);
                     }
                 })
                 .add();
         channel.messageBuilder(PartToClient.class, 3, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder((message, buf) -> writePart(message.part(), buf))
+                .encoder((message, buf) -> writePart(message.read().part(), buf))
                 .decoder(buf -> new PartToClient(readPart(buf, MAX_ASSEMBLED_TO_CLIENT, PART_TO_CLIENT)))
                 .consumerMainThread((message, context) -> {
-                    CustomPacketPayload payload = assemble(toClient, clientAssembly, message.part());
+                    CustomPacketPayload payload = receive(toClient, clientAssembly,
+                            context.get().getNetworkManager(), message.read());
                     if (payload != null) {
                         handle(clientById, payload, context);
                     }
                 })
                 .add();
+        // A montagem de quem sai não fica esperando o coletor de lixo.
+        MinecraftForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
+            if (event.getEntity() instanceof ServerPlayer player && player.connection != null) {
+                serverAssemblies.remove(player.connection.connection);
+            }
+        });
         PacketDistributor.bind(channel, this::envelopesToServer, this::envelopesToClient);
         this.channel = channel;
         registered = this;
@@ -158,12 +176,12 @@ public final class PayloadRegistrar {
 
     private List<Object> envelopesToServer(CustomPacketPayload payload) {
         return envelopes(serverById, payload, MAX_TO_SERVER, PART_TO_SERVER, MAX_ASSEMBLED_TO_SERVER,
-                "cliente → servidor", ToServer::new, PartToServer::new);
+                "cliente → servidor", ToServer::new, part -> new PartToServer(new PartRead(part, null)));
     }
 
     private List<Object> envelopesToClient(CustomPacketPayload payload) {
         return envelopes(clientById, payload, MAX_TO_CLIENT, PART_TO_CLIENT, MAX_ASSEMBLED_TO_CLIENT,
-                "servidor → cliente", ToClient::new, PartToClient::new);
+                "servidor → cliente", ToClient::new, part -> new PartToClient(new PartRead(part, null)));
     }
 
     /**
@@ -241,34 +259,56 @@ public final class PayloadRegistrar {
     }
 
     /**
-     * Lê uma parte (o resto do pacote são os bytes dela). Recusa, sem alocar, um total acima de
-     * {@code assembledMax} ou uma parte maior que as do envio ({@code partSize}).
+     * Lê uma parte (o resto do pacote são os bytes dela). Um total acima de {@code assembledMax} ou uma parte maior
+     * que as do envio ({@code partSize}) é recusado sem alocar nada e vira o motivo do erro ({@link PartRead#error()}):
+     * quem recebe desconecta na thread principal (aqui, na thread da rede, não há a quem desconectar).
      */
-    private static PacketParts.Part readPart(FriendlyByteBuf buf, int assembledMax, int partSize) {
+    private static PartRead readPart(FriendlyByteBuf buf, int assembledMax, int partSize) {
         int total = buf.readVarInt();
         int offset = buf.readVarInt();
         int length = buf.readableBytes();
         if (total <= 0 || total > assembledMax || length <= 0 || length > partSize || offset < 0
                 || offset > total - length) {
-            throw new DecoderException("Parte de pacote inválida: total " + total + ", deslocamento " + offset
-                    + ", " + length + " bytes");
+            buf.skipBytes(length);
+            return new PartRead(null, "parte inválida: total " + total + ", deslocamento " + offset + ", "
+                    + length + " bytes");
         }
         byte[] bytes = new byte[length];
         buf.readBytes(bytes);
-        return new PacketParts.Part(total, offset, bytes);
+        return new PartRead(new PacketParts.Part(total, offset, bytes), null);
+    }
+
+    /** Uma parte do cliente, na montagem da conexão dele. */
+    private @Nullable CustomPacketPayload receiveOnServer(Connection connection, PartRead read) {
+        PacketParts.Assembly assembly = serverAssemblies.computeIfAbsent(connection,
+                c -> new PacketParts.Assembly(MAX_ASSEMBLED_TO_SERVER));
+        CustomPacketPayload payload = receive(toServer, assembly, connection, read);
+        if (!connection.isConnected()) {
+            serverAssemblies.remove(connection);
+        }
+        return payload;
     }
 
     /**
-     * Junta a parte; o payload decodificado quando ela é a última, ou {@code null}. Parte fora de ordem, ou
-     * payload montado que não decodifica: aviso no log e o pacote se perde (a conexão fica).
+     * Junta a parte; o payload decodificado quando ela é a última, ou {@code null}. Parte inválida ou fora de ordem:
+     * um aviso no log e a {@code connection} é desconectada (a montagem fica vazia). Payload montado que não
+     * decodifica: erro no log e o pacote se perde, como um pacote inteiro que não decodifica.
      */
-    private static @Nullable CustomPacketPayload assemble(List<Entry<?>> table, PacketParts.Assembly assembly,
-            PacketParts.Part part) {
-        byte[] whole;
-        try {
-            whole = assembly.accept(part);
-        } catch (IllegalStateException e) {
-            LOGGER.warn("Parte de pacote recusada: {}", e.getMessage());
+    private static @Nullable CustomPacketPayload receive(List<Entry<?>> table, PacketParts.Assembly assembly,
+            Connection connection, PartRead read) {
+        String error = read.error();
+        byte[] whole = null;
+        if (error == null) {
+            try {
+                whole = assembly.accept(read.part());
+            } catch (IllegalStateException e) {
+                error = e.getMessage();
+            }
+        }
+        if (error != null) {
+            assembly.reset();
+            LOGGER.warn("Desconectando {}: {}", connection.getRemoteAddress(), error);
+            connection.disconnect(INVALID_PART);
             return null;
         }
         if (whole == null) {
@@ -277,8 +317,16 @@ public final class PayloadRegistrar {
         try {
             return decode(table, new FriendlyByteBuf(Unpooled.wrappedBuffer(whole)));
         } catch (RuntimeException e) {
-            LOGGER.warn("Pacote montado de {} bytes não decodificou: {}", whole.length, e.toString());
+            LOGGER.error("Pacote montado de {} bytes não decodificou; descartado", whole.length, e);
             return null;
+        }
+    }
+
+    /** Cliente: esvazia a montagem das partes do servidor (chamado ao sair do servidor). */
+    public static void resetClientParts() {
+        PayloadRegistrar registrar = registered;
+        if (registrar != null) {
+            registrar.clientAssembly.reset();
         }
     }
 
@@ -305,25 +353,46 @@ public final class PayloadRegistrar {
     }
 
     /**
-     * Lê os dados de um pacote do canal do mod como o lado que recebe: o discriminador do {@code SimpleChannel}
-     * (o que o Forge lê) e a mensagem, pelos mesmos leitores e a mesma montagem do canal. Devolve o payload de um
-     * envelope inteiro, o payload montado na última parte, ou {@code null} numa parte do meio. Para os GameTests.
-     *
-     * @param toServer os dados vão ao servidor (senão, ao cliente)
-     * @param assembly a montagem daquele lado da conexão (uma por conexão)
+     * Lê os dados de um pacote do canal do mod como o servidor: o discriminador do {@code SimpleChannel} (o que o
+     * Forge lê) e a mensagem, pelos mesmos leitores e pelo mesmo consumidor do canal, com a montagem da
+     * {@code connection} no mapa por conexão (e a desconexão numa parte inválida). Devolve o payload de um envelope
+     * inteiro, o payload montado na última parte, ou {@code null}. Para os GameTests.
      */
-    public static @Nullable CustomPacketPayload receive(boolean toServer, PacketParts.Assembly assembly,
-            FriendlyByteBuf data) {
+    public static @Nullable CustomPacketPayload receiveOnServer(Connection connection, FriendlyByteBuf data) {
         PayloadRegistrar registrar = requireRegistered();
-        List<Entry<?>> table = toServer ? registrar.toServer : registrar.toClient;
         int discriminator = data.readUnsignedByte();
-        if (discriminator == (toServer ? 0 : 1)) {
-            return decode(table, data);
+        return switch (discriminator) {
+            case 0 -> decode(registrar.toServer, data);
+            case 2 -> registrar.receiveOnServer(connection, readPart(data, MAX_ASSEMBLED_TO_SERVER, PART_TO_SERVER));
+            default -> throw new DecoderException("Discriminador " + discriminator + " fora da direção");
+        };
+    }
+
+    /** A montagem do servidor para a {@code connection} está pela metade. Para os GameTests. */
+    public static boolean serverPartsPending(Connection connection) {
+        PacketParts.Assembly assembly = requireRegistered().serverAssemblies.get(connection);
+        return assembly != null && assembly.pending();
+    }
+
+    /**
+     * Lê os dados de um pacote do canal do mod como o cliente, pelos mesmos leitores do canal, com a montagem
+     * {@code assembly} (uma por conexão). Devolve o payload de um envelope inteiro, o payload montado na última
+     * parte, ou {@code null} numa parte do meio. Para os GameTests.
+     */
+    public static @Nullable CustomPacketPayload receiveOnClient(PacketParts.Assembly assembly, FriendlyByteBuf data) {
+        PayloadRegistrar registrar = requireRegistered();
+        int discriminator = data.readUnsignedByte();
+        if (discriminator == 1) {
+            return decode(registrar.toClient, data);
         }
-        if (discriminator == (toServer ? 2 : 3)) {
-            PacketParts.Part part = toServer ? readPart(data, MAX_ASSEMBLED_TO_SERVER, PART_TO_SERVER)
-                    : readPart(data, MAX_ASSEMBLED_TO_CLIENT, PART_TO_CLIENT);
-            return assemble(table, assembly, part);
+        if (discriminator == 3) {
+            PartRead read = readPart(data, MAX_ASSEMBLED_TO_CLIENT, PART_TO_CLIENT);
+            if (read.error() != null) {
+                throw new DecoderException(read.error());
+            }
+            byte[] whole = assembly.accept(read.part());
+            return whole == null ? null
+                    : decode(registrar.toClient, new FriendlyByteBuf(Unpooled.wrappedBuffer(whole)));
         }
         throw new DecoderException("Discriminador " + discriminator + " fora da direção");
     }
@@ -348,11 +417,15 @@ public final class PayloadRegistrar {
     public record ToClient(CustomPacketPayload payload, @Nullable ByteBuf encoded) {
     }
 
+    /** Uma parte lida: a parte, ou o motivo de ela ser inválida. */
+    public record PartRead(PacketParts.@Nullable Part part, @Nullable String error) {
+    }
+
     /** Uma parte de um payload cliente → servidor grande demais para um pacote só. */
-    public record PartToServer(PacketParts.Part part) {
+    public record PartToServer(PartRead read) {
     }
 
     /** Uma parte de um payload servidor → cliente grande demais para um pacote só. */
-    public record PartToClient(PacketParts.Part part) {
+    public record PartToClient(PartRead read) {
     }
 }

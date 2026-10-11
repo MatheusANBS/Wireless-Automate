@@ -55,11 +55,13 @@ class PacketPartsTest {
     }
 
     @Test
-    void newFirstPartDiscardsTheIncompleteOne() {
+    void newFirstPartWithAnotherPendingIsAnError() {
         PacketParts.Assembly assembly = new PacketParts.Assembly(100_000);
         assertNull(assembly.accept(PacketParts.split(data(3000), 1000).get(0)));
         byte[] other = data(2000);
         List<PacketParts.Part> parts = PacketParts.split(other, 1000);
+        assertThrows(IllegalStateException.class, () -> assembly.accept(parts.get(0)));
+        assertFalse(assembly.pending());
         assertNull(assembly.accept(parts.get(0)));
         assertArrayEquals(other, assembly.accept(parts.get(1)));
     }
@@ -81,6 +83,58 @@ class PacketPartsTest {
         assembly.accept(fresh.get(0));
         assembly.accept(fresh.get(1));
         assertArrayEquals(again, assembly.accept(fresh.get(2)));
+    }
+
+    @Test
+    void duplicatedMiddlePartIsAnError() {
+        PacketParts.Assembly assembly = new PacketParts.Assembly(100_000);
+        List<PacketParts.Part> parts = PacketParts.split(data(3000), 1000);
+        assembly.accept(parts.get(0));
+        assembly.accept(parts.get(1));
+        assertThrows(IllegalStateException.class, () -> assembly.accept(parts.get(1)));
+        assertFalse(assembly.pending());
+    }
+
+    @Test
+    void hugeTotalInALaterPartIsAnError() {
+        PacketParts.Assembly assembly = new PacketParts.Assembly(100_000);
+        List<PacketParts.Part> parts = PacketParts.split(data(3000), 1000);
+        assembly.accept(parts.get(0));
+        assertThrows(IllegalStateException.class,
+                () -> assembly.accept(new PacketParts.Part(Integer.MAX_VALUE, 1000, new byte[1000])));
+        assertFalse(assembly.pending());
+        assertEquals(0, assembly.allocated());
+    }
+
+    @Test
+    void offsetNearIntegerMaxIsRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new PacketParts.Part(Integer.MAX_VALUE, Integer.MAX_VALUE - 1, new byte[10]));
+        PacketParts.Assembly assembly = new PacketParts.Assembly(100_000);
+        assertThrows(IllegalStateException.class,
+                () -> assembly.accept(new PacketParts.Part(Integer.MAX_VALUE, Integer.MAX_VALUE - 10, new byte[10])));
+        assertFalse(assembly.pending());
+    }
+
+    @Test
+    void doesNotAllocateTheDeclaredTotalUpFront() {
+        PacketParts.Assembly assembly = new PacketParts.Assembly(2 * 1024 * 1024);
+        // Uma parte de 1 byte declarando 2 MiB: guarda 1 byte, não 2 MiB.
+        assertNull(assembly.accept(new PacketParts.Part(2 * 1024 * 1024, 0, new byte[1])));
+        assertEquals(1, assembly.allocated());
+        assembly.reset();
+        // O buffer dobra com o que chega e nunca passa do total.
+        byte[] data = data(10_000);
+        List<PacketParts.Part> parts = PacketParts.split(data, 1000);
+        int last = 0;
+        for (int i = 0; i < parts.size() - 1; i++) {
+            assembly.accept(parts.get(i));
+            assertTrue(assembly.allocated() >= (i + 1) * 1000 && assembly.allocated() <= 10_000);
+            assertTrue(assembly.allocated() >= last);
+            last = assembly.allocated();
+        }
+        assertArrayEquals(data, assembly.accept(parts.get(parts.size() - 1)));
+        assertEquals(0, assembly.allocated());
     }
 
     @Test

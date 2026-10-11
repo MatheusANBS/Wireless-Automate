@@ -188,7 +188,7 @@ final class GameTestCompat {
             } else if (mod.equals(packet.getIdentifier())) {
                 FriendlyByteBuf data = new FriendlyByteBuf(packet.getData().copy());
                 sizes.add(data.readableBytes());
-                CustomPacketPayload payload = PayloadRegistrar.receive(false, assembly, data);
+                CustomPacketPayload payload = PayloadRegistrar.receiveOnClient(assembly, data);
                 if (payload != null) {
                     payloads.add(payload);
                 }

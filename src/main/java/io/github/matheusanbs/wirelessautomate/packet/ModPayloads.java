@@ -51,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "11";
+    public static final String VERSION = "12";
 
     /**
      * Cria o canal do mod ({@code wirelessautomate:main}, versão {@link #VERSION}, aceita só igual dos dois

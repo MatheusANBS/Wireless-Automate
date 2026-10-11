@@ -6,6 +6,9 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
@@ -21,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.net.PacketParts;
 import io.github.matheusanbs.wirelessautomate.net.PayloadRegistrar;
 import io.github.matheusanbs.wirelessautomate.net.RegistryFriendlyByteBuf;
 import io.github.matheusanbs.wirelessautomate.net.ServerMenus;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -29,6 +33,7 @@ import io.github.matheusanbs.wirelessautomate.packet.FilterEntriesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.FilterViewPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerSnapshotPayload;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RouterNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.StorageActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.StorageEntriesPayload;
@@ -43,6 +48,7 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -53,9 +59,12 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -148,28 +157,40 @@ public final class LargePacketGameTests {
         return list.get(0);
     }
 
-    /**
-     * Os pacotes que o cliente mandaria com {@code payload}, escritos e relidos pelo pacote do vanilla (que recusa
-     * mais de 32767 bytes, como o servidor de verdade), e o payload montado do lado do servidor. Devolve também
-     * quantos pacotes foram.
-     */
-    private static CustomPacketPayload throughServerbound(GameTestHelper helper, CustomPacketPayload payload,
-            int[] packets) {
-        List<Packet<?>> sent = PayloadRegistrar.packetsToServer(payload);
-        packets[0] = sent.size();
-        PacketParts.Assembly assembly = new PacketParts.Assembly(PayloadRegistrar.MAX_ASSEMBLED_TO_SERVER);
-        CustomPacketPayload received = null;
-        for (int i = 0; i < sent.size(); i++) {
-            ServerboundCustomPayloadPacket packet = (ServerboundCustomPayloadPacket) sent.get(i);
+    /** Os dados de cada pacote que o cliente mandaria com {@code payload}, escritos e relidos pelo pacote do vanilla. */
+    private static List<FriendlyByteBuf> clientPackets(GameTestHelper helper, CustomPacketPayload payload) {
+        List<FriendlyByteBuf> data = new ArrayList<>();
+        for (Packet<?> packet : PayloadRegistrar.packetsToServer(payload)) {
             FriendlyByteBuf wire = new FriendlyByteBuf(Unpooled.buffer());
-            packet.write(wire);
+            ((ServerboundCustomPayloadPacket) packet).write(wire);
+            // O construtor de leitura do vanilla recusa mais de 32767 bytes, como o servidor de verdade.
             ServerboundCustomPayloadPacket reread = new ServerboundCustomPayloadPacket(wire);
             helper.assertTrue(reread.getData().readableBytes() <= MAX_SERVERBOUND, "pacote do cliente grande demais");
-            CustomPacketPayload part = PayloadRegistrar.receive(true, assembly, reread.getData());
+            data.add(reread.getData());
+        }
+        return data;
+    }
+
+    /**
+     * Os pacotes que o cliente mandaria com {@code payload}, recebidos pelo consumidor real do servidor, na montagem
+     * da conexão do {@code player} (o mapa por conexão). Devolve o payload montado e põe em {@code packets[0]}
+     * quantos pacotes foram.
+     */
+    private static CustomPacketPayload throughServerbound(GameTestHelper helper, ServerPlayer player,
+            CustomPacketPayload payload, int[] packets) {
+        Connection connection = player.connection.connection;
+        List<FriendlyByteBuf> sent = clientPackets(helper, payload);
+        packets[0] = sent.size();
+        CustomPacketPayload received = null;
+        for (int i = 0; i < sent.size(); i++) {
+            CustomPacketPayload part = PayloadRegistrar.receiveOnServer(connection, sent.get(i));
             helper.assertTrue((part != null) == (i == sent.size() - 1),
                     "payload montado antes ou depois da última parte (" + i + " de " + sent.size() + ")");
+            helper.assertTrue(PayloadRegistrar.serverPartsPending(connection) == (i < sent.size() - 1),
+                    "montagem da conexão pela metade fora de hora");
             received = part;
         }
+        helper.assertTrue(connection.isConnected(), "o servidor desconectou um cliente correto");
         if (received == null) {
             throw new GameTestAssertException("o servidor não montou o payload");
         }
@@ -383,7 +404,7 @@ public final class LargePacketGameTests {
 
             // Pegar o enorme pela referência: o pacote do cliente é pequeno e o cursor recebe o item de verdade.
             int[] packets = new int[1];
-            StorageActionPayload take = (StorageActionPayload) throughServerbound(helper,
+            StorageActionPayload take = (StorageActionPayload) throughServerbound(helper, player,
                     StorageActionPayload.byRef(server.containerId, StorageKind.CHEST,
                             StorageActionPayload.Action.TAKE_STACK, view.ref(shownHuge)), packets);
             GameTestCompat.assertValueEqual(helper, packets[0], 1, "pacotes da ação pela referência");
@@ -394,7 +415,7 @@ public final class LargePacketGameTests {
             GameTestCompat.assertValueEqual(helper, storage.count(huge), 0L, "enormes no Baú");
             server.setCarried(ItemStack.EMPTY);
 
-            StorageActionPayload toInventory = (StorageActionPayload) throughServerbound(helper,
+            StorageActionPayload toInventory = (StorageActionPayload) throughServerbound(helper, player,
                     StorageActionPayload.byRef(server.containerId, StorageKind.CHEST,
                             StorageActionPayload.Action.TAKE_TO_INVENTORY, view.ref(shownBig)), packets);
             helper.assertTrue(StorageListMenu.handle(player, toInventory), "recusou o grande pela referência");
@@ -441,7 +462,7 @@ public final class LargePacketGameTests {
         try {
             ItemStack stack = bigPaper(100 * 1024, 3);
             int[] packets = new int[1];
-            CustomPacketPayload received = throughServerbound(helper,
+            CustomPacketPayload received = throughServerbound(helper, player,
                     new AddFilterEntryPayload(menu.containerId, new FilterEntry.ItemEntry(stack, 0)), packets);
             helper.assertTrue(packets[0] >= 4, "100 KiB deviam ir em partes: " + packets[0] + " pacote(s)");
             helper.assertTrue(ModPayloads.handleAddFilterEntry(player, (AddFilterEntryPayload) received),
@@ -455,7 +476,7 @@ public final class LargePacketGameTests {
             for (int i = 0; i < FilterEntriesPayload.MAX; i++) {
                 mods.add(new FilterEntry.ModEntry("mod" + i, 0));
             }
-            received = throughServerbound(helper, FilterEntriesPayload.add(menu.containerId, mods), packets);
+            received = throughServerbound(helper, player, FilterEntriesPayload.add(menu.containerId, mods), packets);
             GameTestCompat.assertValueEqual(helper, packets[0], 1, "pacotes das regras");
             helper.assertTrue(ModPayloads.handleFilterEntries(player, (FilterEntriesPayload) received),
                     "o servidor recusou as regras");
@@ -464,6 +485,136 @@ public final class LargePacketGameTests {
         } finally {
             player.containerMenu = player.inventoryMenu;
         }
+        helper.succeed();
+    }
+
+    /**
+     * Duas conexões mandando partes ao mesmo tempo, intercaladas: cada uma monta o seu payload (o mapa por conexão
+     * do consumidor real). Uma parte fora de ordem (pacote novo com outro pela metade) e uma parte que declara mais
+     * que o teto de 2 MiB desconectam quem mandou, sem guardar nada.
+     */
+    @GameTest(template = "empty")
+    public static void serverPartsArePerConnectionAndViolationsDisconnect(GameTestHelper helper) {
+        ServerPlayer first = player(helper, A);
+        ServerPlayer second = player(helper, A);
+        ServerPlayer reorder = player(helper, A);
+        ServerPlayer oversized = player(helper, A);
+        ItemStack stackA = bigPaper(80 * 1024, 5);
+        ItemStack stackB = bigPaper(90 * 1024, 6);
+        List<FriendlyByteBuf> partsA = clientPackets(helper,
+                new AddFilterEntryPayload(7, new FilterEntry.ItemEntry(stackA, 0)));
+        List<FriendlyByteBuf> partsB = clientPackets(helper,
+                new AddFilterEntryPayload(8, new FilterEntry.ItemEntry(stackB, 0)));
+        helper.assertTrue(partsA.size() >= 3 && partsB.size() >= 3, "os dois deviam ir em partes");
+        Connection a = first.connection.connection;
+        Connection b = second.connection.connection;
+        CustomPacketPayload gotA = null;
+        CustomPacketPayload gotB = null;
+        for (int i = 0; i < Math.max(partsA.size(), partsB.size()); i++) {
+            if (i < partsA.size()) {
+                gotA = PayloadRegistrar.receiveOnServer(a, new FriendlyByteBuf(partsA.get(i).copy()));
+            }
+            if (i < partsB.size()) {
+                gotB = PayloadRegistrar.receiveOnServer(b, new FriendlyByteBuf(partsB.get(i).copy()));
+            }
+        }
+        helper.assertTrue(gotA instanceof AddFilterEntryPayload pa && pa.containerId() == 7
+                && pa.entry() instanceof FilterEntry.ItemEntry ea && ItemStack.isSameItemSameTags(ea.stack(), stackA),
+                "a primeira conexão montou errado");
+        helper.assertTrue(gotB instanceof AddFilterEntryPayload pb && pb.containerId() == 8
+                && pb.entry() instanceof FilterEntry.ItemEntry eb && ItemStack.isSameItemSameTags(eb.stack(), stackB),
+                "a segunda conexão montou errado");
+        helper.assertTrue(a.isConnected() && b.isConnected(), "desconectou um cliente correto");
+
+        // Pacote novo com outro pela metade: erro de protocolo, desconecta e esvazia.
+        Connection c = reorder.connection.connection;
+        helper.assertTrue(PayloadRegistrar.receiveOnServer(c, new FriendlyByteBuf(partsA.get(0).copy())) == null,
+                "montou com uma parte");
+        helper.assertTrue(PayloadRegistrar.serverPartsPending(c), "a primeira parte não ficou guardada");
+        helper.assertTrue(PayloadRegistrar.receiveOnServer(c, new FriendlyByteBuf(partsA.get(0).copy())) == null,
+                "montou o recomeço");
+        helper.assertFalse(c.isConnected(), "o recomeço não desconectou");
+        helper.assertFalse(PayloadRegistrar.serverPartsPending(c), "a montagem ficou guardada");
+
+        // Parte de 1 byte declarando 3 MiB: recusada sem alocar, desconecta.
+        FriendlyByteBuf hostile = new FriendlyByteBuf(Unpooled.buffer());
+        hostile.writeByte(2);
+        hostile.writeVarInt(3 * 1024 * 1024);
+        hostile.writeVarInt(0);
+        hostile.writeByte(0);
+        Connection d = oversized.connection.connection;
+        helper.assertTrue(PayloadRegistrar.receiveOnServer(d, hostile) == null, "aceitou a parte acima do teto");
+        helper.assertFalse(d.isConnected(), "a parte acima do teto não desconectou");
+        helper.assertFalse(PayloadRegistrar.serverPartsPending(d), "a parte acima do teto ficou guardada");
+        helper.succeed();
+    }
+
+    /**
+     * O pior caso de cada abertura reduzida cabe no teto do Forge: nomes no tamanho máximo com acentos (2 bytes
+     * cada), listas enormes (que a reduzida tira), a prévia do Vinculador cheia (512 pontos com coordenadas de 5
+     * bytes), números no máximo, ícone da máquina com 100 KiB de NBT e o aviso do Tablet com argumentos longos.
+     */
+    @GameTest(template = "empty")
+    public static void reducedOpeningsFitInTheWorstCase(GameTestHelper helper) {
+        String name64 = "ã".repeat(64);
+        List<RouterSnapshot.NetworkEntry> networks = new ArrayList<>();
+        for (int i = 0; i < 2000; i++) {
+            networks.add(new RouterSnapshot.NetworkEntry(UUID.randomUUID(), name64, -1, i % 2 == 0));
+        }
+
+        // Vinculador
+        List<LinkerSnapshot.RouterDot> dots = new ArrayList<>();
+        for (int i = 0; i < LinkerSnapshot.MAX_DOTS; i++) {
+            dots.add(new LinkerSnapshot.RouterDot(Integer.MIN_VALUE, Integer.MIN_VALUE, -1, true));
+        }
+        LinkerTabs all = LinkerTabs.available(LoadedTypes.LIST);
+        LinkerSnapshot linker = new LinkerSnapshot(networks, Optional.of(networks.get(1000).id()), true, all, all,
+                LinkerMode.values()[LinkerMode.values().length - 1],
+                Optional.of(new BlockPos(-30_000_000, -64, -30_000_000)),
+                Optional.of(new BlockPos(30_000_000, 320, 30_000_000)), false, Integer.MAX_VALUE, Integer.MAX_VALUE,
+                Integer.MAX_VALUE, dots, LinkerProblem.values()[LinkerProblem.values().length - 1], Long.MAX_VALUE,
+                Integer.MAX_VALUE, Optional.of(new LinkerSnapshot.Outcome(Integer.MAX_VALUE, Integer.MAX_VALUE,
+                        Integer.MAX_VALUE, Integer.MAX_VALUE, all, false, name64, -1)));
+        int linkerSize = encodedSize(buf -> {
+            buf.writeEnum(InteractionHand.OFF_HAND);
+            LinkerSnapshot.STREAM_CODEC.encode(buf, linker.reduced());
+        });
+        helper.assertTrue(linkerSize <= ServerMenus.MAX_OPEN_DATA, "Vinculador reduzido com " + linkerSize + " bytes");
+
+        // Roteador: o snapshot de um roteador de verdade, com o pior nome, as redes e um ícone de 100 KiB de NBT.
+        helper.setBlock(A, Blocks.CHEST);
+        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = GameTestCompat.getBlockEntity(helper, A.above());
+        ServerPlayer player = player(helper, A.above());
+        RouterSnapshot real = RouterSnapshot.capture(router, player);
+        RouterSnapshot worst = new RouterSnapshot(real.pos(), "ã".repeat(RenameRouterPayload.MAX_LENGTH),
+                RouterTier.values()[RouterTier.values().length - 1], real.facing(), real.typeNetworks(), networks,
+                true, bigPaper(100 * 1024, 9), real.machineState(), real.faces(), real.chunkLoad());
+        int routerSize = encodedSize(buf -> RouterSnapshot.STREAM_CODEC.encode(buf, worst.reduced()));
+        helper.assertTrue(routerSize <= ServerMenus.MAX_OPEN_DATA, "roteador reduzido com " + routerSize + " bytes");
+
+        // Tablet
+        List<TabletSnapshot.NetworkView> views = new ArrayList<>();
+        for (RouterSnapshot.NetworkEntry entry : networks) {
+            views.add(new TabletSnapshot.NetworkView(entry.id(), name64, -1, name64, true, true, true, true,
+                    Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE,
+                    Integer.MAX_VALUE, List.of()));
+        }
+        TabletSnapshot tablet = new TabletSnapshot(true,
+                new ResourceLocation("wirelessautomate", "d".repeat(64)), new BlockPos(30_000_000, 320, 30_000_000),
+                Optional.of(networks.get(0).id()), Long.MAX_VALUE, Long.MAX_VALUE,
+                new TabletSnapshot.Query("ã".repeat(TabletSnapshot.MAX_SEARCH), TabletSnapshot.RoleFilter.PROBLEM,
+                        Optional.of(ResourceType.ITEM), Integer.MAX_VALUE),
+                Integer.MAX_VALUE, Integer.MAX_VALUE, views, List.of(), List.of(),
+                Component.translatable("gui.wirelessautomate.tablet.notice.moved.unloaded", Integer.MAX_VALUE, name64,
+                        Integer.MAX_VALUE), Integer.MAX_VALUE);
+        int tabletSize = encodedSize(buf -> TabletSnapshot.STREAM_CODEC.encode(buf, tablet.reduced()));
+        helper.assertTrue(tabletSize <= ServerMenus.MAX_OPEN_DATA, "Tablet reduzido com " + tabletSize + " bytes");
+        // E o caso não é trivial: os completos passam do teto.
+        helper.assertTrue(encodedSize(buf -> TabletSnapshot.STREAM_CODEC.encode(buf, tablet)) > ServerMenus.MAX_OPEN_DATA
+                && encodedSize(buf -> RouterSnapshot.STREAM_CODEC.encode(buf, worst)) > ServerMenus.MAX_OPEN_DATA
+                && encodedSize(buf -> LinkerSnapshot.STREAM_CODEC.encode(buf, linker)) > ServerMenus.MAX_OPEN_DATA,
+                "o pior caso cabe inteiro: o teste não exercita a reduzida");
         helper.succeed();
     }
 }

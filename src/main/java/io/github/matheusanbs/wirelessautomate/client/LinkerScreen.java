@@ -156,6 +156,20 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return tr("mode." + mode.getSerializedName());
     }
 
+    /** Largura de cada botão de modo: 44 px, ou o nome mais largo com folga (todos iguais). */
+    private int modeW() {
+        int width = 44;
+        for (LinkerMode mode : LinkerMode.values()) {
+            width = Math.max(width, font.width(modeName(mode)) + 8);
+        }
+        return width;
+    }
+
+    /** Modo Máquinas: o Vincular liga as máquinas da área ao roteador escolhido. */
+    private boolean machines() {
+        return snapshot().mode() == LinkerMode.MACHINES;
+    }
+
     private boolean unlink() {
         return snapshot().unlink();
     }
@@ -259,7 +273,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         int x = leftPos;
         int y = topPos;
 
-        int modeW = 44;
+        int modeW = modeW();
         LinkerMode[] modes = LinkerMode.values();
         for (int i = 0; i < modes.length; i++) {
             LinkerMode mode = modes[i];
@@ -353,9 +367,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         createButton.visible = creating;
         createButton.active = !draft.strip().isEmpty();
         nameBox.visible = creating;
-        boolean area = s.mode() == LinkerMode.AREA;
+        boolean area = s.mode() != LinkerMode.SINGLE;
         linkButton.visible = clearButton.visible = area;
-        linkButton.active = s.problem() == LinkerProblem.NONE && toLink() > 0;
+        // em Máquinas a contagem é de roteadores; o servidor decide quais máquinas entram
+        linkButton.active = s.problem() == LinkerProblem.NONE && (machines() || toLink() > 0);
         linkButton.setMessage(linkLabel());
         clearButton.active = s.first().isPresent() || s.otherDimension();
     }
@@ -642,7 +657,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
         int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
-        int headW = x1() - LinkerMode.values().length * 46 - 4 - headX;
+        int headW = x1() - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
         GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? UNLINK : GuiPaint.MUTED);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
@@ -852,7 +867,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** "N roteadores na área" (ou "N roteadores · M já na rede"), ou o que impede. */
     private Component status(LinkerSnapshot s) {
         return switch (s.problem()) {
-            case NONE -> s.already() > 0
+            case NONE -> s.mode() == LinkerMode.MACHINES ? tr("machines.status")
+                    : s.already() > 0
                     ? tr(s.unlink() ? "count.with_unlinked" : "count.with_already", s.inside(), s.already())
                     : s.inside() == 1 ? tr("count.one") : tr("count", s.inside());
             case TOO_BIG -> tr("problem.too_big", s.maxVolume());
@@ -907,6 +923,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (s.problem() != LinkerProblem.NONE) {
             return status(s);
         }
+        if (machines()) {
+            return tr("machines.link.tooltip");
+        }
         if (toLink() == 0) {
             return s.inside() == 0 ? tr("link.none") : tr(s.unlink() ? "unlink.all_out" : "link.all_in");
         }
@@ -922,6 +941,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
      * número delas aqui não cabe no botão (82 px) em português.
      */
     private Component linkLabel() {
+        if (machines()) {
+            return tr("machines.link");
+        }
         return tr(unlink() ? "unlink.count" : "link.count", toLink());
     }
 

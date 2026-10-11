@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import java.util.function.Supplier;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -78,6 +79,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("linker_area", builder -> builder
                     .persistent(LinkerArea.CODEC)
                     .networkSynchronized(LinkerArea.STREAM_CODEC));
+
+    /**
+     * Roteador escolhido no modo Máquinas do Vinculador (posição e dimensão): o alvo dos vínculos de
+     * máquinas. Não é limpo quando o roteador some; o servidor confere a cada clique.
+     */
+    public static final Supplier<DataComponentType<GlobalPos>> LINKER_ROUTER =
+            DATA_COMPONENTS.registerComponentType("linker_router", builder -> builder
+                    .persistent(GlobalPos.CODEC)
+                    .networkSynchronized(GlobalPos.STREAM_CODEC));
 
     /** Bloco da máquina do roteador copiado pelo Configurador: colar em área só vale para essa máquina. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =

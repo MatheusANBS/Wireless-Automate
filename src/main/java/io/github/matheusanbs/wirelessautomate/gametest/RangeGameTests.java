@@ -6,7 +6,16 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
+import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
@@ -15,32 +24,43 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
+import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Roteador de alcance: o slot do Upgrade de Alcance na tela (aceita num tier com raio, recusa no
@@ -1153,5 +1173,255 @@ public final class RangeGameTests {
                             "o roteador quebrado ficou no índice");
                 })
                 .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ Vinculador no modo Máquinas
+
+    private static final BlockPos SECOND_ROUTER_MACHINE = new BlockPos(2, 1, 2);
+    private static final BlockPos STONE = new BlockPos(0, 1, 1);
+    private static final BlockPos COMPOSTER = new BlockPos(2, 1, 1);
+
+    private static ItemStack machinesLinker() {
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setMode(linker, LinkerMode.MACHINES);
+        return linker;
+    }
+
+    @SuppressWarnings("removal")
+    private static ServerPlayer linkerPlayer(GameTestHelper helper, ItemStack linker) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
+        player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+        return player;
+    }
+
+    private static void removePlayer(GameTestHelper helper, ServerPlayer player) {
+        player.containerMenu = player.inventoryMenu;
+        helper.getLevel().getServer().getPlayerList().remove(player);
+    }
+
+    /** Clique direito com o item da mão principal num bloco (relativo), pelo caminho do jogo. */
+    private static void click(GameTestHelper helper, ServerPlayer player, BlockPos relative, boolean sneak) {
+        player.setShiftKeyDown(sneak);
+        BlockPos pos = helper.absolutePos(relative);
+        ItemStack stack = player.getMainHandItem();
+        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        if (!stack.onItemUseFirst(context).consumesAction()) {
+            stack.useOn(context);
+        }
+        player.setShiftKeyDown(false);
+    }
+
+    private static RangeLinks.Result toggle(GameTestHelper helper, ServerPlayer player, BlockPos relative) {
+        return RangeLinks.toggle(player, player.getMainHandItem(), helper.absolutePos(relative));
+    }
+
+    private static void assertRefused(GameTestHelper helper, RangeLinks.Result result, LinkRefusal refusal, String what) {
+        helper.assertTrue(result.status() == RangeLinks.Status.REFUSED && result.refusal() == refusal,
+                what + ": esperava " + refusal + ", veio " + result);
+    }
+
+    /**
+     * Modo Máquinas pelo clique: sem roteador escolhido não vincula; o clique no roteador o escolhe;
+     * sem o upgrade recusa; com ele, o clique na fornalha vincula (e entra no índice) e o segundo
+     * desvincula. Shift + clique marca um canto.
+     */
+    @GameTest(template = "empty")
+    public static void linkerClickLinksAndUnlinks(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        BlockPos furnace = helper.absolutePos(FURNACE_A);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.NO_ROUTER,
+                                "sem roteador escolhido");
+                        click(helper, player, ROUTER, false);
+                        helper.assertValueEqual(LinkerItem.router(linker),
+                                GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()), "roteador escolhido");
+                        assertRefused(helper, toggle(helper, player, FURNACE_A), LinkRefusal.NO_UPGRADE, "sem upgrade");
+                        router.setRangeUpgrade(rangeUpgrade());
+                        click(helper, player, FURNACE_A, false);
+                        helper.assertTrue(router.remoteMachines().contains(furnace), "o clique não vinculou");
+                        helper.assertTrue(RemoteIndex.get().isIndexed(router, furnace), "fora do índice");
+                        click(helper, player, FURNACE_A, false);
+                        helper.assertFalse(router.remoteMachines().contains(furnace), "o segundo clique não desvinculou");
+                        helper.assertFalse(RemoteIndex.get().isIndexed(router, furnace), "ficou no índice");
+                        click(helper, player, FURNACE_A, true);
+                        helper.assertTrue(LinkerItem.area(linker) != null, "Shift + clique não marcou o canto");
+                        helper.assertFalse(router.remoteMachines().contains(furnace), "Shift + clique vinculou");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Recusas do clique: o próprio roteador, outro roteador, a máquina presa, um bloco sem capability,
+     * ar e uma máquina fora do raio. Um bloco com capability sem block entity (composteira) vincula.
+     * Com o roteador escolhido quebrado, a resposta é própria e o componente fica.
+     */
+    @GameTest(template = "empty")
+    public static void linkerClickRefusals(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.setBlock(SECOND_ROUTER_MACHINE, Blocks.CHEST);
+        helper.setBlock(SECOND_ROUTER_MACHINE.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        helper.setBlock(STONE, Blocks.STONE);
+        helper.setBlock(COMPOSTER, Blocks.COMPOSTER);
+        int radius = Config.machineRadius(RouterTier.ADVANCED);
+        BlockPos outside = new BlockPos(1, 3 + radius, 1);
+        helper.setBlock(outside, Blocks.BARREL);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        router.setRangeUpgrade(rangeUpgrade());
+                        LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        assertRefused(helper, toggle(helper, player, ROUTER), LinkRefusal.SELF, "o próprio roteador");
+                        assertRefused(helper, toggle(helper, player, SECOND_ROUTER_MACHINE.above()), LinkRefusal.ROUTER,
+                                "outro roteador");
+                        assertRefused(helper, toggle(helper, player, CHEST), LinkRefusal.ATTACHED, "a máquina presa");
+                        assertRefused(helper, toggle(helper, player, STONE), LinkRefusal.NOT_A_MACHINE, "pedra");
+                        assertRefused(helper, toggle(helper, player, new BlockPos(0, 2, 0)), LinkRefusal.NOT_A_MACHINE, "ar");
+                        assertRefused(helper, toggle(helper, player, outside), LinkRefusal.OUT_OF_RANGE, "fora do raio");
+                        helper.assertTrue(router.remoteMachines().isEmpty(), "uma recusa vinculou");
+                        helper.assertValueEqual(toggle(helper, player, COMPOSTER).status(), RangeLinks.Status.LINKED,
+                                "a composteira (capability sem block entity) no clique");
+
+                        helper.destroyBlock(ROUTER);
+                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(),
+                                RangeLinks.Status.ROUTER_MISSING, "roteador quebrado");
+                        helper.assertTrue(LinkerItem.router(linker) != null, "limpou o roteador escolhido");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Com o limite do Avançado cheio, o clique seguinte é recusado com {@code LIMIT}. */
+    @GameTest(template = "empty")
+    public static void linkerClickRefusesOverLimit(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        int max = Config.maxMachines(RouterTier.ADVANCED);
+        BlockPos[] barrels = new BlockPos[max + 1];
+        int n = 0;
+        for (int y = 3; y <= 5 && n < barrels.length; y++) {
+            for (int x = 0; x <= 2 && n < barrels.length; x += 2) {
+                for (int z = 0; z <= 2 && n < barrels.length; z += 2) {
+                    barrels[n] = new BlockPos(x, y, z);
+                    helper.setBlock(barrels[n++], Blocks.BARREL);
+                }
+            }
+        }
+        int placed = n;
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        helper.assertTrue(placed == max + 1, "a config padrão mudou: limite " + max);
+                        router.setRangeUpgrade(rangeUpgrade());
+                        LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        for (int i = 0; i < max; i++) {
+                            helper.assertValueEqual(toggle(helper, player, barrels[i]).status(), RangeLinks.Status.LINKED,
+                                    "barril " + i);
+                        }
+                        assertRefused(helper, toggle(helper, player, barrels[max]), LinkRefusal.LIMIT, "além do limite");
+                        helper.assertFalse(router.remoteMachines().contains(helper.absolutePos(barrels[max])),
+                                "vinculou além do limite");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Vincular da tela no modo Máquinas: só entram block entities com capability de uma aba marcada
+     * (a composteira, sem block entity, fica de fora; com a aba Itens, a bateria também), nunca a
+     * máquina presa nem o roteador; de novo, as vinculadas contam como já estavam.
+     */
+    @GameTest(template = "empty")
+    public static void linkerAreaLinksBlockEntitiesOfMarkedTabs(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos barrel = new BlockPos(0, 3, 0);
+        BlockPos furnace = new BlockPos(2, 3, 2);
+        BlockPos composter = new BlockPos(2, 3, 0);
+        BlockPos battery = new BlockPos(0, 3, 2);
+        helper.setBlock(barrel, Blocks.BARREL);
+        helper.setBlock(furnace, Blocks.FURNACE);
+        helper.setBlock(composter, Blocks.COMPOSTER);
+        helper.setBlock(battery, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState());
+        ItemStack linker = machinesLinker();
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        router.setRangeUpgrade(rangeUpgrade());
+                        LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(),
+                                helper.absolutePos(new BlockPos(0, 1, 0))).withSecond(helper.absolutePos(new BlockPos(2, 3, 2))));
+                        LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
+                                LinkerSnapshot.capture(player, linker, null));
+                        player.containerMenu = menu;
+                        helper.assertValueEqual(menu.snapshot().problem(), LinkerProblem.NONE, "problema na tela");
+                        helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
+                                "Vincular pela tela recusou");
+                        RemoteMachines remotes = router.remoteMachines();
+                        helper.assertTrue(remotes.contains(helper.absolutePos(barrel)), "barril fora");
+                        helper.assertTrue(remotes.contains(helper.absolutePos(furnace)), "fornalha fora");
+                        helper.assertFalse(remotes.contains(helper.absolutePos(composter)), "composteira sem block entity entrou");
+                        helper.assertFalse(remotes.contains(helper.absolutePos(battery)), "bateria entrou com a aba Itens");
+                        helper.assertFalse(remotes.contains(helper.absolutePos(CHEST)), "a máquina presa entrou");
+                        helper.assertFalse(remotes.contains(router.getBlockPos()), "o roteador entrou");
+
+                        RangeLinks.Result again = RangeLinks.linkArea(player, linker);
+                        helper.assertTrue(again.ok() && again.linked() == 0 && again.already() == 2,
+                                "de novo: " + again);
+
+                        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ENERGY));
+                        RangeLinks.Result energy = RangeLinks.linkArea(player, linker);
+                        helper.assertTrue(energy.ok() && energy.linked() == 1, "aba Energia: " + energy);
+                        helper.assertTrue(remotes.contains(helper.absolutePos(battery)), "bateria fora com a aba Energia");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Configurador nunca fica no modo Máquinas: gravar Máquinas vira pincel, um componente com
+     * Máquinas é lido como pincel e o ciclo dele só passa por Pincel e Área.
+     */
+    @GameTest(template = "empty")
+    public static void configuratorNeverMachines(GameTestHelper helper) {
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        ConfiguratorItem.setMode(configurator, LinkerMode.MACHINES);
+        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE, "setMode(MACHINES)");
+        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_MODE.get()), "gravou Máquinas");
+        configurator.set(ModDataComponents.CONFIGURATOR_MODE.get(), LinkerMode.MACHINES);
+        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE, "componente com Máquinas");
+        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "modo de colar");
+        PasteMode mode = ConfiguratorItem.pasteMode(configurator);
+        for (int i = 0; i < PasteMode.values().length * 2; i++) {
+            mode = mode.next();
+            ConfiguratorItem.setPasteMode(configurator, mode);
+            helper.assertTrue(ConfiguratorItem.mode(configurator) != LinkerMode.MACHINES, "o ciclo chegou a Máquinas");
+        }
+        helper.assertValueEqual(LinkerMode.MACHINES.toggled(), LinkerMode.AREA, "toggled de Máquinas");
+        helper.assertValueEqual(LinkerMode.AREA.toggled(), LinkerMode.SINGLE, "toggled de Área");
+        helper.succeed();
     }
 }

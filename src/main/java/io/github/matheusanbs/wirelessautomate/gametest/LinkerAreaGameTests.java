@@ -420,7 +420,7 @@ public final class LinkerAreaGameTests {
     }
 
     /**
-     * Shift + clique no ar alterna Único e Área. Em Único, Shift + clique num bloco que não é
+     * Shift + clique no ar passa por Único, Área e Máquinas. Em Único, Shift + clique num bloco que não é
      * roteador não marca canto (nem alterna o modo); num roteador, vincula como antes.
      */
     @GameTest(template = "empty")
@@ -437,6 +437,8 @@ public final class LinkerAreaGameTests {
             player.setShiftKeyDown(true);
             linker.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
             helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.AREA, "Shift + clique no ar");
+            linker.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.MACHINES, "depois de Área, Máquinas");
             linker.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
             helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "de volta a Único");
             player.setShiftKeyDown(false);

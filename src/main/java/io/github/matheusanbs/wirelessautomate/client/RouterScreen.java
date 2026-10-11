@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -15,6 +16,11 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.packet.SelectFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
@@ -36,6 +42,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
@@ -54,6 +61,13 @@ import org.lwjgl.glfw.GLFW;
  * <p>Os slots de cartão mostram os da face e do tipo selecionados: ao mudar de aba ou de face a
  * tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram, e a
  * sincronização vanilla traz os cartões.
+ *
+ * <p>Com o Upgrade de Alcance valendo ({@link RangeView#present()}), um botão "Máquinas · 3/8" acima do
+ * visor alterna o visor com a lista das máquinas ({@link RangeList}). Escolher um grupo ou uma máquina
+ * remota troca o alvo de edição: os botões de face passam aos lados relativos à frente (o quadro
+ * canônico, Norte = Frente), o visor mostra o bloco do alvo sem o roteador e o cabeçalho da coluna da
+ * direita diz o perfil ou a máquina, com Voltar ao perfil e Desvincular. Sem o upgrade a tela é a de
+ * sempre.
  *
  * <p>Tudo vem de {@link RouterMenu#snapshot()}. Os botões leem o estado a cada quadro e
  * {@link #refresh()} reposiciona o que depende de texto, então um snapshot novo
@@ -107,6 +121,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int ROW_H = 14;
     private static final int DROPDOWN_ROW = 12;
     private static final int DROPDOWN_MAX_ROWS = 8;
+    /** Faixa do botão "Máquinas" acima do visor (tirada da altura dele), com o upgrade de alcance. */
+    private static final int RANGE_STRIP = 14;
+    /** Linha dos botões Voltar ao perfil e Desvincular, no lugar da segunda linha do cabeçalho. */
+    private static final int TARGET_ROW_Y = BODY_Y + 11;
+    private static final int TARGET_ROW_H = 12;
+    /** Mostra a lista das máquinas no lugar do visor (lembrado na sessão, como o tamanho). */
+    private static boolean showList;
 
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
     /** Ordem dos botões das faces: em cima Cima, Norte e Leste; embaixo as opostas. */
@@ -128,7 +149,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         refresh();
     });
     private final Map<Direction, FlatButton> faceButtons = new EnumMap<>(Direction.class);
-    private final Function<Direction, FaceView> faceViews = this::view;
+    private final Function<Direction, FaceView> faceViews = this::visorView;
+    private final RangeList rangeList = new RangeList();
 
     private ResourceType type = ResourceType.ITEM;
     private Direction face;
@@ -148,6 +170,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private FlatButton prioPlus;
     private FlatButton redstoneButton;
     private FlatButton editFilterButton;
+    private FlatButton machinesButton;
+    private FlatButton revertButton;
+    private FlatButton unlinkButton;
+    /** O alvo de edição que a tela mostra; quando o do snapshot muda, a face passa à do menu. */
+    private EditTarget shownTarget;
     private final List<FlatButton> modeButtons = new ArrayList<>();
     private EditBox renameBox;
 
@@ -167,7 +194,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         this.preview = preview;
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.face = menu.snapshot().facing();
+        this.face = menu.selectedFace();
+        this.shownTarget = menu.snapshot().target();
         types.addAll(LoadedTypes.LIST);
     }
 
@@ -183,6 +211,82 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private FaceView view(Direction direction) {
         return snapshot().face(type, direction);
+    }
+
+    /** A face no visor: num alvo remoto sem máquina carregada, as faces não aparecem apagadas. */
+    private FaceView visorView(Direction direction) {
+        FaceView v = view(direction);
+        if (remote() && !v.available() && !remoteLoaded()) {
+            return new FaceView(v.mode(), v.priority(), v.redstone(), 0, v.filterSize(), v.blacklist());
+        }
+        return v;
+    }
+
+    private RangeView range() {
+        return snapshot().range();
+    }
+
+    /** O upgrade de alcance vale: a tela mostra o botão Máquinas e a lista. */
+    private boolean rangeShown() {
+        return range().present();
+    }
+
+    /** O alvo é um grupo ou uma máquina remota (lados relativos, sem o roteador no visor). */
+    private boolean remote() {
+        return rangeShown() && !snapshot().target().attached();
+    }
+
+    /** A lista ocupa o lugar do visor. */
+    private boolean listShown() {
+        return rangeShown() && showList;
+    }
+
+    /** A máquina remota do alvo, ou {@code null} (presa ou grupo). */
+    private RangeView.@Nullable MachineView targetMachine() {
+        EditTarget target = snapshot().target();
+        return rangeShown() && target.kind() == EditTarget.Kind.MACHINE ? range().machine(target.id()) : null;
+    }
+
+    /** O grupo do alvo (o grupo escolhido ou o da máquina), ou {@code null}. */
+    private RangeView.@Nullable GroupView targetGroup() {
+        EditTarget target = snapshot().target();
+        if (!rangeShown()) {
+            return null;
+        }
+        return switch (target.kind()) {
+            case ATTACHED -> null;
+            case GROUP -> range().group(target.id());
+            case MACHINE -> {
+                RangeView.MachineView machine = range().machine(target.id());
+                yield machine == null ? null : range().group(machine.group());
+            }
+        };
+    }
+
+    /**
+     * Há uma máquina carregada no alvo remoto (a escolhida, ou alguma do grupo): sem ela as faces vêm
+     * sem acesso ({@code slots = -1}), mas continuam editáveis.
+     */
+    private boolean remoteLoaded() {
+        RangeView.MachineView machine = targetMachine();
+        if (machine != null) {
+            return machine.state() == RangeView.MachineState.LOADED;
+        }
+        RangeView.GroupView group = targetGroup();
+        if (group == null) {
+            return true;
+        }
+        for (RangeView.MachineView m : range().machines()) {
+            if (m.group() == group.id() && m.state() == RangeView.MachineState.LOADED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A face pode ser configurada: tem acesso, ou é de um alvo remoto (o perfil vale para várias). */
+    private boolean editable(FaceView view) {
+        return view.available() || remote();
     }
 
     private int tierColor() {
@@ -248,6 +352,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return tr("face." + direction.getName());
     }
 
+    /** O nome da face na tela: absoluto na presa, relativo à frente num alvo remoto (quadro canônico). */
+    private Component sideName(Direction direction) {
+        return remote() ? tr("side." + RemoteSide.fromCanonical(direction.ordinal()).key()) : faceName(direction);
+    }
+
+    /** O rótulo curto do botão de uma face remota: o lado abreviado. */
+    private Component sideShort(Direction direction) {
+        return tr("side.short." + RemoteSide.fromCanonical(direction.ordinal()).key());
+    }
+
     private static Component modeName(PortMode mode) {
         return tr("mode." + mode.name().toLowerCase(Locale.ROOT));
     }
@@ -258,6 +372,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** O que a face acessa: "27 slots", "1 tanque", "energia" ou "sem acesso". */
     private Component access(FaceView view) {
+        if (!view.available() && remote() && !remoteLoaded()) {
+            RangeView.MachineView machine = targetMachine();
+            return machine != null && machine.state() == RangeView.MachineState.MISSING
+                    ? tr("range.access.missing") : tr("range.access.unloaded");
+        }
         if (!view.available()) {
             return tr("access.none");
         }
@@ -325,12 +444,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                     .tooltip(() -> faceTooltip(direction))));
         }
 
+        machinesButton = add(new FlatButton(x + X0, y + BODY_Y, viewW(), RANGE_STRIP - 2, tr("range.machines", 0, 0),
+                this::paintMachines, () -> showList = !showList).tooltip(this::machinesTooltip));
+        revertButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.revert"),
+                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("range.revert")), this::revertMachine)
+                .tooltip(() -> tr("range.revert.tooltip")));
+        unlinkButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.unlink"),
+                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("range.unlink")), this::unlinkMachine)
+                .tooltip(() -> tr("range.unlink.tooltip")));
+
         for (int i = 0; i < MODES.length; i++) {
             PortMode mode = MODES[i];
             FlatButton button = add(new FlatButton(x + rx() + (i % 2) * (MODE_W + 2), y + MODE_Y + (i / 2) * (MODE_H + 2),
                     MODE_W, MODE_H, modeName(mode), (g, b, hovered) -> paintMode(g, b, hovered, mode),
                     () -> sendFace(mode, view().priority(), view().redstone()))
-                    .tooltip(() -> view().available() ? tr("mode." + mode.name().toLowerCase(Locale.ROOT) + ".tooltip")
+                    .tooltip(() -> editable(view()) ? tr("mode." + mode.name().toLowerCase(Locale.ROOT) + ".tooltip")
                             : tr("mode.unavailable")));
             modeButtons.add(button);
         }
@@ -419,6 +547,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return BODY_Y + viewH() + 3;
     }
 
+    /** Topo do visor (ou da lista): abaixo do botão Máquinas, com o upgrade de alcance. */
+    private int boxY() {
+        return BODY_Y + (rangeShown() ? RANGE_STRIP : 0);
+    }
+
+    /** Altura do visor (ou da lista). */
+    private int boxH() {
+        return viewH() - (rangeShown() ? RANGE_STRIP : 0);
+    }
+
     private int faceW() {
         return (viewW() - 2 * FACE_GAP) / 3;
     }
@@ -480,6 +618,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Posições, visibilidade e narração que dependem do snapshot ou do estado da tela. */
     private void refresh() {
         RouterSnapshot s = snapshot();
+        // o alvo mudou (a lista, o servidor ou a volta do filtro): a face passa à que o menu adotou
+        if (!s.target().equals(shownTarget)) {
+            shownTarget = s.target();
+            face = menu.selectedFace();
+        }
         Component tierText = Component.translatable(s.tier().translationKey());
         int tierW = pillWidth(tierText);
         int rateX = leftPos + headEnd() - tierW - 6 - font.width(rate());
@@ -507,18 +650,47 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         FaceView v = view();
         for (FlatButton button : modeButtons) {
-            button.active = v.available();
+            button.active = editable(v);
         }
         moreButton.setWidth(11 + font.width(expanded ? tr("less") : tr("more")) + 2);
         moreButton.setMessage(expanded ? tr("less") : tr("more"));
         prioMinus.visible = prioPlus.visible = redstoneButton.visible = expanded;
-        prioMinus.active = prioPlus.active = redstoneButton.active = v.available();
+        prioMinus.active = prioPlus.active = redstoneButton.active = editable(v);
         redstoneButton.setMessage(tr("redstone.narration", redstoneName(v.redstone())));
         editFilterButton.visible = editFilterButton.active = hasFilter();
+
+        refreshRange();
 
         List<NetworkEntry> networks = s.networks();
         networkScroll = Math.max(0, Math.min(networkScroll, networks.size() + 1 - DROPDOWN_MAX_ROWS));
         syncSelection();
+    }
+
+    /** O botão Máquinas, a lista, o visor abaixo dele, os rótulos das faces e os botões da máquina remota. */
+    private void refreshRange() {
+        boolean shown = rangeShown();
+        machinesButton.visible = shown;
+        machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
+        machineView.setBounds(leftPos + X0 + 1, topPos + boxY() + 1, viewW() - 2, boxH() - 2);
+        rangeList.setBounds(leftPos + X0, topPos + boxY(), viewW(), boxH());
+        if (shown) {
+            rangeList.sync(range(), snapshot().target());
+        }
+        for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
+            entry.getValue().setMessage(sideName(entry.getKey()));
+        }
+        RangeView.MachineView machine = targetMachine();
+        boolean exception = machine != null && machine.exception();
+        int bx = leftPos + rx();
+        revertButton.visible = revertButton.active = exception;
+        if (exception) {
+            revertButton.setX(bx);
+            revertButton.setWidth(font.width(tr("range.revert")) + 8);
+            bx += revertButton.getWidth() + 2;
+        }
+        unlinkButton.visible = unlinkButton.active = machine != null;
+        unlinkButton.setX(bx);
+        unlinkButton.setWidth(font.width(tr("range.unlink")) + 8);
     }
 
     /**
@@ -547,7 +719,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private void sendFace(PortMode mode, int priority, RedstoneMode redstone) {
         FaceView current = view();
-        if (!current.available()) {
+        if (!editable(current)) {
             return;
         }
         if (preview) {
@@ -570,6 +742,65 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (hasFilter() && !preview) {
             send(new OpenFilterPayload(menu.containerId, type, face));
         }
+    }
+
+    /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */
+    private void selectTarget(RangeList.Row row) {
+        if (preview) {
+            return;
+        }
+        switch (row.kind()) {
+            case ATTACHED -> send(SelectTargetPayload.attached(menu.containerId));
+            case GROUP -> {
+                RangeView.GroupView group = range().group(row.group());
+                if (group != null) {
+                    send(SelectTargetPayload.group(menu.containerId, group.id(), group.block()));
+                }
+            }
+            case MACHINE -> {
+                RangeView.MachineView machine = range().machine(row.machine());
+                if (machine != null) {
+                    send(SelectTargetPayload.machine(menu.containerId, row.machine(), machine.pos()));
+                }
+            }
+        }
+    }
+
+    /** Voltar ao perfil: a máquina escolhida perde a exceção. */
+    private void revertMachine() {
+        RangeView.MachineView machine = targetMachine();
+        if (machine != null && !preview) {
+            send(new RevertMachinePayload(menu.containerId, snapshot().target().id(), machine.pos()));
+        }
+    }
+
+    /** Desvincular: a máquina escolhida sai do roteador e a tela volta para a presa. */
+    private void unlinkMachine() {
+        RangeView.MachineView machine = targetMachine();
+        if (machine != null && !preview) {
+            send(new UnlinkMachinePayload(menu.containerId, snapshot().target().id(), machine.pos()));
+        }
+    }
+
+    /** Dica do botão Máquinas: o que ele alterna, e o raio e o limite do tier. */
+    private Component machinesTooltip() {
+        return tr(showList ? "range.machines.tooltip.view" : "range.machines.tooltip.list").copy()
+                .append("\n").append(tr("range.machines.detail", range().radius(), range().max()).copy()
+                        .withColor(GuiPaint.TOOLTIP_MUTED));
+    }
+
+    /** O item da máquina presa (para a linha da lista), pelo mundo do cliente: o snapshot traz o do alvo. */
+    private ItemStack attachedIcon() {
+        RouterSnapshot s = snapshot();
+        if (!remote()) {
+            return s.machine();
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) {
+            return ItemStack.EMPTY;
+        }
+        BlockState state = minecraft.level.getBlockState(s.pos().relative(s.facing().getOpposite()));
+        return new ItemStack(state.getBlock().asItem());
     }
 
     /** Rótulo da linha do filtro: "Filtro" ou, com entradas, "Filtro · lista branca". */
@@ -755,7 +986,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (renaming && !renameBox.isMouseOver(mouseX, mouseY)) {
             finishRename(true);
         }
-        if (machineView.mouseClicked(mouseX, mouseY, button)) {
+        if (listShown()) {
+            if (button == 0 && rangeList.click(range(), snapshot().target(), mouseX, mouseY, this::selectTarget)) {
+                return true;
+            }
+        } else if (machineView.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         boolean wasRenaming = renaming;
@@ -774,7 +1009,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             return true;
         }
         // a tela de contêiner não repassa o arrasto aos filhos; o visor recebe direto
-        if (machineView.mouseDragged(mouseX, mouseY, button)) {
+        if (!listShown() && machineView.mouseDragged(mouseX, mouseY, button)) {
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -840,7 +1075,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             refresh();
             return true;
         }
-        if (!networkListOpen && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
+        if (!networkListOpen && listShown() && rangeList.scroll(range(), mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        if (!networkListOpen && !listShown() && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -920,10 +1158,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         renderTooltip(g, mouseX, mouseY);
         // sobre uma face o visor mostra o nome dela embaixo; a dica cobriria o modelo
-        boolean machineTip = !machineView.isDragging() && machineView.contains(mouseX, mouseY)
+        boolean machineTip = !listShown() && !machineView.isDragging() && machineView.contains(mouseX, mouseY)
                 && machineView.hoveredFace() == null;
         if (machineTip) {
             setTooltipForNextRenderPass(machineTooltip());
+        }
+        RangeList.Row row = listShown() ? rangeList.rowAt(range(), mouseX, mouseY) : null;
+        if (row != null) {
+            machineTip = true;
+            setTooltipForNextRenderPass(rangeList.tooltip(range(), row, attachedName()));
         }
         // texto abreviado: a dica traz o texto inteiro, se nenhuma outra dica já está no ar
         boolean hasTooltip = machineTip || hoveredSlot != null && hoveredSlot.hasItem();
@@ -933,6 +1176,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 setTooltipForNextRenderPass(clipped);
             }
         }
+    }
+
+    /** O nome da máquina presa, para a dica da linha dela na lista. */
+    private Component attachedName() {
+        ItemStack icon = attachedIcon();
+        return icon.isEmpty() ? tr("machine.none") : icon.getHoverName();
     }
 
     /** Dica do visor fora das faces: a máquina e como usar o visor. */
@@ -1001,36 +1250,52 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         // visor 3D: máquina e roteador; com a lista de redes aberta, nada de realce sob o mouse
         int vx = x + X0;
-        int vy = y + BODY_Y;
+        int vy = y + boxY();
         int viewW = viewW();
-        int viewH = viewH();
-        GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
-        GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
-        Direction buttonHovered = null;
-        for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
-            if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
-                buttonHovered = entry.getKey();
+        int viewH = boxH();
+        int pointerX = networkListOpen ? -1 : mouseX;
+        int pointerY = networkListOpen ? -1 : mouseY;
+        if (listShown()) {
+            rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
+        } else {
+            GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
+            GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
+            Direction buttonHovered = null;
+            for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
+                if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
+                    buttonHovered = entry.getKey();
+                }
+            }
+            // num alvo remoto: só o bloco dele, com a frente para quem olha
+            machineView.render(g, s.machineState(), remote() ? null : s.facing(), s.tier(), faceViews, face,
+                    buttonHovered, pointerX, pointerY);
+            Direction pointed = machineView.hoveredFace();
+            if (s.machineState().isAir()) {
+                GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
+            } else if (pointed != null) {
+                Component label = sideName(pointed);
+                g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, GHOST_VEIL);
+                GuiPaint.text(g, font, label, vx + 4, vy + viewH - 11, GuiPaint.FG);
+            } else if (remote() && !remoteLoaded()) {
+                Component label = access(view());
+                g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
+                        GHOST_VEIL);
+                GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.WARN);
             }
         }
-        machineView.render(g, s.machineState(), s.facing(), s.tier(), faceViews, face, buttonHovered,
-                networkListOpen ? -1 : mouseX, networkListOpen ? -1 : mouseY);
-        Direction pointed = machineView.hoveredFace();
-        if (s.machineState().isAir()) {
-            GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
-        } else if (pointed != null) {
-            Component label = faceName(pointed);
-            g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, GHOST_VEIL);
-            GuiPaint.text(g, font, label, vx + 4, vy + viewH - 11, GuiPaint.FG);
-        }
 
-        // face selecionada
+        // face selecionada (ou, num alvo remoto, o alvo e a face)
         FaceView v = view();
-        GuiPaint.text(g, font, faceName(face), x + rx(), y + BODY_Y + 1, GuiPaint.FG);
-        Component detail = access(v);
-        if (face == s.facing()) {
-            detail = detail.copy().append(" · ").append(tr("face.attached"));
+        if (remote()) {
+            renderTargetHeader(g, v);
+        } else {
+            GuiPaint.text(g, font, faceName(face), x + rx(), y + BODY_Y + 1, GuiPaint.FG);
+            Component detail = access(v);
+            if (face == s.facing()) {
+                detail = detail.copy().append(" · ").append(tr("face.attached"));
+            }
+            GuiText.draw(g, font, detail, x + rx(), y + BODY_Y + 12, RW, GuiPaint.MUTED);
         }
-        GuiText.draw(g, font, detail, x + rx(), y + BODY_Y + 12, RW, GuiPaint.MUTED);
 
         // filtro: rótulo com Editar e, embaixo, os slots de cartão com o resumo do conjunto
         if (hasFilter()) {
@@ -1059,7 +1324,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             int boxX = x + lx1() - 43;
             GuiPaint.box(g, boxX, y + prioY(), 28, ROW_H, GuiPaint.INSET, GuiPaint.LINE);
             GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())), boxX + 14,
-                    y + prioY() + 3, v.available() ? GuiPaint.FG : GuiPaint.DISABLED);
+                    y + prioY() + 3, editable(v) ? GuiPaint.FG : GuiPaint.DISABLED);
         } else {
             // em duas linhas: a coluna é estreita para "Prioridade 0 · Com sinal"
             Component priority = tr("priority").copy().append(" " + v.priority());
@@ -1084,6 +1349,48 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         ResizeHandle.Edge hover = resizeHandle.dragging() || !networkListOpen
                 ? resizeHandle.hover(mouseX, mouseY, x, y, w, h) : null;
         ResizeGrip.renderDotted(g, x, y, w, h, hover, trim);
+    }
+
+    /**
+     * Cabeçalho da coluna da direita num alvo remoto. Grupo: a face com o acesso e, embaixo,
+     * "Perfil: Fornalha · vale para 3 de 4". Máquina: "Fornalha #3 · exceção" e, embaixo, os botões
+     * Voltar ao perfil (só na exceção) e Desvincular, no lugar da linha da face (o botão escolhido e o
+     * visor já dizem qual é).
+     */
+    private void renderTargetHeader(GuiGraphics g, FaceView v) {
+        int hx = leftPos + rx();
+        int hy = topPos + BODY_Y;
+        RangeView.MachineView machine = targetMachine();
+        if (machine != null) {
+            int index = snapshot().target().id();
+            Component state = machine.exception()
+                    ? tr("range.machine.exception").copy().withColor(GuiPaint.ACCENT)
+                    : tr("range.machine.follows").copy().withColor(GuiPaint.MUTED);
+            Component text = tr("range.scope.machine", RangeList.machineName(range(), index), state);
+            GuiText.draw(g, font, text, hx, hy + 1, RW, GuiPaint.FG);
+            return;
+        }
+        Component detail = sideName(face).copy().append(" · ").append(access(v));
+        GuiText.draw(g, font, detail, hx, hy + 1, RW, GuiPaint.FG);
+        RangeView.GroupView group = targetGroup();
+        if (group != null) {
+            Component scope = tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(),
+                    group.count());
+            GuiText.draw(g, font, scope, hx, hy + 12, RW, GuiPaint.MUTED);
+        }
+    }
+
+    /** Botão Máquinas: seta (lista aberta ou fechada), o nome e as vagas usadas. */
+    private void paintMachines(GuiGraphics g, FlatButton b, boolean hovered) {
+        int border = showList ? GuiPaint.SELECTED : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
+        int color = hovered || showList ? GuiPaint.FG : GuiPaint.MUTED;
+        if (showList) {
+            GuiPaint.arrowDown(g, b.getX() + 4, b.getY() + 5, color);
+        } else {
+            GuiPaint.arrowRight(g, b.getX() + 5, b.getY() + 4, color);
+        }
+        GuiText.draw(g, font, b.getMessage(), b.getX() + 12, b.getY() + 2, b.getWidth() - 15, GuiPaint.FG);
     }
 
     /** Véu de porcelana translúcida sobre os itens apagados e sob o rótulo da face no visor. */
@@ -1167,10 +1474,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
+        if (remote()) {
+            paintRemoteFace(g, b, hovered, direction);
+            return;
+        }
         FaceView v = view(direction);
         boolean selected = direction == face;
         // a face sob o mouse no visor também realça o botão dela
-        boolean pointed = hovered || direction == machineView.hoveredFace();
+        boolean pointed = hovered || !listShown() && direction == machineView.hoveredFace();
         int x = b.getX();
         int y = b.getY();
         int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
@@ -1187,7 +1498,36 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
     }
 
+    /**
+     * Botão de uma face remota: o lado relativo (não cabe ao lado do ícone do modo), o modo numa faixa na
+     * cor dele embaixo e, escolhido, o botão escuro.
+     */
+    private void paintRemoteFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
+        FaceView v = view(direction);
+        boolean selected = direction == face;
+        boolean pointed = hovered || !listShown() && direction == machineView.hoveredFace();
+        int x = b.getX();
+        int y = b.getY();
+        int w = b.getWidth();
+        int h = b.getHeight();
+        int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, x, y, w, h, selected ? GuiPaint.SELECTED : GuiPaint.BUTTON, border);
+        if (v.mode() != PortMode.NONE) {
+            g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, GuiPaint.modeColor(v.mode()));
+        }
+        Component label = sideShort(direction);
+        int textW = Math.min(font.width(label), w - 2);
+        // a largura do texto inclui 1 px de espaço no fim: centrado assim, sobra 1 px até a borda dos dois lados
+        GuiText.draw(g, font, label, x + 1 + (w - 1 - textW) / 2, y + 4, w - 2,
+                selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+    }
+
     private Component faceTooltip(Direction direction) {
+        if (remote()) {
+            FaceView v = view(direction);
+            return sideName(direction).copy().append("\n")
+                    .append(modeName(v.mode()).copy().append(" · ").append(access(v)));
+        }
         FaceView v = view(direction);
         Component line = v.available()
                 ? modeName(v.mode()).copy().append(" · ").append(access(v))
@@ -1361,10 +1701,25 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         this.networkListOpen = open;
     }
 
+    /** Centro da linha do alvo {@code target} na lista (aberta), ou {@code null} se fora da vista (gancho do e2e). */
+    public int @Nullable [] rangeRowCenter(EditTarget target) {
+        return listShown() ? rangeList.rowCenter(range(), target) : null;
+    }
+
+    /** Ponto da seta de um grupo na lista, que abre e fecha sem escolher (gancho do e2e). */
+    public int @Nullable [] rangeArrowPoint(int group) {
+        return listShown() ? rangeList.arrowPoint(range(), group) : null;
+    }
+
+    /** A lista das máquinas está no lugar do visor (gancho do e2e). */
+    public boolean rangeListShown() {
+        return listShown();
+    }
+
     /** Centro do botão da face, para simular o mouse em cima na captura. */
     int[] previewFaceCenter(Direction direction) {
         for (FlatButton button : buttons) {
-            if (button.getMessage().equals(faceName(direction))) {
+            if (button.getMessage().equals(sideName(direction))) {
                 return new int[] {button.getX() + button.getWidth() / 2, button.getY() + button.getHeight() / 2};
             }
         }
@@ -1373,7 +1728,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Visor no ângulo inicial do snapshot atual. */
     void previewViewDefault() {
-        machineView.previewReset(snapshot().facing(), snapshot().machineState());
+        machineView.previewReset(remote() ? null : snapshot().facing(), snapshot().machineState());
     }
 
     /** Visor num ângulo fixo (graus) e zoom. */
@@ -1384,7 +1739,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Ponto da tela no centro da face da máquina no visor, para simular o mouse em cima. */
     int[] previewViewFaceCenter(Direction direction) {
-        return machineView.previewProject(direction, snapshot().facing(), snapshot().machineState());
+        return machineView.previewProject(direction, remote() ? null : snapshot().facing(), snapshot().machineState());
     }
 
     int[] previewCardSlotCenter(int slot) {

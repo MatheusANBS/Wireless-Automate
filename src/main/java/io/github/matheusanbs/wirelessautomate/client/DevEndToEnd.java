@@ -18,6 +18,9 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorSnapshot;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
@@ -738,6 +741,7 @@ public final class DevEndToEnd {
         cardSteps(list);
         chunkUpgradeSteps(list);
         list.add(close("fechar B"));
+        rangeSteps(list);
         typeNetworkTransferSteps(list);
         tabletSteps(list);
         configuratorSteps(list);
@@ -2795,6 +2799,257 @@ public final class DevEndToEnd {
             capture(Minecraft.getInstance(), file);
             return true;
         }, () -> file + ".png");
+    }
+
+    // ------------------------------------------------------------------ roteador de alcance
+
+    private static BlockPos rangeRouter;
+    private static BlockPos rangeChestA;
+    private static BlockPos rangeChestB;
+    private static BlockPos rangeFurnace;
+
+    /**
+     * Roteador de alcance pela tela: um roteador Avançado num baú, com o Upgrade de Alcance e dois baús e
+     * uma fornalha vinculados (a até 3 blocos) pela API do servidor. Em inglês e em português: abre a
+     * tela, mostra a lista ({@code range-1-lista}), escolhe o grupo dos baús e põe Trás em Extrair (o
+     * perfil; {@code range-2-grupo}, com os lados relativos), escolhe a fornalha e põe Frente em Inserir
+     * (vira exceção; {@code range-3-excecao}, com Voltar ao perfil) e volta ao perfil. Na volta em
+     * português, desvincula o segundo baú pela tela. Sem texto cortado em nenhuma captura.
+     */
+    private static void rangeSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        list.add(new Step("alcance: preparar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            BlockPos chest = chestB.offset(3, 0, 0);
+            rangeRouter = chest.above();
+            rangeChestA = chest.offset(2, 0, 0);
+            rangeChestB = chest.offset(2, 0, -2);
+            rangeFurnace = chest.offset(0, 0, -3);
+            for (BlockPos pos : List.of(chest, rangeChestA, rangeChestB)) {
+                level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+            }
+            level.setBlockAndUpdate(rangeFurnace, Blocks.FURNACE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING, Direction.SOUTH));
+            level.setBlockAndUpdate(rangeRouter, ModBlocks.ROUTER.get().defaultBlockState()
+                    .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+            RouterBlockEntity router = router(server, rangeRouter);
+            router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+            router.linkMachine(rangeChestA);
+            router.linkMachine(rangeChestB);
+            router.linkMachine(rangeFurnace);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            return null;
+        }), () -> clientSees(rangeRouter) && onServer(server -> router(server, rangeRouter).rangeActive()
+                && router(server, rangeRouter).remoteMachines().machines().size() == 3),
+                () -> "roteador em " + rangeRouter + ", máquinas "
+                        + onServer(server -> router(server, rangeRouter).remoteMachines().machines().size())));
+        for (String code : new String[] {"en_us", "pt_br"}) {
+            boolean pt = code.equals("pt_br");
+            String suffix = pt ? "-pt" : "";
+            String label = pt ? "pt: alcance: " : "alcance: ";
+            if (pt) {
+                list.add(language("pt_br"));
+            }
+            list.add(open(label + "abrir", () -> rangeRouter));
+            list.add(new Step(label + "tela no mínimo, com a lista", STEP_TIMEOUT_MS, () -> {
+                routerScreen().previewResize(300, 240);
+                if (!routerScreen().rangeListShown()) {
+                    click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                }
+            }, () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240
+                    && routerScreen().rangeListShown() && rangeView().machines().size() == 3
+                    && rangeView().groups().size() == 2 && stepTicks >= 4,
+                    () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", lista "
+                            + routerScreen().rangeListShown() + ", alcance " + rangeView()));
+            list.add(rangeClipCheck(label + "lista"));
+            list.add(capture("range-1-lista" + suffix));
+
+            list.add(new Step(label + "escolher o grupo dos baús", STEP_TIMEOUT_MS,
+                    () -> clickRow(EditTarget.group(rangeGroup(Blocks.CHEST))),
+                    () -> rangeTargetIs(EditTarget.group(rangeGroup(Blocks.CHEST)))
+                            && routerScreen().getMenu().selectedFace() == Direction.NORTH
+                            && find(byMessage(side(RemoteSide.BACK))) != null,
+                    () -> "alvo " + routerScreen().getMenu().snapshot().target() + ", face "
+                            + routerScreen().getMenu().selectedFace()));
+            list.add(new Step(label + "grupo: Trás em Extrair", STEP_TIMEOUT_MS, () -> {
+                click(widget(byMessage(side(RemoteSide.BACK)), "face Trás"));
+                click(widget(byMessage(mode(PortMode.EXTRACT)), "Extrai"));
+            }, () -> {
+                int chests = rangeGroup(Blocks.CHEST);
+                return routerScreen().getMenu().selectedFace() == Direction.SOUTH
+                        && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.SOUTH).mode()
+                                == PortMode.EXTRACT
+                        && onServer(server -> router(server, rangeRouter).remoteMachines().group(chests)
+                                .profile().face(ResourceType.ITEM, RemoteSide.BACK).mode() == PortMode.EXTRACT);
+            },
+                    () -> "face " + routerScreen().getMenu().selectedFace() + ", modo na tela "
+                            + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.SOUTH).mode()));
+            list.add(rangeClipCheck(label + "grupo"));
+            list.add(capture("range-2-grupo" + suffix));
+            if (!pt) {
+                // o visor com o alvo remoto: só o bloco do grupo, com a frente para quem olha
+                list.add(new Step(label + "visor do grupo", STEP_TIMEOUT_MS, () -> {
+                    click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                    routerScreen().previewViewDefault();
+                }, () -> !routerScreen().rangeListShown() && stepTicks >= 4,
+                        () -> "lista " + routerScreen().rangeListShown()));
+                list.add(rangeClipCheck(label + "visor"));
+                list.add(capture("range-2b-visor"));
+                list.add(new Step(label + "de volta à lista", STEP_TIMEOUT_MS,
+                        () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
+                        () -> routerScreen().rangeListShown(), () -> "lista " + routerScreen().rangeListShown()));
+            }
+
+            // a lista no mínimo não mostra tudo com os baús abertos: fecha os baús e abre a fornalha
+            list.add(new Step(label + "fechar os baús e abrir a fornalha", STEP_TIMEOUT_MS, () -> {
+                int[] chests = routerScreen().rangeArrowPoint(rangeGroup(Blocks.CHEST));
+                if (chests == null) {
+                    throw new StepFailure("seta do grupo dos baús fora da vista");
+                }
+                click(routerScreen(), chests[0], chests[1]);
+                int[] furnaces = routerScreen().rangeArrowPoint(rangeGroup(Blocks.FURNACE));
+                if (furnaces == null) {
+                    throw new StepFailure("seta do grupo da fornalha fora da vista");
+                }
+                click(routerScreen(), furnaces[0], furnaces[1]);
+            }, () -> routerScreen().rangeRowCenter(EditTarget.machine(rangeMachine(rangeFurnace))) != null
+                    && routerScreen().rangeRowCenter(EditTarget.machine(rangeMachine(rangeChestA))) == null,
+                    () -> "linha da fornalha " + java.util.Arrays.toString(
+                            routerScreen().rangeRowCenter(EditTarget.machine(rangeMachine(rangeFurnace))))));
+            list.add(new Step(label + "escolher a fornalha", STEP_TIMEOUT_MS,
+                    () -> clickRow(EditTarget.machine(rangeMachine(rangeFurnace))),
+                    () -> rangeTargetIs(EditTarget.machine(rangeMachine(rangeFurnace)))
+                            && routerScreen().getMenu().selectedFace() == Direction.NORTH,
+                    () -> "alvo " + routerScreen().getMenu().snapshot().target()));
+            list.add(new Step(label + "fornalha: Frente em Inserir vira exceção", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessage(mode(PortMode.INSERT)), "Insere")),
+                    () -> {
+                        RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
+                        return machine != null && machine.exception()
+                                && find(byMessageKey("gui.wirelessautomate.router.range.revert")) != null
+                                && onServer(server -> serverException(server, rangeFurnace));
+                    }, () -> "alcance " + rangeView()));
+            list.add(rangeClipCheck(label + "exceção"));
+            list.add(capture("range-3-excecao" + suffix));
+            list.add(new Step(label + "Voltar ao perfil", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.revert"), "Voltar ao perfil")),
+                    () -> {
+                        RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
+                        return machine != null && !machine.exception()
+                                && find(byMessageKey("gui.wirelessautomate.router.range.revert")) == null
+                                && !onServer(server -> serverException(server, rangeFurnace));
+                    }, () -> "alcance " + rangeView()));
+            if (pt) {
+                // desvincular pela tela: o segundo baú sai e a tela volta para a máquina presa
+                list.add(new Step(label + "abrir os baús e escolher o segundo", STEP_TIMEOUT_MS, () -> {
+                    int[] chests = routerScreen().rangeArrowPoint(rangeGroup(Blocks.CHEST));
+                    int[] furnaces = routerScreen().rangeArrowPoint(rangeGroup(Blocks.FURNACE));
+                    if (chests == null || furnaces == null) {
+                        throw new StepFailure("setas dos grupos fora da vista");
+                    }
+                    click(routerScreen(), furnaces[0], furnaces[1]);
+                    click(routerScreen(), chests[0], chests[1]);
+                }, () -> routerScreen().rangeRowCenter(EditTarget.machine(rangeMachine(rangeChestB))) != null,
+                        () -> "linha do segundo baú fora da vista"));
+                list.add(new Step(label + "escolher o segundo baú", STEP_TIMEOUT_MS,
+                        () -> clickRow(EditTarget.machine(rangeMachine(rangeChestB))),
+                        () -> rangeTargetIs(EditTarget.machine(rangeMachine(rangeChestB))),
+                        () -> "alvo " + routerScreen().getMenu().snapshot().target()));
+                list.add(new Step(label + "Desvincular", STEP_TIMEOUT_MS,
+                        () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.unlink"), "Desvincular")),
+                        () -> rangeView().machines().size() == 2 && routerScreen().getMenu().snapshot().target().attached()
+                                && onServer(server -> !router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
+                        () -> "alcance " + rangeView()));
+            }
+            list.add(close(label + "fechar"));
+            if (pt) {
+                list.add(language("en_us"));
+            }
+        }
+        list.add(new Step("alcance: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerLevel level = server.overworld();
+            RouterBlockEntity router = router(server, rangeRouter);
+            // nada cai no chão: sem o upgrade e sem máquinas antes de tirar o bloco
+            router.removeRangeUpgrade();
+            while (!router.remoteMachines().machines().isEmpty()) {
+                router.unlinkMachine(0);
+            }
+            for (BlockPos pos : List.of(rangeRouter, rangeRouter.below(), rangeChestA, rangeChestB, rangeFurnace)) {
+                level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            }
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockState(rangeRouter).isAir(), () -> "roteador ainda no cliente"));
+    }
+
+    /** No servidor, a máquina remota em {@code pos} tem exceção. */
+    private static boolean serverException(MinecraftServer server, BlockPos pos) {
+        var machines = router(server, rangeRouter).remoteMachines();
+        var machine = machines.machine(machines.index(pos));
+        return machine != null && machine.hasException();
+    }
+
+    private static RangeView rangeView() throws StepFailure {
+        return routerScreen().getMenu().snapshot().range();
+    }
+
+    /** O id do grupo do bloco {@code block} na tela. */
+    private static int rangeGroup(net.minecraft.world.level.block.Block block) throws StepFailure {
+        ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+        for (RangeView.GroupView group : rangeView().groups()) {
+            if (group.block().equals(id)) {
+                return group.id();
+            }
+        }
+        throw new StepFailure("sem grupo de " + id + " na tela: " + rangeView().groups());
+    }
+
+    /** O índice da máquina em {@code pos} na tela. */
+    private static int rangeMachine(BlockPos pos) throws StepFailure {
+        List<RangeView.MachineView> machines = rangeView().machines();
+        for (int i = 0; i < machines.size(); i++) {
+            if (machines.get(i).pos().equals(pos)) {
+                return i;
+            }
+        }
+        throw new StepFailure("sem máquina em " + pos.toShortString() + " na tela");
+    }
+
+    /** Clica na linha da lista do alvo {@code target}. */
+    private static void clickRow(EditTarget target) throws StepFailure {
+        int[] center = routerScreen().rangeRowCenter(target);
+        if (center == null) {
+            throw new StepFailure("linha de " + target + " fora da vista");
+        }
+        click(routerScreen(), center[0], center[1]);
+    }
+
+    /** A tela e o menu do servidor estão no alvo {@code target}. */
+    private static boolean rangeTargetIs(EditTarget target) throws Exception {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        return routerScreen().getMenu().snapshot().target().equals(target) && onServer(server ->
+                server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
+                        && menu.target().equals(target));
+    }
+
+    private static Component side(RemoteSide side) {
+        return Component.translatable("gui.wirelessautomate.router.side." + side.key());
+    }
+
+    /** Nenhum texto cortado na tela do roteador de alcance (mouse fora dela, alguns quadros depois). */
+    private static Step rangeClipCheck(String name) {
+        return new Step(name + ": nenhum texto cortado", STEP_TIMEOUT_MS, () -> moveMouse(0, 0),
+                () -> stepTicks >= 4 && GuiText.clipCount() == 0,
+                () -> GuiText.clipCount() + " texto(s) cortado(s): " + clippedTexts());
+    }
+
+    private static String clippedTexts() {
+        List<String> texts = new ArrayList<>();
+        for (int[] c : GuiText.clipCenters()) {
+            Component full = GuiText.clipAt(c[0], c[1]);
+            texts.add(full == null ? "?" : full.getString());
+        }
+        return texts.toString();
     }
 
     // ------------------------------------------------------------------ português, nome longo

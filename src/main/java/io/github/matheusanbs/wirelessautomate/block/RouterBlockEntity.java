@@ -19,6 +19,12 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
+import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
 import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
@@ -30,15 +36,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringUtil;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -102,6 +111,8 @@ public class RouterBlockEntity extends BlockEntity {
     private @Nullable UUID upgradeOwner;
     /** Upgrade de Alcance no segundo slot (ou vazio). */
     private ItemStack rangeUpgrade = ItemStack.EMPTY;
+    /** Máquinas remotas vinculadas e os grupos delas; guardadas mesmo sem o upgrade (aí não viram porta). */
+    private final RemoteMachines remotes = new RemoteMachines();
     /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
     private boolean chunkUnloading;
 
@@ -468,6 +479,7 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
         }
+        removed.addAll(remotes.removeAllCards());
         if (!removed.isEmpty()) {
             changed(CARD_TYPES_MASK);
         }
@@ -568,6 +580,206 @@ public class RouterBlockEntity extends BlockEntity {
             setRangeUpgrade(ItemStack.EMPTY);
         }
         return removed;
+    }
+
+    // ------------------------------------------------------------------ máquinas remotas
+
+    /**
+     * As máquinas remotas e os grupos. Para ler; mude pelos métodos deste roteador, que salvam e avisam
+     * o motor.
+     */
+    public RemoteMachines remoteMachines() {
+        return remotes;
+    }
+
+    /**
+     * Vincula o bloco em {@code pos} como máquina remota, lendo o id e a frente do mundo. Só no
+     * servidor e com o chunk carregado. Recusa ar, a posição do próprio roteador e uma posição já
+     * vinculada. As regras de raio, limite e dimensão ficam com quem chama (o Vinculador).
+     */
+    public boolean linkMachine(BlockPos pos) {
+        if (level == null || level.isClientSide || !level.isLoaded(pos) || pos.equals(worldPosition)) {
+            return false;
+        }
+        BlockState state = level.getBlockState(pos);
+        if (state.isAir()
+                || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state))) {
+            return false;
+        }
+        changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /**
+     * Desvincula a máquina do índice {@code index}. Se o grupo dela esvazia, ele sai e os cartões dele
+     * caem na posição do roteador.
+     */
+    public boolean unlinkMachine(int index) {
+        if (remotes.machine(index) == null) {
+            return false;
+        }
+        dropAtRouter(remotes.unlink(index));
+        changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /** Como {@link #unlinkMachine(int)}, pela posição da máquina. */
+    public boolean unlinkMachine(BlockPos pos) {
+        return unlinkMachine(remotes.index(pos));
+    }
+
+    /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
+    public boolean revertToProfile(int index) {
+        RemoteMachine machine = remotes.machine(index);
+        if (machine == null || !machine.hasException()) {
+            return false;
+        }
+        machine.setException(null);
+        changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    private void dropAtRouter(List<ItemStack> stacks) {
+        if (level == null) {
+            return;
+        }
+        for (ItemStack stack : stacks) {
+            Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), stack);
+        }
+    }
+
+    /** O grupo de um alvo remoto (o próprio grupo, ou o da máquina); {@code null} na presa ou num alvo que não existe. */
+    private @Nullable MachineGroup groupFor(EditTarget target) {
+        return switch (target.kind()) {
+            case ATTACHED -> null;
+            case GROUP -> remotes.group(target.id());
+            case MACHINE -> {
+                RemoteMachine machine = remotes.machine(target.id());
+                yield machine == null ? null : remotes.groupOf(machine);
+            }
+        };
+    }
+
+    /**
+     * Configuração da face {@code side} do alvo para {@code type}. O lado vem no quadro da tela: na
+     * presa, a face absoluta da máquina; num grupo ou numa máquina remota, o quadro canônico
+     * ({@link RemoteSide#fromCanonical}). Numa máquina, a que vale (exceção ou perfil). Nunca nula: um
+     * alvo que não existe devolve uma configuração padrão solta. Não mude a devolvida; use os setters.
+     */
+    public FaceConfig face(EditTarget target, ResourceType type, Direction side) {
+        return switch (target.kind()) {
+            case ATTACHED -> face(type, side);
+            case GROUP -> {
+                MachineGroup group = remotes.group(target.id());
+                yield group == null ? new FaceConfig() : group.profile().face(type, remoteSide(side));
+            }
+            case MACHINE -> {
+                RemoteMachine machine = remotes.machine(target.id());
+                yield machine == null ? new FaceConfig() : remotes.effective(machine).face(type, remoteSide(side));
+            }
+        };
+    }
+
+    /**
+     * Configura modo, prioridade e redstone de uma face do alvo, avisando o motor uma vez só. Na presa,
+     * é o {@link #configureFace(ResourceType, Direction, PortMode, int, RedstoneMode)} de sempre.
+     */
+    public void configureFace(EditTarget target, ResourceType type, Direction side, PortMode mode, int priority,
+            RedstoneMode redstone) {
+        if (target.attached()) {
+            configureFace(type, side, mode, priority, redstone);
+            return;
+        }
+        editRemote(target, type, side, config -> config.setMode(mode)
+                | config.setPriority(priority) | config.setRedstone(redstone));
+    }
+
+    /** Troca o filtro embutido de uma face do alvo. */
+    public void setFilter(EditTarget target, ResourceType type, Direction side, Filter filter) {
+        if (target.attached()) {
+            setFilter(type, side, filter);
+            return;
+        }
+        editRemote(target, type, side, config -> config.setFilter(filter));
+    }
+
+    /**
+     * Muda uma face de um grupo ou de uma máquina remota. No grupo, muda o perfil (vale para as
+     * máquinas sem exceção) e as exceções que ficaram iguais ao perfil somem. Numa máquina sem
+     * exceção, copia o perfil para a exceção e aplica; se a exceção fica igual ao perfil, ela some. Um
+     * aviso só ao motor, com o tipo.
+     */
+    private boolean editRemote(EditTarget target, ResourceType type, Direction side, Predicate<FaceConfig> edit) {
+        RemoteSide remote = remoteSide(side);
+        if (target.kind() == EditTarget.Kind.GROUP) {
+            MachineGroup group = remotes.group(target.id());
+            if (group == null || !edit.test(group.profile().face(type, remote))) {
+                return false;
+            }
+            for (RemoteMachine machine : remotes.machines()) {
+                MachineConfig exception = machine.exception();
+                if (machine.group() == group.id() && exception != null && exception.sameAs(group.profile())) {
+                    machine.setException(null);
+                }
+            }
+            changed(NetworkManager.typeBit(type));
+            return true;
+        }
+        RemoteMachine machine = remotes.machine(target.id());
+        if (machine == null) {
+            return false;
+        }
+        MachineConfig profile = remotes.groupOf(machine).profile();
+        MachineConfig exception = machine.exception();
+        MachineConfig config = exception != null ? exception : profile.copy();
+        if (!edit.test(config.face(type, remote))) {
+            return false;
+        }
+        machine.setException(config.sameAs(profile) ? null : config);
+        changed(NetworkManager.typeBit(type));
+        return true;
+    }
+
+    private static RemoteSide remoteSide(Direction canonical) {
+        return RemoteSide.fromCanonical(canonical.ordinal());
+    }
+
+    /**
+     * O cartão no slot de uma face do alvo; vazio se não houver. Num grupo ou numa máquina remota, são
+     * os cartões do grupo (a máquina usa os do grupo dela). Não altere a pilha devolvida.
+     */
+    public ItemStack card(EditTarget target, ResourceType type, Direction side, int slot) {
+        if (target.attached()) {
+            return card(type, RelativeSide.fromAbsolute(facing(), spin(), side), slot);
+        }
+        MachineGroup group = groupFor(target);
+        return group == null ? ItemStack.EMPTY : group.card(type, remoteSide(side), slot);
+    }
+
+    /** Põe {@code stack} (guardada como está) no slot de cartão do alvo e avisa o motor. Não valida o cartão. */
+    public void setCard(EditTarget target, ResourceType type, Direction side, int slot, ItemStack stack) {
+        if (target.attached()) {
+            setCard(type, RelativeSide.fromAbsolute(facing(), spin(), side), slot, stack);
+            return;
+        }
+        MachineGroup group = groupFor(target);
+        if (group != null && group.setCard(type, remoteSide(side), slot, stack)) {
+            changed(NetworkManager.typeBit(type));
+        }
+    }
+
+    /** Cartões nos slots de uma face do alvo para o tipo. */
+    public int cardCount(EditTarget target, ResourceType type, Direction side) {
+        if (target.attached()) {
+            return cardCount(type, side);
+        }
+        int count = 0;
+        for (int slot = 0; slot < CARD_SLOTS; slot++) {
+            if (!card(target, type, side, slot).isEmpty()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /** Estado do upgrade para a tela. Só no servidor; no cliente, {@link ChunkLoadState#NONE}. */
@@ -938,6 +1150,12 @@ public class RouterBlockEntity extends BlockEntity {
         if (!rangeUpgrade.isEmpty()) {
             tag.put("range_upgrade", rangeUpgrade.save(registries));
         }
+        if (!remotes.machines().isEmpty()) {
+            tag.put("machines", remotes.saveMachines(registries));
+        }
+        if (!remotes.groups().isEmpty()) {
+            tag.put("groups", remotes.saveGroups(registries));
+        }
     }
 
     @Override
@@ -988,6 +1206,8 @@ public class RouterBlockEntity extends BlockEntity {
         rangeUpgrade = tag.contains("range_upgrade", Tag.TAG_COMPOUND)
                 ? ItemStack.parse(registries, tag.getCompound("range_upgrade")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
+        // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
+        remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {

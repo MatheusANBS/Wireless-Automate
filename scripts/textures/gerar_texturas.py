@@ -357,46 +357,50 @@ def lanterna() -> Sprite:
     return animacao(quadros, 5)
 
 
-# Upgrade de Alcance: a Antena de Campo, "alcança as máquinas em volta". Mastro de grafite com a ponta
-# coral, colar de grafite, base de porcelana com a faixa coral e o pé de grafite. As ondas de vidro entram
-# por código, dos dois lados da ponta: a de dentro acende, passa para a de fora e se apagam.
-ANTENA = [
+# Upgrade de Alcance: a Rosa, o roteador visto de cima como módulo. Casco quadrado de porcelana com os
+# quatro para-choques de grafite nos cantos, o Olho no centro e quatro setas coral saindo pelos quatro
+# lados, a expansão do alcance. Uma luz corre do Olho por cada haste até a ponta, as quatro ao mesmo
+# tempo, e as pontas brilham quando a luz chega; o Olho pulsa no compasso.
+ROSA = [
     "................",
-    "................",
-    "................",
-    ".......Cc.......",
-    ".......cd.......",
-    ".......gh.......",
-    ".......gh.......",
-    ".......gh.......",
-    ".......gh.......",
-    "......Gggh......",
-    "....WWppppqq....",
-    "...Wppppppqqr...",
-    "...Ccccccccdd...",
-    "...hhhhhhhhhh...",
-    "...iiiiiiiiii...",
+    ".......C........",
+    "......Ccd.......",
+    "...GhWWcWWGh....",
+    "...hhppcpphh....",
+    "...Wpxxxxxpq....",
+    "..CWpxxxxxpqc...",
+    ".Ccccxxxxxcccd..",
+    "..dWpxxxxxpqd...",
+    "...Wpxxxxxpq....",
+    "...GhppcppGh....",
+    "...hhqqcqqhh....",
+    "......ccd.......",
+    ".......d........",
 ]
-# Ondas à direita da ponta (centro em x = 7,5); as da esquerda são o espelho (x -> 15 - x).
-ONDA_DENTRO = [(10, 2), (11, 3), (11, 4), (10, 5)]
-ONDA_FORA = [(12, 1), (13, 2), (13, 3), (13, 4), (13, 5), (12, 6)]
+# As quatro direções (dx, dy) das setas e as posições ao longo de cada haste: i = 3, 4 dentro do
+# casco, i = 5 a linha da cabeça e i = 6 a ponta.
+DIRECOES_ROSA = [(0, -1), (1, 0), (0, 1), (-1, 0)]
 
 
-def antena() -> Sprite:
-    acesa, apagada = cor("vidro.3"), cor("vidro.1")
-    # (onda de dentro, onda de fora) por quadro: None = sem onda.
-    fases = [(None, None), (acesa, None), (apagada, acesa), (None, apagada), (None, None), (None, None)]
+def rosa() -> Sprite:
+    luz, rastro = cor("coral.4"), mistura(cor("coral.4"), cor("coral.3"), 0.5)
     quadros = []
-    for k, (dentro, fora) in enumerate(fases):
-        img = corpo(ANTENA)
-        for pontos, c in ((ONDA_DENTRO, dentro), (ONDA_FORA, fora)):
-            if c is None:
-                continue
-            for x, y in pontos:
-                put(img, x, y, c)
-                put(img, 15 - x, y, c)
-        if k == 1:
-            put(img, 7, 3, BRANCO)  # a ponta pisca quando a onda sai
+    for k in range(8):
+        img = corpo(ROSA)
+        for dx, dy in DIRECOES_ROSA:
+            if k == 1:
+                put(img, 7 + dx * 3, 7 + dy * 3, luz)
+            elif k == 2:
+                put(img, 7 + dx * 3, 7 + dy * 3, rastro)
+                put(img, 7 + dx * 4, 7 + dy * 4, luz)
+            elif k == 3:
+                put(img, 7 + dx * 4, 7 + dy * 4, rastro)
+                for j in (-1, 0, 1):
+                    put(img, 7 + dx * 5 + dy * j, 7 + dy * 5 + dx * j, luz)
+                put(img, 7 + dx * 6, 7 + dy * 6, BRANCO)
+            elif k == 4:
+                put(img, 7 + dx * 6, 7 + dy * 6, luz)
+        pulso(img, 7, 7, "vidro", 2, k, 8)
         quadros.append(img)
     return animacao(quadros, 4)
 
@@ -741,7 +745,7 @@ def gerar_itens() -> dict[str, Sprite]:
     for tier in TIERS_CARTAO:
         sprites[f"item/tier_core_{tier}"] = valvula(tier)
     sprites["item/chunk_loader_upgrade"] = lanterna()
-    sprites["item/range_upgrade"] = antena()
+    sprites["item/range_upgrade"] = rosa()
     sprites["item/guide"] = guia()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)

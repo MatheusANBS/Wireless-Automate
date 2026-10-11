@@ -211,7 +211,11 @@ public final class ModPayloads {
         return unlinked;
     }
 
+    /** Com o Upgrade de Alcance valendo (como o {@code SelectTarget}), a máquina do índice está em {@code pos}. */
     private static boolean sameMachine(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
+        if (!router.rangeActive()) {
+            return false;
+        }
         RemoteMachine machine = router.remoteMachines().machine(index);
         return machine != null && machine.pos().equals(pos);
     }

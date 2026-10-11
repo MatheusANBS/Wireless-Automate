@@ -1913,4 +1913,96 @@ public final class RangeGameTests {
                 })
                 .thenSucceed();
     }
+
+    private static void assertAttachedCardsEmpty(GameTestHelper helper, RouterBlockEntity router, String what) {
+        for (Direction face : Direction.values()) {
+            for (int slot = 0; slot < RouterBlockEntity.CARD_SLOTS; slot++) {
+                helper.assertTrue(router.card(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, face, slot).isEmpty(),
+                        what + ": cartão na presa em " + face);
+            }
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void screenShiftClickCardGoesToGroup(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    linkAll(helper, router);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
+                        helper.assertValueEqual(menu.selectedFace(), Direction.UP, "face inicial da presa");
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.group(menu.containerId, furnaces, furnaceId())), "não escolheu o grupo");
+                        // A face vai para a Frente canônica e segue no snapshot.
+                        helper.assertValueEqual(menu.selectedFace(), Direction.NORTH, "face padrão no remoto");
+                        RouterSnapshot snapshot = menu.pollSnapshot();
+                        helper.assertTrue(snapshot != null && snapshot.range().face() == Direction.NORTH,
+                                "a face padrão não foi no snapshot");
+
+                        player.getInventory().setItem(0, itemCard());
+                        int hotbar0 = RouterMenu.UPGRADE_SLOT - 9;
+                        menu.clicked(hotbar0, 0, ClickType.QUICK_MOVE, player);
+                        helper.assertTrue(router.card(EditTarget.group(furnaces), ResourceType.ITEM, Direction.NORTH, 0)
+                                .is(ModItems.FILTER_CARD.get()), "o Shift + clique não pôs o cartão no grupo");
+                        helper.assertTrue(menu.getSlot(hotbar0).getItem().isEmpty(), "o cartão ficou no inventário");
+                        assertAttachedCardsEmpty(helper, router, "Shift + clique com alvo de grupo");
+
+                        // De volta à presa, a face de antes.
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.attached(menu.containerId)),
+                                "não voltou à presa");
+                        helper.assertValueEqual(menu.selectedFace(), Direction.UP, "a face da presa não voltou");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
+    public static void screenLostTargetLocksCards(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    linkAll(helper, router);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        BlockPos barrel = helper.absolutePos(BARREL);
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.machine(menu.containerId,
+                                router.remoteMachines().index(barrel), barrel)), "não escolheu o barril");
+                        helper.assertFalse(menu.cardsLocked(), "cartões travados com o alvo valendo");
+
+                        // O barril sai com um cartão no cursor: o clique no slot não o põe na presa.
+                        menu.setCarried(itemCard());
+                        helper.assertTrue(router.unlinkMachine(barrel), "não desvinculou o barril");
+                        menu.clicked(0, 0, ClickType.PICKUP, player);
+                        helper.assertTrue(menu.getCarried().is(ModItems.FILTER_CARD.get()), "o cartão saiu do cursor");
+                        helper.assertTrue(menu.target().attached(), "o alvo não voltou para a presa");
+                        helper.assertTrue(menu.cardsLocked(), "cartões destravados com o alvo perdido");
+                        assertAttachedCardsEmpty(helper, router, "clique com o alvo perdido");
+
+                        // Shift + clique também não.
+                        player.getInventory().setItem(0, itemCard());
+                        int hotbar0 = RouterMenu.UPGRADE_SLOT - 9;
+                        menu.clicked(hotbar0, 0, ClickType.QUICK_MOVE, player);
+                        assertAttachedCardsEmpty(helper, router, "Shift + clique com o alvo perdido");
+
+                        // Escolher a presa pela tela destrava.
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.attached(menu.containerId)),
+                                "não escolheu a presa");
+                        helper.assertFalse(menu.cardsLocked(), "cartões travados depois de escolher a presa");
+                        menu.setCarried(ItemStack.EMPTY);
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
 }

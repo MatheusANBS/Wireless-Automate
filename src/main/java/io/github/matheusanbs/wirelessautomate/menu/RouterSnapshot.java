@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
@@ -36,6 +37,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -190,6 +193,15 @@ public record RouterSnapshot(
      * não existe, ou sem o upgrade, vira a presa.
      */
     public static RouterSnapshot capture(RouterBlockEntity router, ServerPlayer player, EditTarget target) {
+        return capture(router, player, target, target.attached() ? router.facing() : Direction.NORTH);
+    }
+
+    /**
+     * Como {@link #capture(RouterBlockEntity, ServerPlayer, EditTarget)}, com a face selecionada no menu
+     * ({@code selectedFace}: absoluta na presa, canônica num alvo remoto), que vai na {@link RangeView#face()}.
+     */
+    public static RouterSnapshot capture(RouterBlockEntity router, ServerPlayer player, EditTarget target,
+            Direction selectedFace) {
         NetworkSavedData data = NetworkSavedData.get(player.server);
         List<NetworkEntry> networks = new ArrayList<>();
         for (WaNetwork network : data.networksOf(player.getUUID())) {
@@ -218,7 +230,7 @@ public record RouterSnapshot(
         RemoteMachine viewed = null;
         MachineGroup viewedGroup = null;
         if (router.rangeActive()) {
-            Captured captured = captureRange(router, target);
+            Captured captured = captureRange(router, target, selectedFace);
             range = captured.view();
             editing = range.target();
             viewed = captured.viewed();
@@ -227,18 +239,14 @@ public record RouterSnapshot(
 
         Level level = router.getLevel();
         BlockState machineState;
-        MachineCaches caches;
         if (editing.attached() || viewedGroup == null || level == null) {
             editing = editing.attached() ? editing : EditTarget.ATTACHED_TARGET;
             machineState = level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(router.machinePos());
-            caches = router.attachedCaches();
         } else if (viewed != null) {
             machineState = facingNorth(level.getBlockState(viewed.pos()));
-            caches = router.remoteCaches(viewed.pos());
         } else {
             // Nenhuma máquina do alvo carregada: o bloco do grupo, e as faces sem capability conhecida.
             machineState = BuiltInRegistries.BLOCK.get(viewedGroup.block()).defaultBlockState();
-            caches = null;
         }
         ItemStack machine = new ItemStack(machineState.getBlock().asItem());
 
@@ -249,12 +257,12 @@ public record RouterSnapshot(
                 FaceConfig config = router.face(editing, type, face);
                 int slots;
                 if (editing.attached()) {
-                    slots = slots(caches, type, face);
-                } else if (caches != null) {
+                    slots = slots(router.attachedCaches(), type, face);
+                } else if (viewed != null) {
                     // A face da tela é canônica; a da máquina vem da frente dela.
                     Direction absolute = Direction.values()[RemoteSide.fromCanonical(face.ordinal())
                             .toAbsolute(viewed.front())];
-                    slots = slots(caches, type, absolute);
+                    slots = remoteSlots(level, viewed.pos(), type, absolute);
                 } else {
                     slots = -1;
                 }
@@ -276,10 +284,9 @@ public record RouterSnapshot(
     /**
      * Monta a {@link RangeView}. O estado de cada máquina: fora do raio ou além do limite pela regra do
      * motor ({@link RouterBlockEntity#machineReach()}); das ativas, {@code isLoaded} primeiro (nada aqui
-     * carrega chunk), depois o bloco (tem de ser o do grupo) e as capabilities, pelos
-     * {@link MachineCaches} dela. Um alvo que não existe vira a presa.
+     * carrega chunk), depois a checagem barata de {@link #state}. Um alvo que não existe vira a presa.
      */
-    private static Captured captureRange(RouterBlockEntity router, EditTarget target) {
+    private static Captured captureRange(RouterBlockEntity router, EditTarget target, Direction face) {
         Level level = router.getLevel();
         RemoteMachines remotes = router.remoteMachines();
         List<RemoteMachine> list = remotes.machines();
@@ -292,7 +299,7 @@ public record RouterSnapshot(
             int distance = RangeRules.chebyshev(center.getX(), center.getY(), center.getZ(), pos.getX(), pos.getY(),
                     pos.getZ());
             machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(),
-                    state(router, level, remotes, remote, reach[i])));
+                    state(level, remotes, remote, reach[i])));
         }
         List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
         for (MachineGroup group : remotes.groups()) {
@@ -344,11 +351,11 @@ public record RouterSnapshot(
         }
         RouterTier tier = router.tier();
         RangeView view = new RangeView(Config.machineRadius(tier), Config.maxMachines(tier), List.copyOf(groups),
-                List.copyOf(machines), editing);
+                List.copyOf(machines), editing, face);
         return new Captured(view, viewed, group);
     }
 
-    private static RangeView.MachineState state(RouterBlockEntity router, @Nullable Level level, RemoteMachines remotes,
+    private static RangeView.MachineState state(@Nullable Level level, RemoteMachines remotes,
             RemoteMachine remote, RangeRules.Reach reach) {
         return switch (reach) {
             case OUT_OF_RANGE -> RangeView.MachineState.OUT_OF_RANGE;
@@ -358,9 +365,12 @@ public record RouterSnapshot(
                 if (level == null || !level.isLoaded(remote.pos())) {
                     yield RangeView.MachineState.UNLOADED;
                 }
+                // Checagem barata, sem criar caches nem listeners: o bloco é o do grupo e, se o bloco tem
+                // block entity, ela existe. Um bloco sem block entity (a composteira) não tem como perder
+                // a capability sem trocar de bloco.
                 BlockState state = level.getBlockState(remote.pos());
                 if (!BuiltInRegistries.BLOCK.getKey(state.getBlock()).equals(remotes.groupOf(remote).block())
-                        || !hasAnyCapability(router.remoteCaches(remote.pos()))) {
+                        || (state.hasBlockEntity() && level.getBlockEntity(remote.pos()) == null)) {
                     yield RangeView.MachineState.MISSING;
                 }
                 yield RangeView.MachineState.LOADED;
@@ -368,16 +378,37 @@ public record RouterSnapshot(
         };
     }
 
-    /** A máquina tem, em alguma face, a capability de algum tipo carregado. */
-    private static boolean hasAnyCapability(MachineCaches caches) {
-        for (ResourceType type : LoadedTypes.LIST) {
-            for (Direction face : Direction.values()) {
-                if (slots(caches, type, face) >= 0) {
-                    return true;
-                }
-            }
+    /**
+     * Como {@link #slots(MachineCaches, ResourceType, Direction)}, para a máquina remota que a tela mostra,
+     * por consulta direta ({@code level.getCapability}), sem criar {@code BlockCapabilityCache} nem
+     * listener: a tela pede as 6 faces de todos os tipos, e caches dessas faces ficariam vivos (e avisando
+     * o motor) mesmo nas que nenhuma porta usa. Só com o chunk carregado (quem chama conferiu) e só nos
+     * tipos carregados.
+     */
+    private static int remoteSlots(Level level, BlockPos pos, ResourceType type, Direction face) {
+        if (!LoadedTypes.contains(type)) {
+            return -1;
         }
-        return false;
+        return switch (type) {
+            case ITEM -> {
+                IItemHandler items = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, face);
+                yield items == null ? -1 : items.getSlots();
+            }
+            case FLUID -> {
+                IFluidHandler fluids = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, face);
+                yield fluids == null ? -1 : fluids.getTanks();
+            }
+            case ENERGY -> level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, face) == null ? -1 : 1;
+            case CHEMICAL -> {
+                BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
+                Object chemicals = capability == null ? null : level.getCapability(capability, pos, face);
+                yield chemicals == null ? -1 : Chemicals.tanks(chemicals);
+            }
+            case SOURCE -> {
+                BlockCapability<?, @Nullable Direction> capability = Sources.capability();
+                yield capability == null || level.getCapability(capability, pos, face) == null ? -1 : 1;
+            }
+        };
     }
 
     /** O estado com a frente (horizontal) virada para Norte, para o visor mostrar a frente. */

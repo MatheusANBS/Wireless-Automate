@@ -101,6 +101,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     /** Nome em minúsculas por tipo (as chaves da visão são os mesmos objetos até saírem). */
     private final Map<Object, String> names = new IdentityHashMap<>();
     private List<Object> shown = List.of();
+    /** Quantidade de cada tipo mostrado, tirada junto com a lista (por identidade, como os nomes). */
+    private final Map<Object, Long> shownCounts = new IdentityHashMap<>();
     private int shownVersion = -1;
     private String shownSearch = "";
     private Sort shownSort = sort;
@@ -282,31 +284,51 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         shownVersion = view().version();
         shownSearch = search;
         shownSort = sort;
-        List<Object> keys = view().keys();
-        names.keySet().retainAll(new java.util.HashSet<>(keys));
+        // Foto da quantidade e do nome de cada tipo antes de ordenar: o comparador não pode ver um
+        // valor mudar no meio da ordenação ("Comparison method violates its general contract!"),
+        // e o nome de alguns itens de outros mods mexe nos componentes da pilha, o que muda o hash
+        // dela e faria a busca da quantidade devolver 0 no meio do caminho.
+        List<StorageListView.Entry<Object>> entries = view().entries();
+        shownCounts.clear();
+        List<Object> keys = new ArrayList<>(entries.size());
+        for (StorageListView.Entry<Object> entry : entries) {
+            keys.add(entry.key());
+            shownCounts.put(entry.key(), entry.count());
+        }
+        names.keySet().retainAll(shownCounts.keySet());
         List<Object> kept = new ArrayList<>(keys.size());
         for (Object key : keys) {
-            if (matches(key, search)) {
+            String name = name(key);
+            if (matches(key, name, search)) {
                 kept.add(key);
             }
         }
-        Comparator<Object> byName = Comparator.comparing(this::name);
+        Map<Object, String> mods = new IdentityHashMap<>();
+        for (Object key : kept) {
+            mods.put(key, namespace(key));
+        }
+        Comparator<Object> byName = Comparator.comparing(names::get);
         Comparator<Object> order = switch (sort) {
-            case COUNT -> Comparator.<Object>comparingLong(key -> view().count(key)).reversed().thenComparing(byName);
+            case COUNT -> Comparator.<Object>comparingLong(this::shownCount).reversed().thenComparing(byName);
             case NAME -> byName;
-            case MOD -> Comparator.<Object, String>comparing(StorageListScreen::namespace).thenComparing(byName);
+            case MOD -> Comparator.<Object, String>comparing(mods::get).thenComparing(byName);
         };
         kept.sort(order);
         shown = kept;
         scrollRow = Math.min(scrollRow, maxScroll());
     }
 
+    /** Quantidade do tipo na foto da última {@link #rebuild()}. */
+    private long shownCount(Object key) {
+        Long count = shownCounts.get(key);
+        return count == null ? 0 : count;
+    }
+
     /** Busca: cada palavra precisa aparecer no nome; {@code @texto} procura no id do mod. */
-    private boolean matches(Object key, String search) {
+    private boolean matches(Object key, String name, String search) {
         if (search.isEmpty()) {
             return true;
         }
-        String name = name(key);
         for (String word : search.split("\\s+")) {
             if (word.startsWith("@")) {
                 if (!namespace(key).contains(word.substring(1))) {
@@ -376,7 +398,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                 lines.add(Component.literal(id).withStyle(ChatFormatting.DARK_GRAY));
             }
         }
-        lines.add(amountLine(view().count(key)).copy().withStyle(ChatFormatting.AQUA));
+        lines.add(amountLine(shownCount(key)).copy().withStyle(ChatFormatting.AQUA));
         lines.add(tr(items() ? "click.hint" : "click.hint.tank").withStyle(ChatFormatting.DARK_GRAY));
         if (key instanceof ItemStack stack) {
             g.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
@@ -717,7 +739,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int cx = x + GRID_X + (i % cols) * CELL;
             int cy = y + GRID_Y + (i / cols) * CELL;
             renderKey(g, key, cx, cy, trim);
-            drawCount(g, view().count(key), cx, cy);
+            drawCount(g, shownCount(key), cx, cy);
         }
         Object hovered = keyAt(mouseX, mouseY);
         if (hovered != null || inGrid(mouseX, mouseY) && !menu.getCarried().isEmpty()) {

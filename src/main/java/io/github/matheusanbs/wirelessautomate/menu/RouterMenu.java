@@ -107,6 +107,13 @@ public class RouterMenu extends AbstractContainerMenu {
     private boolean targetChanged;
     /** Tick da última recaptura por tempo (com as remotas na tela). */
     private long rangeTick;
+    /**
+     * O alvo remoto sumiu e o menu voltou sozinho para a presa: os slots de cartão recusam colocar e
+     * tirar até a tela escolher um alvo ({@link #selectTarget}), porque a face selecionada era canônica.
+     */
+    private boolean targetLost;
+    /** A face (absoluta) da presa antes de ir para um alvo remoto, para voltar a ela. */
+    private Direction attachedFace;
     private final @Nullable ServerPlayer viewer;
     private int sentChangeVersion;
     private int sentDataVersion;
@@ -139,7 +146,8 @@ public class RouterMenu extends AbstractContainerMenu {
         for (ResourceType type : ResourceType.values()) {
             sampleTotals[type.ordinal()] = router.moved(type);
         }
-        this.selectedFace = router.facing();
+        this.attachedFace = router.facing();
+        this.selectedFace = targetRef.target().attached() ? attachedFace : Direction.NORTH;
         addSlots(new RouterCards(), new RouterUpgrade(inventory.player.getUUID()), new RouterRangeUpgrade(), inventory);
     }
 
@@ -154,7 +162,7 @@ public class RouterMenu extends AbstractContainerMenu {
         this.router = null;
         this.snapshot = snapshot;
         this.viewer = null;
-        this.selectedFace = snapshot.facing();
+        this.selectedFace = snapshot.range().present() ? snapshot.range().face() : snapshot.facing();
         addSlots(new SimpleContainer(CARD_SLOT_COUNT) {
             @Override
             public int getMaxStackSize() {
@@ -263,6 +271,10 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     public void applySnapshot(RouterSnapshot snapshot) {
+        // Cliente: o alvo mudou no servidor, que já pôs a face no quadro novo; a tela segue.
+        if (router == null && snapshot.range().present() && !snapshot.target().equals(this.snapshot.target())) {
+            selectedFace = snapshot.range().face();
+        }
         this.snapshot = snapshot;
         version++;
     }
@@ -323,10 +335,25 @@ public class RouterMenu extends AbstractContainerMenu {
         }
         EditTargetRef fresh = targetRef.refresh(router);
         if (!fresh.equals(targetRef)) {
+            if (fresh.target().attached() && !targetRef.target().attached()) {
+                targetLost = true;
+            }
             targetRef = fresh;
             targetChanged = true;
         }
         return targetRef.target();
+    }
+
+    /**
+     * Os slots de cartão estão travados: o alvo remoto sumiu e o menu caiu para a presa sem a tela
+     * escolher (ver {@link #selectTarget}). No cliente, sempre falso (o servidor recusa e ressincroniza).
+     */
+    public boolean cardsLocked() {
+        if (router == null) {
+            return false;
+        }
+        validTarget();
+        return targetLost;
     }
 
     /**
@@ -353,10 +380,18 @@ public class RouterMenu extends AbstractContainerMenu {
         if (resolved == null) {
             return false;
         }
+        validTarget();
+        boolean wasAttached = targetRef.target().attached();
         if (!resolved.equals(targetRef)) {
+            // A face muda de quadro com o alvo: uma face padrão do quadro novo (vai no snapshot).
+            if (wasAttached && !resolved.target().attached()) {
+                attachedFace = selectedFace;
+            }
+            selectedFace = resolved.target().attached() ? attachedFace : Direction.NORTH;
             targetRef = resolved;
             targetChanged = true;
         }
+        targetLost = false;
         return true;
     }
 
@@ -646,7 +681,12 @@ public class RouterMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return RouterBlockEntity.acceptsCard(selectedType, stack);
+            return RouterBlockEntity.acceptsCard(selectedType, stack) && !cardsLocked();
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return !cardsLocked();
         }
 
         @Override
@@ -825,7 +865,7 @@ public class RouterMenu extends AbstractContainerMenu {
         sentDataVersion = dataVersion;
         targetChanged = false;
         rangeTick = now;
-        RouterSnapshot captured = RouterSnapshot.capture(router, viewer, target);
+        RouterSnapshot captured = RouterSnapshot.capture(router, viewer, target, selectedFace);
         bodyChanged = !captured.sameBody(snapshot);
         networksChanged = !captured.networks().equals(snapshot.networks());
         if (!bodyChanged && !networksChanged) {

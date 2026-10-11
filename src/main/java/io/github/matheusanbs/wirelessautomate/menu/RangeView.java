@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -20,9 +21,14 @@ import org.jetbrains.annotations.Nullable;
  * @param groups   os grupos, na ordem do roteador
  * @param machines as máquinas, na ordem de vínculo (o índice é o do {@link EditTarget#machine})
  * @param target   o alvo de edição atual da tela
+ * @param face     a face selecionada no menu do servidor (absoluta na presa, canônica num alvo remoto).
+ *                 Trocar de alvo a põe numa face padrão do quadro novo (Frente = NORTH num remoto, a face
+ *                 de antes na presa); o cliente a adota quando o alvo do snapshot muda
  */
-public record RangeView(int radius, int max, List<GroupView> groups, List<MachineView> machines, EditTarget target) {
-    public static final RangeView EMPTY = new RangeView(0, 0, List.of(), List.of(), EditTarget.ATTACHED_TARGET);
+public record RangeView(int radius, int max, List<GroupView> groups, List<MachineView> machines, EditTarget target,
+        Direction face) {
+    public static final RangeView EMPTY = new RangeView(0, 0, List.of(), List.of(), EditTarget.ATTACHED_TARGET,
+            Direction.NORTH);
 
     /** Estado de uma máquina remota na tela. */
     public enum MachineState {
@@ -100,6 +106,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         buf.writeVarInt(view.max);
         buf.writeEnum(view.target.kind());
         buf.writeVarInt(view.target.id());
+        buf.writeEnum(view.face);
         buf.writeVarInt(view.groups.size());
         for (GroupView group : view.groups) {
             buf.writeVarInt(group.id);
@@ -125,6 +132,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         int radius = buf.readVarInt();
         int max = buf.readVarInt();
         EditTarget target = new EditTarget(buf.readEnum(EditTarget.Kind.class), buf.readVarInt());
+        Direction face = buf.readEnum(Direction.class);
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
@@ -137,6 +145,6 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             machines.add(new MachineView(buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
                     buf.readEnum(MachineState.class)));
         }
-        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target);
+        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face);
     }
 }

@@ -357,6 +357,50 @@ def lanterna() -> Sprite:
     return animacao(quadros, 5)
 
 
+# Upgrade de Alcance: a Antena de Campo, "alcança as máquinas em volta". Mastro de grafite com a ponta
+# coral, colar de grafite, base de porcelana com a faixa coral e o pé de grafite. As ondas de vidro entram
+# por código, dos dois lados da ponta: a de dentro acende, passa para a de fora e se apagam.
+ANTENA = [
+    "................",
+    "................",
+    "................",
+    ".......Cc.......",
+    ".......cd.......",
+    ".......gh.......",
+    ".......gh.......",
+    ".......gh.......",
+    ".......gh.......",
+    "......Gggh......",
+    "....WWppppqq....",
+    "...Wppppppqqr...",
+    "...Ccccccccdd...",
+    "...hhhhhhhhhh...",
+    "...iiiiiiiiii...",
+]
+# Ondas à direita da ponta (centro em x = 7,5); as da esquerda são o espelho (x -> 15 - x).
+ONDA_DENTRO = [(10, 2), (11, 3), (11, 4), (10, 5)]
+ONDA_FORA = [(12, 1), (13, 2), (13, 3), (13, 4), (13, 5), (12, 6)]
+
+
+def antena() -> Sprite:
+    acesa, apagada = cor("vidro.3"), cor("vidro.1")
+    # (onda de dentro, onda de fora) por quadro: None = sem onda.
+    fases = [(None, None), (acesa, None), (apagada, acesa), (None, apagada), (None, None), (None, None)]
+    quadros = []
+    for k, (dentro, fora) in enumerate(fases):
+        img = corpo(ANTENA)
+        for pontos, c in ((ONDA_DENTRO, dentro), (ONDA_FORA, fora)):
+            if c is None:
+                continue
+            for x, y in pontos:
+                put(img, x, y, c)
+                put(img, 15 - x, y, c)
+        if k == 1:
+            put(img, 7, 3, BRANCO)  # a ponta pisca quando a onda sai
+        quadros.append(img)
+    return animacao(quadros, 4)
+
+
 # Guia: caderno de campo. Capa coral com o Olho em porcelana e uma etiqueta, páginas de porcelana
 # aparecendo à direita e embaixo, espiral de grafite na lombada.
 GUIA = [
@@ -697,6 +741,7 @@ def gerar_itens() -> dict[str, Sprite]:
     for tier in TIERS_CARTAO:
         sprites[f"item/tier_core_{tier}"] = valvula(tier)
     sprites["item/chunk_loader_upgrade"] = lanterna()
+    sprites["item/range_upgrade"] = antena()
     sprites["item/guide"] = guia()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
@@ -707,6 +752,10 @@ def gerar_itens() -> dict[str, Sprite]:
 
 
 def modelos_itens() -> None:
+    grava_json(MODELOS / "models/item/range_upgrade.json", {
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
+    })
     for tier in TIERS_CARTAO:
         grava_json(MODELOS / f"models/item/tier_core_{tier}.json", {
             "parent": "minecraft:item/generated",
@@ -777,7 +826,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
 
     titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
-                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "guide"]
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide"]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]
         d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)

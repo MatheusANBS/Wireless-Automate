@@ -184,7 +184,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     /**
      * Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro e o
-     * Upgrade de chunk loading. O upgrade de tier troca só o estado e não passa por aqui.
+     * Upgrade de chunk loading e o de Alcance. O upgrade de tier troca só o estado e não passa por aqui.
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
@@ -193,6 +193,10 @@ public class RouterBlock extends BaseEntityBlock {
             ItemStack upgrade = router.removeUpgrade();
             if (!upgrade.isEmpty()) {
                 Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgrade);
+            }
+            ItemStack rangeUpgrade = router.removeRangeUpgrade();
+            if (!rangeUpgrade.isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rangeUpgrade);
             }
             // Por último: tirar os cartões avisa o índice, que senão guardaria o nó de novo.
             NodeIndex.forget(level, pos);

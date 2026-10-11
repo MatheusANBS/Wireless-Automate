@@ -48,6 +48,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.LINKER.get());
                         output.accept(ModItems.FILTER_CARD.get());
                         output.accept(ModItems.CHUNK_LOADER_UPGRADE.get());
+                        output.accept(ModItems.RANGE_UPGRADE.get());
                         GuideBook.create().ifPresent(output::accept);
                     })
                     .build());

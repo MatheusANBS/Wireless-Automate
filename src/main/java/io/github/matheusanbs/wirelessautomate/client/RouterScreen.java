@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
@@ -115,6 +116,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final ItemStack GHOST_CARD = new ItemStack(ModItems.FILTER_CARD.get());
     /** Upgrade desenhado apagado no slot de upgrade vazio. */
     private static final ItemStack GHOST_UPGRADE = new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get());
+    /** Upgrade de Alcance desenhado apagado no slot de alcance vazio. */
+    private static final ItemStack GHOST_RANGE = new ItemStack(ModItems.RANGE_UPGRADE.get());
 
     private final boolean preview;
     private final List<ResourceType> types = new ArrayList<>();
@@ -350,7 +353,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 this::cycleRedstone).tooltip(() -> tr("redstone.tooltip")));
 
         // os slots do menu e o visor acompanham o tamanho da tela
-        menu.placeSlots(rx() + 1, w - 26, inventoryY());
+        menu.placeSlots(rx() + 1, w - 26, w - 26 - 18, inventoryY());
         machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
         refresh();
     }
@@ -451,9 +454,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return w - 26 - 1;
     }
 
-    /** Onde termina a pílula do tier: antes do slot do upgrade, com folga. */
+    /** Fundo do slot do Upgrade de Alcance, à esquerda do slot de upgrade. */
+    private int rangeBgX() {
+        return upgradeBgX() - 18;
+    }
+
+    /** Onde termina a pílula do tier: antes dos dois slots de upgrade, com folga. */
     private int headEnd() {
-        return upgradeBgX() - 4;
+        return rangeBgX() - 4;
     }
 
     private int maxW() {
@@ -602,6 +610,35 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private static boolean isUpgradeSlot(@Nullable Slot slot) {
         return slot != null && slot.index == RouterMenu.UPGRADE_SLOT;
+    }
+
+    private static boolean isRangeSlot(@Nullable Slot slot) {
+        return slot != null && slot.index == RouterMenu.RANGE_SLOT;
+    }
+
+    /**
+     * Dica do slot de alcance: vazio, o que ele faz neste tier (ou que o tier não aceita) e como pôr;
+     * com o upgrade, o nome, se vale e como tirar. Raio e limite pela config sincronizada do servidor.
+     */
+    private Component rangeSlotTooltip() {
+        RouterTier tier = snapshot().tier();
+        int radius = Config.machineRadius(tier);
+        int max = Config.maxMachines(tier);
+        if (!menu.getSlot(RouterMenu.RANGE_SLOT).hasItem()) {
+            Component tip = tr("range.tooltip");
+            if (radius <= 0) {
+                return tip.copy().append("\n").append(tr("range.tooltip.unavailable").copy().withColor(GuiPaint.WARN));
+            }
+            return tip.copy()
+                    .append("\n").append(tr("range.tooltip.effect", radius, max).copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                    .append("\n").append(tr("upgrade.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        }
+        Component state = radius > 0
+                ? tr("range.state.active", radius, max).copy().withColor(GuiPaint.OK)
+                : tr("range.state.inactive").copy().withColor(GuiPaint.WARN);
+        return GHOST_RANGE.getHoverName().copy()
+                .append("\n").append(state)
+                .append("\n").append(tr("upgrade.tooltip.remove").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     /** Estado do upgrade: o do snapshot, ou "sem upgrade" se o slot está vazio (a sincronização do slot chega antes). */
@@ -880,6 +917,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             setTooltipForNextRenderPass(upgradeSlotTooltip());
             return;
         }
+        if (isRangeSlot(hoveredSlot) && menu.getCarried().isEmpty()) {
+            setTooltipForNextRenderPass(rangeSlotTooltip());
+            return;
+        }
         renderTooltip(g, mouseX, mouseY);
         // sobre uma face o visor mostra o nome dela embaixo; a dica cobriria o modelo
         boolean machineTip = !machineView.isDragging() && machineView.contains(mouseX, mouseY)
@@ -940,7 +981,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiPaint.slot(g, ux, uy);
         ChunkLoadState chunkLoad = chunkLoadState();
         if (chunkLoad == ChunkLoadState.NONE) {
-            ghostUpgrade(g, ux + 1, uy + 1);
+            ghostItem(g, GHOST_UPGRADE, ux + 1, uy + 1);
         } else {
             int color = chunkLoadColor(chunkLoad);
             g.pose().pushPose();
@@ -949,6 +990,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             g.fill(ux + 12, uy + 2, ux + 16, uy + 6, color);
             g.fill(ux + 12, uy + 2, ux + 14, uy + 4, GuiPaint.mix(color, GuiPaint.BEVEL_LIGHT, 0.5f));
             g.pose().popPose();
+        }
+
+        // slot do Upgrade de Alcance, à esquerda do de chunk loading
+        int rangeX = x + rangeBgX();
+        GuiPaint.slot(g, rangeX, uy);
+        if (!menu.getSlot(RouterMenu.RANGE_SLOT).hasItem()) {
+            ghostItem(g, GHOST_RANGE, rangeX + 1, uy + 1);
         }
 
         // separador sob as abas
@@ -1044,9 +1092,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Véu de porcelana translúcida sobre os itens apagados e sob o rótulo da face no visor. */
     private static final int GHOST_VEIL = 0xD8DDD3BF;
 
-    /** Upgrade apagado no fundo do slot de upgrade vazio. */
-    private void ghostUpgrade(GuiGraphics g, int x, int y) {
-        g.renderFakeItem(GHOST_UPGRADE, x, y);
+    /** Upgrade apagado no fundo de um slot de upgrade vazio. */
+    private void ghostItem(GuiGraphics g, ItemStack ghost, int x, int y) {
+        g.renderFakeItem(ghost, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
         g.fill(x, y, x + 16, y + 16, GHOST_VEIL);
@@ -1349,6 +1397,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     int[] previewUpgradeSlotCenter() {
         Slot s = menu.getSlot(RouterMenu.UPGRADE_SLOT);
+        return new int[] {leftPos + s.x + 8, topPos + s.y + 8};
+    }
+
+    int[] previewRangeSlotCenter() {
+        Slot s = menu.getSlot(RouterMenu.RANGE_SLOT);
         return new int[] {leftPos + s.x + 8, topPos + s.y + 8};
     }
 

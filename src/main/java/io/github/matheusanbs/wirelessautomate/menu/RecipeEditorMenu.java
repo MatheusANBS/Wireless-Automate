@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import io.github.matheusanbs.wirelessautomate.packet.RecipeEditorStatePayload;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -90,7 +92,7 @@ public class RecipeEditorMenu extends AbstractContainerMenu {
         super.removed(player);
         // Fechar ao sair do jogo ou com o servidor parando também passa aqui: só recarrega com ele rodando. Sem
         // permissão (o stillValid fecha o menu de quem a perdeu), fechar não recarrega.
-        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.pending() > 0 && serverPlayer.server.isRunning()
+        if (player instanceof ServerPlayer serverPlayer && RecipeEditor.reloadOnClose() && serverPlayer.server.isRunning()
                 && serverPlayer.hasPermissions(2)) {
             reloadAndBroadcast(serverPlayer.server, false);
         }
@@ -101,7 +103,19 @@ public class RecipeEditorMenu extends AbstractContainerMenu {
      * mensagem de recarga, se pedida); se a recarga falhar, avisa os editores abertos.
      */
     public static void reloadAndBroadcast(MinecraftServer server, boolean announce) {
-        RecipeEditor.reload(server).whenCompleteAsync((ignored, error) -> {
+        Optional<CompletableFuture<Void>> reload = RecipeEditor.reload(server);
+        if (reload.isEmpty()) {
+            // Já há uma recarga rodando: ela manda o estado ao terminar.
+            if (announce) {
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    if (player.containerMenu instanceof RecipeEditorMenu) {
+                        player.displayClientMessage(Component.translatable("gui.wirelessautomate.recipes.reload_busy"), true);
+                    }
+                }
+            }
+            return;
+        }
+        reload.get().whenCompleteAsync((ignored, error) -> {
             if (error != null) {
                 for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                     if (player.containerMenu instanceof RecipeEditorMenu) {

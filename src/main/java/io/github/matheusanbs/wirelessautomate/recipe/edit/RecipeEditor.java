@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -46,7 +45,7 @@ import net.neoforged.neoforge.event.OnDatapackSyncEvent;
  */
 public final class RecipeEditor {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    private static final AtomicInteger PENDING = new AtomicInteger();
+    private static final ReloadGate GATE = new ReloadGate();
 
     public enum State { DEFAULT, EDITED, DISABLED }
 
@@ -62,25 +61,39 @@ public final class RecipeEditor {
     }
 
     public static int pending() {
-        return PENDING.get();
+        return GATE.pending();
+    }
+
+    /** Fechar a tela recarrega? (há pendências, nenhuma recarga rodando e a última não falhou; ver {@link ReloadGate}) */
+    public static boolean reloadOnClose() {
+        return GATE.reloadOnClose();
     }
 
     public static void reset() {
-        PENDING.set(0);
+        GATE.reset();
     }
 
     /**
-     * Recarrega os recursos com os packs selecionados. Só o sucesso zera as pendências (o fim de toda recarga,
-     * inclusive a do {@code /reload}, também zera, por {@link #onDatapackSync}); a falha vai ao log.
+     * Recarrega os recursos com os packs selecionados, uma recarga por vez ({@link ReloadGate}): com outra
+     * rodando, devolve vazio e não começa nada. A falha vai ao log e devolve as pendências.
      */
-    public static CompletableFuture<Void> reload(MinecraftServer server) {
-        return server.reloadResources(server.getPackRepository().getSelectedIds()).whenComplete((ignored, error) -> {
+    public static Optional<CompletableFuture<Void>> reload(MinecraftServer server) {
+        if (!GATE.tryStart()) {
+            return Optional.empty();
+        }
+        CompletableFuture<Void> future;
+        try {
+            future = server.reloadResources(server.getPackRepository().getSelectedIds());
+        } catch (RuntimeException e) {
+            GATE.finish(false);
+            throw e;
+        }
+        return Optional.of(future.whenComplete((ignored, error) -> {
+            GATE.finish(error == null);
             if (error != null) {
                 WirelessAutomate.LOGGER.error("A recarga das receitas falhou", error);
-            } else {
-                PENDING.set(0);
             }
-        });
+        }));
     }
 
     /**
@@ -91,7 +104,7 @@ public final class RecipeEditor {
         if (event.getPlayer() != null) {
             return;
         }
-        PENDING.set(0);
+        GATE.serverReloaded();
         RecipeEditorMenu.broadcast(event.getPlayerList().getServer(), false);
     }
 
@@ -303,7 +316,7 @@ public final class RecipeEditor {
         }
         try {
             if (Files.deleteIfExists(RecipeOverridePack.recipeFile(id))) {
-                PENDING.incrementAndGet();
+                GATE.changed();
             }
             return Optional.empty();
         } catch (IOException e) {
@@ -365,7 +378,7 @@ public final class RecipeEditor {
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, GSON.toJson(json) + "\n", StandardCharsets.UTF_8);
-            PENDING.incrementAndGet();
+            GATE.changed();
             return Optional.empty();
         } catch (IOException e) {
             return Optional.of(error("disk", String.valueOf(e.getMessage())));

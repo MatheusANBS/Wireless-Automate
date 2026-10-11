@@ -23,6 +23,7 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.runtime.IClickableIngredient;
 import mezz.jei.api.runtime.IIngredientManager;
+import mezz.jei.api.runtime.IJeiRuntime;
 import java.util.Optional;
 import net.minecraft.core.NonNullList;
 import net.minecraft.client.renderer.Rect2i;
@@ -35,8 +36,9 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
 /**
  * Integração opcional com o JEI. Só o próprio JEI acha e carrega esta classe (pela anotação
  * {@link JeiPlugin}, no cliente); nenhum código do mod a referencia, então sem o JEI nada daqui é
- * carregado. Na tela de filtro: arrastar um ingrediente para a grade e Shift + clique nele na lista
- * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. Na
+ * carregado. Na tela de filtro: arrastar um ingrediente para a grade ({@link FilterGhostHandler}) e Shift +
+ * clique nele na lista ou nos favoritos ({@link FilterShiftClick}, porte 1.20.1: o JEI 15.20 não tem o
+ * {@code quickMove}) acrescentam a entrada; as áreas extras do painel afastam o JEI. Na
  * bancada, mostra o upgrade do roteador com o cartão de qualquer tier acima. O tier é subtipo do roteador e
  * dos armazenamentos, para o JEI listar cada um separado, como a aba criativa.
  */
@@ -108,6 +110,16 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
             }
         }
         registration.addRecipes(RecipeTypes.CRAFTING, upgrades);
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
+        FilterShiftClick.runtimeAvailable(jeiRuntime);
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        FilterShiftClick.runtimeUnavailable();
     }
 
     @Override

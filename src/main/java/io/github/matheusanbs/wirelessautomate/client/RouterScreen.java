@@ -289,7 +289,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox.setBordered(false);
         renameBox.setMaxLength(RenameRouterPayload.MAX_LENGTH);
         renameBox.setTextColor(GuiPaint.FG);
-        // sem setTextShadow(false) no 1.20.1: o EditBox sempre desenha o texto com sombra
+        TextShadow.setTextShadow(renameBox, false); // tinta sobre porcelana, sem sombra
         renameBox.setValue(renameDraft);
         renameBox.setResponder(value -> renameDraft = value);
         renameBox.visible = renaming;

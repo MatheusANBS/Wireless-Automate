@@ -12,8 +12,8 @@ import net.minecraft.client.renderer.Rect2i;
  * item que contém fluido (balde), num de fluidos ({@link FilterScreen#ghostEntry}). Na aba Tags, soltar
  * no slot do inspetor mostra as tags do ingrediente ({@link FilterScreen#inspectGhost}). Arrastar para a
  * lista de entradas acrescenta. O clique simples continua sendo do JEI (ver receitas). Porte 1.20.1: o
- * JEI 15.20 não tem o {@code quickMove} (do JEI 19.28+), então o Shift + clique na lista do JEI não
- * acrescenta; só o arrastar.
+ * JEI 15.20 não tem o {@code quickMove} (do JEI 19.28+); o Shift + clique na lista do JEI e nos favoritos
+ * acrescenta pelo {@link FilterShiftClick}, que vê o clique antes do JEI.
  */
 final class FilterGhostHandler implements IGhostIngredientHandler<FilterScreen> {
     @Override

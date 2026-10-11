@@ -554,9 +554,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             List<FaceView> faces = new ArrayList<>(snapshot().faces());
             faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots(),
                     current.filterSize(), current.blacklist()));
-            RouterSnapshot s = snapshot();
-            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(), s.networks(),
-                    s.powered(), s.machine(), s.machineState(), List.copyOf(faces), s.chunkLoad()));
+            menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
             return;
         }
         send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
@@ -702,8 +700,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             RouterSnapshot s = snapshot();
             List<Optional<UUID>> typeNetworks = new ArrayList<>(s.typeNetworks());
             typeNetworks.set(type.ordinal(), network);
-            menu.applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), List.copyOf(typeNetworks), s.networks(),
-                    s.powered(), s.machine(), s.machineState(), s.faces(), s.chunkLoad()));
+            menu.applySnapshot(s.withTypeNetworks(List.copyOf(typeNetworks)));
             return;
         }
         send(new SetNetworkPayload(menu.containerId, type, network));

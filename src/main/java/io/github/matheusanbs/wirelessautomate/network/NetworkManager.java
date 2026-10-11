@@ -205,6 +205,18 @@ public final class NetworkManager {
         }
     }
 
+    /**
+     * Como {@link #capabilityChanged(RouterBlockEntity, ResourceType, Direction)}, numa máquina remota
+     * do nó, em {@code machinePos}: acorda a porta dessa máquina, face e tipo (se existe) e as origens
+     * que esperam por ela.
+     */
+    public void capabilityChanged(RouterBlockEntity node, BlockPos machinePos, ResourceType type, Direction face) {
+        NodePorts ports = nodes.get(node);
+        if (ports != null) {
+            ports.capabilityChanged(machinePos.asLong(), type, face);
+        }
+    }
+
     /** Portas do nó carregado, para o Tablet ler o sono dos destinos ({@link NodeProbe}); não as altera. */
     @Nullable NodePorts ports(RouterBlockEntity node) {
         return nodes.get(node);
@@ -252,6 +264,24 @@ public final class NetworkManager {
         NodePorts ports = nodes.get(node);
         Port port = ports == null ? null : ports.peek(type, face);
         return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
+    }
+
+    /**
+     * Para GameTests e diagnóstico: a máquina remota em {@code machinePos} tem uma porta ativa do tipo
+     * na face absoluta {@code face} nas rotas atuais (lida na última montagem). Não cria nada.
+     */
+    public boolean hasRemotePort(RouterBlockEntity node, BlockPos machinePos, ResourceType type, Direction face) {
+        NodePorts ports = nodes.get(node);
+        Port[] active = ports == null ? null : ports.collected(type);
+        if (active == null) {
+            return false;
+        }
+        for (Port port : active) {
+            if (port.machine.isRemote() && port.face == face && port.machinePos.equals(machinePos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

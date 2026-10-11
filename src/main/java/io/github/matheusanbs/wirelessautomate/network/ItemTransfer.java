@@ -79,11 +79,11 @@ final class ItemTransfer {
      * balde ainda tem saldo: o gerenciador pode visitá-la de novo no mesmo tick se sobrar orçamento.
      */
     static int move(Port source, long now) {
-        BulkItems bulk = source.node.bulkItems(source.face);
+        BulkItems bulk = source.machine.bulkItems(source.face);
         if (bulk != null) {
             return moveBulk(source, bulk, now);
         }
-        IItemHandler handler = source.node.items(source.face);
+        IItemHandler handler = source.machine.items(source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || order == null) {
             // Máquina sumiu ou chunk descarregado: dorme como vazia. O listener da capability da
@@ -244,8 +244,8 @@ final class ItemTransfer {
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
             // Baú do mod: guarda por tipo, sem varrer slots. Senão, o inventário da máquina.
-            BulkItems bulkTarget = destination.node.bulkItems(destination.face);
-            IItemHandler target = bulkTarget == null ? destination.node.items(destination.face) : null;
+            BulkItems bulkTarget = destination.machine.bulkItems(destination.face);
+            IItemHandler target = bulkTarget == null ? destination.machine.items(destination.face) : null;
             if (bulkTarget == null && target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.
@@ -448,7 +448,7 @@ final class ItemTransfer {
         StockTally tally = null;
         IItemHandler view = null;
         if (filtered && filter.usesItemStock()) {
-            view = source.node.items(source.face);
+            view = source.machine.items(source.face);
             tally = source.tally;
             if (tally == null) {
                 tally = new StockTally();
@@ -566,7 +566,7 @@ final class ItemTransfer {
                 components = rule.matchComponents;
             }
             source.offered = true;
-            BulkItems bulkTarget = destination.node.bulkItems(destination.face);
+            BulkItems bulkTarget = destination.machine.bulkItems(destination.face);
             if (bulkTarget != null) {
                 long room = bulkAccepts(bulkTarget, key, remaining, stock, components);
                 if (room < 0) {
@@ -598,7 +598,7 @@ final class ItemTransfer {
                 }
                 continue;
             }
-            IItemHandler target = destination.node.items(destination.face);
+            IItemHandler target = destination.machine.items(destination.face);
             if (target == null) {
                 destination.sleepWithoutMachine(now);
                 destinationSlept = true;

@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -35,6 +36,11 @@ public final class TestMachines {
     public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
     /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
     public static final Block NAIVE_SLOTS = Blocks.CLAY;
+    /**
+     * Um {@link BigSlot} visto só pela face de trás (a oposta à frente {@code HORIZONTAL_FACING}): prova
+     * que o lado relativo de uma máquina remota segue a frente dela.
+     */
+    public static final Block BACK_SLOT = Blocks.CARVED_PUMPKIN;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
@@ -56,6 +62,8 @@ public final class TestMachines {
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> naiveSlots(pos), NAIVE_SLOTS);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) ->
+                side == state.getValue(HorizontalDirectionalBlock.FACING).getOpposite() ? bigSlot(pos) : null, BACK_SLOT);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */

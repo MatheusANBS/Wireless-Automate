@@ -37,6 +37,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -44,6 +45,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -58,6 +61,8 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -1423,5 +1428,89 @@ public final class RangeGameTests {
         helper.assertValueEqual(LinkerMode.MACHINES.toggled(), LinkerMode.AREA, "toggled de Máquinas");
         helper.assertValueEqual(LinkerMode.AREA.toggled(), LinkerMode.SINGLE, "toggled de Área");
         helper.succeed();
+    }
+
+    /** As chaves de tradução de uma mensagem e das partes dela, em ordem. */
+    private static java.util.List<String> keys(Component text) {
+        java.util.List<String> keys = new java.util.ArrayList<>();
+        if (text.getContents() instanceof TranslatableContents contents) {
+            keys.add(contents.getKey());
+        }
+        for (Component sibling : text.getSiblings()) {
+            if (sibling.getContents() instanceof TranslatableContents contents) {
+                keys.add(contents.getKey());
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * As recusas do Vincular da área: com o limite 8 do Avançado, as 8 máquinas mais perto vinculam e a
+     * mais longe dentro do raio fica além do limite; a de fora do raio é contada como fora do alcance;
+     * a que um listener do {@code RightClickBlock} cancela (como um claim) é protegida e não gasta vaga.
+     */
+    @GameTest(template = "empty")
+    public static void linkerAreaRefusals(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos[] near = {
+                new BlockPos(0, 3, 0), new BlockPos(2, 3, 0), new BlockPos(0, 3, 2), new BlockPos(2, 3, 2),
+                new BlockPos(0, 4, 0), new BlockPos(2, 4, 0), new BlockPos(0, 4, 2), new BlockPos(2, 4, 2)};
+        BlockPos claimed = new BlockPos(1, 3, 1);
+        int radius = Config.machineRadius(RouterTier.ADVANCED);
+        BlockPos farthest = new BlockPos(1, 2 + radius, 1);
+        BlockPos outside = new BlockPos(1, 3 + radius, 1);
+        for (BlockPos pos : near) {
+            helper.setBlock(pos, Blocks.BARREL);
+        }
+        helper.setBlock(claimed, Blocks.BARREL);
+        helper.setBlock(farthest, Blocks.BARREL);
+        helper.setBlock(outside, Blocks.BARREL);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        BlockPos claimedAbsolute = helper.absolutePos(claimed);
+        int[] posted = new int[1];
+        Consumer<PlayerInteractEvent.RightClickBlock> claim = event -> {
+            if (event.getEntity() == player) {
+                posted[0]++;
+                if (event.getPos().equals(claimedAbsolute)) {
+                    event.setCanceled(true);
+                }
+            }
+        };
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    NeoForge.EVENT_BUS.addListener(claim);
+                    try {
+                        helper.assertTrue(Config.maxMachines(RouterTier.ADVANCED) == near.length && radius >= 4,
+                                "a config padrão mudou: limite " + Config.maxMachines(RouterTier.ADVANCED) + ", raio " + radius);
+                        router.setRangeUpgrade(rangeUpgrade());
+                        LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(),
+                                helper.absolutePos(new BlockPos(0, 1, 0))).withSecond(helper.absolutePos(outside.offset(1, 0, 1))));
+                        RangeLinks.Result result = RangeLinks.linkArea(player, linker);
+                        helper.assertTrue(result.ok() && result.linked() == near.length && result.overLimit() == 1
+                                && result.outOfRange() == 1 && result.protectedCount() == 1 && result.already() == 0,
+                                "contagens: " + result);
+                        RemoteMachines remotes = router.remoteMachines();
+                        for (BlockPos pos : near) {
+                            helper.assertTrue(remotes.contains(helper.absolutePos(pos)), "a mais perto ficou de fora: " + pos);
+                        }
+                        helper.assertFalse(remotes.contains(claimedAbsolute), "a protegida pelo evento entrou");
+                        helper.assertFalse(remotes.contains(helper.absolutePos(farthest)), "a mais longe passou do limite");
+                        helper.assertFalse(remotes.contains(helper.absolutePos(outside)), "a de fora do raio entrou");
+                        // o evento só sai para quem seria vinculado: as 8, a protegida e nenhuma recusada antes
+                        helper.assertValueEqual(posted[0], near.length + 1, "eventos postados");
+                        helper.assertValueEqual(keys(RangeLinks.areaMessage(result)), java.util.List.of(
+                                "item.wirelessautomate.linker.range.area.linked",
+                                "item.wirelessautomate.linker.range.area.out_of_range",
+                                "item.wirelessautomate.linker.range.area.over_limit",
+                                "item.wirelessautomate.linker.range.area.protected"), "mensagem");
+                    } finally {
+                        NeoForge.EVENT_BUS.unregister(claim);
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
     }
 }

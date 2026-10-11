@@ -617,6 +617,7 @@
   "gui.wirelessautomate.router.range.state.inactive": "Inativo: o raio deste tier é 0 no servidor",
   "item.wirelessautomate.linker.corner1": "Canto 1: %s · Shift + clique no canto 2",
   "item.wirelessautomate.linker.corner2": "Canto 2: %s · área de %s×%s×%s com %s roteadores",
+  "item.wirelessautomate.linker.corner2_machines": "Canto 2: %s · área de %s×%s×%s · Vincular liga as máquinas dela ao roteador escolhido",
   "item.wirelessautomate.linker.too_big": "Área grande demais: %s blocos (máximo %s). O canto 2 não foi marcado.",
   "item.wirelessautomate.linker.area_hint": "Modo Único: Shift + clique no ar muda para Área",
   "item.wirelessautomate.linker.foreign": "A rede ativa %s é de outro jogador",

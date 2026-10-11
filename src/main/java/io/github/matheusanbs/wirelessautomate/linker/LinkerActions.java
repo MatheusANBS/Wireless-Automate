@@ -93,6 +93,12 @@ public final class LinkerActions {
             return Mark.TOO_BIG;
         }
         LinkerItem.setArea(stack, next);
+        if (LinkerItem.mode(stack) == LinkerMode.MACHINES) {
+            // no modo Máquinas contar roteadores não diz nada; quais máquinas entram é o Vincular que decide
+            player.displayClientMessage(Component.translatable(KEY + "corner2_machines", position(pos), box.sizeX(),
+                    box.sizeY(), box.sizeZ()), true);
+            return Mark.SECOND;
+        }
         int routers = LinkerScan.of(player.serverLevel(), box).routers().size();
         player.displayClientMessage(Component.translatable(KEY + "corner2", position(pos), box.sizeX(), box.sizeY(),
                 box.sizeZ(), routers), true);

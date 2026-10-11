@@ -392,7 +392,7 @@
   "gui.wirelessautomate.storage.filter.on.tooltip": "Filtro de entrada ligado: só entra o que ele aceita, por qualquer caminho (roteador, funil, esta tela). Clique para editar",
   "gui.wirelessautomate.storage.filter.off.tooltip": "Sem filtro de entrada: aceita qualquer item. Clique para criar um (o estoque de uma entrada vira \"guardar até N\")",
   "gui.wirelessautomate.storage.search": "Buscar",
-  "gui.wirelessautomate.storage.search.hint": "Buscar… (@mod)",
+  "gui.wirelessautomate.storage.search.hint": "Buscar… @mod #tag",
   "gui.wirelessautomate.storage.sort.count": "Qtd. ↓",
   "gui.wirelessautomate.storage.sort.name": "Nome",
   "gui.wirelessautomate.storage.sort.mod": "Mod",

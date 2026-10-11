@@ -2097,6 +2097,8 @@ public final class DevEndToEnd {
         }, () -> chestScreen().getMenu().getCarried().isEmpty()
                 && onServer(server -> storageChest(server, storageB).storage().total() == CHEST_TOTAL),
                 () -> "cursor " + chestScreen().getMenu().getCarried()));
+        list.add(new Step("Baú: busca por tag", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue("#c:gems"),
+                () -> chestScreen().shownCount() == 1, () -> "na lista " + chestScreen().shownCount()));
         list.add(new Step("Baú: limpar a busca", STEP_TIMEOUT_MS, () -> chestScreen().searchBox().setValue(""),
                 () -> chestScreen().shownCount() == 3, () -> "na lista " + chestScreen().shownCount()));
         int[] before = new int[2];
@@ -2140,8 +2142,10 @@ public final class DevEndToEnd {
                 () -> dragGrip(chestScreen(), (before[0] - 9) * 9, (before[1] - 3) * 9),
                 () -> chestScreen().cols() == before[0] && chestScreen().rows() == before[1],
                 () -> "grade " + chestScreen().cols() + "x" + chestScreen().rows()));
-        list.add(new Step("Baú: abrir o filtro de entrada", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro")),
+        list.add(new Step("Baú: abrir o filtro de entrada", STEP_TIMEOUT_MS, () -> {
+                    chestScreen().searchBox().setValue("diam");
+                    click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro"));
+                },
                 () -> Minecraft.getInstance().screen instanceof FilterScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bau-3-filtro"));
@@ -2149,6 +2153,30 @@ public final class DevEndToEnd {
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Baú: a busca volta vazia", STEP_TIMEOUT_MS, () -> { },
+                () -> chestScreen().searchBox().getValue().isEmpty() && chestScreen().shownCount() == 4,
+                () -> "busca '" + chestScreen().searchBox().getValue() + "', na lista " + chestScreen().shownCount()));
+        int[] diamondAt = {-1};
+        list.add(new Step("Baú: Shift trava a ordem (o tipo que acaba fica no lugar)", STEP_TIMEOUT_MS, () -> {
+            StorageListScreen screen = chestScreen();
+            for (int i = 0; i < screen.shownCount(); i++) {
+                if (screen.shownKey(i) instanceof ItemStack stack && stack.is(Items.DIAMOND)) {
+                    diamondAt[0] = i;
+                }
+            }
+            StorageListScreen.e2eShift = true;
+            screen.shownCount();
+            onServer(server -> storageChest(server, storageB).storage().extract(new ItemStack(Items.DIAMOND), 64, false));
+        }, () -> chestScreen().getMenu().view().types() == 3 && chestScreen().shownCount() == 4
+                && chestScreen().shownKey(diamondAt[0]) instanceof ItemStack stack && stack.is(Items.DIAMOND)
+                && chestScreen().shownAmount(diamondAt[0]) == 0,
+                () -> "tipos " + chestScreen().getMenu().view().types() + ", na lista " + chestScreen().shownCount()
+                        + ", diamante em " + diamondAt[0]));
+        list.add(new Step("Baú: soltar o Shift reordena", STEP_TIMEOUT_MS, () -> {
+            StorageListScreen.e2eShift = false;
+            onServer(server -> storageChest(server, storageB).storage().insert(new ItemStack(Items.DIAMOND), 64, false));
+        }, () -> chestScreen().getMenu().view().types() == 4 && chestScreen().shownCount() == 4,
+                () -> "tipos " + chestScreen().getMenu().view().types() + ", na lista " + chestScreen().shownCount()));
         list.add(close("Baú: fechar"));
 
         list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {

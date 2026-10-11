@@ -454,7 +454,17 @@ public final class StorageGameTests {
         helper.assertValueEqual(storage.total(), 1_000L, "tudo de volta");
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_HALF, cobble), "meia pilha");
         helper.assertValueEqual(menu.getCarried().getCount(), 32, "meia pilha no cursor");
-        helper.assertFalse(act(player, menu, StorageActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND)),
+        // Com menos de uma pilha guardada, o botão direito pega a metade do que há (10 → 5).
+        storage.insert(new ItemStack(Items.DIAMOND), 10, false);
+        ItemStack diamond = new ItemStack(Items.DIAMOND);
+        ItemStack held = menu.getCarried();
+        menu.setCarried(ItemStack.EMPTY);
+        helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_HALF, diamond), "metade de 10");
+        helper.assertValueEqual(menu.getCarried().getCount(), 5, "5 diamantes no cursor");
+        helper.assertValueEqual(storage.count(diamond), 5L, "5 diamantes no Baú");
+        storage.extract(diamond, 5, false);
+        menu.setCarried(held);
+        helper.assertFalse(act(player, menu, StorageActionPayload.Action.TAKE_STACK, new ItemStack(Items.EMERALD)),
                 "tipo que não existe");
         menu.setCarried(ItemStack.EMPTY);
         helper.assertTrue(act(player, menu, StorageActionPayload.Action.TAKE_TO_INVENTORY, cobble), "para o inventário");

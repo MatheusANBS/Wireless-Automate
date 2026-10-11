@@ -1045,7 +1045,7 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único e Área. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas ou marque uma área. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 
@@ -1055,7 +1055,7 @@ Também tira roteadores da rede.
 | --- | --- |
 | Clique num roteador | Põe as abas marcadas do roteador na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas abas da rede. |
 | Clique no ar | Abre a tela: rede, abas, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
-| Shift + clique no ar | Alterna entre **Único** e **Área**. |
+| Shift + clique no ar | Passa para o próximo modo: **Único**, **Área**, **Máquinas** e de volta ao **Único**. |
 | Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism), Source (com o Ars Nouveau). Uma combinação marcada na tela volta para **Todos**. |
 | Shift + clique em dois blocos (Área) | Marca os cantos da área. |
 
@@ -1101,7 +1101,7 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single and Area. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines or mark an area. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Network** | One of your networks, or **None (unlink)**. |
 
@@ -1111,7 +1111,7 @@ also takes routers out of their network.
 | --- | --- |
 | Click a router | Puts the router's checked tabs in the active network (creates one if you have none). On **None (unlink)**, takes those tabs out of their network. |
 | Click the air | Opens the screen: network, tabs, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
-| Shift + click the air | Switches between **Single** and **Area**. |
+| Shift + click the air | Goes to the next mode: **Single**, **Area**, **Machines** and back to **Single**. |
 | Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism), Source (with Ars Nouveau). A combination checked on the screen goes back to **All**. |
 | Shift + click two blocks (Area) | Marks the area corners. |
 

@@ -21,7 +21,7 @@
   - nada de varredura por tick (a de área roda só no clique);
   - nada de sincronizar o cliente com a tela fechada;
   - mudar um perfil é um aviso só ao motor (`batchChanges`).
-- Acordar (decisão 8): uma entrega numa máquina remota acorda as portas de origem **daquela máquina**, de todos os tipos. A carga de um chunk acorda as máquinas remotas que estão nele. O teto de sono continua `MAX_SLEEP_TICKS = 100`.
+- Acordar (decisão 8): um mixin em `Level.blockEntityChanged` acorda as portas de uma máquina remota vinculada quando ela chama `setChanged` (uma consulta num `LongOpenHashSet` por nível; nada mais no caminho quente), com a mesma regra da presa (`deliveringInto`: durante uma entrega, não acorda quem a abastece). A carga de um chunk acorda as máquinas remotas que estão nele. O teto de sono continua `MAX_SLEEP_TICKS = 100`. O mixin é o primeiro do mod: `wirelessautomate.mixins.json` declarado no `neoforge.mods.toml` (`[[mixins]]`), pacote `mixin/`, só lado comum.
 - Cartões (decisão 9): só no perfil do grupo. Uma exceção guarda só os `FaceConfig`.
 - Lados das remotas (`RemoteSide`): Frente, Trás, Esquerda, Direita, Cima e Baixo, com Esquerda e Direita **vistas de quem olha a frente da máquina**. Se a frente é Norte, Esquerda = Leste (`front.getClockWise()`) e Direita = Oeste. A frente vem de `HORIZONTAL_FACING` ou de `FACING` horizontal do `BlockState`. Bloco sem frente usa o quadro canônico, com a frente em Norte.
 - Quadro canônico de tela e payload: as telas e os payloads continuam mandando um `Direction`. Numa remota, ele é lido no quadro "frente = Norte": NORTH=Frente, SOUTH=Trás, EAST=Esquerda, WEST=Direita, UP=Cima, DOWN=Baixo. A conversão fica num lugar só (`RemoteSide.fromCanonical`/`canonical()`).
@@ -45,7 +45,8 @@
 | `range/RemoteMachine.java` (novo) | Máquina vinculada: posição, grupo, exceção (`MachineConfig` ou nulo), última frente conhecida |
 | `range/RemoteMachines.java` (novo) | O conjunto no roteador: vincular, desvincular, grupos, alvo de edição, NBT, cartões soltos ao esvaziar um grupo |
 | `range/MachineCaches.java` (novo) | Os nove `BlockCapabilityCache` de uma máquina (extraídos do `RouterBlockEntity`), com o `isLoaded` das remotas |
-| `range/RemoteChunkIndex.java` (novo) | Chunk → máquinas remotas vinculadas, para acordar na carga do chunk |
+| `range/RemoteIndex.java` (novo) | Por nível: posição → máquinas remotas vinculadas (o conjunto do mixin) e chunk → máquinas, para acordar na carga do chunk |
+| `mixin/LevelMixin.java`, `resources/wirelessautomate.mixins.json`, `neoforge.mods.toml` (novo/mudar) | O mixin em `Level.blockEntityChanged` |
 | `range/RangeLinks.java` (novo) | Regras do servidor do modo Máquinas: escolher roteador, vincular ou desvincular uma, vincular a área |
 | `item/RangeUpgradeItem.java` (novo) | O Upgrade de Alcance (tooltip com raio e limite por tier) |
 | `block/RouterBlockEntity.java` (mudar) | Slot do upgrade de alcance, `RemoteMachines`, caches pela `MachineCaches`, face e cartões por alvo |
@@ -171,17 +172,21 @@
   - tirar o upgrade para as remotas.
 - [ ] Verificação completa. Rode também `./scripts/bench.sh` num cenário curto, se couber no tempo, e anote no relatório que o custo com nós sem remotas não mudou (é só o `Port` com dois campos a mais). Commit "Roteador de alcance: o motor move de e para as máquinas remotas".
 
-### Tarefa 5: acordar pelo motor
+### Tarefa 5: acordar como a máquina presa (mixin e carga de chunk)
 
-**Arquivos:** `network/Port.java`, `NodePorts.java`, `NetworkManager.java`, as `*Transfer`, `range/RemoteChunkIndex.java`, `WirelessAutomate.java` (evento), `gametest/RangeGameTests.java`.
+**Arquivos:** `range/RemoteIndex.java`, `mixin/LevelMixin.java`, `src/main/resources/wirelessautomate.mixins.json`, `src/main/templates/META-INF/neoforge.mods.toml`, `network/NodePorts.java`, `NetworkManager.java`, `WirelessAutomate.java` (evento de chunk), `gametest/RangeGameTests.java`.
 
-- [ ] Nas portas de uma máquina remota, `readPorts` monta a lista das portas de origem daquela máquina (`List<Port> machineSources`, a mesma lista compartilhada pelas portas dela).
-- [ ] Uma entrega bem-sucedida num destino remoto acorda essas portas. Troque os `destination.destinationBackoff.wake()` dos pontos de entrega (Item :281/:670, Fluid :189, Chemical :174, Scalar :86) por `destination.delivered()`, que acorda o próprio backoff e, se a máquina é remota, faz `sourceBackoff.wake()` nas `machineSources` (todos os tipos). Na máquina presa, `delivered()` faz exatamente o que fazia antes.
-- [ ] `RemoteChunkIndex` (um por servidor, como o `NetworkManager`): `ChunkPos.asLong → List<(RouterBlockEntity, BlockPos)>`, mantido quando um nó entra ou sai do motor e quando uma máquina é vinculada ou desvinculada. No `ChunkEvent.Load` de um `ServerLevel`, ele acorda as portas das máquinas daquele chunk (os dois backoffs) e relê a frente delas. Na parada do servidor, limpe junto com o `NetworkManager`.
-- [ ] GameTests:
-  - origem remota vazia e dormindo há muito (force o backoff no máximo): uma entrega nessa máquina pela outra porta a acorda e o item segue para o destino em menos de 20 ticks, bem abaixo dos 100 do teto;
-  - acordar pela carga do chunk: chame o método do índice que o evento chama (o caminho real até as portas) e confira a porta acordada.
-- [ ] Verificação completa. Commit "Roteador de alcance: entrega e carga de chunk acordam as máquinas remotas".
+- [ ] `RemoteIndex` (um por servidor, como o `NetworkManager`, limpo na parada): por nível, `Long2ObjectOpenHashMap<List<RouterBlockEntity>>` de posição da máquina → roteadores que a vinculam (uma máquina pode estar em vários), e `chunk → posições`. É mantido quando um nó entra ou sai do motor (`addNode`/`removeNode`) e quando uma máquina é vinculada ou desvinculada. Só os nós com `rangeActive()` registram as remotas.
+- [ ] Mixin `@Inject(at = HEAD)` em `Level.blockEntityChanged(BlockPos)`: só no servidor (`!isClientSide`); se o mapa daquele nível está vazio, sai na hora; senão `get(pos.asLong())` e, para cada roteador, `NetworkManager.get().wakeMachine(router, pos)`. Nada de alocação nem de busca de capability no caminho.
+- [ ] `NetworkManager.wakeMachine(RouterBlockEntity, BlockPos)` e `NodePorts.wakeMachine(BlockPos, boolean feeders)`: a mesma regra do `wake(node)` de hoje, só nas portas daquela máquina (os dois backoffs, `idleSlots = 0`; feeders com `waitsDestination` só quando não está entregando nela). O `deliveringInto` passa a comparar a posição da máquina avisada com a `visitMachine`.
+- [ ] Carga de chunk: no `ChunkEvent.Load` de um `ServerLevel`, `RemoteIndex` acorda as máquinas daquele chunk e relê a frente delas.
+- [ ] Mixin no build: `wirelessautomate.mixins.json` (`"package": "io.github.matheusanbs.wirelessautomate.mixin"`, `"compatibilityLevel": "JAVA_21"`, `"mixins": ["LevelMixin"]`, `"required": true`, `"minVersion": "0.8"`) e `[[mixins]] config="wirelessautomate.mixins.json"` no `neoforge.mods.toml`. Confira no jar que o JSON e o toml saem certos e que as quatro runs carregam.
+- [ ] GameTests (caminho real, sem chamar o `wakeMachine` à mão):
+  - origem remota (um baú) vazia, com o backoff forçado no máximo: pôr um item no baú pelo `IItemHandler` dele (que chama `setChanged`) faz o item seguir para o destino em menos de 20 ticks;
+  - destino remoto cheio e dormindo: tirar um item dele pelo handler o acorda;
+  - a carga de chunk: chame o método do `RemoteIndex` que o evento chama e confira a porta acordada;
+  - sem o upgrade, a posição não fica no índice.
+- [ ] Verificação completa. Se der, uma rodada curta do `./scripts/bench.sh` para conferir que o mixin não aparece no custo. Commit "Roteador de alcance: as máquinas remotas acordam o roteador como a presa (mixin e carga de chunk)".
 
 ### Tarefa 6: Vinculador no modo Máquinas
 

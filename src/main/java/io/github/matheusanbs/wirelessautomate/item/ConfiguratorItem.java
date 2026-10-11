@@ -121,13 +121,18 @@ public class ConfiguratorItem extends Item {
 
     // ------------------------------------------------------------------ estado no item
 
-    /** Modo da varinha; sem o componente, pincel ({@link LinkerMode#SINGLE}). */
+    /**
+     * Modo da varinha; sem o componente, pincel ({@link LinkerMode#SINGLE}). O Configurador não tem o
+     * modo Máquinas: um {@link LinkerMode#MACHINES} gravado é lido como pincel.
+     */
     public static LinkerMode mode(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.CONFIGURATOR_MODE.get(), LinkerMode.SINGLE);
+        LinkerMode mode = stack.getOrDefault(ModDataComponents.CONFIGURATOR_MODE.get(), LinkerMode.SINGLE);
+        return mode == LinkerMode.MACHINES ? LinkerMode.SINGLE : mode;
     }
 
+    /** Grava o modo; {@link LinkerMode#MACHINES} (que o Configurador não tem) vira pincel. */
     public static void setMode(ItemStack stack, LinkerMode mode) {
-        if (mode == LinkerMode.SINGLE) {
+        if (mode != LinkerMode.AREA) {
             // O pincel não guarda o "qualquer máquina" da área (estado invisível no item).
             stack.remove(ModDataComponents.CONFIGURATOR_MODE.get());
             stack.remove(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get());

@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -121,7 +122,8 @@ public final class LinkerActions {
         if (LinkerItem.effectiveTabs(stack).isEmpty()) {
             return LinkerProblem.NO_TABS;
         }
-        if (LinkerItem.unlink(stack)) {
+        // Máquinas vincula ao roteador escolhido (RangeLinks), sem rede nem desvincular
+        if (LinkerItem.unlink(stack) || LinkerItem.mode(stack) == LinkerMode.MACHINES) {
             return LinkerProblem.NONE;
         }
         WaNetwork network = activeNetwork(player);
@@ -325,6 +327,11 @@ public final class LinkerActions {
                 yield true;
             }
             case LINK -> {
+                if (LinkerItem.mode(stack) == LinkerMode.MACHINES) {
+                    // a tela ainda não mostra o resultado das máquinas: fica na action bar
+                    menu.setOutcome(null, null);
+                    yield RangeLinks.linkArea(player, stack).ok();
+                }
                 LinkResult result = link(player, stack);
                 if (result.ok()) {
                     menu.setOutcome(result, LinkerItem.tabs(stack));

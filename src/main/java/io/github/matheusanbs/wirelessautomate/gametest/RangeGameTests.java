@@ -974,8 +974,9 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão M4: a carga do chunk (o método que o {@code ChunkEvent.Load} chama) acorda as portas
-     * das remotas do chunk, inclusive uma que nunca teve cache de capability.
+     * Revisão M4: a carga do chunk (o método que o {@code ChunkEvent.Load} chama) acorda a porta
+     * dormindo de uma remota do chunk. Aqui a porta já tinha cache de capability; o caso sem cache usa
+     * o mesmo caminho (acordar a porta, e a visita seguinte cria o cache), mas não é isolado no teste.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void chunkLoadWakesRemote(GameTestHelper helper) {
@@ -1087,6 +1088,69 @@ public final class RangeGameTests {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.unlinkMachine(remote);
                     helper.assertFalse(RemoteIndex.get().isIndexed(router, remote), "no índice depois de desvincular");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Só as máquinas ativas entram no índice: a de fora do raio não entra; com o limite do Avançado
+     * cheio, a seguinte não entra até uma das primeiras ser desvinculada.
+     */
+    @GameTest(template = "empty")
+    public static void onlyActiveMachinesIndexed(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        int radius = Config.machineRadius(RouterTier.ADVANCED);
+        int max = Config.maxMachines(RouterTier.ADVANCED);
+        BlockPos outside = new BlockPos(1, 3 + radius, 1);
+        helper.setBlock(outside, Blocks.BARREL);
+        BlockPos[] inside = new BlockPos[max + 1];
+        int n = 0;
+        for (int y = 3; y <= 5 && n < inside.length; y++) {
+            for (int x = 0; x <= 2 && n < inside.length; x += 2) {
+                for (int z = 0; z <= 2 && n < inside.length; z += 2) {
+                    inside[n] = new BlockPos(x, y, z);
+                    helper.setBlock(inside[n++], Blocks.BARREL);
+                }
+            }
+        }
+        int placed = n;
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    helper.assertTrue(placed == max + 1 && radius >= 3, "a config padrão mudou: limite " + max + ", raio " + radius);
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, outside);
+                    for (BlockPos pos : inside) {
+                        link(helper, router, pos);
+                    }
+                    RemoteIndex index = RemoteIndex.get();
+                    helper.assertFalse(index.isIndexed(router, helper.absolutePos(outside)), "fora do raio no índice");
+                    for (int i = 0; i < max; i++) {
+                        helper.assertTrue(index.isIndexed(router, helper.absolutePos(inside[i])), "ativa fora do índice: " + i);
+                    }
+                    BlockPos extra = helper.absolutePos(inside[max]);
+                    helper.assertFalse(index.isIndexed(router, extra), "além do limite no índice");
+                    router.unlinkMachine(helper.absolutePos(inside[0]));
+                    helper.assertTrue(index.isIndexed(router, extra), "a seguinte não entrou ao abrir a vaga");
+                })
+                .thenSucceed();
+    }
+
+    /** Quebrar o roteador ({@code destroyBlock}) tira as máquinas dele do índice. */
+    @GameTest(template = "empty")
+    public static void breakingRouterRemovesFromIndex(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, REMOTE_CHEST);
+                    helper.assertTrue(RemoteIndex.get().isIndexed(router, helper.absolutePos(REMOTE_CHEST)), "fora do índice");
+                    helper.destroyBlock(ROUTER);
+                    helper.assertBlockNotPresent(ModBlocks.ROUTER.get(), ROUTER);
+                    helper.assertFalse(RemoteIndex.get().isIndexed(router, helper.absolutePos(REMOTE_CHEST)),
+                            "o roteador quebrado ficou no índice");
                 })
                 .thenSucceed();
     }

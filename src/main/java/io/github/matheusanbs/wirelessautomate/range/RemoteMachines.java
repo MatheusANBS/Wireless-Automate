@@ -21,6 +21,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Só o modelo: quem salva e avisa o motor é o {@code RouterBlockEntity}. As regras de raio e de
  * limite ficam fora daqui (o Vinculador as aplica antes de vincular).
+ *
+ * <p><b>Vincule e desvincule só pelos métodos do {@code RouterBlockEntity}</b> ({@code linkMachine},
+ * {@code unlinkMachine}): {@link #link}, {@link #unlink} e {@link #load} são públicos só porque o
+ * roteador está noutro pacote. Chamados direto, deixam velhos o índice do mixin ({@link RemoteIndex}),
+ * os caches de capability e as rotas.
  */
 public final class RemoteMachines {
     private final List<RemoteMachine> machines = new ArrayList<>();
@@ -44,7 +49,8 @@ public final class RemoteMachines {
 
     /**
      * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, ou num grupo
-     * novo com o perfil vazio. Devolve {@code false} se a posição já estava vinculada.
+     * novo com o perfil vazio. Devolve {@code false} se a posição já estava vinculada. Só pelo
+     * {@code RouterBlockEntity.linkMachine} (ver a classe).
      */
     public boolean link(BlockPos pos, ResourceLocation block, int front) {
         if (contains(pos)) {
@@ -70,7 +76,8 @@ public final class RemoteMachines {
 
     /**
      * Desvincula a máquina em {@code pos}. Se o grupo dela esvazia, ele sai e os cartões dele voltam
-     * na lista, para quem chamou soltar no mundo. Sem a máquina, devolve uma lista vazia.
+     * na lista, para quem chamou soltar no mundo. Sem a máquina, devolve uma lista vazia. Só pelo
+     * {@code RouterBlockEntity.unlinkMachine} (ver a classe).
      */
     public List<ItemStack> unlink(BlockPos pos) {
         return unlink(index(pos));

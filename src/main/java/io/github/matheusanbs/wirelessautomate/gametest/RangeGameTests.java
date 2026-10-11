@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -36,7 +37,9 @@ import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
@@ -728,9 +731,11 @@ public final class RangeGameTests {
     /**
      * Baixar o raio na config (num Elite, que nenhum outro teste usa com remotas) relê as portas na
      * remontagem: a remota a 4 blocos para de mover. O raio só é lido na remontagem, então a config
-     * fica baixa por alguns ticks e volta no {@code finally} do passo que confere.
+     * fica baixa por alguns ticks e volta no {@code finally} do passo que confere. Num lote próprio: a
+     * recarga da config relê (e acorda) as portas de todos os roteadores com alcance, o que atrapalharia
+     * os testes de sono que rodariam em paralelo.
      */
-    @GameTest(template = "empty", timeoutTicks = 300)
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config")
     public static void configRadiusRereadsPorts(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.ELITE);
         router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "raio").id());
@@ -763,6 +768,325 @@ public final class RangeGameTests {
                         radius.set(original[0]);
                         NetworkManager.configChanged();
                     }
+                })
+                .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ acordar as máquinas remotas
+
+    /** Um sono bem maior que os 20 ticks em que o aviso tem de chegar. */
+    private static final int LONG_SLEEP = 300;
+
+    /** O {@code IItemHandler} da máquina em {@code relative} pela face de cima; mexer nele chama {@code setChanged}. */
+    private static IItemHandler handler(GameTestHelper helper, BlockPos relative) {
+        IItemHandler handler = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
+                helper.absolutePos(relative), Direction.UP);
+        helper.assertTrue(handler != null, "sem IItemHandler em " + relative);
+        return handler;
+    }
+
+    private static int countOf(GameTestHelper helper, BlockPos relative, net.minecraft.world.item.Item item) {
+        Container container = container(helper, relative);
+        int total = 0;
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack stack = container.getItem(i);
+            if (stack.is(item)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static boolean sleep(GameTestHelper helper, RouterBlockEntity router, BlockPos relativeOrNull) {
+        return NetworkManager.get().sleepForTests(router, relativeOrNull == null ? null : helper.absolutePos(relativeOrNull),
+                ResourceType.ITEM, Direction.UP, helper.getLevel().getServer().getTickCount(), LONG_SLEEP);
+    }
+
+    /**
+     * Uma origem que espera destino: barril em {@code relative}, com terra e um roteador Básico em
+     * cima, na rede, extraindo. O destino dela fica cheio de terra ({@link #fillButOne}), então ela
+     * oferece, é recusada por espaço e dorme esperando destino.
+     */
+    private static RouterBlockEntity waitingFeeder(GameTestHelper helper, BlockPos relative, UUID network) {
+        helper.setBlock(relative, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        helper.setBlock(relative.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(relative.above());
+        router.setNetworkId(network);
+        router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        container(helper, relative).setItem(0, new ItemStack(Items.DIRT, 8));
+        return router;
+    }
+
+    /** Enche o baú de terra, menos o slot 0, que fica com 1 pedregulho: só aceita mais pedregulho. */
+    private static void fillButOne(GameTestHelper helper, BlockPos relative) {
+        Container container = container(helper, relative);
+        container.setItem(0, new ItemStack(Items.COBBLESTONE, 1));
+        for (int i = 1; i < container.getContainerSize(); i++) {
+            container.setItem(i, new ItemStack(Items.DIRT, 64));
+        }
+    }
+
+    /**
+     * Origem remota vazia e dormindo um sono longo: pôr um item no baú remoto pelo {@code IItemHandler}
+     * (que chama {@code setChanged}) acorda a porta pelo mixin, e o item chega à presa em menos de 20
+     * ticks.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void remoteSourceWakesOnSetChanged(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        long[] insertedAt = {0};
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
+                .thenIdle(5)
+                .thenExecute(() -> {
+                    helper.assertTrue(RemoteIndex.get().isIndexed(router, helper.absolutePos(REMOTE_CHEST)), "remota fora do índice");
+                    helper.assertTrue(sleep(helper, router, REMOTE_CHEST), "a porta da remota sumiu");
+                    handler(helper, REMOTE_CHEST).insertItem(0, new ItemStack(Items.COBBLESTONE, 5), false);
+                    insertedAt[0] = helper.getTick();
+                })
+                .thenWaitUntil(() -> helper.assertTrue(count(helper, CHEST) == 5, "o item não seguiu para a presa"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - insertedAt[0] < 20,
+                        "a remota demorou " + (helper.getTick() - insertedAt[0]) + " ticks para acordar"))
+                .thenSucceed();
+    }
+
+    /**
+     * Destino remoto cheio, dormindo, e a origem presa esperando por ele: tirar uma pilha do baú remoto
+     * pelo {@code IItemHandler} acorda o destino e a origem que espera, e a entrega sai em menos de 20
+     * ticks.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void fullRemoteDestinationWakesWhenEmptied(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        Container full = container(helper, REMOTE_CHEST);
+        for (int i = 0; i < full.getContainerSize(); i++) {
+            full.setItem(i, new ItemStack(Items.DIRT, 64));
+        }
+        container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 10));
+        long[] freedAt = {0};
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
+                // A origem tenta, o destino cheio recusa e ela passa a dormir esperando destino.
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    helper.assertTrue(countOf(helper, CHEST, Items.COBBLESTONE) == 10, "a presa entregou num destino cheio");
+                    helper.assertTrue(sleep(helper, router, null), "a porta da presa sumiu");
+                    helper.assertTrue(sleep(helper, router, REMOTE_CHEST), "a porta da remota sumiu");
+                    helper.assertTrue(handler(helper, REMOTE_CHEST).extractItem(3, 64, false).getCount() == 64, "não tirou a pilha");
+                    freedAt[0] = helper.getTick();
+                })
+                .thenWaitUntil(() -> helper.assertTrue(countOf(helper, REMOTE_CHEST, Items.COBBLESTONE) == 10,
+                        "a entrega no destino remoto não saiu"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - freedAt[0] < 20,
+                        "o destino remoto demorou " + (helper.getTick() - freedAt[0]) + " ticks para acordar"))
+                .thenSucceed();
+    }
+
+    /**
+     * Revisão I2: a origem remota de um roteador entregando na presa do mesmo roteador é uma entrega
+     * (compara a máquina, não o nó). O barril, que espera a presa (cheia de terra) abrir espaço, está num
+     * sono longo; a entrega de pedregulho da remota na presa não pode acordá-lo (o tick em que ele
+     * acorda não muda).
+     */
+    @GameTest(template = "empty", timeoutTicks = 500)
+    public static void remoteDeliveryIntoAttachedDoesNotWakeFeeders(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        RouterBlockEntity feeder = waitingFeeder(helper, new BlockPos(0, 1, 0), router.networkId(ResourceType.ITEM));
+        fillButOne(helper, CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        long[] feederWake = {0};
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, router);
+                    waitLoaded(helper, feeder);
+                })
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().waitsDestination(feeder, null, ResourceType.ITEM,
+                        Direction.UP), "o barril não espera destino"))
+                .thenExecute(() -> {
+                    helper.assertTrue(sleep(helper, feeder, null), "a porta do barril sumiu");
+                    feederWake[0] = NetworkManager.get().sourceWakeAt(feeder, null, ResourceType.ITEM, Direction.UP);
+                    handler(helper, REMOTE_CHEST).insertItem(0, new ItemStack(Items.COBBLESTONE, 5), false);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(countOf(helper, CHEST, Items.COBBLESTONE) == 6, "a remota não entregou na presa"))
+                .thenExecute(() -> helper.assertValueEqual(NetworkManager.get().sourceWakeAt(feeder, null, ResourceType.ITEM,
+                        Direction.UP), feederWake[0], "a entrega da remota na presa acordou o barril; o tick do despertar"))
+                .thenSucceed();
+    }
+
+    /**
+     * A mesma regra numa máquina remota ({@code wakeMachine}, pelo mixin): a presa entregando
+     * pedregulho na remota não acorda o barril que espera a remota (cheia de terra) abrir espaço.
+     */
+    @GameTest(template = "empty", timeoutTicks = 500)
+    public static void deliveryIntoRemoteDoesNotWakeFeeders(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        RouterBlockEntity feeder = waitingFeeder(helper, new BlockPos(0, 1, 0), router.networkId(ResourceType.ITEM));
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        fillButOne(helper, REMOTE_CHEST);
+        long[] feederWake = {0};
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, router);
+                    waitLoaded(helper, feeder);
+                })
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().waitsDestination(feeder, null, ResourceType.ITEM,
+                        Direction.UP), "o barril não espera destino"))
+                .thenExecute(() -> {
+                    helper.assertTrue(sleep(helper, feeder, null), "a porta do barril sumiu");
+                    feederWake[0] = NetworkManager.get().sourceWakeAt(feeder, null, ResourceType.ITEM, Direction.UP);
+                    handler(helper, CHEST).insertItem(0, new ItemStack(Items.COBBLESTONE, 5), false);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(countOf(helper, REMOTE_CHEST, Items.COBBLESTONE) == 6,
+                        "a presa não entregou na remota"))
+                .thenExecute(() -> helper.assertValueEqual(NetworkManager.get().sourceWakeAt(feeder, null, ResourceType.ITEM,
+                        Direction.UP), feederWake[0], "a entrega da presa na remota acordou o barril; o tick do despertar"))
+                .thenSucceed();
+    }
+
+    /**
+     * Revisão M4: a carga do chunk (o método que o {@code ChunkEvent.Load} chama) acorda as portas
+     * das remotas do chunk, inclusive uma que nunca teve cache de capability.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chunkLoadWakesRemote(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    link(helper, router, REMOTE_CHEST);
+                    profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
+                .thenExecute(() -> {
+                    BlockPos remote = helper.absolutePos(REMOTE_CHEST);
+                    long now = helper.getLevel().getServer().getTickCount();
+                    helper.assertTrue(sleep(helper, router, REMOTE_CHEST), "a porta da remota sumiu");
+                    helper.assertFalse(NetworkManager.get().sourceAwake(router, remote, ResourceType.ITEM, Direction.UP, now),
+                            "a porta não dormiu");
+                    RemoteIndex.get().chunkLoaded(helper.getLevel(), helper.getLevel().getChunk(remote));
+                    helper.assertTrue(NetworkManager.get().sourceAwake(router, remote, ResourceType.ITEM, Direction.UP, now),
+                            "a carga do chunk não acordou a porta");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Revisão M5, pela carga do chunk: a máquina de teste sem block entity ({@link TestMachines#BACK_SLOT})
+     * girada no mundo não avisa nada; a carga do chunk relê a frente e "Trás" passa para o lado novo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chunkLoadRereadsFront(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos machine = new BlockPos(0, 1, 0);
+        helper.setBlock(machine, TestMachines.BACK_SLOT.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));
+        TestMachines.reset(helper.absolutePos(machine));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    link(helper, router, machine);
+                    profile(helper, router, machine, Direction.SOUTH, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, machine, Direction.WEST), "Trás da frente Leste"))
+                .thenExecute(() -> {
+                    helper.setBlock(machine, TestMachines.BACK_SLOT.defaultBlockState()
+                            .setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
+                    BlockPos absolute = helper.absolutePos(machine);
+                    RemoteIndex.get().chunkLoaded(helper.getLevel(), helper.getLevel().getChunk(absolute));
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertValueEqual(remotes.machine(remotes.index(absolute)).front(), Direction.SOUTH.ordinal(), "frente relida");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, machine, Direction.NORTH), "Trás da frente Sul"))
+                .thenExecute(() -> {
+                    helper.assertFalse(remotePort(helper, router, machine, Direction.WEST), "porta no lado velho");
+                    TestMachines.reset(helper.absolutePos(machine));
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Revisão M5, pelo mixin: uma fornalha remota girada (o block entity fica; a capability não é
+     * invalidada) relê a frente no {@code setChanged} seguinte.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void setChangedRereadsFront(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos furnace = new BlockPos(0, 1, 0);
+        helper.setBlock(furnace, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    link(helper, router, furnace);
+                    profile(helper, router, furnace, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, furnace, Direction.UP), "porta da fornalha"))
+                .thenExecute(() -> {
+                    BlockPos absolute = helper.absolutePos(furnace);
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.setBlock(furnace, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
+                    helper.assertValueEqual(remotes.machine(remotes.index(absolute)).front(), Direction.EAST.ordinal(),
+                            "frente antes do setChanged");
+                    handler(helper, furnace).insertItem(0, new ItemStack(Items.IRON_ORE, 1), false);
+                    helper.assertValueEqual(remotes.machine(remotes.index(absolute)).front(), Direction.SOUTH.ordinal(),
+                            "frente depois do setChanged");
+                })
+                .thenSucceed();
+    }
+
+    /** Sem o upgrade, a posição da máquina vinculada não fica no índice do mixin; com ele, fica; tirando, sai. */
+    @GameTest(template = "empty")
+    public static void indexFollowsUpgrade(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    BlockPos remote = helper.absolutePos(REMOTE_CHEST);
+                    link(helper, router, REMOTE_CHEST);
+                    helper.assertFalse(RemoteIndex.get().isIndexed(router, remote), "no índice sem o upgrade");
+                    router.setRangeUpgrade(rangeUpgrade());
+                    helper.assertTrue(RemoteIndex.get().isIndexed(router, remote), "fora do índice com o upgrade");
+                    router.removeRangeUpgrade();
+                    helper.assertFalse(RemoteIndex.get().isIndexed(router, remote), "no índice depois de tirar o upgrade");
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.unlinkMachine(remote);
+                    helper.assertFalse(RemoteIndex.get().isIndexed(router, remote), "no índice depois de desvincular");
                 })
                 .thenSucceed();
     }

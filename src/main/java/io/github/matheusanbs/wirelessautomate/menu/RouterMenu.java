@@ -271,9 +271,10 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     public void applySnapshot(RouterSnapshot snapshot) {
-        // Cliente: o alvo mudou no servidor, que já pôs a face no quadro novo; a tela segue.
-        if (router == null && snapshot.range().present() && !snapshot.target().equals(this.snapshot.target())) {
-            selectedFace = snapshot.range().face();
+        // Cliente: o alvo mudou no servidor, que já pôs a face no quadro novo; a tela segue. Sem a
+        // RangeView (o upgrade saiu com a tela aberta), o servidor voltou para a face da presa.
+        if (router == null && !snapshot.target().equals(this.snapshot.target())) {
+            selectedFace = snapshot.range().present() ? snapshot.range().face() : snapshot.facing();
         }
         this.snapshot = snapshot;
         version++;
@@ -336,7 +337,13 @@ public class RouterMenu extends AbstractContainerMenu {
         EditTargetRef fresh = targetRef.refresh(router);
         if (!fresh.equals(targetRef)) {
             if (fresh.target().attached() && !targetRef.target().attached()) {
-                targetLost = true;
+                // A face estava no quadro canônico da remota: volta para a face onde o roteador está
+                // preso, que o cliente também conhece (snapshot.facing()), e os dois ficam iguais.
+                attachedFace = router.facing();
+                selectedFace = attachedFace;
+                // Com o upgrade ainda valendo (a máquina sumiu), os cartões travam até a tela escolher
+                // um alvo pela lista. Sem ele não há lista: a tela volta a ser a de sempre, sem trava.
+                targetLost = router.rangeActive();
             }
             targetRef = fresh;
             targetChanged = true;

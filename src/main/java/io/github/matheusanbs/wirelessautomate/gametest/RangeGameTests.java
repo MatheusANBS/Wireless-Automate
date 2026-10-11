@@ -1923,6 +1923,39 @@ public final class RangeGameTests {
         }
     }
 
+    /**
+     * Tirar o upgrade com a tela num alvo remoto: o menu volta para a presa, na face onde o roteador está
+     * preso (a mesma que o cliente adota, {@code snapshot.facing()}), e os cartões não ficam travados.
+     */
+    @GameTest(template = "empty")
+    public static void screenUpgradeRemovedRestoresFace(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    linkAll(helper, router);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.group(menu.containerId, furnaces, furnaceId())), "não escolheu o grupo");
+                        menu.select(ResourceType.ITEM, Direction.SOUTH);
+                        router.removeRangeUpgrade();
+                        RouterSnapshot snapshot = menu.pollSnapshot();
+                        helper.assertTrue(menu.validTarget().attached(), "o alvo não voltou para a presa");
+                        helper.assertValueEqual(menu.selectedFace(), router.facing(), "a face não voltou para a da presa");
+                        helper.assertTrue(snapshot != null && !snapshot.range().present() && snapshot.target().attached(),
+                                "o snapshot ainda traz o alvo remoto");
+                        helper.assertFalse(menu.cardsLocked(), "os cartões ficaram travados sem o upgrade");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty")
     public static void screenShiftClickCardGoesToGroup(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);

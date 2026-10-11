@@ -123,10 +123,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int DROPDOWN_MAX_ROWS = 8;
     /** Faixa do botão "Máquinas" acima do visor (tirada da altura dele), com o upgrade de alcance. */
     private static final int RANGE_STRIP = 14;
-    /** Linha dos botões Voltar ao perfil e Desvincular, no lugar da segunda linha do cabeçalho. */
-    private static final int TARGET_ROW_Y = BODY_Y + 11;
+    /**
+     * Linha dos botões Voltar ao perfil e Desvincular, no lugar da segunda linha do cabeçalho: 2 px
+     * acima dos botões de modo ({@link #MODE_Y}).
+     */
+    private static final int TARGET_ROW_Y = BODY_Y + 10;
     private static final int TARGET_ROW_H = 12;
-    /** Mostra a lista das máquinas no lugar do visor (lembrado na sessão, como o tamanho). */
+    /** Folga entre os dois botões e o texto de cada um até a borda (de cada lado). */
+    private static final int TARGET_GAP = 3;
+    private static final int TARGET_PAD = 3;
+    /** Margem mínima do rótulo de uma face remota até a borda do botão, de cada lado. */
+    private static final int SIDE_PAD = 3;
+    /**
+     * Mostra a lista das máquinas no lugar do visor. Estático de propósito, como {@link #savedW}: a
+     * escolha vale para a sessão inteira, então a próxima tela de um roteador com o upgrade já abre na
+     * lista (ou no visor) como o jogador deixou.
+     */
     private static boolean showList;
 
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
@@ -447,10 +459,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         machinesButton = add(new FlatButton(x + X0, y + BODY_Y, viewW(), RANGE_STRIP - 2, tr("range.machines", 0, 0),
                 this::paintMachines, () -> showList = !showList).tooltip(this::machinesTooltip));
         revertButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.revert"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("range.revert")), this::revertMachine)
+                (g, b, hovered) -> paintClippedButton(g, b, hovered, tr("range.revert")), this::revertMachine)
                 .tooltip(() -> tr("range.revert.tooltip")));
         unlinkButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.unlink"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("range.unlink")), this::unlinkMachine)
+                (g, b, hovered) -> paintClippedButton(g, b, hovered, tr("range.unlink")), this::unlinkMachine)
                 .tooltip(() -> tr("range.unlink.tooltip")));
 
         for (int i = 0; i < MODES.length; i++) {
@@ -681,16 +693,25 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         RangeView.MachineView machine = targetMachine();
         boolean exception = machine != null && machine.exception();
+        // a largura do texto mais a folga, sem passar da coluna: se não couber, o Desvincular fica com
+        // até metade e o Voltar ao perfil com o resto, e o texto abrevia (com o inteiro na dica)
+        int unlinkW = font.width(tr("range.unlink")) + 2 * TARGET_PAD;
+        int revertW = exception ? font.width(tr("range.revert")) + 2 * TARGET_PAD : 0;
+        if (exception && revertW + TARGET_GAP + unlinkW > RW) {
+            unlinkW = Math.min(unlinkW, (RW - TARGET_GAP) / 2);
+            revertW = RW - TARGET_GAP - unlinkW;
+        }
+        unlinkW = Math.min(unlinkW, RW);
         int bx = leftPos + rx();
         revertButton.visible = revertButton.active = exception;
         if (exception) {
             revertButton.setX(bx);
-            revertButton.setWidth(font.width(tr("range.revert")) + 8);
-            bx += revertButton.getWidth() + 2;
+            revertButton.setWidth(revertW);
+            bx += revertW + TARGET_GAP;
         }
         unlinkButton.visible = unlinkButton.active = machine != null;
         unlinkButton.setX(bx);
-        unlinkButton.setWidth(font.width(tr("range.unlink")) + 8);
+        unlinkButton.setWidth(unlinkW);
     }
 
     /**
@@ -1515,10 +1536,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (v.mode() != PortMode.NONE) {
             g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, GuiPaint.modeColor(v.mode()));
         }
-        Component label = sideShort(direction);
-        int textW = Math.min(font.width(label), w - 2);
-        // a largura do texto inclui 1 px de espaço no fim: centrado assim, sobra 1 px até a borda dos dois lados
-        GuiText.draw(g, font, label, x + 1 + (w - 1 - textW) / 2, y + 4, w - 2,
+        // o nome inteiro se couber com a margem; senão o abreviado (o inteiro vai na dica)
+        int room = w - 2 * SIDE_PAD;
+        Component label = font.width(sideName(direction)) - 1 <= room ? sideName(direction) : sideShort(direction);
+        // a largura do texto inclui 1 px de espaço no fim, que não conta para a margem
+        int textW = Math.min(font.width(label) - 1, room);
+        GuiText.draw(g, font, label, x + SIDE_PAD + (room - textW) / 2, y + 4, room + 1,
                 selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
     }
 
@@ -1549,6 +1572,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiPaint.port(g, mode, b.getX() + 2, b.getY() + 1, b.active ? 1f : 0.3f);
         GuiText.draw(g, font, modeName(mode), b.getX() + 21, b.getY() + 5, b.getWidth() - 22,
                 b.active ? GuiPaint.FG : GuiPaint.DISABLED);
+    }
+
+    /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
+    private void paintClippedButton(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
+        int border = hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
+        int room = b.getWidth() - 2 * TARGET_PAD;
+        int textW = Math.min(font.width(text), room);
+        GuiText.draw(g, font, text, b.getX() + TARGET_PAD + (room - textW + 1) / 2, b.getY() + (b.getHeight() - 8) / 2,
+                room, GuiPaint.FG);
     }
 
     private void paintTextButton(GuiGraphics g, FlatButton b, boolean hovered, Component text) {

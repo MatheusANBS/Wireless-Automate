@@ -2962,7 +2962,38 @@ public final class DevEndToEnd {
                                 && onServer(server -> !router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
                         () -> "alcance " + rangeView()));
             }
+            if (!pt) {
+                // tirar o upgrade pelo slot com a tela num alvo remoto: a tela volta a ser a de sempre, na
+                // face onde o roteador está preso, igual no cliente e no servidor
+                list.add(new Step(label + "tirar o upgrade com a tela aberta", STEP_TIMEOUT_MS, () -> {
+                    Minecraft minecraft = Minecraft.getInstance();
+                    minecraft.gameMode.handleInventoryMouseClick(routerScreen().getMenu().containerId,
+                            RouterMenu.RANGE_SLOT, 0, ClickType.QUICK_MOVE, minecraft.player);
+                }, () -> {
+                    RouterMenu menu = routerScreen().getMenu();
+                    Direction serverFace = onServer(server -> server.getPlayerList().getPlayer(playerId).containerMenu
+                            instanceof RouterMenu m && m.target().attached() ? m.selectedFace() : null);
+                    return !menu.snapshot().range().present() && menu.snapshot().target().attached()
+                            && menu.selectedFace() == Direction.UP && serverFace == Direction.UP
+                            && find(byMessageKey("gui.wirelessautomate.router.range.machines")) == null
+                            && find(byMessage(face(Direction.UP))) != null
+                            && !onServer(server -> router(server, rangeRouter).rangeActive()) && stepTicks >= 4;
+                }, () -> "face no cliente " + routerScreen().getMenu().selectedFace() + ", alcance "
+                        + routerScreen().getMenu().snapshot().range().present() + ", alvo "
+                        + routerScreen().getMenu().snapshot().target()));
+                list.add(rangeClipCheck(label + "sem upgrade"));
+                list.add(capture("range-4-sem-upgrade"));
+            }
             list.add(close(label + "fechar"));
+            if (!pt) {
+                list.add(new Step(label + "upgrade de volta", STEP_TIMEOUT_MS, () -> onServer(server -> {
+                    ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                    player.getInventory().clearOrCountMatchingItems(stack -> stack.is(ModItems.RANGE_UPGRADE.get()), -1,
+                            player.inventoryMenu.getCraftSlots());
+                    router(server, rangeRouter).setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+                    return null;
+                }), () -> onServer(server -> router(server, rangeRouter).rangeActive()), () -> "upgrade fora"));
+            }
             if (pt) {
                 list.add(language("en_us"));
             }

@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -349,10 +350,10 @@ public final class TypeNetworkGameTests {
             helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), source, true), "copiar não agiu");
             RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
             helper.assertTrue(preset != null, "nada copiado");
-            helper.assertValueEqual(preset.network(ResourceType.ITEM), lines.id(), "itens no preset");
-            helper.assertValueEqual(preset.network(ResourceType.FLUID), fluids.id(), "fluidos no preset");
-            helper.assertValueEqual(preset.network(ResourceType.ENERGY), foreign.id(), "energia no preset");
-            helper.assertTrue(preset.network(ResourceType.CHEMICAL) == null, "químicos no preset");
+            helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(lines.id()), "itens no preset");
+            helper.assertValueEqual(preset.networks(ResourceType.FLUID), List.of(fluids.id()), "fluidos no preset");
+            helper.assertValueEqual(preset.networks(ResourceType.ENERGY), List.of(foreign.id()), "energia no preset");
+            helper.assertTrue(preset.networks(ResourceType.CHEMICAL).isEmpty(), "químicos no preset");
 
             helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), target, false), "colar não agiu");
             helper.assertValueEqual(target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
@@ -362,11 +363,14 @@ public final class TypeNetworkGameTests {
             helper.assertValueEqual(target.networkId(ResourceType.CHEMICAL), targetNetwork.id(),
                     "tipo sem rede no preset mexeu na rede");
 
-            // Codecs: por tipo vai e volta; o formato antigo (rede única) vale para todos os tipos.
+            // Codecs: a rede de cada face vai e volta (a chave antiga networks não é escrita); os
+            // formatos antigos põem a rede nas seis faces do tipo (a rede única, em todos os tipos).
             RegistryAccess registries = helper.getLevel().registryAccess();
             RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
             Tag tag = RouterPreset.CODEC.encodeStart(ops, preset).getOrThrow();
             helper.assertValueEqual(RouterPreset.CODEC.parse(ops, tag).getOrThrow(), preset, "codec por tipo");
+            helper.assertTrue(tag instanceof CompoundTag written && !written.contains("networks")
+                    && !written.contains("network"), "escreveu a chave antiga: " + tag);
             RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
             try {
                 RouterPreset.STREAM_CODEC.encode(buf, preset);
@@ -378,9 +382,33 @@ public final class TypeNetworkGameTests {
             legacy.putUUID("network", lines.id());
             RouterPreset old = RouterPreset.CODEC.parse(ops, legacy).getOrThrow();
             for (ResourceType type : ResourceType.values()) {
-                helper.assertValueEqual(old.network(type), lines.id(), "preset antigo em " + type);
+                for (RelativeSide side : RelativeSide.values()) {
+                    helper.assertTrue(lines.id().equals(old.network(type, side)), "preset antigo em " + type + " " + side);
+                }
             }
-            helper.assertTrue(!preset.equals(preset.withoutNetwork(ResourceType.FLUID)), "equals ignorou uma aba");
+
+            // Mapa por tipo (o formato da rede por aba): só os tipos do mapa, nas seis faces; a face
+            // que já tinha configuração fica com ela.
+            CompoundTag byType = new CompoundTag();
+            CompoundTag networks = new CompoundTag();
+            networks.putUUID(ResourceType.ITEM.key(), lines.id());
+            byType.put("networks", networks);
+            CompoundTag faces = new CompoundTag();
+            CompoundTag itemFaces = new CompoundTag();
+            CompoundTag front = new CompoundTag();
+            front.putString("mode", PortMode.EXTRACT.name());
+            itemFaces.put(RelativeSide.FRONT.key(), front);
+            faces.put(ResourceType.ITEM.key(), itemFaces);
+            byType.put("faces", faces);
+            RouterPreset perType = RouterPreset.CODEC.parse(ops, byType).getOrThrow();
+            for (RelativeSide side : RelativeSide.values()) {
+                helper.assertTrue(lines.id().equals(perType.network(ResourceType.ITEM, side)),
+                        "preset por tipo em itens " + side);
+                helper.assertTrue(perType.network(ResourceType.FLUID, side) == null, "preset por tipo em fluidos " + side);
+            }
+            helper.assertValueEqual(perType.face(ResourceType.ITEM, RelativeSide.FRONT).mode(), PortMode.EXTRACT,
+                    "a face antiga perdeu o modo");
+            helper.assertTrue(!preset.equals(preset.withoutNetwork(fluids.id())), "equals ignorou uma rede");
         } finally {
             data.remove(lines.id());
             data.remove(fluids.id());

@@ -54,11 +54,11 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>Área (qualquer máquina)</b>: a mesma área, colando em todos os roteadores dela.</li>
  * </ul>
  * Shift + clique direito num bloco que não é roteador limpa a varinha (a cópia e a área).
- * A rede de cada aba só é colada se o jogador puder usá-la ({@link PresetApplier}).
+ * A rede de cada face só é colada se o jogador puder usá-la ({@link PresetApplier}).
  *
  * <p>O seletor de tipo ({@link ModDataComponents#CONFIGURATOR_TYPE}, trocado com Shift + roda do
  * mouse, como no Vinculador) escolhe o que o colar aplica: sem tipo (Todos), todas as abas; com um
- * tipo, só as faces e a rede daquela aba, e as outras abas do roteador ficam como estavam. Copiar
+ * tipo, só as faces daquela aba (com as redes delas), e as outras abas do roteador ficam como estavam. Copiar
  * sempre copia tudo.
  */
 public class ConfiguratorItem extends Item {
@@ -261,11 +261,10 @@ public class ConfiguratorItem extends Item {
     private static void copy(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
         RouterPreset preset = RouterPreset.copyOf(router);
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = preset.network(type);
-            if (id != null && data.network(id) == null) {
+        for (UUID id : preset.distinctNetworks()) {
+            if (data.network(id) == null) {
                 // Rede removida: o id órfão não serve para nada colado noutro roteador.
-                preset = preset.withoutNetwork(type);
+                preset = preset.withoutNetwork(id);
             }
         }
         stack.set(ModDataComponents.PRESET.get(), preset);
@@ -285,10 +284,10 @@ public class ConfiguratorItem extends Item {
     }
 
     /**
-     * Cola as faces e a rede de cada tipo que o jogador pode usar (dono ou operador nível 2). A rede
-     * de um tipo que não pode (de outro dono ou removida) fica como estava no roteador, com aviso.
+     * Cola as faces, cada uma com a sua rede se o jogador pode usá-la (dono ou operador nível 2). A
+     * face cuja rede ele não pode usar (de outro dono ou removida) fica com a rede que tinha, com aviso.
      * No pincel, a máquina não importa: colar num roteador é sempre escolha do jogador. Com um tipo
-     * no seletor, só aquela aba é colada (e só a rede dela entra na regra).
+     * no seletor, só aquela aba é colada (e só as redes das faces dela entram na regra).
      */
     private static void paste(ServerPlayer player, ItemStack stack, RouterBlockEntity router, BlockPos pos) {
         RouterPreset preset = stack.get(ModDataComponents.PRESET.get());

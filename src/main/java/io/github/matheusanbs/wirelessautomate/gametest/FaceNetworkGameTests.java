@@ -1,5 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -17,11 +19,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -608,5 +612,48 @@ public final class FaceNetworkGameTests {
                     assertCount(helper, CORNER_B, 0);
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * {@code /wa face <pos> <tipo> <face> network <nome|none>} pelo dispatcher do servidor: a face
+     * absoluta recebe a rede pelo nome e {@code none} tira; o argumento de modo continua valendo.
+     */
+    @GameTest(template = "empty")
+    public static void faceCommandSetsNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = router(helper);
+        String name = "Comando " + UUID.randomUUID();
+        UUID net = network(helper, name);
+        MinecraftServer server = helper.getLevel().getServer();
+        CommandDispatcher<CommandSourceStack> dispatcher = server.getCommands().getDispatcher();
+        CommandSourceStack source = server.createCommandSourceStack().withLevel(helper.getLevel())
+                .withSuppressedOutput();
+        BlockPos pos = helper.absolutePos(ROUTER);
+        String prefix = "wa face " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " item ";
+        try {
+            dispatcher.execute(prefix + "up network " + name, source);
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), net, "rede pelo comando");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), null, "outra face");
+            assertNetwork(helper, router.faceNetwork(ResourceType.FLUID, Direction.UP), null, "outro tipo");
+
+            dispatcher.execute(prefix + "down extract", source);
+            helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.DOWN).mode(), PortMode.EXTRACT,
+                    "o modo deixou de valer");
+
+            dispatcher.execute(prefix + "up network none", source);
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), null, "none não tirou");
+
+            boolean refused = false;
+            try {
+                dispatcher.execute(prefix + "up network Inexistente " + UUID.randomUUID(), source);
+            } catch (CommandSyntaxException e) {
+                refused = true;
+            }
+            helper.assertTrue(refused, "aceitou uma rede que não existe");
+        } catch (CommandSyntaxException e) {
+            throw new IllegalStateException("comando recusado: " + e.getMessage(), e);
+        } finally {
+            NetworkSavedData.get(server).remove(net);
+        }
+        helper.succeed();
     }
 }

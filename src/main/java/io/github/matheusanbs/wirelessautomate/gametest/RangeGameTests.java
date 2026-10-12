@@ -231,6 +231,17 @@ public final class RangeGameTests {
         helper.assertTrue(router.linkMachine(helper.absolutePos(relative)), "não vinculou " + relative);
     }
 
+    /**
+     * Vincula e põe todas as faces (presa, perfis e exceções) na rede da presa: a rede é da face e o
+     * grupo novo nasce sem rede, então a remota não pegaria a rede do roteador sozinha.
+     */
+    private static void linkInNetwork(GameTestHelper helper, RouterBlockEntity router, BlockPos relative) {
+        link(helper, router, relative);
+        UUID network = router.networkId(ResourceType.ITEM);
+        helper.assertTrue(network != null, "o roteador não está numa rede");
+        router.setNetworkId(network);
+    }
+
     private static ItemStack itemCard() {
         ItemStack card = new ItemStack(ModItems.FILTER_CARD.get());
         FilterCardItem.setContents(card, new FilterCardItem.Contents(ResourceType.ITEM, Filter.EMPTY));
@@ -508,7 +519,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 16, "os itens não chegaram ao baú remoto"))
@@ -531,8 +542,8 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                    link(helper, router, FURNACE_A);
-                    link(helper, router, FURNACE_B);
+                    linkInNetwork(helper, router, FURNACE_A);
+                    linkInNetwork(helper, router, FURNACE_B);
                     profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, CHEST) == 12, "o resultado das fornalhas não chegou"))
@@ -566,8 +577,8 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                    link(helper, router, east);
-                    link(helper, router, south);
+                    linkInNetwork(helper, router, east);
+                    linkInNetwork(helper, router, south);
                     // Trás, no quadro canônico (frente = Norte), é o Sul.
                     profile(helper, router, east, Direction.SOUTH, PortMode.EXTRACT);
                 })
@@ -597,8 +608,8 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, outside);
-                    link(helper, router, inside);
+                    linkInNetwork(helper, router, outside);
+                    linkInNetwork(helper, router, inside);
                     profile(helper, router, inside, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, inside) == 64, "o barril no raio não recebeu tudo"))
@@ -630,7 +641,7 @@ public final class RangeGameTests {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     for (BlockPos barrel : barrels) {
-                        link(helper, router, barrel);
+                        linkInNetwork(helper, router, barrel);
                     }
                     profile(helper, router, barrels[0], Direction.UP, PortMode.INSERT);
                 })
@@ -657,7 +668,7 @@ public final class RangeGameTests {
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenExecuteAfter(40, () -> {
@@ -680,7 +691,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota não recebeu com o upgrade"))
@@ -720,9 +731,9 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, outside);
+                    linkInNetwork(helper, router, outside);
                     for (BlockPos barrel : barrels) {
-                        link(helper, router, barrel);
+                        linkInNetwork(helper, router, barrel);
                     }
                     profile(helper, router, outside, Direction.UP, PortMode.INSERT);
                 })
@@ -750,7 +761,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota não recebeu"))
@@ -787,7 +798,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(count(helper, REMOTE_CHEST) == 1, "a remota não recebeu"))
@@ -884,7 +895,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.EXTRACT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
@@ -921,7 +932,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
@@ -962,7 +973,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.EXTRACT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))
@@ -998,7 +1009,7 @@ public final class RangeGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
-                    link(helper, router, REMOTE_CHEST);
+                    linkInNetwork(helper, router, REMOTE_CHEST);
                     profile(helper, router, REMOTE_CHEST, Direction.UP, PortMode.INSERT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, REMOTE_CHEST, Direction.UP), "porta da remota"))

@@ -22,8 +22,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -303,6 +307,277 @@ public final class FaceNetworkGameTests {
                     assertNetwork(helper, spun.faceNetwork(ResourceType.ITEM, Direction.NORTH), north, "rede da face norte");
                     assertNetwork(helper, spun.faceNetwork(ResourceType.ITEM, Direction.EAST), east, "rede da face leste");
                     assertNetwork(helper, spun.faceNetwork(ResourceType.ITEM, Direction.SOUTH), null, "a face sul ganhou rede");
+                })
+                .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ motor (rede de cada porta)
+
+    // Baús nos cantos e no centro (nenhum vizinho de outro), cada um com um roteador em cima
+    // (facing=UP): a face configurada da máquina é UP, salvo no roteador do centro, que usa UP e DOWN
+    // (as duas dão no mesmo baú).
+    private static final BlockPos CORNER_A = new BlockPos(0, 1, 0);
+    private static final BlockPos CORNER_B = new BlockPos(2, 1, 2);
+    private static final BlockPos CORNER_C = new BlockPos(2, 1, 0);
+    private static final BlockPos CORNER_D = new BlockPos(0, 1, 2);
+
+    /** Baú em {@code pos} com um roteador Básico em cima, com a face UP de itens em {@code mode} na rede. */
+    private static RouterBlockEntity chestRouter(GameTestHelper helper, BlockPos pos, @Nullable UUID network, PortMode mode) {
+        helper.setBlock(pos, Blocks.CHEST);
+        helper.setBlock(pos.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(pos.above());
+        router.setNetworkId(ResourceType.ITEM, network);
+        router.setMode(ResourceType.ITEM, Direction.UP, mode);
+        return router;
+    }
+
+    /** O roteador do centro ({@link #CHEST}) sem rede; as faces são postas por {@link #face}. */
+    private static RouterBlockEntity middle(GameTestHelper helper) {
+        return chestRouter(helper, CHEST, null, PortMode.NONE);
+    }
+
+    private static void face(RouterBlockEntity router, Direction face, @Nullable UUID network, PortMode mode) {
+        router.setFaceNetwork(ResourceType.ITEM, face, network);
+        router.setMode(ResourceType.ITEM, face, mode);
+    }
+
+    private static int count(GameTestHelper helper, BlockPos pos, Item item) {
+        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        int total = 0;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack stack = chest.getItem(i);
+            if (stack.is(item)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static void assertCount(GameTestHelper helper, BlockPos pos, int expected) {
+        int actual = count(helper, pos, Items.DIAMOND);
+        helper.assertTrue(actual == expected, "diamantes em " + pos.toShortString() + ": esperava " + expected + ", veio " + actual);
+    }
+
+    private static void putDiamonds(GameTestHelper helper, BlockPos pos, int amount) {
+        ChestBlockEntity chest = helper.getBlockEntity(pos);
+        chest.setItem(0, new ItemStack(Items.DIAMOND, amount));
+    }
+
+    private static void allLoaded(GameTestHelper helper, RouterBlockEntity... routers) {
+        for (RouterBlockEntity router : routers) {
+            loaded(helper, router);
+        }
+    }
+
+    private static @Nullable Object order(RouterBlockEntity router, Direction face) {
+        return NetworkManager.get().sourceOrderForTests(router, ResourceType.ITEM, face);
+    }
+
+    /** O exemplo da spec: o item sai de A pela rede Mina, entra em M por Cima, sai por Baixo pela Armazém e chega em B. */
+    @GameTest(template = "empty")
+    public static void twoNetworksThroughOneMachine(GameTestHelper helper) {
+        UUID mine = network(helper, "mina");
+        UUID storage = network(helper, "armazem");
+        RouterBlockEntity m = middle(helper);
+        face(m, Direction.UP, mine, PortMode.INSERT);
+        face(m, Direction.DOWN, storage, PortMode.EXTRACT);
+        RouterBlockEntity s = chestRouter(helper, CORNER_A, mine, PortMode.EXTRACT);
+        RouterBlockEntity t = chestRouter(helper, CORNER_B, storage, PortMode.INSERT);
+        putDiamonds(helper, CORNER_A, 10);
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, m, s, t))
+                .thenExecute(() -> {
+                    helper.assertTrue(NetworkManager.get().isMember(mine, m), "M fora da Mina");
+                    helper.assertTrue(NetworkManager.get().isMember(storage, m), "M fora do Armazém");
+                })
+                .thenWaitUntil(() -> {
+                    assertCount(helper, CORNER_B, 10);
+                    assertCount(helper, CORNER_A, 0);
+                    assertCount(helper, CHEST, 0);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Mudar a rede de uma face suja o tipo na rede antiga, na nova e nas outras do nó naquele tipo
+     * (a leitura das portas é dividida); depois da montagem o nó sai da antiga e ela para de entregar.
+     */
+    @GameTest(template = "empty")
+    public static void changingFaceNetworkDirtiesOldAndNew(GameTestHelper helper) {
+        UUID mine = network(helper, "mina");
+        UUID storage = network(helper, "armazem");
+        UUID third = network(helper, "terceira");
+        RouterBlockEntity m = middle(helper);
+        face(m, Direction.UP, mine, PortMode.INSERT);
+        face(m, Direction.DOWN, storage, PortMode.EXTRACT);
+        RouterBlockEntity s = chestRouter(helper, CORNER_A, mine, PortMode.EXTRACT);
+        RouterBlockEntity t = chestRouter(helper, CORNER_B, storage, PortMode.INSERT);
+        // A terceira rede ganha outro membro, para existir no motor antes de M entrar nela.
+        RouterBlockEntity other = chestRouter(helper, CORNER_C, third, PortMode.NONE);
+        putDiamonds(helper, CORNER_A, 1);
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, m, s, t, other))
+                .thenWaitUntil(() -> assertCount(helper, CORNER_B, 1))
+                .thenExecute(() -> {
+                    m.setFaceNetwork(ResourceType.ITEM, Direction.UP, third);
+                    NetworkManager manager = NetworkManager.get();
+                    helper.assertTrue(manager.isDirty(mine, ResourceType.ITEM), "a rede antiga não sujou");
+                    helper.assertTrue(manager.isDirty(third, ResourceType.ITEM), "a rede nova não sujou");
+                    helper.assertTrue(manager.isDirty(storage, ResourceType.ITEM), "a outra rede do nó não sujou");
+                })
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    helper.assertFalse(NetworkManager.get().isMember(mine, m), "M continua na Mina");
+                    helper.assertTrue(NetworkManager.get().isMember(third, m), "M fora da terceira rede");
+                    helper.assertTrue(NetworkManager.get().isMember(storage, m), "M saiu do Armazém");
+                    putDiamonds(helper, CORNER_A, 5);
+                })
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    assertCount(helper, CORNER_A, 5);
+                    assertCount(helper, CHEST, 0);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O risco da leitura dividida: R com Baixo extraindo na rede X e Cima na Y, cada uma com dois
+     * destinos (o rodízio tem cursor). Mudar uma face relê o tipo inteiro no nó; a ordem da outra face,
+     * na outra rede, tem de continuar a mesma instância. Mudar Cima e depois Baixo cobre as duas
+     * ordens de montagem (a rede da face mudada monta antes ou depois da outra).
+     */
+    @GameTest(template = "empty")
+    public static void cursorsSurviveWithTwoNetworksOnOneNode(GameTestHelper helper) {
+        UUID x = network(helper, "x");
+        UUID y = network(helper, "y");
+        RouterBlockEntity r = middle(helper);
+        face(r, Direction.DOWN, x, PortMode.EXTRACT);
+        face(r, Direction.UP, y, PortMode.EXTRACT);
+        RouterBlockEntity c = chestRouter(helper, CORNER_C, x, PortMode.INSERT);
+        RouterBlockEntity d = chestRouter(helper, CORNER_D, x, PortMode.INSERT);
+        RouterBlockEntity a = chestRouter(helper, CORNER_A, y, PortMode.INSERT);
+        RouterBlockEntity b = chestRouter(helper, CORNER_B, y, PortMode.INSERT);
+        Object[] kept = new Object[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, r, a, b, c, d))
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(order(r, Direction.DOWN) != null, "Baixo sem rota");
+                    helper.assertTrue(order(r, Direction.UP) != null, "Cima sem rota");
+                })
+                .thenExecute(() -> {
+                    kept[0] = order(r, Direction.DOWN);
+                    r.setPriority(ResourceType.ITEM, Direction.UP, 5);
+                })
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    Object now = order(r, Direction.DOWN);
+                    helper.assertTrue(now != null, "Baixo ficou sem rota ao mudar Cima");
+                    helper.assertTrue(now == kept[0], "Baixo perdeu os cursores ao mudar Cima");
+                    helper.assertTrue(order(r, Direction.UP) != null, "Cima ficou sem rota");
+                    kept[0] = order(r, Direction.UP);
+                    r.setPriority(ResourceType.ITEM, Direction.DOWN, 5);
+                })
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    Object now = order(r, Direction.UP);
+                    helper.assertTrue(now != null, "Cima ficou sem rota ao mudar Baixo");
+                    helper.assertTrue(now == kept[0], "Cima perdeu os cursores ao mudar Baixo");
+                    helper.assertTrue(order(r, Direction.DOWN) != null, "Baixo ficou sem rota");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Na rede Y, uma origem de outro roteador dorme e entrega em destinos que não são de R. Mudar a
+     * face Baixo de R (rede X) remonta Y também (R tem a face Cima nela), mas não acorda essa origem
+     * nem a deixa sem rota.
+     */
+    @GameTest(template = "empty")
+    public static void otherNodeSleepSurvives(GameTestHelper helper) {
+        UUID x = network(helper, "x");
+        UUID y = network(helper, "y");
+        RouterBlockEntity r = middle(helper);
+        face(r, Direction.DOWN, x, PortMode.EXTRACT);
+        face(r, Direction.UP, y, PortMode.EXTRACT);
+        RouterBlockEntity c = chestRouter(helper, CORNER_C, x, PortMode.INSERT);
+        RouterBlockEntity s = chestRouter(helper, CORNER_A, y, PortMode.EXTRACT);
+        RouterBlockEntity b = chestRouter(helper, CORNER_B, y, PortMode.INSERT);
+        Object[] kept = new Object[1];
+        int[] interval = new int[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, r, c, s, b))
+                .thenWaitUntil(() -> helper.assertTrue(order(s, Direction.UP) != null, "a origem de Y sem rota"))
+                .thenExecute(() -> {
+                    NetworkManager manager = NetworkManager.get();
+                    long now = helper.getLevel().getServer().getTickCount();
+                    helper.assertTrue(manager.sleepForTests(s, null, ResourceType.ITEM, Direction.UP, now, 1000), "porta não existe");
+                    kept[0] = order(s, Direction.UP);
+                    interval[0] = manager.sourceSleepInterval(s, ResourceType.ITEM, Direction.UP);
+                    r.setPriority(ResourceType.ITEM, Direction.DOWN, 5);
+                    helper.assertTrue(manager.isDirty(y, ResourceType.ITEM), "Y não sujou");
+                })
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    NetworkManager manager = NetworkManager.get();
+                    long now = helper.getLevel().getServer().getTickCount();
+                    helper.assertFalse(manager.sourceAwake(s, null, ResourceType.ITEM, Direction.UP, now), "a origem de Y acordou");
+                    helper.assertTrue(manager.sourceSleepInterval(s, ResourceType.ITEM, Direction.UP) == interval[0],
+                            "o intervalo do sono mudou");
+                    Object order = order(s, Direction.UP);
+                    helper.assertTrue(order != null, "a origem de Y ficou sem rota");
+                    helper.assertTrue(order == kept[0], "a origem de Y perdeu os cursores");
+                })
+                .thenSucceed();
+    }
+
+    /** Apagar a rede de uma face para só essa face; ela guarda o UUID e a outra continua movendo. */
+    @GameTest(template = "empty")
+    public static void removedNetworkStopsOnlyThatFace(GameTestHelper helper) {
+        UUID mine = network(helper, "mina");
+        UUID storage = network(helper, "armazem");
+        RouterBlockEntity m = middle(helper);
+        face(m, Direction.UP, mine, PortMode.INSERT);
+        face(m, Direction.DOWN, storage, PortMode.EXTRACT);
+        RouterBlockEntity s = chestRouter(helper, CORNER_A, mine, PortMode.EXTRACT);
+        RouterBlockEntity t = chestRouter(helper, CORNER_B, storage, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, m, s, t))
+                .thenExecute(() -> helper.assertTrue(
+                        NetworkSavedData.get(helper.getLevel().getServer()).remove(storage), "rede não removida"))
+                .thenIdle(2)
+                .thenExecute(() -> {
+                    assertNetwork(helper, m.faceNetwork(ResourceType.ITEM, Direction.DOWN), storage, "a face Baixo perdeu o UUID");
+                    putDiamonds(helper, CORNER_A, 10);
+                })
+                .thenWaitUntil(() -> assertCount(helper, CHEST, 10))
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    assertCount(helper, CHEST, 10);
+                    assertCount(helper, CORNER_B, 0);
+                })
+                .thenSucceed();
+    }
+
+    /** Sem rede em nenhuma face de itens, R sai da rede e as portas não ficam com rota velha. */
+    @GameTest(template = "empty")
+    public static void noNetworkFacesLeaveNoMembership(GameTestHelper helper) {
+        UUID x = network(helper, "x");
+        RouterBlockEntity r = middle(helper);
+        face(r, Direction.UP, x, PortMode.EXTRACT);
+        RouterBlockEntity t = chestRouter(helper, CORNER_B, x, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> allLoaded(helper, r, t))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().isMember(x, r), "R fora da rede"))
+                .thenExecute(() -> {
+                    r.setNetworkId(ResourceType.ITEM, null);
+                    putDiamonds(helper, CHEST, 10);
+                })
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    helper.assertFalse(NetworkManager.get().isMember(x, r), "R continua na rede");
+                    helper.assertTrue(order(r, Direction.UP) == null, "a porta ficou com rota velha");
+                    assertCount(helper, CHEST, 10);
+                    assertCount(helper, CORNER_B, 0);
                 })
                 .thenSucceed();
     }

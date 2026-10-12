@@ -23,6 +23,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -218,7 +219,7 @@ public final class TypeNetworkGameTests {
         RouterBlockEntity router = new RouterBlockEntity(BlockPos.ZERO, state);
         router.loadWithComponents(old, registries);
         for (ResourceType type : ResourceType.values()) {
-            helper.assertValueEqual(router.networkId(type), legacy, "rede antiga em " + type);
+            assertNetwork(helper, router.networkId(type), legacy, "rede antiga em " + type);
         }
 
         UUID energy = UUID.randomUUID();
@@ -228,9 +229,9 @@ public final class TypeNetworkGameTests {
         helper.assertFalse(saved.contains("network"), "salvou o formato antigo");
         RouterBlockEntity copy = new RouterBlockEntity(BlockPos.ZERO, state);
         copy.loadWithComponents(saved, registries);
-        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), legacy, "itens");
-        helper.assertValueEqual(copy.networkId(ResourceType.FLUID), legacy, "fluidos");
-        helper.assertValueEqual(copy.networkId(ResourceType.ENERGY), energy, "energia");
+        assertNetwork(helper, copy.networkId(ResourceType.ITEM), legacy, "itens");
+        assertNetwork(helper, copy.networkId(ResourceType.FLUID), legacy, "fluidos");
+        assertNetwork(helper, copy.networkId(ResourceType.ENERGY), energy, "energia");
         helper.assertTrue(copy.networkId(ResourceType.CHEMICAL) == null, "químicos sem rede");
         helper.succeed();
     }
@@ -255,16 +256,16 @@ public final class TypeNetworkGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, linker);
         try {
             helper.assertTrue(use(player, ModItems.LINKER.get(), router, false), "vinculador não agiu");
-            helper.assertValueEqual(router.networkId(ResourceType.ENERGY), active.id(), "energia");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), before, "itens mudaram");
-            helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-            helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
+            assertNetwork(helper, router.networkId(ResourceType.ENERGY), active.id(), "energia");
+            assertNetwork(helper, router.networkId(ResourceType.ITEM), before, "itens mudaram");
+            assertNetwork(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+            assertNetwork(helper, router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
 
             linker.remove(ModDataComponents.LINKER_TYPE.get());
             helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
             use(player, ModItems.LINKER.get(), router, false);
             for (ResourceType type : LoadedTypes.LIST) {
-                helper.assertValueEqual(router.networkId(type), active.id(), "Todos não vinculou " + type);
+                assertNetwork(helper, router.networkId(type), active.id(), "Todos não vinculou " + type);
             }
         } finally {
             data.remove(active.id());
@@ -356,11 +357,11 @@ public final class TypeNetworkGameTests {
             helper.assertTrue(preset.networks(ResourceType.CHEMICAL).isEmpty(), "químicos no preset");
 
             helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), target, false), "colar não agiu");
-            helper.assertValueEqual(target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
-            helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "fluidos colados");
-            helper.assertValueEqual(target.networkId(ResourceType.ENERGY), targetNetwork.id(),
+            assertNetwork(helper, target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
+            assertNetwork(helper, target.networkId(ResourceType.FLUID), fluids.id(), "fluidos colados");
+            assertNetwork(helper, target.networkId(ResourceType.ENERGY), targetNetwork.id(),
                     "colou a rede de outro dono");
-            helper.assertValueEqual(target.networkId(ResourceType.CHEMICAL), targetNetwork.id(),
+            assertNetwork(helper, target.networkId(ResourceType.CHEMICAL), targetNetwork.id(),
                     "tipo sem rede no preset mexeu na rede");
 
             // Codecs: a rede de cada face vai e volta (a chave antiga networks não é escrita); os
@@ -417,5 +418,10 @@ public final class TypeNetworkGameTests {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }
         helper.succeed();
+    }
+
+    /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
     }
 }

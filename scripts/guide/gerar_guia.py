@@ -1109,9 +1109,10 @@ blocos dela.
 
 | Passo | O que fazer |
 | --- | --- |
-| **1** | Escolha a rede **Mina** e, em Faces, deixe só **C** (Cima) marcada. Clique nas fornalhas. |
-| **2** | Escolha a rede **Armazém**, marque só **B** (Baixo) e clique nelas de novo. |
-| **3** | O minério chega pela Mina e os lingotes saem pelo Armazém. Volte a **Todas** quando terminar. |
+| **1** | Na tela do roteador de cada fornalha, ponha a face **Cima** em **Insere** e a **Baixo** em **Extrai**. |
+| **2** | No Vinculador, escolha a rede **Mina** e, em Faces, deixe só **C** (Cima) marcada. Clique nos roteadores das fornalhas. |
+| **3** | Escolha a rede **Armazém**, marque só **B** (Baixo) e clique nos roteadores de novo. |
+| **4** | O minério chega pela Mina e os lingotes saem pelo Armazém. Volte a **Todas** quando terminar. |
 
 ## Exemplo: tirar uma área da rede, menos a energia
 
@@ -1176,9 +1177,10 @@ blocks of it.
 
 | Step | What to do |
 | --- | --- |
-| **1** | Pick the **Mine** network and, under Faces, keep only **T** (Top) checked. Click the furnaces. |
-| **2** | Pick the **Storage** network, check only **Bt** (Bottom) and click them again. |
-| **3** | Ore comes in through Mine and ingots leave through Storage. Go back to **All** when you're done. |
+| **1** | On each furnace's router screen, set the **Top** face to **Insert** and the **Bottom** one to **Extract**. |
+| **2** | In the Linker, pick the **Mine** network and, under Faces, keep only **T** (Top) checked. Click the furnaces' routers. |
+| **3** | Pick the **Storage** network, check only **Bt** (Bottom) and click the routers again. |
+| **4** | Ore comes in through Mine and ingots leave through Storage. Go back to **All** when you're done. |
 
 ## Example: unlink an area, keep the energy
 

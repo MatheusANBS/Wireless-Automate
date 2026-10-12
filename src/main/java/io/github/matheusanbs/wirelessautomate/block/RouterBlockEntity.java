@@ -1017,18 +1017,52 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
-    /** Máscara ({@link NetworkManager#typeBit}) dos tipos com alguma face com modo e controle por redstone. */
+    /**
+     * Máscara ({@link NetworkManager#typeBit}) dos tipos com alguma face com modo e controle por
+     * redstone: na presa, nos perfis dos grupos ou nas exceções das máquinas remotas (o sinal é o do
+     * roteador e vale para todas).
+     */
     public int redstoneTypes() {
         int types = 0;
         for (ResourceType type : TYPES) {
-            for (FaceConfig config : faces[type.ordinal()]) {
-                if (config.redstone() != RedstoneMode.IGNORE && config.mode() != PortMode.NONE) {
-                    types |= NetworkManager.typeBit(type);
-                    break;
-                }
+            if (usesRedstone(type)) {
+                types |= NetworkManager.typeBit(type);
             }
         }
         return types;
+    }
+
+    private boolean usesRedstone(ResourceType type) {
+        for (FaceConfig config : faces[type.ordinal()]) {
+            if (usesRedstone(config)) {
+                return true;
+            }
+        }
+        for (MachineGroup group : remotes.groups()) {
+            if (usesRedstone(group.profile(), type)) {
+                return true;
+            }
+        }
+        for (RemoteMachine machine : remotes.machines()) {
+            MachineConfig exception = machine.exception();
+            if (exception != null && usesRedstone(exception, type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean usesRedstone(MachineConfig config, ResourceType type) {
+        for (RemoteSide side : RemoteSide.values()) {
+            if (usesRedstone(config.face(type, side))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean usesRedstone(FaceConfig config) {
+        return config.redstone() != RedstoneMode.IGNORE && config.mode() != PortMode.NONE;
     }
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */

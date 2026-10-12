@@ -22,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEn
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.netty.buffer.Unpooled;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -36,6 +37,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Químicos do Mekanism: tanques de químico de teste ({@link ChemicalTestTanks}, um tanque da API
@@ -208,14 +210,14 @@ public final class ChemicalGameTests {
         helper.assertValueEqual(tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");
 
         LinkerActions.apply(router, tabs, LinkerFaces.ALL, target);
-        helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens vinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+        assertNetwork(helper, router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
+        assertNetwork(helper, router.networkId(ResourceType.ITEM), target, "itens vinculados");
+        assertNetwork(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
         helper.assertTrue(LinkerActions.inTarget(router, tabs, LinkerFaces.ALL, target), "não conta como vinculado");
 
         LinkerActions.apply(router, List.of(ResourceType.CHEMICAL), LinkerFaces.ALL, null);
         helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos não desvinculados");
-        helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
+        assertNetwork(helper, router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
 
         LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ENERGY));
         helper.assertValueEqual(LinkerItem.cycleTabs(linker, 1), LinkerTabs.of(ResourceType.CHEMICAL), "atalho Químicos");
@@ -287,5 +289,10 @@ public final class ChemicalGameTests {
         }
         TierUpgradeGameTests.directStorage(helper, StorageKind.CHEMICAL_TANK);
         helper.succeed();
+    }
+
+    /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
     }
 }

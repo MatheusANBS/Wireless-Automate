@@ -107,7 +107,10 @@ public record RouterSnapshot(
      * privada de outro dono que está numa face vem só para mostrar o nome, apagada na lista.
      */
     public record NetworkEntry(UUID id, String name, int color, boolean owned, boolean usable) {
-        /** Uma rede que o jogador pode usar (o Vinculador só lista essas). */
+        /**
+         * Uma rede marcada como usável (o Vinculador lista as do jogador e a rede ativa dele, mesmo
+         * de outro dono; a tela do Vinculador só olha o {@code owned}).
+         */
         public NetworkEntry(UUID id, String name, int color, boolean owned) {
             this(id, name, color, owned, true);
         }

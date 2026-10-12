@@ -1058,11 +1058,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /**
      * Põe a face selecionada na rede {@code network} (vazio = sem rede). O servidor confere e o snapshot
-     * seguinte traz a rede nova; sem servidor (captura), muda só o snapshot local.
+     * seguinte traz a rede nova; sem servidor (captura), muda só o snapshot local. "Sem rede" vai
+     * sempre ao servidor: uma face numa rede apagada chega no snapshot como vazia, mas guarda o UUID,
+     * e só assim sai dela.
      */
     private void chooseNetwork(Optional<UUID> network) {
         networkListOpen = false;
-        if (network.equals(snapshot().network(type, face))) {
+        if (network.isPresent() && network.equals(snapshot().network(type, face))) {
             return;
         }
         if (preview) {

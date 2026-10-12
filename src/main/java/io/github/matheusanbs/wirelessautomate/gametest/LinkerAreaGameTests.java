@@ -157,11 +157,11 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(result.linked(), 2, "vinculados");
             helper.assertValueEqual(result.already(), 0, "já estavam");
             for (RouterBlockEntity inside : new RouterBlockEntity[] {a, b}) {
-                helper.assertValueEqual(inside.networkId(ResourceType.FLUID), active.id(), "fluidos de dentro");
-                helper.assertValueEqual(inside.networkId(ResourceType.ITEM), before, "itens mudaram");
-                helper.assertValueEqual(inside.networkId(ResourceType.ENERGY), before, "energia mudou");
+                assertNetwork(helper, inside.networkId(ResourceType.FLUID), active.id(), "fluidos de dentro");
+                assertNetwork(helper, inside.networkId(ResourceType.ITEM), before, "itens mudaram");
+                assertNetwork(helper, inside.networkId(ResourceType.ENERGY), before, "energia mudou");
             }
-            helper.assertValueEqual(c.networkId(ResourceType.FLUID), before, "C fora da área mudou");
+            assertNetwork(helper, c.networkId(ResourceType.FLUID), before, "C fora da área mudou");
 
             LinkResult again = LinkerActions.link(player, linker);
             helper.assertValueEqual(again.linked(), 0, "vinculou de novo");
@@ -193,7 +193,7 @@ public final class LinkerAreaGameTests {
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
             for (ResourceType type : LoadedTypes.LIST) {
-                helper.assertValueEqual(a.networkId(type), active.id(), "aba " + type);
+                assertNetwork(helper, a.networkId(type), active.id(), "aba " + type);
             }
         } finally {
             cleanup(helper, player, before, active.id());
@@ -228,7 +228,7 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.TOO_BIG, "problema");
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertValueEqual(result.problem(), LinkerProblem.TOO_BIG, "vinculou área grande");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
         } finally {
             cleanup(helper, player, before);
         }
@@ -253,7 +253,7 @@ public final class LinkerAreaGameTests {
             player.moveTo(helper.absoluteVec(new Vec3(1.5, 3 + distance + 20, 1.5)));
             helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.TOO_FAR, "problema");
             helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR, "vinculou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
         } finally {
             cleanup(helper, player, before);
         }
@@ -279,7 +279,7 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.FOREIGN_NETWORK, "problema");
             helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.FOREIGN_NETWORK,
                     "vinculou à rede alheia");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou");
 
             LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
                     LinkerSnapshot.capture(player, linker, null));
@@ -294,8 +294,8 @@ public final class LinkerAreaGameTests {
                     "aceitou outro containerId");
             helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
                     "Vincular pela tela recusou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), own.id(), "itens de A");
-            helper.assertValueEqual(a.networkId(ResourceType.FLUID), before, "fluidos de A mudaram");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), own.id(), "itens de A");
+            assertNetwork(helper, a.networkId(ResourceType.FLUID), before, "fluidos de A mudaram");
             LinkerSnapshot snapshot = menu.poll();
             helper.assertTrue(snapshot != null && snapshot.outcome().isPresent()
                     && snapshot.outcome().get().linked() == 1, "a tela não mostra o resultado: " + snapshot);
@@ -454,7 +454,7 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(LinkerItem.area(linker) == null, "Único marcou canto");
             helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.SINGLE, "Único alternou o modo");
             helper.assertTrue(shiftClick(player, a.getBlockPos()), "Shift + clique no roteador");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), active.id(), "Único não vinculou");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), active.id(), "Único não vinculou");
         } finally {
             cleanup(helper, player, before, active.id());
         }
@@ -478,12 +478,12 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(click(player, a.getBlockPos()), "clique no roteador não agiu");
             helper.assertTrue(a.networkId(ResourceType.ITEM) == null, "itens ficaram na rede");
             helper.assertTrue(a.networkId(ResourceType.FLUID) == null, "fluidos ficaram na rede");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
-            helper.assertValueEqual(a.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
+            assertNetwork(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou");
+            assertNetwork(helper, a.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
             assertNoNetworkCreated(helper, player);
 
             helper.assertTrue(click(player, a.getBlockPos()), "segundo clique não agiu");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou no segundo clique");
+            assertNetwork(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou no segundo clique");
             assertNoNetworkCreated(helper, player);
         } finally {
             cleanup(helper, player, before);
@@ -515,16 +515,16 @@ public final class LinkerAreaGameTests {
             for (RouterBlockEntity inside : new RouterBlockEntity[] {a, b}) {
                 helper.assertTrue(inside.networkId(ResourceType.ITEM) == null, "itens de dentro");
                 helper.assertTrue(inside.networkId(ResourceType.FLUID) == null, "fluidos de dentro");
-                helper.assertValueEqual(inside.networkId(ResourceType.ENERGY), before, "energia de dentro mudou");
+                assertNetwork(helper, inside.networkId(ResourceType.ENERGY), before, "energia de dentro mudou");
                 if (Chemicals.LOADED) {
                     helper.assertTrue(inside.networkId(ResourceType.CHEMICAL) == null, "químicos de dentro");
                 } else {
-                    helper.assertValueEqual(inside.networkId(ResourceType.CHEMICAL), before,
+                    assertNetwork(helper, inside.networkId(ResourceType.CHEMICAL), before,
                             "químicos mudaram sem o Mekanism");
                 }
             }
             for (ResourceType type : ResourceType.values()) {
-                helper.assertValueEqual(c.networkId(type), before, "C fora da área mudou: " + type);
+                assertNetwork(helper, c.networkId(type), before, "C fora da área mudou: " + type);
             }
             assertNoNetworkCreated(helper, player);
 
@@ -564,10 +564,10 @@ public final class LinkerAreaGameTests {
             helper.assertValueEqual(result.linked(), 1, "vinculados (B)");
             helper.assertValueEqual(result.already(), 1, "já estavam (A)");
             for (RouterBlockEntity router : new RouterBlockEntity[] {a, b}) {
-                helper.assertValueEqual(router.networkId(ResourceType.ITEM), active.id(), "itens");
-                helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-                helper.assertValueEqual(router.networkId(ResourceType.ENERGY), before, "energia mudou");
-                helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL),
+                assertNetwork(helper, router.networkId(ResourceType.ITEM), active.id(), "itens");
+                assertNetwork(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
+                assertNetwork(helper, router.networkId(ResourceType.ENERGY), before, "energia mudou");
+                assertNetwork(helper, router.networkId(ResourceType.CHEMICAL),
                         Chemicals.LOADED ? active.id() : before, "químicos");
             }
         } finally {
@@ -593,9 +593,9 @@ public final class LinkerAreaGameTests {
             markArea(helper, player);
             LinkResult result = LinkerActions.link(player, linker);
             helper.assertTrue(result.ok() && result.linked() == 1, "vinculou " + result);
-            helper.assertValueEqual(a.networkId(ResourceType.FLUID), active.id(), "fluidos");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
-            helper.assertValueEqual(a.networkId(ResourceType.ENERGY), before, "energia mudou");
+            assertNetwork(helper, a.networkId(ResourceType.FLUID), active.id(), "fluidos");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            assertNetwork(helper, a.networkId(ResourceType.ENERGY), before, "energia mudou");
         } finally {
             cleanup(helper, player, before, active.id());
         }
@@ -624,7 +624,7 @@ public final class LinkerAreaGameTests {
                 player.moveTo(helper.absoluteVec(new Vec3(1.5, 3 + distance + 20, 1.5)));
                 helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.TOO_FAR,
                         "desvinculou de longe");
-                helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "roteador mudou de longe");
+                assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "roteador mudou de longe");
                 player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
             }
 
@@ -633,7 +633,7 @@ public final class LinkerAreaGameTests {
                 helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_TABS, "sem abas");
                 helper.assertFalse(LinkerActions.single(player, linker, a), "clique sem abas mudou o roteador");
                 for (ResourceType type : ResourceType.values()) {
-                    helper.assertValueEqual(a.networkId(type), before, "sem abas mudou " + type);
+                    assertNetwork(helper, a.networkId(type), before, "sem abas mudou " + type);
                 }
                 LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
             }
@@ -685,7 +685,7 @@ public final class LinkerAreaGameTests {
             helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
                     "Desvincular pela tela recusou");
             helper.assertTrue(a.networkId(ResourceType.ENERGY) == null, "energia ficou");
-            helper.assertValueEqual(a.networkId(ResourceType.ITEM), before, "itens mudaram");
+            assertNetwork(helper, a.networkId(ResourceType.ITEM), before, "itens mudaram");
             LinkerSnapshot afterLink = menu.poll();
             helper.assertTrue(afterLink != null && afterLink.outcome().isPresent()
                     && afterLink.outcome().get().unlink() && afterLink.outcome().get().linked() == 1,
@@ -949,5 +949,10 @@ public final class LinkerAreaGameTests {
             cleanup(helper, player, before, active.id());
         }
         helper.succeed();
+    }
+
+    /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
     }
 }

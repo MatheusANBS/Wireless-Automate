@@ -259,6 +259,36 @@ public final class RangeGameTests {
         return remotes.machine(remotes.index(absolute)).group();
     }
 
+    /**
+     * O redstone que remonta: um roteador cujas únicas faces com redstone estão num perfil (ou numa
+     * exceção) conta esse tipo em {@code redstoneTypes}, para o sinal chegar às remotas.
+     */
+    @GameTest(template = "empty")
+    public static void redstoneTypesCountRemoteFaces(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    int item = NetworkManager.typeBit(ResourceType.ITEM);
+                    int fluid = NetworkManager.typeBit(ResourceType.FLUID);
+                    helper.assertTrue((router.redstoneTypes() & item) == 0, "itens sem redstone já contavam");
+                    int group = groupOf(router, helper.absolutePos(FURNACE_A));
+                    router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                            RedstoneMode.HIGH);
+                    helper.assertTrue((router.redstoneTypes() & item) != 0, "o perfil com redstone não contou");
+                    helper.assertTrue((router.redstoneTypes() & fluid) == 0, "outro tipo contou");
+
+                    int machine = router.remoteMachines().index(helper.absolutePos(FURNACE_A));
+                    router.configureFace(EditTarget.machine(machine), ResourceType.FLUID, Direction.UP, PortMode.INSERT, 0,
+                            RedstoneMode.LOW);
+                    helper.assertTrue(router.remoteMachines().machine(machine).hasException(), "não criou a exceção");
+                    helper.assertTrue((router.redstoneTypes() & fluid) != 0, "a exceção com redstone não contou");
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty")
     public static void remoteMachinesSavedAndReloaded(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -2197,6 +2227,33 @@ public final class RangeGameTests {
                         RangeLinks.Result area = RangeLinks.linkArea(player, linker);
                         helper.assertTrue(area.ok() && area.linked() == 1, "área do barril: " + area);
                         assertProfileNetwork(helper, router, BARREL, a, "perfil do barril (área)");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Com o Vinculador em "Nenhuma (desvincular)", vincular no modo Máquinas cria o grupo sem rede,
+     * mesmo com uma rede ativa (a tela não a mostra).
+     */
+    @GameTest(template = "empty")
+    public static void newGroupWithoutNetworkWhenUnlinking(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        activeNetworkOf(helper, player, "ativa escondida");
+                        LinkerItem.setUnlink(linker, true);
+                        router.setRangeUpgrade(rangeUpgrade());
+                        click(helper, player, ROUTER, false);
+                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.LINKED,
+                                "clique na fornalha");
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil da fornalha em desvincular");
                     } finally {
                         removePlayer(helper, player);
                     }

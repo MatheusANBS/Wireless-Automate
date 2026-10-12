@@ -74,9 +74,10 @@ blocks of it.
 
 | Step | What to do |
 | --- | --- |
-| **1** | Pick the **Mine** network and, under Faces, keep only **T** (Top) checked. Click the furnaces. |
-| **2** | Pick the **Storage** network, check only **Bt** (Bottom) and click them again. |
-| **3** | Ore comes in through Mine and ingots leave through Storage. Go back to **All** when you're done. |
+| **1** | On each furnace's router screen, set the **Top** face to **Insert** and the **Bottom** one to **Extract**. |
+| **2** | In the Linker, pick the **Mine** network and, under Faces, keep only **T** (Top) checked. Click the furnaces' routers. |
+| **3** | Pick the **Storage** network, check only **Bt** (Bottom) and click the routers again. |
+| **4** | Ore comes in through Mine and ingots leave through Storage. Go back to **All** when you're done. |
 
 ## Example: unlink an area, keep the energy
 

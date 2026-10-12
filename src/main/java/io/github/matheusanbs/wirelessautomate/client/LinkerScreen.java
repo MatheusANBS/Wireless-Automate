@@ -924,7 +924,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             return status(s);
         }
         if (machines()) {
-            return tr("machines.link.tooltip");
+            return tr(s.unlink() ? "machines.unlink.tooltip" : "machines.link.tooltip");
         }
         if (toLink() == 0) {
             return s.inside() == 0 ? tr("link.none") : tr(s.unlink() ? "unlink.all_out" : "link.all_in");
@@ -942,7 +942,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
      */
     private Component linkLabel() {
         if (machines()) {
-            return tr("machines.link");
+            return tr(unlink() ? "machines.unlink" : "machines.link");
         }
         return tr(unlink() ? "unlink.count" : "link.count", toLink());
     }

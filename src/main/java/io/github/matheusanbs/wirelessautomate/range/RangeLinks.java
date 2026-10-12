@@ -194,6 +194,9 @@ public final class RangeLinks {
     public static Result linkArea(ServerPlayer player, ItemStack stack) {
         LinkerArea area = LinkerItem.area(stack);
         LinkerProblem problem = LinkerActions.checkArea(player, area);
+        if (problem == LinkerProblem.NONE && LinkerItem.unlink(stack)) {
+            return unlinkArea(player, stack, area);
+        }
         List<ResourceType> types = LinkerItem.effectiveTabs(stack);
         if (problem == LinkerProblem.NONE && types.isEmpty()) {
             problem = LinkerProblem.NO_TABS;
@@ -269,6 +272,45 @@ public final class RangeLinks {
         if (result.linked() > 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
                     0.5F, 1.2F);
+        }
+        return result;
+    }
+
+    /**
+     * Com "Nenhuma (desvincular)": tira do roteador escolhido as máquinas vinculadas dentro da área.
+     * Percorre só a lista do roteador (nada de varrer o mundo, e vale com o chunk da máquina
+     * descarregado), não olha as abas (a máquina sai inteira) e não exige o upgrade valendo, para
+     * dar para limpar a lista depois de tirá-lo. Basta poder mexer no roteador: desvincular não toca
+     * na máquina.
+     */
+    private static Result unlinkArea(ServerPlayer player, ItemStack stack, LinkerArea area) {
+        RouterBlockEntity router = chosen(player, stack);
+        if (router == null) {
+            return missing(player, stack);
+        }
+        ServerLevel level = player.serverLevel();
+        if (!level.mayInteract(player, router.getBlockPos())) {
+            return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
+        }
+        LinkerBox box = area.box();
+        List<BlockPos> inside = new ArrayList<>();
+        for (RemoteMachine machine : router.remoteMachines().machines()) {
+            BlockPos pos = machine.pos();
+            if (box.contains(pos.getX(), pos.getY(), pos.getZ())) {
+                inside.add(pos);
+            }
+        }
+        router.batchChanges(() -> {
+            for (BlockPos pos : inside) {
+                router.unlinkMachine(pos);
+            }
+        });
+        Result result = new Result(Status.AREA_DONE, LinkRefusal.NONE, LinkerProblem.NONE, inside.size(), 0, 0, 0, 0, 0);
+        player.displayClientMessage(Component.translatable(KEY + "area.unlinked", inside.size(), routerName(router),
+                used(router), max(router)), true);
+        if (!inside.isEmpty()) {
+            level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
+                    0.5F, 0.8F);
         }
         return result;
     }

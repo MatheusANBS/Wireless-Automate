@@ -408,6 +408,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return tr("side.short." + RemoteSide.fromCanonical(direction.ordinal()).key());
     }
 
+    /** O lado em uma ou duas letras, para o botão estreito (como as letras U, N, E da presa). */
+    private Component sideLetter(Direction direction) {
+        return tr("side.letter." + RemoteSide.fromCanonical(direction.ordinal()).key());
+    }
+
+    /** O nome do lado que cabe em {@code room}: inteiro, abreviado ou a letra; o inteiro vai na dica. */
+    private Component sideLabel(Direction direction, int room) {
+        Component full = sideName(direction);
+        if (font.width(full) - 1 <= room) {
+            return full;
+        }
+        Component shortName = sideShort(direction);
+        return font.width(shortName) - 1 <= room ? shortName : sideLetter(direction);
+    }
+
     private static Component modeName(PortMode mode) {
         return tr("mode." + mode.name().toLowerCase(Locale.ROOT));
     }
@@ -1569,8 +1584,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     /**
-     * Botão de uma face remota: o lado relativo (não cabe ao lado do ícone do modo), o modo numa faixa na
-     * cor dele embaixo e, escolhido, o botão escuro.
+     * Botão de uma face remota: o mesmo desenho do da presa (o ícone do modo e o nome ao lado), com o
+     * lado relativo no lugar da letra: inteiro se couber, senão o abreviado, e o inteiro na dica. A
+     * face fica editável mesmo sem a máquina carregada, então não apaga como a da presa sem máquina.
      */
     private void paintRemoteFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
         FaceView v = view(direction);
@@ -1578,20 +1594,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         boolean pointed = hovered || viewShown() && direction == machineView.hoveredFace();
         int x = b.getX();
         int y = b.getY();
-        int w = b.getWidth();
-        int h = b.getHeight();
         int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, x, y, w, h, selected ? GuiPaint.SELECTED : GuiPaint.BUTTON, border);
-        if (v.mode() != PortMode.NONE) {
-            g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, GuiPaint.modeColor(v.mode()));
+        GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
+        if (selected) {
+            GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, GuiPaint.SELECTED);
         }
-        // o nome inteiro se couber com a margem; senão o abreviado (o inteiro vai na dica)
-        int room = w - 2 * SIDE_PAD;
-        Component label = font.width(sideName(direction)) - 1 <= room ? sideName(direction) : sideShort(direction);
-        // a largura do texto inclui 1 px de espaço no fim, que não conta para a margem
-        int textW = Math.min(font.width(label) - 1, room);
-        GuiText.draw(g, font, label, x + SIDE_PAD + (room - textW) / 2, y + 4, room + 1,
-                selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+        GuiPaint.port(g, v.mode(), x + 1, y + 1, 1f);
+        int room = b.getWidth() - 19 - SIDE_PAD;
+        GuiText.draw(g, font, sideLabel(direction, room), x + 19, y + 5, room, selected ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     private Component faceTooltip(Direction direction) {

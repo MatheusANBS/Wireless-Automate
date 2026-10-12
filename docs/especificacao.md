@@ -19,7 +19,7 @@ O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de fi
 | Componente | Tipo | Função |
 | --- | --- | --- |
 | Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Shift + clique direito com as mãos vazias gira o roteador 90° em torno do eixo da face (horário para quem olha a face de frente); a configuração das faces da máquina não muda. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
-| Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Levam o roteador ao tier do cartão, de qualquer tier abaixo (`RouterTier.canUpgradeTo`): clique no roteador colocado (sem perder a configuração) ou roteador + cartão na bancada. Não há cartão Básico. |
+| Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Têm origem (componente `upgrade_from`, "Básico → Elite") e só valem num bloco exatamente daquele tier (`RouterTier.acceptsCard`); os cartões antigos, sem origem, sobem de qualquer tier abaixo. Shift + clique no roteador ou armazenamento colocado (sem perder a configuração) ou bloco + cartão na bancada. Não há cartão Básico. |
 | Configurador | Item (varinha) | Copia a configuração de um roteador e cola em outro ou em todos os de uma área (só na mesma máquina ou em qualquer uma). |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Escolhe a rede ativa e coloca roteadores nela, um a um ou por área. |
@@ -206,7 +206,7 @@ Motivação: no teste do dono (8/10/2026), 12 milhões de pedregulhos entre dois
 Decisões do dono (8/10/2026):
 
 - **Cinco blocos separados**, cada um com tiers: Baú (itens), Tanque (fluidos), Bateria (energia), Tanque Químico (só com o Mekanism, pela ponte `Chemicals`) e Tanque de Source (só com o Ars Nouveau, pela ponte `Sources`).
-- **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador (Básico → Avançado → Elite → Esmeralda → [Allthemodium → Vibranium → Unobtainium] → Ultimate, de qualquer tier abaixo direto para o do cartão e sem perder o conteúdo). O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
+- **Capacidade por tier**, com os mesmos Cartões de Upgrade do roteador e as mesmas receitas de anel (Básico → Avançado → Elite → Esmeralda → [Allthemodium → Vibranium → Unobtainium] → Ultimate; o cartão vale no tier da origem dele, e a receita direta sobe o item do degrau anterior), sem perder o conteúdo. O Ultimate não tem limite (satura em `Long.MAX_VALUE`).
 - **Tipos ilimitados:** o limite é só a quantidade total do tier.
 - **Tela em lista com busca** (estilo terminal do AE2), redimensionável pelas bordas e pela alça do canto, sempre centralizada: grade rolável de tipos com a contagem abreviada (12,6M), busca por nome e `@mod`, ordenação por quantidade, nome ou mod. Clique tira uma pilha, Shift + clique no inventário guarda.
 - **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
@@ -244,7 +244,7 @@ Decididos pelo dono depois (8/10/2026):
 
 - **Quebrar o bloco:** o conteúdo fica no servidor (um `SavedData` com um id); o item leva só o id e um resumo (tipos e total). Não estoura o limite de pacote. O item é uma referência: duplicá-lo (criativo, dupe) não duplica o conteúdo, os dois apontam para o mesmo.
 - **Capacidades:** a tabela acima é o padrão, ajustável na config.
-- **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos Cartões de Upgrade, como no roteador.
+- **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos anéis (Cartões de Upgrade ou a receita direta), como no roteador.
 - **Texturas:** prontas em `scripts/textures/gerar_texturas.py` (ver "Armazenamento do mod" no pacote de design).
 - **Tanque, Bateria e Tanque Químico prontos (8/10/2026):** no mesmo molde do Baú. As APIs de fluido e energia do NeoForge são em `int` (até ~2,1 bilhões por chamada, e o motor faz uma por tipo por tick), então o Tanque e a Bateria têm capabilities próprias em `long` (`BulkFluids`, `BulkEnergy`) que o roteador usa quando a origem ou o destino é do mod; a de químico do Mekanism já é em `long`. O Tanque troca baldes no bloco e pela tela; a Bateria tem uma tela própria com a carga e a variação por tick, e não tem filtro.
 - **Tanque de Source pronto (8/10/2026, etapa 2):** guarda Source em `long` na base `ScalarStorageBlockEntity` (a mesma da Bateria, com o `ScalarStore`). Capacidade por tier na tabela acima (config `sourceTankCapacity`; de 10.000 no Básico, sem limite no Ultimate). Sem filtro nem lista: a tela (`StorageScalarScreen`) tem a barra roxa, a vazão em Source/s e uma linha de dica. O bloco mostra o nível na coluna de vidro (propriedade `fill`, 0 a 10, forma fina como a Source Jar). Para o roteador, a capability `wirelessautomate:bulk_source` (em `long`, entre dois tanques tudo passa de uma vez). Para o Ars, `ArsStorage` dá a `ISourceCap` (roteador e Relays) e registra o provider no `SourceManager`: Sourcelinks a 5 blocos depositam e as máquinas do Ars tiram, como de uma Source Jar; a visão em `int` fica limitada a `Integer.MAX_VALUE`. Receita vanilla `IGI/GTG/IGI` com ferro, gema de Source e um Tanque Wireless, só com o Ars. Sempre registrado; sem o Ars some da aba criativa e do JEI, e o tooltip diz que precisa do Ars.
@@ -289,19 +289,19 @@ O Sophisticated Storage é o banco de testes: baús com centenas de slots e slot
 
 ## Receitas e progressão
 
-As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodium usam as tags `c:` dele e só carregam com o mod (`neoforge:conditions`). Todas ficam em data packs (`data/wirelessautomate/recipe/`), então o modpack pode trocar tudo sem mexer no código. O roteador nasce Básico; os tiers seguintes vêm dos Cartões de Upgrade. Cada cartão leva o anterior na receita e sobe de qualquer tier abaixo direto para o dele, então chegar a um tier custa exatamente uma escada de cartões (decisão do dono, 9/10/2026, a partir de uma sugestão no CurseForge; ver `docs/superpowers/specs/2026-10-09-upgrade-direto-design.md`).
+As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodium usam as tags `c:` dele e só carregam com o mod (`neoforge:conditions`). Todas ficam em data packs (`data/wirelessautomate/recipe/`), então o modpack pode trocar tudo sem mexer no código. O roteador nasce Básico. Cada tier tem **um anel** (`tier_core_<tier>.json`, tipo `wirelessautomate:tier_upgrade`, `TierUpgradeRecipe`): oito itens em volta do centro, e o centro decide a receita. Redstone dá o cartão de um degrau (origem no degrau anterior da escada da instância); um cartão com origem k, um degrau abaixo, dá o cartão que pula (k → este tier); o roteador ou armazenamento do degrau anterior sobe direto, com os componentes do item. Como o anel é o mesmo nas três, subir pela bancada degrau a degrau e montar o cartão custam o mesmo (o cartão, mais uma Redstone), e o cartão só vale no tier da origem. A escada não fica no cartão: um cartão feito sem o Allthemodium continua valendo (e pula os anéis dele) se o mod entrar depois. O editor de receitas não lista os cartões (tipo próprio). Decisão do dono, 12/10/2026; ver `docs/superpowers/specs/2026-10-12-subir-tier-design.md` (substitui a regra de custo de `2026-10-09-upgrade-direto-design.md`).
 
 | Item | Receita |
 | --- | --- |
 | Roteador (Básico) | Olho de ender em cima, ferro + redstone + ferro no meio, três ferros embaixo |
-| Cartão de Upgrade Avançado | Lingotes de ouro nos cantos, diamantes nas bordas, bloco de ouro no centro |
-| Cartão de Upgrade Elite | Estrela do Nether em cima, Cartão Avançado no centro, três lingotes de netherita em volta |
-| Cartão de Upgrade Esmeralda | Blocos de esmeralda nos cantos, olhos de ender em cima e embaixo, obsidiana chorona dos lados, Cartão Elite no centro |
-| Cartão de Upgrade Allthemodium (com o mod) | Lingotes de Allthemodium em volta, blocos em cima e embaixo, Cartão Esmeralda no centro |
-| Cartão de Upgrade Vibranium (com o mod) | Lingotes de Vibranium nos cantos, liga Vibranium-Allthemodium em cima e embaixo, blocos dos lados, Cartão Allthemodium no centro |
-| Cartão de Upgrade Unobtainium (com o mod) | Lingotes de Unobtainium nos cantos, liga Unobtainium-Vibranium em cima e embaixo, blocos dos lados, Cartão Vibranium no centro |
-| Cartão de Upgrade Ultimate | Sem o Allthemodium: ovo do dragão em cima, Cartão Esmeralda no centro, três blocos de netherita e quatro fragmentos de eco. Com o Allthemodium: a mesma, com o Cartão Unobtainium. No ATM10 (Allthemodium + All The Tweaks): fragmentos de ATM Star nos cantos, ovo do dragão em cima, blocos de liga Unobtainium-Allthemodium e o Cartão Unobtainium |
-| Upgrade do roteador na bancada | Roteador + Cartão de Upgrade de qualquer tier acima, sem forma (também no JEI, uma receita por par de tiers) |
+| Anel do Avançado | Lingotes de ouro nos cantos, diamantes nas bordas |
+| Anel do Elite | Lingotes de netherita nos cantos, obsidiana nas bordas |
+| Anel do Esmeralda | Blocos de esmeralda nos cantos, estrela do Nether em cima, olho do ender embaixo, obsidiana chorona dos lados |
+| Anel do Allthemodium (com o mod) | Lingotes de Allthemodium em volta, blocos em cima e embaixo |
+| Anel do Vibranium (com o mod) | Lingotes de Vibranium nos cantos, liga Vibranium-Allthemodium em cima e embaixo, blocos dos lados |
+| Anel do Unobtainium (com o mod) | Lingotes de Unobtainium nos cantos, liga Unobtainium-Vibranium em cima e embaixo, blocos dos lados |
+| Anel do Ultimate | Ovo do dragão em cima, três blocos de netherita e quatro fragmentos de eco (sem o Allthemodium e com ele sem o All The Tweaks). No ATM10 (Allthemodium + All The Tweaks): fragmentos de ATM Star nos cantos, ovo do dragão em cima, blocos de liga Unobtainium-Allthemodium |
+| Upgrade na bancada com o cartão | Bloco + Cartão de Upgrade com a origem no tier do bloco (ou antigo, de qualquer tier acima), sem forma. No JEI: um par por origem e destino, a receita direta e um exemplo do cartão que pula por tier |
 | Cartão de filtro (2) | Papel, redstone e comparador (`PRP` / `PCP`) |
 | Cópia de Cartão de filtro | Cartão configurado + cartão vazio, sem forma = dois iguais |
 | Upgrade de chunk loading | Olho de ender e diamante cercados de obsidiana, com duas redstones |

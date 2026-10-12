@@ -28,7 +28,7 @@ machine face does.
 | **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone, filter and network per type. |
-| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
+| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (Shift + use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
 
 ## Recipe

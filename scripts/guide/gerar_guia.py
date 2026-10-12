@@ -472,7 +472,7 @@ máquina faz.
 | **Gira com** | Shift + clique direito com a mão vazia: gira o roteador 90°. A configuração das faces não muda. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
 | **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone, filtro e rede por tipo. |
-| **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
+| **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (Shift + clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
 
 ## Receita
@@ -567,7 +567,7 @@ machine face does.
 | **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
 | **Configurable faces** | All six machine faces, each with mode, priority, redstone, filter and network per type. |
-| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
+| **Upgrades** | [Upgrade Cards](upgrade-cards.md) (Shift + use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
 
 ## Recipe
@@ -656,9 +656,19 @@ page('upgrade-cards.md', front('Cartões de Upgrade', 'wirelessautomate:tier_cor
 
 Todo roteador nasce **Básico**. A escada é Básico → Avançado → Elite → Esmeralda → Ultimate. Com
 o mod **Allthemodium**, entram três degraus entre a Esmeralda e o Ultimate: Allthemodium → Vibranium
-→ Unobtainium. Cada cartão leva o roteador direto ao tier dele, de **qualquer tier abaixo**: um
-roteador Básico com o Cartão Esmeralda vira Esmeralda. A configuração do roteador (faces, filtros,
-redes) não se perde.
+→ Unobtainium.
+
+Cada degrau tem um **anel**: oito itens em volta do centro da bancada. Subir um degrau custa o anel
+daquele tier, por qualquer um dos três caminhos:
+
+| Centro do anel | Resultado |
+| --- | --- |
+| **Redstone** | O cartão de um degrau, por exemplo **Avançado → Elite**. |
+| **Um cartão** (por exemplo Básico → Avançado) | O cartão que pula: **Básico → Elite**. Junta os anéis dos degraus que ele pula. |
+| **O roteador ou o armazenamento** do degrau anterior | O mesmo bloco, já no tier novo (a receita direta). |
+
+O cartão tem **origem**: o nome diz de onde ele sobe ("Cartão de Upgrade: Básico → Elite"), e ele só
+vale num bloco daquele tier. Cartões antigos, sem origem, continuam subindo de qualquer tier abaixo.
 
 ## O que cada cartão aumenta
 
@@ -673,11 +683,15 @@ Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de q
 
 | Onde | Como |
 | --- | --- |
-| **No mundo** | Clique com o cartão do tier desejado num roteador já colocado. |
-| **Na bancada** | Um roteador + o cartão do tier desejado, em qualquer posição. O nome do roteador continua. |
+| **No mundo** | Shift + clique com o cartão num roteador ou armazenamento já colocado, do tier da origem do cartão. Toda a configuração (faces, filtros, redes, cartões) continua. |
+| **Na bancada, com o cartão** | O bloco + o cartão, em qualquer posição. |
+| **Na bancada, sem cartão** | O bloco no centro do anel do tier seguinte. |
 
-O cartão só sobe: não aceita um roteador do mesmo tier ou de um tier acima dele. Como cada cartão leva o
-anterior na receita, ir direto ao tier final é o caminho mais barato.
+Na bancada, o bloco sobe como item: o roteador mantém o nome, e o armazenamento, o nome e o conteúdo.
+Num bloco de outro tier, o cartão não é gasto e a barra acima do inventário avisa de qual tier ele sobe.
+
+Se o mod Allthemodium entrar no pack depois, um cartão feito antes dele (por exemplo Esmeralda →
+Ultimate) continua valendo e pula os degraus do Allthemodium.
 
 Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
 [Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e
@@ -691,11 +705,14 @@ perder o conteúdo. A capacidade de cada tier está na página de cada um.
 <RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
 
-Com o Allthemodium, os cartões dele pedem o cartão anterior no centro e os materiais do próprio
-metal: lingotes e blocos de Allthemodium; lingotes, blocos e liga Vibranium-Allthemodium; lingotes,
-blocos e liga Unobtainium-Vibranium. O Ultimate passa a pedir o Cartão Unobtainium e, no ATM10 (com
-o All The Tweaks), fragmentos de ATM Star, ovo do dragão e blocos de liga Unobtainium-Allthemodium.
-O JEI mostra as receitas do seu pack.
+As receitas mostram o anel com a Redstone no centro. Troque a Redstone por um cartão ou pelo bloco
+do degrau anterior para os outros dois caminhos.
+
+Com o Allthemodium, os anéis dele usam os materiais do próprio metal: lingotes e blocos de
+Allthemodium; lingotes, blocos e liga Vibranium-Allthemodium; lingotes, blocos e liga
+Unobtainium-Vibranium. O degrau antes do Ultimate passa a ser o Unobtainium e, no ATM10 (com o All
+The Tweaks), o anel do Ultimate leva fragmentos de ATM Star, ovo do dragão e blocos de liga
+Unobtainium-Allthemodium. O JEI mostra os três caminhos de cada anel do seu pack.
 ''', front('Upgrade Cards', 'wirelessautomate:tier_core_advanced', 3, item_ids=[
     f'wirelessautomate:tier_core_{t[0]}' for t in TIERS[1:]]) + '''
 # Upgrade Cards
@@ -706,9 +723,19 @@ O JEI mostra as receitas do seu pack.
 
 Every router starts as **Basic**. The ladder is Basic → Advanced → Elite → Emerald → Ultimate.
 With the **Allthemodium** mod, three steps go between Emerald and Ultimate: Allthemodium →
-Vibranium → Unobtainium. Each card takes the router straight to its tier from **any lower tier**: a
-Basic router with the Emerald Card becomes Emerald. The router's configuration (faces, filters,
-networks) is kept.
+Vibranium → Unobtainium.
+
+Each step has a **ring**: eight items around the middle of the crafting grid. Going up one step costs
+that tier's ring, by any of three paths:
+
+| Middle of the ring | Result |
+| --- | --- |
+| **Redstone** | The one-step card, for example **Advanced → Elite**. |
+| **A card** (for example Basic → Advanced) | The skipping card: **Basic → Elite**. It adds up the rings of the steps it skips. |
+| **The router or storage** one step below | The same block, already at the new tier (the direct recipe). |
+
+A card has an **origin**: its name says where it starts ("Upgrade Card: Basic → Elite"), and it only
+works on a block of that tier. Old cards, with no origin, still raise any lower tier.
 
 ## What each card raises
 
@@ -723,11 +750,16 @@ Each step multiplies throughput by 8. Range and dimensions follow the **sender's
 
 | Where | How |
 | --- | --- |
-| **In the world** | Use the card of the tier you want on a placed router. |
-| **In a crafting table** | A router + the card of the tier you want, in any slots. The router's name is kept. |
+| **In the world** | Shift + use the card on a placed router or storage of the card's origin tier. All of its configuration (faces, filters, networks, cards) is kept. |
+| **In a crafting table, with the card** | The block + the card, in any slots. |
+| **In a crafting table, no card** | The block in the middle of the next tier's ring. |
 
-Cards only go up: they won't take a router of the same tier or a higher one. Since each card takes the
-previous one in its recipe, going straight to the final tier is the cheapest path.
+In a crafting table, the block goes up as an item: a router keeps its name, and a storage its name and
+contents. On a block of another tier, the card isn't used up and the bar above the hotbar says which tier
+it raises.
+
+If the Allthemodium mod is added to the pack later, a card made before it (for example Emerald →
+Ultimate) still works and skips the Allthemodium steps.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
 [Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and
@@ -741,11 +773,14 @@ keeping their contents. Each tier's capacity is on each one's page.
 <RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
 
-With Allthemodium, its cards take the previous card in the middle and the metal's own materials:
-Allthemodium ingots and blocks; Vibranium ingots, blocks and Vibranium-Allthemodium alloy;
-Unobtainium ingots, blocks and Unobtainium-Vibranium alloy. Ultimate then takes the Unobtainium Card
-and, in ATM10 (with All The Tweaks), ATM Star shards, a dragon egg and Unobtainium-Allthemodium alloy
-blocks. JEI shows your pack's recipes.
+The recipes show the ring with Redstone in the middle. Swap the Redstone for a card or for the block one
+step below for the other two paths.
+
+With Allthemodium, its rings use the metal's own materials: Allthemodium ingots and blocks; Vibranium
+ingots, blocks and Vibranium-Allthemodium alloy; Unobtainium ingots, blocks and Unobtainium-Vibranium
+alloy. The step before Ultimate becomes Unobtainium and, in ATM10 (with All The Tweaks), the Ultimate
+ring takes ATM Star shards, a dragon egg and Unobtainium-Allthemodium alloy blocks. JEI shows the three
+paths of each ring in your pack.
 ''')
 
 # =====================================================================================
@@ -2212,7 +2247,7 @@ Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são reca
 | --- | --- |
 | **Onde fica** | As edições ficam em `config/wirelessautomate/recipes/`, uma pasta só para a instância. Valem em todos os mundos dela e, num servidor, no servidor. Sobrevivem às atualizações do mod. |
 | **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
-| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
+| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro, o upgrade de roteador na bancada e os Cartões de Upgrade (os anéis são de um tipo próprio; mude-os por datapack ou KubeJS). Também não dá para criar receitas novas. |
 | **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
 ''', front('Recipe editor', 'minecraft:writable_book', 19) + '''
 # Recipe editor
@@ -2264,7 +2299,7 @@ If you close the screen with saved changes that haven't been applied, they are r
 | --- | --- |
 | **Where it lives** | Edits are kept in `config/wirelessautomate/recipes/`, a folder for the instance. They apply to every world in it and, on a server, to the server. They survive mod updates. |
 | **Other datapacks and KubeJS** | If another datapack or KubeJS changes the same recipe, theirs wins, and the screen warns that the recipe differs from what is loaded. |
-| **What is not listed** | Other mods' recipes, the Filter Card copy and the router upgrade in the crafting table. You can't create new recipes either. |
+| **What is not listed** | Other mods' recipes, the Filter Card copy, the router upgrade in the crafting table and the Upgrade Cards (their rings are a type of their own; change them with a datapack or KubeJS). You can't create new recipes either. |
 | **Undo everything** | Delete the `data` folder inside `config/wirelessautomate/recipes/` and reload (`/reload`). |
 ''')
 

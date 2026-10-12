@@ -446,6 +446,17 @@ public final class SourceGameTests {
         helper.succeed();
     }
 
+    /** Tanque de Source Avançado (com conteúdo e filtro) no anel do Elite sobe para o Elite com os mesmos componentes. */
+    @GameTest(template = "empty")
+    public static void directRecipeKeepsSourceTank(GameTestHelper helper) {
+        if (!StorageKind.SOURCE_TANK.loaded()) {
+            helper.succeed();
+            return;
+        }
+        TierUpgradeGameTests.directStorage(helper, StorageKind.SOURCE_TANK);
+        helper.succeed();
+    }
+
     private SourceGameTests() {
     }
 }

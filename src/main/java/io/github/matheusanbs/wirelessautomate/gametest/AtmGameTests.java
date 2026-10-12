@@ -3,9 +3,12 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -76,57 +79,89 @@ public final class AtmGameTests {
         }
         helper.assertBlockProperty(ROUTER, RouterBlock.TIER, RouterTier.ULTIMATE);
         helper.assertBlockProperty(STORAGE, RouterBlock.TIER, RouterTier.ULTIMATE);
+        // Um cartão com origem Esmeralda → Ultimate só vale num bloco Esmeralda, não num Allthemodium.
+        BlockPos machine3 = new BlockPos(0, 1, 2);
+        BlockPos router3 = new BlockPos(0, 2, 2);
+        helper.setBlock(machine3, Blocks.FURNACE);
+        helper.setBlock(router3, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ALLTHEMODIUM));
+        helper.assertFalse(RouterBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(router3), RouterTier.ULTIMATE,
+                RouterTier.EMERALD), "o cartão Esmeralda → Ultimate subiu um roteador Allthemodium");
+        helper.assertBlockProperty(router3, RouterBlock.TIER, RouterTier.ALLTHEMODIUM);
         helper.succeed();
     }
 
     /**
-     * As receitas dos cartões do ATM carregam e casam com os materiais do mod; o Ultimate do ATM10 pede o
-     * fragmento de ATM Star e o Cartão Unobtainium, e as outras duas versões do Ultimate não carregam.
+     * Os anéis do ATM carregam e casam com os materiais do mod: com Redstone no centro, o cartão de um degrau com a
+     * origem da escada de oito degraus (o Ultimate do ATM10 pelo {@code tier_core_ultimate_atm_star}, com o fragmento
+     * de ATM Star); o cartão que pula e a receita direta também. As outras duas versões do Ultimate não carregam, e
+     * o custo pela bancada e pelo cartão é o mesmo em toda a escada.
      */
     @GameTest(template = "empty")
     public static void allthemodiumRecipes(GameTestHelper helper) {
+        ItemStack redstone = new ItemStack(Items.REDSTONE);
         Item atmIngot = item(helper, "allthemodium:allthemodium_ingot");
         Item atmBlock = item(helper, "allthemodium:allthemodium_block");
-        assertCrafts(helper, "tier_core_allthemodium",
-                grid(atmIngot, atmBlock, atmIngot, atmIngot, card(RouterTier.EMERALD), atmIngot,
-                        atmIngot, atmBlock, atmIngot),
-                card(RouterTier.ALLTHEMODIUM));
+        TierUpgradeGameTests.assertCard(helper, TierUpgradeGameTests.craft(helper,
+                grid(redstone, atmIngot, atmBlock, atmIngot, atmIngot, atmIngot, atmIngot, atmBlock, atmIngot),
+                WirelessAutomate.id("tier_core_allthemodium")), RouterTier.EMERALD, RouterTier.ALLTHEMODIUM,
+                "Allthemodium");
 
         Item vib = item(helper, "allthemodium:vibranium_ingot");
         Item vibAlloy = item(helper, "allthemodium:vibranium_allthemodium_alloy_ingot");
         Item vibBlock = item(helper, "allthemodium:vibranium_block");
-        assertCrafts(helper, "tier_core_vibranium",
-                grid(vib, vibAlloy, vib, vibBlock, card(RouterTier.ALLTHEMODIUM), vibBlock, vib, vibAlloy, vib),
-                card(RouterTier.VIBRANIUM));
+        TierUpgradeGameTests.assertCard(helper, TierUpgradeGameTests.craft(helper,
+                grid(redstone, vib, vibAlloy, vib, vibBlock, vibBlock, vib, vibAlloy, vib),
+                WirelessAutomate.id("tier_core_vibranium")), RouterTier.ALLTHEMODIUM, RouterTier.VIBRANIUM,
+                "Vibranium");
 
         Item unob = item(helper, "allthemodium:unobtainium_ingot");
         Item unobAlloy = item(helper, "allthemodium:unobtainium_vibranium_alloy_ingot");
         Item unobBlock = item(helper, "allthemodium:unobtainium_block");
-        assertCrafts(helper, "tier_core_unobtainium",
-                grid(unob, unobAlloy, unob, unobBlock, card(RouterTier.VIBRANIUM), unobBlock, unob, unobAlloy, unob),
-                card(RouterTier.UNOBTAINIUM));
+        TierUpgradeGameTests.assertCard(helper, TierUpgradeGameTests.craft(helper,
+                grid(redstone, unob, unobAlloy, unob, unobBlock, unobBlock, unob, unobAlloy, unob),
+                WirelessAutomate.id("tier_core_unobtainium")), RouterTier.VIBRANIUM, RouterTier.UNOBTAINIUM,
+                "Unobtainium");
 
         Item shard = item(helper, "allthetweaks:atm_star_shard");
         Item alloyBlock = item(helper, "allthemodium:unobtainium_allthemodium_alloy_block");
-        assertCrafts(helper, "tier_core_ultimate_atm_star",
-                grid(shard, Items.DRAGON_EGG, shard, alloyBlock, card(RouterTier.UNOBTAINIUM), alloyBlock,
-                        shard, alloyBlock, shard),
-                card(RouterTier.ULTIMATE));
+        TierUpgradeGameTests.assertCard(helper, TierUpgradeGameTests.craft(helper,
+                grid(redstone, shard, Items.DRAGON_EGG, shard, alloyBlock, alloyBlock, shard, alloyBlock, shard),
+                WirelessAutomate.id("tier_core_ultimate_atm_star")), RouterTier.UNOBTAINIUM, RouterTier.ULTIMATE,
+                "Ultimate do ATM10");
+
+        // Cartão que pula: Esmeralda → Allthemodium no anel do Vibranium = Esmeralda → Vibranium.
+        TierUpgradeGameTests.assertCard(helper, TierUpgradeGameTests.craft(helper,
+                grid(TierCoreItem.card(RouterTier.ALLTHEMODIUM, RouterTier.EMERALD),
+                        vib, vibAlloy, vib, vibBlock, vibBlock, vib, vibAlloy, vib),
+                WirelessAutomate.id("tier_core_vibranium")), RouterTier.EMERALD, RouterTier.VIBRANIUM,
+                "cartão que pula");
+
+        // Receita direta: roteador Esmeralda no anel do Allthemodium sobe; no do Ultimate, não (três degraus no meio).
+        ItemStack up = TierUpgradeGameTests.craft(helper,
+                grid(TierUpgradeGameTests.routerItem(RouterTier.EMERALD),
+                        atmIngot, atmBlock, atmIngot, atmIngot, atmIngot, atmIngot, atmBlock, atmIngot),
+                WirelessAutomate.id("tier_core_allthemodium"));
+        helper.assertTrue(RouterBlockItem.tierOf(up) == RouterTier.ALLTHEMODIUM, "roteador Esmeralda: " + up);
+        helper.assertTrue(find(helper, grid(TierUpgradeGameTests.routerItem(RouterTier.EMERALD),
+                shard, Items.DRAGON_EGG, shard, alloyBlock, alloyBlock, shard, alloyBlock, shard)).isEmpty(),
+                "o anel do Ultimate subiu um roteador Esmeralda");
 
         for (String id : List.of("tier_core_ultimate", "tier_core_ultimate_atm")) {
             helper.assertTrue(helper.getLevel().getRecipeManager().byKey(WirelessAutomate.id(id)).isEmpty(),
                     "outra versão do Ultimate carregou: " + id);
         }
-        // Com o ATM, a Esmeralda não sobe direto para o Ultimate nem na bancada.
+        // Com o ATM, o anel vanilla do Ultimate não vale, nem com Redstone nem com um roteador no centro.
         Item echo = Items.ECHO_SHARD;
         Item netherite = Items.NETHERITE_BLOCK;
-        helper.assertTrue(find(helper, grid(echo, Items.DRAGON_EGG, echo, netherite, card(RouterTier.EMERALD),
-                netherite, echo, netherite, echo)).isEmpty(), "Ultimate vanilla com o ATM");
+        for (ItemStack center : List.of(redstone, TierUpgradeGameTests.routerItem(RouterTier.UNOBTAINIUM),
+                TierUpgradeGameTests.routerItem(RouterTier.EMERALD))) {
+            helper.assertTrue(find(helper, grid(center, echo, Items.DRAGON_EGG, echo, netherite, netherite,
+                    echo, netherite, echo)).isEmpty(), "Ultimate vanilla com o ATM: " + center);
+        }
+        TierUpgradeGameTests.sameRing(helper);
+        TierUpgradeGameTests.sameCost(helper);
         helper.succeed();
-    }
-
-    private static Item card(RouterTier tier) {
-        return ModItems.TIER_CORES.get(tier).get();
     }
 
     private static Item item(GameTestHelper helper, String id) {
@@ -137,19 +172,14 @@ public final class AtmGameTests {
         return BuiltInRegistries.ITEM.get(key);
     }
 
-    private static CraftingInput grid(Item... items) {
-        return CraftingInput.of(3, 3, Arrays.stream(items).map(ItemStack::new).toList());
+    /** Grade 3×3: {@code center} no meio e as oito casas do anel em ordem de leitura, sem o centro. */
+    private static CraftingInput grid(ItemStack center, Item... ring) {
+        List<ItemStack> items = new ArrayList<>(Arrays.stream(ring).map(ItemStack::new).toList());
+        items.add(TierUpgradeRecipe.CENTER, center);
+        return CraftingInput.of(3, 3, items);
     }
 
     private static Optional<RecipeHolder<CraftingRecipe>> find(GameTestHelper helper, CraftingInput input) {
         return helper.getLevel().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel());
-    }
-
-    private static void assertCrafts(GameTestHelper helper, String id, CraftingInput input, Item result) {
-        RecipeHolder<CraftingRecipe> holder = find(helper, input)
-                .orElseThrow(() -> new GameTestAssertException("nenhuma receita para " + id));
-        helper.assertValueEqual(holder.id(), WirelessAutomate.id(id), "receita");
-        ItemStack out = holder.value().assemble(input, helper.getLevel().registryAccess());
-        helper.assertTrue(out.is(result) && out.getCount() == 1, "resultado de " + id + ": " + out);
     }
 }

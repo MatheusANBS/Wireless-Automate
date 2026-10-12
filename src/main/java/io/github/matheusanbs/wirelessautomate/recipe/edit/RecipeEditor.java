@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -46,6 +47,8 @@ import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 public final class RecipeEditor {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final ReloadGate GATE = new ReloadGate();
+    /** Overrides em disco sem padrão editável já avisados no log nesta carga do servidor (um aviso por id). */
+    private static final Set<ResourceLocation> WARNED = ConcurrentHashMap.newKeySet();
 
     public enum State { DEFAULT, EDITED, DISABLED }
 
@@ -71,6 +74,7 @@ public final class RecipeEditor {
 
     public static void reset() {
         GATE.reset();
+        WARNED.clear();
     }
 
     /**
@@ -117,10 +121,18 @@ public final class RecipeEditor {
                 ids.add(holder.id());
             }
         }
-        ids.addAll(overridesOnDisk());
+        List<ResourceLocation> onDisk = overridesOnDisk();
+        ids.addAll(onDisk);
         List<Entry> out = new ArrayList<>();
         for (ResourceLocation id : ids) {
-            entry(server, id).ifPresent(out::add);
+            Optional<Entry> entry = entry(server, id);
+            entry.ifPresent(out::add);
+            if (entry.isEmpty() && onDisk.contains(id) && WARNED.add(id)) {
+                // Por exemplo um tier_core_<tier> editado antes de virar wirelessautomate:tier_upgrade: o override
+                // ganha do jar, mas a tela não o lista nem o restaura. Não se apaga nada.
+                WirelessAutomate.LOGGER.warn("Override de receita sem padrão editável: {} ({})", id,
+                        RecipeOverridePack.recipeFile(id));
+            }
         }
         out.sort(Comparator.comparing(e -> e.id().getPath()));
         return out;

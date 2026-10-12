@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.function.Supplier;
@@ -27,9 +28,12 @@ public final class ModCreativeTabs {
                                 output.accept(RouterBlockItem.withTier(ModItems.ROUTER.get(), tier));
                             }
                         }
+                        // O cartão de um degrau, com origem (o que a bancada fabrica); o antigo, sem origem, não
+                        // se fabrica mais.
                         for (RouterTier tier : RouterTier.values()) {
-                            if (tier.loaded() && ModItems.TIER_CORES.containsKey(tier)) {
-                                output.accept(ModItems.TIER_CORES.get(tier).get());
+                            RouterTier previous = tier.previous();
+                            if (tier.loaded() && ModItems.TIER_CORES.containsKey(tier) && previous != null) {
+                                output.accept(TierCoreItem.card(tier, previous));
                             }
                         }
                         for (StorageKind kind : StorageKind.values()) {

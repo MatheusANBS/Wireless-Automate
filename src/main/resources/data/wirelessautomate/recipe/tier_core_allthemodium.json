@@ -5,11 +5,12 @@
       "modid": "allthemodium"
     }
   ],
-  "type": "minecraft:crafting_shaped",
+  "type": "wirelessautomate:tier_upgrade",
   "category": "misc",
+  "tier": "allthemodium",
   "pattern": [
     "IBI",
-    "ICI",
+    "I I",
     "IBI"
   ],
   "key": {
@@ -18,13 +19,6 @@
     },
     "B": {
       "tag": "c:storage_blocks/allthemodium"
-    },
-    "C": {
-      "item": "wirelessautomate:tier_core_emerald"
     }
-  },
-  "result": {
-    "id": "wirelessautomate:tier_core_allthemodium",
-    "count": 1
   }
 }

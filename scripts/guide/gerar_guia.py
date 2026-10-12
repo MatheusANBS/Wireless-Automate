@@ -389,7 +389,7 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 | --- | --- |
 | **1** | Faça dois roteadores e um [Vinculador](linker.md) (receitas abaixo). |
 | **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú, ainda **sem rede**. Faça o mesmo no baú B. |
-| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: os dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
+| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: as faces dos dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
 | **4** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
 | **5** | No roteador B, mesma face, modo **Insere**. |
 | **6** | Coloque itens no baú A: eles aparecem no baú B. |
@@ -424,7 +424,7 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 | --- | --- |
 | **1** | Craft two routers and a [Linker](linker.md) (recipes below). |
 | **2** | Use a router on any face of chest A. It **attaches** to the chest, with **no network** yet. Do the same on chest B. |
-| **3** | Holding the Linker, click router A and then router B: both join your active network (the first click creates one if you have none). |
+| **3** | Holding the Linker, click router A and then router B: the faces of both join your active network (the first click creates one if you have none). |
 | **4** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
 | **5** | On router B, same face, **Insert** mode. |
 | **6** | Put items in chest A: they show up in chest B. |
@@ -471,7 +471,7 @@ máquina faz.
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
 | **Gira com** | Shift + clique direito com a mão vazia: gira o roteador 90°. A configuração das faces não muda. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
-| **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
+| **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone, filtro e rede por tipo. |
 | **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
 
@@ -491,12 +491,25 @@ o roteador.
 | Passo | Como |
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
-| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões C N L B S O (Cima, Norte, Leste, Baixo, Sul, Oeste). |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões Frente, Trás, Esquerda, Direita, Cima e Baixo (lados da máquina, abaixo). |
 | **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
 | **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
-| **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
+| **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
+
+## Lados da máquina
+
+Os botões das faces falam dos lados da **máquina**, vistos de frente para ela: Frente, Trás,
+Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a frente (por exemplo
+**Frente: Sul**). Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
+**Frente = Norte**.
+
+| Na tela | O que mostra |
+| --- | --- |
+| **Ponto em cima do botão** | A cor da rede daquela face (sem ponto: sem rede). |
+| **Linha Rede** | A rede da face escolhida; clique para trocar. |
+| **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 
 ## Modos da face
 
@@ -553,7 +566,7 @@ machine face does.
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
 | **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
-| **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
+| **Configurable faces** | All six machine faces, each with mode, priority, redstone, filter and network per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
 
@@ -573,12 +586,24 @@ behind it drops the router.
 | Step | How |
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
-| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the Front, Back, Left, Right, Top and Bottom buttons (machine sides, below). |
 | **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
-| **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
+| **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
+
+## Machine sides
+
+The face buttons name the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and
+Bottom. Below the buttons, the screen tells where the front is (for example **Front: South**). A
+machine without a front, or facing up or down, like a barrel: **Front = North**.
+
+| On the screen | What it shows |
+| --- | --- |
+| **Dot above a button** | The color of that face's network (no dot: no network). |
+| **Network row** | The selected face's network; click to change it. |
+| **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 
 ## Face modes
 
@@ -729,8 +754,9 @@ blocks. JEI shows your pack's recipes.
 page('networks.md', front('Redes', 'wirelessautomate:linker', 4) + '''
 # Redes
 
-Roteadores não se ligam uns aos outros: cada **aba** de um roteador entra numa **rede**, e tudo do
-mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo das faces.
+Roteadores não se ligam uns aos outros: cada **face** de um roteador, em cada aba, entra numa
+**rede** (ou em nenhuma), e tudo do mesmo tipo na mesma rede troca entre si. Quem envia e quem
+recebe vem do modo das faces.
 
 ''' + fill(SCENE_STORAGE, L1='A fornalha (Extrai) entrega nos barris (Armazém)',
            L2='Os barris (Armazém) entregam no baú (Insere)', FURNACE='Fornalha · Extrai',
@@ -740,9 +766,9 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Regra | Explicação |
 | --- | --- |
-| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha-o numa rede (abaixo) para ele trabalhar. |
+| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha as faces dele numa rede (abaixo) para ele trabalhar. |
 | **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). É nela que o Vinculador põe os roteadores. |
-| **Rede por aba** | Os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia dela para a rede "Base". |
+| **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
 | **Dono** | Só o dono da rede (ou um operador) pode pôr roteadores nela. |
@@ -751,12 +777,12 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Jeito | Quantos de uma vez |
 | --- | --- |
-| Seletor de rede da aba, na tela do roteador | Uma aba de um roteador |
-| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (as abas marcadas) |
-| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
-| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as abas marcadas da rede, num roteador ou numa área |
-| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
+| Linha **Rede** da face, na tela do roteador | Uma face de um roteador, numa aba |
+| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador: as faces e as abas marcadas |
+| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área (as faces e as abas marcadas) |
+| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as faces e as abas marcadas da rede, num roteador ou numa área |
+| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista: todas as faces deles no tipo escolhido (ou em todos) |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede de cada face vai junto com a configuração colada (todas as abas ou só um tipo) |
 
 ## Alcance e chunks
 
@@ -769,8 +795,9 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 ''', front('Networks', 'wirelessautomate:linker', 4) + '''
 # Networks
 
-Routers don't link to each other: each **tab** of a router joins a **network**, and everything of
-the same type on the same network trades. Who sends and who receives comes from the face modes.
+Routers don't link to each other: each **face** of a router, on each tab, joins a **network** (or
+none), and everything of the same type on the same network trades. Who sends and who receives comes
+from the face modes.
 
 ''' + fill(SCENE_STORAGE, L1='The furnace (Extract) delivers to the barrels (Storage)',
            L2='The barrels (Storage) deliver to the chest (Insert)', FURNACE='Furnace · Extract',
@@ -780,9 +807,9 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Rule | Explanation |
 | --- | --- |
-| **No network when placed** | A new router isn't in any network: put it in one (below) so it starts working. |
+| **No network when placed** | A new router isn't in any network: put its faces in one (below) so it starts working. |
 | **Active network** | Every player has an active network (the first one is named after them). It's where the Linker puts routers. |
-| **Network per tab** | A furnace's items can go to the "Ore line" network and its energy to the "Base" network. |
+| **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
 | **Owner** | Only the network's owner (or an operator) can put routers in it. |
@@ -791,12 +818,12 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Way | How many at once |
 | --- | --- |
-| The tab's network selector, on the router screen | One tab of one router |
-| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (the checked tabs) |
-| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
-| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked tabs out of their network, on one router or an area |
-| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
+| The face's **Network** row, on the router screen | One face of one router, on one tab |
+| <ItemLink id="wirelessautomate:linker" />, Single mode | One router: the checked faces and tabs |
+| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area (the checked faces and tabs) |
+| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked faces and tabs out of their network, on one router or an area |
+| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list: all their faces of the chosen type (or of every type) |
+| <ItemLink id="wirelessautomate:configurator" /> | Each face's network goes with the pasted configuration (every tab or one type) |
 
 ## Range and chunks
 
@@ -1045,16 +1072,17 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Uma máquina de um tipo novo entra com todas as faces na sua rede ativa. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
+| **Faces** | As seis (padrão) ou só algumas: Frente, Trás, Esquerda, Direita, Cima e Baixo, lados da máquina de cada roteador. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 
 ## Comandos
 
 | Gesto | O que faz |
 | --- | --- |
-| Clique num roteador | Põe as abas marcadas do roteador na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas abas da rede. |
-| Clique no ar | Abre a tela: rede, abas, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
+| Clique num roteador | Põe as faces marcadas do roteador, nas abas marcadas, na rede ativa (cria uma, se você não tiver). Em **Nenhuma (desvincular)**, tira essas faces da rede. |
+| Clique no ar | Abre a tela: rede, abas, faces, modo e, em Área, a prévia e o botão **Vincular** (ou **Desvincular**). |
 | Shift + clique no ar | Passa para o próximo modo: **Único**, **Área**, **Máquinas** e de volta ao **Único**. |
 | Shift + roda do mouse | Troca as abas pelos atalhos: **Todos**, Itens, Fluidos, Energia, Químicos (com o Mekanism), Source (com o Ars Nouveau). Uma combinação marcada na tela volta para **Todos**. |
 | Shift + clique em dois blocos (Área) | Marca os cantos da área. |
@@ -1064,8 +1092,10 @@ Também tira roteadores da rede.
 | Parte | Como usar |
 | --- | --- |
 | **Rede** | Clique numa rede para torná-la a ativa, ou em **+ Nova rede** para criar uma. |
-| **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
+| **Nenhuma (desvincular)** | A primeira linha da lista. Com ela escolhida, os mesmos gestos tiram as faces e as abas marcadas da rede em vez de pôr. Escolha uma rede para voltar a vincular. |
 | **Abas** | Um botão colorido por tipo: clique para marcar ou desmarcar (marcado = borda e fundo na cor do tipo). **Todos** marca todos os tipos; com todos marcados, deixa só o primeiro. Só as abas marcadas mudam; as outras ficam como estão. Pelo menos uma fica marcada. |
+| **Faces** | **Todas** e uma letra por lado da máquina (F, T, E, D, C, B), vistos de frente para ela: clique para marcar ou desmarcar. Só as faces marcadas mudam. O botão mostra quais vão, como **Vincular 3 · T, B**. Máquina sem frente: Frente = Norte. Não aparece no modo Máquinas. |
+| **Mais dicas ›** | No modo Único, quando as dicas não cabem na tela: passe o mouse para ver as que ficaram de fora. |
 
 Arraste a borda ou o canto para aumentar a tela; o mapa da área cresce.
 
@@ -1075,6 +1105,14 @@ Arraste a borda ou o canto para aumentar a tela; o mapa da área cresce.
 A área pode ter até 262.144 blocos (por exemplo 64 × 64 × 64), e você precisa estar a até 64
 blocos dela.
 
+## Exemplo: entrada e saída em redes diferentes
+
+| Passo | O que fazer |
+| --- | --- |
+| **1** | Escolha a rede **Mina** e, em Faces, deixe só **C** (Cima) marcada. Clique nas fornalhas. |
+| **2** | Escolha a rede **Armazém**, marque só **B** (Baixo) e clique nelas de novo. |
+| **3** | O minério chega pela Mina e os lingotes saem pelo Armazém. Volte a **Todas** quando terminar. |
+
 ## Exemplo: tirar uma área da rede, menos a energia
 
 | Passo | O que fazer |
@@ -1082,7 +1120,7 @@ blocos dela.
 | **1** | Clique no ar para abrir a tela e escolha **Nenhuma (desvincular)**. |
 | **2** | Deixe marcadas **Itens**, **Fluidos** e **Químicos** e desmarque **Energia**. |
 | **3** | Shift + clique no ar para o modo **Área** e marque os dois cantos com Shift + clique. |
-| **4** | Abra a tela de novo e clique em **Desvincular**: as abas de itens, fluidos e químicos saem da rede e a energia continua ligada. |
+| **4** | Abra a tela de novo e clique em **Desvincular**: as faces de itens, fluidos e químicos saem da rede e a energia continua ligada. |
 
 ## Receita
 
@@ -1101,16 +1139,17 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. A machine of a new kind joins with all its faces on your active network. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
+| **Faces** | All six (default) or just some: Front, Back, Left, Right, Top and Bottom, the sides of each router's machine. |
 | **Network** | One of your networks, or **None (unlink)**. |
 
 ## Actions
 
 | Action | What it does |
 | --- | --- |
-| Click a router | Puts the router's checked tabs in the active network (creates one if you have none). On **None (unlink)**, takes those tabs out of their network. |
-| Click the air | Opens the screen: network, tabs, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
+| Click a router | Puts the router's checked faces, on the checked tabs, in the active network (creates one if you have none). On **None (unlink)**, takes those faces out of their network. |
+| Click the air | Opens the screen: network, tabs, faces, mode and, in Area, the preview and the **Link** (or **Unlink**) button. |
 | Shift + click the air | Goes to the next mode: **Single**, **Area**, **Machines** and back to **Single**. |
 | Shift + mouse wheel | Changes the tabs through the shortcuts: **All**, Items, Fluids, Energy, Chemicals (with Mekanism), Source (with Ars Nouveau). A combination checked on the screen goes back to **All**. |
 | Shift + click two blocks (Area) | Marks the area corners. |
@@ -1120,8 +1159,10 @@ also takes routers out of their network.
 | Part | How to use it |
 | --- | --- |
 | **Network** | Click a network to make it active, or **+ New network** to create one. |
-| **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked tabs out of their network instead. Pick a network to go back to linking. |
+| **None (unlink)** | The first row of the list. While it's chosen, the same actions take the checked faces and tabs out of their network instead. Pick a network to go back to linking. |
 | **Tabs** | One colored button per type: click to mark or unmark it (marked = border and tint in the type's color). **All** marks every type; when all are marked, it leaves only the first. Only the marked tabs change; the others stay as they are. At least one stays marked. |
+| **Faces** | **All** and one letter per machine side (F, Bk, L, R, T, Bt), seen facing it: click to check or uncheck. Only the checked faces change. The button shows which ones go, like **Link 3 · Bk, Bt**. Machine without a front: Front = North. Hidden in Machines mode. |
+| **More tips ›** | In Single mode, when the tips don't fit on the screen: hover it to see the ones left out. |
 
 Drag the edge or the corner to make the screen bigger; the area map grows.
 
@@ -1131,6 +1172,14 @@ Drag the edge or the corner to make the screen bigger; the area map grows.
 The area can be up to 262,144 blocks (for example 64 × 64 × 64), and you need to be within 64
 blocks of it.
 
+## Example: input and output on different networks
+
+| Step | What to do |
+| --- | --- |
+| **1** | Pick the **Mine** network and, under Faces, keep only **T** (Top) checked. Click the furnaces. |
+| **2** | Pick the **Storage** network, check only **Bt** (Bottom) and click them again. |
+| **3** | Ore comes in through Mine and ingots leave through Storage. Go back to **All** when you're done. |
+
 ## Example: unlink an area, keep the energy
 
 | Step | What to do |
@@ -1138,7 +1187,7 @@ blocks of it.
 | **1** | Click the air to open the screen and pick **None (unlink)**. |
 | **2** | Keep **Items**, **Fluids** and **Chemicals** checked and uncheck **Energy**. |
 | **3** | Shift + click the air for **Area** mode and mark both corners with Shift + click. |
-| **4** | Open the screen again and click **Unlink**: the items, fluids and chemicals tabs leave their network and the energy stays connected. |
+| **4** | Open the screen again and click **Unlink**: the items, fluids and chemicals faces leave their network and the energy stays connected. |
 
 ## Recipe
 
@@ -1161,7 +1210,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 
 | | |
 | --- | --- |
-| **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
+| **Copia** | Faces, filtros, prioridades, redstone e a rede de cada face. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão), Área (mesma máquina) e Área (qualquer máquina). |
 | **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). |
@@ -1193,7 +1242,7 @@ borda laranja e o centro mostra o que faz a fatia sob o mouse.
 | **Soltar no centro ou Esc** | Fecha sem mudar nada. |
 
 Copiar sempre copia tudo; o **tipo colado** escolhe o que vai para o roteador. Em **Todos**, todas as
-abas. Num tipo só, apenas as faces e a rede daquela aba: as outras abas do roteador ficam como
+abas. Num tipo só, apenas as faces (com as redes delas) daquela aba: as outras abas do roteador ficam como
 estavam. Por exemplo, copie um roteador configurado só para fluidos, passe para **Fluidos** e cole
 nos outros sem mexer nos itens nem na energia deles.
 
@@ -1206,7 +1255,7 @@ nos outros sem mexer nos itens nem na energia deles.
 | --- | --- |
 | **Mesma ou qualquer máquina** | Na mesma máquina, a área ignora os roteadores de outras máquinas (um baú no meio de uma linha de fornalhas fica como estava). Em qualquer máquina, cola em todos. |
 | **Orientação** | A cópia é relativa ao roteador: funciona com ele preso em qualquer face. |
-| **Redes** | A rede de uma aba só é colada se você puder usá-la; senão, a aba fica com a de antes. |
+| **Redes** | A rede de uma face só é colada se você puder usá-la; senão, a face fica com a de antes. Uma face sem rede na cópia não mexe na rede do destino. A rede vale para as faces da máquina presa; as máquinas do Upgrade de Alcance ficam como estão. |
 | **Replicar uma linha** | Copie o roteador de cada tipo de máquina e cole numa área que cubra a linha inteira. |
 
 ## Receita
@@ -1225,7 +1274,7 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 
 | | |
 | --- | --- |
-| **Copies** | Faces, filters, priorities, redstone and each tab's network. |
+| **Copies** | Faces, filters, priorities, redstone and each face's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default), Area (same machine) and Area (any machine). |
 | **Pasted type** | All (default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). |
@@ -1257,7 +1306,7 @@ choice has an orange border and the center tells what the slice under the mouse 
 | **Release in the center or Esc** | Closes without changing anything. |
 
 Copying always copies everything; the **pasted type** picks what goes to the router. On **All**,
-every tab. On a single type, only that tab's faces and network: the router's other tabs stay as they
+every tab. On a single type, only that tab's faces (with their networks): the router's other tabs stay as they
 were. For example, copy a router set up only for fluids, switch to **Fluids** and paste on the others
 without touching their items or energy.
 
@@ -1270,7 +1319,7 @@ without touching their items or energy.
 | --- | --- |
 | **Same or any machine** | On the same machine, the area skips routers on other machines (a chest in the middle of a furnace line stays as it was). On any machine, it pastes on all of them. |
 | **Orientation** | The copy is relative to the router: it works with the router on any face. |
-| **Networks** | A tab's network is only pasted if you can use it; otherwise the tab keeps its own. |
+| **Networks** | A face's network is only pasted if you can use it; otherwise the face keeps its own. A face with no network in the copy leaves the target's network alone. The network applies to the attached machine's faces; Range Upgrade machines stay as they are. |
 | **Replicating a line** | Copy the router of each machine type and paste over an area covering the whole line. |
 
 ## Recipe
@@ -1300,13 +1349,15 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez. Clique num nó para abrir a tela dele à distância. |
+| **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. Clique num nó para abrir a tela dele à distância. |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
 | **Estatísticas** | Quanto cada rede move por tipo, destinos cheios e roteadores em chunks descarregados. |
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 
 A aba Estatísticas tem um cartão por tipo. Clique num cartão para ver na Lista só os roteadores daquele tipo; o chip "Só …" na Lista tira o filtro.
+
+Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra o aviso **faces sem rede: rede removida**: escolha outra rede para elas.
 
 ## Receita
 
@@ -1330,13 +1381,15 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, with search and a role filter (extracts, inserts...). **Select** moves many nodes between networks at once. Click a node to open its screen remotely. |
+| **List** | Every node, with search and a role filter (extracts, inserts...). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. Click a node to open its screen remotely. |
 | **Map** | Top-down view colored by status. Click a point to open the node. |
 | **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
 
 The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
+
+If a network is deleted, the faces that were on it are left without a network and the node shows the warning **faces without network: network removed**: pick another network for them.
 
 ## Recipe
 
@@ -1828,7 +1881,7 @@ pigmentos e slurries. Sem o Mekanism, a aba não aparece e o resto do mod funcio
 | Recurso | Químicos |
 | --- | --- |
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
-| Rede própria na aba | Sim. |
+| Rede por face | Sim. |
 | Vinculador | Sim: marque a caixa **Químicos** na tela dele. |
 | Vazão | O limite de fluido do tier (veja [Roteador](router.md)). |
 | Filtro exato e por mod (`@mod`) | Sim, com estoque. |
@@ -1860,7 +1913,7 @@ and slurries. Without Mekanism the tab doesn't show and the rest of the mod work
 | Feature | Chemicals |
 | --- | --- |
 | Mode, priority and redstone per face | Yes, like the other tabs. |
-| Its own network on the tab | Yes. |
+| Network per face | Yes. |
 | Linker | Yes: check the **Chemicals** box on its screen. |
 | Throughput | The tier's fluid limit (see [Router](router.md)). |
 | Exact and mod (`@mod`) filter | Yes, with stock. |
@@ -1897,7 +1950,7 @@ o resto do mod funciona igual.
 | Recurso | Source |
 | --- | --- |
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
-| Rede própria na aba | Sim. |
+| Rede por face | Sim. |
 | Vinculador e Configurador | Sim: o chip **Source** e o atalho na roda do mouse. |
 | Vazão | Por tier: Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite (tabela completa no [Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos, como a energia. |
@@ -1924,7 +1977,7 @@ and the rest of the mod works the same.
 | Feature | Source |
 | --- | --- |
 | Mode, priority and redstone per face | Yes, like the other tabs. |
-| Its own network on the tab | Yes. |
+| Network per face | Yes. |
 | Linker and Configurator | Yes: the **Source** chip and the mouse wheel shortcut. |
 | Throughput | Per tier: Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited (full table on the [Router](router.md) page). |
 | Filter and Filter Card | No: Source has no types, like energy. |
@@ -2052,7 +2105,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | Sintoma | Causa provável | O que fazer |
 | --- | --- | --- |
 | Nada sai da origem | A face está em **Nenhum** ou **Insere**. | Na aba certa, ponha a face em **Extrai**. |
-| Nada sai da origem | As abas estão em redes diferentes. | Confira o seletor de rede da aba nos dois roteadores. |
+| Nada sai da origem | As faces estão em redes diferentes, ou sem rede. | Confira a linha **Rede** da face nos dois roteadores (o ponto em cima de cada botão mostra a cor da rede). |
 | Nada chega no destino | O destino está longe demais para o tier de quem envia. | Suba o tier da origem com um [Cartão de Upgrade](upgrade-cards.md). |
 | Nada chega no destino | O destino está cheio. | Ele dorme até ter espaço e volta sozinho. |
 | Só alguns itens passam | Um [filtro](filters.md) ou estoque está barrando. | Veja o filtro da face nos dois lados; filtro vazio passa tudo. |
@@ -2073,7 +2126,7 @@ Something not moving? Check in order: it's almost always one of these.
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
 | Nothing leaves the source | The face is on **None** or **Insert**. | On the right tab, set the face to **Extract**. |
-| Nothing leaves the source | The tabs are on different networks. | Check the tab's network selector on both routers. |
+| Nothing leaves the source | The faces are on different networks, or on none. | Check the face's **Network** row on both routers (the dot above each button shows the network's color). |
 | Nothing reaches the destination | It's too far for the sender's tier. | Raise the source's tier with an [Upgrade Card](upgrade-cards.md). |
 | Nothing reaches the destination | The destination is full. | It sleeps until there's room and comes back on its own. |
 | Only some items pass | A [filter](filters.md) or stock limit is blocking. | Check the face filter on both sides; an empty filter lets everything through. |

@@ -14,7 +14,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | Sintoma | Causa provável | O que fazer |
 | --- | --- | --- |
 | Nada sai da origem | A face está em **Nenhum** ou **Insere**. | Na aba certa, ponha a face em **Extrai**. |
-| Nada sai da origem | As abas estão em redes diferentes. | Confira o seletor de rede da aba nos dois roteadores. |
+| Nada sai da origem | As faces estão em redes diferentes, ou sem rede. | Confira a linha **Rede** da face nos dois roteadores (o ponto em cima de cada botão mostra a cor da rede). |
 | Nada chega no destino | O destino está longe demais para o tier de quem envia. | Suba o tier da origem com um [Cartão de Upgrade](upgrade-cards.md). |
 | Nada chega no destino | O destino está cheio. | Ele dorme até ter espaço e volta sozinho. |
 | Só alguns itens passam | Um [filtro](filters.md) ou estoque está barrando. | Veja o filtro da face nos dois lados; filtro vazio passa tudo. |

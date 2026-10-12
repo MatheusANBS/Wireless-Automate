@@ -9,8 +9,9 @@ navigation:
 
 # Networks
 
-Routers don't link to each other: each **tab** of a router joins a **network**, and everything of
-the same type on the same network trades. Who sends and who receives comes from the face modes.
+Routers don't link to each other: each **face** of a router, on each tab, joins a **network** (or
+none), and everything of the same type on the same network trades. Who sends and who receives comes
+from the face modes.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
@@ -52,9 +53,9 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Rule | Explanation |
 | --- | --- |
-| **No network when placed** | A new router isn't in any network: put it in one (below) so it starts working. |
+| **No network when placed** | A new router isn't in any network: put its faces in one (below) so it starts working. |
 | **Active network** | Every player has an active network (the first one is named after them). It's where the Linker puts routers. |
-| **Network per tab** | A furnace's items can go to the "Ore line" network and its energy to the "Base" network. |
+| **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
 | **Owner** | Only the network's owner (or an operator) can put routers in it. |
@@ -63,12 +64,12 @@ the same type on the same network trades. Who sends and who receives comes from 
 
 | Way | How many at once |
 | --- | --- |
-| The tab's network selector, on the router screen | One tab of one router |
-| <ItemLink id="wirelessautomate:linker" />, Single mode | One router (the checked tabs) |
-| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area |
-| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked tabs out of their network, on one router or an area |
-| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration (every tab or one type) |
+| The face's **Network** row, on the router screen | One face of one router, on one tab |
+| <ItemLink id="wirelessautomate:linker" />, Single mode | One router: the checked faces and tabs |
+| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area (the checked faces and tabs) |
+| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked faces and tabs out of their network, on one router or an area |
+| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list: all their faces of the chosen type (or of every type) |
+| <ItemLink id="wirelessautomate:configurator" /> | Each face's network goes with the pasted configuration (every tab or one type) |
 
 ## Range and chunks
 

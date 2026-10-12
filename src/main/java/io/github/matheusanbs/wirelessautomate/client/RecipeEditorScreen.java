@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.packet.RecipeEditorActionPayload.A
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeDraft;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeSlot;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -265,7 +266,7 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
 
     /** Fantasma do JEI (ou do cursor) no slot {@code i} da grade. */
     public void setGhost(int i, ItemStack stack) {
-        if (stack.isEmpty() || !canEditGrid() || i < 0 || i >= RecipeDraft.SLOTS) {
+        if (stack.isEmpty() || !canEditGrid() || i < 0 || i >= RecipeDraft.SLOTS || draft.locked(i)) {
             return;
         }
         selectedSlot = i;
@@ -359,7 +360,7 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         boolean has = draft != null;
         boolean edit = canEditGrid();
         reloadButton.visible = snapshot().pending() > 0;
-        minusButton.visible = plusButton.visible = has;
+        minusButton.visible = plusButton.visible = has && !ring();
         minusButton.active = edit && draft.count() > RecipeDraft.MIN_COUNT;
         plusButton.active = edit && draft.count() < maxCount();
         itemButton.visible = tagButton.visible = clearButton.visible = edit;
@@ -377,6 +378,11 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         saveButton.active = dirty() && !draft.isEmpty();
         Row row = selectedRow();
         restoreButton.active = row != null && (row.state() != RecipeEditor.State.DEFAULT || dirty());
+    }
+
+    /** O anel de subir tier: centro travado, resultado e quantidade fixos. */
+    private boolean ring() {
+        return draft != null && draft.shape() == RecipeDraft.Shape.RING;
     }
 
     private RecipeSlot.Kind slotKind() {
@@ -507,6 +513,9 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         }
         int grid = gridSlotAt(mouseX, mouseY);
         if (grid >= 0 && draft != null) {
+            if (draft.locked(grid)) {
+                return true; // o centro do anel: só o aviso, no tooltip
+            }
             selectedSlot = grid;
             if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                 setSlot(grid, RecipeSlot.EMPTY);
@@ -595,6 +604,9 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         Row row = selectedRow();
         int grid = gridSlotAt(mx, my);
         if (grid >= 0) {
+            if (draft.locked(grid)) {
+                return List.of(tr("ring.center").copy().withColor(0xFFFFB39E));
+            }
             List<Component> lines = new ArrayList<>();
             RecipeSlot slot = draft.slots().get(grid);
             switch (slot.kind()) {
@@ -734,7 +746,11 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         GuiPaint.pill(g, pillX, y + 20, pillW, 11, GuiPaint.BEVEL_LIGHT, stateColor);
         GuiPaint.text(g, font, state, pillX + 4, y + 22, stateColor);
         GuiText.draw(g, font, resultStack(row).getHoverName(), x + X0, y + 22, pillX - 4 - (x + X0), GuiPaint.FG);
-        Component shape = tr(draft.shape() == RecipeDraft.Shape.SHAPED ? "shaped" : "shapeless");
+        Component shape = tr(switch (draft.shape()) {
+            case SHAPED -> "shaped";
+            case SHAPELESS -> "shapeless";
+            case RING -> "ring";
+        });
         GuiText.draw(g, font, shape.copy().append(" · " + row.id().getPath()), x + X0, y + 32, RW, GuiPaint.MUTED);
         if (row.divergent()) {
             GuiText.wrap(g, font, tr("divergent"), x + X0, y + 42, RW, 2, GuiPaint.WARN);
@@ -746,6 +762,10 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
             int sx = x + GRID_X + (i % 3) * 18;
             int sy = y + GRID_Y + (i / 3) * 18;
             boolean selected = i == selectedSlot && !off;
+            if (draft.locked(i)) {
+                lockedCenter(g, sx, sy, off);
+                continue;
+            }
             if (selected) {
                 g.fill(sx, sy, sx + 18, sy + 18, GuiPaint.BEVEL_LIGHT);
                 GuiPaint.outline(g, sx, sy, 18, 18, GuiPaint.ACCENT);
@@ -785,9 +805,15 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
             GuiPaint.text(g, font, qty, ox + OUT_SIZE - 2 - font.width(qty), oy + OUT_SIZE - 9, GuiPaint.FG);
             g.pose().popPose();
         }
-        Component count = draft.count() == 1 ? tr("count.one") : tr("count", draft.count());
-        GuiText.draw(g, font, count, x + STEP_X + 16, y + OUT_Y + 9, x + X0 + RW - (x + STEP_X + 16),
-                off ? GuiPaint.DISABLED : GuiPaint.MUTED);
+        if (ring()) {
+            // sem quantidade: o aviso do centro travado ao lado do resultado
+            GuiText.wrap(g, font, tr("ring.center"), x + STEP_X - 4, y + OUT_Y - 4, x + X0 + RW - (x + STEP_X - 4), 4,
+                    off ? GuiPaint.DISABLED : GuiPaint.MUTED);
+        } else {
+            Component count = draft.count() == 1 ? tr("count.one") : tr("count", draft.count());
+            GuiText.draw(g, font, count, x + STEP_X + 16, y + OUT_Y + 9, x + X0 + RW - (x + STEP_X + 16),
+                    off ? GuiPaint.DISABLED : GuiPaint.MUTED);
+        }
 
         // inspetor do slot escolhido, ou o aviso de desativada
         if (off) {
@@ -816,6 +842,27 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         g.pose().pushPose();
         g.pose().translate(0, 0, 200);
         g.fill(x, y, x + w, y + h, (color & 0x00FFFFFF) | alpha << 24);
+        g.pose().popPose();
+    }
+
+    /**
+     * O centro travado do anel: o slot afundado com um roteador apagado (o que vai no centro) e um cadeado
+     * de 5×6 px no canto.
+     */
+    private static void lockedCenter(GuiGraphics g, int x, int y, boolean off) {
+        g.fill(x, y, x + 18, y + 18, GuiPaint.BEVEL_DARK);
+        g.fill(x + 1, y + 1, x + 18, y + 18, GuiPaint.INSET);
+        g.renderItem(new ItemStack(ModItems.ROUTER.get()), x + 1, y + 1);
+        overlay(g, x + 1, y + 1, 16, 16, GuiPaint.INSET, off ? 0xC0 : 0x90);
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 210);
+        int c = off ? GuiPaint.DISABLED : GuiPaint.MUTED;
+        int lx = x + 12;
+        int ly = y + 11;
+        g.fill(lx + 1, ly, lx + 4, ly + 1, c);
+        g.fill(lx, ly + 1, lx + 1, ly + 3, c);
+        g.fill(lx + 4, ly + 1, lx + 5, ly + 3, c);
+        g.fill(lx, ly + 3, lx + 5, ly + 6, c);
         g.pose().popPose();
     }
 

@@ -27,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeDraft;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeSlot;
@@ -2946,6 +2947,23 @@ public final class DevEndToEnd {
                 () -> "escolhida " + recipeScreen().selectedId() + ", " + GuiText.clipCount() + " texto(s) cortado(s)"));
         list.add(frames());
         list.add(capture("recipes-4-tag"));
+        // o anel de subir tier (wirelessautomate:tier_upgrade): centro travado, sem quantidade, o aviso do centro
+        ResourceLocation ring = WirelessAutomate.id("tier_core_elite");
+        list.add(new Step("Receitas: escolher o anel do Elite", STEP_TIMEOUT_MS, () -> {
+            RecipeEditorScreen screen = recipeScreen();
+            int[] center = screen.rowCenter(ring);
+            if (center == null) {
+                throw new StepFailure("o anel do Elite não está na lista");
+            }
+            click(screen, center[0], center[1]);
+        }, () -> ring.equals(recipeScreen().selectedId())
+                && recipeScreen().draft().shape() == RecipeDraft.Shape.RING
+                && recipeScreen().draft().slots().get(RecipeDraft.CENTER).isEmpty()
+                && !recipeScreen().plusButton().visible && GuiText.clipCount() == 0,
+                () -> "escolhida " + recipeScreen().selectedId() + ", rascunho " + recipeScreen().draft() + ", "
+                        + GuiText.clipCount() + " texto(s) cortado(s)"));
+        list.add(frames());
+        list.add(capture("recipes-5-anel"));
         list.add(close("Receitas: fechar"));
     }
 

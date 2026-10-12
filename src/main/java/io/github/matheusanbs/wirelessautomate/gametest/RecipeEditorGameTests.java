@@ -4,6 +4,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeDraft;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeJson;
@@ -18,7 +23,10 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import com.mojang.authlib.GameProfile;
@@ -34,6 +42,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.neoforged.fml.ModList;
@@ -94,8 +105,11 @@ public final class RecipeEditorGameTests {
                 "filter_card_copy (serializador próprio) não é editável");
         helper.assertTrue(entries.stream().noneMatch(e -> e.id().equals(id("router_upgrade"))),
                 "router_upgrade (serializador próprio) não é editável");
-        helper.assertTrue(entries.stream().noneMatch(e -> e.id().equals(id("tier_core_elite"))),
-                "tier_core_elite (wirelessautomate:tier_upgrade) não é editável");
+        RecipeEditor.Entry elite = entries.stream().filter(e -> e.id().equals(id("tier_core_elite"))).findFirst()
+                .orElseThrow(() -> new GameTestAssertException("tier_core_elite (tier_upgrade) deve ser editável"));
+        helper.assertValueEqual(elite.defaults().shape(), RecipeDraft.Shape.RING, "forma do tier_core_elite");
+        helper.assertValueEqual(elite.resultItem(), id("tier_core_elite"), "resultado do anel");
+        helper.assertTrue(elite.defaults().slots().get(RecipeDraft.CENTER).isEmpty(), "centro do anel vazio");
         boolean guide = entries.stream().anyMatch(e -> e.id().equals(id("guide")));
         helper.assertValueEqual(guide, ModList.get().isLoaded("guideme"), "guide só com o GuideME");
         helper.succeed();
@@ -343,6 +357,219 @@ public final class RecipeEditorGameTests {
             threw = true;
         }
         helper.assertTrue(threw, "forma inválida deve dar DecoderException");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ anéis (tier_upgrade)
+
+    /** A grade 3×3 com o anel da receita (o primeiro item de cada ingrediente) e {@code center} no meio. */
+    private static CraftingInput ringGrid(TierUpgradeRecipe recipe, ItemStack center) {
+        List<Ingredient> ingredients = recipe.getIngredients();
+        List<ItemStack> items = new ArrayList<>(9);
+        for (int i = 0; i < 9; i++) {
+            items.add(i == TierUpgradeRecipe.CENTER ? center : ingredients.get(i).getItems()[0].copyWithCount(1));
+        }
+        return CraftingInput.of(3, 3, items);
+    }
+
+    private static Recipe<?> decode(MinecraftServer server, JsonObject json) {
+        return Recipe.CODEC.parse(RegistryOps.create(JsonOps.INSTANCE, server.registryAccess()), json)
+                .getOrThrow(msg -> new GameTestAssertException("o JSON não decodifica: " + msg));
+    }
+
+    /**
+     * Salvar um anel novo do Elite grava um {@code tier_upgrade} válido (centro vazio, sem result, sem step) que
+     * decodifica e faz as três receitas: o cartão de um degrau, o que pula e a direta, com o mesmo anel novo.
+     */
+    @GameTest(template = "empty")
+    public static void ringSaveWritesTierUpgrade(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation id = id("tier_core_elite");
+        try {
+            RecipeEditor.Entry before = require(server, id);
+            helper.assertValueEqual(before.state(), RecipeEditor.State.DEFAULT, "estado inicial");
+            RecipeDraft draft = before.current().withSlot(1, RecipeSlot.item("minecraft:diamond"))
+                    .withSlot(7, RecipeSlot.tag("c:gems/emerald"));
+            Optional<?> error = RecipeEditor.save(server, id, draft);
+            helper.assertTrue(error.isEmpty(), "salvar o anel deve dar certo: " + error);
+            JsonObject json = readFile(id);
+            helper.assertValueEqual(json.get("type").getAsString(), RecipeJson.TIER_UPGRADE, "type");
+            helper.assertValueEqual(json.get("tier").getAsString(), "elite", "tier");
+            helper.assertFalse(json.has("result"), "o anel não tem result");
+            helper.assertFalse(json.has("step"), "o step padrão não é gravado");
+            helper.assertValueEqual(json.getAsJsonArray("pattern").get(1).getAsString().charAt(1), ' ', "centro do pattern");
+            helper.assertFalse(json.has(RecipeJson.CONDITIONS), "sem condições no JSON gravado");
+
+            Recipe<?> decoded = decode(server, json);
+            if (!(decoded instanceof TierUpgradeRecipe ring)) {
+                throw new GameTestAssertException("deve decodificar como TierUpgradeRecipe: " + decoded);
+            }
+            helper.assertTrue(ring.tier() == RouterTier.ELITE, "tier decodificado: " + ring.tier());
+            helper.assertTrue(ring.getIngredients().get(1).test(new ItemStack(Items.DIAMOND)), "slot 1 novo");
+            helper.assertTrue(ring.getIngredients().get(7).test(new ItemStack(Items.EMERALD)), "slot 7 novo (tag)");
+
+            // cartão de um degrau: anel + Redstone
+            CraftingInput stepGrid = ringGrid(ring, new ItemStack(Items.REDSTONE));
+            helper.assertTrue(ring.matches(stepGrid, helper.getLevel()), "anel novo + Redstone casa");
+            ItemStack stepCard = ring.assemble(stepGrid, server.registryAccess());
+            helper.assertTrue(stepCard.getItem() instanceof TierCoreItem core && core.tier() == RouterTier.ELITE
+                    && Objects.equals(TierCoreItem.origin(stepCard), RouterTier.ADVANCED), "cartão de um degrau: " + stepCard);
+            // cartão que pula: anel + cartão Básico → Avançado
+            CraftingInput jumpGrid = ringGrid(ring, TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC));
+            ItemStack jumpCard = ring.assemble(jumpGrid, server.registryAccess());
+            helper.assertTrue(jumpCard.getItem() instanceof TierCoreItem core && core.tier() == RouterTier.ELITE
+                    && Objects.equals(TierCoreItem.origin(jumpCard), RouterTier.BASIC), "cartão que pula: " + jumpCard);
+            // receita direta: anel + roteador Avançado
+            CraftingInput directGrid = ringGrid(ring, RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ADVANCED));
+            ItemStack router = ring.assemble(directGrid, server.registryAccess());
+            helper.assertTrue(RouterBlockItem.tierOf(router) == RouterTier.ELITE, "receita direta: " + router);
+            // mesmo custo pelos dois caminhos: o anel das duas grades é o mesmo, só o centro muda
+            for (int i = 0; i < 9; i++) {
+                if (i != TierUpgradeRecipe.CENTER) {
+                    helper.assertTrue(ItemStack.isSameItem(stepGrid.getItem(i), directGrid.getItem(i))
+                            && ItemStack.isSameItem(stepGrid.getItem(i), jumpGrid.getItem(i)), "mesmo anel na casa " + i);
+                }
+            }
+            // o anel velho (obsidiana em cima) não casa mais com o novo
+            List<ItemStack> old = new ArrayList<>(stepGrid.items());
+            old.set(1, new ItemStack(Items.OBSIDIAN));
+            helper.assertFalse(ring.matches(CraftingInput.of(3, 3, old), helper.getLevel()), "o anel velho não casa");
+
+            RecipeEditor.Entry after = require(server, id);
+            helper.assertValueEqual(after.state(), RecipeEditor.State.EDITED, "estado depois de salvar");
+            helper.assertValueEqual(after.current(), draft, "rascunho salvo");
+            helper.assertTrue(after.divergent(), "sem recarga, a carregada (do jar) diverge do override");
+        } catch (IOException e) {
+            throw new GameTestAssertException("erro de disco: " + e);
+        } finally {
+            clean(id);
+        }
+        helper.succeed();
+    }
+
+    /** O anel padrão não diverge do carregado (o step no centro não conta); desativar e reativar gravam o anel. */
+    @GameTest(template = "empty")
+    public static void ringDisableAndEnable(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation id = id("tier_core_emerald");
+        try {
+            helper.assertFalse(require(server, id).divergent(), "o padrão não diverge");
+            helper.assertTrue(RecipeEditor.setDisabled(server, id, true).isEmpty(), "desativar o anel");
+            JsonObject json = readFile(id);
+            helper.assertValueEqual(json.get("type").getAsString(), RecipeJson.TIER_UPGRADE, "type do desativado");
+            helper.assertTrue(hasFalseCondition(json), "neoforge:false no anel desativado");
+            helper.assertValueEqual(require(server, id).state(), RecipeEditor.State.DISABLED, "desativada");
+            helper.assertTrue(RecipeEditor.setDisabled(server, id, false).isEmpty(), "reativar o anel");
+            RecipeEditor.Entry enabled = require(server, id);
+            helper.assertValueEqual(enabled.state(), RecipeEditor.State.EDITED, "reativada");
+            helper.assertFalse(enabled.divergent(), "o override igual ao jar não diverge");
+            helper.assertTrue(decode(server, readFile(id)) instanceof TierUpgradeRecipe, "o reativado decodifica");
+        } catch (IOException e) {
+            throw new GameTestAssertException("erro de disco: " + e);
+        } finally {
+            clean(id);
+        }
+        helper.succeed();
+    }
+
+    /** Restaurar um anel salvo apaga o override; anel que não chega às bordas e forma trocada dão erro. */
+    @GameTest(template = "empty")
+    public static void ringRestoreAndReject(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation id = id("tier_core_advanced");
+        try {
+            RecipeDraft base = require(server, id).current();
+            RecipeDraft shorter = base.withSlot(6, RecipeSlot.EMPTY).withSlot(7, RecipeSlot.EMPTY)
+                    .withSlot(8, RecipeSlot.EMPTY);
+            helper.assertTrue(RecipeEditor.save(server, id, shorter).isPresent(), "anel sem a linha de baixo dá erro");
+            RecipeDraft shaped = RecipeDraft.fromShaped(List.of("SSS", "S S", "SSS"),
+                    Map.of('S', RecipeSlot.item("minecraft:stick")), 1);
+            helper.assertTrue(RecipeEditor.save(server, id, shaped).isPresent(), "shaped no lugar do anel dá erro");
+            helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "nada gravado pelos erros");
+
+            helper.assertTrue(RecipeEditor.save(server, id, base.withSlot(0, RecipeSlot.item("minecraft:iron_ingot")))
+                    .isEmpty(), "salvar");
+            helper.assertValueEqual(require(server, id).state(), RecipeEditor.State.EDITED, "editada");
+            helper.assertTrue(RecipeEditor.restore(server, id).isEmpty(), "restaurar deve dar certo");
+            helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "o arquivo deve sumir");
+            RecipeEditor.Entry after = require(server, id);
+            helper.assertValueEqual(after.state(), RecipeEditor.State.DEFAULT, "padrão de novo");
+            helper.assertValueEqual(after.current(), after.defaults(), "rascunho do padrão");
+        } finally {
+            clean(id);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Um override {@code crafting_shaped} de {@code tier_core_<tier>} feito antes da 1.9.0 aparece como editado e
+     * divergente, com o anel padrão na tela, e Restaurar o apaga.
+     */
+    @GameTest(template = "empty")
+    public static void legacyShapedOverrideRestorable(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation id = id("tier_core_ultimate");
+        if (server.getRecipeManager().byKey(id).isEmpty()) {
+            throw new GameTestAssertException("tier_core_ultimate deve estar carregada sem o Allthemodium");
+        }
+        String legacy = """
+                {
+                  "type": "minecraft:crafting_shaped",
+                  "category": "misc",
+                  "pattern": ["XDX", "BRB", "XBX"],
+                  "key": {
+                    "X": {"item": "minecraft:echo_shard"},
+                    "D": {"item": "minecraft:dragon_egg"},
+                    "B": {"item": "minecraft:netherite_block"},
+                    "R": {"item": "wirelessautomate:tier_core_emerald"}
+                  },
+                  "result": {"id": "wirelessautomate:tier_core_ultimate", "count": 1}
+                }
+                """;
+        try {
+            Files.createDirectories(RecipeOverridePack.recipeFile(id).getParent());
+            Files.writeString(RecipeOverridePack.recipeFile(id), legacy, StandardCharsets.UTF_8);
+            RecipeEditor.Entry entry = require(server, id);
+            helper.assertValueEqual(entry.state(), RecipeEditor.State.EDITED, "o override antigo aparece como editado");
+            helper.assertTrue(entry.divergent(), "o override antigo diverge");
+            helper.assertValueEqual(entry.current(), entry.defaults(), "a tela mostra o anel padrão");
+            helper.assertValueEqual(entry.current().shape(), RecipeDraft.Shape.RING, "forma mostrada");
+            helper.assertTrue(RecipeEditor.restore(server, id).isEmpty(), "restaurar o override antigo");
+            helper.assertFalse(Files.exists(RecipeOverridePack.recipeFile(id)), "o arquivo antigo some");
+            helper.assertValueEqual(require(server, id).state(), RecipeEditor.State.DEFAULT, "padrão de novo");
+        } catch (IOException e) {
+            throw new GameTestAssertException("erro de disco: " + e);
+        } finally {
+            clean(id);
+        }
+        helper.succeed();
+    }
+
+    /** O override do anel guarda as condições do padrão (a variante do Ultimate com o ATM). */
+    @GameTest(template = "empty")
+    public static void ringKeepsConditions(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ResourceLocation file = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID,
+                "recipe/tier_core_ultimate_atm.json");
+        Resource resource = server.getResourceManager().getResource(file)
+                .orElseThrow(() -> new GameTestAssertException("o jar deve ter o recurso " + file));
+        JsonObject json;
+        try (Reader reader = resource.openAsReader()) {
+            json = JsonParser.parseReader(reader).getAsJsonObject();
+        } catch (IOException e) {
+            throw new GameTestAssertException("erro lendo o recurso: " + e);
+        }
+        RecipeDraft draft = RecipeJson.toDraft(json)
+                .orElseThrow(() -> new GameTestAssertException("o anel deve virar rascunho"));
+        helper.assertValueEqual(draft.shape(), RecipeDraft.Shape.RING, "forma");
+        JsonObject out = RecipeJson.toOverride(json, draft.withSlot(0, RecipeSlot.item("minecraft:diamond")));
+        String conditions = out.getAsJsonArray(RecipeJson.CONDITIONS).toString();
+        helper.assertTrue(conditions.contains("neoforge:mod_loaded") && conditions.contains("allthemodium")
+                && conditions.contains("allthetweaks"), "as condições devem ser mantidas: " + conditions);
+        helper.assertValueEqual(out.get("type").getAsString(), RecipeJson.TIER_UPGRADE, "type");
+        helper.assertValueEqual(out.get("tier").getAsString(), "ultimate", "tier");
+        helper.assertFalse(out.has("result"), "sem result");
+        helper.assertTrue(decode(server, out) instanceof TierUpgradeRecipe, "o override decodifica como anel");
         helper.succeed();
     }
 }

@@ -38,6 +38,7 @@ Escolha uma receita na lista: a grade 3 × 3 e o resultado aparecem à direita.
 | Aceitar qualquer item de uma tag | Escolha o slot e clique em **Tag**. As setas trocam entre as tags do item. **Item** volta para o item exato. |
 | Esvaziar o slot escolhido | **Limpar** (ou clique direito no slot). |
 | Mudar a quantidade do resultado | **−** e **+**, até o tamanho da pilha do item (no máximo 64). |
+| Mudar o anel de um Cartão de Upgrade | Troque os oito slots em volta. O centro fica travado: nele vai o roteador, o armazenamento, a Redstone ou o cartão, e o anel novo vale para todos esses. |
 
 ## Salvar e recarregar
 
@@ -56,5 +57,5 @@ Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são reca
 | --- | --- |
 | **Onde fica** | As edições ficam em `config/wirelessautomate/recipes/`, uma pasta só para a instância. Valem em todos os mundos dela e, num servidor, no servidor. Sobrevivem às atualizações do mod. |
 | **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
-| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro, o upgrade de roteador na bancada e os Cartões de Upgrade (os anéis são de um tipo próprio; mude-os por datapack ou KubeJS). Também não dá para criar receitas novas. |
+| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
 | **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |

@@ -144,3 +144,7 @@ Nenhum.
 | T8: `rows` por quadro | Resolvido (`cachedRows`); sobra o ícone (Menor 9) |
 | T8 M2, M3, M5, M6, M7 | **Ainda valem** (Menor 17) |
 | T9: guia "Único e Área" | Resolvido |
+
+## Feedback do dono no teste (11/10/2026)
+
+- Alternar entre a lista e o visor pelo botão Máquinas não é óbvio ("cadê o 3D?"): na etapa 2, mostrar a lista e o visor lado a lado quando a janela é larga, como no mockup; no tamanho mínimo, continua alternando, com o botão mais claro.

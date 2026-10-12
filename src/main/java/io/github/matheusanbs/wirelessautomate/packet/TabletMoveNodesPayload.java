@@ -15,8 +15,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
- * Cliente → servidor: "Mover para a rede…" da seleção do Tablet. {@code resource} vazio = todas as abas;
- * {@code network} vazio = sem rede. Até {@link TabletMenu#MAX_MOVE} nós.
+ * Cliente → servidor: "Mover para a rede…" da seleção do Tablet: todas as faces (presa, perfis e
+ * exceções) do tipo {@code resource}, ou de todos os tipos se vazio; {@code network} vazio = sem rede. Até {@link TabletMenu#MAX_MOVE} nós.
  */
 public record TabletMoveNodesPayload(int containerId, List<NodeKey> nodes, Optional<ResourceType> resource,
         Optional<UUID> network) implements CustomPacketPayload {

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
@@ -217,7 +218,8 @@ final class RangeList {
         if (!group.name().isEmpty()) {
             return Component.literal(group.name());
         }
-        return BuiltInRegistries.BLOCK.get(group.block()).getName();
+        // pelo item, não pelo bloco: o nome de alguns blocos tem lacunas que só o item preenche
+        return RouterBlock.machineName(BuiltInRegistries.BLOCK.get(group.block()));
     }
 
     /** O número da máquina dentro do grupo, a partir de 1 (a ordem de vínculo). */

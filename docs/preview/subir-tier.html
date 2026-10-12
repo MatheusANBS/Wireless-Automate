@@ -1,0 +1,430 @@
+<title>Subir tier</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Estudo do novo modelo de subir o tier do roteador: receita direta, cartão de um degrau e cartão que pula. As bancadas seguem a GUI do Minecraft; a página em volta segue o tema. */
+:root {
+  --s: 36px;
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-danger: #D5453A;
+  /* GuiPaint.tierColor */
+  --t-basic: #6E7480; --t-advanced: #D59A1E; --t-elite: #1FA9A0; --t-emerald: #22A84E;
+  --t-allthemodium: #E8740A; --t-vibranium: #18B57A; --t-unobtainium: #B23FD0; --t-ultimate: #7B4FE0;
+  /* bancada do Minecraft */
+  --mc-panel: #C6C6C6; --mc-slot: #8B8B8B; --mc-dark: #373737; --mc-light: #FFFFFF; --mc-ink: #3F3F3F;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+@media (max-width: 480px) { :root { --s: 30px } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px; overflow-x: hidden }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 10px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 0 0 6px }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 74ch; margin: 6px 0 0 }
+p, li { max-width: 76ch }
+.mu { color: var(--page-mu) }
+code { font-family: var(--pix); font-size: .95em }
+section.part { border-top: 1px solid var(--page-line); margin-top: 40px; padding-top: 28px }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.answer { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; margin-top: 22px }
+.answer > div { min-width: 0; background: var(--page-card); border: 1px solid var(--page-line); padding: 14px 16px }
+.answer b { display: block; font-family: var(--pix); font-weight: 500; font-size: 17px; margin-bottom: 4px }
+ul.tight { margin: 0; padding-left: 18px } ul.tight li { margin-bottom: 5px }
+kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg) }
+.q { margin-top: 14px; display: grid; gap: 12px }
+.q > div { background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 16px; max-width: 900px }
+.q b { font-family: var(--pix); font-weight: 500; font-size: 16px }
+.q .rec { display: inline-block; font-family: var(--pix); font-size: 12px; letter-spacing: .04em; color: var(--g-ok); border: 1px solid var(--g-ok); padding: 0 6px; margin-left: 8px; text-transform: uppercase; vertical-align: 1px }
+.q p { margin: 4px 0 0 }
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0 }
+.toolbar button, select.pick { font-family: var(--pix); font-size: 13px; padding: 3px 9px; background: var(--page-card); color: var(--page-fg); border: 1px solid var(--page-line); cursor: pointer }
+.toolbar button.on { background: var(--page-fg); color: var(--page); border-color: var(--page-fg) }
+.toolbar button:focus-visible, select.pick:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px }
+.tier { font-family: var(--pix); font-weight: 500 }
+.pill { display: inline-block; font-family: var(--pix); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; padding: 0 6px; border: 1px solid currentColor; vertical-align: 2px }
+.pill.changed { color: var(--coral) }
+.pill.same { color: var(--page-mu) }
+
+/* ---- bancada ---- */
+.row { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-start; margin-top: 14px }
+.craft { display: inline-flex; align-items: center; gap: 8px; background: var(--mc-panel); padding: 8px; border: 3px solid; border-color: var(--mc-light) var(--mc-dark) var(--mc-dark) var(--mc-light); box-shadow: 0 0 0 2px #000; color: var(--mc-ink); font-family: var(--pix); flex: none; max-width: 100% }
+.craft.old { opacity: .55; filter: saturate(.6) }
+.g3 { display: grid; grid-template-columns: repeat(3, var(--s)); gap: 0 }
+.slot { width: var(--s); height: var(--s); background: var(--mc-slot); border: 2px solid; border-color: var(--mc-dark) var(--mc-light) var(--mc-light) var(--mc-dark); display: grid; place-items: center; position: relative }
+.slot svg { width: calc(var(--s) - 8px); height: calc(var(--s) - 8px); image-rendering: pixelated }
+.slot .cnt { position: absolute; right: 1px; bottom: -2px; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #3f3f3f; line-height: 1 }
+.slot.ghost svg { opacity: .55 }
+.slot.res { margin: 0 2px }
+.carr { width: 26px; height: 16px; flex: none; color: #8B8B8B }
+.carr.eq { font-size: 20px; text-align: center; line-height: 16px; color: var(--mc-ink) }
+.cap { font-family: var(--pix); font-size: 14px; margin-top: 6px; color: var(--page-mu) }
+.cap b { color: var(--page-fg); font-weight: 500 }
+.craftbox { flex: none; max-width: 100%; min-width: 0 }
+.plus { font-family: var(--pix); font-size: 26px; color: var(--page-mu); align-self: center; padding: 0 2px }
+.gallery { display: grid; gap: 26px; margin-top: 16px }
+.gal { border: 1px solid var(--page-line); background: var(--page-card); padding: 14px 16px; min-width: 0 }
+.gal h3 { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.gal h3 .sw { width: 14px; height: 14px; border: 2px solid #1B1920; display: inline-block }
+.gal .note { font-size: 13px; color: var(--page-mu); margin: 6px 0 0; max-width: 90ch }
+.gal .note b { color: var(--coral); font-weight: 400 }
+
+/* ---- tooltip do Minecraft ---- */
+.mctip, #tip { font-family: var(--pix); font-size: 15px; line-height: 19px; background: rgba(16, 0, 16, .94); border: 2px solid #2b0f5c; padding: 4px 8px; color: #fff; max-width: 340px }
+.mctip { display: inline-block; margin-top: 10px }
+.mctip .g, #tip .g { color: #A8A8A8 } .mctip .w, #tip .w { color: #FFC555 } .mctip .r, #tip .r { color: #FF6B6B } .mctip .b, #tip .b { color: #5555FF }
+#tip { position: fixed; z-index: 10; pointer-events: none }
+.actionbar { font-family: var(--pix); font-size: 15px; text-align: center; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; padding: 8px 6px; background: #121815; margin-top: 8px; min-height: 38px; max-width: 420px }
+.actionbar .w { color: #FFC555 } .actionbar .k { color: #8FD6A4 } .actionbar .r { color: #FF7A6B }
+.actionbar small { display: block; font-size: 11px; color: #9AA59E; text-shadow: none; margin-bottom: 2px }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; margin-top: 16px }
+.cols > * { min-width: 0 }
+.card { background: var(--page-card); border: 1px solid var(--page-line); padding: 14px 16px }
+
+/* ---- calculadora ---- */
+.calc { margin-top: 16px; background: var(--page-card); border: 1px solid var(--page-line); padding: 14px 16px }
+.calc .pickers { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-family: var(--pix) }
+.calc .paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 14px }
+.calc .path { min-width: 0; border-top: 2px solid var(--page-line); padding-top: 8px }
+.calc .path h4 { font-family: var(--pix); font-weight: 500; font-size: 16px; margin: 0 0 6px }
+.steps { display: flex; flex-direction: column; gap: 6px }
+.step { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px }
+.step .lbl { font-family: var(--pix); min-width: 10ch; color: var(--page-mu) }
+.chip { display: inline-flex; align-items: center; gap: 3px; background: var(--page); border: 1px solid var(--page-line); padding: 1px 5px 1px 2px; font-family: var(--pix); font-size: 13px }
+.chip svg { width: 16px; height: 16px }
+.total { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--page-line); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center }
+.total .lbl { font-family: var(--pix); width: 100%; font-size: 14px }
+.verdict { margin-top: 12px; font-family: var(--pix); font-size: 16px; color: var(--g-ok) }
+svg.ico { width: 16px; height: 16px; vertical-align: -3px }
+@media (max-width: 560px) { .row > .plus { width: 100%; text-align: center; padding: 0; margin: -6px 0 } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Subir tier</h1>
+    <span class="status">Estudo v1 · aguardando aprovação</span>
+  </header>
+  <p class="lede">Hoje cada Cartão de Upgrade embute todos os anéis dos tiers anteriores e sobe o roteador de qualquer tier abaixo. Uma receita direta de bancada (o roteador no centro do anel) sairia mais barata e induziria a craftar direto. O novo modelo, inspirado no Sophisticated Storage, faz os dois caminhos custarem o mesmo: um degrau custa o anel daquele tier; pular vários degraus custa a soma dos anéis. Nada aqui foi implementado.</p>
+
+  <div class="answer">
+    <div><b>Receita direta</b>Roteador do tier anterior no centro + o anel do tier novo = roteador do tier novo, com toda a configuração mantida (faces, redes, nome, cartões, upgrades, máquinas).</div>
+    <div><b>Cartão de um degrau</b>O mesmo anel em volta de uma Redstone = "Avançado → Elite". Vale só num roteador Avançado.</div>
+    <div><b>Cartão que pula</b>Um cartão no centro do anel do tier seguinte estende o destino e mantém a origem: "Básico → Avançado" + anel do Elite = "Básico → Elite". Mesmo custo da bancada passo a passo, com a vantagem de pular vários tiers de uma vez e de usar com o roteador no lugar.</div>
+  </div>
+
+  <!-- ===================================================== 1 · ABERTURA -->
+  <section class="part" id="regra">
+    <div class="eyebrow">1 · A regra</div>
+    <h2>O mesmo custo pela bancada e pelo cartão</h2>
+    <p>O Sophisticated Storage faz assim: o baú de ferro é o baú no centro de 8 lingotes de ferro; o cartão "Ferro → Ouro" é 8 ouro em volta de uma alavanca; e "Básico → Ouro" é 8 ouro em volta do cartão "Básico → Ferro". Quem compra um cartão que pula paga exatamente o que pagaria subindo degrau a degrau.</p>
+    <div class="row" id="sophRow"></div>
+    <p style="margin-top:14px">No Wireless Automate, a Redstone faz o papel da alavanca, e o anel de cada tier é o mesmo nas três receitas: direta, cartão de um degrau e cartão que pula. Assim nenhum caminho sai mais barato que o outro.</p>
+  </section>
+
+  <!-- ===================================================== 2 · ANÉIS -->
+  <section class="part" id="aneis">
+    <div class="eyebrow">2 · Os anéis</div>
+    <h2>Um anel por tier, nas três receitas</h2>
+    <p>Para cada tier: a receita direta (o roteador do tier anterior no centro) e o cartão de um degrau (a Redstone no centro). O anel é o mesmo nas duas. Os anéis marcados com <span class="pill changed">mudou</span> são diferentes dos de hoje; a receita de hoje aparece esmaecida para comparar. A estrela do Nether sai do Elite e vai para o Esmeralda.</p>
+    <div class="toolbar" id="modeBar" aria-label="Mods instalados"></div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <!-- ===================================================== 3 · CARTÃO QUE PULA -->
+  <section class="part" id="pular">
+    <div class="eyebrow">3 · O cartão que pula</div>
+    <h2>Estender o destino, manter a origem</h2>
+    <p>Um cartão no centro do anel do tier seguinte vira um cartão com o mesmo tier de origem e o destino um degrau acima. É um item por tier de destino; a origem fica guardada no item e aparece no nome e na dica. Um cartão "Básico → Esmeralda" custou: Redstone + anel do Avançado + anel do Elite + anel do Esmeralda, o que a bancada cobraria para subir um roteador Básico até o Esmeralda, degrau a degrau.</p>
+    <div class="row" id="jumpRow"></div>
+    <div class="mctip" id="jumpTip"></div>
+
+    <h3 style="margin-top:26px">A conta, para qualquer origem e destino</h3>
+    <p class="mu" style="margin-top:0">Escolha a origem e o destino: a lista de anéis somados é a mesma nos dois caminhos. A escada segue o seletor de mods da seção 2.</p>
+    <div class="calc" id="calc"></div>
+  </section>
+
+  <!-- ===================================================== 4 · USAR -->
+  <section class="part" id="usar">
+    <div class="eyebrow">4 · Usar o cartão</div>
+    <h2>No mundo, na bancada, e quando a origem não bate</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>No mundo</h3>
+        <p><kbd>Shift</kbd> + clique direito com o cartão no roteador. O roteador sobe no lugar e mantém tudo: faces, redes, nome, cartões, upgrades e máquinas vinculadas.</p>
+        <div class="actionbar"><small>action bar</small>Roteador <span class="k">Avançado → Elite</span></div>
+      </div>
+      <div class="card">
+        <h3>Na bancada</h3>
+        <p>Roteador + cartão, em qualquer posição da grade, sem outros itens. Mesmo efeito da receita direta: a configuração vem junto.</p>
+        <div class="row" style="margin-top:4px" id="benchRow"></div>
+      </div>
+      <div class="card">
+        <h3>Origem diferente: recusa</h3>
+        <p>Um cartão "Básico → Elite" num roteador Avançado não é aceito, no mundo nem na bancada. O cartão fica na mão e a action bar avisa.</p>
+        <div class="actionbar"><small>action bar</small><span class="r">Este cartão sobe um roteador Básico</span></div>
+      </div>
+      <div class="card">
+        <h3>Cartões antigos</h3>
+        <p>Um cartão feito antes dessa mudança não tem origem gravada e continua valendo como hoje: sobe qualquer roteador de tier abaixo. Foi pago no preço antigo, então o direito fica.</p>
+        <div class="mctip" id="oldTip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 5 · PERGUNTAS -->
+  <section class="part" id="perguntas">
+    <div class="eyebrow">5 · Para decidir</div>
+    <h2>Perguntas em aberto</h2>
+    <div class="q">
+      <div><b>1. Redstone no centro do cartão de um degrau?</b><span class="rec">Recomendo a Redstone</span>
+        <p>É barata, abundante e já é o item do "controle" no mod (redstone por face). A alternativa é a alavanca, como no Sophisticated Storage: tem o mesmo custo na prática, mas é um item de bloco e a grade fica menos legível no JEI.</p></div>
+      <div><b>2. Os anéis novos do Avançado e do Elite</b><span class="rec">Recomendo como estão</span>
+        <p>Avançado: 4 lingotes de ouro + 4 diamantes (o bloco de ouro do centro sai, porque o centro agora é o roteador ou a Redstone). Elite: 4 lingotes de netherite + 4 obsidianas, sem a estrela do Nether, que passa para o Esmeralda. O salto de preço entre tiers fica mais regular; se parecer pesado, o Elite pode trocar dois netherites por sucata de netherite.</p></div>
+      <div><b>3. O que o JEI mostra?</b><span class="rec">Recomendo</span>
+        <p>As receitas diretas, os cartões de um degrau e, por tier de destino, um exemplo de cartão que pula (por exemplo "Básico → Elite" a partir de "Básico → Avançado"). Mostrar todas as combinações de origem e destino encheria a aba sem acrescentar informação.</p></div>
+    </div>
+    <h3 style="margin-top:26px">Fica de fora</h3>
+    <ul class="tight mu">
+      <li>Subir mais de um tier numa receita direta de bancada.</li>
+      <li>Descer tier.</li>
+    </ul>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function el(parent, tag, cls, style, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (style) Object.assign(e.style, style);
+  if (html != null) e.innerHTML = html;
+  parent.appendChild(e);
+  return e;
+}
+const tip = $('tip');
+function bindTip(node, html) {
+  node.addEventListener('mousemove', e => { tip.innerHTML = typeof html === 'function' ? html() : html; tip.hidden = false;
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+  node.addEventListener('mouseleave', () => { tip.hidden = true; });
+}
+function toolbar(root, states, current, onPick) {
+  root.innerHTML = '';
+  states.forEach(([k, n]) => { const b = el(root, 'button', k === current ? 'on' : '', null, n); b.addEventListener('click', () => onPick(k)); });
+}
+
+/* ---------- tiers ---------- */
+const TIERS = {
+  basic: ['Básico', '#6E7480'], advanced: ['Avançado', '#D59A1E'], elite: ['Elite', '#1FA9A0'], emerald: ['Esmeralda', '#22A84E'],
+  allthemodium: ['Allthemodium', '#E8740A'], vibranium: ['Vibranium', '#18B57A'], unobtainium: ['Unobtainium', '#B23FD0'], ultimate: ['Ultimate', '#7B4FE0'],
+};
+const tn = t => TIERS[t][0], tc = t => TIERS[t][1];
+const LADDER = {
+  none: ['basic', 'advanced', 'elite', 'emerald', 'ultimate'],
+  atm: ['basic', 'advanced', 'elite', 'emerald', 'allthemodium', 'vibranium', 'unobtainium', 'ultimate'],
+  att: ['basic', 'advanced', 'elite', 'emerald', 'allthemodium', 'vibranium', 'unobtainium', 'ultimate'],
+};
+const MODES = [['none', 'Sem Allthemodium'], ['atm', 'Com Allthemodium'], ['att', 'Com All The Tweaks']];
+let mode = 'none';
+
+/* ---------- ícones (SVG 16×16, sem imagens) ---------- */
+const S = inner => `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${inner}</svg>`;
+const ingot = (c, d, h) => S(`<polygon points="3,9 6,4 15,4 12,9" fill="${h || c}"/><rect x="3" y="9" width="9" height="3" fill="${c}"/><polygon points="12,9 15,4 15,7 12,12" fill="${d}"/><rect x="7" y="5" width="5" height="1" fill="#fff" opacity=".55"/>`);
+const alloy = (c1, c2, d) => S(`<polygon points="3,9 6,4 15,4 12,9" fill="${c1}"/><polygon points="8,9 10,4 15,4 12,9" fill="${c2}"/><rect x="3" y="9" width="9" height="3" fill="${c1}"/><rect x="8" y="9" width="4" height="3" fill="${c2}"/><polygon points="12,9 15,4 15,7 12,12" fill="${d}"/>`);
+const block = (c, d, l) => S(`<rect x="1" y="1" width="14" height="14" fill="${d}"/><rect x="1" y="1" width="13" height="13" fill="${l || c}"/><rect x="2" y="2" width="12" height="12" fill="${c}"/><rect x="4" y="4" width="8" height="8" fill="${d}" opacity=".45"/><rect x="5" y="5" width="6" height="6" fill="${c}"/>`);
+const gem = (c, d, l) => S(`<polygon points="8,1 14,6 8,15 2,6" fill="${c}"/><polygon points="8,1 14,6 2,6" fill="${l}"/><polygon points="8,15 14,6 10,6" fill="${d}"/><rect x="5" y="3" width="2" height="1" fill="#fff" opacity=".8"/>`);
+const ICONS = {
+  gold_ingot: ['Lingote de ouro', ingot('#F0C840', '#A87C14', '#FBE98A')],
+  iron_ingot: ['Lingote de ferro', ingot('#D8D8D8', '#8E8E8E', '#F3F3F3')],
+  diamond: ['Diamante', gem('#4AE0D8', '#1E9A94', '#B8FFF9')],
+  netherite_ingot: ['Lingote de netherite', ingot('#4D4141', '#2A2222', '#6B5C5C')],
+  obsidian: ['Obsidiana', S(`<rect x="1" y="1" width="14" height="14" fill="#0E0916"/><rect x="2" y="2" width="12" height="12" fill="#1A1126"/><rect x="4" y="5" width="3" height="2" fill="#3B2460"/><rect x="9" y="9" width="3" height="3" fill="#3B2460"/><rect x="10" y="3" width="2" height="2" fill="#2B1A48"/>`)],
+  crying_obsidian: ['Obsidiana chorona', S(`<rect x="1" y="1" width="14" height="14" fill="#0E0916"/><rect x="2" y="2" width="12" height="12" fill="#1F1333"/><rect x="4" y="3" width="2" height="6" fill="#B14BFF"/><rect x="10" y="5" width="2" height="7" fill="#B14BFF"/><rect x="7" y="9" width="2" height="4" fill="#7A2BD6"/><rect x="4" y="10" width="2" height="2" fill="#E6A6FF"/>`)],
+  emerald_block: ['Bloco de esmeralda', block('#22A84E', '#136B30', '#6DE58C')],
+  nether_star: ['Estrela do Nether', S(`<polygon points="8,0 9.5,6.5 16,8 9.5,9.5 8,16 6.5,9.5 0,8 6.5,6.5" fill="#F6E27A"/><polygon points="8,3 9,7 13,8 9,9 8,13 7,9 3,8 7,7" fill="#FFFBE0"/>`)],
+  ender_eye: ['Olho do Ender', S(`<rect x="2" y="4" width="12" height="8" fill="#1E6B4C"/><rect x="1" y="6" width="14" height="4" fill="#2E9A6B"/><rect x="4" y="3" width="8" height="10" fill="#2E9A6B"/><rect x="6" y="5" width="4" height="6" fill="#0B1F17"/><rect x="7" y="6" width="2" height="4" fill="#9CF5C8"/>`)],
+  echo_shard: ['Fragmento de eco', S(`<polygon points="6,1 12,4 12,11 7,15 3,9" fill="#0C3237"/><polygon points="7,3 11,5 11,10 7,13 5,9" fill="#145A5F"/><rect x="6" y="5" width="1" height="6" fill="#28E0D2"/><rect x="9" y="7" width="1" height="4" fill="#28E0D2"/>`)],
+  dragon_egg: ['Ovo do dragão', S(`<rect x="7" y="1" width="2" height="2" fill="#1A0F24"/><rect x="5" y="3" width="6" height="2" fill="#1A0F24"/><rect x="4" y="5" width="8" height="6" fill="#1A0F24"/><rect x="3" y="11" width="10" height="3" fill="#1A0F24"/><rect x="4" y="14" width="8" height="1" fill="#1A0F24"/><rect x="6" y="6" width="2" height="2" fill="#4B2A6A"/><rect x="9" y="9" width="2" height="2" fill="#4B2A6A"/><rect x="5" y="11" width="2" height="1" fill="#2E1A44"/>`)],
+  netherite_block: ['Bloco de netherite', block('#3C3333', '#231C1C', '#5A4D4D')],
+  allthemodium_ingot: ['Lingote de allthemodium', ingot('#F2B23A', '#B8650A', '#FFE08A')],
+  allthemodium_block: ['Bloco de allthemodium', block('#E8740A', '#9A4A05', '#FFC24A')],
+  vibranium_ingot: ['Lingote de vibranium', ingot('#3FE0A8', '#148A62', '#A8FFE0')],
+  va_alloy: ['Liga vibranium-allthemodium', alloy('#3FE0A8', '#F2B23A', '#148A62')],
+  vibranium_block: ['Bloco de vibranium', block('#18B57A', '#0D6E49', '#6AF0BC')],
+  unobtainium_ingot: ['Lingote de unobtainium', ingot('#C85BE8', '#7A2A9A', '#EDB2FF')],
+  uv_alloy: ['Liga unobtainium-vibranium', alloy('#C85BE8', '#3FE0A8', '#7A2A9A')],
+  unobtainium_block: ['Bloco de unobtainium', block('#B23FD0', '#6E2283', '#E79CFA')],
+  atm_star_shard: ['Fragmento de estrela ATM', S(`<polygon points="5,1 12,3 13,9 8,15 3,10" fill="#C99A1E"/><polygon points="6,3 11,4 11,9 8,12 5,9" fill="#FFE27A"/><rect x="7" y="5" width="2" height="2" fill="#fff"/>`)],
+  ua_alloy_block: ['Bloco de liga unobtainium-allthemodium', S(`<rect x="1" y="1" width="14" height="14" fill="#6E2283"/><rect x="2" y="2" width="12" height="12" fill="#B23FD0"/><polygon points="2,14 14,2 14,14" fill="#E8740A"/><rect x="4" y="4" width="8" height="8" fill="#000" opacity=".2"/>`)],
+  redstone: ['Pó de redstone', S(`<rect x="3" y="11" width="10" height="3" fill="#C01E1A"/><rect x="5" y="9" width="6" height="2" fill="#E0241F"/><rect x="7" y="7" width="2" height="2" fill="#FF4A42"/><rect x="2" y="13" width="2" height="1" fill="#8E1512"/><rect x="12" y="12" width="2" height="2" fill="#8E1512"/>`)],
+  lever: ['Alavanca', S(`<rect x="3" y="11" width="10" height="4" fill="#6E6E6E"/><rect x="4" y="12" width="8" height="2" fill="#8A8A8A"/><rect x="7" y="8" width="2" height="3" fill="#7A5230"/><rect x="8" y="5" width="2" height="3" fill="#7A5230"/><rect x="9" y="2" width="3" height="3" fill="#5C3A1C"/>`)],
+  chest: ['Baú', S(`<rect x="1" y="3" width="14" height="11" fill="#5A3A18"/><rect x="2" y="4" width="12" height="9" fill="#8B5A2B"/><rect x="2" y="7" width="12" height="1" fill="#5A3A18"/><rect x="7" y="6" width="2" height="3" fill="#B8B8B8"/>`)],
+};
+const BASIC_CARD_ORIGIN = 'basic';
+/** O roteador de um tier: cubo escuro com o núcleo na cor do tier. */
+const routerIcon = t => S(`<rect x="1" y="2" width="14" height="13" fill="#1B1920"/><rect x="2" y="3" width="12" height="11" fill="#2A2730"/><rect x="4" y="5" width="8" height="7" fill="${tc(t)}"/><rect x="5" y="6" width="3" height="2" fill="#fff" opacity=".5"/><rect x="7" y="0" width="2" height="3" fill="#3A3640"/><rect x="3" y="13" width="10" height="1" fill="#3A3640"/>`);
+/** O Cartão de Upgrade: cartão claro com o cristal na cor do tier de destino. A origem fica só no nome e na dica. */
+const cardIcon = t => S(`<rect x="3" y="1" width="10" height="14" fill="#1B1920"/><rect x="4" y="2" width="8" height="12" fill="#E8E2D4"/><polygon points="8,4 11,8 8,12 5,8" fill="${tc(t)}"/><polygon points="8,4 11,8 5,8" fill="#fff" opacity=".35"/><rect x="5" y="13" width="6" height="1" fill="#1B1920"/>`);
+
+/** Um item para a grade: chave de ICONS, ou {router: tier}, {card: tier, from: tier|null}. */
+function item(spec) {
+  if (typeof spec === 'string') return { svg: ICONS[spec][1], name: ICONS[spec][0], tip: ICONS[spec][0] };
+  if (spec.router) return { svg: routerIcon(spec.router), name: `Roteador ${tn(spec.router)}`, tip: `Roteador <span style="color:${tc(spec.router)}">${tn(spec.router)}</span><br><span class="g">Mantém a configuração ao subir</span>` };
+  if (spec.card) {
+    if (spec.from === null) return { svg: cardIcon(spec.card), name: `Cartão de Upgrade: ${tn(spec.card)}`, tip: `Cartão de Upgrade: <span style="color:${tc(spec.card)}">${tn(spec.card)}</span><br><span class="g">Cartão antigo: sobe qualquer roteador abaixo do ${tn(spec.card)}</span>` };
+    return { svg: cardIcon(spec.card), name: `Cartão de Upgrade: ${tn(spec.from)} → ${tn(spec.card)}`, tip: cardTip(spec.from, spec.card) };
+  }
+}
+const cardTip = (from, to) => `Cartão de Upgrade: <span style="color:${tc(from)}">${tn(from)}</span> → <span style="color:${tc(to)}">${tn(to)}</span><br><span class="g">Sobe um roteador ${tn(from)} para ${tn(to)}</span><br><span class="g">Vale só num roteador ${tn(from)}</span><br><span class="w">Shift + clique direito no roteador</span>`;
+
+/* ---------- a bancada ---------- */
+const ARROW = `<svg class="carr" viewBox="0 0 26 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="6" width="14" height="4" fill="#8B8B8B"/><polygon points="16,2 24,8 16,14" fill="#8B8B8B"/></svg>`;
+function slot(parent, spec, extra) {
+  const s = el(parent, 'div', 'slot' + (extra && extra.cls ? ' ' + extra.cls : ''));
+  if (spec) { const it = item(spec); s.innerHTML = it.svg + (extra && extra.count > 1 ? `<span class="cnt">${extra.count}</span>` : ''); s.setAttribute('aria-label', it.name); bindTip(s, it.tip); }
+  return s;
+}
+/** Uma bancada: cells (9 specs, ou null) e o resultado. */
+function craft(parent, cells, result, opts) {
+  const o = opts || {};
+  const box = el(parent, 'div', 'craftbox');
+  const c = el(box, 'div', 'craft' + (o.old ? ' old' : ''));
+  const g = el(c, 'div', 'g3');
+  cells.forEach(x => slot(g, x));
+  c.insertAdjacentHTML('beforeend', ARROW);
+  slot(c, result, { cls: 'res' });
+  if (o.cap) el(box, 'div', 'cap', null, o.cap);
+  return box;
+}
+const ring = (r, center) => [r[0], r[1], r[2], r[3], center, r[4], r[5], r[6], r[7]];
+
+/* ---------- anéis ---------- */
+// [tl, t, tr, l, r, bl, b, br]
+const RINGS = {
+  advanced: ['gold_ingot', 'diamond', 'gold_ingot', 'diamond', 'diamond', 'gold_ingot', 'diamond', 'gold_ingot'],
+  elite: ['netherite_ingot', 'obsidian', 'netherite_ingot', 'obsidian', 'obsidian', 'netherite_ingot', 'obsidian', 'netherite_ingot'],
+  emerald: ['emerald_block', 'nether_star', 'emerald_block', 'crying_obsidian', 'crying_obsidian', 'emerald_block', 'ender_eye', 'emerald_block'],
+  ultimate: ['echo_shard', 'dragon_egg', 'echo_shard', 'netherite_block', 'netherite_block', 'echo_shard', 'netherite_block', 'echo_shard'],
+  ultimate_att: ['atm_star_shard', 'dragon_egg', 'atm_star_shard', 'ua_alloy_block', 'ua_alloy_block', 'atm_star_shard', 'ua_alloy_block', 'atm_star_shard'],
+  allthemodium: ['allthemodium_ingot', 'allthemodium_block', 'allthemodium_ingot', 'allthemodium_ingot', 'allthemodium_ingot', 'allthemodium_ingot', 'allthemodium_block', 'allthemodium_ingot'],
+  vibranium: ['vibranium_ingot', 'va_alloy', 'vibranium_ingot', 'vibranium_block', 'vibranium_block', 'vibranium_ingot', 'va_alloy', 'vibranium_ingot'],
+  unobtainium: ['unobtainium_ingot', 'uv_alloy', 'unobtainium_ingot', 'unobtainium_block', 'unobtainium_block', 'unobtainium_ingot', 'uv_alloy', 'unobtainium_ingot'],
+};
+const ringOf = t => (t === 'ultimate' && mode === 'att') ? RINGS.ultimate_att : RINGS[t];
+// o que mudou em relação a hoje: a receita atual do cartão (com o cartão anterior ou o bloco no centro)
+const TODAY = {
+  advanced: { cells: ring(RINGS.advanced, 'gold_block'), note: 'Hoje: o mesmo anel com um <b>bloco de ouro</b> no centro. O centro passa a ser o roteador ou a Redstone.' },
+  elite: { cells: [null, 'nether_star', null, 'netherite_ingot', { card: 'advanced', from: null }, 'netherite_ingot', null, 'netherite_ingot', null], note: 'Hoje: <b>estrela do Nether + 3 netherites</b> em volta do cartão Avançado. A estrela vai para o Esmeralda e o anel fecha com obsidiana.' },
+  emerald: { cells: ['emerald_block', 'ender_eye', 'emerald_block', 'crying_obsidian', { card: 'elite', from: null }, 'crying_obsidian', 'emerald_block', 'ender_eye', 'emerald_block'], note: 'Hoje: 4 blocos de esmeralda, <b>2 olhos do Ender</b>, 2 obsidianas choronas. Um olho dá lugar à <b>estrela do Nether</b>.' },
+};
+ICONS.gold_block = ['Bloco de ouro', block('#F0C840', '#A87C14', '#FBE98A')];
+
+function gallery() {
+  const root = $('gallery'); root.innerHTML = '';
+  const lad = LADDER[mode];
+  lad.slice(1).forEach((t, i) => {
+    const prev = lad[i];
+    const g = el(root, 'div', 'gal');
+    const changed = !!TODAY[t];
+    el(g, 'h3', null, null, `<span class="sw" style="background:${tc(t)}"></span>${tn(t)} <span class="mu" style="font-family:var(--body);font-weight:400;font-size:13px">(a partir do ${tn(prev)})</span>`
+      + (changed ? '<span class="pill changed">mudou</span>' : (t === 'ultimate' && mode === 'att' ? '<span class="pill same">anel do All The Tweaks</span>' : '<span class="pill same">como hoje</span>')));
+    const row = el(g, 'div', 'row');
+    const r = ringOf(t);
+    craft(row, ring(r, { router: prev }), { router: t }, { cap: `<b>Receita direta</b> · roteador ${tn(prev)} no centro` });
+    craft(row, ring(r, 'redstone'), { card: t, from: prev }, { cap: `<b>Cartão de um degrau</b> · Redstone no centro · "${tn(prev)} → ${tn(t)}"` });
+    if (changed) craft(row, TODAY[t].cells, { card: t, from: null }, { cap: '<b>Hoje</b> · cartão antigo', old: true });
+    if (changed) el(g, 'p', 'note', null, TODAY[t].note);
+    else if (t === 'ultimate') el(g, 'p', 'note', null, mode === 'none' ? 'O Ultimate sem o Allthemodium vem do Esmeralda.' : mode === 'atm' ? 'O Ultimate com o Allthemodium vem do Unobtainium, com o mesmo anel de sem o mod.' : 'Com o All The Tweaks, o Ultimate vem do Unobtainium com o anel de fragmentos de estrela ATM e blocos de liga unobtainium-allthemodium.');
+  });
+}
+
+/* ---------- 1 · Sophisticated ---------- */
+(function soph() {
+  const row = $('sophRow');
+  const eight = (x, c) => [x, x, x, x, c, x, x, x, x];
+  const sophCard = (c, name, line) => [name, S(`<rect x="3" y="1" width="10" height="14" fill="#1B1920"/><rect x="4" y="2" width="8" height="12" fill="#E8E2D4"/><rect x="5" y="4" width="6" height="6" fill="${c}"/><rect x="5" y="11" width="6" height="2" fill="#7A5230"/>`), line];
+  ICONS.soph_iron_chest = ['Baú de ferro (Sophisticated Storage)', ICONS.chest[1].replace(/#8B5A2B/g, '#C9C9C9').replace(/#5A3A18/g, '#7A7A7A')];
+  ICONS.soph_card_iron = sophCard('#C9C9C9', 'Upgrade "Básico → Ferro" (Sophisticated Storage)');
+  ICONS.soph_card_gold = sophCard('#F0C840', 'Upgrade de baú para ouro (Sophisticated Storage)');
+  craft(row, eight('iron_ingot', 'chest'), 'soph_iron_chest', { cap: '<b>Baú de ferro</b> · baú + 8 ferro' });
+  craft(row, eight('gold_ingot', 'lever'), 'soph_card_gold', { cap: '<b>"Ferro → Ouro"</b> · 8 ouro + alavanca' });
+  craft(row, eight('gold_ingot', 'soph_card_iron'), 'soph_card_gold', { cap: '<b>"Básico → Ouro"</b> · 8 ouro em volta do "Básico → Ferro"' });
+})();
+
+/* ---------- 3 · sequência do cartão que pula ---------- */
+(function jump() {
+  const row = $('jumpRow');
+  craft(row, ring(RINGS.advanced, 'redstone'), { card: 'advanced', from: 'basic' }, { cap: '<b>Básico → Avançado</b> · Redstone + anel do Avançado' });
+  el(row, 'div', 'plus', null, '+');
+  craft(row, ring(RINGS.elite, { card: 'advanced', from: 'basic' }), { card: 'elite', from: 'basic' }, { cap: '<b>Básico → Elite</b> · o cartão + anel do Elite' });
+  el(row, 'div', 'plus', null, '+');
+  craft(row, ring(RINGS.emerald, { card: 'elite', from: 'basic' }), { card: 'emerald', from: 'basic' }, { cap: '<b>Básico → Esmeralda</b> · o cartão + anel do Esmeralda' });
+  $('jumpTip').innerHTML = cardTip('basic', 'emerald');
+  $('oldTip').innerHTML = item({ card: 'elite', from: null }).tip;
+})();
+
+/* ---------- 4 · bancada ---------- */
+craft($('benchRow'), [null, null, null, null, { router: 'advanced' }, { card: 'elite', from: 'advanced' }, null, null, null], { router: 'elite' }, { cap: '<b>Roteador Avançado + "Avançado → Elite"</b> = Roteador Elite' });
+
+/* ---------- 3 · calculadora ---------- */
+const calcState = { from: 'basic', to: 'emerald' };
+function countItems(keys) { const m = new Map(); keys.forEach(k => m.set(k, (m.get(k) || 0) + 1)); return m; }
+const chip = (k, n) => `<span class="chip">${ICONS[k][1]}${n}× ${esc(ICONS[k][0])}</span>`;
+function calc() {
+  const root = $('calc'); root.innerHTML = '';
+  const lad = LADDER[mode];
+  if (!lad.includes(calcState.from)) calcState.from = 'basic';
+  if (!lad.includes(calcState.to) || lad.indexOf(calcState.to) <= lad.indexOf(calcState.from)) calcState.to = lad[Math.min(lad.indexOf(calcState.from) + 2, lad.length - 1)];
+  const p = el(root, 'div', 'pickers');
+  const sel = (label, key, opts) => {
+    el(p, 'span', null, null, label);
+    const s = el(p, 'select', 'pick');
+    opts.forEach(t => { const o = el(s, 'option', null, null, tn(t)); o.value = t; if (t === calcState[key]) o.selected = true; });
+    s.addEventListener('change', () => { calcState[key] = s.value; calc(); });
+  };
+  sel('Origem', 'from', lad.slice(0, -1));
+  sel('Destino', 'to', lad.slice(lad.indexOf(calcState.from) + 1));
+  const i0 = lad.indexOf(calcState.from), i1 = lad.indexOf(calcState.to);
+  const steps = lad.slice(i0 + 1, i1 + 1);
+  el(p, 'span', 'mu', { fontFamily: 'var(--body)', fontSize: '13px' }, `${steps.length} degrau${steps.length > 1 ? 's' : ''}`);
+
+  const paths = el(root, 'div', 'paths');
+  const path = (title, pre, label) => {
+    const d = el(paths, 'div', 'path');
+    el(d, 'h4', null, null, title);
+    const st = el(d, 'div', 'steps');
+    const all = [];
+    if (pre) { el(st, 'div', 'step', null, `<span class="lbl">centro</span>${chip('redstone', 1)}`); all.push('redstone'); }
+    steps.forEach((t, i) => {
+      const r = ringOf(t); all.push(...r);
+      const m = countItems(r);
+      el(st, 'div', 'step', null, `<span class="lbl" style="color:${tc(t)}">${label(t, i)}</span>` + [...m].map(([k, n]) => chip(k, n)).join(''));
+    });
+    const tot = el(d, 'div', 'total');
+    el(tot, 'span', 'lbl', null, `Total: ${all.length} itens`);
+    tot.insertAdjacentHTML('beforeend', [...countItems(all)].map(([k, n]) => chip(k, n)).join(''));
+    return all;
+  };
+  const a = path(`Bancada, degrau a degrau`, false, t => `anel do ${tn(t)}`);
+  const b = path(`Cartão "${tn(calcState.from)} → ${tn(calcState.to)}"`, true, (t, i) => i === 0 ? `anel do ${tn(t)}` : `+ anel do ${tn(t)}`);
+  const same = JSON.stringify([...countItems(a)].sort()) === JSON.stringify([...countItems(b.filter(x => x !== 'redstone'))].sort());
+  el(root, 'div', 'verdict', null, same ? `✓ Os mesmos ${a.length} itens nos dois caminhos; o cartão custa só uma Redstone a mais.` : 'Os caminhos diferem (erro no estudo).');
+}
+
+/* ---------- modo ---------- */
+function setMode(k) { mode = k; toolbar($('modeBar'), MODES, mode, setMode); gallery(); calc(); }
+setMode('none');
+})();
+</script>

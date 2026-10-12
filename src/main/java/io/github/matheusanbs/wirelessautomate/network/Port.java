@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
@@ -58,6 +59,18 @@ final class Port {
 
     // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
     // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
+    /**
+     * A rede da face, lida com a configuração ({@link FaceConfig#network()}); {@code null} = sem rede.
+     * Só a rede com este id adota a porta.
+     */
+    @Nullable UUID faceNetwork;
+    /**
+     * A porta foi relida e a rede dela ainda não a consumiu: a leitura é dividida entre as redes do
+     * tipo no nó, e quem relê pode ser outra rede ({@link NetworkRoutes}). Vira {@link #fresh} na
+     * montagem da rede da porta.
+     */
+    boolean pendingFresh;
+    /** A rede que adotou a porta na última montagem (a rota); {@code null} = sem rota. */
     @Nullable NetworkRoutes network;
     boolean source;
     boolean destination;
@@ -104,6 +117,8 @@ final class Port {
 
     /** Limpa tudo o que a montagem preenche, inclusive o que veio da configuração da face. */
     void clearRoute() {
+        faceNetwork = null;
+        pendingFresh = false;
         network = null;
         source = false;
         destination = false;

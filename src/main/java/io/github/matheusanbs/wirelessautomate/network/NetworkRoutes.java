@@ -32,8 +32,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Regras da montagem, por tipo de recurso:
  * <ul>
- *   <li>só entram os membros cujo tipo está nesta rede: um nó com Itens aqui e Fluidos noutra rede
- *       só dá portas de itens a esta;
+ *   <li>só entram as portas cuja face está nesta rede ({@link Port#faceNetwork}): um nó com a face
+ *       Cima de itens aqui e a Baixo noutra rede só dá a porta de Cima a esta. As portas de um tipo
+ *       são lidas uma vez para todas as redes do nó ({@link NodePorts#collected});
+
  *   <li>origem = face ativa (modo e redstone) que extrai; destino = face ativa que insere;
  *   <li>uma origem não entrega na mesma máquina e mesma face de onde tira;
  *   <li>uma face Ambos não entrega para outra face Ambos (senão os recursos iriam e voltariam entre
@@ -77,7 +79,7 @@ final class NetworkRoutes {
     private static final ToIntFunction<Port> PRIORITY = port -> port.priority;
 
     final UUID id;
-    /** Nós com algum tipo nesta rede, cada um uma vez, na ordem de entrada (remoção O(1)). */
+    /** Nós com alguma face nesta rede, cada um uma vez, na ordem de entrada (remoção O(1)). */
     final ReferenceLinkedOpenHashSet<NodePorts> members = new ReferenceLinkedOpenHashSet<>();
     /** Origens ativas de cada tipo (por ordinal), inclusive as sem destino. */
     final List<Port>[] sourcesOf = newLists();
@@ -129,7 +131,7 @@ final class NetworkRoutes {
         int mask = dirtyTypes;
         dirtyTypes = 0;
         if (!exists) {
-            // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
+            // Só as portas que esta rede adotou: as outras do mesmo tipo no nó são de outras redes.
             for (ResourceType type : TYPES) {
                 if ((mask & NetworkManager.typeBit(type)) == 0) {
                     continue;
@@ -137,9 +139,7 @@ final class NetworkRoutes {
                 sourcesOf[type.ordinal()].clear();
                 destinationsOf[type.ordinal()].clear();
                 for (NodePorts member : members) {
-                    if (id.equals(member.network(type))) {
-                        member.clearRoutes(type);
-                    }
+                    member.clearRoutes(type, this);
                 }
             }
             return;
@@ -404,29 +404,39 @@ final class NetworkRoutes {
     }
 
     /**
-     * Junta as origens e os destinos do tipo. Um membro que não mudou desde a última montagem entra
-     * com as portas já lidas; os outros têm as faces relidas ({@link #readPorts}) e as portas ficam
-     * marcadas como relidas ({@link Port#fresh}). A ordem que cada porta tinha vai para
-     * {@link Port#previousOrder}.
+     * Junta as origens e os destinos do tipo. A leitura das portas de um membro é dividida entre as
+     * redes do tipo nele: um membro que não mudou desde a última montagem entra com as portas já
+     * lidas; senão a primeira rede a passar por ele relê as faces ({@link #readPorts}), depois de
+     * guardar a ordem de todas as portas do tipo em {@link Port#previousOrder} e limpar as rotas
+     * delas (de todas as redes: o {@link NetworkManager#nodeChanged} sujou o tipo em todas, que
+     * remontam na mesma passada). Desta leitura, só entram as portas desta rede; as relidas
+     * ({@link Port#pendingFresh}) ficam marcadas como {@link Port#fresh} na rede delas, seja qual for
+     * a que releu.
      */
     private void collectPorts(ResourceType type, List<Port> sources, List<Port> destinations) {
         for (NodePorts member : members) {
-            if (!id.equals(member.network(type))) {
+            if (!member.inNetwork(type, id)) {
                 continue;
             }
             Port[] active = member.collected(type);
-            boolean fresh = active == null;
-            if (fresh) {
+            if (active == null) {
                 member.rememberOrders(type);
                 member.clearRoutes(type);
                 active = readPorts(member, type);
                 member.setCollected(type, active);
             }
             for (Port port : active) {
+                if (!id.equals(port.faceNetwork)) {
+                    continue;
+                }
+                boolean fresh = port.pendingFresh;
+                port.pendingFresh = false;
                 if (!fresh) {
+                    // A relida já tem a ordem guardada pelo rememberOrders.
                     port.previousOrder = port.order;
                 }
                 port.clearOrder();
+                port.network = this;
                 port.fresh = fresh;
                 if (port.source) {
                     sources.add(port);
@@ -463,7 +473,8 @@ final class NetworkRoutes {
                 active = new Port[DIRECTIONS.length];
             }
             Port port = member.port(type, face);
-            port.network = this;
+            port.faceNetwork = config.network();
+            port.pendingFresh = true;
             port.priority = config.priority();
             port.filter = node.filterSet(type, face);
             port.tier = tier;
@@ -522,7 +533,8 @@ final class NetworkRoutes {
                     }
                 }
                 Port port = member.remotePort(caches, type, DIRECTIONS[side.toAbsolute(front)]);
-                port.network = this;
+                port.faceNetwork = face.network();
+                port.pendingFresh = true;
                 port.priority = face.priority();
                 port.filter = node.filterSet(remote, type, side);
                 port.tier = tier;

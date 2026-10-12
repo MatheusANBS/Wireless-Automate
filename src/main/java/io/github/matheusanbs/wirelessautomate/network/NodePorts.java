@@ -6,25 +6,36 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Estado de um nó carregado no {@link NetworkManager}: a rede de cada tipo (aba) e as portas,
- * criadas sob demanda. O nó é membro de toda rede em que algum tipo dele está.
+ * Estado de um nó carregado no {@link NetworkManager}: as redes distintas de cada tipo (as que
+ * aparecem nas faces dele: presa, perfis e exceções) e as portas, criadas sob demanda. A rede é da
+ * porta ({@link Port#faceNetwork}); o nó é membro de toda rede em que alguma face dele está, de
+ * qualquer tipo e em qualquer modo.
+ *
+ * <p>A leitura das portas de um tipo ({@link #collected}) é uma só, dividida entre as redes do tipo:
+ * a primeira rede a montar o tipo depois de uma mudança relê as faces (e limpa as rotas de todas as
+ * portas do tipo), e as portas relidas ficam marcadas ({@link Port#pendingFresh}) até a rede de cada
+ * uma consumi-las. Por isso o {@link NetworkManager#nodeChanged} suja o tipo em todas as redes do nó.
  */
 final class NodePorts {
     private static final int FACES = Direction.values().length;
     private static final ResourceType[] TYPES = ResourceType.values();
 
     final RouterBlockEntity node;
+    /** Nenhuma rede. */
+    static final UUID[] NO_NETWORKS = new UUID[0];
+
     /**
-     * Rede de cada tipo (por {@link ResourceType#ordinal()}) nas rotas; pode diferir de
-     * {@code node.networkId(type)} até o próximo {@code nodeChanged}.
+     * As redes distintas de cada tipo (por {@link ResourceType#ordinal()}) nas rotas; podem diferir de
+     * {@code node.networks(type)} até o próximo {@code nodeChanged}.
      */
-    private final UUID[] networks = new UUID[TYPES.length];
+    private final UUID[][] networks = new UUID[TYPES.length][];
     /** Portas da máquina presa: [tipo × 6 + face absoluta]. */
     private final Port[] ports = new Port[ResourceType.values().length * FACES];
     /**
@@ -43,6 +54,7 @@ final class NodePorts {
 
     NodePorts(RouterBlockEntity node) {
         this.node = node;
+        Arrays.fill(networks, NO_NETWORKS);
     }
 
     Port port(ResourceType type, Direction face) {
@@ -128,17 +140,32 @@ final class NodePorts {
         return ports[type.ordinal() * FACES + face.ordinal()];
     }
 
-    @Nullable UUID network(ResourceType type) {
+    /** As redes distintas do tipo nas rotas (não alterar o arranjo). */
+    UUID[] networks(ResourceType type) {
         return networks[type.ordinal()];
     }
 
-    void setNetwork(ResourceType type, @Nullable UUID network) {
-        networks[type.ordinal()] = network;
+    void setNetworks(ResourceType type, UUID[] ids) {
+        networks[type.ordinal()] = ids;
     }
 
-    /** Algum tipo do nó está na rede {@code network}. */
+    /** Alguma face do tipo está na rede {@code network}. */
+    boolean inNetwork(ResourceType type, UUID network) {
+        return contains(networks[type.ordinal()], network);
+    }
+
+    /** Alguma face de algum tipo do nó está na rede {@code network}. */
     boolean inNetwork(UUID network) {
-        for (UUID id : networks) {
+        for (UUID[] ids : networks) {
+            if (contains(ids, network)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean contains(UUID[] ids, UUID network) {
+        for (UUID id : ids) {
             if (network.equals(id)) {
                 return true;
             }
@@ -147,8 +174,33 @@ final class NodePorts {
     }
 
     /**
-     * Limpa os campos de rota das portas de um tipo e descarta a leitura dele, sem tocar nos outros
-     * tipos (que podem estar noutra rede).
+     * Tira das rotas da rede {@code owner} as portas do tipo que ela adotou (presa e remotas): só a rede
+     * e a ordem, sem descartar a leitura nem tocar nas portas do mesmo tipo que estão noutra rede.
+     */
+    void clearRoutes(ResourceType type, NetworkRoutes owner) {
+        int first = type.ordinal() * FACES;
+        clearRoutes(ports, first, owner);
+        if (remotes != null) {
+            for (Port[] byFace : remotes.values()) {
+                clearRoutes(byFace, first, owner);
+            }
+        }
+    }
+
+    private static void clearRoutes(Port[] byFace, int first, NetworkRoutes owner) {
+        for (int i = first; i < first + FACES; i++) {
+            Port port = byFace[i];
+            if (port != null && port.network == owner) {
+                port.network = null;
+                port.clearOrder();
+            }
+        }
+    }
+
+    /**
+     * Limpa os campos de rota das portas de um tipo, de todas as redes, e descarta a leitura dele, sem
+     * tocar nos outros tipos. Só para a releitura ({@link NetworkRoutes}): toda rede com porta desse
+     * tipo no nó está suja e remonta na mesma passada.
      */
     void clearRoutes(ResourceType type) {
         collected[type.ordinal()] = null;

@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -37,10 +36,12 @@ import org.jetbrains.annotations.Nullable;
  *       de tentativas, sem passar na frente de quem ainda não teve a primeira visita do tick.
  * </ol>
  *
- * <p>Cada tipo de recurso (aba) de um nó entra numa rede própria ({@link RouterBlockEntity#networkId(ResourceType)});
- * o nó é membro de toda rede em que algum tipo dele está, e a montagem de um tipo numa rede só
- * considera os membros cujo tipo está nela. A sujeira também é por tipo: mudar a aba Itens remonta
- * só os itens da rede.
+ * <p>A rede é da face: cada porta (nó, face, tipo) está na rede da sua face ({@link Port#faceNetwork}),
+ * ou em nenhuma. O nó é membro de toda rede que aparece em alguma face dele, de qualquer tipo
+ * ({@link RouterBlockEntity#networks(ResourceType)}, lido só no {@link #addNode} e no
+ * {@link #nodeChanged}), e a montagem de um tipo numa rede só adota as portas daquela rede. A
+ * sujeira é por tipo: mudar a aba Itens remonta só os itens, mas em todas as redes do nó naquele
+ * tipo, porque a leitura das portas de um tipo é dividida entre elas ({@link NodePorts}).
  *
  * <p>Sono e despertar: em volta de cada visita o gerenciador anota a máquina da origem visitada
  * (nível e posição). Assim, quando a máquina de um destino avisa mudança porque nós acabamos de
@@ -138,7 +139,7 @@ public final class NetworkManager {
         NodePorts ports = new NodePorts(node);
         nodes.put(node, ports);
         for (ResourceType type : TYPES) {
-            move(ports, type, node.networkId(type));
+            setMembership(ports, type, node.networks(type));
         }
         RemoteIndex.get().update(node);
     }
@@ -147,7 +148,7 @@ public final class NetworkManager {
         NodePorts ports = nodes.remove(node);
         if (ports != null) {
             for (ResourceType type : TYPES) {
-                move(ports, type, null);
+                setMembership(ports, type, NodePorts.NO_NETWORKS);
             }
             RemoteIndex.get().remove(node);
         }
@@ -163,10 +164,16 @@ public final class NetworkManager {
     }
 
     /**
-     * A rede ou a configuração de faces dos tipos de {@code types} (máscara de {@link #typeBit}) do nó
-     * mudou: marca esses tipos nas redes afetadas para remontar no próximo tick. Compara tipo a tipo:
-     * um tipo que trocou de rede sai da antiga e entra na nova (as duas sujam); os outros só sujam a
-     * rede em que já estão. Os tipos fora da máscara não são relidos nem remontados.
+     * A configuração de faces (inclusive a rede delas) dos tipos de {@code types} (máscara de
+     * {@link #typeBit}) do nó mudou: descarta a leitura desses tipos e os marca para remontar no
+     * próximo tick em todas as redes do nó naquele tipo, as de antes e as de agora
+     * ({@link #setMembership}). Os tipos fora da máscara não são relidos nem remontados. Só aqui e no
+     * {@link #addNode} as redes do nó são recalculadas.
+     *
+     * <p>Também é chamado no meio de uma remontagem, quando a leitura de uma remota acha a frente
+     * mudada ({@link NetworkRoutes}): as redes já remontadas nessa passada ficam sujas de novo e
+     * remontam no tick seguinte. Nesse caso raro (a máquina girou sem avisar), as portas delas nos
+     * outros tipos podem ficar um tick sem rota, se outra rede da mesma passada reler o tipo.
      */
     public void nodeChanged(RouterBlockEntity node, int types) {
         NodePorts ports = nodes.get(node);
@@ -175,14 +182,8 @@ public final class NetworkManager {
         }
         ports.invalidate(types);
         for (ResourceType type : TYPES) {
-            if ((types & typeBit(type)) == 0) {
-                continue;
-            }
-            UUID network = node.networkId(type);
-            if (Objects.equals(network, ports.network(type))) {
-                markDirty(network, type);
-            } else {
-                move(ports, type, network);
+            if ((types & typeBit(type)) != 0) {
+                setMembership(ports, type, node.networks(type));
             }
         }
     }
@@ -285,6 +286,23 @@ public final class NetworkManager {
     /** Tempo somado das remontagens, em ns. */
     public long rebuildNanos() {
         return rebuildNanos;
+    }
+
+    /** Para GameTests e diagnóstico: o nó carregado é membro da rede nas rotas (alguma face dele está nela). */
+    public boolean isMember(UUID network, RouterBlockEntity node) {
+        NetworkRoutes routes = networks.get(network);
+        NodePorts ports = nodes.get(node);
+        return routes != null && ports != null && routes.members.contains(ports);
+    }
+
+    /**
+     * Para GameTests: a ordem de destinos da porta da máquina presa na face absoluta {@code face}
+     * (com os cursores do rodízio), ou {@code null} se a porta não existe ou não tem rota. Só para
+     * comparar por identidade ({@code ==}).
+     */
+    public @Nullable Object sourceOrderForTests(RouterBlockEntity node, ResourceType type, Direction face) {
+        Port port = portOrNull(node, null, type, face);
+        return port == null ? null : port.order;
     }
 
     /** Para GameTests e diagnóstico: o tipo da rede está marcado para remontar no próximo tick. */
@@ -648,47 +666,40 @@ public final class NetworkManager {
     }
 
     /**
-     * Passa o tipo {@code type} do nó para a rede {@code network} ({@code null} = nenhuma): limpa as
-     * rotas das portas desse tipo, suja o tipo na rede antiga e na nova e acerta os membros (o nó sai
-     * da antiga só se nenhum outro tipo dele continuar lá, e entra na nova só se ainda não estava).
+     * As redes do tipo {@code type} no nó passam a ser {@code now}: suja o tipo em todas as redes de
+     * antes e de agora (criando as novas), para que toda rede com uma porta desse tipo neste nó remonte
+     * na mesma passada (a releitura limpa as portas do tipo inteiro, de todas as redes; ver
+     * {@link NodePorts}). Nas redes que saíram, tira as rotas das portas do tipo e o nó deixa de ser
+     * membro se nenhum outro tipo dele continuar lá; nas novas, o nó entra se ainda não era membro.
      */
-    private void move(NodePorts ports, ResourceType type, @Nullable UUID network) {
-        UUID before = ports.network(type);
-        if (Objects.equals(before, network)) {
-            return;
-        }
-        ports.clearRoutes(type);
-        boolean wasMember = network != null && ports.inNetwork(network);
-        ports.setNetwork(type, network);
-        NetworkRoutes old = before == null ? null : networks.get(before);
-        if (old != null) {
-            if (!ports.inNetwork(before)) {
-                old.members.remove(ports);
+    private void setMembership(NodePorts ports, ResourceType type, UUID[] now) {
+        UUID[] before = ports.networks(type);
+        int bit = typeBit(type);
+        ports.setNetworks(type, now);
+        for (UUID id : before) {
+            NetworkRoutes routes = networks.get(id);
+            if (routes == null) {
+                continue;
             }
-            old.dirtyTypes |= typeBit(type);
+            routes.dirtyTypes |= bit;
             dirty = true;
+            if (!NodePorts.contains(now, id)) {
+                ports.clearRoutes(type, routes);
+                if (!ports.inNetwork(id)) {
+                    routes.members.remove(ports);
+                }
+            }
         }
-        if (network == null) {
-            return;
-        }
-        NetworkRoutes routes = networks.get(network);
-        if (routes == null) {
-            routes = new NetworkRoutes(network);
-            networks.put(network, routes);
-            networkList.add(routes);
-            networksAdded = true;
-        }
-        if (!wasMember) {
+        for (UUID id : now) {
+            NetworkRoutes routes = networks.get(id);
+            if (routes == null) {
+                routes = new NetworkRoutes(id);
+                networks.put(id, routes);
+                networkList.add(routes);
+                networksAdded = true;
+            }
             routes.members.add(ports);
-        }
-        routes.dirtyTypes |= typeBit(type);
-        dirty = true;
-    }
-
-    private void markDirty(@Nullable UUID network, ResourceType type) {
-        NetworkRoutes routes = network == null ? null : networks.get(network);
-        if (routes != null) {
-            routes.dirtyTypes |= typeBit(type);
+            routes.dirtyTypes |= bit;
             dirty = true;
         }
     }

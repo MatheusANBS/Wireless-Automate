@@ -38,6 +38,24 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(AtmGameTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class AtmGameTests {
+
+    /** Com o Allthemodium, todas as receitas viajam para o cliente (o servidor dedicado codifica o update_recipes). */
+    @GameTest(template = "empty")
+    public static void recipesEncodeForNetwork(net.minecraft.gametest.framework.GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        for (var holder : server.getRecipeManager().getRecipes()) {
+            var buf = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), server.registryAccess());
+            try {
+                net.minecraft.world.item.crafting.RecipeHolder.STREAM_CODEC.encode(buf, holder);
+                net.minecraft.world.item.crafting.RecipeHolder.STREAM_CODEC.decode(buf);
+            } catch (RuntimeException e) {
+                io.github.matheusanbs.wirelessautomate.WirelessAutomate.LOGGER.error("Receita não codifica: {}", holder.id(), e);
+                helper.fail("Receita não codifica: " + holder.id() + ": " + e);
+                return;
+            }
+        }
+        helper.succeed();
+    }
     static final String NAMESPACE = "wirelessautomate_atm";
 
     private static final BlockPos MACHINE = new BlockPos(1, 1, 1);

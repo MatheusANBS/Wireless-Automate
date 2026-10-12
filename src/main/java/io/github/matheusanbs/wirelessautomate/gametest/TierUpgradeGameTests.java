@@ -81,6 +81,24 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class TierUpgradeGameTests {
+
+    /** Todas as receitas carregadas viajam para o cliente (o servidor dedicado codifica o update_recipes). */
+    @net.minecraft.gametest.framework.GameTest(template = "empty")
+    public static void recipesEncodeForNetwork(net.minecraft.gametest.framework.GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        for (var holder : server.getRecipeManager().getRecipes()) {
+            var buf = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), server.registryAccess());
+            try {
+                net.minecraft.world.item.crafting.RecipeHolder.STREAM_CODEC.encode(buf, holder);
+                net.minecraft.world.item.crafting.RecipeHolder.STREAM_CODEC.decode(buf);
+            } catch (RuntimeException e) {
+                WirelessAutomate.LOGGER.error("Receita não codifica: {}", holder.id(), e);
+                helper.fail("Receita não codifica: " + holder.id() + ": " + e);
+                return;
+            }
+        }
+        helper.succeed();
+    }
     private static final BlockPos MACHINE = new BlockPos(1, 1, 1);
     private static final BlockPos ROUTER = MACHINE.above();
     private static final String KEY = "item.wirelessautomate.tier_core.";

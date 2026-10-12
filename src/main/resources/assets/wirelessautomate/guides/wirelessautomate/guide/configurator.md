@@ -21,7 +21,7 @@ Copies a router's configuration and pastes it on others, one at a time or over a
 
 | | |
 | --- | --- |
-| **Copies** | Faces, filters, priorities, redstone and each tab's network. |
+| **Copies** | Faces, filters, priorities, redstone and each face's network. |
 | **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the mode's actions. |
 | **Modes** | Brush (default), Area (same machine) and Area (any machine). |
 | **Pasted type** | All (default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). |
@@ -53,7 +53,7 @@ choice has an orange border and the center tells what the slice under the mouse 
 | **Release in the center or Esc** | Closes without changing anything. |
 
 Copying always copies everything; the **pasted type** picks what goes to the router. On **All**,
-every tab. On a single type, only that tab's faces and network: the router's other tabs stay as they
+every tab. On a single type, only that tab's faces (with their networks): the router's other tabs stay as they
 were. For example, copy a router set up only for fluids, switch to **Fluids** and paste on the others
 without touching their items or energy.
 
@@ -81,7 +81,7 @@ without touching their items or energy.
 | --- | --- |
 | **Same or any machine** | On the same machine, the area skips routers on other machines (a chest in the middle of a furnace line stays as it was). On any machine, it pastes on all of them. |
 | **Orientation** | The copy is relative to the router: it works with the router on any face. |
-| **Networks** | A tab's network is only pasted if you can use it; otherwise the tab keeps its own. |
+| **Networks** | A face's network is only pasted if you can use it; otherwise the face keeps its own. A face with no network in the copy leaves the target's network alone. The network applies to the attached machine's faces; Range Upgrade machines stay as they are. |
 | **Replicating a line** | Copy the router of each machine type and paste over an area covering the whole line. |
 
 ## Recipe

@@ -21,7 +21,7 @@ Copia a configuração de um roteador e cola em outros, um a um ou numa área in
 
 | | |
 | --- | --- |
-| **Copia** | Faces, filtros, prioridades, redstone e a rede de cada aba. |
+| **Copia** | Faces, filtros, prioridades, redstone e a rede de cada face. |
 | **Guarda** | Uma cópia só, no próprio item. O tooltip mostra o que está copiado e os comandos do modo. |
 | **Modos** | Pincel (padrão), Área (mesma máquina) e Área (qualquer máquina). |
 | **Tipo colado** | Todos (padrão), Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). |
@@ -53,7 +53,7 @@ borda laranja e o centro mostra o que faz a fatia sob o mouse.
 | **Soltar no centro ou Esc** | Fecha sem mudar nada. |
 
 Copiar sempre copia tudo; o **tipo colado** escolhe o que vai para o roteador. Em **Todos**, todas as
-abas. Num tipo só, apenas as faces e a rede daquela aba: as outras abas do roteador ficam como
+abas. Num tipo só, apenas as faces (com as redes delas) daquela aba: as outras abas do roteador ficam como
 estavam. Por exemplo, copie um roteador configurado só para fluidos, passe para **Fluidos** e cole
 nos outros sem mexer nos itens nem na energia deles.
 
@@ -81,7 +81,7 @@ nos outros sem mexer nos itens nem na energia deles.
 | --- | --- |
 | **Mesma ou qualquer máquina** | Na mesma máquina, a área ignora os roteadores de outras máquinas (um baú no meio de uma linha de fornalhas fica como estava). Em qualquer máquina, cola em todos. |
 | **Orientação** | A cópia é relativa ao roteador: funciona com ele preso em qualquer face. |
-| **Redes** | A rede de uma aba só é colada se você puder usá-la; senão, a aba fica com a de antes. |
+| **Redes** | A rede de uma face só é colada se você puder usá-la; senão, a face fica com a de antes. Uma face sem rede na cópia não mexe na rede do destino. A rede vale para as faces da máquina presa; as máquinas do Upgrade de Alcance ficam como estão. |
 | **Replicar uma linha** | Copie o roteador de cada tipo de máquina e cole numa área que cubra a linha inteira. |
 
 ## Receita

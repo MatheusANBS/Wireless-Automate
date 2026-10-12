@@ -27,7 +27,7 @@ machine face does.
 | **Opens with** | Right-click the router, with an empty hand or a regular item. |
 | **Turns with** | Shift + right-click with an empty hand: turns the router 90°. The face settings don't change. |
 | **Types** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. |
-| **Configurable faces** | All six machine faces, each with mode, priority, redstone and filter per type. |
+| **Configurable faces** | All six machine faces, each with mode, priority, redstone, filter and network per type. |
 | **Upgrades** | [Upgrade Cards](upgrade-cards.md) (use on the router) and the [Chunk Loading Upgrade](chunk-loading.md) (in the slot at the top of the screen). |
 | **Starting tier** | Basic. Raised with [Upgrade Cards](upgrade-cards.md). |
 
@@ -58,12 +58,24 @@ behind it drops the router.
 | Step | How |
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
-| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the U N E D S W buttons (Up, North, East, Down, South, West). |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the Front, Back, Left, Right, Top and Bottom buttons (machine sides, below). |
 | **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
 | **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
-| **5. Network (optional)** | In the selector next to the tabs, pick this tab's [network](networks.md). |
+| **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
+
+## Machine sides
+
+The face buttons name the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and
+Bottom. Below the buttons, the screen tells where the front is (for example **Front: South**). A
+machine without a front, or facing up or down, like a barrel: **Front = North**.
+
+| On the screen | What it shows |
+| --- | --- |
+| **Dot above a button** | The color of that face's network (no dot: no network). |
+| **Network row** | The selected face's network; click to change it. |
+| **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 
 ## Face modes
 

@@ -14,7 +14,7 @@ Something not moving? Check in order: it's almost always one of these.
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
 | Nothing leaves the source | The face is on **None** or **Insert**. | On the right tab, set the face to **Extract**. |
-| Nothing leaves the source | The tabs are on different networks. | Check the tab's network selector on both routers. |
+| Nothing leaves the source | The faces are on different networks, or on none. | Check the face's **Network** row on both routers (the dot above each button shows the network's color). |
 | Nothing reaches the destination | It's too far for the sender's tier. | Raise the source's tier with an [Upgrade Card](upgrade-cards.md). |
 | Nothing reaches the destination | The destination is full. | It sleeps until there's room and comes back on its own. |
 | Only some items pass | A [filter](filters.md) or stock limit is blocking. | Check the face filter on both sides; an empty filter lets everything through. |

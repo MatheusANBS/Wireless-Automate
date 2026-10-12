@@ -27,7 +27,7 @@ máquina faz.
 | **Abre com** | Clique direito no roteador, de mãos livres ou com um item comum. |
 | **Gira com** | Shift + clique direito com a mão vazia: gira o roteador 90°. A configuração das faces não muda. |
 | **Tipos** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. |
-| **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone e filtro por tipo. |
+| **Faces configuráveis** | As seis faces da máquina, cada uma com modo, prioridade, redstone, filtro e rede por tipo. |
 | **Upgrades** | [Cartões de Upgrade](upgrade-cards.md) (clique no roteador) e o [Upgrade de Chunk Loading](chunk-loading.md) (no slot do topo da tela). |
 | **Tier inicial** | Básico. Sobe com os [Cartões de Upgrade](upgrade-cards.md). |
 
@@ -58,12 +58,25 @@ o roteador.
 | Passo | Como |
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
-| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões C N L B S O (Cima, Norte, Leste, Baixo, Sul, Oeste). |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões Frente, Trás, Esquerda, Direita, Cima e Baixo (lados da máquina, abaixo). |
 | **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
 | **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
-| **5. Rede (opcional)** | No seletor ao lado das abas, escolha a [rede](networks.md) desta aba. |
+| **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
+
+## Lados da máquina
+
+Os botões das faces falam dos lados da **máquina**, vistos de frente para ela: Frente, Trás,
+Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a frente (por exemplo
+**Frente: Sul**). Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
+**Frente = Norte**.
+
+| Na tela | O que mostra |
+| --- | --- |
+| **Ponto em cima do botão** | A cor da rede daquela face (sem ponto: sem rede). |
+| **Linha Rede** | A rede da face escolhida; clique para trocar. |
+| **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 
 ## Modos da face
 

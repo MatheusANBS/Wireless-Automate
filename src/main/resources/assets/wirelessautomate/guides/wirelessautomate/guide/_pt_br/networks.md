@@ -9,8 +9,9 @@ navigation:
 
 # Redes
 
-Roteadores não se ligam uns aos outros: cada **aba** de um roteador entra numa **rede**, e tudo do
-mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo das faces.
+Roteadores não se ligam uns aos outros: cada **face** de um roteador, em cada aba, entra numa
+**rede** (ou em nenhuma), e tudo do mesmo tipo na mesma rede troca entre si. Quem envia e quem
+recebe vem do modo das faces.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
@@ -52,9 +53,9 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Regra | Explicação |
 | --- | --- |
-| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha-o numa rede (abaixo) para ele trabalhar. |
+| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha as faces dele numa rede (abaixo) para ele trabalhar. |
 | **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). É nela que o Vinculador põe os roteadores. |
-| **Rede por aba** | Os itens de uma fornalha podem ir para a rede "Linha de minério" e a energia dela para a rede "Base". |
+| **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
 | **Dono** | Só o dono da rede (ou um operador) pode pôr roteadores nela. |
@@ -63,12 +64,12 @@ mesmo tipo na mesma rede troca entre si. Quem envia e quem recebe vem do modo da
 
 | Jeito | Quantos de uma vez |
 | --- | --- |
-| Seletor de rede da aba, na tela do roteador | Uma aba de um roteador |
-| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador (as abas marcadas) |
-| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área |
-| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as abas marcadas da rede, num roteador ou numa área |
-| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada (todas as abas ou só um tipo) |
+| Linha **Rede** da face, na tela do roteador | Uma face de um roteador, numa aba |
+| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador: as faces e as abas marcadas |
+| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área (as faces e as abas marcadas) |
+| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as faces e as abas marcadas da rede, num roteador ou numa área |
+| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista: todas as faces deles no tipo escolhido (ou em todos) |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede de cada face vai junto com a configuração colada (todas as abas ou só um tipo) |
 
 ## Alcance e chunks
 

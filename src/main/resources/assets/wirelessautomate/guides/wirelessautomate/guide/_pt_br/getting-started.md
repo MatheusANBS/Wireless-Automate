@@ -32,7 +32,7 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 | --- | --- |
 | **1** | Faça dois roteadores e um [Vinculador](linker.md) (receitas abaixo). |
 | **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú, ainda **sem rede**. Faça o mesmo no baú B. |
-| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: os dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
+| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: as faces dos dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
 | **4** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
 | **5** | No roteador B, mesma face, modo **Insere**. |
 | **6** | Coloque itens no baú A: eles aparecem no baú B. |

@@ -317,6 +317,15 @@ public final class LinkerActions {
      */
     public static boolean inTarget(RouterBlockEntity router, List<ResourceType> types, LinkerFaces faces,
             @Nullable UUID target) {
+        if (target == null && faces.isAll()) {
+            // desvincular a aba inteira: nenhuma face do tipo (presa, perfis e exceções) em rede
+            for (ResourceType type : types) {
+                if (router.networks(type).length > 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
         return router.attachedFacesIn(types, faces.absoluteMask(router.attachedFront()), target);
     }
 
@@ -326,6 +335,11 @@ public final class LinkerActions {
      */
     public static void apply(RouterBlockEntity router, List<ResourceType> types, LinkerFaces faces,
             @Nullable UUID target) {
+        if (target == null && faces.isAll()) {
+            // desvincular com todas as faces tira a aba inteira da rede, inclusive as máquinas do alcance
+            router.setNetworkAllFaces(types, null);
+            return;
+        }
         router.setAttachedFacesNetwork(types, faces.absoluteMask(router.attachedFront()), target);
     }
 

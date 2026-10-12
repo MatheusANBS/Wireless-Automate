@@ -35,12 +35,37 @@ public final class TierLadder {
     }
 
     /**
-     * O cartão do degrau {@code to} sobe um bloco do degrau {@code from}: {@code to} está acima e o mod dele
-     * está carregado. O cartão de um tier já consome os anteriores na receita, então pular degraus não
-     * barateia nada. O mod de {@code from} não importa (um bloco que ficou no Vibranium sobe para o Ultimate).
+     * Regra do cartão antigo, sem origem: o cartão do degrau {@code to} sobe um bloco do degrau {@code from}
+     * se {@code to} está acima e o mod dele está carregado. Vale para os cartões fabricados antes de o cartão
+     * ter origem, que continuam subindo de qualquer tier abaixo. O mod de {@code from} não importa (um bloco
+     * que ficou no Vibranium sobe para o Ultimate).
      */
     public static boolean canUpgrade(List<@Nullable String> requiredMods, int from, int to, Predicate<String> modLoaded) {
         return to > from && loaded(requiredMods.get(to), modLoaded);
+    }
+
+    /**
+     * O cartão de origem {@code origin} e destino {@code to} sobe um bloco do degrau {@code block}. Com origem,
+     * só um bloco exatamente da origem: o cartão "k → N" custa os mesmos anéis que a bancada cobraria para
+     * levar o bloco de k a N, então valer de outro tier daria um caminho mais barato (ou mais caro) que o da
+     * bancada. Sem origem ({@code origin < 0}, cartão antigo), a regra de {@link #canUpgrade}.
+     */
+    public static boolean cardApplies(List<@Nullable String> requiredMods, int origin, int to, int block,
+            Predicate<String> modLoaded) {
+        if (origin < 0) {
+            return canUpgrade(requiredMods, block, to, modLoaded);
+        }
+        return block == origin && canUpgrade(requiredMods, origin, to, modLoaded);
+    }
+
+    /**
+     * {@code to} é o degrau imediatamente acima de {@code from} na escada desta instância (e, portanto,
+     * carregado). É o "estender um degrau": o cartão "k → N−1" no centro do anel de N vira "k → N", e o bloco
+     * de N−1 no centro do anel de N vira o bloco de N. Cada anel cobra um degrau só, e assim subir de k a N
+     * custa a soma dos anéis no meio, pela bancada ou pelo cartão.
+     */
+    public static boolean oneStep(List<@Nullable String> requiredMods, int from, int to, Predicate<String> modLoaded) {
+        return to >= 0 && next(requiredMods, from, modLoaded) == to;
     }
 
     public static boolean loaded(@Nullable String requiredMod, Predicate<String> modLoaded) {

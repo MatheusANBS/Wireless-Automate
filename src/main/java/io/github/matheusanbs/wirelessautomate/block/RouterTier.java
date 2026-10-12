@@ -1,7 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import com.mojang.serialization.Codec;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import java.util.Arrays;
 import java.util.List;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.StringRepresentable;
 import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +32,13 @@ public enum RouterTier implements StringRepresentable {
 
     /** Id do mod Allthemodium. */
     public static final String ATM = "allthemodium";
+
+    /** Codec pelo nome serializado, como o NBT. */
+    public static final Codec<RouterTier> CODEC = StringRepresentable.fromEnum(RouterTier::values);
+
+    /** Stream codec pelo nome (a posição só vale dentro de uma versão); recusa nome desconhecido. */
+    public static final StreamCodec<ByteBuf, RouterTier> STREAM_CODEC = ByteBufCodecs.STRING_UTF8.map(
+            RouterTier::byNameOrThrow, RouterTier::getSerializedName);
 
     private static final List<@Nullable String> REQUIRED_MODS =
             Arrays.stream(values()).map(tier -> tier.requiredMod).toList();
@@ -66,13 +78,39 @@ public enum RouterTier implements StringRepresentable {
         return i < 0 ? null : values()[i];
     }
 
-    /** O cartão do tier {@code target} sobe um bloco deste tier: {@code target} está acima e carregado. */
+    /**
+     * Regra do cartão antigo, sem origem: o cartão do tier {@code target} sobe um bloco deste tier se
+     * {@code target} está acima e carregado.
+     */
     public boolean canUpgradeTo(RouterTier target) {
         return TierLadder.canUpgrade(REQUIRED_MODS, ordinal(), target.ordinal(), RouterTier::modLoaded);
     }
 
+    /**
+     * O cartão de origem {@code origin} e destino {@code target} sobe um bloco deste tier: com origem, só se
+     * este tier é exatamente a origem; sem origem ({@code null}, cartão antigo), de qualquer tier abaixo.
+     */
+    public boolean acceptsCard(@Nullable RouterTier origin, RouterTier target) {
+        return TierLadder.cardApplies(REQUIRED_MODS, origin == null ? -1 : origin.ordinal(), target.ordinal(),
+                ordinal(), RouterTier::modLoaded);
+    }
+
+    /** {@code ring} é o tier imediatamente acima deste na escada desta instância (o anel sobe um degrau só). */
+    public boolean stepsTo(RouterTier ring) {
+        return TierLadder.oneStep(REQUIRED_MODS, ordinal(), ring.ordinal(), RouterTier::modLoaded);
+    }
+
     public String translationKey() {
         return "tier.wirelessautomate." + name;
+    }
+
+    private static RouterTier byNameOrThrow(String name) {
+        for (RouterTier tier : values()) {
+            if (tier.name.equals(name)) {
+                return tier;
+            }
+        }
+        throw new DecoderException("Tier desconhecido: " + name);
     }
 
     private static boolean modLoaded(String mod) {

@@ -1,9 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.range;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -48,17 +51,27 @@ public final class RemoteMachines {
     }
 
     /**
-     * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, ou num grupo
-     * novo com o perfil vazio. Devolve {@code false} se a posição já estava vinculada. Só pelo
-     * {@code RouterBlockEntity.linkMachine} (ver a classe).
+     * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, que não muda,
+     * ou num grupo novo com o perfil vazio e as seis faces de todos os tipos carregados na rede
+     * {@code network} ({@code null} = sem rede; decisão 5 da spec da rede por face). Devolve
+     * {@code false} se a posição já estava vinculada. Só pelo {@code RouterBlockEntity.linkMachine}
+     * (ver a classe).
      */
-    public boolean link(BlockPos pos, ResourceLocation block, int front) {
+    public boolean link(BlockPos pos, ResourceLocation block, int front, @Nullable UUID network) {
         if (contains(pos)) {
             return false;
         }
         MachineGroup group = firstGroupOf(block);
         if (group == null) {
-            group = new MachineGroup(nextGroupId++, block, "", new MachineConfig());
+            MachineConfig profile = new MachineConfig();
+            if (network != null) {
+                for (ResourceType type : LoadedTypes.LIST) {
+                    for (RemoteSide side : RemoteSide.values()) {
+                        profile.face(type, side).setNetwork(network);
+                    }
+                }
+            }
+            group = new MachineGroup(nextGroupId++, block, "", profile);
             groups.add(group);
         }
         machines.add(new RemoteMachine(pos, group.id(), null, front));

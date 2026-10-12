@@ -1466,6 +1466,48 @@ public final class RangeGameTests {
     }
 
     /**
+     * "Nenhuma (desvincular)" no modo Máquinas: o botão da tela tira do roteador escolhido as máquinas
+     * vinculadas dentro da área, e só elas; a de fora da área continua.
+     */
+    @GameTest(template = "empty")
+    public static void linkerAreaUnlinksMachinesInside(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        BlockPos barrel = new BlockPos(0, 3, 0);
+        BlockPos furnace = new BlockPos(2, 3, 2);
+        helper.setBlock(barrel, Blocks.BARREL);
+        helper.setBlock(furnace, Blocks.FURNACE);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        router.setRangeUpgrade(rangeUpgrade());
+                        helper.assertTrue(router.linkMachine(helper.absolutePos(barrel)), "vincular o barril");
+                        helper.assertTrue(router.linkMachine(helper.absolutePos(furnace)), "vincular a fornalha");
+                        LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        LinkerItem.setUnlink(linker, true);
+                        LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(),
+                                helper.absolutePos(new BlockPos(0, 2, 0))).withSecond(helper.absolutePos(new BlockPos(1, 3, 1))));
+                        LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
+                                LinkerSnapshot.capture(player, linker, null));
+                        player.containerMenu = menu;
+                        helper.assertTrue(LinkerActions.handle(player, LinkerActionPayload.of(CONTAINER_ID, Op.LINK)),
+                                "Desvincular pela tela recusou");
+                        RemoteMachines remotes = router.remoteMachines();
+                        helper.assertFalse(remotes.contains(helper.absolutePos(barrel)), "o barril, na área, continuou");
+                        helper.assertTrue(remotes.contains(helper.absolutePos(furnace)), "a fornalha, fora da área, saiu");
+
+                        RangeLinks.Result again = RangeLinks.linkArea(player, linker);
+                        helper.assertTrue(again.ok() && again.linked() == 0, "de novo: " + again);
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
      * O Configurador nunca fica no modo Máquinas: gravar Máquinas vira pincel, um componente com
      * Máquinas é lido como pincel e o ciclo dele só passa por Pincel e Área.
      */

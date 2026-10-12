@@ -22,7 +22,7 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas ou marque uma área. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
 

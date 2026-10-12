@@ -33,6 +33,11 @@ import org.jetbrains.annotations.Nullable;
  * tem o estoque, é só pulado, <b>sem dormir</b>: recusar o item A não diz nada sobre o B, e o
  * backoff de "cheio" o deixaria de fora também para o B. Só a recusa por falta de espaço (a
  * inserção simulada não aceita nada de um item que o filtro deixa entrar) faz o destino dormir.
+ * A máquina que recusa o item pelo tipo também é só pulada ({@link InsertPlan#refusesItem}): ela
+ * tem slot vazio, nenhum dos vazios o aceita ({@link IItemHandler#isItemValid}) e não há pilha dele
+ * lá dentro. É a Salvaging Table do Apotheosis com o que não se desmonta, ou uma máquina com o que
+ * não tem receita: sem isso, o primeiro item sem receita do baú a punha para dormir como cheia, e
+ * os que ela aceitaria esperavam o sono acabar.
  * Se nenhum destino aceitar nenhum item, a origem é que dorme, pela volta sem mover; se todos os
  * destinos estão dormindo, ela dorme até o primeiro deles acordar ({@link SourceSleep}).
  *
@@ -262,6 +267,10 @@ final class ItemTransfer {
                 continue;
             }
             if (accepts == 0) {
+                if (target != null && PLAN.refusesItem(target, probe)) {
+                    // A máquina não aceita este item (sem receita): pula sem dormir, como o filtro.
+                    continue;
+                }
                 destination.destinationBackoff.sleep(now);
                 destinationSlept = true;
                 continue;
@@ -622,7 +631,8 @@ final class ItemTransfer {
                     break;
                 }
                 if (accepts == 0) {
-                    if (first) {
+                    // A máquina que não aceita este item (sem receita) é pulada sem dormir, como o filtro.
+                    if (first && !PLAN.refusesItem(target, key)) {
                         destination.destinationBackoff.sleep(now);
                         destinationSlept = true;
                     }
@@ -751,6 +761,10 @@ final class ItemTransfer {
         private int[] empties = new int[64];
         private int[] fulls = new int[16];
         private long counted;
+        /** Vazios anotados pela última {@link #simulate} (em {@link #empties}). */
+        private int emptySeen;
+        /** A última {@link #simulate} viu uma pilha do mesmo item no destino. */
+        private boolean sameSeen;
         /** Tamanho máximo do item da simulação em curso ({@link #insert}). */
         private int itemMax;
 
@@ -832,6 +846,8 @@ final class ItemTransfer {
             size = 0;
             itemMax = stack.getMaxStackSize();
             counted = 0;
+            emptySeen = 0;
+            sameSeen = false;
             int emptyCount = 0;
             int fullCount = 0;
             boolean fullRefused = false;
@@ -854,6 +870,7 @@ final class ItemTransfer {
                     continue;
                 }
                 boolean same = ItemStack.isSameItemSameComponents(inSlot, stack);
+                sameSeen |= same;
                 if (count == COUNT_COMPONENTS ? same : count == COUNT_ITEM && ItemStack.isSameItem(inSlot, stack)) {
                     counted += inSlot.getCount();
                     if (counted >= stock) {
@@ -892,6 +909,7 @@ final class ItemTransfer {
                     }
                 }
             }
+            emptySeen = emptyCount;
             for (int i = 0; i < emptyCount && !rest.isEmpty(); i++) {
                 rest = offer(target, empties[i], rest);
             }
@@ -899,6 +917,25 @@ final class ItemTransfer {
                 rest = offer(target, fulls[i], rest);
             }
             return stack.getCount() - rest.getCount();
+        }
+
+        /**
+         * A última {@link #simulate} não aceitou nada porque o destino recusa o item, não por falta
+         * de espaço: havia slot vazio, nenhum deles o aceita ({@link IItemHandler#isItemValid}) e não
+         * havia pilha dele no destino. Uma máquina cheia de verdade fica de fora: sem vazio, ou com
+         * a pilha do item lotada, ou com um vazio que aceita o item e mesmo assim recusou (a saída da
+         * máquina cheia). Só roda na recusa, e só nos vazios anotados.
+         */
+        boolean refusesItem(IItemHandler target, ItemStack stack) {
+            if (sameSeen || emptySeen == 0) {
+                return false;
+            }
+            for (int i = 0; i < emptySeen; i++) {
+                if (target.isItemValid(empties[i], stack)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /** Quanto do item a última {@link #simulate} contou no destino. */

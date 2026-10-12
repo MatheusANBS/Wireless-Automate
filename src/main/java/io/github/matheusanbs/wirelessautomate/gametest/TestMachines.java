@@ -35,12 +35,15 @@ public final class TestMachines {
     public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
     /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
     public static final Block NAIVE_SLOTS = Blocks.CLAY;
+    /** Uma entrada que só aceita diamante e o consome na hora, como a Salvaging Table ({@link TypedSlot}). */
+    public static final Block TYPED_SLOT = Blocks.HAY_BLOCK;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, TypedSlot> TYPED = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -56,6 +59,7 @@ public final class TestMachines {
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> naiveSlots(pos), NAIVE_SLOTS);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> typedSlot(pos), TYPED_SLOT);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -71,6 +75,10 @@ public final class TestMachines {
         return NAIVE.computeIfAbsent(pos.immutable(), key -> new NaiveSlots());
     }
 
+    static TypedSlot typedSlot(BlockPos pos) {
+        return TYPED.computeIfAbsent(pos.immutable(), key -> new TypedSlot());
+    }
+
     static LiveTank liveTank(BlockPos pos) {
         return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
     }
@@ -81,6 +89,7 @@ public final class TestMachines {
         TANKS.remove(pos.immutable());
         LIVE_TANKS.remove(pos.immutable());
         NAIVE.remove(pos.immutable());
+        TYPED.remove(pos.immutable());
     }
 
     static final class BigSlot implements IItemHandler {
@@ -224,6 +233,61 @@ public final class TestMachines {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return true;
+        }
+    }
+
+    /**
+     * Como a Salvaging Table do Apotheosis: um slot de entrada sempre vazio que só aceita diamante
+     * ({@link #isItemValid}) e consome um por chamada, na hora. O resto volta intacto, como de um
+     * inventário cheio. Com {@link #setFull} ligado, recusa também o diamante (a saída da máquina
+     * cheia), mas continua dizendo que ele é válido.
+     */
+    static final class TypedSlot implements IItemHandler {
+        private int consumed;
+        private boolean full;
+
+        int consumed() {
+            return consumed;
+        }
+
+        void setFull(boolean full) {
+            this.full = full;
+        }
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty() || full || !isItemValid(slot, stack)) {
+                return stack;
+            }
+            if (!simulate) {
+                consumed++;
+            }
+            return stack.copyWithCount(stack.getCount() - 1);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 1;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return stack.is(Items.DIAMOND);
         }
     }
 

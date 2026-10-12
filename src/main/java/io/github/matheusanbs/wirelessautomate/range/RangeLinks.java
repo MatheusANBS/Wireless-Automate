@@ -171,7 +171,7 @@ public final class RangeLinks {
         if (refusal == LinkRefusal.NONE) {
             refusal = rangeRefusal(router, distance, used(router));
         }
-        if (refusal == LinkRefusal.NONE && !router.linkMachine(pos, groupNetwork(player))) {
+        if (refusal == LinkRefusal.NONE && !router.linkMachine(pos, groupNetwork(player, stack))) {
             refusal = LinkRefusal.NOT_A_MACHINE;
         }
         if (refusal != LinkRefusal.NONE) {
@@ -185,10 +185,14 @@ public final class RangeLinks {
 
     /**
      * A rede em que nasce um grupo novo (decisão 5 da spec da rede por face): a rede ativa de quem
-     * vincula, se ela existe e ele pode usá-la; senão nenhuma. Nunca cria rede. Um grupo que já
-     * existe não muda.
+     * vincula, se ela existe e ele pode usá-la; senão nenhuma. Com o Vinculador em "Nenhuma
+     * (desvincular)", nenhuma também: a tela não mostra a rede ativa. Nunca cria rede. Um grupo que
+     * já existe não muda.
      */
-    private static @Nullable UUID groupNetwork(ServerPlayer player) {
+    private static @Nullable UUID groupNetwork(ServerPlayer player, ItemStack stack) {
+        if (LinkerItem.unlink(stack)) {
+            return null;
+        }
         WaNetwork network = LinkerActions.activeNetwork(player);
         return network != null && network.canUse(player) ? network.id() : null;
     }
@@ -256,7 +260,7 @@ public final class RangeLinks {
         int max = max(router);
         InteractionHand hand = player.getItemInHand(InteractionHand.MAIN_HAND) == stack
                 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-        UUID network = groupNetwork(player);
+        UUID network = groupNetwork(player, stack);
         router.batchChanges(() -> {
             int used = used(router);
             for (BlockPos pos : candidates) {

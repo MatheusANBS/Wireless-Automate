@@ -74,9 +74,10 @@ blocos dela.
 
 | Passo | O que fazer |
 | --- | --- |
-| **1** | Escolha a rede **Mina** e, em Faces, deixe só **C** (Cima) marcada. Clique nas fornalhas. |
-| **2** | Escolha a rede **Armazém**, marque só **B** (Baixo) e clique nelas de novo. |
-| **3** | O minério chega pela Mina e os lingotes saem pelo Armazém. Volte a **Todas** quando terminar. |
+| **1** | Na tela do roteador de cada fornalha, ponha a face **Cima** em **Insere** e a **Baixo** em **Extrai**. |
+| **2** | No Vinculador, escolha a rede **Mina** e, em Faces, deixe só **C** (Cima) marcada. Clique nos roteadores das fornalhas. |
+| **3** | Escolha a rede **Armazém**, marque só **B** (Baixo) e clique nos roteadores de novo. |
+| **4** | O minério chega pela Mina e os lingotes saem pelo Armazém. Volte a **Todas** quando terminar. |
 
 ## Exemplo: tirar uma área da rede, menos a energia
 

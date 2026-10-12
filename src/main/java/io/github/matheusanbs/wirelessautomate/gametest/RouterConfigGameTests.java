@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -30,6 +31,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /** Configuração por face, rotação relativa, caches de capability e redstone do roteador. */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -88,7 +90,7 @@ public final class RouterConfigGameTests {
 
         RouterBlockEntity copy = new RouterBlockEntity(node.getBlockPos(), node.getBlockState());
         copy.loadWithComponents(tag, registries);
-        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), network, "rede");
+        assertNetwork(helper, copy.networkId(ResourceType.ITEM), network, "rede");
         for (ResourceType type : ResourceType.values()) {
             for (Direction face : Direction.values()) {
                 helper.assertValueEqual(copy.face(type, face), node.face(type, face), type + " " + face);
@@ -332,5 +334,10 @@ public final class RouterConfigGameTests {
         helper.assertTrue(network.equals(copy.networkId(ResourceType.ENERGY)), "rede de energia perdida");
         helper.assertTrue(copy.face(ResourceType.FLUID, Direction.UP).mode() == PortMode.INSERT, "modo de fluido perdido");
         helper.succeed();
+    }
+
+    /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
     }
 }

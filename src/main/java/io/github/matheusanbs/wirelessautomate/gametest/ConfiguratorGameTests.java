@@ -145,7 +145,7 @@ public final class ConfiguratorGameTests {
                         helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.EAST).priority(), 7, "LEFT");
                         helper.assertValueEqual(target.face(ResourceType.ENERGY, Direction.SOUTH).redstone(),
                                 RedstoneMode.HIGH, "BACK");
-                        helper.assertValueEqual(target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
+                        assertNetwork(helper, target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
 
                         // Rede de outro dono: só as faces vão.
                         source.setNetworkId(other.id());
@@ -188,7 +188,7 @@ public final class ConfiguratorGameTests {
             }
         }
         helper.assertValueEqual(configured, 1, "faces configuradas no destino não foram zeradas");
-        helper.assertValueEqual(target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
+        assertNetwork(helper, target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
         helper.assertValueEqual(RouterPreset.copyOf(target).withoutNetworks(), preset,
                 "copiar o colado não dá o mesmo preset");
         helper.succeed();
@@ -548,11 +548,11 @@ public final class ConfiguratorGameTests {
                         ConfiguratorItem.setType(configurator, ResourceType.FLUID);
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
-                        helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
+                        assertNetwork(helper, target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            assertNetwork(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
 
                         source.setNetworkId(ResourceType.ITEM, foreign.id());
@@ -617,11 +617,11 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, false);
 
                         assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
-                        helper.assertValueEqual(target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
+                        assertNetwork(helper, target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            assertNetwork(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
                     } finally {
                         player.setShiftKeyDown(false);

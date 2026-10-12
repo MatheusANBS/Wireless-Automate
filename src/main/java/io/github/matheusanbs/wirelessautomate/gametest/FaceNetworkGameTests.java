@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -597,6 +598,46 @@ public final class FaceNetworkGameTests {
                 .thenExecute(() -> {
                     assertCount(helper, CHEST, 10);
                     assertCount(helper, CORNER_B, 0);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * "Sem rede" pela tela numa face cuja rede foi apagada: o snapshot mostra a face vazia, mas ela
+     * guarda o UUID; o payload vazio limpa a face e o índice (o aviso do Tablet) deixa de citar a rede.
+     */
+    @SuppressWarnings("removal")
+    @GameTest(template = "empty")
+    public static void noNetworkClearsRemovedNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = router(helper);
+        UUID gone = network(helper, "apagada");
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, gone);
+        NodeIndex.NodeKey key = NodeIndex.NodeKey.of(helper.getLevel(), router.getBlockPos());
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    helper.assertTrue(NetworkSavedData.get(helper.getLevel().getServer()).remove(gone), "rede não removida");
+                    ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                    player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+                    RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
+                            RouterSnapshot.capture(router, player));
+                    player.containerMenu = menu;
+                    try {
+                        helper.assertTrue(RouterSnapshot.capture(router, player).network(ResourceType.ITEM, Direction.DOWN)
+                                .isEmpty(), "o snapshot mostrou a rede apagada");
+                        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), gone, "a face perdeu o UUID");
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.DOWN, null)),
+                                "recusou Sem rede");
+                        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), null,
+                                "Sem rede não limpou a face");
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                })
+                .thenWaitUntil(() -> {
+                    NodeIndex.Entry entry = NodeIndex.get(helper.getLevel().getServer()).entry(key);
+                    helper.assertTrue(entry != null, "nó fora do índice");
+                    helper.assertFalse(entry.inNetwork(gone), "o índice continua na rede apagada");
                 })
                 .thenSucceed();
     }

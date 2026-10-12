@@ -73,9 +73,11 @@ public final class RouterPreset {
         FaceConfig[][] faces = new FaceConfig[TYPES.length][SIDES.length];
         for (ResourceType type : TYPES) {
             for (RelativeSide side : SIDES) {
-                FaceConfig config = router.face(type, side);
+                // Transição: as faces vão sem a rede (o preset leva a rede comum da presa por tipo).
+                FaceConfig config = new FaceConfig();
+                config.copySettingsFrom(router.face(type, side));
                 if (!config.isDefault()) {
-                    faces[type.ordinal()][side.ordinal()] = copy(config);
+                    faces[type.ordinal()][side.ordinal()] = config;
                 }
             }
         }

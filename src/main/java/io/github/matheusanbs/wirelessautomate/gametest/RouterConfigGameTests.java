@@ -306,7 +306,10 @@ public final class RouterConfigGameTests {
                 .thenSucceed();
     }
 
-    /** As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. */
+    /**
+     * As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. A rede mora
+     * nas faces ({@code network} dentro de cada uma); a chave antiga {@code networks} não é mais escrita.
+     */
     @GameTest(template = "empty")
     public static void savedKeysStayTheSame(GameTestHelper helper) {
         UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "teste-chaves").id();
@@ -317,8 +320,9 @@ public final class RouterConfigGameTests {
         node.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
-        Set<String> networks = tag.getCompound("networks").getAllKeys();
-        helper.assertTrue(networks.containsAll(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
+        helper.assertFalse(tag.contains("networks"), "a chave antiga networks ainda é escrita");
+        Set<String> types = tag.getCompound("faces").getAllKeys();
+        helper.assertTrue(types.containsAll(Set.of("item", "fluid", "energy", "chemical")), "tipos nas faces: " + types);
         helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
 
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);

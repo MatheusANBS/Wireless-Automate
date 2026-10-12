@@ -34,8 +34,10 @@ import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -85,8 +87,6 @@ public class RouterBlockEntity extends BlockEntity {
     private static final RelativeSide[] SIDES = RelativeSide.values();
     private static final int FACES = Direction.values().length;
 
-    /** Rede de cada aba (por {@link ResourceType#ordinal()}); {@code null} = sem rede nesse tipo. */
-    private final UUID[] networks = new UUID[ResourceType.values().length];
     /** Nome do nó dado pelo jogador; vazio = sem nome. */
     private String name = "";
     /** [tipo][lado relativo], tudo alocado de início: consultas não alocam. */
@@ -138,59 +138,197 @@ public class RouterBlockEntity extends BlockEntity {
         return getBlockState().getValue(RouterBlock.TIER);
     }
 
-    /** Rede em que o recurso {@code type} deste roteador entra; {@code null} = sem rede. */
+    /**
+     * <b>Atalho de transição, só para testes, e2e e bench</b>: a rede comum às seis faces da máquina
+     * presa no tipo {@code type}, ou {@code null} se nenhuma tem rede ou se estão em redes diferentes.
+     * A rede é da face: use {@link #faceNetwork(ResourceType, Direction)},
+     * {@link #faceNetwork(EditTarget, ResourceType, Direction)} ou {@link #networks(ResourceType)}.
+     */
     public @Nullable UUID networkId(ResourceType type) {
-        return networks[type.ordinal()];
-    }
-
-    /** Põe só o tipo {@code type} numa rede (a aba do roteador, ou o Vinculador com tipo). */
-    public void setNetworkId(ResourceType type, @Nullable UUID networkId) {
-        if (Objects.equals(networks[type.ordinal()], networkId)) {
-            return;
-        }
-        networks[type.ordinal()] = networkId;
-        changed(NetworkManager.typeBit(type));
-    }
-
-    /** Põe todos os tipos na mesma rede (colocar o roteador, Vinculador em "Todos"). */
-    public void setNetworkId(@Nullable UUID networkId) {
-        int changed = 0;
-        for (int i = 0; i < networks.length; i++) {
-            if (!Objects.equals(networks[i], networkId)) {
-                networks[i] = networkId;
-                changed |= 1 << i;
+        FaceConfig[] row = faces[type.ordinal()];
+        UUID network = row[0].network();
+        for (int i = 1; i < row.length; i++) {
+            if (!Objects.equals(network, row[i].network())) {
+                return null;
             }
         }
-        if (changed != 0) {
-            changed(changed);
+        return network;
+    }
+
+    /**
+     * Atalho: põe as seis faces da presa, dos perfis e das exceções do tipo {@code type} na rede
+     * {@code networkId} ({@code null} tira da rede). É o {@link #setNetworkAllFaces}; a rede é da face
+     * ({@link #setFaceNetwork(ResourceType, Direction, UUID)}).
+     */
+    public void setNetworkId(ResourceType type, @Nullable UUID networkId) {
+        setNetworkAllFaces(List.of(type), networkId);
+    }
+
+    /** Atalho: todas as faces de todos os tipos na rede {@code networkId}. Ver {@link #setNetworkAllFaces}. */
+    public void setNetworkId(@Nullable UUID networkId) {
+        setNetworkAllFaces(Arrays.asList(TYPES), networkId);
+    }
+
+    /** Atalho: todas as faces dos tipos {@code types} na rede {@code networkId}. Ver {@link #setNetworkAllFaces}. */
+    public void setNetworkId(Collection<ResourceType> types, @Nullable UUID networkId) {
+        setNetworkAllFaces(types, networkId);
+    }
+
+    /** Rede da face {@code machineFace} (absoluta) da máquina presa no tipo {@code type}; {@code null} = nenhuma. */
+    public @Nullable UUID faceNetwork(ResourceType type, Direction machineFace) {
+        return face(type, machineFace).network();
+    }
+
+    /** Põe a face {@code machineFace} (absoluta) da máquina presa na rede {@code network} ({@code null} tira). */
+    public void setFaceNetwork(ResourceType type, Direction machineFace, @Nullable UUID network) {
+        if (face(type, machineFace).setNetwork(network)) {
+            changed(NetworkManager.typeBit(type));
         }
     }
 
     /**
-     * Põe os tipos {@code types} na mesma rede ({@code null} tira da rede), avisando a mudança uma
-     * vez só (Vinculador com várias abas marcadas).
+     * Rede da face {@code side} do alvo de edição, no quadro da tela (como
+     * {@link #face(EditTarget, ResourceType, Direction)}): numa máquina remota, a que vale (exceção ou perfil).
      */
-    public void setNetworkId(Collection<ResourceType> types, @Nullable UUID networkId) {
-        int changed = 0;
+    public @Nullable UUID faceNetwork(EditTarget target, ResourceType type, Direction side) {
+        return face(target, type, side).network();
+    }
+
+    /**
+     * Põe a face {@code side} do alvo (quadro da tela) na rede {@code network}. Num grupo, muda o
+     * perfil; numa máquina remota, cria a exceção (ou a apaga se ficar igual ao perfil), como as
+     * outras edições por alvo.
+     */
+    public void setFaceNetwork(EditTarget target, ResourceType type, Direction side, @Nullable UUID network) {
+        if (target.attached()) {
+            setFaceNetwork(type, side, network);
+            return;
+        }
+        editRemote(target, type, side, config -> config.setNetwork(network));
+    }
+
+    /**
+     * Põe as faces absolutas da máquina presa marcadas em {@code absoluteFaceMask} (bit =
+     * {@link Direction#ordinal()}) dos tipos {@code types} na rede {@code network}, com um aviso só.
+     * Devolve quantas faces mudaram (Vinculador).
+     */
+    public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
+        int[] count = new int[1];
+        batchChanges(() -> {
+            for (ResourceType type : types) {
+                for (Direction face : Direction.values()) {
+                    if ((absoluteFaceMask & (1 << face.ordinal())) != 0 && face(type, face).setNetwork(network)) {
+                        count[0]++;
+                        changed(NetworkManager.typeBit(type));
+                    }
+                }
+            }
+        });
+        return count[0];
+    }
+
+    /**
+     * Todas as faces absolutas da presa marcadas em {@code absoluteFaceMask}, nos tipos {@code types},
+     * já estão na rede {@code network} (o "já estavam" do Vinculador).
+     */
+    public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
         for (ResourceType type : types) {
-            if (!Objects.equals(networks[type.ordinal()], networkId)) {
-                networks[type.ordinal()] = networkId;
-                changed |= NetworkManager.typeBit(type);
+            for (Direction face : Direction.values()) {
+                if ((absoluteFaceMask & (1 << face.ordinal())) != 0
+                        && !Objects.equals(network, face(type, face).network())) {
+                    return false;
+                }
             }
         }
-        if (changed != 0) {
-            changed(changed);
+        return true;
+    }
+
+    /**
+     * Põe as seis faces da máquina presa, dos perfis de todos os grupos e das exceções, nos tipos
+     * {@code types}, na rede {@code network} ({@code null} tira da rede), com um aviso só. É o que a
+     * rede da aba fazia antes (Tablet, atalhos de teste, bench, comandos).
+     */
+    public void setNetworkAllFaces(Collection<ResourceType> types, @Nullable UUID network) {
+        batchChanges(() -> {
+            for (ResourceType type : types) {
+                boolean changed = false;
+                for (FaceConfig config : faces[type.ordinal()]) {
+                    changed |= config.setNetwork(network);
+                }
+                for (MachineGroup group : remotes.groups()) {
+                    changed |= setNetwork(group.profile(), type, network);
+                }
+                for (RemoteMachine machine : remotes.machines()) {
+                    MachineConfig exception = machine.exception();
+                    if (exception != null) {
+                        changed |= setNetwork(exception, type, network);
+                    }
+                }
+                if (changed) {
+                    changed(NetworkManager.typeBit(type));
+                }
+            }
+        });
+    }
+
+    private static boolean setNetwork(MachineConfig config, ResourceType type, @Nullable UUID network) {
+        boolean changed = false;
+        for (RemoteSide side : RemoteSide.values()) {
+            changed |= config.face(type, side).setNetwork(network);
+        }
+        return changed;
+    }
+
+    /**
+     * As redes distintas do tipo {@code type} (sem nulo, na ordem em que aparecem) nas faces da presa,
+     * dos perfis e das exceções. Sem cache: só o motor (no {@code nodeChanged}), o índice e o snapshot
+     * chamam.
+     */
+    public UUID[] networks(ResourceType type) {
+        Set<UUID> found = new LinkedHashSet<>();
+        for (FaceConfig config : faces[type.ordinal()]) {
+            addNetwork(found, config);
+        }
+        for (MachineGroup group : remotes.groups()) {
+            addNetworks(found, group.profile(), type);
+        }
+        for (RemoteMachine machine : remotes.machines()) {
+            MachineConfig exception = machine.exception();
+            if (exception != null) {
+                addNetworks(found, exception, type);
+            }
+        }
+        return found.toArray(UUID[]::new);
+    }
+
+    private static void addNetworks(Set<UUID> found, MachineConfig config, ResourceType type) {
+        for (RemoteSide side : RemoteSide.values()) {
+            addNetwork(found, config.face(type, side));
         }
     }
 
-    /** Algum tipo está numa rede. */
+    private static void addNetwork(Set<UUID> found, FaceConfig config) {
+        if (config.network() != null) {
+            found.add(config.network());
+        }
+    }
+
+    /** Alguma face (presa, perfil ou exceção) de algum tipo está numa rede. */
     public boolean hasNetwork() {
-        for (UUID network : networks) {
-            if (network != null) {
+        for (ResourceType type : TYPES) {
+            if (networks(type).length > 0) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Frente horizontal da máquina presa ({@link RemoteMachines#frontOf}), ou −1 sem nível ou sem
+     * frente. Só para a tela e o Vinculador, nunca por tick (a presa é vizinha, o chunk está carregado).
+     */
+    public int attachedFront() {
+        return level == null ? -1 : RemoteMachines.frontOf(level.getBlockState(machinePos()));
     }
 
     /** Nome do nó; vazio se o jogador não deu um. */
@@ -813,9 +951,12 @@ public class RouterBlockEntity extends BlockEntity {
         changeVersion++;
     }
 
-    /** Copia a configuração de uma face inteira, pelo lado relativo (para presets e o Configurador). */
+    /**
+     * Copia modo, prioridade, redstone e filtro de uma face, pelo lado relativo (presets e o
+     * Configurador). A rede da face não muda: colar decide a rede à parte, pela regra das redes.
+     */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
-        if (face(type, side).copyFrom(config)) {
+        if (face(type, side).copySettingsFrom(config)) {
             changed(NetworkManager.typeBit(type));
         }
     }
@@ -1185,16 +1326,6 @@ public class RouterBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        CompoundTag networksTag = new CompoundTag();
-        for (ResourceType type : ResourceType.values()) {
-            UUID network = networks[type.ordinal()];
-            if (network != null) {
-                networksTag.putUUID(type.key(), network);
-            }
-        }
-        if (!networksTag.isEmpty()) {
-            tag.put("networks", networksTag);
-        }
         if (!name.isEmpty()) {
             tag.putString("name", name);
         }
@@ -1258,15 +1389,47 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * Migração da rede da aba: põe {@code network} nas faces do tipo ainda sem rede da presa, dos
+     * perfis e das exceções. Faces que já têm rede ficam. Sem avisar ninguém: o fim da carga avisa.
+     */
+    private void migrateLegacyNetwork(ResourceType type, UUID network) {
+        for (FaceConfig config : faces[type.ordinal()]) {
+            if (config.network() == null) {
+                config.setNetwork(network);
+            }
+        }
+        for (MachineGroup group : remotes.groups()) {
+            migrateLegacyNetwork(group.profile(), type, network);
+        }
+        for (RemoteMachine machine : remotes.machines()) {
+            MachineConfig exception = machine.exception();
+            if (exception != null) {
+                migrateLegacyNetwork(exception, type, network);
+            }
+        }
+    }
+
+    private static void migrateLegacyNetwork(MachineConfig config, ResourceType type, UUID network) {
+        for (RemoteSide side : RemoteSide.values()) {
+            FaceConfig face = config.face(type, side);
+            if (face.network() == null) {
+                face.setNetwork(network);
+            }
+        }
+    }
+
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        // Formato antigo: uma rede para o roteador inteiro vale para todos os tipos.
-        UUID legacy = tag.hasUUID("network") ? tag.getUUID("network") : null;
+        // Formato antigo (rede da aba em "networks", ou ainda mais antigo, uma rede só em "network"):
+        // só lido, para migrar para as faces depois de carregá-las.
+        UUID single = tag.hasUUID("network") ? tag.getUUID("network") : null;
         CompoundTag networksTag = tag.getCompound("networks");
-        for (ResourceType type : ResourceType.values()) {
+        UUID[] legacy = new UUID[TYPES.length];
+        for (ResourceType type : TYPES) {
             String key = type.key();
-            networks[type.ordinal()] = networksTag.hasUUID(key) ? networksTag.getUUID(key) : legacy;
+            legacy[type.ordinal()] = networksTag.hasUUID(key) ? networksTag.getUUID(key) : single;
         }
         name = sanitizeName(tag.getString("name"));
         powered = tag.getBoolean("powered");
@@ -1308,6 +1471,12 @@ public class RouterBlockEntity extends BlockEntity {
                 : ItemStack.EMPTY;
         // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
         remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
+        for (ResourceType type : TYPES) {
+            UUID network = legacy[type.ordinal()];
+            if (network != null) {
+                migrateLegacyNetwork(type, network);
+            }
+        }
         pruneRemoteCaches();
         // As instâncias de RemoteMachine são outras: o índice do mixin aponta para as novas.
         remotesChanged();

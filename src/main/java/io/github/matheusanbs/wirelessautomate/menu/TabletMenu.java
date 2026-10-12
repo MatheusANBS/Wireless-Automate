@@ -406,12 +406,13 @@ public class TabletMenu extends AbstractContainerMenu {
             // Só os nós da página são sondados agora.
             RouterBlockEntity router = entry.router();
             int full = router == null ? 0 : fullDestinations(router, now);
-            // só as redes que existem; uma face numa rede apagada vira o aviso (sem varrer nada)
+            // só as redes que existem, só dos tipos carregados (os outros vão vazios); uma face numa
+            // rede apagada vira o aviso (sem varrer nada)
             List<List<UUID>> networks = new ArrayList<>();
             boolean removed = false;
             for (ResourceType type : ResourceType.values()) {
                 List<UUID> existing = new ArrayList<>();
-                for (UUID id : entry.networks(type)) {
+                for (UUID id : LoadedTypes.contains(type) ? entry.networks(type) : List.<UUID>of()) {
                     if (data.network(id) != null) {
                         existing.add(id);
                     } else {
@@ -476,7 +477,7 @@ public class TabletMenu extends AbstractContainerMenu {
         if (operator || me.equals(entry.placedBy())) {
             return true;
         }
-        for (ResourceType type : ResourceType.values()) {
+        for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 WaNetwork network = data.network(id);
                 if (network != null && network.owner().equals(me)) {
@@ -530,7 +531,7 @@ public class TabletMenu extends AbstractContainerMenu {
      */
     private static void countMembership(NodeIndex.Entry entry, Map<UUID, Totals> totals, boolean loaded) {
         Set<Totals> counted = null;
-        for (ResourceType type : ResourceType.values()) {
+        for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 Totals network = totals.get(id);
                 if (network == null) {
@@ -555,7 +556,7 @@ public class TabletMenu extends AbstractContainerMenu {
         }
         boolean anyNetwork = false;
         boolean anyRunning = false;
-        for (ResourceType type : ResourceType.values()) {
+        for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 if (data.network(id) != null) {
                     anyNetwork = true;
@@ -618,7 +619,7 @@ public class TabletMenu extends AbstractContainerMenu {
     }
 
     private static boolean inNetworkName(NodeIndex.Entry entry, String word, Map<UUID, String> networkNames) {
-        for (ResourceType type : ResourceType.values()) {
+        for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 String name = networkNames.get(id);
                 if (name != null && name.contains(word)) {
@@ -727,7 +728,8 @@ public class TabletMenu extends AbstractContainerMenu {
 
     /**
      * Põe os nós numa rede: todas as faces (presa, perfis e exceções) do tipo {@code type} ou, vazio,
-     * de todos os tipos; {@code network} vazio tira da rede. Só nós visíveis ao jogador e carregados
+     * de todos os tipos carregados (as faces de um tipo cujo mod saiu ficam como estão); {@code network}
+     * vazio tira da rede. Só nós visíveis ao jogador e carregados
      * (a rede é guardada no roteador); os descarregados ficam de fora e são contados no aviso. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
@@ -757,7 +759,7 @@ public class TabletMenu extends AbstractContainerMenu {
                 continue;
             }
             UUID id = target == null ? null : target.id();
-            router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> List.of(ResourceType.values())), id);
+            router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id);
             moved++;
         }
         Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")

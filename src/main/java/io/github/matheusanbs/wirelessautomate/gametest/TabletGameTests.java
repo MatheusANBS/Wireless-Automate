@@ -370,7 +370,10 @@ public final class TabletGameTests {
             // todas as abas, sem rede
             eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, List.of(key(b)),
                     Optional.empty(), Optional.empty())), 1, "tirar da rede");
-            helper.assertFalse(b.hasNetwork(), "b ainda em alguma rede");
+            // só os tipos carregados: a face de um tipo cujo mod não está aqui fica como está
+            for (ResourceType type : io.github.matheusanbs.wirelessautomate.network.LoadedTypes.LIST) {
+                helper.assertTrue(b.networks(type).length == 0, "b ainda em alguma rede de " + type);
+            }
 
             // químicos, outro containerId e nó invisível
             eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, both,
@@ -539,6 +542,46 @@ public final class TabletGameTests {
                         NodeIndex.Entry entry = index(helper).entry(key(router));
                         eq(helper, entry.networks(ResourceType.ITEM), List.of(target.id()), "índice depois de mover");
                         eq(helper, entry.networks(ResourceType.ENERGY), List.of(first.id()), "energia no índice");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void unloadedTypesStayOutOfTheTablet(GameTestHelper helper) {
+        if (io.github.matheusanbs.wirelessautomate.network.LoadedTypes.contains(ResourceType.CHEMICAL)) {
+            helper.succeed(); // com o Mekanism, Químicos é um tipo carregado como os outros
+            return;
+        }
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork items = data.create(player.getUUID(), "teste-descarregado-itens");
+        WaNetwork chemicals = data.create(player.getUUID(), "teste-descarregado-quimicos");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, items.id());
+        router.setFaceNetwork(ResourceType.CHEMICAL, Direction.UP, chemicals.id());
+        NodeKey key = key(router);
+        TabletMenu menu = openTablet(player, 93);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        NodeView view = node(fresh(menu), key);
+                        helper.assertTrue(view != null, "nó fora da lista");
+                        eq(helper, view.distinctNetworks(), 1, "redes distintas contaram Químicos");
+                        helper.assertTrue(view.networks(ResourceType.CHEMICAL).isEmpty(), "Químicos no NodeView");
+                        helper.assertFalse(listed(search(menu, "descarregado-quimicos"), key),
+                                "busca achou pela rede de Químicos");
+
+                        // sem aba, para "Sem rede": a face de Químicos fica como está
+                        eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(93, List.of(key),
+                                Optional.empty(), Optional.empty())), 1, "nós movidos");
+                        eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), null, "itens ainda na rede");
+                        eq(helper, router.faceNetwork(ResourceType.CHEMICAL, Direction.UP), chemicals.id(),
+                                "a face de Químicos perdeu a rede");
                         helper.succeed();
                     } finally {
                         close(player);

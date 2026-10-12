@@ -527,7 +527,6 @@
   "gui.wirelessautomate.tablet.network.none": "Sem rede",
   "gui.wirelessautomate.tablet.network.hidden": "Rede de outro jogador",
   "gui.wirelessautomate.tablet.node.face_networks": "faces em %s redes",
-  "gui.wirelessautomate.tablet.node.face_networks.one": "faces em %s rede",
   "gui.wirelessautomate.tablet.node.removed_network": "faces sem rede: rede removida",
   "gui.wirelessautomate.tablet.decimal": ",",
   "gui.wirelessautomate.tablet.ms": "%s ms/t",

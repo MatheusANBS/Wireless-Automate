@@ -2899,6 +2899,20 @@ public final class DevEndToEnd {
                 list.add(new Step(label + "de volta à lista", STEP_TIMEOUT_MS,
                         () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
                         () -> routerScreen().rangeListShown(), () -> "lista " + routerScreen().rangeListShown()));
+                // tela larga: a lista e o visor lado a lado, sem alternar
+                list.add(new Step(label + "tela larga, lista e visor lado a lado", STEP_TIMEOUT_MS,
+                        () -> routerScreen().previewResize(Math.min(560, routerScreen().width - 8), 280),
+                        () -> routerScreen().rangeListShown() && routerScreen().rangeViewShown() && stepTicks >= 4,
+                        () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", lista "
+                                + routerScreen().rangeListShown() + ", visor " + routerScreen().rangeViewShown()));
+                list.add(rangeClipCheck(label + "lado a lado"));
+                list.add(capture("range-5-lado-a-lado"));
+                list.add(new Step(label + "de volta ao mínimo", STEP_TIMEOUT_MS,
+                        () -> routerScreen().previewResize(300, 240),
+                        () -> routerScreen().size()[0] == 300 && routerScreen().rangeListShown()
+                                && !routerScreen().rangeViewShown(),
+                        () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", visor "
+                                + routerScreen().rangeViewShown()));
             }
 
             // a lista no mínimo não mostra tudo com os baús abertos: fecha os baús e abre a fornalha

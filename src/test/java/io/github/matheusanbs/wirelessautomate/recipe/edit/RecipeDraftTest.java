@@ -106,4 +106,54 @@ class RecipeDraftTest {
         assertEquals(d, RecipeDraft.fromShaped(l.pattern(), l.key(), d.count()));
         assertNotEquals(d, d.withCount(4));
     }
+
+    // ------------------------------------------------------------------ anel (tier_upgrade)
+
+    private static RecipeDraft ring() {
+        return RecipeDraft.fromRing(List.of("NON", "O O", "NON"), Map.of('N', STICK, 'O', AMETHYST));
+    }
+
+    @Test
+    void ringKeepsFullGridAndEmptyCenter() {
+        RecipeDraft d = ring();
+        assertEquals(RecipeDraft.Shape.RING, d.shape());
+        assertTrue(d.locked(RecipeDraft.CENTER));
+        assertFalse(d.locked(0));
+        assertTrue(d.spansGrid());
+        assertEquals(List.of("ABA", "B B", "ABA"), d.layout().pattern());
+        assertEquals(8, d.ingredients().size());
+    }
+
+    @Test
+    void ringCenterAndCountAreLocked() {
+        RecipeDraft d = ring();
+        assertEquals(d, d.withSlot(RecipeDraft.CENTER, X));
+        assertEquals(d, d.withCount(5));
+        assertEquals(X, d.withSlot(0, X).slots().get(0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new RecipeDraft(RecipeDraft.Shape.RING, d.withSlot(0, X).slots(), 2, false));
+        java.util.List<RecipeSlot> filled = new java.util.ArrayList<>(d.slots());
+        filled.set(RecipeDraft.CENTER, X);
+        assertThrows(IllegalArgumentException.class, () -> new RecipeDraft(RecipeDraft.Shape.RING, filled, 1, false));
+    }
+
+    @Test
+    void ringLayoutIsNotTrimmed() {
+        // sem a linha de baixo, o anel não chega às bordas: o padrão continua 3×3, mas não ocupa a grade
+        RecipeDraft d = ring().withSlot(6, RecipeSlot.EMPTY).withSlot(7, RecipeSlot.EMPTY).withSlot(8, RecipeSlot.EMPTY);
+        assertFalse(d.spansGrid());
+        assertEquals(List.of("ABA", "B B", "   "), d.layout().pattern());
+        // os cantos bastam para chegar às quatro bordas
+        RecipeDraft corners = ring().withSlot(1, RecipeSlot.EMPTY).withSlot(3, RecipeSlot.EMPTY)
+                .withSlot(5, RecipeSlot.EMPTY).withSlot(7, RecipeSlot.EMPTY);
+        assertTrue(corners.spansGrid());
+    }
+
+    @Test
+    void ringRejectsBadPatterns() {
+        Map<Character, RecipeSlot> key = Map.of('N', STICK);
+        assertThrows(IllegalArgumentException.class, () -> RecipeDraft.fromRing(List.of("NNN", "NNN", "NNN"), key));
+        assertThrows(IllegalArgumentException.class, () -> RecipeDraft.fromRing(List.of("NNN", "N N"), key));
+        assertThrows(IllegalArgumentException.class, () -> RecipeDraft.fromRing(List.of("NN", "N N", "NNN"), key));
+    }
 }

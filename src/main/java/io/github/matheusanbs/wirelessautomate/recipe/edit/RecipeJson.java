@@ -14,6 +14,8 @@ import java.util.Optional;
 public final class RecipeJson {
     public static final String SHAPED = "minecraft:crafting_shaped";
     public static final String SHAPELESS = "minecraft:crafting_shapeless";
+    /** O anel de subir tier do mod: {@code tier}, {@code pattern} 3×3 com o centro vazio, {@code key} e {@code step}. */
+    public static final String TIER_UPGRADE = "wirelessautomate:tier_upgrade";
     public static final String CONDITIONS = "neoforge:conditions";
     public static final String FALSE_CONDITION = "neoforge:false";
 
@@ -27,6 +29,17 @@ public final class RecipeJson {
             if (type == null) {
                 return Optional.empty();
             }
+            RecipeDraft draft;
+            if (type.equals(TIER_UPGRADE)) {
+                // sem result: o cartão sai do tier
+                Optional<List<String>> pattern = pattern(json);
+                Optional<Map<Character, RecipeSlot>> key = key(json);
+                if (pattern.isEmpty() || key.isEmpty() || string(json, "tier") == null) {
+                    return Optional.empty();
+                }
+                draft = RecipeDraft.fromRing(pattern.get(), key.get());
+                return Optional.of(draft.withDisabled(hasFalseCondition(json)));
+            }
             int count = 1;
             JsonElement result = json.get("result");
             if (result == null || !result.isJsonObject()) {
@@ -36,29 +49,13 @@ public final class RecipeJson {
             if (countEl != null) {
                 count = countEl.getAsInt();
             }
-            RecipeDraft draft;
             if (type.equals(SHAPED)) {
-                JsonElement patternEl = json.get("pattern");
-                JsonElement keyEl = json.get("key");
-                if (patternEl == null || !patternEl.isJsonArray() || keyEl == null || !keyEl.isJsonObject()) {
+                Optional<List<String>> pattern = pattern(json);
+                Optional<Map<Character, RecipeSlot>> key = key(json);
+                if (pattern.isEmpty() || key.isEmpty()) {
                     return Optional.empty();
                 }
-                List<String> pattern = new ArrayList<>();
-                for (JsonElement line : patternEl.getAsJsonArray()) {
-                    pattern.add(line.getAsString());
-                }
-                Map<Character, RecipeSlot> key = new LinkedHashMap<>();
-                for (Map.Entry<String, JsonElement> e : keyEl.getAsJsonObject().entrySet()) {
-                    if (e.getKey().length() != 1) {
-                        return Optional.empty();
-                    }
-                    Optional<RecipeSlot> slot = slot(e.getValue());
-                    if (slot.isEmpty()) {
-                        return Optional.empty();
-                    }
-                    key.put(e.getKey().charAt(0), slot.get());
-                }
-                draft = RecipeDraft.fromShaped(pattern, key, count);
+                draft = RecipeDraft.fromShaped(pattern.get(), key.get(), count);
             } else if (type.equals(SHAPELESS)) {
                 JsonElement ingEl = json.get("ingredients");
                 if (ingEl == null || !ingEl.isJsonArray()) {
@@ -83,13 +80,47 @@ public final class RecipeJson {
         }
     }
 
-    /** O JSON do override: o padrão com grade, quantidade e condições do rascunho. */
+    private static Optional<List<String>> pattern(JsonObject json) {
+        JsonElement patternEl = json.get("pattern");
+        if (patternEl == null || !patternEl.isJsonArray()) {
+            return Optional.empty();
+        }
+        List<String> pattern = new ArrayList<>();
+        for (JsonElement line : patternEl.getAsJsonArray()) {
+            pattern.add(line.getAsString());
+        }
+        return Optional.of(pattern);
+    }
+
+    private static Optional<Map<Character, RecipeSlot>> key(JsonObject json) {
+        JsonElement keyEl = json.get("key");
+        if (keyEl == null || !keyEl.isJsonObject()) {
+            return Optional.empty();
+        }
+        Map<Character, RecipeSlot> key = new LinkedHashMap<>();
+        for (Map.Entry<String, JsonElement> e : keyEl.getAsJsonObject().entrySet()) {
+            if (e.getKey().length() != 1) {
+                return Optional.empty();
+            }
+            Optional<RecipeSlot> slot = slot(e.getValue());
+            if (slot.isEmpty()) {
+                return Optional.empty();
+            }
+            key.put(e.getKey().charAt(0), slot.get());
+        }
+        return Optional.of(key);
+    }
+
+    /**
+     * O JSON do override: o padrão com grade, quantidade e condições do rascunho. No anel, o resto do padrão
+     * ({@code type}, {@code category}, {@code tier}, {@code step}) fica como está e não há {@code result}.
+     */
     public static JsonObject toOverride(JsonObject defaultJson, RecipeDraft draft) {
         JsonObject out = defaultJson.deepCopy();
         out.remove("pattern");
         out.remove("key");
         out.remove("ingredients");
-        if (draft.shape() == RecipeDraft.Shape.SHAPED) {
+        if (draft.shape() != RecipeDraft.Shape.SHAPELESS) {
             RecipeDraft.ShapedLayout layout = draft.layout();
             JsonArray pattern = new JsonArray();
             layout.pattern().forEach(pattern::add);
@@ -106,10 +137,12 @@ public final class RecipeJson {
             }
             out.add("ingredients", ingredients);
         }
-        JsonElement resultEl = out.get("result");
-        JsonObject result = resultEl != null && resultEl.isJsonObject() ? resultEl.getAsJsonObject() : new JsonObject();
-        result.addProperty("count", draft.count());
-        out.add("result", result);
+        if (draft.shape() != RecipeDraft.Shape.RING) {
+            JsonElement resultEl = out.get("result");
+            JsonObject result = resultEl != null && resultEl.isJsonObject() ? resultEl.getAsJsonObject() : new JsonObject();
+            result.addProperty("count", draft.count());
+            out.add("result", result);
+        }
 
         JsonArray conditions = new JsonArray();
         JsonElement old = out.get(CONDITIONS);
@@ -129,8 +162,12 @@ public final class RecipeJson {
         return out;
     }
 
-    /** O id do item do resultado ({@code result.id}), se houver. */
+    /** O id do item do resultado ({@code result.id}; no anel, o Cartão de Upgrade do {@code tier}), se houver. */
     public static Optional<String> resultId(JsonObject json) {
+        if (TIER_UPGRADE.equals(string(json, "type"))) {
+            String tier = string(json, "tier");
+            return tier == null ? Optional.empty() : Optional.of("wirelessautomate:tier_core_" + tier);
+        }
         JsonElement result = json.get("result");
         if (result == null || !result.isJsonObject()) {
             return Optional.empty();

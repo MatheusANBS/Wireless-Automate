@@ -38,6 +38,7 @@ Pick a recipe in the list: the 3 × 3 grid and the result show up on the right.
 | Accept any item of a tag | Pick the slot and click **Tag**. The arrows cycle through the item's tags. **Item** goes back to the exact item. |
 | Empty the chosen slot | **Clear** (or right click the slot). |
 | Change the result's amount | **−** and **+**, up to the item's stack size (64 at most). |
+| Change an Upgrade Card's ring | Swap the eight slots around it. The center is locked: it holds the router, the storage, the Redstone or the card, and the new ring applies to all of them. |
 
 ## Saving and reloading
 
@@ -56,5 +57,5 @@ If you close the screen with saved changes that haven't been applied, they are r
 | --- | --- |
 | **Where it lives** | Edits are kept in `config/wirelessautomate/recipes/`, a folder for the instance. They apply to every world in it and, on a server, to the server. They survive mod updates. |
 | **Other datapacks and KubeJS** | If another datapack or KubeJS changes the same recipe, theirs wins, and the screen warns that the recipe differs from what is loaded. |
-| **What is not listed** | Other mods' recipes, the Filter Card copy, the router upgrade in the crafting table and the Upgrade Cards (their rings are a type of their own; change them with a datapack or KubeJS). You can't create new recipes either. |
+| **What is not listed** | Other mods' recipes, the Filter Card copy and the router upgrade in the crafting table. You can't create new recipes either. |
 | **Undo everything** | Delete the `data` folder inside `config/wirelessautomate/recipes/` and reload (`/reload`). |

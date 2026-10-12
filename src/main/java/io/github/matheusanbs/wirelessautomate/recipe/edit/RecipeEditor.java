@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
+import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -151,9 +153,9 @@ public final class RecipeEditor {
 
     private static void warnOrphan(ResourceLocation id) {
         if (WARNED.add(id)) {
-            // Por exemplo um tier_core_<tier> editado antes de virar wirelessautomate:tier_upgrade: o override
-            // ganha do jar (e fabrica um cartão sem origem, com o anel velho), mas a tela não o lista nem o
-            // restaura. Não se apaga nada: apague o arquivo para voltar à receita do mod.
+            // Um override de uma receita do mod que deixou de existir ou que não é de bancada: a tela não o
+            // lista nem o restaura. Não se apaga nada: apague o arquivo para voltar à receita do mod. (Um
+            // tier_core_<tier> editado antes de virar wirelessautomate:tier_upgrade não cai aqui: ver entry.)
             WirelessAutomate.LOGGER.warn("Override de receita sem padrão editável: {} ({})", id,
                     RecipeOverridePack.recipeFile(id));
         }
@@ -171,14 +173,22 @@ public final class RecipeEditor {
         }
         Optional<RecipeDraft> override = readOverride(id);
         RecipeDraft current = override.orElse(defaults.get().draft());
+        boolean legacy = override.isPresent() && override.get().shape() != defaults.get().draft().shape();
+        if (legacy) {
+            // Override de outra forma que o padrão (um tier_core_<tier> crafting_shaped de antes da 1.9.0, que
+            // ganha do jar e fabrica um cartão sem origem): a tela mostra o padrão, editável, e marca a receita
+            // como editada e divergente; Restaurar apaga o arquivo e Salvar o troca por um anel.
+            current = defaults.get().draft().withDisabled(override.get().disabled());
+        }
         State state = override.isEmpty() ? State.DEFAULT : (current.disabled() ? State.DISABLED : State.EDITED);
-        boolean divergent = override.isPresent() && diverges(server, id, defaults.get(), current);
+        boolean divergent = override.isPresent() && (legacy || diverges(server, id, defaults.get(), current));
         return Optional.of(new Entry(id, defaults.get().resultItem(), defaults.get().draft(), current, state, divergent));
     }
 
     private static boolean isCraftingSerializer(Recipe<?> recipe) {
         return recipe.getSerializer() == RecipeSerializer.SHAPED_RECIPE
-                || recipe.getSerializer() == RecipeSerializer.SHAPELESS_RECIPE;
+                || recipe.getSerializer() == RecipeSerializer.SHAPELESS_RECIPE
+                || recipe.getSerializer() == ModRecipes.TIER_UPGRADE.get();
     }
 
     private static List<ResourceLocation> overridesOnDisk() {
@@ -264,11 +274,19 @@ public final class RecipeEditor {
             return conditionsPass(server, defaults.json());
         }
         Recipe<?> recipe = loaded.get().value();
+        if ((current.shape() == RecipeDraft.Shape.RING) != (recipe instanceof TierUpgradeRecipe)) {
+            return true;
+        }
         ItemStack result = recipe.getResultItem(server.registryAccess());
         if (!BuiltInRegistries.ITEM.getKey(result.getItem()).equals(resultItem) || result.getCount() != current.count()) {
             return true;
         }
-        List<Ingredient> ingredients = recipe.getIngredients().stream().filter(i -> !i.isEmpty()).toList();
+        List<Ingredient> all = new ArrayList<>(recipe.getIngredients());
+        if (recipe instanceof TierUpgradeRecipe && all.size() == RecipeDraft.SLOTS) {
+            // o padrão herdado do anel tem o step no centro; o rascunho, não
+            all.set(RecipeDraft.CENTER, Ingredient.EMPTY);
+        }
+        List<Ingredient> ingredients = all.stream().filter(i -> !i.isEmpty()).toList();
         List<RecipeSlot> slots = current.ingredients();
         if (ingredients.size() != slots.size()) {
             return true;
@@ -344,7 +362,8 @@ public final class RecipeEditor {
         if (override.isEmpty() && !disabled) {
             return Optional.empty();
         }
-        RecipeDraft base = override.orElse(defaults.get().draft());
+        RecipeDraft base = override.filter(o -> o.shape() == defaults.get().draft().shape())
+                .orElse(defaults.get().draft());
         return write(id, RecipeJson.toOverride(defaults.get().json(), base.withDisabled(disabled)));
     }
 
@@ -386,6 +405,9 @@ public final class RecipeEditor {
     private static Optional<Component> validate(RecipeDraft draft) {
         if (draft.isEmpty()) {
             return Optional.of(error("empty"));
+        }
+        if (draft.shape() == RecipeDraft.Shape.RING && !draft.spansGrid()) {
+            return Optional.of(error("ring"));
         }
         for (RecipeSlot slot : draft.slots()) {
             if (slot.isEmpty()) {

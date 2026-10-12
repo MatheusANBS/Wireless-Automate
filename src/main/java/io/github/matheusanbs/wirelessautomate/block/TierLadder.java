@@ -49,6 +49,10 @@ public final class TierLadder {
      * só um bloco exatamente da origem: o cartão "k → N" custa os mesmos anéis que a bancada cobraria para
      * levar o bloco de k a N, então valer de outro tier daria um caminho mais barato (ou mais caro) que o da
      * bancada. Sem origem ({@code origin < 0}, cartão antigo), a regra de {@link #canUpgrade}.
+     *
+     * <p>A escada não fica gravada no cartão: um cartão feito sem o Allthemodium (por exemplo Esmeralda →
+     * Ultimate, só com o anel do Ultimate) continua valendo depois que o mod entra no pack e pula os anéis do
+     * Allthemodium, do Vibranium e do Unobtainium. Só acontece quando o pack muda; fica assim de propósito.
      */
     public static boolean cardApplies(List<@Nullable String> requiredMods, int origin, int to, int block,
             Predicate<String> modLoaded) {

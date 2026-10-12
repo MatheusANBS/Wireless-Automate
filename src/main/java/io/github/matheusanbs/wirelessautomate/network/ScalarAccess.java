@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
-import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,8 +13,8 @@ import org.jetbrains.annotations.Nullable;
  * <p>As implementações não guardam estado e não alocam: o laço chama estes métodos a cada visita.
  */
 public interface ScalarAccess {
-    /** O handler da máquina pela face {@code machineFace} do nó (pelo cache do roteador), ou {@code null}. */
-    @Nullable Object handler(RouterBlockEntity node, Direction machineFace);
+    /** O handler da máquina pela face {@code machineFace} (pelos caches da máquina da porta), ou {@code null}. */
+    @Nullable Object handler(MachineCaches machine, Direction machineFace);
 
     /** O handler pode dar alguma coisa (sem olhar quanto tem). */
     boolean canExtract(Object handler);

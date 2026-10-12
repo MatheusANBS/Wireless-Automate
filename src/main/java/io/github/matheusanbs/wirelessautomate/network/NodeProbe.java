@@ -23,7 +23,7 @@ public final class NodeProbe {
     /** Destinos de {@code type} do nó que estão cheios agora (ver {@link #FULL_INTERVAL}). 0 se o nó não está no motor. */
     public static int fullDestinations(RouterBlockEntity node, ResourceType type, long now) {
         NodePorts ports = NetworkManager.get().ports(node);
-        if (ports == null || ports.network(type) == null) {
+        if (ports == null || ports.networks(type).length == 0) {
             return 0;
         }
         int count = 0;

@@ -17,7 +17,7 @@ and slurries. Without Mekanism the tab doesn't show and the rest of the mod work
 | Feature | Chemicals |
 | --- | --- |
 | Mode, priority and redstone per face | Yes, like the other tabs. |
-| Its own network on the tab | Yes. |
+| Network per face | Yes. |
 | Linker | Yes: check the **Chemicals** box on its screen. |
 | Throughput | The tier's fluid limit (see [Router](router.md)). |
 | Exact and mod (`@mod`) filter | Yes, with stock. |

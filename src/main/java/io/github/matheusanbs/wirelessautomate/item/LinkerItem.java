@@ -5,15 +5,19 @@ import com.mojang.serialization.DataResult;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -34,14 +38,21 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Vinculador (controle): escolhe a rede ativa e coloca roteadores nela. Clique num roteador o põe
- * na rede ativa (criando uma se o jogador não tiver), nos dois modos. Clique no ar abre a tela
+ * na rede ativa (criando uma se o jogador não tiver), em Único e Área. Clique no ar abre a tela
  * ({@link LinkerMenu}: rede ativa, abas, modo e, em Área, a prévia e o Vincular); Shift + clique no
- * ar alterna entre Único e Área ({@link ModDataComponents#LINKER_MODE}). Em Área, Shift + clique
- * em dois blocos marca os cantos ({@link ModDataComponents#LINKER_AREA}, ver {@link LinkerActions}).
+ * ar passa ao próximo modo, Único → Área → Máquinas ({@link ModDataComponents#LINKER_MODE}). Em Área
+ * e Máquinas, Shift + clique em dois blocos marca os cantos ({@link ModDataComponents#LINKER_AREA},
+ * ver {@link LinkerActions}). Em Máquinas, clique num roteador o escolhe
+ * ({@link ModDataComponents#LINKER_ROUTER}) e clique em outro bloco vincula ou desvincula essa máquina
+ * a ele ({@link RangeLinks}).
  *
  * <p>As abas ({@link ModDataComponents#LINKER_TABS}, caixas na tela; Shift + roda do mouse percorre
  * os atalhos de {@link LinkerTabs#next}) escolhem o que o clique muda: só as abas marcadas do
  * roteador entram na rede. Químicos contam só com o Mekanism.
+ *
+ * <p>As faces ({@link ModDataComponents#LINKER_FACES}, a linha Faces da tela) escolhem quais lados da
+ * máquina presa, relativos à frente dela, entram: em Único e Área, cada roteador usa a frente da
+ * própria máquina. O modo Máquinas ignora as faces.
  *
  * <p>Com "Nenhuma (desvincular)" escolhida na tela ({@link ModDataComponents#LINKER_UNLINK}), os
  * mesmos gestos tiram as abas marcadas da rede em vez de pôr; nesse modo nenhuma rede é criada.
@@ -69,6 +80,11 @@ public class LinkerItem extends Item {
             Codec.STRING.listOf().xmap(LinkerTabs::fromNames, LinkerTabs::names);
     public static final StreamCodec<ByteBuf, LinkerTabs> TABS_STREAM_CODEC =
             ByteBufCodecs.VAR_INT.map(LinkerTabs::new, LinkerTabs::mask);
+
+    /** Codec das faces: a máscara de 6 bits por {@link RemoteSide}; bits a mais são descartados. */
+    public static final Codec<LinkerFaces> FACES_CODEC = Codec.INT.xmap(LinkerFaces::of, LinkerFaces::mask);
+    public static final StreamCodec<ByteBuf, LinkerFaces> FACES_STREAM_CODEC =
+            ByteBufCodecs.VAR_INT.map(LinkerFaces::of, LinkerFaces::mask);
 
     public LinkerItem(Properties properties) {
         super(properties);
@@ -141,6 +157,54 @@ public class LinkerItem extends Item {
         return text;
     }
 
+    // ------------------------------------------------------------------ faces
+
+    /** Faces guardadas no Vinculador; sem o componente, Todas. */
+    public static LinkerFaces faces(ItemStack stack) {
+        return stack.getOrDefault(ModDataComponents.LINKER_FACES.get(), LinkerFaces.ALL);
+    }
+
+    /** Grava as faces (Todas apaga o componente). Vazio é gravado: vincular avisa e não faz nada. */
+    public static void setFaces(ItemStack stack, LinkerFaces faces) {
+        if (faces.isAll()) {
+            stack.remove(ModDataComponents.LINKER_FACES.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_FACES.get(), faces);
+        }
+    }
+
+    /** Letra de um lado ("T" para Trás), a mesma dos botões de face da tela do roteador. */
+    public static Component sideLetter(RemoteSide side) {
+        return Component.translatable("gui.wirelessautomate.router.side.letter." + side.key());
+    }
+
+    /** Nome inteiro de um lado ("Trás"). */
+    public static Component sideName(RemoteSide side) {
+        return Component.translatable("gui.wirelessautomate.router.side." + side.key());
+    }
+
+    /** "T, B": as letras dos lados marcados, na ordem dos botões. */
+    public static Component facesLetters(LinkerFaces faces) {
+        return joined(faces, true);
+    }
+
+    /** "Trás, Baixo": os nomes dos lados marcados, na ordem dos botões. */
+    public static Component facesNames(LinkerFaces faces) {
+        return joined(faces, false);
+    }
+
+    private static Component joined(LinkerFaces faces, boolean letters) {
+        MutableComponent text = Component.empty();
+        List<RemoteSide> marked = faces.marked();
+        for (int i = 0; i < marked.size(); i++) {
+            if (i > 0) {
+                text.append(", ");
+            }
+            text.append(letters ? sideLetter(marked.get(i)) : sideName(marked.get(i)));
+        }
+        return text;
+    }
+
     // ------------------------------------------------------------------ desvincular
 
     /** O Vinculador está no modo desvincular ("Nenhuma" na escolha da rede). */
@@ -156,20 +220,48 @@ public class LinkerItem extends Item {
         }
     }
 
+    /**
+     * Modo Máquinas: o clique (sem Shift) num bloco é do Vinculador antes de ser do bloco (senão
+     * clicar numa fornalha a abriria). Num roteador, escolhe o roteador; em outro bloco, vincula ou
+     * desvincula a máquina ({@link RangeLinks}). Shift + clique segue o caminho normal (marca os cantos).
+     */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        if (mode(stack) != LinkerMode.MACHINES || context.isSecondaryUseActive()) {
+            return InteractionResult.PASS;
+        }
+        Level level = context.getLevel();
+        if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
+            if (level.getBlockEntity(context.getClickedPos()) instanceof RouterBlockEntity router) {
+                RangeLinks.choose(player, stack, router);
+            } else {
+                RangeLinks.toggle(player, stack, context.getClickedPos());
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
         ItemStack stack = context.getItemInHand();
         Player user = context.getPlayer();
         boolean sneaking = user != null && user.isSecondaryUseActive();
-        if (sneaking && mode(stack) == LinkerMode.AREA) {
-            // Área: Shift + clique em qualquer bloco marca um canto
+        if (sneaking && mode(stack).marksArea()) {
+            // Área e Máquinas: Shift + clique em qualquer bloco marca um canto
             if (!level.isClientSide && user instanceof ServerPlayer player) {
                 LinkerActions.markCorner(player, stack, context.getClickedPos());
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
         if (!(level.getBlockEntity(context.getClickedPos()) instanceof RouterBlockEntity router)) {
+            if (!sneaking && mode(stack) == LinkerMode.MACHINES) {
+                // o onItemUseFirst já trata o clique; aqui só se ele foi pulado
+                if (!level.isClientSide && user instanceof ServerPlayer player) {
+                    RangeLinks.toggle(player, stack, context.getClickedPos());
+                }
+                return InteractionResult.sidedSuccess(level.isClientSide);
+            }
             if (sneaking) {
                 // Único: Shift + clique num bloco não alterna o modo (isso é no ar); só explica
                 if (!level.isClientSide && user instanceof ServerPlayer player) {
@@ -181,18 +273,23 @@ public class LinkerItem extends Item {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide && user instanceof ServerPlayer player) {
-            LinkerActions.single(player, stack, router);
+            if (mode(stack) == LinkerMode.MACHINES) {
+                // o onItemUseFirst já trata o clique; aqui só se ele foi pulado
+                RangeLinks.choose(player, stack, router);
+            } else {
+                LinkerActions.single(player, stack, router);
+            }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** No ar: Shift + clique alterna Único/Área; clique abre a tela. */
+    /** No ar: Shift + clique passa ao próximo modo (Único → Área → Máquinas); clique abre a tela. */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer serverPlayer) {
             if (player.isSecondaryUseActive()) {
-                LinkerMode mode = mode(stack).toggled();
+                LinkerMode mode = mode(stack).next();
                 setMode(stack, mode);
                 serverPlayer.displayClientMessage(Component.translatable(KEY + "mode", modeName(mode)), true);
             } else {
@@ -221,6 +318,20 @@ public class LinkerItem extends Item {
         return Component.translatable(KEY + "mode." + mode.getSerializedName());
     }
 
+    /** Roteador escolhido no modo Máquinas; {@code null} se nenhum. */
+    public static @Nullable GlobalPos router(ItemStack stack) {
+        return stack.get(ModDataComponents.LINKER_ROUTER.get());
+    }
+
+    /** {@code null} esquece o roteador escolhido. */
+    public static void setRouter(ItemStack stack, @Nullable GlobalPos router) {
+        if (router == null) {
+            stack.remove(ModDataComponents.LINKER_ROUTER.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_ROUTER.get(), router);
+        }
+    }
+
     /** Cantos marcados; {@code null} se nenhum. */
     public static @Nullable LinkerArea area(ItemStack stack) {
         return stack.get(ModDataComponents.LINKER_AREA.get());
@@ -240,8 +351,20 @@ public class LinkerItem extends Item {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable(KEY + "tooltip.mode", modeName(mode(stack))).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable(KEY + "tooltip.tabs", tabsName(tabs(stack))).withStyle(ChatFormatting.AQUA));
+        if (mode(stack) != LinkerMode.MACHINES) {
+            LinkerFaces faces = faces(stack);
+            tooltip.add(Component.translatable(KEY + "tooltip.faces", faces.isAll()
+                    ? Component.translatable(KEY + "faces.all")
+                    : faces.isEmpty() ? Component.translatable(KEY + "faces.none") : facesNames(faces))
+                    .withStyle(faces.isEmpty() ? ChatFormatting.GOLD : ChatFormatting.AQUA));
+        }
         if (unlink(stack)) {
             tooltip.add(Component.translatable(KEY + "tooltip.unlink").withStyle(ChatFormatting.GOLD));
+        }
+        GlobalPos router = router(stack);
+        if (router != null && mode(stack) == LinkerMode.MACHINES) {
+            tooltip.add(Component.translatable(KEY + "tooltip.router", LinkerActions.position(router.pos()))
+                    .withStyle(ChatFormatting.GRAY));
         }
         LinkerArea area = area(stack);
         if (area != null) {

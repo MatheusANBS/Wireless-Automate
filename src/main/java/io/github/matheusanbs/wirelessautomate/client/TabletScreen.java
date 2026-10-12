@@ -274,6 +274,34 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 .orElse(tr("network.hidden"));
     }
 
+    /** As redes das faces de um tipo, separadas por vírgula ("Mina, Armazém"), ou "Sem rede". */
+    private Component networkNames(List<UUID> ids) {
+        if (ids.isEmpty()) {
+            return tr("network.none");
+        }
+        MutableComponent text = Component.empty();
+        for (int i = 0; i < ids.size(); i++) {
+            if (i > 0) {
+                text.append(Component.literal(", ").withColor(GuiPaint.TOOLTIP_MUTED));
+            }
+            text.append(networkName(Optional.of(ids.get(i))));
+        }
+        return text;
+    }
+
+    /** Os avisos de rede da linha do nó: faces em várias redes e faces numa rede removida. */
+    private List<Component> networkLabels(NodeView node, int mutedColor) {
+        List<Component> labels = new ArrayList<>(2);
+        if (node.removedNetwork()) {
+            labels.add(tr("node.removed_network").copy().withColor(GuiPaint.WARN));
+        }
+        int distinct = node.distinctNetworks();
+        if (distinct > 1) {
+            labels.add(plural("node.face_networks", distinct).copy().withColor(mutedColor));
+        }
+        return labels;
+    }
+
     private @Nullable NetworkView selectedNetworkView() {
         return selectedNetwork == null ? null : snapshot().network(selectedNetwork).orElse(null);
     }
@@ -1298,7 +1326,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return null;
     }
 
-    /** Nome, onde fica, tier, máquina, rede de cada aba, papéis e status. */
+    /** Nome, onde fica, tier, máquina, as redes das faces de cada tipo, avisos de rede, papéis e status. */
     private Component nodeTooltip(NodeView node, boolean clickOpens) {
         MutableComponent text = nodeName(node).copy();
         text.append("\n").append(coords(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
@@ -1307,7 +1335,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         for (ResourceType type : MOVE_TYPES) {
             text.append("\n").append(typeName(type).copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                    .append(Component.literal(": ").withColor(GuiPaint.TOOLTIP_MUTED)).append(networkName(node.network(type)));
+                    .append(Component.literal(": ").withColor(GuiPaint.TOOLTIP_MUTED)).append(networkNames(node.networks(type)));
+        }
+        for (Component label : networkLabels(node, GuiPaint.TOOLTIP_MUTED)) {
+            text.append("\n").append(label);
         }
         List<Component> roles = roleLabels(node.roles());
         if (!roles.isEmpty()) {
@@ -1407,6 +1438,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             GuiPaint.text(g, font, status, x + x1() - statusW + 6, ry + 3, statusColor(node.status()));
             GuiText.draw(g, font, nodeName(node), textX, ry + 3, x + x1() - statusW - 8 - textX, GuiPaint.FG);
             MutableComponent line = coords(node).copy().withColor(GuiPaint.MUTED);
+            for (Component label : networkLabels(node, GuiPaint.MUTED)) {
+                line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
+            }
             for (Component label : roleLabels(node.roles())) {
                 line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
             }

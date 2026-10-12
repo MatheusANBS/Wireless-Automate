@@ -25,7 +25,10 @@ public enum PasteMode {
         this.key = key;
     }
 
-    /** No {@link LinkerMode#SINGLE} é sempre o pincel, com ou sem {@code anyMachine}. */
+    /**
+     * No {@link LinkerMode#SINGLE} é sempre o pincel, com ou sem {@code anyMachine}; o
+     * {@link LinkerMode#MACHINES}, que é só do Vinculador, também.
+     */
     public static PasteMode of(LinkerMode mode, boolean anyMachine) {
         return of(mode == LinkerMode.AREA, anyMachine);
     }

@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -30,6 +31,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /** Configuração por face, rotação relativa, caches de capability e redstone do roteador. */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -88,7 +90,7 @@ public final class RouterConfigGameTests {
 
         RouterBlockEntity copy = new RouterBlockEntity(node.getBlockPos(), node.getBlockState());
         copy.loadWithComponents(tag, registries);
-        helper.assertValueEqual(copy.networkId(ResourceType.ITEM), network, "rede");
+        assertNetwork(helper, copy.networkId(ResourceType.ITEM), network, "rede");
         for (ResourceType type : ResourceType.values()) {
             for (Direction face : Direction.values()) {
                 helper.assertValueEqual(copy.face(type, face), node.face(type, face), type + " " + face);
@@ -306,7 +308,10 @@ public final class RouterConfigGameTests {
                 .thenSucceed();
     }
 
-    /** As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. */
+    /**
+     * As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. A rede mora
+     * nas faces ({@code network} dentro de cada uma); a chave antiga {@code networks} não é mais escrita.
+     */
     @GameTest(template = "empty")
     public static void savedKeysStayTheSame(GameTestHelper helper) {
         UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "teste-chaves").id();
@@ -317,8 +322,9 @@ public final class RouterConfigGameTests {
         node.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
 
         CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
-        Set<String> networks = tag.getCompound("networks").getAllKeys();
-        helper.assertTrue(networks.containsAll(Set.of("item", "fluid", "energy", "chemical")), "chaves de rede: " + networks);
+        helper.assertFalse(tag.contains("networks"), "a chave antiga networks ainda é escrita");
+        Set<String> types = tag.getCompound("faces").getAllKeys();
+        helper.assertTrue(types.containsAll(Set.of("item", "fluid", "energy", "chemical")), "tipos nas faces: " + types);
         helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
 
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);
@@ -328,5 +334,10 @@ public final class RouterConfigGameTests {
         helper.assertTrue(network.equals(copy.networkId(ResourceType.ENERGY)), "rede de energia perdida");
         helper.assertTrue(copy.face(ResourceType.FLUID, Direction.UP).mode() == PortMode.INSERT, "modo de fluido perdido");
         helper.succeed();
+    }
+
+    /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
     }
 }

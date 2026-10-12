@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.compat.arsnouveau;
 
 import com.hollingsworth.arsnouveau.api.source.ISourceCap;
-import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.network.ScalarAccess;
 import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import net.minecraft.core.Direction;
@@ -28,9 +28,9 @@ public final class ArsSources {
      */
     public static final ScalarAccess ACCESS = new ScalarAccess() {
         @Override
-        public @Nullable Object handler(RouterBlockEntity node, Direction machineFace) {
-            BulkSource bulk = node.bulkSource(machineFace);
-            return bulk != null ? bulk : node.arsSource(machineFace);
+        public @Nullable Object handler(MachineCaches machine, Direction machineFace) {
+            BulkSource bulk = machine.bulkSource(machineFace);
+            return bulk != null ? bulk : machine.arsSource(machineFace);
         }
 
         @Override

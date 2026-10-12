@@ -9,8 +9,8 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,6 +32,11 @@ import org.jetbrains.annotations.Nullable;
  * ({@code mayInteract}) e os protegidos ficam de fora. Vincular exige uma rede ativa que o jogador
  * pode usar; desvincular não usa rede nenhuma, então vale para qualquer roteador que ele alcança (como
  * o "sem rede" da tela do roteador).
+ *
+ * <p>Faces ({@link LinkerFaces}, decisão 8 da rede por face): só as faces marcadas da máquina presa,
+ * relativas à frente dela, mudam; cada roteador usa a frente da própria máquina
+ * ({@link RouterBlockEntity#attachedFront()}, lida só no clique). Perfis e exceções do roteador de
+ * alcance ficam como estão. Sem nenhuma face marcada, vincular avisa e não muda nada.
  */
 public final class LinkerActions {
     private static final String KEY = "item.wirelessautomate.linker.";
@@ -56,11 +61,12 @@ public final class LinkerActions {
      * @param unloadedChunks chunks da área que estavam descarregados (os roteadores deles ficaram de fora)
      * @param network        a rede ativa; {@code null} ao desvincular
      * @param unlink         foi um desvincular
+     * @param faces          as faces marcadas no Vinculador
      */
     public record LinkResult(LinkerProblem problem, int linked, int already, int protectedCount, int unloadedChunks,
-            @Nullable WaNetwork network, boolean unlink) {
+            @Nullable WaNetwork network, boolean unlink, LinkerFaces faces) {
         static LinkResult refused(LinkerProblem problem) {
-            return new LinkResult(problem, 0, 0, 0, 0, null, false);
+            return new LinkResult(problem, 0, 0, 0, 0, null, false, LinkerFaces.ALL);
         }
 
         public boolean ok() {
@@ -92,6 +98,12 @@ public final class LinkerActions {
             return Mark.TOO_BIG;
         }
         LinkerItem.setArea(stack, next);
+        if (LinkerItem.mode(stack) == LinkerMode.MACHINES) {
+            // no modo Máquinas contar roteadores não diz nada; quais máquinas entram é o Vincular que decide
+            player.displayClientMessage(Component.translatable(KEY + "corner2_machines", position(pos), box.sizeX(),
+                    box.sizeY(), box.sizeZ()), true);
+            return Mark.SECOND;
+        }
         int routers = LinkerScan.of(player.serverLevel(), box).routers().size();
         player.displayClientMessage(Component.translatable(KEY + "corner2", position(pos), box.sizeX(), box.sizeY(),
                 box.sizeZ(), routers), true);
@@ -121,7 +133,11 @@ public final class LinkerActions {
         if (LinkerItem.effectiveTabs(stack).isEmpty()) {
             return LinkerProblem.NO_TABS;
         }
-        if (LinkerItem.unlink(stack)) {
+        if (LinkerItem.mode(stack) != LinkerMode.MACHINES && LinkerItem.faces(stack).isEmpty()) {
+            return LinkerProblem.NO_FACES;
+        }
+        // Máquinas vincula ao roteador escolhido (RangeLinks), sem rede nem desvincular
+        if (LinkerItem.unlink(stack) || LinkerItem.mode(stack) == LinkerMode.MACHINES) {
             return LinkerProblem.NONE;
         }
         WaNetwork network = activeNetwork(player);
@@ -158,9 +174,9 @@ public final class LinkerActions {
     }
 
     /**
-     * Clique num roteador (os dois modos): põe as abas marcadas na rede ativa (criando uma se o
-     * jogador não tiver) ou, no modo desvincular, as tira da rede, sem criar rede. Mostra o resultado
-     * na action bar e devolve se o roteador mudou.
+     * Clique num roteador (os dois modos): põe as faces marcadas, nas abas marcadas, na rede ativa
+     * (criando uma se o jogador não tiver) ou, no modo desvincular, as tira da rede, sem criar rede.
+     * Mostra o resultado na action bar e devolve se o roteador mudou.
      */
     public static boolean single(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
         LinkerTabs tabs = LinkerItem.tabs(stack);
@@ -169,15 +185,26 @@ public final class LinkerActions {
             player.displayClientMessage(Component.translatable(KEY + "no_tabs"), true);
             return false;
         }
+        LinkerFaces faces = LinkerItem.faces(stack);
+        if (faces.isEmpty()) {
+            player.displayClientMessage(Component.translatable(KEY + "no_faces"), true);
+            return false;
+        }
         Component tabsName = LinkerItem.tabsName(tabs);
+        Component letters = LinkerItem.facesLetters(faces);
         boolean all = tabs.isAll(LoadedTypes.LIST);
+        boolean allFaces = faces.isAll();
         if (LinkerItem.unlink(stack)) {
-            if (inTarget(router, types, null)) {
-                player.displayClientMessage(Component.translatable(KEY + "already_unlinked", tabsName), true);
+            if (inTarget(router, types, faces, null)) {
+                player.displayClientMessage(allFaces
+                        ? Component.translatable(KEY + "already_unlinked", tabsName)
+                        : Component.translatable(KEY + "already_unlinked_faces", letters, tabsName), true);
                 return false;
             }
-            apply(router, types, null);
-            player.displayClientMessage(Component.translatable(KEY + "unlinked", tabsName), true);
+            apply(router, types, faces, null);
+            player.displayClientMessage(allFaces
+                    ? Component.translatable(KEY + "unlinked", tabsName)
+                    : Component.translatable(KEY + "unlinked_faces", letters, tabsName), true);
             player.level().playSound(null, router.getBlockPos(), SoundEvents.EXPERIENCE_ORB_PICKUP,
                     SoundSource.BLOCKS, 0.5F, 0.8F);
             return true;
@@ -187,15 +214,17 @@ public final class LinkerActions {
             player.displayClientMessage(Component.translatable(KEY + "foreign", network.displayName()), true);
             return false;
         }
-        if (inTarget(router, types, network.id())) {
-            player.displayClientMessage(all
-                    ? Component.translatable(KEY + "already", network.displayName())
+        if (inTarget(router, types, faces, network.id())) {
+            player.displayClientMessage(!allFaces
+                    ? Component.translatable(KEY + "already_faces", letters, network.displayName(), tabsName)
+                    : all ? Component.translatable(KEY + "already", network.displayName())
                     : Component.translatable(KEY + "already_tabs", network.displayName(), tabsName), true);
             return false;
         }
-        apply(router, types, network.id());
-        player.displayClientMessage(all
-                ? Component.translatable(KEY + "linked", network.displayName())
+        apply(router, types, faces, network.id());
+        player.displayClientMessage(!allFaces
+                ? Component.translatable(KEY + "linked_faces", letters, network.displayName(), tabsName)
+                : all ? Component.translatable(KEY + "linked", network.displayName())
                 : Component.translatable(KEY + "linked_tabs", network.displayName(), tabsName), true);
         player.level().playSound(null, router.getBlockPos(), SoundEvents.EXPERIENCE_ORB_PICKUP,
                 SoundSource.BLOCKS, 0.5F, 1.4F);
@@ -203,8 +232,9 @@ public final class LinkerActions {
     }
 
     /**
-     * Põe as abas marcadas de todos os roteadores carregados da área na rede ativa (sem rede ativa,
-     * cria uma, como o modo Único) ou, no modo desvincular, as tira da rede (sem criar rede).
+     * Põe as faces marcadas, nas abas marcadas, de todos os roteadores carregados da área na rede
+     * ativa (sem rede ativa, cria uma, como o modo Único) ou, no modo desvincular, as tira da rede (sem
+     * criar rede). Cada roteador usa a frente da própria máquina.
      * Roteadores em área protegida para o jogador ficam de fora. Mostra o resultado na action bar.
      */
     public static LinkResult link(ServerPlayer player, ItemStack stack) {
@@ -217,6 +247,7 @@ public final class LinkerActions {
         UUID target = network == null ? null : network.id();
         LinkerTabs tabs = LinkerItem.tabs(stack);
         List<ResourceType> types = LinkerItem.effectiveTabs(stack);
+        LinkerFaces faces = LinkerItem.faces(stack);
         ServerLevel level = player.serverLevel();
         LinkerScan scan = LinkerScan.of(level, LinkerItem.area(stack).box());
         int linked = 0;
@@ -225,15 +256,15 @@ public final class LinkerActions {
         for (RouterBlockEntity router : scan.routers()) {
             if (!level.mayInteract(player, router.getBlockPos())) {
                 protectedCount++;
-            } else if (inTarget(router, types, target)) {
+            } else if (inTarget(router, types, faces, target)) {
                 already++;
             } else {
-                apply(router, types, target);
+                apply(router, types, faces, target);
                 linked++;
             }
         }
         LinkResult result = new LinkResult(LinkerProblem.NONE, linked, already, protectedCount, scan.unloadedChunks(),
-                network, unlink);
+                network, unlink, faces);
         player.displayClientMessage(resultMessage(result, tabs), true);
         if (linked > 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
@@ -243,13 +274,22 @@ public final class LinkerActions {
     }
 
     /**
-     * "5 roteadores vinculados a Base (Itens + Fluidos) · 2 já estavam · 1 chunk descarregado ficou de
-     * fora", ou "12 roteadores desvinculados (Itens + Fluidos)".
+     * "5 roteadores vinculados a Base (Itens + Fluidos, todas as faces) · 2 já estavam · 1 chunk
+     * descarregado ficou de fora", "3 roteadores: faces T, B em Base (Itens)" ou "12 roteadores
+     * desvinculados (Itens + Fluidos, todas as faces)".
      */
     public static MutableComponent resultMessage(LinkResult result, LinkerTabs tabs) {
         Component tabsName = LinkerItem.tabsName(tabs);
         MutableComponent text;
-        if (result.unlink()) {
+        if (!result.faces().isAll()) {
+            Component letters = LinkerItem.facesLetters(result.faces());
+            if (result.unlink()) {
+                text = Component.translatable(KEY + "area.unlinked_faces", result.linked(), letters, tabsName);
+            } else {
+                Component name = result.network() == null ? Component.empty() : result.network().displayName();
+                text = Component.translatable(KEY + "area.linked_faces", result.linked(), letters, name, tabsName);
+            }
+        } else if (result.unlink()) {
             text = Component.translatable(KEY + "area.unlinked", result.linked(), tabsName);
         } else {
             Component name = result.network() == null ? Component.empty() : result.network().displayName();
@@ -271,21 +311,22 @@ public final class LinkerActions {
     }
 
     /**
-     * Todas as abas {@code types} do roteador já estão em {@code target} ({@code null} = já sem rede).
-     * Sem abas, nada muda e conta como já estar.
+     * Todas as faces {@code faces} (relativas à frente da máquina presa), nas abas {@code types}, já
+     * estão em {@code target} ({@code null} = já sem rede). Sem abas ou sem faces, nada muda e conta
+     * como já estar.
      */
-    public static boolean inTarget(RouterBlockEntity router, List<ResourceType> types, @Nullable UUID target) {
-        for (ResourceType type : types) {
-            if (!Objects.equals(target, router.networkId(type))) {
-                return false;
-            }
-        }
-        return true;
+    public static boolean inTarget(RouterBlockEntity router, List<ResourceType> types, LinkerFaces faces,
+            @Nullable UUID target) {
+        return router.attachedFacesIn(types, faces.absoluteMask(router.attachedFront()), target);
     }
 
-    /** Põe as abas {@code types} do roteador em {@code target} ({@code null} tira da rede). */
-    public static void apply(RouterBlockEntity router, List<ResourceType> types, @Nullable UUID target) {
-        router.setNetworkId(types, target);
+    /**
+     * Põe as faces {@code faces} da máquina presa (relativas à frente dela), nas abas {@code types}, em
+     * {@code target} ({@code null} tira da rede). Perfis e exceções do alcance não mudam.
+     */
+    public static void apply(RouterBlockEntity router, List<ResourceType> types, LinkerFaces faces,
+            @Nullable UUID target) {
+        router.setAttachedFacesNetwork(types, faces.absoluteMask(router.attachedFront()), target);
     }
 
     // ------------------------------------------------------------------ tela
@@ -313,6 +354,11 @@ public final class LinkerActions {
             }
             case TOGGLE_TAB -> toggleTab(stack, payload.value());
             case SET_TABS -> setTabs(stack, payload.value());
+            case SET_FACES -> {
+                // aceita vazio: a tela mostra o aviso e o Vincular desliga
+                LinkerItem.setFaces(stack, LinkerFaces.of(payload.value()));
+                yield true;
+            }
             case SET_MODE -> {
                 if (payload.value() < 0 || payload.value() >= LinkerMode.values().length) {
                     yield false;
@@ -325,6 +371,11 @@ public final class LinkerActions {
                 yield true;
             }
             case LINK -> {
+                if (LinkerItem.mode(stack) == LinkerMode.MACHINES) {
+                    // a tela ainda não mostra o resultado das máquinas: fica na action bar
+                    menu.setOutcome(null, null);
+                    yield RangeLinks.linkArea(player, stack).ok();
+                }
                 LinkResult result = link(player, stack);
                 if (result.ok()) {
                     menu.setOutcome(result, LinkerItem.tabs(stack));

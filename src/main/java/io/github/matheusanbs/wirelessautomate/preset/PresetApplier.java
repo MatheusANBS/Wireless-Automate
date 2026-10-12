@@ -12,17 +12,18 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A regra das redes ao colar ou aplicar um preset: cada aba só leva a rede se ela existe e o
- * jogador pode usá-la (dono ou operador nível 2, {@link ModPayloads#canUse}); senão a aba fica com
- * a rede que o roteador já tinha. A mesma regra vale para o pincel, a área e os códigos importados
- * (a rede de outro mundo não existe aqui e cai).
+ * A regra das redes ao colar ou aplicar um preset, por rede distinta: cada rede do preset só vai se
+ * ela existe e o jogador pode usá-la (dono ou operador nível 2, {@link ModPayloads#canUse}); senão
+ * ela sai do preset e as faces que a levariam ficam com a rede que já tinham no roteador. A mesma
+ * regra vale para o pincel, a área e os códigos importados (a rede de outro mundo não existe aqui e
+ * cai).
  */
 public final class PresetApplier {
     /**
      * O preset que pode ser aplicado e o que ficou de fora.
      *
      * @param applied   redes que vão junto, sem repetir
-     * @param keptTypes abas que ficam com a rede de antes
+     * @param keptTypes abas com alguma face que fica com a rede de antes
      * @param kept      redes recusadas, sem repetir
      * @param denied    uma rede recusada que existe (de outro dono), para a mensagem; {@code null} se todas sumiram
      */
@@ -38,35 +39,38 @@ public final class PresetApplier {
     }
 
     /**
-     * Como {@link #check(ServerPlayer, RouterPreset)}, mas olhando só a rede da aba {@code only}
-     * (as outras redes saem do preset e não entram nos avisos); {@code null} = todas as abas.
+     * Como {@link #check(ServerPlayer, RouterPreset)}, mas olhando só as redes das faces da aba
+     * {@code only} (as outras redes saem do preset e não entram nos avisos); {@code null} = todas.
      */
     public static Checked check(ServerPlayer player, RouterPreset preset, @Nullable ResourceType only) {
         preset = preset.onlyNetworkOf(only);
         NetworkSavedData data = NetworkSavedData.get(player.server);
         List<UUID> applied = new ArrayList<>();
-        List<ResourceType> keptTypes = new ArrayList<>();
         List<UUID> kept = new ArrayList<>();
         WaNetwork denied = null;
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = preset.network(type);
-            if (id == null) {
-                continue;
-            }
+        for (UUID id : preset.distinctNetworks()) {
             WaNetwork network = data.network(id);
             if (network != null && ModPayloads.canUse(player, network)) {
-                if (!applied.contains(id)) {
-                    applied.add(id);
-                }
-                continue;
-            }
-            preset = preset.withoutNetwork(type);
-            keptTypes.add(type);
-            if (!kept.contains(id)) {
+                applied.add(id);
+            } else {
                 kept.add(id);
+                if (network != null) {
+                    denied = network;
+                }
             }
-            if (network != null) {
-                denied = network;
+        }
+        List<ResourceType> keptTypes = new ArrayList<>();
+        if (!kept.isEmpty()) {
+            for (ResourceType type : ResourceType.values()) {
+                for (UUID id : preset.networks(type)) {
+                    if (kept.contains(id)) {
+                        keptTypes.add(type);
+                        break;
+                    }
+                }
+            }
+            for (UUID id : kept) {
+                preset = preset.withoutNetwork(id);
             }
         }
         return new Checked(preset, List.copyOf(applied), List.copyOf(keptTypes), List.copyOf(kept), denied);

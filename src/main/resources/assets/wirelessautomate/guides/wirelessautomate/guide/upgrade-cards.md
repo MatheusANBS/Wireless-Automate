@@ -29,9 +29,19 @@ item_ids:
 
 Every router starts as **Basic**. The ladder is Basic → Advanced → Elite → Emerald → Ultimate.
 With the **Allthemodium** mod, three steps go between Emerald and Ultimate: Allthemodium →
-Vibranium → Unobtainium. Each card takes the router straight to its tier from **any lower tier**: a
-Basic router with the Emerald Card becomes Emerald. The router's configuration (faces, filters,
-networks) is kept.
+Vibranium → Unobtainium.
+
+Each step has a **ring**: eight items around the middle of the crafting grid. Going up one step costs
+that tier's ring, by any of three paths:
+
+| Middle of the ring | Result |
+| --- | --- |
+| **Redstone** | The one-step card, for example **Advanced → Elite**. |
+| **A card** (for example Basic → Advanced) | The skipping card: **Basic → Elite**. It adds up the rings of the steps it skips. |
+| **The router or storage** one step below | The same block, already at the new tier (the direct recipe). |
+
+A card has an **origin**: its name says where it starts ("Upgrade Card: Basic → Elite"), and it only
+works on a block of that tier. Old cards, with no origin, still raise any lower tier.
 
 ## What each card raises
 
@@ -56,11 +66,16 @@ Each step multiplies throughput by 8. Range and dimensions follow the **sender's
 
 | Where | How |
 | --- | --- |
-| **In the world** | Use the card of the tier you want on a placed router. |
-| **In a crafting table** | A router + the card of the tier you want, in any slots. The router's name is kept. |
+| **In the world** | Shift + use the card on a placed router or storage of the card's origin tier. All of its configuration (faces, filters, networks, cards) is kept. |
+| **In a crafting table, with the card** | The block + the card, in any slots. |
+| **In a crafting table, no card** | The block in the middle of the next tier's ring. |
 
-Cards only go up: they won't take a router of the same tier or a higher one. Since each card takes the
-previous one in its recipe, going straight to the final tier is the cheapest path.
+In a crafting table, the block goes up as an item: a router keeps its name, and a storage its name and
+contents. On a block of another tier, the card isn't used up and the bar above the hotbar says which tier
+it raises.
+
+If the Allthemodium mod is added to the pack later, a card made before it (for example Emerald →
+Ultimate) still works and skips the Allthemodium steps.
 
 The same cards raise the storages ([Chest](wireless-chest.md), [Tank](wireless-tank.md),
 [Battery](wireless-battery.md), [Chemical Tank](wireless-chemical-tank.md) and
@@ -74,8 +89,11 @@ keeping their contents. Each tier's capacity is on each one's page.
 <RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
 
-With Allthemodium, its cards take the previous card in the middle and the metal's own materials:
-Allthemodium ingots and blocks; Vibranium ingots, blocks and Vibranium-Allthemodium alloy;
-Unobtainium ingots, blocks and Unobtainium-Vibranium alloy. Ultimate then takes the Unobtainium Card
-and, in ATM10 (with All The Tweaks), ATM Star shards, a dragon egg and Unobtainium-Allthemodium alloy
-blocks. JEI shows your pack's recipes.
+The recipes show the ring with Redstone in the middle. Swap the Redstone for a card or for the block one
+step below for the other two paths.
+
+With Allthemodium, its rings use the metal's own materials: Allthemodium ingots and blocks; Vibranium
+ingots, blocks and Vibranium-Allthemodium alloy; Unobtainium ingots, blocks and Unobtainium-Vibranium
+alloy. The step before Ultimate becomes Unobtainium and, in ATM10 (with All The Tweaks), the Ultimate
+ring takes ATM Star shards, a dragon egg and Unobtainium-Allthemodium alloy blocks. JEI shows the three
+paths of each ring in your pack.

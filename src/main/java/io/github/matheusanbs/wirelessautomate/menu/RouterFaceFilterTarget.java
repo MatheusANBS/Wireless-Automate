@@ -5,6 +5,8 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Optional;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -12,17 +14,30 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Filtro de uma face (absoluta) de um roteador, para um tipo. Grava pelo
- * {@link RouterBlockEntity#setFilter}, que salva e avisa o motor.
+ * Filtro de uma face de um roteador, para um tipo, no alvo de edição da tela ({@code target}): a face
+ * absoluta da máquina presa, ou a face canônica do perfil de um grupo ou de uma máquina remota. Grava
+ * pelo {@link RouterBlockEntity#setFilter(EditTarget, ResourceType, Direction, Filter)}, que salva e
+ * avisa o motor. Um alvo remoto que deixou de existir fecha a tela ({@link #stillValid}) e não grava.
  */
-public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face)
-        implements FilterTarget {
+public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face,
+        EditTargetRef target) implements FilterTarget {
     public RouterFaceFilterTarget {
         if (!hasFilter(type)) {
             throw new IllegalArgumentException("Filtro de " + type);
         }
+    }
+
+    /** Filtro de uma face (absoluta) da máquina presa. */
+    public RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face) {
+        this(router, type, face, EditTargetRef.ATTACHED);
+    }
+
+    /** O alvo conferido no roteador, ou {@code null} se ele deixou de existir. */
+    private @Nullable EditTarget current() {
+        return target.current(router);
     }
 
     /** O tipo tem filtro (pelo registro) e existe nesta instância. */
@@ -33,9 +48,12 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
     /** Abre a tela de filtro desta face para o jogador. */
     public void open(ServerPlayer player) {
         FilterView view = view(player);
+        Component side = target.target().attached()
+                ? Component.translatable("gui.wirelessautomate.router.face." + face.getName())
+                : Component.translatable("gui.wirelessautomate.router.side."
+                        + RemoteSide.fromCanonical(face.ordinal()).key());
         Component title = Component.translatable("container.wirelessautomate.filter.face",
-                FilterCardItem.typeName(type),
-                Component.translatable("gui.wirelessautomate.router.face." + face.getName()));
+                FilterCardItem.typeName(type), side);
         player.openMenu(new SimpleMenuProvider(
                         (containerId, inventory, p) -> new FilterMenu(containerId, inventory, this, view), title),
                 buf -> FilterView.STREAM_CODEC.encode(buf, view));
@@ -43,18 +61,22 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
 
     @Override
     public Filter filter() {
-        return router.face(type, face).filter();
+        EditTarget current = current();
+        return current == null ? Filter.EMPTY : router.face(current, type, face).filter();
     }
 
     @Override
     public void setFilter(Filter filter) {
-        router.setFilter(type, face, filter);
+        EditTarget current = current();
+        if (current != null) {
+            router.setFilter(current, type, face, filter);
+        }
     }
 
     /** A mesma regra do {@link RouterMenu}: roteador no mundo, mesma dimensão e até 8 blocos. */
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(router, player);
+        return stillValid(router, player) && current() != null;
     }
 
     static boolean stillValid(RouterBlockEntity router, Player player) {

@@ -3,7 +3,14 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,8 +32,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Regras da montagem, por tipo de recurso:
  * <ul>
- *   <li>só entram os membros cujo tipo está nesta rede: um nó com Itens aqui e Fluidos noutra rede
- *       só dá portas de itens a esta;
+ *   <li>só entram as portas cuja face está nesta rede ({@link Port#faceNetwork}): um nó com a face
+ *       Cima de itens aqui e a Baixo noutra rede só dá a porta de Cima a esta. As portas de um tipo
+ *       são lidas uma vez para todas as redes do nó ({@link NodePorts#collected});
+
  *   <li>origem = face ativa (modo e redstone) que extrai; destino = face ativa que insere;
  *   <li>uma origem não entrega na mesma máquina e mesma face de onde tira;
  *   <li>uma face Ambos não entrega para outra face Ambos (senão os recursos iriam e voltariam entre
@@ -65,11 +74,12 @@ final class NetworkRoutes {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final RouterTier[] TIERS = RouterTier.values();
     private static final Port[] NO_PORTS = new Port[0];
+    private static final RemoteSide[] REMOTE_SIDES = RemoteSide.values();
     private static final double AVERAGE_WEIGHT = 0.05;
     private static final ToIntFunction<Port> PRIORITY = port -> port.priority;
 
     final UUID id;
-    /** Nós com algum tipo nesta rede, cada um uma vez, na ordem de entrada (remoção O(1)). */
+    /** Nós com alguma face nesta rede, cada um uma vez, na ordem de entrada (remoção O(1)). */
     final ReferenceLinkedOpenHashSet<NodePorts> members = new ReferenceLinkedOpenHashSet<>();
     /** Origens ativas de cada tipo (por ordinal), inclusive as sem destino. */
     final List<Port>[] sourcesOf = newLists();
@@ -121,7 +131,7 @@ final class NetworkRoutes {
         int mask = dirtyTypes;
         dirtyTypes = 0;
         if (!exists) {
-            // Só as portas dos tipos desta rede: as dos outros tipos do nó são de outras redes.
+            // Só as portas que esta rede adotou: as outras do mesmo tipo no nó são de outras redes.
             for (ResourceType type : TYPES) {
                 if ((mask & NetworkManager.typeBit(type)) == 0) {
                     continue;
@@ -129,9 +139,7 @@ final class NetworkRoutes {
                 sourcesOf[type.ordinal()].clear();
                 destinationsOf[type.ordinal()].clear();
                 for (NodePorts member : members) {
-                    if (id.equals(member.network(type))) {
-                        member.clearRoutes(type);
-                    }
+                    member.clearRoutes(type, this);
                 }
             }
             return;
@@ -396,29 +404,39 @@ final class NetworkRoutes {
     }
 
     /**
-     * Junta as origens e os destinos do tipo. Um membro que não mudou desde a última montagem entra
-     * com as portas já lidas; os outros têm as faces relidas ({@link #readPorts}) e as portas ficam
-     * marcadas como relidas ({@link Port#fresh}). A ordem que cada porta tinha vai para
-     * {@link Port#previousOrder}.
+     * Junta as origens e os destinos do tipo. A leitura das portas de um membro é dividida entre as
+     * redes do tipo nele: um membro que não mudou desde a última montagem entra com as portas já
+     * lidas; senão a primeira rede a passar por ele relê as faces ({@link #readPorts}), depois de
+     * guardar a ordem de todas as portas do tipo em {@link Port#previousOrder} e limpar as rotas
+     * delas (de todas as redes: o {@link NetworkManager#nodeChanged} sujou o tipo em todas, que
+     * remontam na mesma passada). Desta leitura, só entram as portas desta rede; as relidas
+     * ({@link Port#pendingFresh}) ficam marcadas como {@link Port#fresh} na rede delas, seja qual for
+     * a que releu.
      */
     private void collectPorts(ResourceType type, List<Port> sources, List<Port> destinations) {
         for (NodePorts member : members) {
-            if (!id.equals(member.network(type))) {
+            if (!member.inNetwork(type, id)) {
                 continue;
             }
             Port[] active = member.collected(type);
-            boolean fresh = active == null;
-            if (fresh) {
+            if (active == null) {
                 member.rememberOrders(type);
                 member.clearRoutes(type);
                 active = readPorts(member, type);
                 member.setCollected(type, active);
             }
             for (Port port : active) {
+                if (!id.equals(port.faceNetwork)) {
+                    continue;
+                }
+                boolean fresh = port.pendingFresh;
+                port.pendingFresh = false;
                 if (!fresh) {
+                    // A relida já tem a ordem guardada pelo rememberOrders.
                     port.previousOrder = port.order;
                 }
                 port.clearOrder();
+                port.network = this;
                 port.fresh = fresh;
                 if (port.source) {
                     sources.add(port);
@@ -430,7 +448,10 @@ final class NetworkRoutes {
         }
     }
 
-    /** Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas. */
+    /**
+     * Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas: as da
+     * máquina presa e, com o Upgrade de Alcance valendo, as das remotas (ver {@link #readRemotePorts}).
+     */
     private Port[] readPorts(NodePorts member, ResourceType type) {
         RouterBlockEntity node = member.node;
         boolean powered = node.powered();
@@ -452,7 +473,8 @@ final class NetworkRoutes {
                 active = new Port[DIRECTIONS.length];
             }
             Port port = member.port(type, face);
-            port.network = this;
+            port.faceNetwork = config.network();
+            port.pendingFresh = true;
             port.priority = config.priority();
             port.filter = node.filterSet(type, face);
             port.tier = tier;
@@ -461,7 +483,68 @@ final class NetworkRoutes {
             port.destination = config.mode().inserts();
             active[count++] = port;
         }
+        if (node.rangeActive() && !node.remoteMachines().machines().isEmpty()) {
+            return readRemotePorts(member, type, powered, count == active.length ? active : Arrays.copyOf(active, count));
+        }
+        member.retainRemotes(type, LongSets.EMPTY_SET);
         return count == active.length ? active : Arrays.copyOf(active, count);
+    }
+
+    /**
+     * Depois das faces da presa ({@code attached}), as das máquinas remotas: as primeiras
+     * {@code maxMachines} do tier dentro do raio, na ordem de vínculo (as de fora do raio ou do limite
+     * não viram porta). A face absoluta de cada lado sai da frente da máquina ({@link RemoteSide}); a
+     * configuração é a que vale para ela (exceção ou perfil do grupo), o filtro é o embutido mais os
+     * cartões do grupo naquele lado e o {@code powered} é o do roteador. O resto é como na presa.
+     */
+    private Port[] readRemotePorts(NodePorts member, ResourceType type, boolean powered, Port[] attached) {
+        RouterBlockEntity node = member.node;
+        RouterTier tier = node.tier();
+        RemoteMachines remotes = node.remoteMachines();
+        List<RemoteMachine> machines = remotes.machines();
+        RangeRules.Reach[] reach = node.machineReach();
+        LongOpenHashSet keep = new LongOpenHashSet();
+        List<Port> active = new ArrayList<>(attached.length + machines.size() * 2);
+        active.addAll(Arrays.asList(attached));
+        for (int i = 0, n = machines.size(); i < n; i++) {
+            if (reach[i] != RangeRules.Reach.ACTIVE) {
+                continue;
+            }
+            RemoteMachine remote = machines.get(i);
+            BlockPos pos = remote.pos();
+            keep.add(pos.asLong());
+            MachineConfig config = remotes.effective(remote);
+            MachineCaches caches = null;
+            int front = remote.front();
+            for (RemoteSide side : REMOTE_SIDES) {
+                FaceConfig face = config.face(type, side);
+                if (!face.isActive(powered)) {
+                    continue;
+                }
+                if (caches == null) {
+                    caches = node.remoteCaches(pos);
+                    // A frente é relida aqui (uma vez por máquina com face ativa, só na remontagem):
+                    // girar a máquina sem setChanged não avisa ninguém. Se mudou, vale já nesta
+                    // leitura; os outros tipos do nó são relidos na próxima remontagem, sem laço
+                    // (lá a frente já bate).
+                    if (node.rereadFront(remote)) {
+                        front = remote.front();
+                        NetworkManager.get().nodeChanged(node, ALL_TYPES & ~NetworkManager.typeBit(type));
+                    }
+                }
+                Port port = member.remotePort(caches, type, DIRECTIONS[side.toAbsolute(front)]);
+                port.faceNetwork = face.network();
+                port.pendingFresh = true;
+                port.priority = face.priority();
+                port.filter = node.filterSet(remote, type, side);
+                port.tier = tier;
+                port.source = face.mode().extracts();
+                port.destination = face.mode().inserts();
+                active.add(port);
+            }
+        }
+        member.retainRemotes(type, keep);
+        return active.toArray(NO_PORTS);
     }
 
     /** As duas portas estão em Ambos: depois de {@link #collectPorts}, origem e destino ao mesmo tempo. */

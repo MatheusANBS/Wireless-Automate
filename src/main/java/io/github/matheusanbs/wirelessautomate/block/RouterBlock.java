@@ -184,7 +184,7 @@ public class RouterBlock extends BaseEntityBlock {
 
     /**
      * Roteador removido (quebrado, solto por falta de apoio, trocado): solta os Cartões de Filtro e o
-     * Upgrade de chunk loading. O upgrade de tier troca só o estado e não passa por aqui.
+     * Upgrade de chunk loading e o de Alcance. O upgrade de tier troca só o estado e não passa por aqui.
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
@@ -193,6 +193,10 @@ public class RouterBlock extends BaseEntityBlock {
             ItemStack upgrade = router.removeUpgrade();
             if (!upgrade.isEmpty()) {
                 Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgrade);
+            }
+            ItemStack rangeUpgrade = router.removeRangeUpgrade();
+            if (!rangeUpgrade.isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rangeUpgrade);
             }
             // Por último: tirar os cartões avisa o índice, que senão guardaria o nó de novo.
             NodeIndex.forget(level, pos);
@@ -264,9 +268,22 @@ public class RouterBlock extends BaseEntityBlock {
         return RouterBlockItem.withTier((RouterBlockItem) asItem(), state.getValue(TIER));
     }
 
+    /**
+     * Atalho do cartão antigo (sem origem: sobe de qualquer tier abaixo); os testes o usam para pôr um roteador num
+     * tier.
+     */
     public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target) {
+        return tryUpgrade(level, pos, target, null);
+    }
+
+    /**
+     * Sobe o roteador em {@code pos} para {@code target} no lugar (o block entity e a configuração ficam), se o
+     * tier dele aceita o cartão {@code origin → target} ({@link RouterTier#acceptsCard}): com origem, só um
+     * roteador daquele tier; sem origem (cartão antigo), de qualquer tier abaixo.
+     */
+    public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target, @Nullable RouterTier origin) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof RouterBlock) || !state.getValue(TIER).canUpgradeTo(target)) {
+        if (!(state.getBlock() instanceof RouterBlock) || !state.getValue(TIER).acceptsCard(origin, target)) {
             return false;
         }
         if (!level.isClientSide) {

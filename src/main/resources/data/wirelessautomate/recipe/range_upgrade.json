@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "PEP",
+    "RCR",
+    "PEP"
+  ],
+  "key": {
+    "P": { "item": "minecraft:ender_pearl" },
+    "E": { "item": "minecraft:ender_eye" },
+    "R": { "item": "minecraft:redstone_block" },
+    "C": { "item": "wirelessautomate:linker" }
+  },
+  "result": {
+    "id": "wirelessautomate:range_upgrade",
+    "count": 1
+  }
+}

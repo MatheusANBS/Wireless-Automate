@@ -5,11 +5,12 @@
       "modid": "allthemodium"
     }
   ],
-  "type": "minecraft:crafting_shaped",
+  "type": "wirelessautomate:tier_upgrade",
   "category": "misc",
+  "tier": "vibranium",
   "pattern": [
     "IAI",
-    "BCB",
+    "B B",
     "IAI"
   ],
   "key": {
@@ -21,13 +22,6 @@
     },
     "B": {
       "tag": "c:storage_blocks/vibranium"
-    },
-    "C": {
-      "item": "wirelessautomate:tier_core_allthemodium"
     }
-  },
-  "result": {
-    "id": "wirelessautomate:tier_core_vibranium",
-    "count": 1
   }
 }

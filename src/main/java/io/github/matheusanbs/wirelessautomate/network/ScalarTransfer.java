@@ -24,7 +24,7 @@ final class ScalarTransfer {
 
     /** Uma visita. Devolve {@code true} se moveu algo. */
     static boolean move(Port source, long now, ScalarAccess access) {
-        Object handler = access.handler(source.node, source.face);
+        Object handler = access.handler(source.machine, source.face);
         RoundRobinOrder<Port> order = source.order;
         if (handler == null || !access.canExtract(handler) || order == null) {
             SourceSleep.nothingToMove(source, now);
@@ -56,7 +56,7 @@ final class ScalarTransfer {
             if (destination.destinationBackoff.isSleeping(now)) {
                 continue;
             }
-            Object target = access.handler(destination.node, destination.face);
+            Object target = access.handler(destination.machine, destination.face);
             if (target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.

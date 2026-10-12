@@ -5,10 +5,13 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -17,6 +20,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -37,7 +41,9 @@ import org.jetbrains.annotations.Nullable;
  * salvar se um dado salvo mudou de fato. Quem está carregado é guardado só em memória (a referência
  * ao block entity), então carregar e descarregar chunks não suja o arquivo.
  *
- * <p>O que fica salvo de cada nó: posição e dimensão, nome, tier, rede de cada aba, os papéis (um
+ * <p>O que fica salvo de cada nó: posição e dimensão, nome, tier, as redes distintas das faces de cada
+ * tipo (presa, perfis e exceções, chave {@code face_networks}; a {@code networks} antiga, uma rede por
+ * tipo, só é lida, para migrar), os papéis (um
  * resumo dos modos das faces por tipo, ver {@link #role}), o bloco da máquina e quem colocou.
  * Uma entrada pode ficar velha se o bloco sumir sem passar pelo {@code onRemove} (região apagada):
  * o Tablet a apaga quando acha o chunk carregado sem roteador ({@link #forget}).
@@ -53,6 +59,7 @@ public final class NodeIndex extends SavedData {
     private static final int ROLES_PER_TYPE = 3;
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final Direction[] DIRECTIONS = Direction.values();
+    private static final UUID[] NO_NETWORKS = new UUID[0];
 
     /** Dimensão e posição de um roteador. */
     public record NodeKey(ResourceKey<Level> dimension, BlockPos pos) {
@@ -74,7 +81,8 @@ public final class NodeIndex extends SavedData {
         private final NodeKey key;
         private String name = "";
         private RouterTier tier = RouterTier.BASIC;
-        private final UUID[] networks = new UUID[TYPES.length];
+        /** Por tipo, as redes distintas das faces ({@link RouterBlockEntity#networks}); nunca nulo. */
+        private final UUID[][] networks = new UUID[TYPES.length][];
         private int roles;
         private ResourceLocation machine = BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR);
         private @Nullable UUID placedBy;
@@ -85,6 +93,7 @@ public final class NodeIndex extends SavedData {
 
         Entry(NodeKey key) {
             this.key = key;
+            Arrays.fill(networks, NO_NETWORKS);
         }
 
         public NodeKey key() {
@@ -99,28 +108,40 @@ public final class NodeIndex extends SavedData {
             return tier;
         }
 
-        /** Rede da aba {@code type}; {@code null} = sem rede. */
-        public @Nullable UUID network(ResourceType type) {
-            return networks[type.ordinal()];
+        /** As redes distintas das faces do tipo {@code type} (presa, perfis e exceções). Só leitura. */
+        public List<UUID> networks(ResourceType type) {
+            return List.of(networks[type.ordinal()]);
         }
 
-        /** Algum tipo do nó está em {@code network}. */
+        /** Alguma face de algum tipo do nó está em {@code network}. */
         public boolean inNetwork(UUID network) {
-            for (UUID id : networks) {
-                if (network.equals(id)) {
+            for (UUID[] ids : networks) {
+                for (UUID id : ids) {
+                    if (network.equals(id)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /** Alguma face de algum tipo está numa rede (que exista ou não). */
+        public boolean hasNetwork() {
+            for (UUID[] ids : networks) {
+                if (ids.length > 0) {
                     return true;
                 }
             }
             return false;
         }
 
-        public boolean hasNetwork() {
-            for (UUID id : networks) {
-                if (id != null) {
-                    return true;
-                }
+        /** Redes distintas somando todos os tipos (uma rede em dois tipos conta uma vez). */
+        public int distinctNetworks() {
+            Set<UUID> distinct = new HashSet<>();
+            for (UUID[] ids : networks) {
+                Collections.addAll(distinct, ids);
             }
-            return false;
+            return distinct.size();
         }
 
         /** Papéis em bits, ver {@link NodeIndex#role}. */
@@ -170,9 +191,9 @@ public final class NodeIndex extends SavedData {
                 changed = true;
             }
             for (ResourceType type : TYPES) {
-                UUID network = from.networkId(type);
-                if (!Objects.equals(networks[type.ordinal()], network)) {
-                    networks[type.ordinal()] = network;
+                UUID[] now = from.networks(type);
+                if (!Arrays.equals(networks[type.ordinal()], now)) {
+                    networks[type.ordinal()] = now.length == 0 ? NO_NETWORKS : now;
                     changed = true;
                 }
             }
@@ -207,11 +228,16 @@ public final class NodeIndex extends SavedData {
             tag.putString("tier", tier.getSerializedName());
             CompoundTag networksTag = new CompoundTag();
             for (ResourceType type : TYPES) {
-                if (networks[type.ordinal()] != null) {
-                    networksTag.putUUID(type.key(), networks[type.ordinal()]);
+                UUID[] ids = networks[type.ordinal()];
+                if (ids.length > 0) {
+                    ListTag list = new ListTag();
+                    for (UUID id : ids) {
+                        list.add(NbtUtils.createUUID(id));
+                    }
+                    networksTag.put(type.key(), list);
                 }
             }
-            tag.put("networks", networksTag);
+            tag.put("face_networks", networksTag);
             tag.putInt("roles", roles);
             tag.putString("machine", machine.toString());
             if (placedBy != null) {
@@ -231,10 +257,28 @@ public final class NodeIndex extends SavedData {
             String tierName = tag.getString("tier");
             entry.tier = Arrays.stream(RouterTier.values()).filter(t -> t.getSerializedName().equals(tierName))
                     .findFirst().orElse(RouterTier.BASIC);
-            CompoundTag networksTag = tag.getCompound("networks");
-            for (ResourceType type : TYPES) {
-                String typeKey = type.key();
-                entry.networks[type.ordinal()] = networksTag.hasUUID(typeKey) ? networksTag.getUUID(typeKey) : null;
+            if (tag.contains("face_networks", Tag.TAG_COMPOUND)) {
+                CompoundTag networksTag = tag.getCompound("face_networks");
+                for (ResourceType type : TYPES) {
+                    ListTag list = networksTag.getList(type.key(), Tag.TAG_INT_ARRAY);
+                    Set<UUID> ids = new LinkedHashSet<>();
+                    for (Tag id : list) {
+                        try {
+                            ids.add(NbtUtils.loadUUID(id));
+                        } catch (IllegalArgumentException e) {
+                            // UUID mal formado: fica de fora (o roteador relê ao carregar)
+                        }
+                    }
+                    entry.networks[type.ordinal()] = ids.isEmpty() ? NO_NETWORKS : ids.toArray(UUID[]::new);
+                }
+            } else {
+                // migração: a chave antiga tinha uma rede por tipo
+                CompoundTag networksTag = tag.getCompound("networks");
+                for (ResourceType type : TYPES) {
+                    String typeKey = type.key();
+                    entry.networks[type.ordinal()] = networksTag.hasUUID(typeKey)
+                            ? new UUID[] {networksTag.getUUID(typeKey)} : NO_NETWORKS;
+                }
             }
             entry.roles = tag.getInt("roles");
             ResourceLocation machine = ResourceLocation.tryParse(tag.getString("machine"));

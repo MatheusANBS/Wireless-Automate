@@ -1,0 +1,498 @@
+<title>Rede por face</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: estudo em seções verticais; cada tela do jogo em escala de pixels de GUI (--u), com as cores fixas do GuiPaint; a página em volta segue o tema. */
+:root {
+  --u: 2.3px;
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  /* GuiPaint */
+  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-hover: #F8F3E8;
+  --g-ink: #2A2730; --g-mu: #7A7366; --g-dis: #B5AC9D; --g-ring: #1B1920; --g-ac: #F0603E; --g-acd: #C2442A;
+  --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-danger: #D5453A; --g-tier: #D59A1E;
+  --m-ext: #2F6FD6; --m-ins: #E8742B; --m-both: #2F9D5C; --m-none: #948870;
+  /* redes do exemplo */
+  --n-mina: #C9742B; --n-arm: #7B4FE0; --n-energia: #E3A21A; --n-fazenda: #1FA9A0;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+@media (min-width: 1500px) { :root { --u: 2.7px } }
+@media (max-width: 860px) { :root { --u: calc((100vw - 40px) / 300) } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 10px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 0 0 6px }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 74ch; margin: 6px 0 0 }
+p, li { max-width: 76ch }
+.mu { color: var(--page-mu) }
+code { font-family: var(--pix); font-size: .95em }
+section.part { border-top: 1px solid var(--page-line); margin-top: 40px; padding-top: 28px }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.answer { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; margin-top: 22px }
+.answer > div { min-width: 0; background: var(--page-card); border: 1px solid var(--page-line); padding: 14px 16px }
+.answer b { display: block; font-family: var(--pix); font-weight: 500; font-size: 17px; margin-bottom: 4px }
+.tbl { overflow-x: auto; margin-top: 12px }
+table { border-collapse: collapse; font-size: 14px; width: 100% }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 26px; margin-top: 18px }
+.cols > * { min-width: 0 }
+ul.tight { margin: 0; padding-left: 18px } ul.tight li { margin-bottom: 5px }
+.stage { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; margin-top: 16px }
+.side { flex: 1 1 260px; min-width: 0; font-size: 14px; color: var(--page-mu) }
+.side b { color: var(--page-fg) }
+.side ol { margin: 0; padding-left: 20px } .side li { margin-bottom: 6px }
+kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg) }
+.q { margin-top: 14px; display: grid; gap: 12px }
+.q > div { background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 16px; max-width: 900px }
+.q b { font-family: var(--pix); font-weight: 500; font-size: 16px }
+.q .rec { display: inline-block; font-family: var(--pix); font-size: 12px; letter-spacing: .04em; color: var(--g-ok); border: 1px solid var(--g-ok); padding: 0 6px; margin-left: 8px; text-transform: uppercase; vertical-align: 1px }
+.q p { margin: 4px 0 0 }
+
+/* ---- telas do jogo ---- */
+.gui { position: relative; flex: none; background: var(--g-panel); border: var(--u) solid var(--g-ink); box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-dark);
+  font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--g-ink); user-select: none; overflow: hidden }
+.a { position: absolute } .t { position: absolute; white-space: nowrap }
+.gmu { color: var(--g-mu) }
+.stripe { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--u) * 3); background: var(--g-tier) }
+.inset { position: absolute; background: var(--g-inset); box-shadow: inset var(--u) var(--u) 0 var(--g-dark) }
+.grid { background-color: var(--g-light); background-image: linear-gradient(var(--g-inset) 1px, transparent 1px), linear-gradient(90deg, var(--g-inset) 1px, transparent 1px);
+  background-size: calc(var(--u) * 8) calc(var(--u) * 8); box-shadow: inset 0 0 0 var(--u) var(--g-dark) }
+.slots { position: absolute; background-color: var(--g-inset); background-image: linear-gradient(var(--g-dark) 1px, transparent 1px), linear-gradient(90deg, var(--g-dark) 1px, transparent 1px);
+  background-size: calc(var(--u) * 18) calc(var(--u) * 18); box-shadow: inset 0 0 0 1px var(--g-dark) }
+.gbtn { position: absolute; font: inherit; color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-ink); padding: 0 calc(var(--u) * 3); cursor: pointer;
+  display: flex; align-items: center; gap: calc(var(--u) * 2); white-space: nowrap; overflow: hidden }
+.gbtn:hover { border-color: var(--g-ac) }
+.gbtn:focus-visible, .mrow:focus-visible { outline: var(--u) solid var(--g-ac); outline-offset: var(--u) }
+.gbtn.on { background: var(--g-ink); color: var(--g-light) }
+.gbtn.sel { box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac) }
+.gbtn .sw { flex: none; width: calc(var(--u) * 7); height: calc(var(--u) * 7); border: var(--u) solid var(--g-ink) }
+.gbtn .lbl { overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.gbtn .arrow { margin-left: auto; color: var(--g-mu) }
+.dot { display: inline-block; flex: none; width: calc(var(--u) * 5); height: calc(var(--u) * 5); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-ring) }
+.list { position: absolute; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--g-dark) transparent; background: var(--g-light); box-shadow: inset 0 0 0 var(--u) var(--g-dark) }
+.mrow { display: flex; align-items: center; gap: calc(var(--u) * 3); width: 100%; height: calc(var(--u) * 12); padding: 0 calc(var(--u) * 3); background: transparent; border: 0;
+  font: inherit; font-size: calc(var(--u) * 7); color: var(--g-ink); text-align: left; cursor: pointer; white-space: nowrap }
+.mrow:hover { background: var(--g-hover) }
+.mrow.sel { background: var(--g-panel); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
+.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.facebtn { position: absolute; height: calc(var(--u) * 18); font: inherit; font-size: calc(var(--u) * 8); background: var(--g-light); border: var(--u) solid var(--g-ink); color: var(--g-ink);
+  display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); cursor: pointer }
+.facebtn .sw { width: calc(var(--u) * 8); height: calc(var(--u) * 8); border: var(--u) solid var(--g-ink); flex: none }
+.facebtn.sel { box-shadow: 0 0 0 var(--u) var(--g-ink) }
+.facebtn .mark { position: absolute; right: calc(var(--u) * 2); top: calc(var(--u) * 2); width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-light) }
+.dd { position: absolute; background: var(--g-light); border: var(--u) solid var(--g-ink); box-shadow: calc(var(--u) * 1) calc(var(--u) * 1) 0 var(--g-dark); z-index: 3 }
+svg text { font-family: var(--pix) }
+#tip { position: fixed; z-index: 10; pointer-events: none; font-family: var(--pix); font-size: 15px; line-height: 19px; background: rgba(16, 0, 16, .94);
+  border: 2px solid #2b0f5c; padding: 3px 7px; max-width: 340px; color: #fff }
+#tip .g { color: #A8A8A8 } #tip .w { color: #FFC555 }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0 }
+.toolbar button { font-family: var(--pix); font-size: 13px; padding: 3px 9px; background: var(--page-card); color: var(--page-fg); border: 1px solid var(--page-line); cursor: pointer }
+.toolbar button.on { background: var(--page-fg); color: var(--page); border-color: var(--page-fg) }
+.toolbar button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px }
+.screen { flex: none; max-width: 100% }
+.actionbar { font-family: var(--pix); font-size: 15px; text-align: center; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; padding: 8px 6px; background: #121815; margin-top: 8px; min-height: 38px }
+.actionbar .w { color: #FFC555 } .actionbar .n { color: #C9A4FF } .actionbar .k { color: #8FD6A4 }
+.actionbar small { display: block; font-size: 11px; color: #9AA59E; text-shadow: none; margin-bottom: 2px }
+.flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: center; max-width: 640px; margin-top: 18px; font-family: var(--pix) }
+.flow .node { background: var(--page-card); border: 1px solid var(--page-line); padding: 10px 12px; text-align: center; min-width: 0 }
+.flow .node b { display: block; font-weight: 500; font-size: 16px }
+.flow .node small { display: block; font-family: var(--body); font-size: 12px; color: var(--page-mu) }
+.flow .arr { font-size: 22px; color: var(--page-mu); text-align: center }
+.flow .arr small { display: block; font-family: var(--body); font-size: 12px; line-height: 1.2 }
+@media (max-width: 560px) { .flow { grid-template-columns: 1fr; } .flow .arr { transform: rotate(90deg) } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Rede por face</h1>
+    <span class="status">Estudo v2 · aguardando aprovação</span>
+  </header>
+  <p class="lede">A rede deixa de ser da aba e passa a ser da face: cada face da máquina, em cada tipo de recurso, está numa rede ou em nenhuma. O seletor de rede da linha das abas sai. As abas continuam só como tipo (Itens, Fluidos, Energia...), com modo, filtro e cartões por face. As faces passam a ser os lados relativos à máquina (Frente, Trás, Esquerda, Direita, Cima, Baixo) na tela do roteador e no Vinculador. Este estudo desenha a tela do roteador, o Vinculador e o Tablet. Nada aqui foi implementado.</p>
+
+  <div class="answer">
+    <div><b>Uma rede por face, por tipo</b>Na aba Itens, a face Cima pode estar na Mina e a Baixo no Armazém. Na aba Energia, a mesma face Cima pode estar noutra rede. Sem rede da aba, sem herança.</div>
+    <div><b>O Vinculador escolhe as faces</b>Linha Faces, com os seis lados relativos à máquina e o botão Todas. Vincular põe as faces marcadas, nas abas marcadas, na rede ativa.</div>
+    <div><b>Mundos antigos carregam iguais</b>Na carga, a rede que a aba tinha é copiada para as seis faces daquele tipo. O motor já tem uma porta por face, então o custo por tick não muda.</div>
+  </div>
+
+  <!-- ===================================================== EXEMPLO -->
+  <section class="part" id="exemplo">
+    <div class="eyebrow">1 · Exemplo</div>
+    <h2>Uma fornalha, duas redes</h2>
+    <p>Uma Fornalha recebe minério pela rede <b style="color:var(--n-mina)">Mina</b> e manda os lingotes pela rede <b style="color:var(--n-arm)">Armazém</b>, com um roteador só: a face Cima está na Mina e a face Baixo no Armazém, as duas na aba Itens.</p>
+    <div class="flow" aria-label="Fluxo do exemplo">
+      <div class="node"><b style="color:var(--n-mina)">Mina</b><small>baús de minério</small></div>
+      <div class="arr">→<small>face Cima<br>Insere</small></div>
+      <div class="node"><b>Fornalha</b><small>um roteador Avançado</small></div>
+      <div class="arr">→<small>face Baixo<br>Extrai</small></div>
+      <div class="node"><b style="color:var(--n-arm)">Armazém</b><small>baús de lingotes</small></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== TELA DO ROTEADOR -->
+  <section class="part" id="roteador">
+    <div class="eyebrow">2 · Tela do roteador</div>
+    <h2>A linha Rede da face escolhida</h2>
+    <p>Na coluna da direita, abaixo dos botões de modo, a linha <b>Rede</b> com um seletor: as redes do jogador e "Sem rede". Cada botão de face tem um ponto na cor da rede dela; sem ponto, a face está sem rede. A linha das abas fica só com as abas. Os botões de face passam a usar os lados relativos à máquina também na presa (Frente, Trás, Esquerda, Direita, Cima, Baixo), como já é nas remotas e como no Vinculador; a dica mostra o lado absoluto junto ("Trás · Norte"). Máquina sem frente, ou com a frente para cima ou para baixo: Frente = Norte, e a tela diz isso abaixo dos botões. A tela está no tamanho mínimo (300 × 240).</p>
+
+    <div class="stage">
+      <div class="screen">
+        <div class="gui" id="routerGui" style="width:calc(var(--u)*300);height:calc(var(--u)*240)"></div>
+        <div class="toolbar" id="routerStates" aria-label="Estado da tela do roteador"></div>
+      </div>
+      <div class="side">
+        <h3>Experimente</h3>
+        <ol>
+          <li>A face <b>Cima</b> insere pela Mina. Clique em <b>B</b>: Baixo extrai pelo Armazém. As outras quatro estão sem rede (sem ponto). A fornalha olha para o sul, então a dica de <b>T</b> diz "Trás · Norte".</li>
+          <li>Clique na pílula da Rede para abrir a lista e trocar; "Sem rede" tira a face da rede.</li>
+          <li>A dica da face diz o modo e "Rede: Armazém" ou "Sem rede". No canto da linha das abas, "2 redes" resume a aba, com as faces na dica.</li>
+          <li>No estado <b>Grupo do alcance</b>, a rede está no perfil do grupo, por lado relativo (Frente, Trás...), como o modo e o filtro. Uma exceção de máquina guarda a própria rede.</li>
+        </ol>
+        <h3 style="margin-top:14px">Onde cabe</h3>
+        <p>No tamanho mínimo a coluna da direita está cheia. Os botões de modo baixam de 18 para 14 px (a altura do botão Editar) e os cartões descem 4 px, e a linha Rede entra sem empurrar nada para fora.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== VINCULADOR -->
+  <section class="part" id="vinculador">
+    <div class="eyebrow">3 · Vinculador</div>
+    <h2>A linha Faces</h2>
+    <p>Abaixo do mapa entra a linha <b>Faces</b>: <b>Todas</b> e os seis lados relativos à máquina, Frente, Trás, Esquerda, Direita, Cima e Baixo (Esquerda e Direita vistas de frente para a máquina, o mesmo quadro das máquinas do roteador de alcance). Vincular, no clique ou na área, põe as faces marcadas, nas abas marcadas, na rede ativa. Com "Nenhuma (desvincular)", as faces marcadas ficam sem rede. O botão e a action bar dizem o que vai acontecer.</p>
+
+    <div class="stage">
+      <div class="screen">
+        <div class="gui" id="linkerGui" style="width:calc(var(--u)*300);height:calc(var(--u)*204)"></div>
+        <div class="actionbar" id="linkerBar"></div>
+        <div class="toolbar" id="linkerStates" aria-label="Estado do Vinculador"></div>
+      </div>
+      <div class="side">
+        <h3>Experimente</h3>
+        <ol>
+          <li><b>Todas</b> as faces: os 3 roteadores da área vão para o Armazém na aba Itens, pelas seis faces.</li>
+          <li>Marque <b>T</b> e <b>B</b> (Trás e Baixo): o botão vira "Vincular 3 · T, B" e só essas faces vão para o Armazém.</li>
+          <li>Escolha <b>Nenhuma (desvincular)</b> com as faces marcadas: "Desvincular T, B · 3", e essas faces ficam sem rede.</li>
+        </ol>
+        <p>O mapa fica 14 px mais baixo para a linha caber no tamanho mínimo (300 × 204). O texto do botão é abreviado pelo tamanho, com o texto inteiro na dica. A escolha de faces fica guardada no item, como as abas e o modo. <kbd>Shift</kbd> + roda continua trocando as abas; a linha Faces some no modo Máquinas, que vincula máquinas a um roteador, não redes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== TABLET E O RESTO -->
+  <section class="part" id="tablet">
+    <div class="eyebrow">4 · Tablet, Configurador e carga</div>
+    <h2>Onde mais aparece</h2>
+    <div class="stage">
+      <div class="screen">
+        <div class="gui" id="tabletGui" style="width:calc(var(--u)*300);height:calc(var(--u)*112)"></div>
+      </div>
+      <div class="side">
+        <ul class="tight">
+          <li><b>Tablet.</b> O roteador aparece na Lista de cada rede em que tem alguma face, e a linha diz "faces em 2 redes". As Estatísticas contam cada face na rede dela.</li>
+          <li><b>Rede apagada.</b> As faces dela ficam sem rede, e o Tablet avisa "faces sem rede: rede removida" na linha do roteador.</li>
+          <li><b>Configurador.</b> Copiar leva a rede de cada face; colar aplica só redes que o jogador pode usar, com o aviso de hoje.</li>
+          <li><b>Mundos antigos.</b> Na carga, a rede que a aba tinha vai para as seis faces daquele tipo; nada muda no que o jogador vê funcionando.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== PERGUNTAS -->
+  <section class="part" id="perguntas">
+    <div class="eyebrow">5 · Para decidir</div>
+    <h2>Perguntas em aberto</h2>
+    <div class="q">
+      <div><b>1. Atalho de roda para as faces?</b><span class="rec">Recomendo deixar fora da primeira versão</span>
+        <p>As faces se marcam na tela do Vinculador e ficam guardadas no item. Se fizer falta no uso, um atalho entra depois sem mexer no resto.</p></div>
+    </div>
+    <h3 style="margin-top:26px">Fica de fora</h3>
+    <ul class="tight mu">
+      <li>Uma face em duas redes ao mesmo tempo.</li>
+      <li>Rede por cartão de filtro ou por slot da máquina.</li>
+      <li>A linha Faces no modo Máquinas do Vinculador.</li>
+      <li>Mover uma face sozinha entre redes pelo Tablet (mover continua por roteador e aba).</li>
+    </ul>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const U = v => `calc(var(--u)*${v})`;
+function el(parent, tag, cls, style, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (style) Object.assign(e.style, style);
+  if (html != null) e.innerHTML = html;
+  parent.appendChild(e);
+  return e;
+}
+const box = (x, y, w, h) => ({ left: U(x), top: U(y), width: U(w), height: U(h) });
+/** Resolve "var(--x)" para a cor; qualquer outra string volta como está (o SVG não lê var()). */
+const cssVar = v => { const m = /^var\((--[\w-]+)\)$/.exec(v); return m ? getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() : v; };
+const tip = $('tip');
+function bindTip(node, html) {
+  node.addEventListener('mousemove', e => { tip.innerHTML = typeof html === 'function' ? html() : html; tip.hidden = false;
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+  node.addEventListener('mouseleave', () => { tip.hidden = true; });
+}
+function toolbar(root, states, current, onPick) {
+  root.innerHTML = '';
+  states.forEach(([k, n]) => { const b = el(root, 'button', k === current ? 'on' : '', null, n); b.addEventListener('click', () => onPick(k)); });
+}
+
+/* ---------- redes e tipos ---------- */
+const NETS = { mina: ['Mina', 'var(--n-mina)'], arm: ['Armazém', 'var(--n-arm)'], energia: ['Energia da base', 'var(--n-energia)'], fazenda: ['Fazenda', 'var(--n-fazenda)'] };
+const TYPES = [['Itens', '#E07A2E'], ['Fluidos', '#2F6FD6'], ['Energia', '#E3A21A'], ['Químicos', '#4F9A2E'], ['Source', '#8A4FD0']];
+const MODES = [['Extrai', '--m-ext', '⬆'], ['Insere', '--m-ins', '⬇'], ['Armazém', '--m-both', '◆'], ['Nenhum', '--m-none', '–']];
+const netDot = (k, extra) => `<span class="dot" style="background:${k ? NETS[k][1] : 'var(--g-light)'};${extra || ''}"></span>`;
+const netName = k => k ? NETS[k][0] : 'Sem rede';
+
+/* ===================== tela do roteador ===================== */
+// lados relativos à frente da máquina, na presa e nas remotas (Esquerda e Direita vistas de frente para a máquina)
+const REL = [['C', 'Cima'], ['F', 'Frente'], ['E', 'Esquerda'], ['B', 'Baixo'], ['T', 'Trás'], ['D', 'Direita']];
+// a fornalha do exemplo olha para o sul
+const ABS_OF = { C: 'Cima', F: 'Sul', E: 'Oeste', B: 'Baixo', T: 'Norte', D: 'Leste' };
+const router = {
+  state: 'up', open: false, selF: 'C',
+  attached: { C: { m: 1, n: 'mina' }, F: { m: 3, n: null }, E: { m: 3, n: null }, B: { m: 0, n: 'arm' }, T: { m: 3, n: null }, D: { m: 3, n: null } },
+  group: { C: { m: 1, n: 'mina' }, F: { m: 3, n: null }, E: { m: 3, n: null }, B: { m: 3, n: null }, T: { m: 0, n: 'arm' }, D: { m: 3, n: null } },
+};
+const ROUTER_STATES = [['up', 'Face Cima · Mina'], ['down', 'Face Baixo · lista aberta'], ['group', 'Grupo do alcance']];
+function setRouterState(k) {
+  router.state = k; router.open = k === 'down';
+  router.selF = { up: 'C', down: 'B', group: 'T' }[k];
+  routerGui();
+}
+function routerGui() {
+  const g = $('routerGui'); g.innerHTML = '';
+  const grp = router.state === 'group';
+  const faces = grp ? router.group : router.attached;
+  const FACES = REL;
+  const faceName = f => FACES.find(x => x[0] === f)[1];
+  const cur = faces[router.selF];
+  const nets = [...new Set(Object.values(faces).map(x => x.n).filter(Boolean))];
+
+  // cabeçalho
+  el(g, 'div', 'stripe');
+  el(g, 'div', 't', { left: U(9), top: U(8) }, 'Fornalha');
+  el(g, 'div', 't gmu', { left: U(118), top: U(8), fontSize: U(7.5) }, '0 itens/s');
+  el(g, 'div', 'gbtn', { ...box(170, 5, 60, 13), borderColor: 'var(--g-tier)', fontSize: U(7), borderRadius: U(3) }, '<span class="dot" style="background:var(--g-tier)"></span>Avançado');
+  el(g, 'div', 'inset', box(254, 4, 18, 18)); el(g, 'div', 'inset', box(273, 4, 18, 18));
+  if (grp) el(g, 'div', 't', { left: U(258), top: U(9), fontSize: U(9) }, '◎');
+  // abas: só o tipo, sem seletor de rede
+  const tab = el(g, 'button', 'gbtn sel', { ...box(9, 26, 54, 15), fontSize: U(7.5) }, `<span style="color:${TYPES[0][1]}">●</span>Itens`);
+  bindTip(tab, 'Itens<br><span class="g">Modo, filtro, cartões e rede por face</span>');
+  TYPES.slice(1).forEach(([n, c], i) => { const b = el(g, 'button', 'gbtn', { ...box(70 + i * 26, 26, 24, 15), border: '0', background: 'transparent', fontSize: U(7), justifyContent: 'center' },
+    `<span style="color:${c}">●</span>`); bindTip(b, n); });
+  const sum = el(g, 'div', 't gmu', { right: U(9), top: U(30), fontSize: U(7) }, nets.length ? `${nets.length} redes` : 'sem rede');
+  bindTip(sum, () => 'Itens: ' + FACES.filter(([f]) => faces[f].n).map(([f, n]) => `${n} em ${NETS[faces[f].n][0]}`).join(' · '));
+  el(g, 'div', 'a', { left: U(9), right: U(9), top: U(45), height: U(1), background: 'var(--g-dark)' });
+
+  // coluna da esquerda: visor ou lista
+  if (!grp) {
+    el(g, 'div', 'a grid', box(9, 50, 112, 84));
+    drawFurnace(g, 9, 50, 112, 84, faces);
+  } else {
+    el(g, 'div', 'gbtn', { ...box(9, 50, 112, 12), fontSize: U(7), background: 'var(--g-light)' }, '▾ Máquinas · 3/8');
+    const list = el(g, 'div', 'list', box(9, 64, 112, 70));
+    const row = (html, cls, st) => el(list, 'button', 'mrow' + (cls || ''), st || null, html);
+    row(`<span style="color:#9C6B3A">▣</span><span class="nm">Máquina presa</span>`);
+    row(`<span style="color:var(--g-mu);width:${U(4)}">▾</span><span style="color:#8A8F98">▣</span><span class="nm">Fornalha ×2<br><span class="gmu" style="font-size:${U(6)}">todas no perfil</span></span>`, ' sel', { height: U(20), lineHeight: 1.1 });
+    row(`<span class="dot" style="background:var(--g-ok);width:${U(4)};height:${U(4)};margin-left:${U(8)}"></span><span class="nm">#1 · 2 blocos</span>`);
+    row(`<span class="dot" style="background:var(--g-ok);width:${U(4)};height:${U(4)};margin-left:${U(8)}"></span><span class="nm">#2 · 2 blocos</span>`);
+    row(`<span style="color:var(--g-mu);width:${U(4)}">▸</span><span style="color:#9C6B3A">▣</span><span class="nm">Baú ×1</span>`);
+  }
+  // botões de face: ponto na cor da rede; sem ponto = sem rede
+  FACES.forEach(([f, name], i) => {
+    const fc = faces[f], mo = MODES[fc.m];
+    const b = el(g, 'button', 'facebtn' + (f === router.selF ? ' sel' : ''), { left: U(9 + (i % 3) * 38), top: U(136 + Math.floor(i / 3) * 20), width: U(36) },
+      `<span class="sw" style="background:var(${mo[1]})"></span>${f}` + (fc.n ? `<span class="mark" style="background:${NETS[fc.n][1]}"></span>` : ''));
+    b.addEventListener('click', () => { router.selF = f; router.open = false; routerGui(); });
+    bindTip(b, () => `${name}${grp ? '' : ' · ' + ABS_OF[f]}<br><span class="g">${mo[0]}</span><br><span class="g">${fc.n ? 'Rede: ' + NETS[fc.n][0] : 'Sem rede'}</span>`
+      + (f === 'F' ? '<br><span class="g">Sem frente: Frente = Norte</span>' : ''));
+  });
+  // referência dos lados (discreta); numa máquina sem frente diria "Sem frente: Frente = Norte"
+  const ref = el(g, 'div', 't gmu', { left: U(9), top: U(175), fontSize: U(6) }, grp ? 'Lados pela frente de cada máquina' : 'Frente da máquina: Sul');
+  bindTip(ref, 'Os lados são relativos à frente da máquina.<br><span class="g">Sem frente (ou frente para cima ou para baixo): Frente = Norte</span>');
+  // Mais
+  el(g, 'div', 'a', { left: U(9), width: U(112), top: U(182), height: U(1), background: 'var(--g-dark)' });
+  el(g, 'div', 't gmu', { left: U(9), top: U(186), fontSize: U(7.5) }, '▸ Mais');
+  el(g, 'div', 't gmu', { left: U(9), top: U(199), fontSize: U(7.5) }, 'Prioridade 0');
+  el(g, 'div', 't gmu', { left: U(9), top: U(217), fontSize: U(7.5) }, 'Redstone: Ignorar');
+
+  // coluna da direita
+  const fx = 129;
+  el(g, 'div', 't', { left: U(fx), top: U(50) }, grp ? `${faceName(router.selF)} · 27 slots` : faceName(router.selF));
+  el(g, 'div', 't gmu', { left: U(fx), top: U(60), fontSize: U(7.5) }, grp ? 'Perfil: Fornalha · vale para 2 de 2' : (router.selF === 'C' ? '27 slots · roteador aqui' : '27 slots'));
+  MODES.forEach(([n, c, ico], i) => {
+    const on = cur.m === i;
+    const b = el(g, 'button', 'gbtn', { ...box(fx + (i % 2) * 82, 74 + Math.floor(i / 2) * 16, 80, 14), fontSize: U(7.5),
+      borderColor: on ? `var(${c})` : '', background: on ? `color-mix(in srgb, var(${c}) 18%, var(--g-light))` : '' },
+      `<span class="sw" style="background:var(${c});color:#fff;font-size:${U(5)};display:grid;place-items:center">${ico}</span>${n}`);
+    b.addEventListener('click', () => { cur.m = i; routerGui(); });
+  });
+  // linha Rede
+  el(g, 'div', 't gmu', { left: U(fx), top: U(109), fontSize: U(7.5) }, 'Rede');
+  const pill = el(g, 'button', 'gbtn', { ...box(fx + 26, 106, 136, 12), fontSize: U(7), borderRadius: U(3), borderColor: cur.n ? NETS[cur.n][1] : 'var(--g-dark)', color: cur.n ? '' : 'var(--g-mu)' },
+    `${cur.n ? netDot(cur.n) : ''}<span class="lbl">${netName(cur.n)}</span><span class="arrow">▾</span>`);
+  pill.addEventListener('click', () => { router.open = !router.open; routerGui(); });
+  bindTip(pill, () => `Rede da face ${faceName(router.selF)} em Itens: ${netName(cur.n)}<br><span class="g">Clique para escolher</span>`);
+  // filtro e cartões
+  el(g, 'div', 't gmu', { left: U(fx), top: U(124), fontSize: U(7.5) }, 'Filtro');
+  el(g, 'button', 'gbtn', { ...box(fx + 122, 121, 40, 14), fontSize: U(7.5), justifyContent: 'center' }, 'Editar');
+  el(g, 'div', 'inset', box(fx, 137, 18, 18)); el(g, 'div', 'inset', box(fx + 20, 137, 18, 18));
+  el(g, 'div', 't', { left: U(fx + 42), top: U(142), fontSize: U(7.5) }, 'Passa tudo');
+  el(g, 'div', 'slots', box(fx, 157, 162, 54));
+  el(g, 'div', 'slots', box(fx, 215, 162, 18));
+  el(g, 'div', 't gmu', { right: U(2), bottom: U(1), fontSize: U(6) }, '⋱');
+  // lista do seletor
+  if (router.open) {
+    const dd = el(g, 'div', 'dd', { left: U(fx + 26), top: U(119), width: U(136) });
+    el(dd, 'div', 't gmu', { position: 'static', display: 'block', padding: `${U(2)} ${U(3)}`, fontSize: U(6) }, `Rede da face ${faceName(router.selF)}`);
+    const opts = [...Object.keys(NETS).map(k => [k, NETS[k][0]]), [null, 'Sem rede']];
+    opts.forEach(([k, label]) => {
+      const r = el(dd, 'button', 'mrow' + (cur.n === k ? ' sel' : ''), k ? null : { color: 'var(--g-mu)' },
+        (k ? netDot(k) : `<span style="display:inline-block;width:${U(5)};height:${U(5)};border:${U(1)} solid var(--g-dark)"></span>`) + `<span class="nm">${esc(label)}</span>`);
+      r.addEventListener('click', () => { cur.n = k; router.open = false; routerGui(); });
+    });
+  }
+  toolbar($('routerStates'), ROUTER_STATES, router.state, setRouterState);
+}
+function drawFurnace(g, x, y, w, h, faces) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 112 84'); Object.assign(svg.style, { position: 'absolute', ...box(x, y, w, h) }); g.appendChild(svg);
+  const cx = 56, cy = 40, s = 22, hh = 11, d = 24;
+  const P = pts => pts.map(p => p.join(',')).join(' ');
+  const poly = (pts, attrs) => { const p = document.createElementNS(NS, 'polygon'); p.setAttribute('points', P(pts)); for (const k in attrs) p.setAttribute(k, attrs[k]); svg.appendChild(p); return p; };
+  // visível: Cima, Esquerda (oeste) e Frente (sul, com a boca da fornalha)
+  const sides = [['C', [[cx, cy - hh], [cx + s, cy], [cx, cy + hh], [cx - s, cy]], '#8F949C'], ['E', [[cx - s, cy], [cx, cy + hh], [cx, cy + hh + d], [cx - s, cy + d]], '#6E737B'], ['F', [[cx + s, cy], [cx, cy + hh], [cx, cy + hh + d], [cx + s, cy + d]], '#5B6068']];
+  sides.forEach(([f, pts, col]) => {
+    const p = poly(pts, { fill: col, stroke: '#1B1920', 'stroke-width': 1.3 });
+    if (f === 'F') poly([[cx + 6, cy + 13], [cx + 16, cy + 8], [cx + 16, cy + 16], [cx + 6, cy + 21]], { fill: '#E8742B' });  // a boca da fornalha
+    const fc = faces[f];
+    if (fc.m !== 3) poly(pts, { fill: cssVar(`var(${MODES[fc.m][1]})`), 'fill-opacity': .42 });
+    if (f === router.selF) poly(pts, { fill: 'none', stroke: fc.n ? cssVar(NETS[fc.n][1]) : '#F0603E', 'stroke-width': 2.6 });
+    const hit = poly(pts, { fill: 'transparent' }); hit.style.cursor = 'pointer'; hit.addEventListener('click', () => { router.selF = f; router.open = false; routerGui(); });
+  });
+  // o roteador preso em cima
+  poly([[cx, cy - hh - 10], [cx + 6, cy - hh - 7], [cx, cy - hh - 4], [cx - 6, cy - hh - 7]], { fill: '#2A2730' });
+  poly([[cx - 6, cy - hh - 7], [cx, cy - hh - 4], [cx, cy - hh + 1], [cx - 6, cy - hh - 2]], { fill: '#1B1920' });
+  poly([[cx + 6, cy - hh - 7], [cx, cy - hh - 4], [cx, cy - hh + 1], [cx + 6, cy - hh - 2]], { fill: '#3A3640' });
+}
+routerGui();
+
+/* ===================== Vinculador ===================== */
+const linker = { state: 'all', net: 'arm', faces: new Set() };
+const LINKER_STATES = [['all', 'Todas as faces'], ['faces', 'Faces marcadas'], ['unlink', 'Desvincular faces']];
+const LFACES = [['F', 'Frente'], ['T', 'Trás'], ['E', 'Esquerda'], ['D', 'Direita'], ['C', 'Cima'], ['B', 'Baixo']];
+const ALL = new Set(LFACES.map(x => x[0]));
+function setLinkerState(k) {
+  linker.state = k;
+  if (k === 'all') { linker.faces = new Set(ALL); linker.net = 'arm'; }
+  else { linker.faces = new Set(['T', 'B']); linker.net = k === 'unlink' ? null : 'arm'; }
+  linkerGui();
+}
+function linkerGui() {
+  const g = $('linkerGui'); g.innerHTML = '';
+  const fl = LFACES.filter(([f]) => linker.faces.has(f));
+  const all = fl.length === LFACES.length, none = fl.length === 0;
+  const short = fl.map(x => x[0]).join(', '), long = fl.map(x => x[1]).join(', ');
+  el(g, 'div', 'stripe', { background: 'var(--g-ac)' });
+  el(g, 'div', 't', { left: U(9), top: U(8) }, 'Vinculador');
+  el(g, 'div', 't gmu', { left: U(56), top: U(8), fontSize: U(7.5) }, 'Abas: Itens');
+  ['Único', 'Área', 'Máquinas'].forEach((n, i) => el(g, 'button', 'gbtn' + (i === 1 ? ' on' : ''), { ...box(130 + i * 54, 5, i === 2 ? 53 : 52, 13), justifyContent: 'center', fontSize: U(7.5) }, n));
+  el(g, 'div', 'a', { left: U(9), right: U(9), top: U(26), height: U(1), background: 'var(--g-dark)' });
+
+  // rede ativa
+  el(g, 'div', 't', { left: U(9), top: U(31), fontSize: U(8) }, 'Rede ativa');
+  const list = el(g, 'div', 'list', box(9, 42, 144, 72));
+  [[null, 'Nenhuma (desvincular)'], ['mina', 'Mina'], ['arm', 'Armazém'], ['energia', 'Energia da base'], ['fazenda', 'Fazenda']].forEach(([k, n]) => {
+    const r = el(list, 'button', 'mrow' + (linker.net === k ? ' sel' : ''), null,
+      (k ? netDot(k) : `<span style="display:inline-block;width:${U(5)};height:${U(5)};border:${U(1)} solid var(--g-danger)"></span>`) + `<span class="nm">${n}</span>`);
+    r.addEventListener('click', () => { linker.net = k; linkerGui(); });
+  });
+  el(g, 'button', 'gbtn', { ...box(9, 118, 144, 13), justifyContent: 'center', fontSize: U(7.5) }, '+ Nova rede');
+  el(g, 'div', 't', { left: U(9), top: U(136), fontSize: U(8) }, 'Abas');
+  el(g, 'button', 'gbtn', { ...box(97, 133, 56, 12), justifyContent: 'center', fontSize: U(7), borderColor: 'var(--g-dark)' }, 'Todas');
+  TYPES.forEach(([n, c], i) => { const on = i === 0; el(g, 'button', 'gbtn', { ...box(9 + (i % 2) * 74, 142 + Math.floor(i / 2) * 18, 70, 16), fontSize: U(7.5),
+    borderColor: on ? c : 'var(--g-dark)', background: on ? `color-mix(in srgb, ${c} 20%, var(--g-light))` : 'var(--g-light)', color: on ? '' : 'var(--g-mu)' }, `<span style="color:${c}">●</span>${n}`); });
+
+  // mapa (14 px mais baixo que hoje: 90 em vez de 104)
+  const rx = 161;
+  el(g, 'div', 'inset', { ...box(rx, 31, 130, 90), background: 'var(--g-light)' });
+  const net = linker.net ? NETS[linker.net][1] : 'var(--g-danger)';
+  el(g, 'div', 'a', { left: U(rx + 30), top: U(50), width: U(70), height: U(36), border: `${U(1)} dashed ${linker.net ? net : 'var(--g-dark)'}`, background: linker.net ? `color-mix(in srgb, ${net} 12%, transparent)` : 'transparent' });
+  el(g, 'div', 'a', { left: U(rx + 34), top: U(54), width: U(6), height: U(6), background: 'var(--g-ac)', border: `${U(1)} solid var(--g-ink)` });
+  el(g, 'div', 't', { left: U(rx + 41), top: U(50), fontSize: U(6) }, '1'); el(g, 'div', 't', { left: U(rx + 101), top: U(78), fontSize: U(6) }, '2');
+  [[52, 72], [70, 64], [90, 76]].forEach(([x, y]) => el(g, 'div', 'a', { left: U(rx + x), top: U(y), width: U(5), height: U(5), background: 'var(--n-mina)' }));
+  el(g, 'div', 't gmu', { left: U(rx + 44), top: U(110), fontSize: U(6.5) }, '1 quadrado = 16 blocos');
+
+  // linha Faces: Todas + os seis lados relativos à máquina
+  const allB = el(g, 'button', 'gbtn' + (all ? ' on' : ''), { ...box(rx, 124, 34, 12), justifyContent: 'center', fontSize: U(6.5) }, 'Todas');
+  allB.addEventListener('click', () => { linker.faces = all ? new Set() : new Set(ALL); linkerGui(); });
+  bindTip(allB, 'As seis faces');
+  LFACES.forEach(([f, name], i) => {
+    const on = linker.faces.has(f);
+    const b = el(g, 'button', 'gbtn' + (on ? ' on' : ''), { ...box(rx + 37 + i * 15.5, 124, 14, 12), justifyContent: 'center', padding: 0, fontSize: U(7), color: on ? '' : 'var(--g-mu)', borderColor: on ? '' : 'var(--g-dark)' }, f);
+    b.addEventListener('click', () => { if (on) linker.faces.delete(f); else linker.faces.add(f); linkerGui(); });
+    bindTip(b, `${name}<br><span class="g">Lado relativo à frente da máquina</span>`);
+  });
+
+  el(g, 'div', 't gmu', { left: U(rx), top: U(140), fontSize: U(7) }, 'Canto 1  −12, −61, −8');
+  el(g, 'div', 't gmu', { left: U(rx), top: U(150), fontSize: U(7) }, 'Canto 2  −9, −59, −7');
+  el(g, 'div', 't', { left: U(rx), top: U(160), fontSize: U(7), color: none ? 'var(--g-danger)' : '' }, none ? 'Marque ao menos uma face' : all ? '3 roteadores na área' : `3 roteadores · faces ${short}`);
+
+  // botões
+  let label, full, bar;
+  const nn = linker.net ? NETS[linker.net][0] : null;
+  if (none) { label = linker.net ? 'Vincular' : 'Desvincular'; full = 'Marque ao menos uma face'; bar = '<span class="w">Nenhuma face marcada no Vinculador</span>'; }
+  else if (linker.net && all) { label = 'Vincular 3'; full = `Põe as seis faces de 3 roteadores em ${nn} (Itens)`; bar = `3 roteadores vinculados a <span class="n">${nn}</span> (Itens, todas as faces)`; }
+  else if (linker.net) { label = `Vincular 3 · ${short}`; full = `Põe as faces ${long} de 3 roteadores em ${nn} (Itens)`; bar = `3 roteadores: faces <span class="k">${short}</span> em <span class="n">${nn}</span> (Itens)`; }
+  else if (all) { label = 'Desvincular 3'; full = 'As seis faces de 3 roteadores ficam sem rede (Itens)'; bar = '3 roteadores desvinculados (Itens, todas as faces)'; }
+  else { label = `Desvincular ${short} · 3`; full = `As faces ${long} de 3 roteadores ficam sem rede (Itens)`; bar = `3 roteadores: faces <span class="k">${short}</span> sem rede (Itens)`; }
+  const go = el(g, 'button', 'gbtn', { ...box(rx, 176, 88, 14), justifyContent: 'center', fontSize: U(7), background: none ? 'var(--g-dis)' : linker.net ? net : 'var(--g-danger)', color: '#fff' }, `<span class="lbl">${label}</span>`);
+  bindTip(go, full);
+  el(g, 'button', 'gbtn', { ...box(rx + 91, 176, 39, 14), justifyContent: 'center', fontSize: U(7) }, 'Limpar');
+  el(g, 'div', 't gmu', { right: U(2), bottom: U(1), fontSize: U(6) }, '⋱');
+  $('linkerBar').innerHTML = `<small>action bar depois de Vincular</small>${bar}`;
+  toolbar($('linkerStates'), LINKER_STATES, linker.state, setLinkerState);
+}
+setLinkerState('all');
+
+/* ===================== Tablet ===================== */
+(function tabletGui() {
+  const g = $('tabletGui');
+  el(g, 'div', 'stripe', { background: 'var(--g-ac)' });
+  el(g, 'div', 't', { left: U(9), top: U(8) }, 'Tablet de rede');
+  el(g, 'div', 't gmu', { right: U(9), top: U(8), fontSize: U(7.5) }, '6 nós · 4 redes');
+  ['Lista', 'Mapa', 'Estatísticas', 'Redes', 'Grupos'].forEach((n, i) => el(g, 'button', 'gbtn' + (i === 0 ? ' sel' : ''),
+    { ...box(9 + i * 50, 26, 48, 13), border: i === 0 ? '' : '0', background: i === 0 ? '' : 'transparent', justifyContent: 'center', fontSize: U(7.5) }, n));
+  el(g, 'div', 'gbtn', { ...box(9, 46, 120, 12), borderColor: 'var(--g-dark)', color: 'var(--g-dis)', fontSize: U(7) }, 'Buscar');
+  el(g, 'div', 'gbtn', { ...box(134, 46, 90, 12), borderColor: 'var(--n-arm)', fontSize: U(7), borderRadius: U(3) }, `${netDot('arm')}Armazém<span class="arrow">▾</span>`);
+  el(g, 'button', 'gbtn', { ...box(229, 46, 62, 12), justifyContent: 'center', fontSize: U(7) }, 'Selecionar');
+  const rows = [
+    ['Fornalha', '−9, −59, −7 · Extrai itens', `<span style="color:var(--n-arm)">faces em 2 redes</span>`, 'Ocioso'],
+    ['Baú de lingotes', '−4, −59, −7 · Insere itens', `<span style="color:var(--g-warn)">1 face sem rede: rede removida</span>`, 'Movendo'],
+  ];
+  rows.forEach(([n, d, x, s], i) => {
+    const r = el(g, 'button', 'a mrow', { ...box(9, 64 + i * 22, 282, 20), height: U(20), lineHeight: 1.15, background: 'transparent' },
+      `<span style="color:#8A8F98">▣</span><span class="nm">${n}<br><span class="gmu" style="font-size:${U(6.5)}">${d} · ${x}</span></span><span class="gmu" style="font-size:${U(6.5)}">● ${s}</span>`);
+    bindTip(r, i === 0 ? 'Fornalha<br><span class="g">Itens: Cima em Mina · Baixo em Armazém</span><br><span class="g">Clique para abrir à distância</span>'
+      : 'Baú de lingotes<br><span class="w">Energia: Cima ficou sem rede (a rede foi removida)</span>');
+  });
+})();
+})();
+</script>

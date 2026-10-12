@@ -77,7 +77,7 @@ public final class AreaRenderer {
         } else {
             LevelRenderer.renderLineBox(pose, lines, new AABB(area.first()).inflate(0.002), r, g, b, 1f);
             BlockPos aimed = aimed(minecraft);
-            if (aimed != null && mode == LinkerMode.AREA) {
+            if (aimed != null && mode.marksArea()) {
                 LinkerBox next = area.withSecond(aimed).box();
                 LevelRenderer.renderLineBox(pose, lines, aabb(next).inflate(0.002), r, g, b, 0.35f);
             }

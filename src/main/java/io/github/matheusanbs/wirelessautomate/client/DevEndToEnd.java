@@ -1311,6 +1311,7 @@ public final class DevEndToEnd {
     private static final List<BlockPos> showStorage = new ArrayList<>();
     private static BlockPos showSourceJar;
     private static final List<BlockPos> showTanks = new ArrayList<>();
+    private static BlockPos showRange;
 
     /** Metade da largura da casa (paredes em x = ±12) e as paredes norte e sul (o salão dos tiers no fundo). */
     private static final int HOUSE_X = 12;
@@ -1337,6 +1338,11 @@ public final class DevEndToEnd {
                 () -> onServer(server -> showRouters.stream().allMatch(p -> NetworkManager.get().contains(router(server, p))))
                         && showRouters.stream().allMatch(DevEndToEnd::clientSees),
                 () -> showRouters.size() + " roteadores"));
+        list.add(new Step("vincular as máquinas do alcance", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            showcaseRangeLink(server);
+            return null;
+        }), () -> onServer(server -> router(server, showRange).remoteMachines().machines().size() == 10),
+                () -> "máquinas " + onServer(server -> router(server, showRange).remoteMachines().machines().size())));
         // A casa inteira, de cima, vista do jardim.
         list.add(showLook("câmera na casa", 0, 17, 4.5, 0, 0, -14.5, false));
         list.add(wait("chunks e itens", 100));
@@ -1352,6 +1358,7 @@ public final class DevEndToEnd {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
                 ItemStack linker = new ItemStack(ModItems.LINKER.get());
                 LinkerItem.setMode(linker, LinkerMode.AREA);
+                LinkerItem.setFaces(linker, LinkerFaces.NONE.toggle(RemoteSide.TOP).toggle(RemoteSide.BOTTOM));
                 LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
                         java.util.Optional.of(showBase.offset(-8, 1, -7))));
                 player.setItemInHand(InteractionHand.MAIN_HAND, linker);
@@ -1429,6 +1436,21 @@ public final class DevEndToEnd {
             click(widget(byMessage(face(Direction.UP)), "face Cima"));
         }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit"))) != null, () -> "Editar"));
         list.add(capture("s4-roteador-fornalha"));
+        // Rede por face: a fornalha larga, face de baixo (na rede dos armazenamentos) com a lista de redes aberta.
+        list.add(new Step("fornalha larga, face de baixo", STEP_TIMEOUT_MS, () -> {
+            routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300);
+            click(widget(byMessage(face(Direction.DOWN)), "face Baixo"));
+        }, () -> routerScreen().size()[0] > 400 && routerScreen().getMenu().selectedFace() == Direction.DOWN,
+                () -> "face " + routerScreen().getMenu().selectedFace()));
+        list.add(new Step("abrir a lista de redes", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"), "pílula da Rede")),
+                () -> routerScreen().networkListShown() && stepTicks >= 4, () -> "lista " + routerScreen().networkListShown()));
+        list.add(capture("s3b-roteador-redes"));
+        list.add(new Step("fechar a lista e voltar à face de cima", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"), "pílula da Rede"));
+            click(widget(byMessage(face(Direction.UP)), "face Cima"));
+        }, () -> !routerScreen().networkListShown() && routerScreen().getMenu().selectedFace() == Direction.UP,
+                () -> "lista " + routerScreen().networkListShown()));
         list.add(new Step("abrir o filtro", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {
@@ -1471,6 +1493,37 @@ public final class DevEndToEnd {
         list.add(showLook("câmera no salão dos tiers", 0, 1.1, -16.9, 0, 2.3, -24, false));
         list.add(wait("salão dos tiers", 20));
         list.add(capture("s15-tiers"));
+        // O roteador de alcance: o canto noroeste e a tela larga, com a lista e o visor lado a lado.
+        list.add(showLook("câmera no alcance", -4, 2.2, -20, -11, 0.6, -20, false));
+        list.add(wait("alcance", 20));
+        list.add(capture("s17-alcance"));
+        list.add(showLook("perto do roteador de alcance", -6, 0.5, -20, -8, 1, -20, true));
+        list.add(open("abrir o roteador de alcance", () -> showRange));
+        list.add(new Step("alcance: tela larga com a lista", STEP_TIMEOUT_MS, () -> {
+            routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300);
+            if (!routerScreen().rangeListShown()) {
+                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+            }
+        }, () -> routerScreen().rangeListShown() && routerScreen().rangeViewShown() && rangeView().groups().size() == 2
+                && stepTicks >= 4, () -> "lista " + routerScreen().rangeListShown() + ", visor " + routerScreen().rangeViewShown()));
+        list.add(new Step("alcance: grupo dos altos-fornos", STEP_TIMEOUT_MS,
+                () -> clickRow(EditTarget.group(rangeGroup(Blocks.BLAST_FURNACE))),
+                () -> routerScreen().getMenu().snapshot().target().equals(EditTarget.group(rangeGroup(Blocks.BLAST_FURNACE)))
+                        && stepTicks >= 4,
+                () -> "alvo " + routerScreen().getMenu().snapshot().target()));
+        list.add(new Step("alcance: face de cima e vazão", 20_000,
+                () -> click(widget(byMessage(side(RemoteSide.TOP)), "face Topo")),
+                () -> routerScreen().getMenu().selectedFace() == Direction.UP
+                        && (routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()] > 0 || stepTicks > 300),
+                () -> "face " + routerScreen().getMenu().selectedFace() + ", vazão "
+                        + routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()]));
+        list.add(new Step("alcance: anotar a vazão", STEP_TIMEOUT_MS, () -> record("alcance: vazão",
+                String.valueOf(routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()])), () -> true, () -> ""));
+        list.add(capture("s18-alcance-tela"));
+        list.add(close("fechar o roteador de alcance"));
+        // Subir tier: o tooltip do cartão com origem e as receitas no JEI, com o salão ao fundo.
+        list.add(showLook("câmera no salão (cartões)", 0, 1.1, -16.9, 0, 2.3, -24, true));
+        upgradeCardSteps(list);
         // A vitrine dos itens, de perto.
         list.add(showLook("câmera na vitrine", 0, 4.2, -5, 0, 0.8, -10.5, false));
         list.add(wait("vitrine", 20));
@@ -1619,6 +1672,13 @@ public final class DevEndToEnd {
             showcaseHouse(server, level);
             showcaseSmelting(server, level, smelting.id());
             showcaseStorage(server, level, storage.id());
+            // Rede por face: as fornalhas recebem o minério da linha por cima e mandam os lingotes para a
+            // rede dos armazenamentos por baixo.
+            for (int i = 0; i < 5; i++) {
+                router(server, showBase.offset(-11, 1, -15 + 2 * i)).setFaceNetwork(ResourceType.ITEM, Direction.DOWN,
+                        storage.id());
+            }
+            showcaseRange(server, level, smelting.id());
             showcaseDisplay(server);
             showcaseTiers(server, level, data.create(player.getUUID(), "Tier Hall").id());
             if (StorageKind.SOURCE_TANK.loaded()) {
@@ -1847,6 +1907,68 @@ public final class DevEndToEnd {
         router(server, showInput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         router(server, showOutput.above()).setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
         refillShowcase(level);
+    }
+
+    /**
+     * Canto noroeste: o roteador de alcance. Um baú com um roteador Elite e o Upgrade de Alcance, e dez
+     * máquinas vinculadas sem roteador (cinco altos-fornos e cinco defumadores em cima, contra a parede
+     * oeste), em dois grupos: minérios para os altos-fornos, carne para os defumadores.
+     */
+    private static void showcaseRange(MinecraftServer server, ServerLevel level, UUID network) {
+        BlockPos chest = showBase.offset(-8, 0, -20);
+        showRange = chest.above();
+        level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        Container input = (Container) level.getBlockEntity(chest);
+        Item[] items = {Items.RAW_IRON, Items.RAW_GOLD, Items.BEEF, Items.PORKCHOP, Items.RAW_COPPER, Items.CHICKEN};
+        for (int slot = 0; slot < input.getContainerSize(); slot++) {
+            input.setItem(slot, new ItemStack(items[slot % items.length], 64));
+        }
+        placeShowRouter(server, level, chest, "elite", "Kitchen & Forge", network);
+        showRangeNetwork = network;
+        for (int z = -22; z <= -18; z++) {
+            BlockPos blast = showBase.offset(-11, 0, z);
+            level.setBlockAndUpdate(blast, Blocks.BLAST_FURNACE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING, Direction.EAST)
+                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT, true));
+            level.setBlockAndUpdate(blast.above(), Blocks.SMOKER.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING, Direction.EAST)
+                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT, true));
+            for (BlockPos machine : List.of(blast, blast.above())) {
+                ((Container) level.getBlockEntity(machine)).setItem(1, new ItemStack(Items.COAL_BLOCK, 64));
+            }
+        }
+    }
+
+    private static UUID showRangeNetwork;
+
+    /**
+     * Upgrade, vínculos e perfis do roteador de alcance, depois do {@code onLoad} dele (como nos GameTests):
+     * antes disso o motor não conhece as máquinas remotas.
+     */
+    private static void showcaseRangeLink(MinecraftServer server) {
+        RouterBlockEntity router = router(server, showRange);
+        router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+        router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        for (int z = -22; z <= -18; z++) {
+            BlockPos blast = showBase.offset(-11, 0, z);
+            router.linkMachine(blast, showRangeNetwork);
+            router.linkMachine(blast.above(), showRangeNetwork);
+        }
+        Filter ores = new Filter(Filter.ListMode.WHITELIST, false, List.of(
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_IRON), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_GOLD), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.RAW_COPPER), 0)));
+        Filter meat = new Filter(Filter.ListMode.WHITELIST, false, List.of(
+                new FilterEntry.ItemEntry(new ItemStack(Items.BEEF), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.PORKCHOP), 0),
+                new FilterEntry.ItemEntry(new ItemStack(Items.CHICKEN), 0)));
+        for (var group : router.remoteMachines().groups()) {
+            EditTarget target = EditTarget.group(group.id());
+            router.configureFace(target, ResourceType.ITEM, Direction.UP, PortMode.INSERT, 0,
+                    io.github.matheusanbs.wirelessautomate.network.RedstoneMode.IGNORE);
+            router.setFilter(target, ResourceType.ITEM, Direction.UP,
+                    group.block().getPath().equals("smoker") ? meat : ores);
+        }
     }
 
     /**
@@ -2167,6 +2289,7 @@ public final class DevEndToEnd {
                         moveMouse(0, 0);
                     }
                     if (stepTicks < 20) {
+                        quietShowcase();
                         return false;
                     }
                     capture(Minecraft.getInstance(), file);
@@ -2188,6 +2311,14 @@ public final class DevEndToEnd {
                 && Minecraft.getInstance().player.isCreative(), () -> "slot 9"));
     }
 
+    /** Na vitrine, tira os avisos (receitas desbloqueadas) e o chat de cima das telas antes de uma captura. */
+    private static void quietShowcase() {
+        if (SHOWCASE != null) {
+            Minecraft.getInstance().getToasts().clear();
+            Minecraft.getInstance().gui.getChat().clearMessages(false);
+        }
+    }
+
     /** O mouse sobre o slot {@code 9 + index} do inventário (a primeira linha de cima). */
     private static void hoverSlot(InventoryScreen screen, int index) {
         for (Slot slot : screen.getMenu().slots) {
@@ -2206,6 +2337,7 @@ public final class DevEndToEnd {
             }
             hoverSlot(screen, index);
             if (stepTicks < 8) {
+                quietShowcase();
                 return false;
             }
             capture(Minecraft.getInstance(), file);

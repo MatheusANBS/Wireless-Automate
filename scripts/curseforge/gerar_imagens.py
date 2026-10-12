@@ -186,6 +186,33 @@ def destaque(nome: str, titulo: str, subtitulo: str, origem: Path, recorte: tupl
     return img
 
 
+def lado_a_lado(nome: str, titulo: str, subtitulo: str, partes: list[tuple[Path, tuple[int, int, int, int]]],
+                altura: int = 760) -> Image.Image:
+    """Faixa de título e as capturas {@code partes} (captura, recorte em 1280x800) lado a lado, na mesma altura
+    ({@code altura} no layout de 1280, menor se não couber na largura), cada uma com moldura."""
+    fotos = [recorta(origem, recorte) for origem, recorte in partes]
+    vao = u(24)
+    area = LARGURA - u(48) - vao * (len(fotos) - 1)
+    h = min(u(altura), int(area / sum(f.width / f.height for f in fotos)))
+    fotos = [f.resize((round(f.width * h / f.height), h), Image.LANCZOS) for f in fotos]
+    faixa = u(150)
+    img = Image.new("RGB", (LARGURA, faixa + h + u(40)), FUNDO)
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, LARGURA, faixa - 1], fill=FAIXA)
+    d.rectangle([0, faixa - u(4), LARGURA, faixa - 1], fill=LISTRA)
+    px = u(6)
+    escreve_pixel(img, titulo, u(32), u(34), px, TITULO, sombra=SOMBRA_TITULO)
+    assert d.textlength(subtitulo, font=fonte(u(30))) < LARGURA - u(60), f"subtítulo de {nome} passa da borda"
+    d.text((u(34), u(34) + 7 * px + u(24)), subtitulo, fill=TEXTO, font=fonte(u(30)))
+    x = (LARGURA - sum(f.width for f in fotos) - vao * (len(fotos) - 1)) // 2
+    y, b = faixa + u(16), u(3)
+    for f in fotos:
+        d.rectangle([x - b, y - b, x + f.width + b - 1, y + f.height + b - 1], fill=MOLDURA)
+        img.paste(f, (x, y))
+        x += f.width + vao
+    return img
+
+
 # (tier, nome, cor do nome, só com o Allthemodium) na ordem do RouterTier, e as vazões padrão do ResourceType
 # (os químicos dividem a vazão com os fluidos); 0 = sem limite. Alcance: o padrão do RouterTier.
 TIERS = [
@@ -210,6 +237,10 @@ VAZOES = [
     ("Source/s", [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0]),
 ]
 ALCANCE = ["64 blocks", "512 blocks", "Dimension"] + ["All dims"] * 5
+# Upgrade de Alcance: raio e limite de máquinas padrão da RangeTiers (o Básico não aceita o upgrade).
+RAIO = [0, 6, 12, 16, 24, 32, 48, 64]
+MAQUINAS = [0, 8, 16, 32, 48, 64, 96, 128]
+UPGRADE_ALCANCE = ["-" if r == 0 else f"{r} / {m}" for r, m in zip(RAIO, MAQUINAS)]
 
 
 def tiers() -> Image.Image:
@@ -217,7 +248,11 @@ def tiers() -> Image.Image:
     largura, faixa = LARGURA, u(150)
     rotulo_w, margem = u(236), u(24)
     coluna = (largura - rotulo_w - margem) // len(TIERS)
-    img = Image.new("RGB", (largura, faixa + u(680)), FUNDO)
+    linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
+    linhas.append(("Range", ALCANCE))
+    linhas.append(("Range Upgrade", UPGRADE_ALCANCE))
+    fim = 256 + 72 * len(linhas) - 2  # a borda de baixo do bloco do Allthemodium, no layout de 1280
+    img = Image.new("RGB", (largura, faixa + u(fim + 66)), FUNDO)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, largura, faixa - 1], fill=FAIXA)
     d.rectangle([0, faixa - u(4), largura, faixa - 1], fill=LISTRA)
@@ -229,7 +264,7 @@ def tiers() -> Image.Image:
     atm = [i for i, t in enumerate(TIERS) if t[3]]
     # a borda fica um pouco fora das colunas: "Allthemodium" ocupa quase a coluna inteira
     ax0, ax1 = x0 + atm[0] * coluna - u(8), x0 + (atm[-1] + 1) * coluna + u(8)
-    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), fill=(250, 232, 212))
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(fim)], radius=u(10), fill=(250, 232, 212))
     for i, (tier, nome, cor, _) in enumerate(TIERS):
         cx = x0 + i * coluna + coluna // 2
         hx, (hy0, hy1) = TIER_HALL_X[i], TIER_HALL_Y
@@ -242,8 +277,6 @@ def tiers() -> Image.Image:
         img.paste(arte, (ax, ay))
         d.text((cx, faixa + u(206)), nome, fill=cor, font=fonte(u(22 if len(nome) < 11 else 18)), anchor="mt")
     y = faixa + u(256)
-    linhas = [(rotulo, [f"{v:,}" if v else "Unlimited" for v in valores]) for rotulo, valores in VAZOES]
-    linhas.append(("Range", ALCANCE))
     for n, (rotulo, valores) in enumerate(linhas):
         if n % 2 == 0:
             d.rectangle([u(24), y - u(12), largura - margem, y + u(50)], fill=ZEBRA)
@@ -254,11 +287,12 @@ def tiers() -> Image.Image:
             d.text((cx, y + u(19)), valor, fill=TEXTO, font=fonte(u(20)), anchor="mm")
         y += u(72)
     # borda e título do bloco do Allthemodium por cima das faixas
-    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(614)], radius=u(10), outline=(205, 98, 0), width=u(2))
+    d.rounded_rectangle([ax0, faixa + u(22), ax1, faixa + u(fim)], radius=u(10), outline=(205, 98, 0), width=u(2))
     d.text(((ax0 + ax1) // 2, faixa + u(30)), "Only with Allthemodium", fill=(170, 80, 0), font=fonte(u(20)),
            anchor="mt")
-    d.text((u(34), faixa + u(640)), "Per face and per resource type; chemicals use the fluid rate. "
-           "Without Allthemodium, Emerald upgrades straight to Ultimate.", fill=MUTED, font=fonte(u(20)))
+    d.text((u(34), faixa + u(fim + 26)), "Per face and type; chemicals use the fluid rate. Range Upgrade: radius in blocks / "
+           "machines. No Allthemodium: Emerald goes to Ultimate.", fill=MUTED,
+           font=fonte(u(20)))
     return img
 
 
@@ -266,7 +300,7 @@ DESTAQUES = [
     # (arquivo, título, subtítulo, captura, recorte[, (captura do detalhe, recorte, largura)]) — recortes
     # em coordenadas de 1280x800, qualquer que seja o tamanho da captura.
     ("feature-0-overview", "Everything wireless",
-     "An ore line, five storage blocks, a hall of tiers and an Ars lab, with no pipes.",
+     "An ore line, a range router, five storage blocks, a hall of tiers and an Ars lab, no pipes.",
      VITRINE / "s0-casa.png", (90, 150, 1190, 770)),
     ("feature-1-network", "Connect machines without pipes",
      "Attach a router to any machine. Routers on the same network trade with each other.",
@@ -274,6 +308,15 @@ DESTAQUES = [
     ("feature-2-router", "Configure every face",
      "Pick a face on the 3D model and set it per resource type, on up to five tabs.",
      VITRINE / "s3-roteador.png", (20, 80, 1260, 720)),
+    ("feature-19-face-networks", "A network per face",
+     "Ore comes in from the line on top, ingots go to storage from the bottom. One router.",
+     VITRINE / "s3b-roteador-redes.png", (20, 80, 1260, 720)),
+    ("feature-17-range", "One router, many machines",
+     "With the Range Upgrade, one router feeds every machine you link in its radius.",
+     VITRINE / "s17-alcance.png", (0, 100, 1280, 800)),
+    ("feature-18-range-screen", "Configure by machine type",
+     "Linked machines of the same block share one profile, with exceptions per machine.",
+     VITRINE / "s18-alcance-tela.png", (30, 90, 1250, 710)),
     ("feature-3-filters", "Tags in one click",
      "Put any item in the inspector to see and check all its tags, or search every tag in the game.",
      VITRINE / "s5b-filtro-tags.png", (272, 118, 1008, 680)),
@@ -305,7 +348,7 @@ DESTAQUES = [
      "Hold Left Alt: pick the mode and the pasted type, and paste on any machine in the area.",
      VITRINE / "s16-roda.png", (0, 0, 1280, 800)),
     ("feature-13-linker", "Linker by type",
-     "Check the tabs to link: only Items, or Energy and Source, or everything at once.",
+     "Check the tabs and the faces to link: only Items, only Top and Bottom, or everything.",
      VITRINE / "s13-vinculador.png", (164, 84, 1116, 716)),
     ("feature-6-tablet", "Network Tablet",
      "Every router, from anywhere: live stats per resource type, a map and groups.",
@@ -313,6 +356,15 @@ DESTAQUES = [
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
      VITRINE / "s8-guia.png", (296, 52, 1266, 658)),
+]
+
+
+# Imagens de capturas lado a lado: (arquivo, título, subtítulo, [(captura, recorte)]).
+LADO_A_LADO = [
+    ("feature-20-tier-up", "Raise a tier, keep the setup",
+     "The router in the next tier's ring, or an Upgrade Card with an origin: the same cost.",
+     [(VITRINE / "cartao-3-jei-direta.png", (395, 45, 845, 620)),
+      (VITRINE / "cartao-1-tooltip.png", (514, 385, 1270, 722))]),
 ]
 
 
@@ -347,6 +399,12 @@ def main() -> None:
             print(f"pulando {nome}: falta {faltam[0].relative_to(RAIZ)}")
             continue
         feitos.append(salva(destaque(nome, titulo, sub, origem, recorte, *detalhe), nome))
+    for nome, titulo, sub, partes in LADO_A_LADO:
+        faltam = [p for p, _ in partes if not p.exists()]
+        if faltam:
+            print(f"pulando {nome}: falta {faltam[0].relative_to(RAIZ)}")
+            continue
+        feitos.append(salva(lado_a_lado(nome, titulo, sub, partes), nome))
     print("gerados:", ", ".join(feitos))
 
 

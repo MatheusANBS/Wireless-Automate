@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -531,6 +532,21 @@ public final class StorageGameTests {
                 RouterTier.ELITE), new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get())));
         helper.assertTrue(helper.getLevel().getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, down, helper.getLevel()).isEmpty(), "desceu tier");
+        // Cartão com origem: Baú Básico + "Básico → Elite" sobe; Baú Avançado + o mesmo cartão não.
+        CraftingInput withOrigin = CraftingInput.of(2, 1,
+                List.of(chest, TierCoreItem.card(RouterTier.ELITE, RouterTier.BASIC)));
+        ItemStack elite = helper.getLevel().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, withOrigin, helper.getLevel())
+                .orElseThrow(() -> new GameTestAssertException("cartão com origem não subiu o Baú Básico"))
+                .value().assemble(withOrigin, helper.getLevel().registryAccess());
+        helper.assertValueEqual(StorageBlockItem.tierOf(elite), RouterTier.ELITE, "tier com origem");
+        helper.assertValueEqual(elite.get(ModDataComponents.STORAGE_CONTENTS.get()), contents, "conteúdo com origem");
+        CraftingInput otherTier = CraftingInput.of(2, 1, List.of(
+                StorageBlockItem.withTier(ModItems.STORAGE_CHEST.get(), RouterTier.ADVANCED),
+                TierCoreItem.card(RouterTier.ELITE, RouterTier.BASIC)));
+        helper.assertTrue(helper.getLevel().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, otherTier, helper.getLevel()).isEmpty(),
+                "cartão com origem Básico subiu um Baú Avançado");
         helper.succeed();
     }
 

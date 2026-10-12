@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -171,19 +172,31 @@ public final class RecipeGameTests {
         helper.assertValueEqual(RouterBlockItem.tierOf(picked), RouterTier.ELITE, "clique do meio");
 
         // O tooltip do cartão diz o que ele aumenta, com os números da config.
-        List<Component> lines = new java.util.ArrayList<>();
-        ItemStack advancedCard = new ItemStack(ModItems.TIER_CORES.get(RouterTier.ADVANCED).get());
-        advancedCard.getItem().appendHoverText(advancedCard, Item.TooltipContext.EMPTY, lines,
-                net.minecraft.world.item.TooltipFlag.NORMAL);
-        String text = lines.toString();
-        // Só os valores do tier do cartão (a origem varia): 256 itens/s e alcance de 512 blocos.
+        // Cartão com origem Básico → Avançado: "32 → 256" itens/s e alcance "64 blocos → 512 blocos".
+        List<String> texts = tooltip(TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC));
+        String change = Component.translatable("item.wirelessautomate.tier_core.items",
+                Component.translatable("item.wirelessautomate.tier_core.change", "32", "256")).getString();
+        String rangeChange = Component.translatable("item.wirelessautomate.tier_core.range",
+                Component.translatable("item.wirelessautomate.tier_core.change",
+                        Component.translatable("item.wirelessautomate.tier_core.range.blocks", "64"),
+                        Component.translatable("item.wirelessautomate.tier_core.range.blocks", "512"))).getString();
+        helper.assertTrue(texts.contains(change) && texts.contains(rangeChange),
+                "tooltip do cartão com origem sem os números: " + texts);
+        // Cartão antigo: só os valores do tier do cartão (a origem varia): 256 itens/s e alcance de 512 blocos.
+        texts = tooltip(TierCoreItem.card(RouterTier.ADVANCED, null));
         String items = Component.translatable("item.wirelessautomate.tier_core.items", "256").getString();
         String range = Component.translatable("item.wirelessautomate.tier_core.range",
                 Component.translatable("item.wirelessautomate.tier_core.range.blocks", "512")).getString();
-        List<String> texts = lines.stream().map(Component::getString).toList();
         helper.assertTrue(texts.contains(items) && texts.contains(range),
-                "tooltip sem os números do tier: " + text);
+                "tooltip do cartão antigo sem os números do tier: " + texts);
         helper.succeed();
+    }
+
+    private static List<String> tooltip(ItemStack card) {
+        List<Component> lines = new ArrayList<>();
+        card.getItem().appendHoverText(card, Item.TooltipContext.EMPTY, lines,
+                net.minecraft.world.item.TooltipFlag.NORMAL);
+        return lines.stream().map(Component::getString).toList();
     }
 
     @GameTest(template = "empty")

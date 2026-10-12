@@ -136,12 +136,19 @@ public record LinkerSnapshot(
     public static LinkerSnapshot capture(ServerPlayer player, ItemStack stack, @Nullable Outcome outcome) {
         NetworkSavedData data = NetworkSavedData.get(player.server);
         List<NetworkEntry> networks = new ArrayList<>();
+        // as mesmas redes do Tablet: as do jogador primeiro, depois as públicas (todas, para um operador)
         for (WaNetwork network : data.networksOf(player.getUUID())) {
             networks.add(new NetworkEntry(network.id(), network.name(), network.color(), true));
         }
+        boolean operator = player.hasPermissions(2);
         WaNetwork active = LinkerActions.activeNetwork(player);
-        if (active != null && !active.owner().equals(player.getUUID())) {
-            networks.add(new NetworkEntry(active.id(), active.name(), active.color(), false));
+        for (WaNetwork network : data.networks()) {
+            if (network.owner().equals(player.getUUID())) {
+                continue;
+            }
+            if (operator || network.isPublic() || active != null && network.id().equals(active.id())) {
+                networks.add(new NetworkEntry(network.id(), network.name(), network.color(), network.canUse(player)));
+            }
         }
         boolean unlink = LinkerItem.unlink(stack);
         LinkerTabs tabs = LinkerItem.tabs(stack);

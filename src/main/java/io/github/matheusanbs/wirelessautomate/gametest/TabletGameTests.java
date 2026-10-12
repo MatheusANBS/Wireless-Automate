@@ -392,6 +392,59 @@ public final class TabletGameTests {
         }
     }
 
+    /**
+     * Mover pelo Tablet só tira faces de redes que o jogador gerencia (dono ou operador): uma face na
+     * rede de outro dono fica, privada ou pública (pública deixa usar, não gerenciar); faces sem rede,
+     * em rede apagada ou do próprio jogador vão. O operador move todas.
+     */
+    @GameTest(template = "empty")
+    public static void moveNodesKeepsOthersNetworks(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork mine = data.create(player.getUUID(), "teste-dono-mina");
+        WaNetwork target = data.create(player.getUUID(), "teste-dono-alvo");
+        WaNetwork foreignPrivate = data.create(UUID.randomUUID(), "teste-dono-alheia");
+        WaNetwork foreignPublic = data.create(UUID.randomUUID(), "teste-dono-publica").withPublic(true);
+        data.update(foreignPublic);
+        WaNetwork deleted = data.create(UUID.randomUUID(), "teste-dono-apagada");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, foreignPrivate.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, foreignPublic.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.NORTH, mine.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.SOUTH, deleted.id());
+        data.remove(deleted.id());
+        openTablet(player, 74);
+        try {
+            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(74, List.of(key(router)),
+                    Optional.of(ResourceType.ITEM), Optional.of(target.id()))), 1, "nós movidos");
+            eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), foreignPrivate.id(), "privada alheia ficou");
+            eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), foreignPublic.id(), "pública alheia ficou");
+            for (Direction face : List.of(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST)) {
+                eq(helper, router.faceNetwork(ResourceType.ITEM, face), target.id(), "face " + face + " no alvo");
+            }
+        } finally {
+            close(player);
+        }
+        ServerPlayer operator = new ServerPlayer(helper.getLevel().getServer(), helper.getLevel(),
+                new GameProfile(UUID.randomUUID(), "test-mock-operator"),
+                net.minecraft.server.level.ClientInformation.createDefault()) {
+            @Override
+            protected int getPermissionLevel() {
+                return 2;
+            }
+        };
+        operator.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        openTablet(operator, 75);
+        try {
+            eq(helper, TabletPayloads.handleMoveNodes(operator, new TabletMoveNodesPayload(75, List.of(key(router)),
+                    Optional.of(ResourceType.ITEM), Optional.empty())), 1, "operador moveu");
+            helper.assertTrue(router.networks(ResourceType.ITEM).length == 0, "operador deixou faces em rede");
+            helper.succeed();
+        } finally {
+            close(operator);
+        }
+    }
+
     // ------------------------------------------------------------------ redes por face
 
     /** Liga a busca {@code search} e devolve o snapshot remontado. */

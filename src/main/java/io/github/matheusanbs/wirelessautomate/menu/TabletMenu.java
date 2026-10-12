@@ -730,7 +730,10 @@ public class TabletMenu extends AbstractContainerMenu {
      * Põe os nós numa rede: todas as faces (presa, perfis e exceções) do tipo {@code type} ou, vazio,
      * de todos os tipos carregados (as faces de um tipo cujo mod saiu ficam como estão); {@code network}
      * vazio tira da rede. Só nós visíveis ao jogador e carregados
-     * (a rede é guardada no roteador); os descarregados ficam de fora e são contados no aviso. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
+     * (a rede é guardada no roteador); os descarregados ficam de fora e são contados no aviso. Uma face
+     * numa rede que o jogador não gerencia ({@link WaNetwork#canManage}: dono ou operador; uma rede
+     * pública de outro dono também não) fica como está e é contada no aviso; faces sem rede ou em rede
+     * apagada vão. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
         if (viewer == null || keys.isEmpty() || keys.size() > MAX_MOVE
@@ -748,6 +751,11 @@ public class TabletMenu extends AbstractContainerMenu {
         boolean operator = viewer.hasPermissions(2);
         int moved = 0;
         int unloaded = 0;
+        int kept = 0;
+        java.util.function.Predicate<UUID> canLeave = from -> {
+            WaNetwork current = data.network(from);
+            return current == null || current.canManage(viewer);
+        };
         for (NodeKey key : new HashSet<>(keys)) {
             NodeIndex.Entry entry = index.entry(key);
             if (entry == null || !visible(entry, data, operator, viewer.getUUID())) {
@@ -759,15 +767,16 @@ public class TabletMenu extends AbstractContainerMenu {
                 continue;
             }
             UUID id = target == null ? null : target.id();
-            router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id);
+            kept += router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id, canLeave);
             moved++;
         }
         Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
                 : target.displayName();
+        String suffix = kept > 0 ? ".kept" : "";
         if (unloaded > 0) {
-            notice("moved.unloaded", moved, name, unloaded);
+            notice("moved.unloaded" + suffix, moved, name, unloaded, kept);
         } else {
-            notice("moved", moved, name);
+            notice("moved" + suffix, moved, name, kept);
         }
         return moved;
     }

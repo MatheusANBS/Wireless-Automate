@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerScan;
@@ -14,12 +15,14 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,13 +41,15 @@ import org.jetbrains.annotations.Nullable;
  * @param second     canto 2, idem
  * @param otherDimension a área foi marcada noutra dimensão (os cantos não vêm)
  * @param inside     roteadores carregados dentro da área
- * @param already    desses, quantos já estão na rede ativa nas abas marcadas (ao desvincular, já sem rede)
+ * @param already    desses, quantos já estão na rede ativa nas faces e abas marcadas (ao desvincular, já sem
+ *                   rede)
  * @param unloadedChunks chunks da área descarregados (os roteadores deles não entram na conta)
  * @param routers    pontos da prévia de cima, no máximo {@link #MAX_DOTS}
  * @param problem    por que não dá para vincular agora ({@link LinkerProblem#NONE} se dá)
  * @param maxVolume  volume máximo da config, para a mensagem de área grande
  * @param maxDistance distância máxima da config (0 = sem limite)
  * @param outcome    resultado do último Vincular desta tela, até a próxima ação
+ * @param faces      faces marcadas no Vinculador (lados relativos à máquina presa; a linha Faces)
  */
 public record LinkerSnapshot(
         List<NetworkEntry> networks,
@@ -63,7 +68,17 @@ public record LinkerSnapshot(
         LinkerProblem problem,
         long maxVolume,
         int maxDistance,
-        Optional<Outcome> outcome) {
+        Optional<Outcome> outcome,
+        LinkerFaces faces) {
+
+    /** Com todas as faces (capturas de desenvolvimento e estados copiados sem a linha Faces). */
+    public LinkerSnapshot(List<NetworkEntry> networks, Optional<UUID> active, boolean unlink, LinkerTabs tabs,
+            LinkerTabs available, LinkerMode mode, Optional<BlockPos> first, Optional<BlockPos> second,
+            boolean otherDimension, int inside, int already, int unloadedChunks, List<RouterDot> routers,
+            LinkerProblem problem, long maxVolume, int maxDistance, Optional<Outcome> outcome) {
+        this(networks, active, unlink, tabs, available, mode, first, second, otherDimension, inside, already,
+                unloadedChunks, routers, problem, maxVolume, maxDistance, outcome, LinkerFaces.ALL);
+    }
 
     /** Pontos na prévia: acima disso só a contagem vale. */
     public static final int MAX_DOTS = 512;
@@ -71,8 +86,9 @@ public record LinkerSnapshot(
     /**
      * Um roteador na prévia de cima.
      *
-     * @param color  cor da rede dele na primeira aba marcada, ou −1 sem rede
-     * @param linked já está na rede ativa nas abas marcadas (ao desvincular, já sem rede nelas)
+     * @param color  cor da rede da primeira face marcada (Frente, Trás, Esquerda, Direita, Cima, Baixo) da
+     *               máquina presa, na primeira aba marcada, ou −1 sem rede
+     * @param linked já está na rede ativa nas faces e abas marcadas (ao desvincular, já sem rede nelas)
      */
     public record RouterDot(int x, int z, int color, boolean linked) {
     }
@@ -82,7 +98,12 @@ public record LinkerSnapshot(
      * e os chunks descarregados. Ao desvincular, {@code network} vem vazio.
      */
     public record Outcome(int linked, int already, int protectedCount, int unloadedChunks, LinkerTabs tabs,
-            boolean unlink, String network, int color) {
+            boolean unlink, String network, int color, LinkerFaces faces) {
+        /** Com todas as faces. */
+        public Outcome(int linked, int already, int protectedCount, int unloadedChunks, LinkerTabs tabs,
+                boolean unlink, String network, int color) {
+            this(linked, already, protectedCount, unloadedChunks, tabs, unlink, network, color, LinkerFaces.ALL);
+        }
     }
 
     /** As abas que valem (só as dos tipos disponíveis), na ordem das abas. */
@@ -125,6 +146,11 @@ public record LinkerSnapshot(
         boolean unlink = LinkerItem.unlink(stack);
         LinkerTabs tabs = LinkerItem.tabs(stack);
         List<ResourceType> types = LinkerItem.effectiveTabs(stack);
+        LinkerFaces faces = LinkerItem.faces(stack);
+        // o modo Máquinas não usa as faces: a contagem fica a de todas
+        LinkerFaces counted = LinkerItem.mode(stack) == LinkerMode.MACHINES ? LinkerFaces.ALL : faces;
+        // a cor do ponto: a primeira face marcada (sem nenhuma, a Frente)
+        RemoteSide colorSide = faces.isEmpty() ? RemoteSide.FRONT : faces.marked().getFirst();
         LinkerArea area = LinkerItem.area(stack);
         boolean otherDimension = area != null && !area.dimension().equals(player.level().dimension());
         Optional<BlockPos> first = area == null || otherDimension ? Optional.empty() : Optional.of(area.first());
@@ -143,13 +169,15 @@ public record LinkerSnapshot(
             ResourceType colorType = types.isEmpty() ? ResourceType.ITEM : types.getFirst();
             for (RouterBlockEntity router : scan.routers()) {
                 inside++;
-                boolean linked = unlink ? LinkerActions.inTarget(router, types, null)
-                        : active != null && LinkerActions.inTarget(router, types, active.id());
+                boolean linked = unlink ? LinkerActions.inTarget(router, types, counted, null)
+                        : active != null && LinkerActions.inTarget(router, types, counted, active.id());
                 if (linked) {
                     already++;
                 }
                 if (dots.size() < MAX_DOTS) {
-                    UUID id = router.networkId(colorType);
+                    // a frente da máquina presa é lida só aqui, com a tela aberta
+                    Direction colorFace = Direction.values()[colorSide.toAbsolute(router.attachedFront())];
+                    UUID id = router.faceNetwork(colorType, colorFace);
                     WaNetwork network = id == null ? null : data.network(id);
                     BlockPos pos = router.getBlockPos();
                     dots.add(new RouterDot(pos.getX(), pos.getZ(), network == null ? -1 : network.color(), linked));
@@ -159,7 +187,7 @@ public record LinkerSnapshot(
         return new LinkerSnapshot(List.copyOf(networks), Optional.ofNullable(active).map(WaNetwork::id),
                 unlink, tabs, LinkerTabs.available(LoadedTypes.LIST), LinkerItem.mode(stack), first, second, otherDimension, inside, already,
                 unloaded, List.copyOf(dots), problem, LinkerActions.maxVolume(), LinkerActions.maxDistance(),
-                Optional.ofNullable(outcome));
+                Optional.ofNullable(outcome), faces);
     }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, LinkerSnapshot> STREAM_CODEC =
@@ -203,7 +231,9 @@ public record LinkerSnapshot(
             b.writeBoolean(o.unlink());
             b.writeUtf(o.network(), 64);
             b.writeInt(o.color());
+            b.writeVarInt(o.faces().mask());
         });
+        buf.writeVarInt(s.faces.mask());
     }
 
     private static LinkerSnapshot decode(RegistryFriendlyByteBuf buf) {
@@ -235,8 +265,10 @@ public record LinkerSnapshot(
         long maxVolume = buf.readVarLong();
         int maxDistance = buf.readVarInt();
         Optional<Outcome> outcome = buf.readOptional(b -> new Outcome(b.readVarInt(), b.readVarInt(), b.readVarInt(),
-                b.readVarInt(), new LinkerTabs(b.readVarInt()), b.readBoolean(), b.readUtf(64), b.readInt()));
+                b.readVarInt(), new LinkerTabs(b.readVarInt()), b.readBoolean(), b.readUtf(64), b.readInt(),
+                LinkerFaces.of(b.readVarInt())));
+        LinkerFaces faces = LinkerFaces.of(buf.readVarInt());
         return new LinkerSnapshot(List.copyOf(networks), active, unlink, tabs, available, mode, first, second, otherDimension, inside,
-                already, unloaded, List.copyOf(dots), problem, maxVolume, maxDistance, outcome);
+                already, unloaded, List.copyOf(dots), problem, maxVolume, maxDistance, outcome, faces);
     }
 }

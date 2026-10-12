@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
@@ -206,13 +207,13 @@ public final class ChemicalGameTests {
         List<ResourceType> tabs = LinkerItem.effectiveTabs(linker);
         helper.assertValueEqual(tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");
 
-        LinkerActions.apply(router, tabs, target);
+        LinkerActions.apply(router, tabs, LinkerFaces.ALL, target);
         helper.assertValueEqual(router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
         helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens vinculados");
         helper.assertValueEqual(router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-        helper.assertTrue(LinkerActions.inTarget(router, tabs, target), "não conta como vinculado");
+        helper.assertTrue(LinkerActions.inTarget(router, tabs, LinkerFaces.ALL, target), "não conta como vinculado");
 
-        LinkerActions.apply(router, List.of(ResourceType.CHEMICAL), null);
+        LinkerActions.apply(router, List.of(ResourceType.CHEMICAL), LinkerFaces.ALL, null);
         helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos não desvinculados");
         helper.assertValueEqual(router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
 

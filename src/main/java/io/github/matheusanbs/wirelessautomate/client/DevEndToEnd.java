@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
@@ -3390,7 +3391,73 @@ public final class DevEndToEnd {
                 () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB) + "; resultado na tela "
                         + linkerScreen().getMenu().snapshot().outcome()));
         list.add(capture("9-vinculador-vinculado"));
+        linkerFacesSteps(list);
         list.add(close("fechar o Vinculador"));
+    }
+
+    /**
+     * Linha Faces (rede por face): desmarca Frente, Esquerda, Direita e Cima (sobram Trás e Baixo),
+     * escolhe "Nenhuma (desvincular)" e Desvincular tira da rede só as faces de fluidos Trás e Baixo de
+     * cada roteador (pela frente da máquina de cada um); de volta à rede, Vincular põe essas faces de
+     * novo, e Todas marca as seis.
+     */
+    private static void linkerFacesSteps(List<Step> list) {
+        LinkerFaces backAndBottom = LinkerFaces.NONE.toggle(RemoteSide.BACK).toggle(RemoteSide.BOTTOM);
+        LinkerFaces faces = LinkerFaces.ALL;
+        for (RemoteSide side : new RemoteSide[] {RemoteSide.FRONT, RemoteSide.LEFT, RemoteSide.RIGHT, RemoteSide.TOP}) {
+            faces = faces.toggle(side);
+            LinkerFaces expected = faces;
+            list.add(new Step("desmarcar a face " + side.key(), STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.side.letter." + side.key()),
+                            "face " + side.key())),
+                    // espera a tela também: o próximo clique parte do estado dela
+                    () -> serverLinker(stack -> LinkerItem.faces(stack).equals(expected))
+                            && linkerScreen().getMenu().snapshot().faces().equals(expected),
+                    () -> "faces " + linkerScreen().getMenu().snapshot().faces()));
+        }
+        list.add(new Step("Nenhuma (desvincular)", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.network.unlink"), "Nenhuma")),
+                () -> serverLinker(LinkerItem::unlink) && linkerScreen().getMenu().snapshot().unlink(),
+                () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
+        list.add(clipCheck("Vinculador com faces"));
+        list.add(capture("9b-vinculador-faces-desvincular"));
+        list.add(new Step("Desvincular Trás e Baixo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.unlink.count.faces"), "Desvincular")),
+                () -> onServer(server -> {
+                    for (BlockPos pos : List.of(routerA, routerB)) {
+                        RouterBlockEntity router = router(server, pos);
+                        int marked = backAndBottom.absoluteMask(router.attachedFront());
+                        if (!router.attachedFacesIn(List.of(ResourceType.FLUID), marked, null)
+                                || !router.attachedFacesIn(List.of(ResourceType.FLUID), 63 & ~marked, areaNetwork)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }) && linkerScreen().getMenu().snapshot().outcome().map(o -> o.unlink() && o.linked() == 2)
+                        .orElse(false),
+                () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB) + "; resultado na tela "
+                        + linkerScreen().getMenu().snapshot().outcome()));
+        list.add(clipCheck("Vinculador desvinculado por faces"));
+        list.add(capture("9c-vinculador-faces-desvinculadas"));
+        list.add(new Step("de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
+                () -> serverLinker(stack -> !LinkerItem.unlink(stack)) && !linkerScreen().getMenu().snapshot().unlink(),
+                () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
+        list.add(new Step("Vincular Trás e Baixo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count.faces"), "Vincular")),
+                () -> onServer(server -> router(server, routerA).attachedFacesIn(List.of(ResourceType.FLUID), 63,
+                        areaNetwork) && router(server, routerB).attachedFacesIn(List.of(ResourceType.FLUID), 63,
+                        areaNetwork))
+                        && linkerScreen().getMenu().snapshot().outcome().map(o -> !o.unlink() && o.linked() == 2)
+                                .orElse(false),
+                () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB)));
+        list.add(clipCheck("Vinculador vinculado por faces"));
+        list.add(capture("9d-vinculador-faces-vinculadas"));
+        list.add(new Step("Todas as faces", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.faces.all"), "Todas")),
+                () -> serverLinker(stack -> LinkerItem.faces(stack).isAll())
+                        && linkerScreen().getMenu().snapshot().faces().isAll(),
+                () -> "faces " + linkerScreen().getMenu().snapshot().faces()));
     }
 
     /** Aperta ou solta o Shift como o teclado; termina quando o servidor vê o jogador agachado ou não. */

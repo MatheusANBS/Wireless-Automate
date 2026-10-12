@@ -17,7 +17,7 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  * @param text    o nome da rede nova ({@link Op#CREATE_NETWORK})
  * @param value   a aba ({@link Op#TOGGLE_TAB}: o {@code ordinal} do tipo), o modo
  *                ({@link Op#SET_MODE}: o {@code ordinal}) ou o desvincular ({@link Op#SET_UNLINK}: 1 liga,
- *                0 desliga)
+ *                0 desliga), as abas ({@link Op#SET_TABS}: a máscara) ou as faces ({@link Op#SET_FACES}: a máscara)
  */
 public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network, String text, int value)
         implements CustomPacketPayload {
@@ -37,7 +37,9 @@ public record LinkerActionPayload(int containerId, Op op, Optional<UUID> network
         CLEAR_AREA,
         LINK,
         /** "Todos" na tela: grava a máscara de abas de {@code value} (recusa uma sem tipo disponível). */
-        SET_TABS
+        SET_TABS,
+        /** Linha Faces: grava a máscara de faces de {@code value} (6 bits por {@code RemoteSide}; vazia é aceita). */
+        SET_FACES
     }
 
     public static final Type<LinkerActionPayload> TYPE = new Type<>(WirelessAutomate.id("linker_action"));

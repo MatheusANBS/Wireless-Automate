@@ -177,7 +177,7 @@ public class LinkerMenu extends AbstractContainerMenu {
         outcome = new LinkerSnapshot.Outcome(result.linked(), result.already(), result.protectedCount(),
                 result.unloadedChunks(), tabs, result.unlink(),
                 result.network() == null ? "" : result.network().name(),
-                result.network() == null ? 0 : result.network().color());
+                result.network() == null ? 0 : result.network().color(), result.faces());
     }
 
     /** Pede um estado novo no próximo {@link #broadcastChanges()} (depois de uma ação). */

@@ -259,19 +259,30 @@ public class RouterBlockEntity extends BlockEntity {
      * rede da aba fazia antes (Tablet, atalhos de teste, bench, comandos).
      */
     public void setNetworkAllFaces(Collection<ResourceType> types, @Nullable UUID network) {
+        setNetworkAllFaces(types, network, from -> true);
+    }
+
+    /**
+     * Como {@link #setNetworkAllFaces(Collection, UUID)}, mas uma face numa rede de onde
+     * {@code canLeave} recusa tirar (recebe a rede atual da face, nunca nula) fica como está: o Tablet
+     * só tira faces de redes que o jogador gerencia. Faces sem rede, ou já na rede {@code network},
+     * não perguntam. Devolve quantas faces ficaram por causa do {@code canLeave}.
+     */
+    public int setNetworkAllFaces(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
+        int[] kept = new int[1];
         batchChanges(() -> {
             for (ResourceType type : types) {
                 boolean changed = false;
                 for (FaceConfig config : faces[type.ordinal()]) {
-                    changed |= config.setNetwork(network);
+                    changed |= moveFace(config, network, canLeave, kept);
                 }
                 for (MachineGroup group : remotes.groups()) {
-                    changed |= setNetwork(group.profile(), type, network);
+                    changed |= setNetwork(group.profile(), type, network, canLeave, kept);
                 }
                 for (RemoteMachine machine : remotes.machines()) {
                     MachineConfig exception = machine.exception();
                     if (exception != null) {
-                        changed |= setNetwork(exception, type, network);
+                        changed |= setNetwork(exception, type, network, canLeave, kept);
                     }
                 }
                 if (changed) {
@@ -286,14 +297,25 @@ public class RouterBlockEntity extends BlockEntity {
                 }
             }
         });
+        return kept[0];
     }
 
-    private static boolean setNetwork(MachineConfig config, ResourceType type, @Nullable UUID network) {
+    private static boolean setNetwork(MachineConfig config, ResourceType type, @Nullable UUID network,
+            Predicate<UUID> canLeave, int[] kept) {
         boolean changed = false;
         for (RemoteSide side : RemoteSide.values()) {
-            changed |= config.face(type, side).setNetwork(network);
+            changed |= moveFace(config.face(type, side), network, canLeave, kept);
         }
         return changed;
+    }
+
+    private static boolean moveFace(FaceConfig config, @Nullable UUID network, Predicate<UUID> canLeave, int[] kept) {
+        UUID from = config.network();
+        if (from != null && !from.equals(network) && !canLeave.test(from)) {
+            kept[0]++;
+            return false;
+        }
+        return config.setNetwork(network);
     }
 
     /**

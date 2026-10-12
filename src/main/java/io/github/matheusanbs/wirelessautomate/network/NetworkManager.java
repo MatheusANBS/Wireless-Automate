@@ -391,7 +391,8 @@ public final class NetworkManager {
 
     /**
      * Para GameTests e diagnóstico: a máquina remota em {@code machinePos} tem uma porta ativa do tipo
-     * na face absoluta {@code face} nas rotas atuais (lida na última montagem). Não cria nada.
+     * na face absoluta {@code face} na leitura da última montagem, em qualquer rede (inclusive face
+     * sem rede ou de rede pausada: a leitura é do nó, dividida entre as redes dele). Não cria nada.
      */
     public boolean hasRemotePort(RouterBlockEntity node, BlockPos machinePos, ResourceType type, Direction face) {
         NodePorts ports = nodes.get(node);

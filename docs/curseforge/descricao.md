@@ -13,7 +13,8 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 ![Connect machines without pipes](https://media.forgecdn.net/attachments/2034/635/feature-1-network-png.png)
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
-- **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). Each resource tab of a router can join a different network, so a furnace's items can go to your ore line while its energy comes from your base grid.
+- **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). **Each face of the machine joins its own network**, per resource type, so one furnace can take ore from your mining line on top and send ingots to storage from the bottom, while its energy comes from your base grid.
+- **One router, many machines:** with the **Range Upgrade**, a single router serves every machine you link in its radius (up to 64 blocks and 128 machines on Ultimate). Machines of the same type share one profile, so a whole farm is set up once.
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
@@ -37,22 +38,22 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 ### Five tiers, eight with Allthemodium
 
-Upgrade Cards raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate, and each card takes a router from **any lower tier** straight to its own (a Basic router + the Emerald Card is an Emerald router). With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate Card takes **ATM Star shards**. Upgrade in place by using the card on the router, or combine both in a crafting table. The router keeps its configuration.
+Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
 ![Eight tiers](https://media.forgecdn.net/attachments/2034/638/feature-4-tiers-png.png)
 
-| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
-| --- | --- | --- | --- | --- | --- |
-| Basic | 32 | 2,000 | 1,000 | 100 | 64 blocks |
-| Advanced | 256 | 16,000 | 8,000 | 800 | 512 blocks |
-| Elite | 2,048 | 128,000 | 64,000 | 6,400 | Whole dimension |
-| Emerald | 16,384 | 1,024,000 | 512,000 | 51,200 | Every dimension |
-| Allthemodium¹ | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Every dimension |
-| Vibranium¹ | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Every dimension |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 262,144,000 | 26,214,400 | Every dimension |
-| Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
+| Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
+| --- | --- | --- | --- | --- | --- | --- |
+| Basic | 32 | 2,000 | 1,000 | 100 | 64 blocks | — |
+| Advanced | 256 | 16,000 | 8,000 | 800 | 512 blocks | 6 blocks, 8 machines |
+| Elite | 2,048 | 128,000 | 64,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
+| Emerald | 16,384 | 1,024,000 | 512,000 | 51,200 | Every dimension | 16 blocks, 32 machines |
+| Allthemodium¹ | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Every dimension | 24 blocks, 48 machines |
+| Vibranium¹ | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 262,144,000 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
+| Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension | 64 blocks, 128 machines |
 
-*Per face and per resource type. ¹ Only with Allthemodium. Server owners can change every value in the config.*
+*Per face and per resource type; every machine linked by the Range Upgrade gets the full rate. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
 ![From iron to Unobtainium](https://media.forgecdn.net/attachments/2034/649/feature-15-tier-hall-png.png)
 
@@ -73,7 +74,7 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 | Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 262G FE | 2,621,440,000 |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited |
 
-- Upgrade with the same Upgrade Cards as the router, without losing the contents.
+- Upgrade with the same rings and Upgrade Cards as the router, without losing the contents.
 - **Break it and the contents go with the item**, like a shulker box, tier included.
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
 - Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
@@ -97,8 +98,9 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2034/639/feature-5-area-png.png)
 
-- **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs you check (Items, Fluids, Energy and, with the optional mods, Chemicals and Source). Pick **None (unlink)** to take those tabs out of their network instead.
-- **Configurator:** copies a router's setup (faces, filters, priorities, redstone and networks) and pastes it on other routers, one by one or over an area. Area paste can touch only routers on the **same kind of machine**, so you can configure a whole production line in a few clicks, or every router in the area. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the mode and the pasted type.
+- **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs and machine faces you check (Items, Fluids, Energy and, with the optional mods, Chemicals and Source). Pick **None (unlink)** to take them out of their network instead. In **Machines** mode it links machines to a router with the Range Upgrade, by click or by area.
+- **Range Upgrade:** one router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs.
+- **Configurator:** copies a router's setup (faces, filters, priorities, redstone and the network of each face) and pastes it on other routers, one by one or over an area. Area paste can touch only routers on the **same kind of machine**, so you can configure a whole production line in a few clicks, or every router in the area. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the mode and the pasted type.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
@@ -110,7 +112,7 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2034/640/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
+Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 
 ### Built-in guide book
 
@@ -141,8 +143,8 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Any mod with standard NeoForge storage** | Items, fluids and energy work with any machine, chest or tank that exposes NeoForge's standard item, fluid and energy handlers, which covers most tech and storage mods (tested with Sophisticated Storage and Mekanism). |
 | **Mekanism** (optional) | A **Chemicals** tab for gases, infuse types, pigments and slurries, and the Wireless Chemical Tank. Remember to enable the face in the Mekanism machine's side configuration. |
 | **Ars Nouveau** (optional) | A **Source** tab (Source Jars, Relays and the Imbuement Chamber connect straight to a router) and the **Wireless Source Tank**, which Ars machines use like a Source Jar. Needs Ars Nouveau 5.2 or newer. |
-| **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate Card takes ATM Star shards. |
-| **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; router and storage upgrades in the crafting table show in JEI. |
+| **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
+| **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
 | **GuideME** (optional) | The in-game guide book. |
 
 ## Performance

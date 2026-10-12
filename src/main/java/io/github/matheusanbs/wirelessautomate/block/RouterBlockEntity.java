@@ -268,6 +268,13 @@ public class RouterBlockEntity extends BlockEntity {
                     changed(NetworkManager.typeBit(type));
                 }
             }
+            // como no editRemote: a exceção que ficou igual ao perfil do grupo some
+            for (RemoteMachine machine : remotes.machines()) {
+                MachineConfig exception = machine.exception();
+                if (exception != null && exception.sameAs(remotes.groupOf(machine).profile())) {
+                    machine.setException(null);
+                }
+            }
         });
     }
 

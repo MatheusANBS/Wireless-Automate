@@ -130,14 +130,22 @@ public record TabletSnapshot(
     /**
      * Um nó da página.
      *
-     * @param networks rede de cada aba, por {@link ResourceType#ordinal()}
-     * @param roles    papéis em bits ({@code NodeIndex.role})
-     * @param machine  bloco da máquina, para o ícone e o nome
+     * @param networks       por {@link ResourceType#ordinal()}, as redes distintas das faces do tipo
+     *                       (presa, perfis e exceções), só as que ainda existem
+     * @param roles          papéis em bits ({@code NodeIndex.role})
+     * @param machine        bloco da máquina, para o ícone e o nome
+     * @param removedNetwork alguma face aponta para uma rede que não existe mais
      */
     public record NodeView(NodeKey key, String name, ResourceLocation machine, RouterTier tier,
-            List<Optional<UUID>> networks, int roles, NodeStatus status) {
-        public Optional<UUID> network(ResourceType type) {
+            List<List<UUID>> networks, int roles, NodeStatus status, boolean removedNetwork) {
+        /** As redes das faces do tipo {@code type}. */
+        public List<UUID> networks(ResourceType type) {
             return networks.get(type.ordinal());
+        }
+
+        /** Redes distintas somando todos os tipos (uma rede em dois tipos conta uma vez). */
+        public int distinctNetworks() {
+            return (int) networks.stream().flatMap(List::stream).distinct().count();
         }
     }
 
@@ -251,11 +259,15 @@ public record TabletSnapshot(
             buf.writeUtf(n.name, 64);
             buf.writeResourceLocation(n.machine);
             buf.writeEnum(n.tier);
-            for (Optional<UUID> network : n.networks) {
-                buf.writeOptional(network, (b, id) -> b.writeUUID(id));
+            for (List<UUID> networks : n.networks) {
+                buf.writeVarInt(networks.size());
+                for (UUID id : networks) {
+                    buf.writeUUID(id);
+                }
             }
             buf.writeVarInt(n.roles);
             buf.writeEnum(n.status);
+            buf.writeBoolean(n.removedNetwork);
         }
     }
 
@@ -323,12 +335,19 @@ public record TabletSnapshot(
             String name = buf.readUtf(64);
             ResourceLocation machine = buf.readResourceLocation();
             RouterTier tier = buf.readEnum(RouterTier.class);
-            List<Optional<UUID>> typeNetworks = new ArrayList<>(ResourceType.values().length);
+            List<List<UUID>> typeNetworks = new ArrayList<>(ResourceType.values().length);
             for (int t = 0; t < ResourceType.values().length; t++) {
-                typeNetworks.add(buf.readOptional(b -> b.readUUID()));
+                int count = buf.readVarInt();
+                List<UUID> ids = new ArrayList<>(count);
+                for (int j = 0; j < count; j++) {
+                    ids.add(buf.readUUID());
+                }
+                typeNetworks.add(List.copyOf(ids));
             }
-            nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), buf.readVarInt(),
-                    buf.readEnum(NodeStatus.class)));
+            int roles = buf.readVarInt();
+            NodeStatus status = buf.readEnum(NodeStatus.class);
+            nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, status,
+                    buf.readBoolean()));
         }
         return new Page(query, total, matching, List.copyOf(nodes));
     }

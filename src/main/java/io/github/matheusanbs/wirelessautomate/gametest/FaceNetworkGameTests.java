@@ -264,6 +264,34 @@ public final class FaceNetworkGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void allFacesDropsExceptionEqualToProfile(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithFurnaces(helper);
+        UUID network = network(helper, "exceção igual ao perfil");
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_A)), "não vinculou a fornalha A");
+                    helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_B)), "não vinculou a fornalha B");
+                    RemoteMachines remotes = router.remoteMachines();
+                    int indexA = remotes.index(helper.absolutePos(FURNACE_A));
+                    int indexB = remotes.index(helper.absolutePos(FURNACE_B));
+                    // A: exceção só pela rede; B: exceção pelo modo
+                    router.setFaceNetwork(EditTarget.machine(indexA), ResourceType.ITEM, Direction.NORTH, network);
+                    router.configureFace(EditTarget.machine(indexB), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                            RedstoneMode.IGNORE);
+                    helper.assertTrue(remotes.machine(indexA).hasException(), "a A não ganhou exceção");
+
+                    router.setNetworkId(ResourceType.ITEM, network);
+                    helper.assertFalse(remotes.machine(indexA).hasException(),
+                            "a exceção igual ao perfil continuou depois de todas as faces");
+                    helper.assertTrue(remotes.machine(indexB).hasException(), "a exceção de verdade sumiu");
+                    assertAllRemote(helper, router, EditTarget.machine(indexA), ResourceType.ITEM, network,
+                            "a A fora da rede");
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
     public static void exceptionDiffersOnlyByNetwork(GameTestHelper helper) {
         RouterBlockEntity router = routerWithFurnaces(helper);
         UUID network = network(helper, "exceção");

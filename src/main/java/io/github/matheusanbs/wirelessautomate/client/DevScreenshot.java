@@ -601,17 +601,19 @@ public final class DevScreenshot {
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
             @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status) {
         // uma rede por tipo do registro (Itens, Fluidos e Energia; os outros sem rede)
-        List<Optional<UUID>> networks = new java.util.ArrayList<>();
+        List<List<UUID>> networks = new java.util.ArrayList<>();
         for (ResourceType type : ResourceType.values()) {
-            networks.add(Optional.ofNullable(switch (type) {
+            UUID id = switch (type) {
                 case ITEM -> items;
                 case FLUID -> fluids;
                 case ENERGY -> energy;
                 default -> null;
-            }));
+            };
+            networks.add(id == null ? List.of() : List.of(id));
         }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
-                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status);
+                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
+                false);
     }
 
     // ------------------------------------------------------------------ Vinculador

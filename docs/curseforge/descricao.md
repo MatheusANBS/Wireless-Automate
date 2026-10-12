@@ -4,7 +4,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-![Everything wireless](ENVIAR:feature-0-overview.png)
+![Everything wireless](https://media.forgecdn.net/attachments/2046/274/feature-0-overview-png.png)
 
 ---
 
@@ -19,17 +19,17 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 - **Priority, round-robin and redstone control** for every face and resource type.
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
 
-![Configure every face](ENVIAR:feature-2-router.png)
+![Configure every face](https://media.forgecdn.net/attachments/2046/276/feature-2-router-png.png)
 
-![A network per face](ENVIAR:feature-19-face-networks.png)
+![A network per face](https://media.forgecdn.net/attachments/2046/272/feature-19-face-networks-png.png)
 
 ### Range Upgrade
 
 One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs.
 
-![One router, many machines](ENVIAR:feature-17-range.png)
+![One router, many machines](https://media.forgecdn.net/attachments/2046/270/feature-17-range-png.png)
 
-![Configure by machine type](ENVIAR:feature-18-range-screen.png)
+![Configure by machine type](https://media.forgecdn.net/attachments/2046/271/feature-18-range-screen-png.png)
 
 ### Filters with no entry limit
 
@@ -50,7 +50,7 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
-![Eight tiers](ENVIAR:feature-4-tiers.png)
+![Eight tiers](https://media.forgecdn.net/attachments/2046/277/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 
 ![From iron to Unobtainium](https://media.forgecdn.net/attachments/2034/649/feature-15-tier-hall-png.png)
 
-![Raise a tier, keep the setup](ENVIAR:feature-20-tier-up.png)
+![Raise a tier, keep the setup](https://media.forgecdn.net/attachments/2046/273/feature-20-tier-up-png.png)
 
 ### Wireless storage
 
@@ -117,11 +117,11 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 ![Configurator wheel](https://media.forgecdn.net/attachments/2035/213/feature-16-wheel-png.png)
 
-![Linker by type](ENVIAR:feature-13-linker.png)
+![Linker by type](https://media.forgecdn.net/attachments/2046/279/feature-13-linker-png.png)
 
 ### Network Tablet
 
-![Network Tablet](ENVIAR:feature-6-tablet.png)
+![Network Tablet](https://media.forgecdn.net/attachments/2046/278/feature-6-tablet-png.png)
 
 Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 

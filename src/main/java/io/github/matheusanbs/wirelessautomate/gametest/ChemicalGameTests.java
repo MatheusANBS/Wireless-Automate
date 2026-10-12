@@ -277,4 +277,15 @@ public final class ChemicalGameTests {
         helper.assertValueEqual(tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
         helper.succeed();
     }
+
+    /** Tanque Químico Avançado (com conteúdo e filtro) no anel do Elite sobe para o Elite com os mesmos componentes. */
+    @GameTest(template = "empty")
+    public static void directRecipeKeepsChemicalTank(GameTestHelper helper) {
+        if (!StorageKind.CHEMICAL_TANK.loaded()) {
+            helper.succeed();
+            return;
+        }
+        TierUpgradeGameTests.directStorage(helper, StorageKind.CHEMICAL_TANK);
+        helper.succeed();
+    }
 }

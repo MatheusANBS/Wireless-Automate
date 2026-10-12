@@ -94,6 +94,8 @@ public final class RecipeEditorGameTests {
                 "filter_card_copy (serializador próprio) não é editável");
         helper.assertTrue(entries.stream().noneMatch(e -> e.id().equals(id("router_upgrade"))),
                 "router_upgrade (serializador próprio) não é editável");
+        helper.assertTrue(entries.stream().noneMatch(e -> e.id().equals(id("tier_core_elite"))),
+                "tier_core_elite (wirelessautomate:tier_upgrade) não é editável");
         boolean guide = entries.stream().anyMatch(e -> e.id().equals(id("guide")));
         helper.assertValueEqual(guide, ModList.get().isLoaded("guideme"), "guide só com o GuideME");
         helper.succeed();
@@ -229,7 +231,7 @@ public final class RecipeEditorGameTests {
     public static void keepsConditions(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ResourceLocation file = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID,
-                "recipe/tier_core_allthemodium.json");
+                "recipe/storage_chemical_tank.json");
         Resource resource = server.getResourceManager().getResource(file)
                 .orElseThrow(() -> new GameTestAssertException("o jar deve ter o recurso " + file));
         JsonObject json;
@@ -242,7 +244,7 @@ public final class RecipeEditorGameTests {
                 .orElseThrow(() -> new GameTestAssertException("o padrão deve virar rascunho"));
         JsonObject out = RecipeJson.toOverride(json, draft.withCount(2));
         String conditions = out.getAsJsonArray(RecipeJson.CONDITIONS).toString();
-        helper.assertTrue(conditions.contains("neoforge:mod_loaded") && conditions.contains("allthemodium"),
+        helper.assertTrue(conditions.contains("neoforge:mod_loaded") && conditions.contains("mekanism"),
                 "a condição mod_loaded deve ser mantida: " + conditions);
         helper.assertFalse(conditions.contains(RecipeJson.FALSE_CONDITION), "sem neoforge:false");
         helper.assertValueEqual(out.getAsJsonObject("result").get("count").getAsInt(), 2, "count do override");

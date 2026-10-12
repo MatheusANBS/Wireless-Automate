@@ -62,6 +62,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
@@ -100,6 +101,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
+import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import net.neoforged.neoforge.client.ClientCommandHandler;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -1916,10 +1919,8 @@ public final class DevEndToEnd {
                 {"{id:\"wirelessautomate:linker\",count:1}", "{id:\"wirelessautomate:configurator\",count:1}",
                         "{id:\"wirelessautomate:network_tablet\",count:1}", "{id:\"wirelessautomate:filter_card\",count:1}",
                         guide},
-                {"{id:\"wirelessautomate:tier_core_emerald\",count:1}",
-                        "{id:\"wirelessautomate:tier_core_" + atm(RouterTier.VIBRANIUM, RouterTier.ELITE).getSerializedName()
-                                + "\",count:1}",
-                        "{id:\"wirelessautomate:tier_core_ultimate\",count:1}",
+                {cardSnbt(RouterTier.EMERALD), cardSnbt(atm(RouterTier.VIBRANIUM, RouterTier.ELITE)),
+                        cardSnbt(RouterTier.ULTIMATE),
                         "{id:\"wirelessautomate:chunk_loader_upgrade\",count:1}", "{id:\"wirelessautomate:router\",count:1}"}};
         int[] zs = {-12, -9};
         for (int r = 0; r < rows.length; r++) {
@@ -1932,6 +1933,14 @@ public final class DevEndToEnd {
                         pos.getX() + 0.5, pos.getY() + 0.45, pos.getZ() + 0.5, rows[r][i]));
             }
         }
+    }
+
+    /** O Cartão de Upgrade de um degrau para {@code tier} (origem no degrau anterior), em SNBT para o summon. */
+    private static String cardSnbt(RouterTier tier) {
+        RouterTier from = tier.previous();
+        return "{id:\"wirelessautomate:tier_core_" + tier.getSerializedName() + "\",count:1"
+                + (from == null ? "" : ",components:{\"wirelessautomate:upgrade_from\":\"" + from.getSerializedName()
+                        + "\"}") + "}";
     }
 
     /**
@@ -1963,10 +1972,10 @@ public final class DevEndToEnd {
             placeShowRouter(server, level, block, tiers[i].getSerializedName(), names[i] + " Router", network);
             if (ModItems.TIER_CORES.containsKey(tiers[i])) {
                 command(server, String.format(java.util.Locale.ROOT,
-                        "summon minecraft:item_display %.2f %.2f %.2f {item:{id:\"wirelessautomate:tier_core_%s\",count:1},"
+                        "summon minecraft:item_display %.2f %.2f %.2f {item:%s,"
                                 + "billboard:\"center\",brightness:{sky:15,block:15},transformation:{left_rotation:[0f,0f,0f,1f],"
                                 + "right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[0.7f,0.7f,0.7f]}}",
-                        block.getX() + 0.5, block.getY() + 2.5, block.getZ() + 0.5, tiers[i].getSerializedName()));
+                        block.getX() + 0.5, block.getY() + 2.5, block.getZ() + 0.5, cardSnbt(tiers[i])));
             }
         }
         // Lanternas no piso nas pontas da fila.
@@ -2089,6 +2098,120 @@ public final class DevEndToEnd {
 
     /** Total guardado nos dois Baús do roteiro: 12 milhões de pedregulho, 64 diamantes e 1.000 de terra. */
     private static final long CHEST_TOTAL = 12_000_000L + 64 + 1_000;
+
+    /**
+     * Cartão de Upgrade com origem: o tooltip do cartão Básico → Elite no inventário ({@code cartao-1-tooltip}) e,
+     * com o JEI, a tela de receitas dele pela tecla do JEI (R) com o mouse em cima: o cartão Avançado → Elite (o
+     * cartão de um degrau, {@code cartao-2-jei-um-degrau}), o roteador Elite (a receita direta e o par bloco +
+     * cartão, {@code cartao-3-jei-direta}) e o Básico → Elite (o cartão que pula, {@code cartao-4-jei-pula}). Se a
+     * tela do JEI não abrir, o passo anota no log e segue sem a captura.
+     */
+    private static void upgradeCardSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        ItemStack[] shown = {TierCoreItem.card(RouterTier.ELITE, RouterTier.BASIC),
+                TierCoreItem.card(RouterTier.ELITE, RouterTier.ADVANCED),
+                RouterBlockItem.withTier(ModItems.ROUTER.get(), RouterTier.ELITE)};
+        list.add(new Step("cartão: no inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            // Em sobrevivência: no criativo o inventário abre a tela criativa, na aba que estava.
+            player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            for (int i = 0; i < shown.length; i++) {
+                player.getInventory().setItem(9 + i, shown[i].copy());
+            }
+            return null;
+        }), () -> !Minecraft.getInstance().player.isCreative()
+                && Minecraft.getInstance().player.getInventory().getItem(9).getItem() instanceof TierCoreItem
+                && TierCoreItem.origin(Minecraft.getInstance().player.getInventory().getItem(9)) == RouterTier.BASIC,
+                () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9)));
+        list.add(new Step("cartão: abrir o inventário", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player)),
+                () -> Minecraft.getInstance().screen instanceof InventoryScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        String[] files = {"cartao-4-jei-pula", "cartao-2-jei-um-degrau", "cartao-3-jei-direta"};
+        list.add(hoverCapture("cartao-1-tooltip", 0, () -> Minecraft.getInstance().screen instanceof InventoryScreen));
+        if (!ModList.get().isLoaded("jei")) {
+            files = new String[0];
+        }
+        for (int i = 0; i < files.length; i++) {
+            int index = i;
+            String file = files[i];
+            boolean[] opened = new boolean[1];
+            list.add(new Step("cartão: receitas do JEI (" + file + ")", STEP_TIMEOUT_MS, () -> {
+                if (!(Minecraft.getInstance().screen instanceof InventoryScreen)) {
+                    Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player));
+                }
+            }, () -> {
+                Screen screen = Minecraft.getInstance().screen;
+                if (screen instanceof InventoryScreen inventory) {
+                    if (stepTicks < 4) {
+                        return false;
+                    }
+                    hoverSlot(inventory, index);
+                    if (stepTicks == 8) {
+                        // A tecla do JEI passa pelo teclado (o JEI escuta o evento da tela, não o keyPressed).
+                        var keyboard = Minecraft.getInstance().keyboardHandler;
+                        long window = Minecraft.getInstance().getWindow().getWindow();
+                        keyboard.keyPress(window, GLFW.GLFW_KEY_R, 0, GLFW.GLFW_PRESS, 0);
+                        keyboard.keyPress(window, GLFW.GLFW_KEY_R, 0, GLFW.GLFW_RELEASE, 0);
+                    }
+                    if (stepTicks > 60) {
+                        record("cartão: a tela do JEI não abriu para " + file, "sem captura");
+                        return true;
+                    }
+                    return false;
+                }
+                if (screen != null && screen.getClass().getName().startsWith("mezz.jei")) {
+                    if (!opened[0]) {
+                        opened[0] = true;
+                        moveMouse(0, 0);
+                    }
+                    if (stepTicks < 20) {
+                        return false;
+                    }
+                    capture(Minecraft.getInstance(), file);
+                    Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player));
+                    return true;
+                }
+                return false;
+            }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        }
+        list.add(close("cartão: fechar o inventário"));
+        list.add(new Step("cartão: limpar o inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            for (int i = 0; i < shown.length; i++) {
+                player.getInventory().setItem(9 + i, ItemStack.EMPTY);
+            }
+            player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+            return null;
+        }), () -> Minecraft.getInstance().player.getInventory().getItem(9).isEmpty()
+                && Minecraft.getInstance().player.isCreative(), () -> "slot 9"));
+    }
+
+    /** O mouse sobre o slot {@code 9 + index} do inventário (a primeira linha de cima). */
+    private static void hoverSlot(InventoryScreen screen, int index) {
+        for (Slot slot : screen.getMenu().slots) {
+            if (slot.container instanceof net.minecraft.world.entity.player.Inventory && slot.getContainerSlot() == 9 + index) {
+                moveMouse(screen.getGuiLeft() + slot.x + 8, screen.getGuiTop() + slot.y + 8);
+                return;
+            }
+        }
+    }
+
+    /** Põe o mouse sobre o slot {@code 9 + index} e, alguns quadros depois, salva a captura com o tooltip. */
+    private static Step hoverCapture(String file, int index, java.util.function.BooleanSupplier ready) {
+        return new Step("captura " + file, STEP_TIMEOUT_MS, () -> { }, () -> {
+            if (!ready.getAsBoolean() || !(Minecraft.getInstance().screen instanceof InventoryScreen screen)) {
+                return false;
+            }
+            hoverSlot(screen, index);
+            if (stepTicks < 8) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), file);
+            return true;
+        }, () -> file + ".png");
+    }
 
     /** O Baú A é Esmeralda e sobe para o tier seguinte: o Ultimate, ou o Allthemodium com o mod. */
     private static RouterTier chestUpgrade() {
@@ -2254,14 +2377,40 @@ public final class DevEndToEnd {
                 () -> "tipos " + chestScreen().getMenu().view().types() + ", na lista " + chestScreen().shownCount()));
         list.add(close("Baú: fechar"));
 
-        list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {
+        boolean[] wrongClicked = new boolean[1];
+        int[] wrongAt = new int[1];
+        list.add(new Step("Baú: cartão de outra origem é recusado", STEP_TIMEOUT_MS, () -> {
             onServer(server -> {
                 server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
-                        new ItemStack(ModItems.TIER_CORES.get(chestUpgrade()).get()));
+                        TierCoreItem.card(chestUpgrade(), RouterTier.BASIC));
                 return null;
             });
         }, () -> {
-            if (!Minecraft.getInstance().player.getMainHandItem().is(ModItems.TIER_CORES.get(chestUpgrade()).get())) {
+            ItemStack hand = Minecraft.getInstance().player.getMainHandItem();
+            if (!hand.is(ModItems.TIER_CORES.get(chestUpgrade()).get())) {
+                return false;
+            }
+            if (!wrongClicked[0]) {
+                wrongClicked[0] = true;
+                wrongAt[0] = stepTicks;
+                useOn(storageA);
+            }
+            return stepTicks - wrongAt[0] >= 10 && onServer(server -> {
+                ItemStack held = server.getPlayerList().getPlayer(playerId).getMainHandItem();
+                return server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER) == RouterTier.EMERALD
+                        && held.getCount() == 1 && TierCoreItem.origin(held) == RouterTier.BASIC;
+            });
+        }, () -> onServer(server -> "tier " + server.overworld().getBlockState(storageA).getValue(RouterBlock.TIER)
+                + ", mão " + server.getPlayerList().getPlayer(playerId).getMainHandItem())));
+        list.add(new Step("Baú: Cartão de Upgrade no bloco", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND,
+                        TierCoreItem.card(chestUpgrade(), RouterTier.EMERALD));
+                return null;
+            });
+        }, () -> {
+            ItemStack hand = Minecraft.getInstance().player.getMainHandItem();
+            if (!hand.is(ModItems.TIER_CORES.get(chestUpgrade()).get()) || TierCoreItem.origin(hand) != RouterTier.EMERALD) {
                 return false;
             }
             if (!clicked[0]) {
@@ -2300,6 +2449,7 @@ public final class DevEndToEnd {
         }, () -> onServer(server -> server.overworld().getBlockEntity(storageB) instanceof StorageChestBlockEntity chest
                 ? "total " + chest.storage().total() : "sem Baú em " + storageB.toShortString())));
         list.add(capture("bau-4-tooltip-mao"));
+        upgradeCardSteps(list);
 
         list.add(new Step("Baú: olhar os blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);

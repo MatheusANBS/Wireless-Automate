@@ -560,7 +560,11 @@ public final class TierUpgradeGameTests {
         }
     }
 
-    /** Nenhuma receita de bancada carregada fabrica um cartão sem origem. */
+    /**
+     * Nenhuma receita de bancada carregada fabrica um cartão sem origem: só as de anel dão cartão (pelo resultado
+     * mostrado), e o {@code assemble} delas, com cada centro possível (Redstone, cartão com origem, cartão antigo,
+     * roteador), nunca devolve um cartão sem origem.
+     */
     @GameTest(template = "empty")
     public static void noCardWithoutOrigin(GameTestHelper helper) {
         for (RecipeHolder<CraftingRecipe> holder : helper.getLevel().getRecipeManager()
@@ -568,6 +572,61 @@ public final class TierUpgradeGameTests {
             ItemStack result = holder.value().getResultItem(helper.getLevel().registryAccess());
             helper.assertFalse(result.getItem() instanceof TierCoreItem && TierCoreItem.origin(result) == null,
                     "cartão sem origem em " + holder.id());
+            helper.assertFalse(result.getItem() instanceof TierCoreItem && !(holder.value() instanceof TierUpgradeRecipe),
+                    "cartão fora das receitas de anel: " + holder.id());
+            if (!(holder.value() instanceof TierUpgradeRecipe ring)) {
+                continue;
+            }
+            RouterTier below = ring.tier().previous();
+            List<ItemStack> centers = new ArrayList<>(List.of(redstone(), routerItem(below)));
+            if (ModItems.TIER_CORES.containsKey(below)) {
+                centers.add(new ItemStack(ModItems.TIER_CORES.get(below).get()));
+                RouterTier origin = below.previous();
+                if (origin != null) {
+                    centers.add(TierCoreItem.card(below, origin));
+                }
+            }
+            for (ItemStack center : centers) {
+                ItemStack out = ring.assemble(ringGrid(holder, center), helper.getLevel().registryAccess());
+                helper.assertFalse(out.getItem() instanceof TierCoreItem && TierCoreItem.origin(out) == null,
+                        "assemble de " + holder.id() + " com " + center + " deu cartão sem origem");
+            }
+        }
+        helper.succeed();
+    }
+
+    /** O anel não devolve nada à grade: nem o centro (Redstone, cartão ou bloco) nem as casas do anel. */
+    @GameTest(template = "empty")
+    public static void ringLeavesNothing(GameTestHelper helper) {
+        RecipeHolder<CraftingRecipe> holder = ringHolder(helper, RouterTier.ELITE);
+        for (ItemStack center : List.of(redstone(), routerItem(RouterTier.ADVANCED),
+                TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC))) {
+            CraftingInput grid = ringGrid(holder, center);
+            craft(helper, grid, holder.id());
+            for (ItemStack left : holder.value().getRemainingItems(grid)) {
+                helper.assertTrue(left.isEmpty(), "sobrou " + left + " com " + center + " no centro");
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Os textos do cartão com origem (recusa na action bar e tooltip) trazem o nome do tier e, no inglês, sem o
+     * artigo "a" na frente do nome (seis das sete origens começam com vogal).
+     */
+    @GameTest(template = "empty")
+    public static void cardTexts(GameTestHelper helper) {
+        for (RouterTier origin : RouterTier.values()) {
+            if (origin == RouterTier.ULTIMATE) {
+                continue;
+            }
+            String tier = name(origin);
+            for (String key : List.of("refused.router", "refused.storage", "only")) {
+                String text = Component.translatable(KEY + key, tier).getString();
+                helper.assertTrue(text.contains(tier), key + " sem o tier: " + text);
+                helper.assertFalse(text.contains(" a " + tier) || text.contains(" um " + tier),
+                        key + " com artigo antes do tier: " + text);
+            }
         }
         helper.succeed();
     }

@@ -4,7 +4,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-![Everything wireless](https://media.forgecdn.net/attachments/2034/634/feature-0-overview-png.png)
+![Everything wireless](ENVIAR:feature-0-overview.png)
 
 ---
 
@@ -14,12 +14,22 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
 - **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). **Each face of the machine joins its own network**, per resource type, so one furnace can take ore from your mining line on top and send ingots to storage from the bottom, while its energy comes from your base grid.
-- **One router, many machines:** with the **Range Upgrade**, a single router serves every machine you link in its radius (up to 64 blocks and 128 machines on Ultimate). Machines of the same type share one profile, so a whole farm is set up once.
+- **One router, many machines:** with the **Range Upgrade**, a single router serves every machine you link around it, so a whole farm is set up once (see Range Upgrade below).
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
 
-![Configure every face](https://media.forgecdn.net/attachments/2034/636/feature-2-router-png.png)
+![Configure every face](ENVIAR:feature-2-router.png)
+
+![A network per face](ENVIAR:feature-19-face-networks.png)
+
+### Range Upgrade
+
+One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs.
+
+![One router, many machines](ENVIAR:feature-17-range.png)
+
+![Configure by machine type](ENVIAR:feature-18-range-screen.png)
 
 ### Filters with no entry limit
 
@@ -40,7 +50,7 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
-![Eight tiers](https://media.forgecdn.net/attachments/2034/638/feature-4-tiers-png.png)
+![Eight tiers](ENVIAR:feature-4-tiers.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -56,6 +66,8 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 *Per face and per resource type; every machine linked by the Range Upgrade gets the full rate. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
 ![From iron to Unobtainium](https://media.forgecdn.net/attachments/2034/649/feature-15-tier-hall-png.png)
+
+![Raise a tier, keep the setup](ENVIAR:feature-20-tier-up.png)
 
 ### Wireless storage
 
@@ -99,18 +111,17 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2034/639/feature-5-area-png.png)
 
 - **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs and machine faces you check (Items, Fluids, Energy and, with the optional mods, Chemicals and Source). Pick **None (unlink)** to take them out of their network instead. In **Machines** mode it links machines to a router with the Range Upgrade, by click or by area.
-- **Range Upgrade:** one router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs.
 - **Configurator:** copies a router's setup (faces, filters, priorities, redstone and the network of each face) and pastes it on other routers, one by one or over an area. Area paste can touch only routers on the **same kind of machine**, so you can configure a whole production line in a few clicks, or every router in the area. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the mode and the pasted type.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
 ![Configurator wheel](https://media.forgecdn.net/attachments/2035/213/feature-16-wheel-png.png)
 
-![Linker by type](https://media.forgecdn.net/attachments/2034/647/feature-13-linker-png.png)
+![Linker by type](ENVIAR:feature-13-linker.png)
 
 ### Network Tablet
 
-![Network Tablet](https://media.forgecdn.net/attachments/2034/640/feature-6-tablet-png.png)
+![Network Tablet](ENVIAR:feature-6-tablet.png)
 
 Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
 

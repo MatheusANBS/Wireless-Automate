@@ -166,13 +166,14 @@ public final class DevScreenshot {
                 mouseY = center[1];
             }, "4d-armazem-dica"),
             new Step(() -> {
-                // nome de rede comprido: a pílula encolhe o nome para caber à direita das abas
+                // nome de rede comprido: a pílula da linha Rede encolhe o nome para caber
                 RouterSnapshot s = screen.getMenu().snapshot();
-                List<Optional<UUID>> networks = new ArrayList<>(s.typeNetworks());
-                networks.set(ResourceType.ITEM.ordinal(), Optional.of(LONG));
+                List<FaceView> faces = new ArrayList<>(s.faces());
+                int index = RouterSnapshot.index(ResourceType.ITEM, screen.getMenu().selectedFace());
+                faces.set(index, faces.get(index).withNetwork(Optional.of(LONG)));
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha da linha de processamento", s.tier(),
-                        s.facing(), List.copyOf(networks), s.networks(), s.powered(), s.machine(), s.machineState(),
-                        s.faces()));
+                        s.facing(), s.attachedFront(), s.networks(), s.powered(), s.machine(), s.machineState(),
+                        List.copyOf(faces)));
                 mouseX = mouseY = -1;
             }, "4e-nome-longo"),
             new Step(() -> {
@@ -181,7 +182,7 @@ public final class DevScreenshot {
                 screen.previewType(ResourceType.FLUID);
                 RouterSnapshot s = screen.getMenu().snapshot();
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                        sample().typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), s.faces()));
+                        s.attachedFront(), s.networks(), s.powered(), s.machine(), s.machineState(), sample().faces()));
                 int[] center = screen.previewEditFilterCenter();
                 mouseX = center[0];
                 mouseY = center[1];
@@ -225,7 +226,7 @@ public final class DevScreenshot {
                 new Step(() -> {
                     RouterSnapshot s = screen.getMenu().snapshot();
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.ADVANCED, Direction.NORTH,
-                            s.typeNetworks(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
+                            -1, s.networks(), s.powered(), new ItemStack(Items.CHEST),
                             Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST), s.faces()));
                     screen.previewFace(Direction.UP);
                     screen.previewViewDefault();
@@ -236,7 +237,7 @@ public final class DevScreenshot {
                 new Step(() -> {
                     RouterSnapshot s = screen.getMenu().snapshot();
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.BASIC, Direction.WEST,
-                            s.typeNetworks(), s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
+                            -1, s.networks(), s.powered(), ItemStack.EMPTY, Blocks.AIR.defaultBlockState(),
                             s.faces()));
                     screen.previewViewDefault();
                     mouseX = mouseY = -1;
@@ -266,7 +267,7 @@ public final class DevScreenshot {
                     faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
                     faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true));
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
-                            s.typeNetworks(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
+                            s.attachedFront(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
                     screen.previewType(ResourceType.ITEM);
                     screen.previewFace(Direction.DOWN);
                     mouseX = mouseY = -1;
@@ -447,7 +448,7 @@ public final class DevScreenshot {
         screen.getMenu().getSlot(RouterMenu.UPGRADE_SLOT).set(state == ChunkLoadState.NONE
                 ? ItemStack.EMPTY : new ItemStack(ModItems.CHUNK_LOADER_UPGRADE.get()));
         RouterSnapshot s = screen.getMenu().snapshot();
-        screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.typeNetworks(),
+        screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), s.name(), s.tier(), s.facing(), s.attachedFront(),
                 s.networks(), s.powered(), s.machine(), s.machineState(), s.faces(), state));
     }
 
@@ -457,8 +458,8 @@ public final class DevScreenshot {
         List<FaceView> faces = new ArrayList<>(s.faces());
         int down = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
         FaceView d = faces.get(down);
-        faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
-        RouterSnapshot snapshot = new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(), s.typeNetworks(),
+        faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false, d.network()));
+        RouterSnapshot snapshot = new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(), s.attachedFront(),
                 s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces));
 
         Inventory inventory = new Inventory(null);
@@ -1121,7 +1122,10 @@ public final class DevScreenshot {
         }
     }
 
-    /** Fornalha com o roteador Elite preso em cima: Itens na "Linha 5x", Fluidos sem rede, Energia na "Base". */
+    /**
+     * Fornalha (frente para o Norte) com o roteador Elite preso em cima: em Itens, Cima e Norte na
+     * "Linha 5x" e Baixo na "Base" (o resumo diz "2 redes"); Fluidos sem rede; Energia na "Base".
+     */
     private static RouterSnapshot sample() {
         List<FaceView> faces = new ArrayList<>(Collections.nCopies(ResourceType.values().length * 6,
                 new FaceView(PortMode.NONE, 0, RedstoneMode.IGNORE, -1, 0, false)));
@@ -1146,11 +1150,22 @@ public final class DevScreenshot {
                 new NetworkEntry(UUID.nameUUIDFromBytes("energia".getBytes()), "Energia", 0xFFB020, false),
                 new NetworkEntry(UUID.nameUUIDFromBytes("minerio".getBytes()), "Minério", 0xD8875A, true),
                 new NetworkEntry(LONG, "Processamento de minérios do lado norte", 0x81C784, true));
-        List<Optional<UUID>> typeNetworks = new ArrayList<>(Collections.nCopies(ResourceType.values().length,
-                Optional.of(base)));
-        typeNetworks.set(ResourceType.ITEM.ordinal(), Optional.of(line));
-        typeNetworks.set(ResourceType.FLUID.ordinal(), Optional.empty());
-        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP, List.copyOf(typeNetworks),
+        for (ResourceType type : ResourceType.values()) {
+            if (type == ResourceType.ITEM || type == ResourceType.FLUID) {
+                continue;
+            }
+            for (Direction direction : Direction.values()) {
+                int index = RouterSnapshot.index(type, direction);
+                faces.set(index, faces.get(index).withNetwork(Optional.of(base)));
+            }
+        }
+        for (Direction direction : new Direction[] {Direction.UP, Direction.NORTH}) {
+            int index = RouterSnapshot.index(ResourceType.ITEM, direction);
+            faces.set(index, faces.get(index).withNetwork(Optional.of(line)));
+        }
+        int downIndex = RouterSnapshot.index(ResourceType.ITEM, Direction.DOWN);
+        faces.set(downIndex, faces.get(downIndex).withNetwork(Optional.of(base)));
+        return new RouterSnapshot(new BlockPos(0, 64, 0), "", RouterTier.ELITE, Direction.UP, Direction.NORTH.ordinal(),
                 networks, false, new ItemStack(Items.FURNACE), Blocks.FURNACE.defaultBlockState(), List.copyOf(faces));
     }
 }

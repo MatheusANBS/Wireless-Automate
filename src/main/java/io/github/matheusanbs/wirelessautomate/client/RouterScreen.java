@@ -50,9 +50,10 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, vazão da
- * aba e tier; abas por tipo, cada uma com um ponto na cor da sua rede, e à direita delas o seletor
- * da rede da aba selecionada (cada tipo do roteador entra numa rede própria); o visor 3D da
- * máquina com o roteador ({@link MachineView3D}) e os botões das 6 faces logo abaixo; a face selecionada com modo, filtro e os slots de Cartão de
+ * aba e tier; abas por tipo e, no canto direito da linha delas, o resumo "N redes" das faces da aba;
+ * o visor 3D da máquina com o roteador ({@link MachineView3D}) e os botões das 6 faces logo abaixo,
+ * cada um com um ponto na cor da rede da face; a face selecionada com modo, a linha Rede (a rede é
+ * da face: cada face, em cada tipo, está numa rede ou em nenhuma), filtro e os slots de Cartão de
  * Filtro; prioridade e redstone recolhidos em "Mais", embaixo das faces; e o inventário do jogador,
  * embaixo da face selecionada, para pôr e tirar cartões. No cabeçalho, à direita do tier, fica o
  * slot do Upgrade de chunk loading (é do roteador, não da face), com uma luz do estado (ativo, no
@@ -62,12 +63,18 @@ import org.lwjgl.glfw.GLFW;
  * tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram, e a
  * sincronização vanilla traz os cartões.
  *
+ * <p>Os botões de face mostram os lados relativos à frente da máquina (Frente, Trás, Esquerda,
+ * Direita, Cima, Baixo), na ordem do quadro canônico ({@link #FACE_ORDER}). Na presa, a frente vem do
+ * snapshot ({@link RouterSnapshot#attachedFront()}) e o botão age na face absoluta dela
+ * ({@link #screenFace}); o resto da tela e os pacotes continuam com a face absoluta. Num alvo remoto, a
+ * face da tela já é a canônica.
+ *
  * <p>Com o Upgrade de Alcance valendo ({@link RangeView#present()}), um botão "Máquinas · 3/8" acima do
  * visor alterna o visor com a lista das máquinas ({@link RangeList}). Escolher um grupo ou uma máquina
- * remota troca o alvo de edição: os botões de face passam aos lados relativos à frente (o quadro
- * canônico, Norte = Frente), o visor mostra o bloco do alvo sem o roteador e o cabeçalho da coluna da
- * direita diz o perfil ou a máquina, com Voltar ao perfil e Desvincular. Sem o upgrade a tela é a de
- * sempre.
+ * remota troca o alvo de edição: as faces passam ao quadro canônico (Norte = Frente), o visor mostra o
+ * bloco do alvo sem o roteador e o cabeçalho da coluna da direita diz o perfil ou a máquina, com
+ * Voltar ao perfil e Desvincular; a linha Rede edita a rede da face do perfil ou da exceção. Sem o
+ * upgrade a tela é a de sempre.
  *
  * <p>Tudo vem de {@link RouterMenu#snapshot()}. Os botões leem o estado a cada quadro e
  * {@link #refresh()} reposiciona o que depende de texto, então um snapshot novo
@@ -90,34 +97,32 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int PILL_H = 13;
     private static final int TAB_Y = 26;
     private static final int TAB_H = 15;
-    /** Espaço do ponto da rede na aba (ponto de 5 px e folga). */
-    private static final int TAB_DOT = 8;
-    /** Pílula da rede sem o nome: borda, ponto, folgas e a seta. */
-    private static final int NET_PILL_PAD = 6 + 5 + 4 + 4 + 5 + 5;
-    /** Mínimo do seletor de rede à direita das abas (bolinha, um pedaço do nome e a seta). */
-    private static final int NET_MIN = 92;
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
     // visor 3D (altura no tamanho mínimo; cresce com a tela) e, logo abaixo, os botões das faces em
-    // duas fileiras (cada coluna é um eixo)
+    // duas fileiras (cada coluna é um eixo) e a linha da frente da máquina
     private static final int VIEW_H = 84;
-    private static final int FACE_H = 18;
+    /** Botões de face com 16 px (o ícone do modo ocupa a altura), para a linha da frente caber embaixo. */
+    private static final int FACE_H = 16;
     private static final int FACE_GAP = 2;
     // coluna da face selecionada: largura fixa, presa à borda direita
     private static final int RW = 162;
     private static final int MODE_Y = 74;
     private static final int MODE_W = (RW - 2) / 2;
-    private static final int MODE_H = 18;
-    private static final int FILTER_Y = 114;
+    private static final int MODE_H = 14;
+    /** Linha Rede da face selecionada, abaixo dos botões de modo: o rótulo e a pílula com a lista. */
+    private static final int NET_Y = 106;
+    private static final int NET_H = 12;
+    private static final int FILTER_Y = 120;
     /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_Y}). */
     private static final int CARD_BG_Y = RouterMenu.CARD_Y - 1;
     /** Slot do upgrade (o fundo), no canto direito do cabeçalho; o tier e a vazão ficam à esquerda dele. */
     private static final int UPGRADE_BG_Y = RouterMenu.UPGRADE_Y - 1;
     // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone (alturas no tamanho mínimo)
-    private static final int ADV_SEP_Y = 180;
-    private static final int MORE_Y = 184;
-    private static final int PRIO_Y = 199;
-    private static final int REDSTONE_Y = 217;
+    private static final int ADV_SEP_Y = 182;
+    private static final int MORE_Y = 186;
+    private static final int PRIO_Y = 201;
+    private static final int REDSTONE_Y = 219;
     private static final int ROW_H = 14;
     private static final int DROPDOWN_ROW = 12;
     private static final int DROPDOWN_MAX_ROWS = 8;
@@ -138,8 +143,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Folga entre os dois botões e o texto de cada um até a borda (de cada lado). */
     private static final int TARGET_GAP = 3;
     private static final int TARGET_PAD = 3;
-    /** Margem mínima do rótulo de uma face remota até a borda do botão, de cada lado. */
+    /** Margem mínima do rótulo de uma face até a borda do botão, de cada lado. */
     private static final int SIDE_PAD = 3;
+    /** Espaço do Olho do roteador à direita do rótulo, no botão da face onde ele está preso. */
+    private static final int FACE_EYE = 7;
     /**
      * Mostra a lista das máquinas no lugar do visor. Estático de propósito, como {@link #savedW}: a
      * escolha vale para a sessão inteira, então a próxima tela de um roteador com o upgrade já abre na
@@ -148,7 +155,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static boolean showList;
 
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
-    /** Ordem dos botões das faces: em cima Cima, Norte e Leste; embaixo as opostas. */
+    /**
+     * Ordem dos botões das faces, no quadro canônico (frente = Norte): em cima Cima, Frente e Esquerda;
+     * embaixo Baixo, Trás e Direita. Na presa, cada um age na face absoluta do lado ({@link #screenFace}).
+     */
     private static final Direction[] FACE_ORDER = {Direction.UP, Direction.NORTH, Direction.EAST, Direction.DOWN,
             Direction.SOUTH, Direction.WEST};
     /** Cartão desenhado apagado num slot de cartão vazio. */
@@ -175,14 +185,17 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private boolean expanded;
     private boolean networkListOpen;
     private int networkScroll;
-    /** Largura disponível para o nome da rede na pílula (o que sobra à direita das abas). */
-    private int netTextMax = NET_MIN - NET_PILL_PAD;
     private TabLayout.Mode tabMode = TabLayout.Mode.FULL;
     private boolean renaming;
     private String renameDraft = "";
 
     private FlatButton titleButton;
+    /** Pílula da linha Rede: a rede da face selecionada; abre a lista. */
     private FlatButton networkButton;
+    /** Resumo "N redes" no canto da linha das abas (só a dica responde ao mouse). */
+    private FlatButton summaryButton;
+    /** Linha "Frente: Sul" abaixo dos botões de face (só a dica responde ao mouse). */
+    private FlatButton frontButton;
     private FlatButton moreButton;
     private FlatButton prioMinus;
     private FlatButton prioPlus;
@@ -235,7 +248,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private FaceView visorView(Direction direction) {
         FaceView v = view(direction);
         if (remote() && !v.available() && !remoteLoaded()) {
-            return new FaceView(v.mode(), v.priority(), v.redstone(), 0, v.filterSize(), v.blacklist());
+            return new FaceView(v.mode(), v.priority(), v.redstone(), 0, v.filterSize(), v.blacklist(), v.network());
         }
         return v;
     }
@@ -347,43 +360,54 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return s.machine().isEmpty() ? Component.translatable("block.wirelessautomate.router") : s.machine().getHoverName();
     }
 
-    private @Nullable NetworkEntry currentNetwork() {
-        return network(type);
+    /** A rede da face {@code f} (quadro do alvo) na aba atual, se o seletor a conhece. */
+    private @Nullable NetworkEntry network(Direction f) {
+        Optional<UUID> id = snapshot().network(type, f);
+        return id.isEmpty() ? null : snapshot().entry(id.get());
     }
 
-    /** A rede da aba {@code t}, se ela estiver numa rede que o seletor conhece. */
-    private @Nullable NetworkEntry network(ResourceType t) {
-        Optional<UUID> id = snapshot().network(t);
-        if (id.isEmpty()) {
-            return null;
-        }
-        for (NetworkEntry entry : snapshot().networks()) {
-            if (entry.id().equals(id.get())) {
-                return entry;
-            }
-        }
-        return null;
-    }
-
-    private Component networkLabel() {
-        return networkLabel(type);
-    }
-
-    private Component networkLabel(ResourceType t) {
-        NetworkEntry entry = network(t);
+    /** O nome da rede da face {@code f}: o da rede, "Sem rede" ou "Rede indisponível". */
+    private Component networkLabel(Direction f) {
+        NetworkEntry entry = network(f);
         if (entry != null) {
             return Component.literal(entry.name());
         }
-        return snapshot().network(t).isPresent() ? tr("network.unknown") : tr("network.none");
+        return snapshot().network(type, f).isPresent() ? tr("network.unknown") : tr("network.none");
     }
 
-    private int networkColor() {
-        return networkColor(type);
-    }
-
-    private int networkColor(ResourceType t) {
-        NetworkEntry entry = network(t);
+    /** A cor da rede da face {@code f} (ARGB), ou {@code MUTED} sem rede. */
+    private int networkColor(Direction f) {
+        NetworkEntry entry = network(f);
         return entry != null ? 0xFF000000 | entry.color() : GuiPaint.MUTED;
+    }
+
+    /** O resumo da aba: "2 redes", "1 rede" ou "Sem rede" (as redes distintas das faces do alvo). */
+    private Component networkSummary() {
+        int count = snapshot().networks(type).size();
+        if (count == 0) {
+            return tr("network.none");
+        }
+        return count == 1 ? tr("networks.count.one") : tr("networks.count", count);
+    }
+
+    /** Dica do resumo: cada face com rede, "Cima: Mina · Baixo: Armazém", na ordem dos botões. */
+    private Component networkSummaryTooltip() {
+        Component faces = Component.empty();
+        boolean first = true;
+        for (Direction canonical : FACE_ORDER) {
+            Direction f = screenFace(canonical);
+            if (snapshot().network(type, f).isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                faces = faces.copy().append(" · ");
+            }
+            faces = faces.copy().append(sideName(f)).append(": ").append(networkLabel(f));
+            first = false;
+        }
+        Component head = tr("networks.tooltip", typeName(type));
+        Component body = first ? tr("network.none") : faces;
+        return head.copy().append("\n").append(body.copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     private static Component tr(String key, Object... args) {
@@ -398,19 +422,38 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return tr("face." + direction.getName());
     }
 
-    /** O nome da face na tela: absoluto na presa, relativo à frente num alvo remoto (quadro canônico). */
+    /**
+     * A face da tela (absoluta na presa, canônica num alvo remoto) do botão do lado canônico
+     * {@code canonical}: na presa, a face absoluta do lado pela frente da máquina
+     * ({@link RouterSnapshot#attachedFront()}); num alvo remoto, a própria. É a única conversão entre os
+     * dois quadros na tela.
+     */
+    private Direction screenFace(Direction canonical) {
+        if (remote()) {
+            return canonical;
+        }
+        return Direction.values()[RemoteSide.fromCanonical(canonical.ordinal()).toAbsolute(snapshot().attachedFront())];
+    }
+
+    /** O lado relativo à frente da máquina da face da tela {@code direction}. */
+    private RemoteSide side(Direction direction) {
+        return remote() ? RemoteSide.fromCanonical(direction.ordinal())
+                : RemoteSide.fromAbsolute(snapshot().attachedFront(), direction.ordinal());
+    }
+
+    /** O nome da face na tela: o lado relativo à frente da máquina (na presa e num alvo remoto). */
     private Component sideName(Direction direction) {
-        return remote() ? tr("side." + RemoteSide.fromCanonical(direction.ordinal()).key()) : faceName(direction);
+        return tr("side." + side(direction).key());
     }
 
-    /** O rótulo curto do botão de uma face remota: o lado abreviado. */
+    /** O lado abreviado, para o botão da face. */
     private Component sideShort(Direction direction) {
-        return tr("side.short." + RemoteSide.fromCanonical(direction.ordinal()).key());
+        return tr("side.short." + side(direction).key());
     }
 
-    /** O lado em uma ou duas letras, para o botão estreito (como as letras U, N, E da presa). */
+    /** O lado em uma ou duas letras, para o botão estreito. */
     private Component sideLetter(Direction direction) {
-        return tr("side.letter." + RemoteSide.fromCanonical(direction.ordinal()).key());
+        return tr("side.letter." + side(direction).key());
     }
 
     /** O nome do lado que cabe em {@code room}: inteiro, abreviado ou a letra; o inteiro vai na dica. */
@@ -484,26 +527,36 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         for (ResourceType t : types) {
             FlatButton tab = add(new FlatButton(0, y + TAB_Y, TabLayout.ICON_TAB, TAB_H, typeName(t),
                     (g, b, hovered) -> paintTab(g, b, hovered, t), () -> selectType(t))
-                    .tooltip(() -> tr("tab.tooltip", typeName(t), networkLabel(t))));
+                    .tooltip(() -> tr("tab.tooltip", typeName(t))));
             tabButtons.put(t, tab);
         }
+        // o resumo das redes da aba, no canto direito da linha das abas
+        summaryButton = add(new FlatButton(x, y + TAB_Y + 1, 40, PILL_H, Component.empty(), this::paintSummary,
+                () -> { }).tooltip(this::networkSummaryTooltip));
+        summaryButton.active = false;
         layoutTabs();
 
-        // a rede é da aba: o seletor fica na linha das abas, à direita delas
-        networkButton = add(new FlatButton(x, y + TAB_Y + 1, 40, PILL_H, Component.empty(), this::paintNetwork,
-                () -> {
+        // a rede é da face: a linha Rede fica abaixo dos botões de modo
+        int netLabelW = font.width(tr("network.face")) + 5;
+        networkButton = add(new FlatButton(x + rx() + netLabelW, y + NET_Y, RW - netLabelW, NET_H, Component.empty(),
+                this::paintNetwork, () -> {
                     networkListOpen = !networkListOpen;
                     networkScroll = 0;
                 }).tooltip(this::networkTooltip));
 
         machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
         for (int i = 0; i < FACE_ORDER.length; i++) {
-            Direction direction = FACE_ORDER[i];
-            faceButtons.put(direction, add(new FlatButton(x + X0 + (i % 3) * (faceW() + FACE_GAP),
-                    y + facesY() + (i / 3) * (FACE_H + FACE_GAP), faceW(), FACE_H, faceName(direction),
-                    (g, b, hovered) -> paintFace(g, b, hovered, direction), () -> face = direction)
-                    .tooltip(() -> faceTooltip(direction))));
+            Direction canonical = FACE_ORDER[i];
+            faceButtons.put(canonical, add(new FlatButton(x + X0 + (i % 3) * (faceW() + FACE_GAP),
+                    y + facesY() + (i / 3) * (FACE_H + FACE_GAP), faceW(), FACE_H, Component.empty(),
+                    (g, b, hovered) -> paintFace(g, b, hovered, screenFace(canonical)), () -> {
+                        face = screenFace(canonical);
+                        networkListOpen = false;
+                    }).tooltip(() -> faceTooltip(screenFace(canonical)))));
         }
+        frontButton = add(new FlatButton(x + X0, y + frontY(), viewW(), 9, Component.empty(), this::paintFront,
+                () -> { }).tooltip(() -> tr("front.tooltip")));
+        frontButton.active = false;
 
         machinesButton = add(new FlatButton(x + X0, y + BODY_Y, viewW(), RANGE_STRIP - 2, tr("range.machines", 0, 0),
                 this::paintMachines, () -> {
@@ -557,17 +610,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         layoutTabs();
     }
 
-    /** Larguras e posições das abas pelo espaço que sobra depois do seletor de rede. */
+    /** Larguras e posições das abas pelo espaço que sobra depois do resumo das redes, e o resumo no canto. */
     private void layoutTabs() {
+        int summaryW = font.width(networkSummary()) + 2;
+        summaryButton.setX(leftPos + x1() - summaryW);
+        summaryButton.setWidth(summaryW);
+        summaryButton.setMessage(networkSummary());
         int[] full = new int[types.size()];
         int active = 0;
         for (int i = 0; i < types.size(); i++) {
-            full[i] = 4 + TAB_DOT + ResourceStyle.ICON + 3 + font.width(typeName(types.get(i))) + 6;
+            full[i] = 4 + ResourceStyle.ICON + 3 + font.width(typeName(types.get(i))) + 6;
             if (types.get(i) == type) {
                 active = i;
             }
         }
-        int available = (x1() - X0) - NET_MIN - 6;
+        int available = (x1() - X0) - summaryW - 6;
         TabLayout.Result layout = TabLayout.choose(full, active, available);
         tabMode = layout.mode();
         int tabX = leftPos + X0;
@@ -611,6 +668,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private int facesY() {
         return BODY_Y + viewH() + 3;
+    }
+
+    /** A linha da frente da máquina, logo abaixo das duas fileiras de botões de face. */
+    private int frontY() {
+        return facesY() + 2 * FACE_H + FACE_GAP + 1;
     }
 
     /** Topo do visor (ou da lista): abaixo do botão Máquinas, com o upgrade de alcance. */
@@ -693,18 +755,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int tierW = pillWidth(tierText);
         int rateX = leftPos + headEnd() - tierW - 6 - font.width(rate());
 
-        // seletor da rede com todo o espaço que sobra à direita das abas
-        int tabsEnd = leftPos + X0;
-        for (FlatButton tab : tabButtons.values()) {
-            tabsEnd = Math.max(tabsEnd, tab.getX() + tab.getWidth());
-        }
-        int netX = tabsEnd + 6;
-        int netW = leftPos + x1() - netX;
-        netTextMax = Math.max(24, netW - NET_PILL_PAD);
-        Component netText = networkLabel();
-        networkButton.setX(netX);
-        networkButton.setWidth(netW);
-        networkButton.setMessage(tr("network.tab.narration", typeName(type), netText));
+        // o resumo muda com o snapshot: as abas abrem espaço para ele
+        layoutTabs();
+        networkButton.setMessage(tr("network.face.narration", sideName(face), typeName(type), networkLabel(face)));
+        frontButton.setMessage(frontLabel());
 
         int titleW = rateX - (leftPos + X0) - 8;
         titleButton.setWidth(Math.min(titleW, font.width(displayName()) + 4));
@@ -743,7 +797,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             rangeList.sync(range(), snapshot().target());
         }
         for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
-            entry.getValue().setMessage(sideName(entry.getKey()));
+            entry.getValue().setMessage(sideName(screenFace(entry.getKey())));
         }
         RangeView.MachineView machine = targetMachine();
         boolean exception = machine != null && machine.exception();
@@ -800,7 +854,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (preview) {
             List<FaceView> faces = new ArrayList<>(snapshot().faces());
             faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots(),
-                    current.filterSize(), current.blacklist()));
+                    current.filterSize(), current.blacklist(), current.network()));
             menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
             return;
         }
@@ -1000,19 +1054,23 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         sendFace(view().mode(), view().priority(), all[(view().redstone().ordinal() + 1) % all.length]);
     }
 
+    /**
+     * Põe a face selecionada na rede {@code network} (vazio = sem rede). O servidor confere e o snapshot
+     * seguinte traz a rede nova; sem servidor (captura), muda só o snapshot local.
+     */
     private void chooseNetwork(Optional<UUID> network) {
         networkListOpen = false;
-        if (network.equals(snapshot().network(type))) {
+        if (network.equals(snapshot().network(type, face))) {
             return;
         }
         if (preview) {
-            RouterSnapshot s = snapshot();
-            List<Optional<UUID>> typeNetworks = new ArrayList<>(s.typeNetworks());
-            typeNetworks.set(type.ordinal(), network);
-            menu.applySnapshot(s.withTypeNetworks(List.copyOf(typeNetworks)));
+            List<FaceView> faces = new ArrayList<>(snapshot().faces());
+            int index = RouterSnapshot.index(type, face);
+            faces.set(index, faces.get(index).withNetwork(network));
+            menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
             return;
         }
-        send(new SetNetworkPayload(menu.containerId, type, network));
+        send(new SetNetworkPayload(menu.containerId, type, face, network));
     }
 
     private void startRename() {
@@ -1035,7 +1093,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (commit && !name.equals(snapshot().name())) {
             if (preview) {
                 RouterSnapshot s = snapshot();
-                menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.typeNetworks(), s.networks(),
+                menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.attachedFront(), s.networks(),
                         s.powered(), s.machine(), s.machineState(), s.faces(), s.chunkLoad()));
             } else {
                 send(new RenameRouterPayload(menu.containerId, name));
@@ -1342,12 +1400,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             Direction buttonHovered = null;
             for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
                 if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
-                    buttonHovered = entry.getKey();
+                    buttonHovered = screenFace(entry.getKey());
                 }
             }
-            // num alvo remoto: só o bloco dele, com a frente para quem olha
+            // num alvo remoto: só o bloco dele, com a frente para quem olha; o anel da face selecionada
+            // fica na cor da rede dela
+            NetworkEntry selectedNetwork = network(face);
             machineView.render(g, s.machineState(), remote() ? null : s.facing(), s.tier(), faceViews, face,
-                    buttonHovered, pointerX, pointerY);
+                    buttonHovered, selectedNetwork == null ? -1 : selectedNetwork.color() & 0xFFFFFF,
+                    pointerX, pointerY);
             Direction pointed = machineView.hoveredFace();
             if (s.machineState().isAir()) {
                 GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
@@ -1368,13 +1429,17 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (remote()) {
             renderTargetHeader(g, v);
         } else {
-            GuiPaint.text(g, font, faceName(face), x + rx(), y + BODY_Y + 1, GuiPaint.FG);
+            GuiText.draw(g, font, sideName(face), x + rx(), y + BODY_Y + 1, RW, GuiPaint.FG);
             Component detail = access(v);
             if (face == s.facing()) {
                 detail = detail.copy().append(" · ").append(tr("face.attached"));
             }
             GuiText.draw(g, font, detail, x + rx(), y + BODY_Y + 12, RW, GuiPaint.MUTED);
         }
+
+        // linha Rede: o rótulo; a pílula é o networkButton
+        GuiText.draw(g, font, tr("network.face"), x + rx(), y + NET_Y + 2, networkButton.getX() - (x + rx()) - 2,
+                GuiPaint.MUTED);
 
         // filtro: rótulo com Editar e, embaixo, os slots de cartão com o resumo do conjunto
         if (hasFilter()) {
@@ -1510,112 +1575,118 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
     }
 
-    /** Dica da pílula: de qual aba é a rede e, se o nome não coube, o nome inteiro antes. */
+    /** Dica da pílula: de qual face e aba é a rede, o nome e como trocar. */
     private Component networkTooltip() {
-        Component hint = tr("network.tab.tooltip", typeName(type));
-        Component name = networkLabel();
-        Component head = tr("network.label").copy().withColor(GuiPaint.TOOLTIP_MUTED);
-        if (font.width(name) <= netTextMax) {
-            return head.copy().append("\n").append(hint);
-        }
-        return head.copy().append("\n").append(name).append("\n").append(hint.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return tr("network.face.tooltip", sideName(face), typeName(type)).copy()
+                .append("\n").append(networkLabel(face))
+                .append("\n").append(tr("network.face.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
+    /** A pílula da linha Rede: borda e ponto na cor da rede da face; cinza em "Sem rede". */
     private void paintNetwork(GuiGraphics g, FlatButton b, boolean hovered) {
-        int color = networkColor();
+        NetworkEntry entry = network(face);
+        int color = networkColor(face);
         int fill = hovered || networkListOpen ? GuiPaint.BUTTON : GuiPaint.PANEL;
-        GuiPaint.pill(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, color);
-        if (currentNetwork() != null) {
-            GuiPaint.eye(g, b.getX() + 6, b.getY() + 4, color);
+        GuiPaint.pill(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, entry != null ? color : GuiPaint.LINE);
+        if (entry != null) {
+            GuiPaint.eye(g, b.getX() + 4, b.getY() + 3, color);
         } else {
-            GuiPaint.outline(g, b.getX() + 6, b.getY() + 4, 5, 5, color);
+            GuiPaint.outline(g, b.getX() + 4, b.getY() + 3, 5, 5, GuiPaint.MUTED);
         }
-        Component label = networkLabel();
-        int textColor = currentNetwork() != null ? GuiPaint.FG : GuiPaint.MUTED;
-        GuiText.draw(g, font, label, b.getX() + 15, b.getY() + 3, netTextMax, textColor);
-        GuiPaint.arrowDown(g, b.getX() + b.getWidth() - 10, b.getY() + 5, hovered ? GuiPaint.FG : GuiPaint.MUTED);
+        int textX = b.getX() + 13;
+        GuiText.draw(g, font, networkLabel(face), textX, b.getY() + 2, b.getX() + b.getWidth() - 12 - textX,
+                entry != null ? GuiPaint.FG : GuiPaint.MUTED);
+        GuiPaint.arrowDown(g, b.getX() + b.getWidth() - 9, b.getY() + 4, hovered ? GuiPaint.FG : GuiPaint.MUTED);
+    }
+
+    /** O resumo "2 redes" no canto da linha das abas, discreto. */
+    private void paintSummary(GuiGraphics g, FlatButton b, boolean hovered) {
+        GuiText.draw(g, font, b.getMessage(), b.getX(), b.getY() + 3, b.getWidth(), GuiPaint.MUTED);
+    }
+
+    /** "Frente: Sul", "Sem frente (= Norte)" ou, num alvo remoto, "Lados por máquina" (a dica explica). */
+    private Component frontLabel() {
+        if (remote()) {
+            return tr("front.remote");
+        }
+        int front = snapshot().attachedFront();
+        return front < 0 ? tr("front.none") : tr("front.known", faceName(Direction.values()[front]));
+    }
+
+    /** A linha da frente da máquina, abaixo dos botões de face. */
+    private void paintFront(GuiGraphics g, FlatButton b, boolean hovered) {
+        GuiText.draw(g, font, b.getMessage(), b.getX(), b.getY(), b.getWidth(), GuiPaint.MUTED);
     }
 
     private void paintTab(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
         boolean selected = t == type;
         GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), selected, hovered);
-        networkDot(g, b.getX() + 5, b.getY() + 5, t);
-        ResourceStyle.drawIcon(g, t, b.getX() + 4 + TAB_DOT, b.getY() + 3);
         if (b.getWidth() > TabLayout.ICON_TAB) {
-            int textX = b.getX() + 4 + TAB_DOT + ResourceStyle.ICON + 3;
+            ResourceStyle.drawIcon(g, t, b.getX() + 4, b.getY() + 3);
+            int textX = b.getX() + 4 + ResourceStyle.ICON + 3;
             GuiText.draw(g, font, typeName(t), textX, b.getY() + 4, b.getX() + b.getWidth() - 4 - textX,
                     GuiPaint.tabText(selected, hovered));
-        }
-    }
-
-    /** O Olho na cor da rede da aba {@code t}; sem rede, um anel vazado em {@code MUTED}. */
-    private void networkDot(GuiGraphics g, int x, int y, ResourceType t) {
-        if (network(t) != null) {
-            GuiPaint.eye(g, x, y, networkColor(t));
         } else {
-            g.fill(x, y, x + 5, y + 5, GuiPaint.INSET);
-            GuiPaint.outline(g, x, y, 5, 5, GuiPaint.MUTED);
+            ResourceStyle.drawIcon(g, t, b.getX() + (b.getWidth() - ResourceStyle.ICON) / 2, b.getY() + 3);
         }
     }
 
+    /**
+     * Botão de uma face ({@code direction} no quadro do alvo): o ícone do modo e o lado relativo
+     * (inteiro, abreviado ou a letra, com o inteiro na dica), o ponto na cor da rede no canto de cima
+     * (sem ponto = sem rede) e, na presa, o Olho do roteador na face onde ele está preso. Na presa a face
+     * sem a capability fica apagada; num alvo remoto ela continua editável mesmo sem a máquina carregada.
+     */
     private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
-        if (remote()) {
-            paintRemoteFace(g, b, hovered, direction);
-            return;
-        }
         FaceView v = view(direction);
+        boolean lit = v.available() || remote();
         boolean selected = direction == face;
         // a face sob o mouse no visor também realça o botão dela
         boolean pointed = hovered || viewShown() && direction == machineView.hoveredFace();
         int x = b.getX();
         int y = b.getY();
         int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), v.available() ? GuiPaint.BUTTON : GuiPaint.INSET, border);
+        GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), lit ? GuiPaint.BUTTON : GuiPaint.INSET, border);
         if (selected) {
             GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, GuiPaint.SELECTED);
         }
-        GuiPaint.port(g, v.available() ? v.mode() : PortMode.NONE, x + 1, y + 1, v.available() ? 1f : 0.3f);
-        GuiPaint.text(g, font, tr("face.short." + direction.getName()), x + 19, y + 5,
-                v.available() ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
-        if (direction == snapshot().facing()) {
-            // marca do roteador preso nesta face: o Olho na cor do tier ao lado da letra
-            GuiPaint.eye(g, x + b.getWidth() - 9, y + 6, tierColor());
+        // o sprite tem 1 px transparente em volta: no botão de 16 px ele vai rente ao topo
+        GuiPaint.port(g, lit ? v.mode() : PortMode.NONE, x + 1, y, lit ? 1f : 0.3f);
+        boolean attached = !remote() && direction == snapshot().facing();
+        NetworkEntry entry = network(direction);
+        int room = b.getWidth() - 19 - SIDE_PAD - (attached ? FACE_EYE : 0);
+        GuiText.draw(g, font, sideLabel(direction, room), x + 19, y + 4, room,
+                lit ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
+        if (attached) {
+            // marca do roteador preso nesta face: o Olho na cor do tier, à direita do rótulo
+            GuiPaint.eye(g, x + b.getWidth() - 9, y + 7, tierColor());
+        }
+        if (entry != null) {
+            // o ponto da rede, no canto de cima, acima da linha do rótulo (que começa em y + 4)
+            int color = 0xFF000000 | entry.color();
+            int mx = x + b.getWidth() - 6;
+            g.fill(mx + 1, y + 1, mx + 3, y + 2, color);
+            g.fill(mx, y + 2, mx + 4, y + 4, color);
         }
     }
 
     /**
-     * Botão de uma face remota: o mesmo desenho do da presa (o ícone do modo e o nome ao lado), com o
-     * lado relativo no lugar da letra: inteiro se couber, senão o abreviado, e o inteiro na dica. A
-     * face fica editável mesmo sem a máquina carregada, então não apaga como a da presa sem máquina.
+     * Dica de uma face: o lado relativo e, na presa, o absoluto junto ("Trás · Norte"); o modo e o
+     * acesso; a rede ("Rede: Armazém" ou "Sem rede").
      */
-    private void paintRemoteFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
-        FaceView v = view(direction);
-        boolean selected = direction == face;
-        boolean pointed = hovered || viewShown() && direction == machineView.hoveredFace();
-        int x = b.getX();
-        int y = b.getY();
-        int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
-        if (selected) {
-            GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, GuiPaint.SELECTED);
-        }
-        GuiPaint.port(g, v.mode(), x + 1, y + 1, 1f);
-        int room = b.getWidth() - 19 - SIDE_PAD;
-        GuiText.draw(g, font, sideLabel(direction, room), x + 19, y + 5, room, selected ? GuiPaint.FG : GuiPaint.MUTED);
-    }
-
     private Component faceTooltip(Direction direction) {
-        if (remote()) {
-            FaceView v = view(direction);
-            return sideName(direction).copy().append("\n")
-                    .append(modeName(v.mode()).copy().append(" · ").append(access(v)));
-        }
         FaceView v = view(direction);
-        Component line = v.available()
+        Component head = remote() ? sideName(direction)
+                : sideName(direction).copy().append(" · ").append(faceName(direction));
+        Component line = v.available() || remote()
                 ? modeName(v.mode()).copy().append(" · ").append(access(v))
                 : access(v);
-        Component text = faceName(direction).copy().append("\n").append(line);
-        if (direction == snapshot().facing()) {
+        NetworkEntry entry = network(direction);
+        Component net = entry != null ? tr("network.face.line", entry.name())
+                : v.network().isPresent() ? tr("network.unknown") : tr("network.none");
+        Component text = head.copy().append("\n").append(line).append("\n")
+                .append(net.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        if (!remote() && direction == snapshot().facing()) {
             text = text.copy().append("\n").append(tr("face.attached.tooltip"));
         }
         return text;
@@ -1628,8 +1699,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int fill = selected ? GuiPaint.mix(GuiPaint.BUTTON, color, 0.28f) : GuiPaint.BUTTON;
         int border = selected ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
-        GuiPaint.port(g, mode, b.getX() + 2, b.getY() + 1, b.active ? 1f : 0.3f);
-        GuiText.draw(g, font, modeName(mode), b.getX() + 21, b.getY() + 5, b.getWidth() - 22,
+        // o botão tem 14 px: o ícone do modo vai a 3/4 (12 px)
+        g.pose().pushPose();
+        g.pose().translate(b.getX() + 2, b.getY() + 1, 0);
+        g.pose().scale(0.75f, 0.75f, 1f);
+        GuiPaint.port(g, mode, 0, 0, b.active ? 1f : 0.3f);
+        g.pose().popPose();
+        GuiText.draw(g, font, modeName(mode), b.getX() + 17, b.getY() + 3, b.getWidth() - 18,
                 b.active ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
@@ -1670,7 +1746,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         width = Math.max(width, font.width(tr("network.none")) + 24);
         width = Math.max(width, font.width(listTitle()) + 12);
-        return Math.min(width, 140);
+        return Math.min(width, RW);
     }
 
     private int dropdownX() {
@@ -1678,16 +1754,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     private int dropdownY() {
-        return networkButton.getY() + PILL_H + 2;
+        return networkButton.getY() + NET_H + 1;
     }
 
     private int dropdownRows() {
         return Math.min(DROPDOWN_MAX_ROWS, snapshot().networks().size() + 1);
     }
 
-    /** Título da lista: de qual aba é a rede que se escolhe. */
+    /** Título da lista: de qual face e aba é a rede que se escolhe. */
     private Component listTitle() {
-        return tr("network.list.title", typeName(type));
+        return tr("network.list.title", sideName(face), typeName(type));
     }
 
     /** Altura da lista: o título e as linhas visíveis. */
@@ -1719,7 +1795,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int w = dropdownWidth();
         int rows = dropdownRows();
         int hoveredRow = dropdownRowAt(mouseX, mouseY);
-        Optional<UUID> current = snapshot().network(type);
+        Optional<UUID> current = snapshot().network(type, face);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
         GuiPaint.box(g, x, y, w, dropdownHeight(), GuiPaint.PANEL, GuiPaint.BUTTON_BORDER);
@@ -1793,6 +1869,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         this.networkListOpen = open;
     }
 
+    /** A lista de redes da linha Rede está aberta (gancho do e2e). */
+    public boolean networkListShown() {
+        return networkListOpen;
+    }
+
     /** Centro da linha do alvo {@code target} na lista (aberta), ou {@code null} se fora da vista (gancho do e2e). */
     public int @Nullable [] rangeRowCenter(EditTarget target) {
         return listShown() ? rangeList.rowCenter(range(), target) : null;
@@ -1811,6 +1892,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** O visor está na tela (gancho do e2e); lado a lado, os dois estão. */
     public boolean rangeViewShown() {
         return rangeShown() && viewShown();
+    }
+
+    /**
+     * O rótulo do botão da face {@code direction} no quadro do alvo (absoluta na presa): o lado relativo à
+     * frente da máquina (gancho do e2e, que acha o botão pela mensagem).
+     */
+    public Component attachedFaceLabel(Direction direction) {
+        return sideName(direction);
     }
 
     /** Centro do botão da face, para simular o mouse em cima na captura. */

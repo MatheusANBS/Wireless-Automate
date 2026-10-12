@@ -221,24 +221,30 @@ public final class ModPayloads {
     }
 
     /**
-     * Muda a rede de uma aba (tipo) do roteador. Só aceita rede que existe e que o jogador pode
-     * usar (dono ou operador nível 2, a mesma regra do Configurador), ou vazio para tirar da rede.
+     * Põe uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina remota) numa
+     * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono ou operador nível 2,
+     * a mesma regra do Configurador), ou vazio para tirar a face da rede. Ignora a ação se o alvo deixou
+     * de existir ({@link RouterMenu#actionTarget()}).
      */
     public static boolean handleSetNetwork(@Nullable ServerPlayer player, SetNetworkPayload payload) {
         RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null) {
+        if (router == null || !LoadedTypes.contains(payload.resource())) {
+            return false;
+        }
+        EditTarget target = openMenu(player, payload.containerId()).actionTarget();
+        if (target == null) {
             return false;
         }
         Optional<UUID> id = payload.network();
         if (id.isEmpty()) {
-            router.setNetworkId(payload.resource(), null);
+            router.setFaceNetwork(target, payload.resource(), payload.face(), null);
             return true;
         }
         WaNetwork network = NetworkSavedData.get(player.server).network(id.get());
         if (network == null || !canUse(player, network)) {
             return false;
         }
-        router.setNetworkId(payload.resource(), network.id());
+        router.setFaceNetwork(target, payload.resource(), payload.face(), network.id());
         return true;
     }
 

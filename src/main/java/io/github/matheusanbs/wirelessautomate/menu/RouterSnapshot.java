@@ -53,9 +53,11 @@ import org.jetbrains.annotations.Nullable;
  * redes do seletor ({@link #NETWORKS_CODEC}) vão em pacotes separados, cada um só quando muda.
  *
  * @param name     nome do nó dado pelo jogador; vazio = sem nome (a tela mostra o da máquina)
- * @param typeNetworks rede de cada aba, por {@link ResourceType#ordinal()}; vazia se não tiver ou se
- *                 ela não existir mais
- * @param networks redes que o jogador pode escolher no seletor
+ * @param attachedFront frente horizontal da máquina presa, no índice de {@link Direction#ordinal()}
+ *                 ({@link RouterBlockEntity#attachedFront()}, lida só no {@link #capture}); −1 sem frente
+ *                 ou com a frente vertical. A tela mostra os lados da presa relativos a ela
+ * @param networks redes que o jogador pode escolher no seletor e as de outro dono que aparecem em
+ *                 alguma face do alvo editado (para a pílula e o resumo mostrarem o nome)
  * @param machine  ícone da máquina conectada ({@link ItemStack#EMPTY} se não houver item)
  * @param machineState estado do bloco da máquina, para o visor 3D (ar se não houver)
  * @param faces    {@code ResourceType.values().length × 6}, no índice de {@link #index}
@@ -71,7 +73,7 @@ public record RouterSnapshot(
         String name,
         RouterTier tier,
         Direction facing,
-        List<Optional<UUID>> typeNetworks,
+        int attachedFront,
         List<NetworkEntry> networks,
         boolean powered,
         ItemStack machine,
@@ -85,17 +87,17 @@ public record RouterSnapshot(
 
     /** Sem as máquinas remotas (o snapshot de sempre, sem o Upgrade de Alcance). */
     public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
-            List<Optional<UUID>> typeNetworks, List<NetworkEntry> networks, boolean powered, ItemStack machine,
+            int attachedFront, List<NetworkEntry> networks, boolean powered, ItemStack machine,
             BlockState machineState, List<FaceView> faces, ChunkLoadState chunkLoad) {
-        this(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState, faces, chunkLoad,
+        this(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState, faces, chunkLoad,
                 RangeView.EMPTY);
     }
 
     /** Sem o estado do upgrade de chunk loading (capturas e prévias que não o mostram). */
     public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
-            List<Optional<UUID>> typeNetworks, List<NetworkEntry> networks, boolean powered, ItemStack machine,
+            int attachedFront, List<NetworkEntry> networks, boolean powered, ItemStack machine,
             BlockState machineState, List<FaceView> faces) {
-        this(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState, faces,
+        this(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState, faces,
                 ChunkLoadState.NONE);
     }
 
@@ -105,19 +107,19 @@ public record RouterSnapshot(
 
     /** O mesmo snapshot com outras redes no seletor. */
     public RouterSnapshot withNetworks(List<NetworkEntry> networks) {
-        return new RouterSnapshot(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState,
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
                 faces, chunkLoad, range);
     }
 
     /** O mesmo snapshot com outras faces (prévias da tela). */
     public RouterSnapshot withFaces(List<FaceView> faces) {
-        return new RouterSnapshot(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState,
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
                 faces, chunkLoad, range);
     }
 
-    /** O mesmo snapshot com outras redes por aba (prévias da tela). */
-    public RouterSnapshot withTypeNetworks(List<Optional<UUID>> typeNetworks) {
-        return new RouterSnapshot(pos, name, tier, facing, typeNetworks, networks, powered, machine, machineState,
+    /** O mesmo snapshot com outra frente da máquina presa (prévias da tela). */
+    public RouterSnapshot withAttachedFront(int attachedFront) {
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
                 faces, chunkLoad, range);
     }
 
@@ -129,7 +131,7 @@ public record RouterSnapshot(
     /** Tudo igual menos, talvez, as redes do seletor. */
     public boolean sameBody(RouterSnapshot other) {
         return pos.equals(other.pos) && name.equals(other.name) && tier == other.tier && facing == other.facing
-                && typeNetworks.equals(other.typeNetworks) && powered == other.powered
+                && attachedFront == other.attachedFront && powered == other.powered
                 && ItemStack.matches(machine, other.machine) && machineState == other.machineState
                 && faces.equals(other.faces) && chunkLoad == other.chunkLoad && range.equals(other.range);
     }
@@ -142,7 +144,7 @@ public record RouterSnapshot(
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(pos, name, tier, facing, typeNetworks, networks, powered,
+        return java.util.Objects.hash(pos, name, tier, facing, attachedFront, networks, powered,
                 ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad, range);
     }
 
@@ -153,17 +155,48 @@ public record RouterSnapshot(
      *                   {@code -1} se a máquina não tem essa capability nessa face
      * @param filterSize entradas do filtro (0 = passa tudo)
      * @param blacklist  o filtro é lista negra
+     * @param network    a rede da face (no alvo editado); vazia sem rede ou se a rede não existe mais
      */
     public record FaceView(PortMode mode, int priority, RedstoneMode redstone, int slots, int filterSize,
-            boolean blacklist) {
+            boolean blacklist, Optional<UUID> network) {
+        /** Sem rede (prévias da tela). */
+        public FaceView(PortMode mode, int priority, RedstoneMode redstone, int slots, int filterSize,
+                boolean blacklist) {
+            this(mode, priority, redstone, slots, filterSize, blacklist, Optional.empty());
+        }
+
         public boolean available() {
             return slots >= 0;
         }
+
+        /** A mesma face em outra rede. */
+        public FaceView withNetwork(Optional<UUID> network) {
+            return new FaceView(mode, priority, redstone, slots, filterSize, blacklist, network);
+        }
     }
 
-    /** Rede da aba {@code type}. */
-    public Optional<UUID> network(ResourceType type) {
-        return typeNetworks.get(type.ordinal());
+    /** Rede da face {@code face} (no quadro do alvo) no tipo {@code type}; vazia sem rede. */
+    public Optional<UUID> network(ResourceType type, Direction face) {
+        return face(type, face).network();
+    }
+
+    /** As redes distintas das seis faces do tipo {@code type}, na ordem das faces ({@link Direction#values()}). */
+    public List<UUID> networks(ResourceType type) {
+        List<UUID> ids = new ArrayList<>(2);
+        for (Direction face : Direction.values()) {
+            face(type, face).network().filter(id -> !ids.contains(id)).ifPresent(ids::add);
+        }
+        return ids;
+    }
+
+    /** A entrada do seletor com a rede {@code id}, ou {@code null} se o snapshot não a traz. */
+    public @Nullable NetworkEntry entry(UUID id) {
+        for (NetworkEntry entry : networks) {
+            if (entry.id.equals(id)) {
+                return entry;
+            }
+        }
+        return null;
     }
 
     public static int index(ResourceType type, Direction face) {
@@ -177,8 +210,8 @@ public record RouterSnapshot(
     /**
      * Monta o snapshot do roteador para o jogador (as redes do seletor dependem dele). Só no servidor.
      *
-     * <p>O seletor traz as redes do jogador, as públicas de outros donos e, se for de outro dono, a
-     * rede atual do roteador ({@code owned = false} nas de outro dono). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
+     * <p>O seletor traz as redes do jogador, as públicas de outros donos e as de outro dono que estão em
+     * alguma face, de qualquer tipo, do alvo editado ({@code owned = false} nas de outro dono). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
      * roteador, sem consulta direta de capability. O ícone da máquina é só o item do bloco, sem os
      * dados do block entity, para o pacote continuar pequeno.
      */
@@ -213,18 +246,6 @@ public record RouterSnapshot(
                 networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false));
             }
         }
-        List<Optional<UUID>> typeNetworks = new ArrayList<>();
-        for (ResourceType type : ResourceType.values()) {
-            UUID networkId = router.networkId(type);
-            WaNetwork current = networkId == null ? null : data.network(networkId);
-            typeNetworks.add(Optional.ofNullable(current).map(WaNetwork::id));
-            // Rede de outro dono aparece no seletor para o jogador ver onde o roteador está.
-            if (current != null && !current.owner().equals(player.getUUID())
-                    && networks.stream().noneMatch(e -> e.id().equals(current.id()))) {
-                networks.add(new NetworkEntry(current.id(), current.name(), current.color(), false));
-            }
-        }
-
         RangeView range = RangeView.EMPTY;
         EditTarget editing = EditTarget.ATTACHED_TARGET;
         RemoteMachine viewed = null;
@@ -266,14 +287,22 @@ public record RouterSnapshot(
                 } else {
                     slots = -1;
                 }
+                // Uma rede que não existe mais vai vazia: a tela mostra "Sem rede" (a face guarda o UUID).
+                WaNetwork network = config.network() == null ? null : data.network(config.network());
                 faces[index(type, face)] = new FaceView(config.mode(), config.priority(), config.redstone(),
                         slots, config.filter().entries().size(),
-                        config.filter().listMode() == Filter.ListMode.BLACKLIST);
+                        config.filter().listMode() == Filter.ListMode.BLACKLIST,
+                        Optional.ofNullable(network).map(WaNetwork::id));
+                // Rede de outro dono numa face aparece no seletor, para o jogador ver onde a face está.
+                if (network != null && !network.owner().equals(player.getUUID())
+                        && networks.stream().noneMatch(e -> e.id().equals(network.id()))) {
+                    networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false));
+                }
             }
         }
 
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
-                List.copyOf(typeNetworks), List.copyOf(networks), router.powered(), machine,
+                router.attachedFront(), List.copyOf(networks), router.powered(), machine,
                 machineState, List.of(faces), router.chunkLoadState(), range);
     }
 
@@ -484,10 +513,7 @@ public record RouterSnapshot(
         buf.writeUtf(s.name, NAME_LENGTH);
         buf.writeEnum(s.tier);
         buf.writeEnum(s.facing);
-        buf.writeVarInt(s.typeNetworks.size());
-        for (Optional<UUID> network : s.typeNetworks) {
-            buf.writeOptional(network, (b, id) -> b.writeUUID(id));
-        }
+        buf.writeVarInt(s.attachedFront + 1);
         buf.writeBoolean(s.powered);
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.machine);
         buf.writeVarInt(Block.getId(s.machineState));
@@ -499,6 +525,7 @@ public record RouterSnapshot(
             buf.writeVarInt(face.slots);
             buf.writeVarInt(face.filterSize);
             buf.writeBoolean(face.blacklist);
+            buf.writeOptional(face.network, (b, id) -> b.writeUUID(id));
         }
         buf.writeEnum(s.chunkLoad);
         RangeView.encode(buf, s.range);
@@ -509,11 +536,7 @@ public record RouterSnapshot(
         String name = buf.readUtf(NAME_LENGTH);
         RouterTier tier = buf.readEnum(RouterTier.class);
         Direction facing = buf.readEnum(Direction.class);
-        int typeCount = buf.readVarInt();
-        List<Optional<UUID>> typeNetworks = new ArrayList<>(typeCount);
-        for (int i = 0; i < typeCount; i++) {
-            typeNetworks.add(buf.readOptional(b -> b.readUUID()));
-        }
+        int attachedFront = buf.readVarInt() - 1;
         boolean powered = buf.readBoolean();
         ItemStack machine = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         BlockState machineState = Block.stateById(buf.readVarInt());
@@ -521,11 +544,12 @@ public record RouterSnapshot(
         List<FaceView> faces = new ArrayList<>(faceCount);
         for (int i = 0; i < faceCount; i++) {
             faces.add(new FaceView(buf.readEnum(PortMode.class), buf.readVarInt(),
-                    buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
+                    buf.readEnum(RedstoneMode.class), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
+                    buf.readOptional(b -> b.readUUID())));
         }
         ChunkLoadState chunkLoad = buf.readEnum(ChunkLoadState.class);
         RangeView range = RangeView.decode(buf);
-        return new RouterSnapshot(pos, name, tier, facing, List.copyOf(typeNetworks), List.of(), powered, machine,
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, List.of(), powered, machine,
                 machineState, List.copyOf(faces), chunkLoad, range);
     }
 }

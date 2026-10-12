@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -42,7 +43,9 @@ public final class Config {
     public record TierValues(
             Map<String, ModConfigSpec.LongValue> rates,
             ModConfigSpec.IntValue range,
-            ModConfigSpec.BooleanValue crossDimension) {
+            ModConfigSpec.BooleanValue crossDimension,
+            ModConfigSpec.IntValue machineRadius,
+            ModConfigSpec.IntValue maxMachines) {
         /**
          * Vazão do tipo na unidade da config ({@link ResourceType#ratePerTick()}); 0 = sem limite. O
          * padrão do tier enquanto a config do servidor não carregou (tela fora de um mundo).
@@ -86,7 +89,11 @@ public final class Config {
                     builder.comment("Alcance em blocos (0 = a dimensão inteira).")
                             .defineInRange("range", tier.defaultRange, 0, Integer.MAX_VALUE),
                     builder.comment("Permite rotas entre dimensões.")
-                            .define("crossDimension", tier.defaultCrossDimension)));
+                            .define("crossDimension", tier.defaultCrossDimension),
+                    builder.comment("Raio, em blocos, em que o Upgrade de Alcance vincula máquinas (0 = este tier não aceita o upgrade).")
+                            .defineInRange("machineRadius", RangeTiers.defaultRadius(tier.ordinal()), 0, RangeTiers.MAX_RADIUS),
+                    builder.comment("Máximo de máquinas vinculadas pelo Upgrade de Alcance.")
+                            .defineInRange("maxMachines", RangeTiers.defaultMaxMachines(tier.ordinal()), 0, RangeTiers.MAX_MACHINES)));
             builder.pop();
         }
         builder.pop();
@@ -202,6 +209,16 @@ public final class Config {
     /** Capacidade do armazenamento no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */
     public static long storageCapacity(StorageKind kind, RouterTier tier) {
         return SPEC.isLoaded() ? STORAGE_CAPACITY.get(kind).get(tier).get() : kind.defaultCapacity(tier);
+    }
+
+    /** Raio, em blocos, em que o Upgrade de Alcance vincula máquinas no tier (0 = o tier não aceita o upgrade). */
+    public static int machineRadius(RouterTier tier) {
+        return read(TIERS.get(tier).machineRadius());
+    }
+
+    /** Máximo de máquinas vinculadas pelo Upgrade de Alcance no tier. */
+    public static int maxMachines(RouterTier tier) {
+        return read(TIERS.get(tier).maxMachines());
     }
 
     /** Capacidade do Baú no tier; 0 = sem limite. */

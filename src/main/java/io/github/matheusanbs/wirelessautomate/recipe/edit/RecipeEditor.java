@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -38,6 +39,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 /**
  * Serviço do servidor do editor de receitas: lista as receitas editáveis do mod, grava e apaga os overrides
@@ -46,6 +48,8 @@ import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 public final class RecipeEditor {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final ReloadGate GATE = new ReloadGate();
+    /** Overrides em disco sem padrão editável já avisados no log até a parada do servidor (um aviso por id). */
+    private static final Set<ResourceLocation> WARNED = ConcurrentHashMap.newKeySet();
 
     public enum State { DEFAULT, EDITED, DISABLED }
 
@@ -71,6 +75,7 @@ public final class RecipeEditor {
 
     public static void reset() {
         GATE.reset();
+        WARNED.clear();
     }
 
     /**
@@ -106,6 +111,7 @@ public final class RecipeEditor {
         }
         GATE.serverReloaded();
         RecipeEditorMenu.broadcast(event.getPlayerList().getServer(), false);
+        warnOrphanOverrides(event.getPlayerList().getServer());
     }
 
     // ---------------------------------------------------------------- leitura
@@ -117,13 +123,45 @@ public final class RecipeEditor {
                 ids.add(holder.id());
             }
         }
-        ids.addAll(overridesOnDisk());
+        List<ResourceLocation> onDisk = overridesOnDisk();
+        ids.addAll(onDisk);
         List<Entry> out = new ArrayList<>();
         for (ResourceLocation id : ids) {
-            entry(server, id).ifPresent(out::add);
+            Optional<Entry> entry = entry(server, id);
+            entry.ifPresent(out::add);
+            if (entry.isEmpty() && onDisk.contains(id)) {
+                warnOrphan(id);
+            }
         }
         out.sort(Comparator.comparing(e -> e.id().getPath()));
         return out;
+    }
+
+    /**
+     * Avisa no log cada override em disco cujo padrão no jar não é editável. Roda na subida do servidor e no fim
+     * de cada recarga, para o aviso sair mesmo num servidor que nunca abre o {@code /wa recipes}; um aviso por id.
+     */
+    public static void warnOrphanOverrides(MinecraftServer server) {
+        for (ResourceLocation id : overridesOnDisk()) {
+            if (readDefaults(server, id).isEmpty()) {
+                warnOrphan(id);
+            }
+        }
+    }
+
+    private static void warnOrphan(ResourceLocation id) {
+        if (WARNED.add(id)) {
+            // Por exemplo um tier_core_<tier> editado antes de virar wirelessautomate:tier_upgrade: o override
+            // ganha do jar (e fabrica um cartão sem origem, com o anel velho), mas a tela não o lista nem o
+            // restaura. Não se apaga nada: apague o arquivo para voltar à receita do mod.
+            WirelessAutomate.LOGGER.warn("Override de receita sem padrão editável: {} ({})", id,
+                    RecipeOverridePack.recipeFile(id));
+        }
+    }
+
+    /** Subida do servidor: os avisos de override sem padrão editável ({@link #warnOrphanOverrides}). */
+    public static void onServerStarted(ServerStartedEvent event) {
+        warnOrphanOverrides(event.getServer());
     }
 
     private static Optional<Entry> entry(MinecraftServer server, ResourceLocation id) {

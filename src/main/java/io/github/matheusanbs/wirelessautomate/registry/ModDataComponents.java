@@ -2,18 +2,21 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import java.util.function.Supplier;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -61,6 +64,15 @@ public final class ModDataComponents {
                     .persistent(LinkerItem.TABS_CODEC)
                     .networkSynchronized(LinkerItem.TABS_STREAM_CODEC));
 
+    /**
+     * Faces (lados relativos à máquina presa) que o Vinculador vincula ou desvincula: máscara de 6 bits
+     * pelo {@code ordinal} do {@code RemoteSide}; sem o componente, Todas (63).
+     */
+    public static final Supplier<DataComponentType<LinkerFaces>> LINKER_FACES =
+            DATA_COMPONENTS.registerComponentType("linker_faces", builder -> builder
+                    .persistent(LinkerItem.FACES_CODEC)
+                    .networkSynchronized(LinkerItem.FACES_STREAM_CODEC));
+
     /** Vinculador no modo desvincular ("Nenhuma" na escolha da rede); sem o componente, vincula. */
     public static final Supplier<DataComponentType<Boolean>> LINKER_UNLINK =
             DATA_COMPONENTS.registerComponentType("linker_unlink", builder -> builder
@@ -78,6 +90,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("linker_area", builder -> builder
                     .persistent(LinkerArea.CODEC)
                     .networkSynchronized(LinkerArea.STREAM_CODEC));
+
+    /**
+     * Roteador escolhido no modo Máquinas do Vinculador (posição e dimensão): o alvo dos vínculos de
+     * máquinas. Não é limpo quando o roteador some; o servidor confere a cada clique.
+     */
+    public static final Supplier<DataComponentType<GlobalPos>> LINKER_ROUTER =
+            DATA_COMPONENTS.registerComponentType("linker_router", builder -> builder
+                    .persistent(GlobalPos.CODEC)
+                    .networkSynchronized(GlobalPos.STREAM_CODEC));
 
     /** Bloco da máquina do roteador copiado pelo Configurador: colar em área só vale para essa máquina. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =
@@ -111,6 +132,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder
                     .persistent(ConfiguratorItem.TYPE_CODEC)
                     .networkSynchronized(ConfiguratorItem.TYPE_STREAM_CODEC));
+
+    /**
+     * Tier de origem do Cartão de Upgrade (pelo nome do tier): o cartão só vale num bloco desse tier. Ausente =
+     * cartão antigo (de antes desta regra), que sobe de qualquer tier abaixo do destino.
+     */
+    public static final Supplier<DataComponentType<RouterTier>> UPGRADE_FROM =
+            DATA_COMPONENTS.registerComponentType("upgrade_from", builder -> builder
+                    .persistent(RouterTier.CODEC)
+                    .networkSynchronized(RouterTier.STREAM_CODEC));
 
     private ModDataComponents() {
     }

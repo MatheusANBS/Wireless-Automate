@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
@@ -12,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +37,10 @@ import org.lwjgl.glfw.GLFW;
  * (Itens, Fluidos, Energia e, com o Mekanism, Químicos); no cabeçalho o modo (Único ou Área). Em
  * Único, só a explicação do clique; em Área, a prévia de cima da caixa marcada com os roteadores
  * dentro dela, os cantos, a contagem e o botão Vincular (ou Desvincular).
+ *
+ * <p>Linha Faces ({@code [Todas] [F] [T] [E] [D] [C] [B]}, lados relativos à máquina presa): em Área,
+ * logo abaixo do mapa (que fica {@link #FACES_H} px mais baixo); em Único, no pé da coluna da direita;
+ * some no modo Máquinas. "Todas" só marca as seis; as letras marcam e desmarcam uma a uma.
  *
  * <p>Tudo vem de {@link LinkerMenu#snapshot()}; os botões leem o estado a cada quadro, então um
  * estado novo aparece sem recriar widgets. A tela não muda nada sozinha: manda a ação e espera o
@@ -70,6 +77,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     // coluna da direita: o corpo do modo
     private static final int RX = X0 + LW + 8;
     private static final int MAP_H = 104;
+    /** Altura que a linha Faces toma do mapa (botões de 12 px e folga). */
+    private static final int FACES_H = 14;
+    private static final int FACES_ALL_W = 34;
+    private static final int FACE_W = 14;
+    private static final int FACE_STEP = 15;
+    private static final RemoteSide[] SIDES = RemoteSide.values();
 
     /** Caixas das abas, na ordem dos botões (Químicos só aparece com o Mekanism). */
     private static final ResourceType[] TABS = ResourceType.values();
@@ -81,6 +94,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private final List<FlatButton> buttons = new ArrayList<>();
     private final List<FlatButton> rowButtons = new ArrayList<>();
     private final List<FlatButton> tabButtons = new ArrayList<>();
+    private final List<FlatButton> faceButtons = new ArrayList<>();
     private int scroll;
     private boolean creating;
     private String draft = "";
@@ -90,6 +104,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private FlatButton linkButton;
     private FlatButton clearButton;
     private FlatButton allButton;
+    private FlatButton allFacesButton;
+    /** Modo Único: as dicas que não couberam acima da linha Faces e onde fica o "Mais dicas" (x, y, l, a). */
+    private @Nullable Component moreHints;
+    private int[] moreArea = new int[4];
     private EditBox nameBox;
 
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title) {
@@ -118,8 +136,14 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return h - MIN_H;
     }
 
+    /** O mapa: no modo Máquinas, a altura de antes; nos outros, {@link #FACES_H} a menos para a linha Faces. */
     private int mapH() {
-        return MAP_H + extraH();
+        return MAP_H + extraH() - (machines() ? 0 : FACES_H);
+    }
+
+    /** Topo da linha Faces: abaixo do mapa em Área, no pé da coluna em Único. */
+    private int facesY() {
+        return snapshot().mode() == LinkerMode.SINGLE ? actionY() + 2 : BODY_Y + mapH() + 2;
     }
 
     private int actionY() {
@@ -156,6 +180,20 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return tr("mode." + mode.getSerializedName());
     }
 
+    /** Largura de cada botão de modo: 44 px, ou o nome mais largo com folga (todos iguais). */
+    private int modeW() {
+        int width = 44;
+        for (LinkerMode mode : LinkerMode.values()) {
+            width = Math.max(width, font.width(modeName(mode)) + 8);
+        }
+        return width;
+    }
+
+    /** Modo Máquinas: o Vincular liga as máquinas da área ao roteador escolhido. */
+    private boolean machines() {
+        return snapshot().mode() == LinkerMode.MACHINES;
+    }
+
     private boolean unlink() {
         return snapshot().unlink();
     }
@@ -163,6 +201,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Todas as abas que existem estão marcadas. */
     private boolean allTabs() {
         return snapshot().tabs().isAll(snapshot().available().types());
+    }
+
+    private LinkerFaces faces() {
+        return snapshot().faces();
     }
 
     /** "Todos" ou "Itens + Fluidos", pelas abas que valem. */
@@ -256,10 +298,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         buttons.clear();
         rowButtons.clear();
         tabButtons.clear();
+        faceButtons.clear();
         int x = leftPos;
         int y = topPos;
 
-        int modeW = 44;
+        int modeW = modeW();
         LinkerMode[] modes = LinkerMode.values();
         for (int i = 0; i < modes.length; i++) {
             LinkerMode mode = modes[i];
@@ -303,6 +346,15 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         }
         allButton = add(new FlatButton(x + X0 + LW - 50, y + typeLabelY() - 3, 50, 12, tr("type.all"),
                 (g, b, hovered) -> paintAll(g, b, hovered), this::setAllTabs).tooltip(this::allTooltip));
+
+        allFacesButton = add(new FlatButton(x + RX, y + facesY(), FACES_ALL_W, 12, tr("faces.all"),
+                this::paintAllFaces, this::setAllFaces).tooltip(this::allFacesTooltip));
+        for (int i = 0; i < SIDES.length; i++) {
+            RemoteSide side = SIDES[i];
+            faceButtons.add(add(new FlatButton(x + RX + FACES_ALL_W + 3 + i * FACE_STEP, y + facesY(), FACE_W, 12,
+                    LinkerItem.sideLetter(side), (g, b, hovered) -> paintFace(g, b, hovered, side),
+                    () -> toggleFace(side)).tooltip(() -> faceTooltip(side))));
+        }
 
         linkButton = add(new FlatButton(x + RX, y + actionY(), rw() - 48, 16, tr("link.count", 0), this::paintLink,
                 this::link).tooltip(this::linkTooltip));
@@ -353,9 +405,18 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         createButton.visible = creating;
         createButton.active = !draft.strip().isEmpty();
         nameBox.visible = creating;
-        boolean area = s.mode() == LinkerMode.AREA;
+        boolean area = s.mode() != LinkerMode.SINGLE;
         linkButton.visible = clearButton.visible = area;
-        linkButton.active = s.problem() == LinkerProblem.NONE && toLink() > 0;
+        // a linha Faces some no modo Máquinas; em Único fica no pé da coluna, em Área abaixo do mapa
+        boolean showFaces = !machines();
+        allFacesButton.visible = showFaces;
+        allFacesButton.setY(topPos + facesY());
+        for (FlatButton face : faceButtons) {
+            face.visible = showFaces;
+            face.setY(topPos + facesY());
+        }
+        // em Máquinas a contagem é de roteadores; o servidor decide quais máquinas entram
+        linkButton.active = s.problem() == LinkerProblem.NONE && (machines() || toLink() > 0);
         linkButton.setMessage(linkLabel());
         clearButton.active = s.first().isPresent() || s.otherDimension();
     }
@@ -369,9 +430,35 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Cópia do estado com rede, desvincular, abas e modo trocados (só na captura de desenvolvimento). */
     private static LinkerSnapshot with(LinkerSnapshot s, Optional<UUID> active, boolean unlink, LinkerTabs tabs,
             LinkerMode mode) {
+        return with(s, active, unlink, tabs, mode, s.faces());
+    }
+
+    private static LinkerSnapshot with(LinkerSnapshot s, Optional<UUID> active, boolean unlink, LinkerTabs tabs,
+            LinkerMode mode, LinkerFaces faces) {
         return new LinkerSnapshot(s.networks(), active, unlink, tabs, s.available(), mode, s.first(), s.second(),
                 s.otherDimension(), s.inside(), s.already(), s.unloadedChunks(), s.routers(), s.problem(),
-                s.maxVolume(), s.maxDistance(), Optional.empty());
+                s.maxVolume(), s.maxDistance(), Optional.empty(), faces);
+    }
+
+    /** Grava as faces (o servidor aceita vazio: o aviso aparece e o Vincular desliga). */
+    private void setFaces(LinkerFaces next) {
+        if (preview) {
+            LinkerSnapshot s = snapshot();
+            apply(with(s, s.active(), s.unlink(), s.tabs(), s.mode(), next));
+            return;
+        }
+        send(Op.SET_FACES, Optional.empty(), "", next.mask());
+    }
+
+    private void toggleFace(RemoteSide side) {
+        setFaces(faces().toggle(side));
+    }
+
+    /** "Todas" só marca as seis (para desmarcar, as letras uma a uma). */
+    private void setAllFaces() {
+        if (!faces().isAll()) {
+            setFaces(LinkerFaces.ALL);
+        }
     }
 
     private void setMode(LinkerMode mode) {
@@ -454,7 +541,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             LinkerSnapshot s = snapshot();
             apply(new LinkerSnapshot(s.networks(), s.active(), s.unlink(), s.tabs(), s.available(), s.mode(),
                     Optional.empty(), Optional.empty(), false, 0, 0, 0, List.of(), LinkerProblem.NO_AREA, s.maxVolume(),
-                    s.maxDistance(), Optional.empty()));
+                    s.maxDistance(), Optional.empty(), s.faces()));
             return;
         }
         send(Op.CLEAR_AREA, Optional.empty(), "", 0);
@@ -614,6 +701,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 break;
             }
         }
+        if (moreHints != null && snapshot().mode() == LinkerMode.SINGLE && mouseX >= moreArea[0]
+                && mouseX < moreArea[0] + moreArea[2] && mouseY >= moreArea[1] && mouseY < moreArea[1] + moreArea[3]) {
+            setTooltipForNextRenderPass(moreHints);
+            return;
+        }
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
             return;
@@ -642,7 +734,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
         int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
-        int headW = x1() - LinkerMode.values().length * 46 - 4 - headX;
+        int headW = x1() - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
         GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? UNLINK : GuiPaint.MUTED);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
@@ -684,9 +776,73 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         Component typeHint = unlink()
                 ? (allTabs() ? tr("single.unlink.all") : tr("single.unlink.tabs", tabsName()))
                 : (allTabs() ? tr("single.all") : tr("single.tabs", tabsName()));
-        for (Component hint : List.of(typeHint, tr("single.toggle"), tr("single.open"))) {
-            lineY += GuiText.wrap(g, font, hint, x, lineY, rw(), 3, GuiPaint.MUTED);
-            lineY += 4;
+        List<Component> hints = new ArrayList<>();
+        List<Integer> colors = new ArrayList<>();
+        hints.add(typeHint);
+        colors.add(GuiPaint.MUTED);
+        if (faces().isEmpty()) {
+            hints.add(tr("problem.no_faces"));
+            colors.add(WARN);
+        } else if (!faces().isAll()) {
+            hints.add(tr(unlink() ? "single.unlink.faces" : "single.faces", LinkerItem.facesNames(faces())));
+            colors.add(GuiPaint.MUTED);
+        }
+        hints.add(tr("single.toggle"));
+        colors.add(GuiPaint.MUTED);
+        hints.add(tr("single.open"));
+        colors.add(GuiPaint.MUTED);
+        // as dicas param antes da linha Faces, no pé da coluna. Cabem pela prioridade (a das abas, a das
+        // faces, Shift + roda e por último a do Shift + clique); as que não cabem vão para a dica do
+        // mouse de uma linha "Mais dicas", nunca somem sem rastro
+        int limit = topPos + facesY() - 4;
+        int last = hints.size() - 1;
+        List<Integer> priority = new ArrayList<>();
+        for (int i = 0; i < last - 1; i++) {
+            priority.add(i);
+        }
+        priority.add(last);
+        priority.add(last - 1);
+        int[] height = new int[hints.size()];
+        for (int i = 0; i < hints.size(); i++) {
+            height[i] = GuiText.lineCount(font, hints.get(i), rw(), 4) * 10 + 4;
+        }
+        boolean[] shown = new boolean[hints.size()];
+        int used = lineY;
+        boolean dropped = false;
+        for (int i : priority) {
+            if (used + height[i] - 4 > limit) {
+                dropped = true;
+                continue;
+            }
+            shown[i] = true;
+            used += height[i];
+        }
+        // com alguma de fora, a linha "Mais dicas" também precisa caber: tira as menos importantes
+        for (int k = priority.size() - 1; dropped && k >= 0 && used + 10 - 4 > limit; k--) {
+            int i = priority.get(k);
+            if (shown[i]) {
+                shown[i] = false;
+                used -= height[i];
+            }
+        }
+        MutableComponent more = Component.empty();
+        moreHints = null;
+        for (int i = 0; i < hints.size(); i++) {
+            if (shown[i]) {
+                lineY += GuiText.wrap(g, font, hints.get(i), x, lineY, rw(), 4, colors.get(i));
+                lineY += 4;
+            } else {
+                if (!more.getSiblings().isEmpty()) {
+                    more.append(Component.literal("\n"));
+                }
+                more.append(hints.get(i));
+            }
+        }
+        if (!more.getSiblings().isEmpty()) {
+            Component label = tr("single.more");
+            GuiText.draw(g, font, label, x, lineY, rw(), GuiPaint.MUTED);
+            moreHints = more;
+            moreArea = new int[] {x, lineY - 1, Math.min(rw(), font.width(label)), 10};
         }
     }
 
@@ -800,21 +956,23 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             GuiPaint.textRight(g, font, scaleText, x + mapW - 3, y + mh - 10, GuiPaint.DISABLED);
         }
 
-        // cantos
-        int cy = y + mh + 4;
+        // cantos (abaixo da linha Faces, que fica entre o mapa e eles)
+        int below = machines() ? 0 : FACES_H;
+        int cy = y + mh + below + 4;
         cornerLine(g, x, cy, tr("corner1"), s.first());
         cornerLine(g, x, cy + 10, tr("corner2"), s.second());
 
         // estado (contagem ou o que impede) e, embaixo, o detalhe ou o resultado do último Vincular
-        int sy = y + mh + 25;
+        int sy = y + mh + below + 25;
         if (s.problem() != LinkerProblem.NONE) {
             GuiText.wrap(g, font, status(s), x, sy, rw(), 2, statusColor(s));
             return;
         }
         // depois do Vincular, o resultado toma o lugar da contagem (que viraria "N já na rede")
         Component head = s.outcome().map(this::outcomeText).orElse(status(s));
-        GuiText.draw(g, font, head, x, sy, rw(), s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         Component detail = s.outcome().isPresent() ? outcomeDetail(s.outcome().get()) : detail(s);
+        // sem detalhe, o resultado pode ocupar as duas linhas (até o botão)
+        GuiText.wrap(g, font, head, x, sy, rw(), detail == null ? 2 : 1, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         if (detail != null) {
             boolean unloaded = s.outcome().map(o -> o.unloadedChunks() > 0).orElse(s.unloadedChunks() > 0);
             GuiText.draw(g, font, detail, x, sy + 11, rw(), unloaded ? WARN : GuiPaint.MUTED);
@@ -852,7 +1010,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** "N roteadores na área" (ou "N roteadores · M já na rede"), ou o que impede. */
     private Component status(LinkerSnapshot s) {
         return switch (s.problem()) {
-            case NONE -> s.already() > 0
+            case NONE -> s.mode() == LinkerMode.MACHINES ? tr("machines.status")
+                    : s.already() > 0
                     ? tr(s.unlink() ? "count.with_unlinked" : "count.with_already", s.inside(), s.already())
                     : s.inside() == 1 ? tr("count.one") : tr("count", s.inside());
             case TOO_BIG -> tr("problem.too_big", s.maxVolume());
@@ -878,11 +1037,15 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     private Component outcomeText(Outcome o) {
+        boolean someFaces = !o.faces().isAll();
         if (o.unlink()) {
-            return tr("outcome.unlinked", o.linked(), tabsName(o.tabs(), snapshot().available().types()));
+            Component tabs = tabsName(o.tabs(), snapshot().available().types());
+            return someFaces ? tr("outcome.unlinked_faces", o.linked(), LinkerItem.facesLetters(o.faces()), tabs)
+                    : tr("outcome.unlinked", o.linked(), tabs);
         }
         Component network = Component.literal(o.network()).withColor(0xFF000000 | o.color());
-        return tr("outcome", o.linked(), network);
+        return someFaces ? tr("outcome.faces", o.linked(), LinkerItem.facesLetters(o.faces()), network)
+                : tr("outcome", o.linked(), network);
     }
 
     /**
@@ -907,8 +1070,16 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (s.problem() != LinkerProblem.NONE) {
             return status(s);
         }
+        if (machines()) {
+            return tr(s.unlink() ? "machines.unlink.tooltip" : "machines.link.tooltip");
+        }
         if (toLink() == 0) {
             return s.inside() == 0 ? tr("link.none") : tr(s.unlink() ? "unlink.all_out" : "link.all_in");
+        }
+        if (!faces().isAll()) {
+            Component names = LinkerItem.facesNames(faces());
+            return s.unlink() ? tr("unlink.tooltip.faces", toLink(), names, tabsName())
+                    : tr("link.tooltip.faces", toLink(), names, activeName(), tabsName());
         }
         if (s.unlink()) {
             return allTabs() ? tr("unlink.tooltip", toLink()) : tr("unlink.tooltip.tabs", toLink(), tabsName());
@@ -918,11 +1089,34 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     /**
-     * "Vincular 9" ou "Desvincular 9". Quais abas entram aparece nas caixas e no tooltip: pôr o
-     * número delas aqui não cabe no botão (82 px) em português.
+     * "Vincular 9" ou "Desvincular 9"; com só algumas faces, "Vincular 9 · T, B" ou "Desvincular T, B ·
+     * 9" (abreviado pelo {@link GuiText}; o tooltip diz tudo). Quais abas entram aparece nas caixas e
+     * no tooltip: pôr o número delas aqui não cabe no botão (82 px) em português.
      */
     private Component linkLabel() {
+        if (machines()) {
+            return tr(unlink() ? "machines.unlink" : "machines.link");
+        }
+        if (faces().isEmpty()) {
+            return tr(unlink() ? "unlink.label" : "link.label");
+        }
+        if (!faces().isAll()) {
+            return tr(unlink() ? "unlink.count.faces" : "link.count.faces", toLink(),
+                    LinkerItem.facesLetters(faces()));
+        }
         return tr(unlink() ? "unlink.count" : "link.count", toLink());
+    }
+
+    private Component faceTooltip(RemoteSide side) {
+        return LinkerItem.sideName(side).copy().append("\n")
+                .append(tr(faces().contains(side) ? "faces.side.on" : "faces.side.off").copy()
+                        .withColor(GuiPaint.TOOLTIP_MUTED))
+                .append("\n").append(tr("faces.side.frame").copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                .append("\n").append(tr("faces.side.no_front").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+    }
+
+    private Component allFacesTooltip() {
+        return tr(faces().isAll() ? "faces.all.tooltip.on" : "faces.all.tooltip");
     }
 
     private Component tabTooltip(ResourceType t) {
@@ -1014,6 +1208,29 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         int tx = ix + ResourceStyle.ICON + 4;
         GuiText.draw(g, font, typeName(t), tx, b.getY() + (b.getHeight() - 8) / 2,
                 b.getX() + b.getWidth() - 3 - tx, checked ? GuiPaint.FG : GuiPaint.MUTED);
+    }
+
+    /** Uma letra da linha Faces: marcada, fundo escuro; desmarcada, a letra apagada. */
+    private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, RemoteSide side) {
+        boolean on = faces().contains(side);
+        paintToggle(g, b, hovered, LinkerItem.sideLetter(side), on);
+    }
+
+    /** "Todas" da linha Faces: fundo escuro com as seis marcadas. */
+    private void paintAllFaces(GuiGraphics g, FlatButton b, boolean hovered) {
+        paintToggle(g, b, hovered, tr("faces.all"), faces().isAll());
+    }
+
+    private void paintToggle(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean on) {
+        if (on) {
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.SELECTED, GuiPaint.SELECTED);
+        } else {
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
+                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        }
+        int textW = Math.min(font.width(text), b.getWidth() - 2);
+        GuiText.draw(g, font, text, b.getX() + (b.getWidth() - textW) / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
+                textW, on ? GuiPaint.SELECTED_TEXT : hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     /** Todos: botão de texto, na cor do Vinculador quando todas as abas estão marcadas. */

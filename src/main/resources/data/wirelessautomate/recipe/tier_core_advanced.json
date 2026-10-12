@@ -1,18 +1,18 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "wirelessautomate:tier_upgrade",
   "category": "misc",
+  "tier": "advanced",
   "pattern": [
     "GDG",
-    "DBD",
+    "D D",
     "GDG"
   ],
   "key": {
-    "G": { "item": "minecraft:gold_ingot" },
-    "D": { "item": "minecraft:diamond" },
-    "B": { "item": "minecraft:gold_block" }
-  },
-  "result": {
-    "id": "wirelessautomate:tier_core_advanced",
-    "count": 1
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    }
   }
 }

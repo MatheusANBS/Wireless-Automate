@@ -40,8 +40,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@code /wa}: profiler embutido ({@code profile}), gerência de redes ({@code network}) e
- * configuração de faces sem tela ({@code face}), usada em testes manuais antes das telas, e o
- * conteúdo dos Baús guardado no servidor ({@code storage}).
+ * configuração de faces sem tela ({@code face}: modo e prioridade, ou a rede da face), usada em
+ * testes manuais antes das telas, e o conteúdo dos Baús guardado no servidor ({@code storage}).
  */
 public final class WaCommand {
     public static final int MAX_NAME_LENGTH = 32;
@@ -103,6 +103,13 @@ public final class WaCommand {
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .then(word("type", TYPES.keySet())
                                         .then(word("face", FACES.keySet())
+                                                // O literal ganha do argumento "mode" no Brigadier.
+                                                .then(Commands.literal("network")
+                                                        .then(Commands.literal("none")
+                                                                .executes(context -> faceNetwork(context, null)))
+                                                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                                                .suggests(NETWORK_NAMES)
+                                                                .executes(context -> faceNetwork(context, name(context)))))
                                                 .then(word("mode", MODES.keySet())
                                                         .executes(context -> face(context, null))
                                                         .then(Commands.argument("priority", IntegerArgumentType.integer())
@@ -250,6 +257,42 @@ public final class WaCommand {
             router.setPriority(type, face, priority);
             message = Component.translatable("command.wirelessautomate.face.set_priority",
                     pos.toShortString(), typeName, faceName, modeName, priority);
+        }
+        context.getSource().sendSuccess(() -> message, false);
+        return 1;
+    }
+
+    /**
+     * {@code /wa face <pos> <tipo> <face> network <nome|none>}: põe a face absoluta da máquina presa
+     * na rede pelo nome (a mesma busca do {@code use}; o comando já pede permissão 2, então qualquer
+     * rede) ou, com {@code none} ({@code name} nulo), tira a face da rede.
+     */
+    private static int faceNetwork(CommandContext<CommandSourceStack> context, @Nullable String name)
+            throws CommandSyntaxException {
+        ServerLevel level = context.getSource().getLevel();
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, level, "pos");
+        if (!(level.getBlockEntity(pos) instanceof RouterBlockEntity router)) {
+            throw NOT_ROUTER.create(pos.toShortString());
+        }
+        String typeName = StringArgumentType.getString(context, "type");
+        String faceName = StringArgumentType.getString(context, "face");
+        ResourceType type = parse(TYPES, typeName);
+        Direction face = parse(FACES, faceName);
+        Component message;
+        if (name == null) {
+            router.setFaceNetwork(type, face, null);
+            message = Component.translatable("command.wirelessautomate.face.clear_network",
+                    pos.toShortString(), typeName, faceName);
+        } else {
+            ServerPlayer player = context.getSource().getPlayer();
+            WaNetwork network = NetworkSavedData.get(context.getSource().getServer())
+                    .find(player == null ? null : player.getUUID(), name);
+            if (network == null) {
+                throw NOT_FOUND.create(name);
+            }
+            router.setFaceNetwork(type, face, network.id());
+            message = Component.translatable("command.wirelessautomate.face.set_network",
+                    pos.toShortString(), typeName, faceName, network.displayName());
         }
         context.getSource().sendSuccess(() -> message, false);
         return 1;

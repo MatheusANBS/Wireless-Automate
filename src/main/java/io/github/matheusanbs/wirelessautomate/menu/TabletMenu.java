@@ -406,13 +406,23 @@ public class TabletMenu extends AbstractContainerMenu {
             // Só os nós da página são sondados agora.
             RouterBlockEntity router = entry.router();
             int full = router == null ? 0 : fullDestinations(router, now);
-            List<Optional<UUID>> networks = new ArrayList<>();
+            // só as redes que existem, só dos tipos carregados (os outros vão vazios); uma face numa
+            // rede apagada vira o aviso (sem varrer nada)
+            List<List<UUID>> networks = new ArrayList<>();
+            boolean removed = false;
             for (ResourceType type : ResourceType.values()) {
-                UUID id = entry.network(type);
-                networks.add(id != null && data.network(id) != null ? Optional.of(id) : Optional.empty());
+                List<UUID> existing = new ArrayList<>();
+                for (UUID id : LoadedTypes.contains(type) ? entry.networks(type) : List.<UUID>of()) {
+                    if (data.network(id) != null) {
+                        existing.add(id);
+                    } else {
+                        removed = true;
+                    }
+                }
+                networks.add(List.copyOf(existing));
             }
             nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), status(entry, match.loaded, full, match.moved, data)));
+                    entry.roles(), status(entry, match.loaded, full, match.moved, data), removed));
         }
 
         Map<UUID, NetworkStats> stats = new HashMap<>();
@@ -462,26 +472,28 @@ public class TabletMenu extends AbstractContainerMenu {
         return full;
     }
 
-    /** O jogador vê o nó: operador, quem o colocou, ou alguma aba numa rede dele. */
+    /** O jogador vê o nó: operador, quem o colocou, ou alguma face numa rede dele. */
     private static boolean visible(NodeIndex.Entry entry, NetworkSavedData data, boolean operator, UUID me) {
         if (operator || me.equals(entry.placedBy())) {
             return true;
         }
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = entry.network(type);
-            WaNetwork network = id == null ? null : data.network(id);
-            if (network != null && network.owner().equals(me)) {
-                return true;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                WaNetwork network = data.network(id);
+                if (network != null && network.owner().equals(me)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
-    private static @Nullable Totals totalsOf(Map<UUID, Totals> totals, @Nullable UUID network) {
-        return network == null ? null : totals.get(network);
-    }
-
-    /** Soma a vazão do nó às redes de cada aba; devolve se ele moveu algo desde a amostra anterior. */
+    /**
+     * Soma a vazão do nó às redes das faces de cada tipo; devolve se ele moveu algo desde a amostra
+     * anterior. O roteador só conta o movido por tipo ({@link RouterBlockEntity#moved}), não por rede:
+     * com as faces de um tipo em duas redes, o total do tipo vai para cada uma delas (a vazão de uma
+     * rede conta o nó inteiro). A vazão exata por rede pediria contar o movido por porta no motor.
+     */
     private boolean sampleMoved(NodeIndex.Entry entry, RouterBlockEntity router, Map<UUID, Totals> totals, long elapsed) {
         long[] last = lastMoved.get(entry.key());
         if (last == null) {
@@ -499,9 +511,11 @@ public class TabletMenu extends AbstractContainerMenu {
             long delta = Math.max(0, now - last[type.ordinal()]);
             if (delta > 0) {
                 moved = true;
-                Totals network = totalsOf(totals, entry.network(type));
-                if (network != null) {
-                    network.moved[t] = RateMath.add(network.moved[t], delta);
+                for (UUID id : entry.networks(type)) {
+                    Totals network = totals.get(id);
+                    if (network != null) {
+                        network.moved[t] = RateMath.add(network.moved[t], delta);
+                    }
                 }
             }
         }
@@ -511,25 +525,26 @@ public class TabletMenu extends AbstractContainerMenu {
         return moved;
     }
 
-    /** Conta o nó uma vez em cada rede em que alguma aba dele está. */
+    /**
+     * Conta o nó uma vez em cada rede em que alguma face dele está. Uma rede em vários tipos conta uma
+     * vez: o {@code counted} guarda as já contadas deste nó (vazio e sem custo para quem não tem rede).
+     */
     private static void countMembership(NodeIndex.Entry entry, Map<UUID, Totals> totals, boolean loaded) {
-        ResourceType[] types = ResourceType.values();
-        for (int i = 0; i < types.length; i++) {
-            UUID id = entry.network(types[i]);
-            if (id == null) {
-                continue;
-            }
-            boolean repeated = false;
-            for (int j = 0; j < i; j++) {
-                if (id.equals(entry.network(types[j]))) {
-                    repeated = true;
+        Set<Totals> counted = null;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                Totals network = totals.get(id);
+                if (network == null) {
+                    continue;
                 }
-            }
-            Totals network = totals.get(id);
-            if (!repeated && network != null) {
-                network.nodes++;
-                if (!loaded) {
-                    network.unloaded++;
+                if (counted == null) {
+                    counted = new HashSet<>();
+                }
+                if (counted.add(network)) {
+                    network.nodes++;
+                    if (!loaded) {
+                        network.unloaded++;
+                    }
                 }
             }
         }
@@ -541,11 +556,12 @@ public class TabletMenu extends AbstractContainerMenu {
         }
         boolean anyNetwork = false;
         boolean anyRunning = false;
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = entry.network(type);
-            if (id != null && data.network(id) != null) {
-                anyNetwork = true;
-                anyRunning |= !data.isPaused(id);
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                if (data.network(id) != null) {
+                    anyNetwork = true;
+                    anyRunning |= !data.isPaused(id);
+                }
             }
         }
         if (!anyNetwork) {
@@ -603,11 +619,12 @@ public class TabletMenu extends AbstractContainerMenu {
     }
 
     private static boolean inNetworkName(NodeIndex.Entry entry, String word, Map<UUID, String> networkNames) {
-        for (ResourceType type : ResourceType.values()) {
-            UUID id = entry.network(type);
-            String name = id == null ? null : networkNames.get(id);
-            if (name != null && name.contains(word)) {
-                return true;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                String name = networkNames.get(id);
+                if (name != null && name.contains(word)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -710,9 +727,13 @@ public class TabletMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Põe os nós numa rede: só a aba {@code type} ou, vazio, todas; {@code network} vazio tira da
-     * rede. Só nós visíveis ao jogador e carregados (a rede é guardada no roteador); os descarregados
-     * ficam de fora e são contados no aviso. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
+     * Põe os nós numa rede: todas as faces (presa, perfis e exceções) do tipo {@code type} ou, vazio,
+     * de todos os tipos carregados (as faces de um tipo cujo mod saiu ficam como estão); {@code network}
+     * vazio tira da rede. Só nós visíveis ao jogador e carregados
+     * (a rede é guardada no roteador); os descarregados ficam de fora e são contados no aviso. Uma face
+     * numa rede que o jogador não gerencia ({@link WaNetwork#canManage}: dono ou operador; uma rede
+     * pública de outro dono também não) fica como está e é contada no aviso; faces sem rede ou em rede
+     * apagada vão. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
         if (viewer == null || keys.isEmpty() || keys.size() > MAX_MOVE
@@ -730,6 +751,11 @@ public class TabletMenu extends AbstractContainerMenu {
         boolean operator = viewer.hasPermissions(2);
         int moved = 0;
         int unloaded = 0;
+        int kept = 0;
+        java.util.function.Predicate<UUID> canLeave = from -> {
+            WaNetwork current = data.network(from);
+            return current == null || current.canManage(viewer);
+        };
         for (NodeKey key : new HashSet<>(keys)) {
             NodeIndex.Entry entry = index.entry(key);
             if (entry == null || !visible(entry, data, operator, viewer.getUUID())) {
@@ -741,19 +767,16 @@ public class TabletMenu extends AbstractContainerMenu {
                 continue;
             }
             UUID id = target == null ? null : target.id();
-            if (type.isPresent()) {
-                router.setNetworkId(type.get(), id);
-            } else {
-                router.setNetworkId(id);
-            }
+            kept += router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id, canLeave);
             moved++;
         }
         Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
                 : target.displayName();
+        String suffix = kept > 0 ? ".kept" : "";
         if (unloaded > 0) {
-            notice("moved.unloaded", moved, name, unloaded);
+            notice("moved.unloaded" + suffix, moved, name, unloaded, kept);
         } else {
-            notice("moved", moved, name);
+            notice("moved" + suffix, moved, name, kept);
         }
         return moved;
     }

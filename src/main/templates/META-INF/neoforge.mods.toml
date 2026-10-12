@@ -10,6 +10,10 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''${mod_description}'''
 
+# O primeiro mixin do mod: acorda o roteador quando uma máquina remota vinculada muda (mixin/LevelMixin).
+[[mixins]]
+config="${mod_id}.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"

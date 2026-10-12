@@ -357,6 +357,54 @@ def lanterna() -> Sprite:
     return animacao(quadros, 5)
 
 
+# Upgrade de Alcance: a Rosa, o roteador visto de cima como módulo. Casco quadrado de porcelana com os
+# quatro para-choques de grafite nos cantos, o Olho no centro e quatro setas coral saindo pelos quatro
+# lados, a expansão do alcance. Uma luz corre do Olho por cada haste até a ponta, as quatro ao mesmo
+# tempo, e as pontas brilham quando a luz chega; o Olho pulsa no compasso.
+ROSA = [
+    "................",
+    ".......C........",
+    "......Ccd.......",
+    "...GhWWcWWGh....",
+    "...hhppcpphh....",
+    "...Wpxxxxxpq....",
+    "..CWpxxxxxpqc...",
+    ".Ccccxxxxxcccd..",
+    "..dWpxxxxxpqd...",
+    "...Wpxxxxxpq....",
+    "...GhppcppGh....",
+    "...hhqqcqqhh....",
+    "......ccd.......",
+    ".......d........",
+]
+# As quatro direções (dx, dy) das setas e as posições ao longo de cada haste: i = 3, 4 dentro do
+# casco, i = 5 a linha da cabeça e i = 6 a ponta.
+DIRECOES_ROSA = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
+
+def rosa() -> Sprite:
+    luz, rastro = cor("coral.4"), mistura(cor("coral.4"), cor("coral.3"), 0.5)
+    quadros = []
+    for k in range(8):
+        img = corpo(ROSA)
+        for dx, dy in DIRECOES_ROSA:
+            if k == 1:
+                put(img, 7 + dx * 3, 7 + dy * 3, luz)
+            elif k == 2:
+                put(img, 7 + dx * 3, 7 + dy * 3, rastro)
+                put(img, 7 + dx * 4, 7 + dy * 4, luz)
+            elif k == 3:
+                put(img, 7 + dx * 4, 7 + dy * 4, rastro)
+                for j in (-1, 0, 1):
+                    put(img, 7 + dx * 5 + dy * j, 7 + dy * 5 + dx * j, luz)
+                put(img, 7 + dx * 6, 7 + dy * 6, BRANCO)
+            elif k == 4:
+                put(img, 7 + dx * 6, 7 + dy * 6, luz)
+        pulso(img, 7, 7, "vidro", 2, k, 8)
+        quadros.append(img)
+    return animacao(quadros, 4)
+
+
 # Guia: caderno de campo. Capa coral com o Olho em porcelana e uma etiqueta, páginas de porcelana
 # aparecendo à direita e embaixo, espiral de grafite na lombada.
 GUIA = [
@@ -697,6 +745,7 @@ def gerar_itens() -> dict[str, Sprite]:
     for tier in TIERS_CARTAO:
         sprites[f"item/tier_core_{tier}"] = valvula(tier)
     sprites["item/chunk_loader_upgrade"] = lanterna()
+    sprites["item/range_upgrade"] = rosa()
     sprites["item/guide"] = guia()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
@@ -707,6 +756,10 @@ def gerar_itens() -> dict[str, Sprite]:
 
 
 def modelos_itens() -> None:
+    grava_json(MODELOS / "models/item/range_upgrade.json", {
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
+    })
     for tier in TIERS_CARTAO:
         grava_json(MODELOS / f"models/item/tier_core_{tier}.json", {
             "parent": "minecraft:item/generated",
@@ -777,7 +830,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
 
     titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
-                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "guide"]
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide"]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]
         d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)

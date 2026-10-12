@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -27,6 +28,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -52,6 +54,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Configurador (pincel e colar em área na mesma máquina ou em qualquer uma, o seletor de tipo) e o
@@ -123,7 +126,7 @@ public final class ConfiguratorGameTests {
                         RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
                         helper.assertTrue(preset != null, "nada copiado para o item");
                         helper.assertValueEqual(preset.configuredFaces(), 4, "faces configuradas");
-                        helper.assertValueEqual(preset.network(ResourceType.ITEM), own.id(), "rede não copiada");
+                        helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(own.id()), "rede não copiada");
 
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         for (ResourceType type : TYPES) {
@@ -142,7 +145,7 @@ public final class ConfiguratorGameTests {
                         helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.EAST).priority(), 7, "LEFT");
                         helper.assertValueEqual(target.face(ResourceType.ENERGY, Direction.SOUTH).redstone(),
                                 RedstoneMode.HIGH, "BACK");
-                        helper.assertValueEqual(target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
+                        assertNetwork(helper, target.networkId(ResourceType.ITEM), own.id(), "rede própria não colada");
 
                         // Rede de outro dono: só as faces vão.
                         source.setNetworkId(other.id());
@@ -179,13 +182,13 @@ public final class ConfiguratorGameTests {
         int configured = 0;
         for (ResourceType type : TYPES) {
             for (RelativeSide side : SIDES) {
-                if (!target.face(type, side).isDefault()) {
+                if (!settings(target.face(type, side)).isDefault()) {
                     configured++;
                 }
             }
         }
         helper.assertValueEqual(configured, 1, "faces configuradas no destino não foram zeradas");
-        helper.assertValueEqual(target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
+        assertNetwork(helper, target.networkId(ResourceType.ITEM), network, "preset sem rede mexeu na rede");
         helper.assertValueEqual(RouterPreset.copyOf(target).withoutNetworks(), preset,
                 "copiar o colado não dá o mesmo preset");
         helper.succeed();
@@ -491,11 +494,19 @@ public final class ConfiguratorGameTests {
         target.setPriority(ResourceType.FLUID, Direction.WEST, 9);
     }
 
-    /** Confere que as faces do tipo no roteador são as do preset {@code expected}. */
+    /** A face sem a rede: só modo, prioridade, redstone e filtro. */
+    private static FaceConfig settings(FaceConfig config) {
+        FaceConfig copy = new FaceConfig();
+        copy.copySettingsFrom(config);
+        return copy;
+    }
+
+    /** Confere que as configurações das faces do tipo no roteador são as do preset {@code expected} (sem a rede). */
     private static void assertFaces(GameTestHelper helper, RouterBlockEntity router, ResourceType type,
             RouterPreset expected, String message) {
         for (RelativeSide side : SIDES) {
-            helper.assertValueEqual(router.face(type, side), expected.face(type, side), message + " " + type + " " + side);
+            helper.assertValueEqual(settings(router.face(type, side)), settings(expected.face(type, side)),
+                    message + " " + type + " " + side);
         }
     }
 
@@ -537,11 +548,11 @@ public final class ConfiguratorGameTests {
                         ConfiguratorItem.setType(configurator, ResourceType.FLUID);
                         helper.assertTrue(use(player, target, false), "colar não agiu");
                         assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
-                        helper.assertValueEqual(target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
+                        assertNetwork(helper, target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            assertNetwork(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
 
                         source.setNetworkId(ResourceType.ITEM, foreign.id());
@@ -560,7 +571,8 @@ public final class ConfiguratorGameTests {
                         use(player, target, false);
                         for (ResourceType type : TYPES) {
                             assertFaces(helper, target, type, copied, "Todos:");
-                            helper.assertValueEqual(target.networkId(type), copied.network(type), "Todos, rede " + type);
+                            helper.assertTrue(Objects.equals(target.networkId(type), copied.network(type, RelativeSide.FRONT)),
+                                    "Todos, rede " + type);
                         }
                     } finally {
                         for (WaNetwork network : new WaNetwork[] {items, fluids, energy, before, foreign}) {
@@ -605,11 +617,11 @@ public final class ConfiguratorGameTests {
                         clickAir(helper, player, false);
 
                         assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
-                        helper.assertValueEqual(target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
+                        assertNetwork(helper, target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
                                 ResourceType.CHEMICAL, ResourceType.SOURCE}) {
                             assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            helper.assertValueEqual(target.networkId(other), before.id(), "rede mexida: " + other);
+                            assertNetwork(helper, target.networkId(other), before.id(), "rede mexida: " + other);
                         }
                     } finally {
                         player.setShiftKeyDown(false);
@@ -719,6 +731,181 @@ public final class ConfiguratorGameTests {
         }
         helper.assertTrue(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, NbtOps.INSTANCE.createString("lava"))
                 .isError(), "aceitou um tipo desconhecido");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ rede por face
+
+    /** Compara redes (podem ser nulas: o {@code assertValueEqual} derruba o servidor com {@code null}). */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected,
+            String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
+    }
+
+    /**
+     * Origem (facing=up) com Cima (FRONT) na rede A e Baixo (BACK) na B: colar num roteador virado
+     * para o norte põe A na frente (norte) e B atrás (sul); as outras faces ficam sem rede.
+     */
+    @GameTest(template = "empty")
+    public static void copyAndPastePerFaceNetworks(GameTestHelper helper) {
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
+        RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        WaNetwork a = data.create(player.getUUID(), "Face A " + player.getUUID());
+        WaNetwork b = data.create(player.getUUID(), "Face B " + player.getUUID());
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a.id());
+                        source.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, b.id());
+                        helper.assertTrue(use(player, source, true), "copiar não agiu");
+                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
+                        helper.assertTrue(preset != null, "nada copiado");
+                        helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(a.id(), b.id()),
+                                "redes das faces no preset");
+                        helper.assertValueEqual(preset.configuredFaces(), 0, "a rede contou como configuração");
+
+                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        assertNetwork(helper, target.face(ResourceType.ITEM, RelativeSide.FRONT).network(), a.id(), "FRONT");
+                        assertNetwork(helper, target.face(ResourceType.ITEM, RelativeSide.BACK).network(), b.id(), "BACK");
+                        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.NORTH), a.id(), "norte");
+                        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.SOUTH), b.id(), "sul");
+                        for (RelativeSide side : new RelativeSide[] {RelativeSide.TOP, RelativeSide.BOTTOM,
+                                RelativeSide.LEFT, RelativeSide.RIGHT}) {
+                            assertNetwork(helper, target.face(ResourceType.ITEM, side).network(), null, "item " + side);
+                        }
+                        for (ResourceType type : TYPES) {
+                            if (type != ResourceType.ITEM) {
+                                helper.assertTrue(target.networks(type).length == 0, "rede em " + type);
+                            }
+                        }
+                    } finally {
+                        data.remove(a.id());
+                        data.remove(b.id());
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Baixo numa rede privada de outro dono: no destino, a face de baixo fica com a rede que tinha e
+     * a de cima recebe A; o aviso (o {@code Checked} que a action bar usa) cita a aba e a rede.
+     */
+    @GameTest(template = "empty")
+    public static void pasteSkipsForbiddenFaceNetwork(GameTestHelper helper) {
+        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
+        RouterBlockEntity target = place(helper, new BlockPos(2, 0, 2), Direction.UP);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        WaNetwork a = data.create(player.getUUID(), "Própria " + player.getUUID());
+        WaNetwork before = data.create(player.getUUID(), "Antes " + player.getUUID());
+        WaNetwork foreign = data.create(UUID.randomUUID(), "Privada " + player.getUUID());
+        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        helper.assertTrue(!foreign.isPublic(), "a rede alheia nasceu pública");
+                        source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a.id());
+                        source.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, foreign.id());
+                        target.setNetworkId(before.id());
+                        helper.assertTrue(use(player, source, true), "copiar não agiu");
+                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
+
+                        PresetApplier.Checked checked = PresetApplier.check(player, preset);
+                        helper.assertValueEqual(checked.applied(), List.of(a.id()), "redes aplicadas");
+                        helper.assertValueEqual(checked.kept(), List.of(foreign.id()), "redes recusadas");
+                        helper.assertValueEqual(checked.keptTypes(), List.of(ResourceType.ITEM), "abas avisadas");
+                        helper.assertTrue(checked.denied() != null && checked.denied().id().equals(foreign.id()),
+                                "rede recusada no aviso");
+                        helper.assertTrue(!checked.preset().distinctNetworks().contains(foreign.id()),
+                                "a rede recusada ficou no preset");
+
+                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.UP), a.id(), "Cima");
+                        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.DOWN), before.id(),
+                                "Baixo (rede proibida)");
+                        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.NORTH), before.id(),
+                                "face sem rede no preset");
+                        helper.assertTrue(!List.of(target.networks(ResourceType.ITEM)).contains(foreign.id()),
+                                "a rede proibida vazou");
+                    } finally {
+                        data.remove(a.id());
+                        data.remove(before.id());
+                        data.remove(foreign.id());
+                        helper.getLevel().getServer().getPlayerList().remove(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Uma face sem rede no preset não tira a rede da face de destino; a com rede troca. */
+    @GameTest(template = "empty")
+    public static void presetFaceWithoutNetworkKeepsTarget(GameTestHelper helper) {
+        UUID a = UUID.randomUUID();
+        UUID kept = UUID.randomUUID();
+        RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a);
+        source.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.INSERT);
+        RouterPreset preset = RouterPreset.copyOf(source);
+        assertNetwork(helper, preset.network(ResourceType.ITEM, RelativeSide.BACK), null, "BACK no preset");
+
+        RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        target.setNetworkId(kept);
+        preset.applyTo(target);
+        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.UP), a, "FRONT");
+        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.DOWN), kept, "BACK, configurada sem rede");
+        helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.DOWN).mode(), PortMode.INSERT, "modo de BACK");
+        assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.EAST), kept, "face padrão");
+        assertNetwork(helper, target.networkId(ResourceType.FLUID), kept, "outra aba");
+        helper.succeed();
+    }
+
+    /** Colar só Fluidos troca as redes das faces de fluidos e não toca nas das faces de itens. */
+    @GameTest(template = "empty")
+    public static void pasteOnlyTypeKeepsOtherTypes(GameTestHelper helper) {
+        @SuppressWarnings("removal")
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork items = data.create(player.getUUID(), "Só itens " + player.getUUID());
+        WaNetwork fluids = data.create(player.getUUID(), "Só fluidos " + player.getUUID());
+        WaNetwork before = data.create(player.getUUID(), "Só antes " + player.getUUID());
+        try {
+            RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+            source.setFaceNetwork(ResourceType.ITEM, Direction.UP, items.id());
+            source.setFaceNetwork(ResourceType.FLUID, Direction.UP, fluids.id());
+            source.setFaceNetwork(ResourceType.FLUID, Direction.EAST, items.id());
+            RouterPreset preset = RouterPreset.copyOf(source);
+
+            PresetApplier.Checked checked = PresetApplier.check(player, preset, ResourceType.FLUID);
+            helper.assertValueEqual(checked.applied(), List.of(fluids.id(), items.id()), "redes da aba de fluidos");
+            helper.assertTrue(checked.preset().networks(ResourceType.ITEM).isEmpty(), "ficou rede de itens");
+
+            RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+            target.setNetworkId(before.id());
+            checked.preset().applyTo(target, ResourceType.FLUID);
+            assertNetwork(helper, target.faceNetwork(ResourceType.FLUID, Direction.UP), fluids.id(), "fluidos, Cima");
+            assertNetwork(helper, target.faceNetwork(ResourceType.FLUID, Direction.EAST), items.id(), "fluidos, Leste");
+            assertNetwork(helper, target.faceNetwork(ResourceType.FLUID, Direction.DOWN), before.id(), "fluidos, Baixo");
+            for (Direction face : Direction.values()) {
+                assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, face), before.id(), "itens, " + face);
+            }
+        } finally {
+            data.remove(items.id());
+            data.remove(fluids.id());
+            data.remove(before.id());
+            helper.getLevel().getServer().getPlayerList().remove(player);
+        }
         helper.succeed();
     }
 }

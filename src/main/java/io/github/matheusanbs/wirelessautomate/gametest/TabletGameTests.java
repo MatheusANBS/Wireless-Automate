@@ -27,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
@@ -41,6 +42,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
@@ -51,6 +54,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -149,7 +153,7 @@ public final class TabletGameTests {
                     NodeIndex.Entry entry = index(helper).entry(key);
                     helper.assertTrue(entry != null, "roteador fora do índice");
                     helper.assertTrue(entry.loaded(), "carregado");
-                    eq(helper, entry.network(ResourceType.ITEM), network, "rede de itens");
+                    eq(helper, entry.networks(ResourceType.ITEM), List.of(network), "rede de itens");
                     eq(helper, entry.tier(), RouterTier.BASIC, "tier");
                     eq(helper, entry.placedBy(), placer, "quem colocou");
                     eq(helper, entry.machine().getPath(), "chest", "máquina");
@@ -166,7 +170,7 @@ public final class TabletGameTests {
                     router.setNetworkId(ResourceType.ENERGY, null);
                     eq(helper, entry.name(), "Baú do índice", "nome");
                     eq(helper, entry.tier(), RouterTier.ADVANCED, "tier depois do núcleo");
-                    helper.assertTrue(entry.network(ResourceType.ENERGY) == null, "energia sem rede");
+                    helper.assertTrue(entry.networks(ResourceType.ENERGY).isEmpty(), "energia sem rede");
 
                     // ida e volta pelo arquivo
                     CompoundTag saved = index(helper).save(new CompoundTag(), helper.getLevel().registryAccess());
@@ -174,7 +178,7 @@ public final class TabletGameTests {
                     helper.assertTrue(loaded != null, "nó perdido ao salvar");
                     eq(helper, loaded.name(), "Baú do índice", "nome salvo");
                     eq(helper, loaded.roles(), entry.roles(), "papéis salvos");
-                    eq(helper, loaded.network(ResourceType.ITEM), network, "rede salva");
+                    eq(helper, loaded.networks(ResourceType.ITEM), List.of(network), "rede salva");
                     eq(helper, loaded.placedBy(), placer, "dono salvo");
                     helper.assertFalse(loaded.loaded(), "carregado não é salvo");
 
@@ -212,7 +216,7 @@ public final class TabletGameTests {
             helper.assertTrue(snapshot.network(own.id()).isPresent(), "rede própria fora do snapshot");
             helper.assertTrue(snapshot.network(foreign.id()).isEmpty(), "rede alheia privada no snapshot");
             NodeView view = node(snapshot, key(mine));
-            eq(helper, view.network(ResourceType.ITEM), Optional.of(own.id()), "rede do nó");
+            eq(helper, view.networks(ResourceType.ITEM), List.of(own.id()), "rede do nó");
             helper.assertTrue(view.status() != NodeStatus.UNLOADED, "nó carregado aparece descarregado");
 
             // papel e busca
@@ -346,7 +350,7 @@ public final class TabletGameTests {
                 eq(helper, router.networkId(ResourceType.FLUID), first.id(), "fluidos ficaram");
                 eq(helper, router.networkId(ResourceType.ENERGY), first.id(), "energia ficou");
             }
-            eq(helper, index(helper).entry(key(a)).network(ResourceType.ITEM), second.id(),
+            eq(helper, index(helper).entry(key(a)).networks(ResourceType.ITEM), List.of(second.id()),
                     "índice depois de mover");
 
             // rede alheia privada: recusado e nada muda
@@ -366,7 +370,10 @@ public final class TabletGameTests {
             // todas as abas, sem rede
             eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, List.of(key(b)),
                     Optional.empty(), Optional.empty())), 1, "tirar da rede");
-            helper.assertFalse(b.hasNetwork(), "b ainda em alguma rede");
+            // só os tipos carregados: a face de um tipo cujo mod não está aqui fica como está
+            for (ResourceType type : io.github.matheusanbs.wirelessautomate.network.LoadedTypes.LIST) {
+                helper.assertTrue(b.networks(type).length == 0, "b ainda em alguma rede de " + type);
+            }
 
             // químicos, outro containerId e nó invisível
             eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, both,
@@ -383,6 +390,288 @@ public final class TabletGameTests {
         } finally {
             close(player);
         }
+    }
+
+    /**
+     * Mover pelo Tablet só tira faces de redes que o jogador gerencia (dono ou operador): uma face na
+     * rede de outro dono fica, privada ou pública (pública deixa usar, não gerenciar); faces sem rede,
+     * em rede apagada ou do próprio jogador vão. O operador move todas.
+     */
+    @GameTest(template = "empty")
+    public static void moveNodesKeepsOthersNetworks(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork mine = data.create(player.getUUID(), "teste-dono-mina");
+        WaNetwork target = data.create(player.getUUID(), "teste-dono-alvo");
+        WaNetwork foreignPrivate = data.create(UUID.randomUUID(), "teste-dono-alheia");
+        WaNetwork foreignPublic = data.create(UUID.randomUUID(), "teste-dono-publica").withPublic(true);
+        data.update(foreignPublic);
+        WaNetwork deleted = data.create(UUID.randomUUID(), "teste-dono-apagada");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, foreignPrivate.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, foreignPublic.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.NORTH, mine.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.SOUTH, deleted.id());
+        data.remove(deleted.id());
+        openTablet(player, 74);
+        try {
+            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(74, List.of(key(router)),
+                    Optional.of(ResourceType.ITEM), Optional.of(target.id()))), 1, "nós movidos");
+            eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), foreignPrivate.id(), "privada alheia ficou");
+            eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), foreignPublic.id(), "pública alheia ficou");
+            for (Direction face : List.of(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST)) {
+                eq(helper, router.faceNetwork(ResourceType.ITEM, face), target.id(), "face " + face + " no alvo");
+            }
+        } finally {
+            close(player);
+        }
+        ServerPlayer operator = new ServerPlayer(helper.getLevel().getServer(), helper.getLevel(),
+                new GameProfile(UUID.randomUUID(), "test-mock-operator"),
+                net.minecraft.server.level.ClientInformation.createDefault()) {
+            @Override
+            protected int getPermissionLevel() {
+                return 2;
+            }
+        };
+        operator.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        openTablet(operator, 75);
+        try {
+            eq(helper, TabletPayloads.handleMoveNodes(operator, new TabletMoveNodesPayload(75, List.of(key(router)),
+                    Optional.of(ResourceType.ITEM), Optional.empty())), 1, "operador moveu");
+            helper.assertTrue(router.networks(ResourceType.ITEM).length == 0, "operador deixou faces em rede");
+            helper.succeed();
+        } finally {
+            close(operator);
+        }
+    }
+
+    // ------------------------------------------------------------------ redes por face
+
+    /** Liga a busca {@code search} e devolve o snapshot remontado. */
+    private static TabletSnapshot search(TabletMenu menu, String search) {
+        menu.setQuery(new Query(search, RoleFilter.ALL, Optional.empty(), 0));
+        menu.pollSnapshot();
+        return menu.snapshot();
+    }
+
+    @GameTest(template = "empty")
+    public static void nodeListedInBothFaceNetworks(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork mine = data.create(player.getUUID(), "teste-faces-mina");
+        WaNetwork depot = data.create(player.getUUID(), "teste-faces-armazem");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, mine.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, depot.id());
+        NodeKey key = key(router);
+        TabletMenu menu = openTablet(player, 90);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        helper.assertTrue(listed(search(menu, "faces-mina"), key), "busca pela rede de Cima");
+                        helper.assertTrue(listed(search(menu, "faces-armazem"), key), "busca pela rede de Baixo");
+                        TabletSnapshot s = search(menu, "");
+                        NodeView view = node(s, key);
+                        helper.assertTrue(view != null, "nó fora da lista");
+                        helper.assertTrue(view.networks(ResourceType.ITEM).contains(mine.id())
+                                && view.networks(ResourceType.ITEM).contains(depot.id()),
+                                "itens sem as duas redes: " + view.networks(ResourceType.ITEM));
+                        helper.assertTrue(view.networks(ResourceType.FLUID).isEmpty(), "fluidos ganharam rede");
+                        eq(helper, view.distinctNetworks(), 2, "redes distintas");
+                        helper.assertFalse(view.removedNetwork(), "aviso de rede removida sem motivo");
+                        for (WaNetwork network : List.of(mine, depot)) {
+                            helper.assertTrue(s.network(network.id()).map(n -> n.nodes() >= 1).orElse(false),
+                                    "o nó não conta em " + network.name());
+                        }
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void nodeIndexFaceNetworksRoundTrip(GameTestHelper helper) {
+        NetworkSavedData data = data(helper);
+        UUID up = data.create(UUID.randomUUID(), "teste-indice-cima").id();
+        UUID down = data.create(UUID.randomUUID(), "teste-indice-baixo").id();
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, up);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, down);
+        router.setFaceNetwork(ResourceType.ENERGY, Direction.UP, up);
+        NodeKey key = key(router);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    NodeIndex.Entry entry = index(helper).entry(key);
+                    helper.assertTrue(entry != null, "roteador fora do índice");
+                    helper.assertTrue(entry.networks(ResourceType.ITEM).containsAll(List.of(up, down))
+                            && entry.networks(ResourceType.ITEM).size() == 2,
+                            "redes de itens: " + entry.networks(ResourceType.ITEM));
+                    eq(helper, entry.distinctNetworks(), 2, "redes distintas");
+                    helper.assertTrue(entry.inNetwork(down) && entry.hasNetwork(), "inNetwork/hasNetwork");
+
+                    CompoundTag saved = index(helper).save(new CompoundTag(), helper.getLevel().registryAccess());
+                    CompoundTag node = null;
+                    ListTag nodes = saved.getList("nodes", Tag.TAG_COMPOUND);
+                    for (int i = 0; i < nodes.size(); i++) {
+                        CompoundTag tag = nodes.getCompound(i);
+                        if (tag.getLong("pos") == key.pos().asLong()
+                                && tag.getString("dim").equals(key.dimension().location().toString())) {
+                            node = tag;
+                        }
+                    }
+                    helper.assertTrue(node != null, "nó fora do arquivo");
+                    helper.assertTrue(node.contains("face_networks"), "sem face_networks");
+                    helper.assertFalse(node.contains("networks"), "a chave antiga ainda é escrita");
+                    helper.assertFalse(node.getCompound("face_networks").contains(ResourceType.FLUID.key()),
+                            "tipo sem rede gravado");
+                    NodeIndex.Entry loaded = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                    helper.assertTrue(loaded != null, "nó perdido ao salvar");
+                    eq(helper, loaded.networks(ResourceType.ITEM), entry.networks(ResourceType.ITEM), "itens salvos");
+                    eq(helper, loaded.networks(ResourceType.ENERGY), List.of(up), "energia salva");
+                    eq(helper, loaded.networks(ResourceType.FLUID), List.of(), "fluidos salvos");
+
+                    // a entrada antiga, com uma rede por tipo em "networks", vira uma lista de um
+                    CompoundTag legacy = node.copy();
+                    legacy.remove("face_networks");
+                    CompoundTag old = new CompoundTag();
+                    old.putUUID(ResourceType.FLUID.key(), down);
+                    legacy.put("networks", old);
+                    ListTag legacyNodes = new ListTag();
+                    legacyNodes.add(legacy);
+                    CompoundTag legacyFile = new CompoundTag();
+                    legacyFile.put("nodes", legacyNodes);
+                    NodeIndex.Entry migrated = NodeIndex.load(legacyFile, helper.getLevel().registryAccess()).entry(key);
+                    helper.assertTrue(migrated != null, "entrada antiga perdida");
+                    eq(helper, migrated.networks(ResourceType.FLUID), List.of(down), "rede antiga de fluidos");
+                    eq(helper, migrated.networks(ResourceType.ITEM), List.of(), "itens na entrada antiga");
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
+    public static void moveSetsAllFacesOfTheTab(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork first = data.create(player.getUUID(), "teste-mover-faces-1");
+        WaNetwork second = data.create(player.getUUID(), "teste-mover-faces-2");
+        WaNetwork target = data.create(player.getUUID(), "teste-mover-faces-alvo");
+        RouterBlockEntity router = chestWithRouter(helper, A, first.id());
+        BlockPos furnace = new BlockPos(2, 1, 0);
+        helper.setBlock(furnace, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, second.id());
+        TabletMenu menu = openTablet(player, 91);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        helper.assertTrue(router.linkMachine(helper.absolutePos(furnace)), "não vinculou a fornalha");
+                        int index = router.remoteMachines().index(helper.absolutePos(furnace));
+                        EditTarget group = EditTarget.group(router.remoteMachines().machine(index).group());
+                        EditTarget machine = EditTarget.machine(index);
+                        router.setFaceNetwork(group, ResourceType.ITEM, Direction.NORTH, second.id());
+                        router.configureFace(machine, ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                                RedstoneMode.IGNORE);
+                        helper.assertTrue(router.remoteMachines().machine(index).hasException(), "sem exceção");
+
+                        eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(91,
+                                List.of(key(router)), Optional.of(ResourceType.ITEM), Optional.of(target.id()))), 1,
+                                "nós movidos");
+                        for (Direction face : Direction.values()) {
+                            eq(helper, router.faceNetwork(ResourceType.ITEM, face), target.id(), "presa " + face);
+                            eq(helper, router.faceNetwork(group, ResourceType.ITEM, face), target.id(), "perfil " + face);
+                            eq(helper, router.faceNetwork(machine, ResourceType.ITEM, face), target.id(),
+                                    "exceção " + face);
+                            // as outras abas não mudam
+                            eq(helper, router.faceNetwork(ResourceType.FLUID, face), first.id(), "fluidos da presa " + face);
+                            eq(helper, router.faceNetwork(group, ResourceType.FLUID, face), null,
+                                    "fluidos do perfil " + face);
+                        }
+                        NodeIndex.Entry entry = index(helper).entry(key(router));
+                        eq(helper, entry.networks(ResourceType.ITEM), List.of(target.id()), "índice depois de mover");
+                        eq(helper, entry.networks(ResourceType.ENERGY), List.of(first.id()), "energia no índice");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void unloadedTypesStayOutOfTheTablet(GameTestHelper helper) {
+        if (io.github.matheusanbs.wirelessautomate.network.LoadedTypes.contains(ResourceType.CHEMICAL)) {
+            helper.succeed(); // com o Mekanism, Químicos é um tipo carregado como os outros
+            return;
+        }
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork items = data.create(player.getUUID(), "teste-descarregado-itens");
+        WaNetwork chemicals = data.create(player.getUUID(), "teste-descarregado-quimicos");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, items.id());
+        router.setFaceNetwork(ResourceType.CHEMICAL, Direction.UP, chemicals.id());
+        NodeKey key = key(router);
+        TabletMenu menu = openTablet(player, 93);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        NodeView view = node(fresh(menu), key);
+                        helper.assertTrue(view != null, "nó fora da lista");
+                        eq(helper, view.distinctNetworks(), 1, "redes distintas contaram Químicos");
+                        helper.assertTrue(view.networks(ResourceType.CHEMICAL).isEmpty(), "Químicos no NodeView");
+                        helper.assertFalse(listed(search(menu, "descarregado-quimicos"), key),
+                                "busca achou pela rede de Químicos");
+
+                        // sem aba, para "Sem rede": a face de Químicos fica como está
+                        eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(93, List.of(key),
+                                Optional.empty(), Optional.empty())), 1, "nós movidos");
+                        eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), null, "itens ainda na rede");
+                        eq(helper, router.faceNetwork(ResourceType.CHEMICAL, Direction.UP), chemicals.id(),
+                                "a face de Químicos perdeu a rede");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void removedNetworkFlag(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        NetworkSavedData data = data(helper);
+        WaNetwork kept = data.create(player.getUUID(), "teste-removida-fica");
+        WaNetwork gone = data.create(player.getUUID(), "teste-removida-sai");
+        RouterBlockEntity router = chestWithRouter(helper, A, null);
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, kept.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, gone.id());
+        NodeKey key = key(router);
+        TabletMenu menu = openTablet(player, 92);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        NodeView before = node(fresh(menu), key);
+                        helper.assertTrue(before != null && !before.removedNetwork(), "aviso antes de remover");
+                        helper.assertTrue(data.remove(gone.id()), "não removeu a rede");
+                        NodeView after = node(fresh(menu), key);
+                        helper.assertTrue(after != null, "nó sumiu da lista");
+                        helper.assertTrue(after.removedNetwork(), "sem o aviso de rede removida");
+                        eq(helper, after.networks(ResourceType.ITEM), List.of(kept.id()), "redes depois de remover");
+                        // a face guarda o UUID: nada varre os roteadores
+                        eq(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), gone.id(), "a face mudou");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
     }
 
     // ------------------------------------------------------------------ redes, grupos e pausa

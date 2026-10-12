@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -13,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -87,6 +89,10 @@ public final class WakeGameTests {
 
     private static int interval(RouterBlockEntity router) {
         return NetworkManager.get().sourceSleepInterval(router, ResourceType.ITEM, Direction.UP);
+    }
+
+    private static int destinationInterval(RouterBlockEntity router) {
+        return NetworkManager.get().destinationSleepInterval(router, ResourceType.ITEM, Direction.UP);
     }
 
     private static void assertDeepSleep(GameTestHelper helper, RouterBlockEntity router, String what) {
@@ -306,6 +312,94 @@ public final class WakeGameTests {
                     helper.setBlock(A, Blocks.BLAST_FURNACE.defaultBlockState());
                     helper.assertTrue(router.changeVersion() != version[0], "trocar a máquina não mudou a versão");
                 })
+                .thenSucceed();
+    }
+
+    /**
+     * Máquina que recusa pelo tipo (a Salvaging Table do Apotheosis com o que não se desmonta): o
+     * baú de origem tem dez pilhas de pedregulho antes dos diamantes. Recusar o pedregulho não pode
+     * pôr a máquina para dormir como cheia; antes, cada pilha recusada dobrava o sono e os diamantes
+     * levavam mais de 400 ticks para chegar.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void machineRefusingItemTypeDoesNotSleep(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-recusa-tipo");
+        TestMachines.reset(helper.absolutePos(B));
+        RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity b = place(helper, B, TestMachines.TYPED_SLOT.defaultBlockState(), network);
+        b.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        ChestBlockEntity source = chestAt(helper, A);
+        for (int i = 0; i < 10; i++) {
+            source.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        }
+        source.setItem(10, new ItemStack(Items.DIAMOND, 5));
+        TestMachines.TypedSlot machine = TestMachines.typedSlot(helper.absolutePos(B));
+        long[] start = {0};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, b))
+                .thenExecute(() -> start[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(machine.consumed(), 5, "diamantes consumidos"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - start[0] < 40,
+                        "os diamantes levaram " + (helper.getTick() - start[0]) + " ticks"))
+                .thenExecute(() -> helper.assertValueEqual(destinationInterval(b), 1, "sono de destino da máquina"))
+                .thenExecute(() -> helper.assertValueEqual(count(helper, A, Items.COBBLESTONE), 640, "pedregulho na origem"))
+                .thenSucceed();
+    }
+
+    /** O mesmo com o Baú do mod de origem (visita por tipos), o caso relatado com o Apotheosis. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void machineRefusingItemTypeDoesNotSleepFromStorageChest(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-recusa-tipo-bau");
+        TestMachines.reset(helper.absolutePos(B));
+        helper.setBlock(A, ModBlocks.STORAGE_CHEST.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.ELITE));
+        StorageChestBlockEntity storage = helper.getBlockEntity(A);
+        Item[] junk = {Items.COBBLESTONE, Items.DIRT, Items.STONE, Items.SAND, Items.GRAVEL, Items.OAK_LOG,
+                Items.ANDESITE, Items.DIORITE, Items.GRANITE, Items.TUFF};
+        for (Item item : junk) {
+            storage.storage().insert(new ItemStack(item), 1_000, false);
+        }
+        storage.storage().insert(new ItemStack(Items.DIAMOND), 5, false);
+        BlockPos routerPos = A.above();
+        helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity a = helper.getBlockEntity(routerPos);
+        a.setNetworkId(network);
+        a.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        RouterBlockEntity b = place(helper, B, TestMachines.TYPED_SLOT.defaultBlockState(), network);
+        b.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        TestMachines.TypedSlot machine = TestMachines.typedSlot(helper.absolutePos(B));
+        long[] start = {0};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, b))
+                .thenExecute(() -> start[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(machine.consumed(), 5, "diamantes consumidos"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - start[0] < 40,
+                        "os diamantes levaram " + (helper.getTick() - start[0]) + " ticks"))
+                .thenExecute(() -> helper.assertValueEqual(destinationInterval(b), 1, "sono de destino da máquina"))
+                .thenSucceed();
+    }
+
+    /**
+     * A mesma máquina cheia (recusa o diamante, que ela diz ser válido) continua dormindo como cheia,
+     * cada vez mais fundo; a origem espera por ela.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void fullMachineStillSleeps(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-maquina-cheia");
+        TestMachines.reset(helper.absolutePos(B));
+        TestMachines.TypedSlot machine = TestMachines.typedSlot(helper.absolutePos(B));
+        machine.setFull(true);
+        RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity b = place(helper, B, TestMachines.TYPED_SLOT.defaultBlockState(), network);
+        b.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 5));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, b))
+                .thenWaitUntil(() -> helper.assertTrue(destinationInterval(b) >= DEEP_SLEEP,
+                        "a máquina cheia não dormiu fundo: próximo sono de " + destinationInterval(b) + " ticks"))
+                .thenExecute(() -> helper.assertValueEqual(machine.consumed(), 0, "diamantes consumidos"))
                 .thenSucceed();
     }
 }

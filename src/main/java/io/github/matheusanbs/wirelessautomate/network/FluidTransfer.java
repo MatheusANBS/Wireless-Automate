@@ -40,8 +40,8 @@ final class FluidTransfer {
      * por falta do que mover depois de uma volta inteira sem mover ({@link Port#idleSlots}).
      */
     static boolean move(Port source, long now) {
-        BulkFluids bulk = source.node.bulkFluids(source.face);
-        IFluidHandler handler = bulk == null ? source.node.fluids(source.face) : null;
+        BulkFluids bulk = source.machine.bulkFluids(source.face);
+        IFluidHandler handler = bulk == null ? source.machine.fluids(source.face) : null;
         RoundRobinOrder<Port> order = source.order;
         if (bulk == null && handler == null || order == null) {
             SourceSleep.nothingToMove(source, now);
@@ -150,8 +150,8 @@ final class FluidTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
-            BulkFluids bulkTarget = destination.node.bulkFluids(destination.face);
-            IFluidHandler target = bulkTarget == null ? destination.node.fluids(destination.face) : null;
+            BulkFluids bulkTarget = destination.machine.bulkFluids(destination.face);
+            IFluidHandler target = bulkTarget == null ? destination.machine.fluids(destination.face) : null;
             if (bulkTarget == null && target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
                 // voltar (o listener dela o acorda) ou o teto do sono, sem contar como cheio.

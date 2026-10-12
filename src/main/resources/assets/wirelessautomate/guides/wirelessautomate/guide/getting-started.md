@@ -32,7 +32,7 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 | --- | --- |
 | **1** | Craft two routers and a [Linker](linker.md) (recipes below). |
 | **2** | Use a router on any face of chest A. It **attaches** to the chest, with **no network** yet. Do the same on chest B. |
-| **3** | Holding the Linker, click router A and then router B: both join your active network (the first click creates one if you have none). |
+| **3** | Holding the Linker, click router A and then router B: the faces of both join your active network (the first click creates one if you have none). |
 | **4** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
 | **5** | On router B, same face, **Insert** mode. |
 | **6** | Put items in chest A: they show up in chest B. |

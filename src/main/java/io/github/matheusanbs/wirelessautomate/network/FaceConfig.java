@@ -7,12 +7,17 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Configuração de uma face da máquina para um tipo de recurso: modo, prioridade, redstone e filtro.
+ * Configuração de uma face da máquina para um tipo de recurso: modo, prioridade, redstone, filtro e
+ * a rede em que a face está ({@code null} = nenhuma).
  * Mutável: num roteador, mude pelos setters do {@code RouterBlockEntity}, que salvam e avisam o
  * {@link NetworkManager}. Os setters daqui devolvem {@code true} quando o valor mudou.
  */
@@ -21,11 +26,14 @@ public final class FaceConfig {
     private static final String PRIORITY = "priority";
     private static final String REDSTONE = "redstone";
     private static final String FILTER = "filter";
+    private static final String NETWORK = "network";
 
     private PortMode mode = PortMode.NONE;
     private int priority;
     private RedstoneMode redstone = RedstoneMode.IGNORE;
     private Filter filter = Filter.EMPTY;
+    /** Rede da face; {@code null} = sem rede. */
+    private @Nullable UUID network;
 
     public PortMode mode() {
         return mode;
@@ -41,6 +49,18 @@ public final class FaceConfig {
 
     public Filter filter() {
         return filter;
+    }
+
+    /** Rede em que esta face está; {@code null} = nenhuma. */
+    public @Nullable UUID network() {
+        return network;
+    }
+
+    /** Põe a face na rede {@code network} ({@code null} tira da rede). Devolve {@code true} se mudou. */
+    public boolean setNetwork(@Nullable UUID network) {
+        boolean changed = !Objects.equals(this.network, network);
+        this.network = network;
+        return changed;
     }
 
     public boolean setFilter(Filter filter) {
@@ -70,8 +90,18 @@ public final class FaceConfig {
         return changed;
     }
 
-    /** Copia todos os campos de {@code other}. Devolve {@code true} se algo mudou. */
+    /** Copia todos os campos de {@code other}, inclusive a rede. Devolve {@code true} se algo mudou. */
     public boolean copyFrom(FaceConfig other) {
+        boolean changed = copySettingsFrom(other);
+        changed |= setNetwork(other.network);
+        return changed;
+    }
+
+    /**
+     * Copia modo, prioridade, redstone e filtro de {@code other}, <b>sem</b> a rede (colar um preset:
+     * a rede é decidida à parte, pela regra das redes). Devolve {@code true} se algo mudou.
+     */
+    public boolean copySettingsFrom(FaceConfig other) {
         boolean changed = setMode(other.mode);
         changed |= setPriority(other.priority);
         changed |= setRedstone(other.redstone);
@@ -79,7 +109,7 @@ public final class FaceConfig {
         return changed;
     }
 
-    /** Volta aos valores padrão. Devolve {@code true} se algo mudou. */
+    /** Volta aos valores padrão, sem rede. Devolve {@code true} se algo mudou. */
     public boolean reset() {
         return copyFrom(new FaceConfig());
     }
@@ -90,12 +120,14 @@ public final class FaceConfig {
     }
 
     public boolean isDefault() {
-        return mode == PortMode.NONE && priority == 0 && redstone == RedstoneMode.IGNORE && filter.isDefault();
+        return mode == PortMode.NONE && priority == 0 && redstone == RedstoneMode.IGNORE && filter.isDefault()
+                && network == null;
     }
 
     /**
      * Formato salvo (NBT da face, preset do Configurador): só os campos fora do padrão, então uma
-     * face padrão vira um mapa vazio. Tolerante: enum com nome inválido ou campo com tipo errado
+     * face padrão vira um mapa vazio. A rede vai em {@code network} (o array de inteiros do
+     * {@code putUUID}); ausente = sem rede. Tolerante: enum com nome inválido ou campo com tipo errado
      * volta ao padrão, e uma entrada de filtro que não lê é descartada ({@link FilterCodecs#LENIENT}).
      * Precisa de {@code RegistryOps} por causa dos componentes das entradas de item e fluido.
      */
@@ -105,11 +137,14 @@ public final class FaceConfig {
             Codec.INT.lenientOptionalFieldOf(PRIORITY, 0).forGetter(FaceConfig::priority),
             enumCodec(RedstoneMode.class, RedstoneMode.IGNORE).lenientOptionalFieldOf(REDSTONE, RedstoneMode.IGNORE)
                     .forGetter(FaceConfig::redstone),
-            FilterCodecs.LENIENT.lenientOptionalFieldOf(FILTER, Filter.EMPTY).forGetter(FaceConfig::filter))
+            FilterCodecs.LENIENT.lenientOptionalFieldOf(FILTER, Filter.EMPTY).forGetter(FaceConfig::filter),
+            UUIDUtil.CODEC.lenientOptionalFieldOf(NETWORK).forGetter(config -> Optional.ofNullable(config.network)))
             .apply(i, FaceConfig::of));
 
-    private static FaceConfig of(PortMode mode, int priority, RedstoneMode redstone, Filter filter) {
+    private static FaceConfig of(PortMode mode, int priority, RedstoneMode redstone, Filter filter,
+            Optional<UUID> network) {
         FaceConfig config = new FaceConfig();
+        config.network = network.orElse(null);
         config.mode = mode;
         config.priority = priority;
         config.redstone = redstone;
@@ -152,16 +187,17 @@ public final class FaceConfig {
     public boolean equals(Object o) {
         return o instanceof FaceConfig other
                 && mode == other.mode && priority == other.priority && redstone == other.redstone
-                && filter.equals(other.filter);
+                && filter.equals(other.filter) && Objects.equals(network, other.network);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mode, priority, redstone, filter);
+        return Objects.hash(mode, priority, redstone, filter, network);
     }
 
     @Override
     public String toString() {
-        return "FaceConfig[" + mode + ", priority=" + priority + ", redstone=" + redstone + ", " + filter + "]";
+        return "FaceConfig[" + mode + ", priority=" + priority + ", redstone=" + redstone + ", " + filter
+                + ", network=" + network + "]";
     }
 }

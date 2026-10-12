@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
@@ -131,6 +132,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder
                     .persistent(ConfiguratorItem.TYPE_CODEC)
                     .networkSynchronized(ConfiguratorItem.TYPE_STREAM_CODEC));
+
+    /**
+     * Tier de origem do Cartão de Upgrade (pelo nome do tier): o cartão só vale num bloco desse tier. Ausente =
+     * cartão antigo (de antes desta regra), que sobe de qualquer tier abaixo do destino.
+     */
+    public static final Supplier<DataComponentType<RouterTier>> UPGRADE_FROM =
+            DATA_COMPONENTS.registerComponentType("upgrade_from", builder -> builder
+                    .persistent(RouterTier.CODEC)
+                    .networkSynchronized(RouterTier.STREAM_CODEC));
 
     private ModDataComponents() {
     }

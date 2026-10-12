@@ -18,9 +18,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um cartão de um tier
- * acima do item (Básico + Esmeralda vale, como Avançado + Elite), como o clique com o
- * cartão no bloco colocado ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
+ * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um Cartão de Upgrade que
+ * vale para o tier do item, como o clique com o cartão no bloco colocado: um cartão com origem só vale num bloco
+ * daquele tier; o antigo, sem origem, de qualquer tier abaixo (Básico + Esmeralda vale, como Avançado + Elite) ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
  * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um armazenamento cheio),
  * no tier novo. Os dois guardam o tier no {@code block_state}, com a mesma propriedade.
  */
@@ -32,7 +32,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
     /** O roteador ou o armazenamento no tier novo, ou vazio se a grade não casa. */
     public static ItemStack upgraded(CraftingInput input) {
         ItemStack router = ItemStack.EMPTY;
-        RouterTier core = null;
+        ItemStack card = ItemStack.EMPTY;
         for (int i = 0; i < input.size(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.isEmpty()) {
@@ -41,19 +41,28 @@ public class RouterUpgradeRecipe extends CustomRecipe {
             if ((stack.getItem() instanceof RouterBlockItem || stack.getItem() instanceof StorageBlockItem)
                     && router.isEmpty()) {
                 router = stack;
-            } else if (stack.getItem() instanceof TierCoreItem item && core == null) {
-                core = item.tier();
+            } else if (stack.getItem() instanceof TierCoreItem && card.isEmpty()) {
+                card = stack;
             } else {
                 return ItemStack.EMPTY;
             }
         }
-        if (router.isEmpty() || core == null || !RouterBlockItem.tierOf(router).canUpgradeTo(core)) {
+        if (router.isEmpty() || card.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        ItemStack result = router.copyWithCount(1);
+        RouterTier core = ((TierCoreItem) card.getItem()).tier();
+        if (!RouterBlockItem.tierOf(router).acceptsCard(TierCoreItem.origin(card), core)) {
+            return ItemStack.EMPTY;
+        }
+        return withTier(router, core);
+    }
+
+    /** Cópia de um do item do roteador ou do armazenamento, com todos os componentes, no {@code tier}. */
+    public static ItemStack withTier(ItemStack block, RouterTier tier) {
+        ItemStack result = block.copyWithCount(1);
         result.set(DataComponents.BLOCK_STATE, result
                 .getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY)
-                .with(RouterBlock.TIER, core));
+                .with(RouterBlock.TIER, tier));
         return result;
     }
 

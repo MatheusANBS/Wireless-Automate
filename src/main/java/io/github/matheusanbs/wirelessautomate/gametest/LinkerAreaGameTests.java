@@ -919,20 +919,34 @@ public final class LinkerAreaGameTests {
         helper.succeed();
     }
 
-    /** No modo Máquinas o Vinculador não usa as faces: {@code check} não as olha. */
+    /**
+     * No modo Máquinas o Vinculador não usa as faces: {@code check} não as olha e a prévia conta com
+     * Todas (A, inteiro na rede ativa, já estava; B, só com a Norte, não). O Vincular do modo Máquinas
+     * com as faces vazias é conferido no {@code RangeGameTests.linkerAreaLinksBlockEntitiesOfMarkedTabs}.
+     */
     @GameTest(template = "empty")
     public static void machinesModeIgnoresFaces(GameTestHelper helper) {
-        ItemStack linker = areaLinker(LinkerTabs.ALL);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-maquinas-antes").id();
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM));
         LinkerItem.setMode(linker, LinkerMode.MACHINES);
         LinkerItem.setFaces(linker, LinkerFaces.NONE);
         ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-faces-maquinas");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        router(helper, A, active.id());
+        RouterBlockEntity b = router(helper, B, before);
+        b.setFaceNetwork(ResourceType.ITEM, Direction.NORTH, active.id());
         try {
             markArea(helper, player);
             helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE, "Máquinas olhou as faces");
+            LinkerSnapshot snapshot = LinkerSnapshot.capture(player, linker, null);
+            helper.assertTrue(snapshot.inside() == 2 && snapshot.already() == 1,
+                    "prévia no modo Máquinas: " + snapshot.inside() + " na área, " + snapshot.already() + " já estavam");
             LinkerItem.setMode(linker, LinkerMode.AREA);
             helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_FACES, "Área sem faces");
         } finally {
-            cleanup(helper, player);
+            cleanup(helper, player, before, active.id());
         }
         helper.succeed();
     }

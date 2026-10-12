@@ -3508,7 +3508,7 @@ public final class DevEndToEnd {
                         .orElse(false),
                 () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB) + "; resultado na tela "
                         + linkerScreen().getMenu().snapshot().outcome()));
-        list.add(clipCheck("Vinculador desvinculado por faces"));
+        list.add(rangeClipCheck("Vinculador desvinculado por faces"));
         list.add(capture("9c-vinculador-faces-desvinculadas"));
         list.add(new Step("de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
@@ -3522,8 +3522,21 @@ public final class DevEndToEnd {
                         && linkerScreen().getMenu().snapshot().outcome().map(o -> !o.unlink() && o.linked() == 2)
                                 .orElse(false),
                 () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB)));
-        list.add(clipCheck("Vinculador vinculado por faces"));
+        list.add(rangeClipCheck("Vinculador vinculado por faces"));
         list.add(capture("9d-vinculador-faces-vinculadas"));
+        // modo Único com Trás e Baixo marcados: a linha Faces no pé da coluna e as dicas acima dela
+        list.add(new Step("modo Único com faces", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.mode.single"), "Único")),
+                () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.SINGLE)
+                        && linkerScreen().getMenu().snapshot().mode() == LinkerMode.SINGLE,
+                () -> "modo " + linkerScreen().getMenu().snapshot().mode()));
+        list.add(rangeClipCheck("Vinculador Único com faces"));
+        list.add(capture("9e-vinculador-unico-faces"));
+        list.add(new Step("de volta a Área", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.mode.area"), "Área")),
+                () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.AREA)
+                        && linkerScreen().getMenu().snapshot().mode() == LinkerMode.AREA,
+                () -> "modo " + linkerScreen().getMenu().snapshot().mode()));
         list.add(new Step("Todas as faces", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.faces.all"), "Todas")),
                 () -> serverLinker(stack -> LinkerItem.faces(stack).isAll())

@@ -105,6 +105,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private FlatButton clearButton;
     private FlatButton allButton;
     private FlatButton allFacesButton;
+    /** Modo Único: as dicas que não couberam acima da linha Faces e onde fica o "Mais dicas" (x, y, l, a). */
+    private @Nullable Component moreHints;
+    private int[] moreArea = new int[4];
     private EditBox nameBox;
 
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title) {
@@ -698,6 +701,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 break;
             }
         }
+        if (moreHints != null && snapshot().mode() == LinkerMode.SINGLE && mouseX >= moreArea[0]
+                && mouseX < moreArea[0] + moreArea[2] && mouseY >= moreArea[1] && mouseY < moreArea[1] + moreArea[3]) {
+            setTooltipForNextRenderPass(moreHints);
+            return;
+        }
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
             return;
@@ -783,16 +791,58 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         colors.add(GuiPaint.MUTED);
         hints.add(tr("single.open"));
         colors.add(GuiPaint.MUTED);
-        // as dicas param antes da linha Faces, no pé da coluna: uma que não cabe inteira fica de fora
+        // as dicas param antes da linha Faces, no pé da coluna. Cabem pela prioridade (a das abas, a das
+        // faces, Shift + roda e por último a do Shift + clique); as que não cabem vão para a dica do
+        // mouse de uma linha "Mais dicas", nunca somem sem rastro
         int limit = topPos + facesY() - 4;
+        int last = hints.size() - 1;
+        List<Integer> priority = new ArrayList<>();
+        for (int i = 0; i < last - 1; i++) {
+            priority.add(i);
+        }
+        priority.add(last);
+        priority.add(last - 1);
+        int[] height = new int[hints.size()];
         for (int i = 0; i < hints.size(); i++) {
-            Component hint = hints.get(i);
-            int lines = GuiText.lineCount(font, hint, rw(), 3);
-            if (lineY + lines * 10 > limit) {
-                break;
+            height[i] = GuiText.lineCount(font, hints.get(i), rw(), 4) * 10 + 4;
+        }
+        boolean[] shown = new boolean[hints.size()];
+        int used = lineY;
+        boolean dropped = false;
+        for (int i : priority) {
+            if (used + height[i] - 4 > limit) {
+                dropped = true;
+                continue;
             }
-            lineY += GuiText.wrap(g, font, hint, x, lineY, rw(), 3, colors.get(i));
-            lineY += 4;
+            shown[i] = true;
+            used += height[i];
+        }
+        // com alguma de fora, a linha "Mais dicas" também precisa caber: tira as menos importantes
+        for (int k = priority.size() - 1; dropped && k >= 0 && used + 10 - 4 > limit; k--) {
+            int i = priority.get(k);
+            if (shown[i]) {
+                shown[i] = false;
+                used -= height[i];
+            }
+        }
+        MutableComponent more = Component.empty();
+        moreHints = null;
+        for (int i = 0; i < hints.size(); i++) {
+            if (shown[i]) {
+                lineY += GuiText.wrap(g, font, hints.get(i), x, lineY, rw(), 4, colors.get(i));
+                lineY += 4;
+            } else {
+                if (!more.getSiblings().isEmpty()) {
+                    more.append(Component.literal("\n"));
+                }
+                more.append(hints.get(i));
+            }
+        }
+        if (!more.getSiblings().isEmpty()) {
+            Component label = tr("single.more");
+            GuiText.draw(g, font, label, x, lineY, rw(), GuiPaint.MUTED);
+            moreHints = more;
+            moreArea = new int[] {x, lineY - 1, Math.min(rw(), font.width(label)), 10};
         }
     }
 
@@ -920,8 +970,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         }
         // depois do Vincular, o resultado toma o lugar da contagem (que viraria "N já na rede")
         Component head = s.outcome().map(this::outcomeText).orElse(status(s));
-        GuiText.draw(g, font, head, x, sy, rw(), s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         Component detail = s.outcome().isPresent() ? outcomeDetail(s.outcome().get()) : detail(s);
+        // sem detalhe, o resultado pode ocupar as duas linhas (até o botão)
+        GuiText.wrap(g, font, head, x, sy, rw(), detail == null ? 2 : 1, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
         if (detail != null) {
             boolean unloaded = s.outcome().map(o -> o.unloadedChunks() > 0).orElse(s.unloadedChunks() > 0);
             GuiText.draw(g, font, detail, x, sy + 11, rw(), unloaded ? WARN : GuiPaint.MUTED);
@@ -1060,7 +1111,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return LinkerItem.sideName(side).copy().append("\n")
                 .append(tr(faces().contains(side) ? "faces.side.on" : "faces.side.off").copy()
                         .withColor(GuiPaint.TOOLTIP_MUTED))
-                .append("\n").append(tr("faces.side.frame").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                .append("\n").append(tr("faces.side.frame").copy().withColor(GuiPaint.TOOLTIP_MUTED))
+                .append("\n").append(tr("faces.side.no_front").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     private Component allFacesTooltip() {

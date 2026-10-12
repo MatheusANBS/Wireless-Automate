@@ -341,11 +341,13 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Frente horizontal da máquina presa ({@link RemoteMachines#frontOf}), ou −1 sem nível ou sem
-     * frente. Só para a tela e o Vinculador, nunca por tick (a presa é vizinha, o chunk está carregado).
+     * Frente horizontal da máquina presa ({@link RemoteMachines#frontOf}), ou −1 sem nível, sem frente
+     * ou com a máquina num chunk descarregado (na borda do chunk ela pode estar no vizinho; ler o bloco
+     * o carregaria à força). Só para a tela e o Vinculador, nunca por tick.
      */
     public int attachedFront() {
-        return level == null ? -1 : RemoteMachines.frontOf(level.getBlockState(machinePos()));
+        BlockPos machine = machinePos();
+        return level == null || !level.isLoaded(machine) ? -1 : RemoteMachines.frontOf(level.getBlockState(machine));
     }
 
     /** Nome do nó; vazio se o jogador não deu um. */

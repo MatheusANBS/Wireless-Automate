@@ -174,6 +174,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private final Map<ResourceType, FlatButton> tabButtons = new EnumMap<>(ResourceType.class);
     private final MachineView3D machineView = new MachineView3D(direction -> {
         face = direction;
+        networkListOpen = false;
         refresh();
     });
     private final Map<Direction, FlatButton> faceButtons = new EnumMap<>(Direction.class);
@@ -607,6 +608,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     private void selectType(ResourceType t) {
         type = t;
+        networkListOpen = false;
         layoutTabs();
     }
 
@@ -1113,7 +1115,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             int row = dropdownRowAt(mouseX, mouseY);
             if (row >= 0) {
                 List<NetworkEntry> networks = snapshot().networks();
-                chooseNetwork(row < networks.size() ? Optional.of(networks.get(row).id()) : Optional.empty());
+                // uma rede que o jogador não pode usar fica na lista só para mostrar o nome: sem clique
+                if (row >= networks.size() || networks.get(row).usable()) {
+                    chooseNetwork(row < networks.size() ? Optional.of(networks.get(row).id()) : Optional.empty());
+                }
             } else if (!dropdownContains(mouseX, mouseY)) {
                 networkListOpen = false;
             }
@@ -1414,8 +1419,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
             } else if (pointed != null) {
                 Component label = sideName(pointed);
-                g.fill(vx + 1, vy + viewH - 13, vx + 7 + font.width(label), vy + viewH - 1, GHOST_VEIL);
-                GuiPaint.text(g, font, label, vx + 4, vy + viewH - 11, GuiPaint.FG);
+                g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
+                        GHOST_VEIL);
+                GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.FG);
             } else if (remote() && !remoteLoaded()) {
                 Component label = access(view());
                 g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
@@ -1807,20 +1813,23 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             boolean none = index >= networks.size();
             NetworkEntry entry = none ? null : networks.get(index);
             boolean selected = none ? current.isEmpty() : current.isPresent() && current.get().equals(entry.id());
-            if (index == hoveredRow) {
+            boolean usable = none || entry.usable();
+            if (index == hoveredRow && usable) {
                 g.fill(x + 1, ry, x + w - 1, ry + DROPDOWN_ROW, GuiPaint.ROW_SELECTED);
             }
             if (selected) {
                 g.fill(x + 1, ry, x + 2, ry + DROPDOWN_ROW, GuiPaint.ACCENT);
             }
-            int color = none ? GuiPaint.MUTED : 0xFF000000 | entry.color();
+            int color = none ? GuiPaint.MUTED
+                    : usable ? 0xFF000000 | entry.color() : GuiPaint.mix(0xFF000000 | entry.color(), GuiPaint.PANEL, 0.6f);
             if (none) {
                 GuiPaint.outline(g, x + 6, ry + 3, 5, 5, color);
             } else {
                 GuiPaint.eye(g, x + 6, ry + 3, color);
             }
             Component label = none ? tr("network.none") : Component.literal(entry.name());
-            GuiText.draw(g, font, label, x + 15, ry + 2, w - 20, none ? GuiPaint.MUTED : GuiPaint.FG);
+            GuiText.draw(g, font, label, x + 15, ry + 2, w - 20,
+                    none ? GuiPaint.MUTED : usable ? GuiPaint.FG : GuiPaint.DISABLED);
         }
         if (networkScroll > 0) {
             GuiPaint.text(g, font, Component.literal("▲"), x + w - 9, y + 2 + DROPDOWN_ROW, GuiPaint.MUTED);

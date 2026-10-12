@@ -725,11 +725,11 @@ public final class DevEndToEnd {
                     () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         }
         // Com 5 tipos ou mais (Mekanism e Ars no runClient) as abas não cabem com todos os nomes no
-        // mínimo (300): só a ativa tem nome. Em 420 cabem com menos tipos; com 5, depende do resumo
-        // das redes no canto (o seletor de rede saiu da linha), então vale nome só na ativa ou todos.
+        // mínimo (300): só a ativa tem nome. Em 420 todos os nomes cabem, com o resumo das redes no
+        // canto (o seletor de rede saiu da linha das abas).
         boolean manyTypes = LoadedTypes.LIST.size() >= 5;
         TabLayout.Mode tabsAtMinimum = TabLayout.Mode.ACTIVE_NAME;
-        TabLayout.Mode tabsAtLarge = manyTypes ? TabLayout.Mode.ACTIVE_NAME : TabLayout.Mode.FULL;
+        TabLayout.Mode tabsAtLarge = TabLayout.Mode.FULL;
         list.add(new Step("abas no tamanho mínimo", STEP_TIMEOUT_MS,
                 () -> { },
                 () -> routerScreen().tabMode() == tabsAtMinimum,
@@ -740,8 +740,7 @@ public final class DevEndToEnd {
         list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(420, 300),
                 () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
-                        && (routerScreen().tabMode() == tabsAtLarge
-                                || manyTypes && routerScreen().tabMode() == TabLayout.Mode.FULL)
+                        && routerScreen().tabMode() == tabsAtLarge
                         && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
                                 == routerScreen().size()[0] - 9 - 162 + 1,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
@@ -758,6 +757,7 @@ public final class DevEndToEnd {
                 () -> routerScreen().previewResize(300, 240),
                 () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+        attachedFrameSteps(list);
         cardSteps(list);
         chunkUpgradeSteps(list);
         list.add(close("fechar B"));
@@ -940,6 +940,29 @@ public final class DevEndToEnd {
             return null;
         }), () -> routerScreen().getMenu().snapshot().networks(type).equals(List.of(network.get())),
                 () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks());
+    }
+
+    /**
+     * Quadro da presa com a frente fora do Norte: o baú B olha para o Sul, então o botão "Trás" (achado
+     * pelo texto da chave {@code side.back}, não pelo rótulo que a tela calcula) seleciona a face
+     * absoluta Norte no cliente e no servidor, e "Frente" a Sul.
+     */
+    private static void attachedFrameSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        list.add(new Step("B: frente do baú para o Sul", STEP_TIMEOUT_MS, () -> { },
+                () -> onServer(server -> router(server, routerB).attachedFront() == Direction.SOUTH.ordinal())
+                        && routerScreen().getMenu().snapshot().attachedFront() == Direction.SOUTH.ordinal(),
+                () -> "frente " + routerScreen().getMenu().snapshot().attachedFront()));
+        for (RemoteSide side : new RemoteSide[] {RemoteSide.BACK, RemoteSide.FRONT}) {
+            Direction expected = side == RemoteSide.BACK ? Direction.NORTH : Direction.SOUTH;
+            list.add(new Step("B: botão " + side.key() + " é a face " + expected.getName(), STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.side." + side.key())),
+                            "botão " + side.key())),
+                    () -> routerScreen().getMenu().selectedFace() == expected && onServer(server ->
+                            server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
+                                    && menu.selectedFace() == expected),
+                    () -> "face na tela " + routerScreen().getMenu().selectedFace()));
+        }
     }
 
     /** Rede de cada aba no servidor, para o log. */

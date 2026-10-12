@@ -101,8 +101,16 @@ public record RouterSnapshot(
                 ChunkLoadState.NONE);
     }
 
-    /** Uma rede no seletor. {@code owned}: o jogador é o dono. */
-    public record NetworkEntry(UUID id, String name, int color, boolean owned) {
+    /**
+     * Uma rede no seletor. {@code owned}: o jogador é o dono. {@code usable}: o jogador pode pôr uma face
+     * nela (dono, rede pública ou operador, a regra do servidor, {@link WaNetwork#canUse}); uma rede
+     * privada de outro dono que está numa face vem só para mostrar o nome, apagada na lista.
+     */
+    public record NetworkEntry(UUID id, String name, int color, boolean owned, boolean usable) {
+        /** Uma rede que o jogador pode usar (o Vinculador só lista essas). */
+        public NetworkEntry(UUID id, String name, int color, boolean owned) {
+            this(id, name, color, owned, true);
+        }
     }
 
     /** O mesmo snapshot com outras redes no seletor. */
@@ -296,7 +304,8 @@ public record RouterSnapshot(
                 // Rede de outro dono numa face aparece no seletor, para o jogador ver onde a face está.
                 if (network != null && !network.owner().equals(player.getUUID())
                         && networks.stream().noneMatch(e -> e.id().equals(network.id()))) {
-                    networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false));
+                    networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false,
+                            network.canUse(player)));
                 }
             }
         }
@@ -496,6 +505,7 @@ public record RouterSnapshot(
             buf.writeUtf(entry.name, 64);
             buf.writeInt(entry.color);
             buf.writeBoolean(entry.owned);
+            buf.writeBoolean(entry.usable);
         }
     }
 
@@ -503,7 +513,8 @@ public record RouterSnapshot(
         int networkCount = buf.readVarInt();
         List<NetworkEntry> networks = new ArrayList<>(networkCount);
         for (int i = 0; i < networkCount; i++) {
-            networks.add(new NetworkEntry(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readBoolean()));
+            networks.add(new NetworkEntry(buf.readUUID(), buf.readUtf(64), buf.readInt(), buf.readBoolean(),
+                    buf.readBoolean()));
         }
         return List.copyOf(networks);
     }

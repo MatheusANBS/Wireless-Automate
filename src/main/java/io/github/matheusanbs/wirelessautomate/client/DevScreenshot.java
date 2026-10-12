@@ -226,7 +226,7 @@ public final class DevScreenshot {
                 new Step(() -> {
                     RouterSnapshot s = screen.getMenu().snapshot();
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "", RouterTier.ADVANCED, Direction.NORTH,
-                            -1, s.networks(), s.powered(), new ItemStack(Items.CHEST),
+                            Direction.EAST.ordinal(), s.networks(), s.powered(), new ItemStack(Items.CHEST),
                             Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST), s.faces()));
                     screen.previewFace(Direction.UP);
                     screen.previewViewDefault();
@@ -264,8 +264,8 @@ public final class DevScreenshot {
                     int north = RouterSnapshot.index(ResourceType.ITEM, Direction.NORTH);
                     FaceView d = faces.get(down);
                     FaceView n = faces.get(north);
-                    faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false));
-                    faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true));
+                    faces.set(down, new FaceView(d.mode(), d.priority(), d.redstone(), d.slots(), 12, false, d.network()));
+                    faces.set(north, new FaceView(n.mode(), n.priority(), n.redstone(), n.slots(), 3, true, n.network()));
                     screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
                             s.attachedFront(), s.networks(), s.powered(), s.machine(), s.machineState(), List.copyOf(faces)));
                     screen.previewType(ResourceType.ITEM);

@@ -187,6 +187,16 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * Põe a face {@code side} (relativa ao {@code facing} + {@code spin}, como os presets a guardam)
+     * da máquina presa na rede {@code network} ({@code null} tira).
+     */
+    public void setFaceNetwork(ResourceType type, RelativeSide side, @Nullable UUID network) {
+        if (face(type, side).setNetwork(network)) {
+            changed(NetworkManager.typeBit(type));
+        }
+    }
+
+    /**
      * Rede da face {@code side} do alvo de edição, no quadro da tela (como
      * {@link #face(EditTarget, ResourceType, Direction)}): numa máquina remota, a que vale (exceção ou perfil).
      */

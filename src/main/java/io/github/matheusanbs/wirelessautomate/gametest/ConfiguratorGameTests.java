@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -179,7 +180,7 @@ public final class ConfiguratorGameTests {
         int configured = 0;
         for (ResourceType type : TYPES) {
             for (RelativeSide side : SIDES) {
-                if (!target.face(type, side).isDefault()) {
+                if (!settings(target.face(type, side)).isDefault()) {
                     configured++;
                 }
             }
@@ -492,10 +493,17 @@ public final class ConfiguratorGameTests {
     }
 
     /** Confere que as faces do tipo no roteador são as do preset {@code expected}. */
+    /** A face sem a rede: o preset (ainda) leva só modo, prioridade, redstone e filtro por face. */
+    private static FaceConfig settings(FaceConfig config) {
+        FaceConfig copy = new FaceConfig();
+        copy.copySettingsFrom(config);
+        return copy;
+    }
+
     private static void assertFaces(GameTestHelper helper, RouterBlockEntity router, ResourceType type,
             RouterPreset expected, String message) {
         for (RelativeSide side : SIDES) {
-            helper.assertValueEqual(router.face(type, side), expected.face(type, side), message + " " + type + " " + side);
+            helper.assertValueEqual(settings(router.face(type, side)), expected.face(type, side), message + " " + type + " " + side);
         }
     }
 

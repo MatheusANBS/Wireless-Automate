@@ -7,8 +7,8 @@ import net.minecraft.nbt.CompoundTag;
 
 /**
  * Configuração das faces de uma máquina remota: um {@link FaceConfig} por tipo de recurso e por
- * {@link RemoteSide}, sempre preenchido. É o perfil de um grupo ({@link MachineGroup}) ou a exceção de
- * uma máquina ({@link RemoteMachine}). Sem cartões: eles ficam só no grupo (decisão 9 da spec).
+ * {@link RemoteSide}, sempre preenchido, com a rede de cada face. É o perfil de um grupo
+ * ({@link MachineGroup}) ou a exceção de uma máquina ({@link RemoteMachine}). Sem cartões: eles ficam só no grupo (decisão 9 da spec).
  *
  * <p>Mutável: no roteador, mude pelos métodos por alvo do {@code RouterBlockEntity}, que salvam e
  * avisam o motor.
@@ -40,7 +40,7 @@ public final class MachineConfig {
         return copy;
     }
 
-    /** Copia todas as faces de {@code other}. Devolve {@code true} se algo mudou. */
+    /** Copia todas as faces de {@code other}, com a rede. Devolve {@code true} se algo mudou. */
     public boolean copyFrom(MachineConfig other) {
         boolean changed = false;
         for (int t = 0; t < faces.length; t++) {
@@ -51,7 +51,7 @@ public final class MachineConfig {
         return changed;
     }
 
-    /** Modo, prioridade, redstone e filtro iguais em todas as faces de todos os tipos. */
+    /** Modo, prioridade, redstone, filtro e rede iguais em todas as faces de todos os tipos. */
     public boolean sameAs(MachineConfig other) {
         for (int t = 0; t < faces.length; t++) {
             for (int s = 0; s < faces[t].length; s++) {

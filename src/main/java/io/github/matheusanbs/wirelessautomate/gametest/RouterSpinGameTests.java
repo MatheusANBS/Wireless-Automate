@@ -73,6 +73,13 @@ public final class RouterSpinGameTests {
         return helper.getBlockState(ROUTER).getValue(RouterBlock.SPIN);
     }
 
+    /** Modo, prioridade, redstone e filtro no padrão (a rede é do roteador inteiro, posta em {@link #configured}). */
+    private static boolean settingsDefault(FaceConfig config) {
+        FaceConfig copy = new FaceConfig();
+        copy.copySettingsFrom(config);
+        return copy.isDefault();
+    }
+
     /** A configuração montada em {@link #configured}, conferida pelas faces absolutas. */
     private static void assertConfig(GameTestHelper helper, RouterBlockEntity router, String when) {
         FaceConfig north = router.face(ResourceType.ITEM, Direction.NORTH);
@@ -82,10 +89,10 @@ public final class RouterSpinGameTests {
                 "fluido na face leste " + when);
         for (Direction face : Direction.values()) {
             if (face != Direction.NORTH) {
-                helper.assertTrue(router.face(ResourceType.ITEM, face).isDefault(), "item na face " + face + " " + when);
+                helper.assertTrue(settingsDefault(router.face(ResourceType.ITEM, face)), "item na face " + face + " " + when);
             }
             if (face != Direction.EAST) {
-                helper.assertTrue(router.face(ResourceType.FLUID, face).isDefault(), "fluido na face " + face + " " + when);
+                helper.assertTrue(settingsDefault(router.face(ResourceType.FLUID, face)), "fluido na face " + face + " " + when);
             }
             int expectedCards = face == Direction.NORTH ? 1 : 0;
             helper.assertValueEqual(router.cardCount(ResourceType.ITEM, face), expectedCards, "cartões na face " + face + " " + when);

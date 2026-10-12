@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
@@ -1437,6 +1438,8 @@ public final class RangeGameTests {
         helper.setBlock(composter, Blocks.COMPOSTER);
         helper.setBlock(battery, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState());
         ItemStack linker = machinesLinker();
+        // o modo Máquinas ignora as faces: nenhuma marcada não muda o Vincular
+        LinkerItem.setFaces(linker, LinkerFaces.NONE);
         LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
         ServerPlayer player = linkerPlayer(helper, linker);
         helper.startSequence()

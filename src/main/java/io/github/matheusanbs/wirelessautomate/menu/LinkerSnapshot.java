@@ -149,8 +149,8 @@ public record LinkerSnapshot(
         LinkerFaces faces = LinkerItem.faces(stack);
         // o modo Máquinas não usa as faces: a contagem fica a de todas
         LinkerFaces counted = LinkerItem.mode(stack) == LinkerMode.MACHINES ? LinkerFaces.ALL : faces;
-        // a cor do ponto: a primeira face marcada (sem nenhuma, a Frente)
-        RemoteSide colorSide = faces.isEmpty() ? RemoteSide.FRONT : faces.marked().getFirst();
+        // a cor do ponto: a primeira face contada (sem nenhuma, a Frente; no modo Máquinas, a Frente)
+        RemoteSide colorSide = counted.isEmpty() ? RemoteSide.FRONT : counted.marked().getFirst();
         LinkerArea area = LinkerItem.area(stack);
         boolean otherDimension = area != null && !area.dimension().equals(player.level().dimension());
         Optional<BlockPos> first = area == null || otherDimension ? Optional.empty() : Optional.of(area.first());

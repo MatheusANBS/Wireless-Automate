@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
@@ -86,10 +87,11 @@ public class LinkerMenu extends AbstractContainerMenu {
     }
 
     /** O que do item muda o estado da tela. */
-    private record StackKey(LinkerMode mode, LinkerTabs tabs, boolean unlink, Optional<LinkerArea> area) {
+    private record StackKey(LinkerMode mode, LinkerTabs tabs, LinkerFaces faces, boolean unlink,
+            Optional<LinkerArea> area) {
         static StackKey of(ItemStack stack) {
-            return new StackKey(LinkerItem.mode(stack), LinkerItem.tabs(stack), LinkerItem.unlink(stack),
-                    Optional.ofNullable(LinkerItem.area(stack)));
+            return new StackKey(LinkerItem.mode(stack), LinkerItem.tabs(stack), LinkerItem.faces(stack),
+                    LinkerItem.unlink(stack), Optional.ofNullable(LinkerItem.area(stack)));
         }
     }
 

@@ -71,4 +71,56 @@ class TierLadderTest {
     void canUpgradeFromATierWhoseModLeft() {
         assertTrue(TierLadder.canUpgrade(MODS, 5, 7, WITHOUT));
     }
+
+    @Test
+    void cardWithOriginNeedsExactTier() {
+        assertTrue(TierLadder.cardApplies(MODS, 0, 2, 0, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, 0, 2, 1, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, 0, 2, 2, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, 0, 2, 7, WITH));
+    }
+
+    @Test
+    void cardWithOriginNeverGoesDown() {
+        assertFalse(TierLadder.cardApplies(MODS, 2, 1, 2, WITH));
+    }
+
+    @Test
+    void legacyCardKeepsAnyLowerTier() {
+        assertTrue(TierLadder.cardApplies(MODS, -1, 7, 0, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, -1, 1, 2, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, -1, 2, 2, WITH));
+    }
+
+    @Test
+    void cardToAtmTierNeedsTheMod() {
+        assertTrue(TierLadder.cardApplies(MODS, 3, 4, 3, WITH));
+        assertFalse(TierLadder.cardApplies(MODS, 3, 4, 3, WITHOUT));
+    }
+
+    @Test
+    void oneStepFollowsTheLadder() {
+        assertTrue(TierLadder.oneStep(MODS, 3, 7, WITHOUT));
+        assertFalse(TierLadder.oneStep(MODS, 3, 4, WITHOUT));
+        assertTrue(TierLadder.oneStep(MODS, 3, 4, WITH));
+        assertFalse(TierLadder.oneStep(MODS, 3, 7, WITH));
+        assertFalse(TierLadder.oneStep(MODS, 0, 2, WITH));
+        for (int to = 0; to < MODS.size(); to++) {
+            assertFalse(TierLadder.oneStep(MODS, 7, to, WITH));
+            assertFalse(TierLadder.oneStep(MODS, 7, to, WITHOUT));
+        }
+    }
+
+    @Test
+    void oneStepFromAnOrphanAtmTier() {
+        assertTrue(TierLadder.oneStep(MODS, 5, 7, WITHOUT));
+    }
+
+    @Test
+    void stepCardOrigin() {
+        assertEquals(3, TierLadder.previous(MODS, 7, WITHOUT));
+        assertEquals(6, TierLadder.previous(MODS, 7, WITH));
+        assertEquals(0, TierLadder.previous(MODS, 1, WITH));
+        assertEquals(0, TierLadder.previous(MODS, 1, WITHOUT));
+    }
 }

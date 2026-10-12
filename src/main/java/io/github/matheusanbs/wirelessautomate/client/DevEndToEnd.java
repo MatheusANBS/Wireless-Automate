@@ -53,6 +53,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -666,12 +667,25 @@ public final class DevEndToEnd {
                 && NODE_NAME.equals(routerScreen().getMenu().snapshot().name()),
                 () -> "servidor \"" + onServer(server -> router(server, routerB).name()) + "\", tela \""
                         + routerScreen().getMenu().snapshot().name() + "\""));
-        list.add(new Step("trocar a rede da aba Itens", STEP_TIMEOUT_MS,
+        // A rede é da face: a linha Rede troca só a face selecionada (Cima); as outras ficam na principal.
+        list.add(new Step("abrir a lista da linha Rede", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"),
+                        "pílula da linha Rede")),
+                () -> routerScreen().networkListShown() && stepTicks >= 2,
+                () -> "lista " + routerScreen().networkListShown()));
+        list.add(capture("5a-roteador-b-lista-rede"));
+        list.add(new Step("trocar a rede da face Cima em Itens", STEP_TIMEOUT_MS,
                 () -> chooseNetwork(otherNetwork, OTHER_NETWORK),
-                () -> otherNetwork.equals(onServer(server -> router(server, routerB).networkId(ResourceType.ITEM)))
-                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
+                () -> onServer(server -> {
+                    RouterBlockEntity router = router(server, routerB);
+                    return otherNetwork.equals(router.faceNetwork(ResourceType.ITEM, Direction.UP))
+                            && mainNetwork.equals(router.faceNetwork(ResourceType.ITEM, Direction.DOWN));
+                }) && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, Direction.UP)
+                        .equals(Optional.of(otherNetwork))
+                        && routerScreen().getMenu().snapshot().networks(ResourceType.ITEM).size() == 2,
                 () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks()));
         list.add(capture("5-roteador-b-rede-itens"));
+        list.add(allFacesShortcut("B: as outras faces de Itens na mesma rede", ResourceType.ITEM, () -> otherNetwork));
         list.add(new Step("aba Energia", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.energy")), "aba Energia")),
                 () -> {
@@ -680,17 +694,20 @@ public final class DevEndToEnd {
                             server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
                                     && menu.selectedType() == ResourceType.ENERGY);
                 }, () -> "aba na tela " + routerScreen().getMenu().selectedType()));
-        list.add(new Step("trocar só a rede da aba Energia", STEP_TIMEOUT_MS,
+        list.add(new Step("trocar só a rede da face Cima em Energia", STEP_TIMEOUT_MS,
                 () -> chooseNetwork(energyNetwork, ENERGY_NETWORK),
                 () -> onServer(server -> {
                     RouterBlockEntity router = router(server, routerB);
-                    return energyNetwork.equals(router.networkId(ResourceType.ENERGY))
+                    return energyNetwork.equals(router.faceNetwork(ResourceType.ENERGY, Direction.UP))
+                            && mainNetwork.equals(router.faceNetwork(ResourceType.ENERGY, Direction.DOWN))
                             && otherNetwork.equals(router.networkId(ResourceType.ITEM))
                             && mainNetwork.equals(router.networkId(ResourceType.FLUID));
-                }) && routerScreen().getMenu().snapshot().network(ResourceType.ENERGY).equals(Optional.of(energyNetwork))
-                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(otherNetwork)),
+                }) && routerScreen().getMenu().snapshot().network(ResourceType.ENERGY, Direction.UP)
+                        .equals(Optional.of(energyNetwork))
+                        && routerScreen().getMenu().snapshot().networks(ResourceType.ITEM).equals(List.of(otherNetwork)),
                 () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks()));
         list.add(capture("5b-roteador-b-rede-energia"));
+        list.add(allFacesShortcut("B: as outras faces de Energia na mesma rede", ResourceType.ENERGY, () -> energyNetwork));
         list.add(new Step("de volta à aba Itens", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
@@ -708,7 +725,8 @@ public final class DevEndToEnd {
                     () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         }
         // Com 5 tipos ou mais (Mekanism e Ars no runClient) as abas não cabem com todos os nomes no
-        // mínimo (300) nem em 420: só a ativa tem nome. Com menos tipos cabem em 420.
+        // mínimo (300): só a ativa tem nome. Em 420 cabem com menos tipos; com 5, depende do resumo
+        // das redes no canto (o seletor de rede saiu da linha), então vale nome só na ativa ou todos.
         boolean manyTypes = LoadedTypes.LIST.size() >= 5;
         TabLayout.Mode tabsAtMinimum = TabLayout.Mode.ACTIVE_NAME;
         TabLayout.Mode tabsAtLarge = manyTypes ? TabLayout.Mode.ACTIVE_NAME : TabLayout.Mode.FULL;
@@ -722,7 +740,8 @@ public final class DevEndToEnd {
         list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(420, 300),
                 () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
-                        && routerScreen().tabMode() == tabsAtLarge
+                        && (routerScreen().tabMode() == tabsAtLarge
+                                || manyTypes && routerScreen().tabMode() == TabLayout.Mode.FULL)
                         && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
                                 == routerScreen().size()[0] - 9 - 162 + 1,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
@@ -880,19 +899,23 @@ public final class DevEndToEnd {
     }
 
     /**
-     * Abre o seletor de rede da aba atual (na linha das abas) e clica na linha da rede: a lista abre
-     * logo abaixo da pílula, com 2 px de folga, 2 px de borda, o título e uma linha por rede.
+     * Abre a pílula da linha Rede (a rede da face selecionada, abaixo dos botões de modo) e clica na
+     * linha da rede: a lista abre logo abaixo da pílula, com 1 px de folga, 2 px de borda, o título e
+     * uma linha por rede.
      */
-    private static void chooseNetwork(UUID network, String name) throws StepFailure {
+    private static void chooseNetwork(@Nullable UUID network, String name) throws StepFailure {
         RouterScreen screen = routerScreen();
-        AbstractWidget pill = widget(byMessageKey("gui.wirelessautomate.router.network.tab.narration"),
-                "seletor de rede da aba");
-        if (pill.getY() - screen.getGuiTop() > 45) {
-            throw new StepFailure("o seletor de rede não está na linha das abas (y " + (pill.getY() - screen.getGuiTop()) + ")");
+        AbstractWidget pill = widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"),
+                "pílula da linha Rede");
+        if (pill.getY() - screen.getGuiTop() < 100) {
+            throw new StepFailure("a pílula de rede não está abaixo dos modos (y " + (pill.getY() - screen.getGuiTop()) + ")");
         }
-        click(pill);
+        if (!screen.networkListShown()) {
+            click(pill);
+        }
         List<NetworkEntry> networks = screen.getMenu().snapshot().networks();
-        int row = -1;
+        // "Sem rede" é a última linha, depois das redes
+        int row = network == null ? networks.size() : -1;
         for (int i = 0; i < networks.size(); i++) {
             if (networks.get(i).id().equals(network)) {
                 row = i;
@@ -902,8 +925,21 @@ public final class DevEndToEnd {
             throw new StepFailure("a rede " + name + " não está na lista da tela: " + networks);
         }
         int x = pill.getX() + pill.getWidth() / 2;
-        int y = pill.getY() + pill.getHeight() + 2 + 2 + (row + 1) * DROPDOWN_ROW + DROPDOWN_ROW / 2;
+        int y = pill.getY() + pill.getHeight() + 1 + 2 + (row + 1) * DROPDOWN_ROW + DROPDOWN_ROW / 2;
         click(screen, x, y);
+    }
+
+    /**
+     * Atalho no servidor: todas as faces do tipo {@code type} do roteador B na rede {@code network}, como a
+     * rede da aba fazia, para os passos de transporte por aba; espera a tela mostrar só essa rede. A rede
+     * vem por {@code Supplier}: os campos das redes só existem quando os passos rodam.
+     */
+    private static Step allFacesShortcut(String label, ResourceType type, Supplier<UUID> network) {
+        return new Step(label, STEP_TIMEOUT_MS, () -> onServer(server -> {
+            router(server, routerB).setNetworkId(type, network.get());
+            return null;
+        }), () -> routerScreen().getMenu().snapshot().networks(type).equals(List.of(network.get())),
+                () -> "servidor " + serverNetworks(routerB) + ", tela " + clientNetworks());
     }
 
     /** Rede de cada aba no servidor, para o log. */
@@ -919,12 +955,23 @@ public final class DevEndToEnd {
                 + networkName(router.networkId(ResourceType.ENERGY));
     }
 
-    /** Rede de cada aba no snapshot da tela, para o log. */
+    /** Redes das faces de cada aba no snapshot da tela, para o log. */
     private static String clientNetworks() throws StepFailure {
         RouterSnapshot s = routerScreen().getMenu().snapshot();
-        return "itens " + networkName(s.network(ResourceType.ITEM).orElse(null)) + ", fluidos "
-                + networkName(s.network(ResourceType.FLUID).orElse(null)) + ", energia "
-                + networkName(s.network(ResourceType.ENERGY).orElse(null));
+        return "itens " + networkNames(s.networks(ResourceType.ITEM)) + ", fluidos "
+                + networkNames(s.networks(ResourceType.FLUID)) + ", energia "
+                + networkNames(s.networks(ResourceType.ENERGY));
+    }
+
+    private static String networkNames(List<UUID> ids) {
+        if (ids.isEmpty()) {
+            return "nenhuma";
+        }
+        List<String> names = new ArrayList<>();
+        for (UUID id : ids) {
+            names.add(networkName(id));
+        }
+        return String.join("+", names);
     }
 
     private static String networkName(@Nullable UUID id) {
@@ -2889,6 +2936,30 @@ public final class DevEndToEnd {
             list.add(rangeClipCheck(label + "grupo"));
             list.add(capture("range-2-grupo" + suffix));
             if (!pt) {
+                // a linha Rede no grupo edita a rede da face do perfil; depois volta a "Sem rede"
+                list.add(new Step(label + "grupo: Trás na rede principal pela linha Rede", STEP_TIMEOUT_MS,
+                        () -> chooseNetwork(mainNetwork, MAIN_NETWORK),
+                        () -> {
+                            int chests = rangeGroup(Blocks.CHEST);
+                            return routerScreen().getMenu().snapshot().network(ResourceType.ITEM, Direction.SOUTH)
+                                    .equals(Optional.of(mainNetwork))
+                                    && onServer(server -> mainNetwork.equals(router(server, rangeRouter).remoteMachines()
+                                            .group(chests).profile().face(ResourceType.ITEM, RemoteSide.BACK).network())
+                                            && router(server, rangeRouter).faceNetwork(ResourceType.ITEM, Direction.NORTH)
+                                                    == null);
+                        }, () -> "rede na tela " + routerScreen().getMenu().snapshot()
+                                .network(ResourceType.ITEM, Direction.SOUTH)));
+                list.add(rangeClipCheck(label + "grupo com rede"));
+                list.add(capture("range-2c-grupo-rede"));
+                list.add(new Step(label + "grupo: Trás sem rede", STEP_TIMEOUT_MS,
+                        () -> chooseNetwork(null, "Sem rede"),
+                        () -> {
+                            int chests = rangeGroup(Blocks.CHEST);
+                            return routerScreen().getMenu().snapshot().network(ResourceType.ITEM, Direction.SOUTH).isEmpty()
+                                    && onServer(server -> router(server, rangeRouter).remoteMachines().group(chests)
+                                            .profile().face(ResourceType.ITEM, RemoteSide.BACK).network() == null);
+                        }, () -> "rede na tela " + routerScreen().getMenu().snapshot()
+                                .network(ResourceType.ITEM, Direction.SOUTH)));
                 // o visor com o alvo remoto: só o bloco do grupo, com a frente para quem olha
                 list.add(new Step(label + "visor do grupo", STEP_TIMEOUT_MS, () -> {
                     click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
@@ -3128,9 +3199,9 @@ public final class DevEndToEnd {
         list.add(new Step("pt: roteador no mínimo", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(300, 240),
                 () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240
-                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM).equals(Optional.of(longNetwork)),
+                        && routerScreen().getMenu().snapshot().networks(ResourceType.ITEM).equals(List.of(longNetwork)),
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", rede "
-                        + routerScreen().getMenu().snapshot().network(ResourceType.ITEM)));
+                        + routerScreen().getMenu().snapshot().networks(ResourceType.ITEM)));
         list.add(new Step("pt: nome longo cortado com tooltip inteiro", STEP_TIMEOUT_MS, () -> {
             int[] center = GuiText.firstClipCenter();
             if (center != null) {
@@ -3512,8 +3583,12 @@ public final class DevEndToEnd {
         return minecraft.level != null && minecraft.level.getBlockState(pos).getBlock() instanceof RouterBlock;
     }
 
-    private static Component face(Direction direction) {
-        return Component.translatable("gui.wirelessautomate.router.face." + direction.getName());
+    /**
+     * O rótulo do botão da face absoluta {@code direction} da máquina presa na tela aberta: o lado
+     * relativo à frente da máquina ("Cima", "Trás"...).
+     */
+    private static Component face(Direction direction) throws StepFailure {
+        return routerScreen().attachedFaceLabel(direction);
     }
 
     private static Component mode(PortMode mode) {

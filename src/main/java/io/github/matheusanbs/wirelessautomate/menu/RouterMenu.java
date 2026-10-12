@@ -74,7 +74,7 @@ public class RouterMenu extends AbstractContainerMenu {
     public static final int SAMPLE_TICKS = 20;
     /** Posições na tela (canto do item): o primeiro slot de cartão e o primeiro da mochila. */
     public static final int CARD_X = 130;
-    public static final int CARD_Y = 132;
+    public static final int CARD_Y = 136;
     public static final int INVENTORY_X = 130;
     public static final int INVENTORY_Y = 157;
     public static final int CARD_SLOT_COUNT = RouterBlockEntity.CARD_SLOTS;

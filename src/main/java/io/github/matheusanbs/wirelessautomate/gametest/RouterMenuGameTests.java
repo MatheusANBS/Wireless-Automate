@@ -19,6 +19,8 @@ import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.netty.buffer.Unpooled;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -29,11 +31,14 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Lado do servidor da tela do roteador: o snapshot, os handlers dos pacotes do cliente, a versão
@@ -92,7 +97,7 @@ public final class RouterMenuGameTests {
         helper.assertValueEqual(snapshot.name(), "Baú de minérios", "nome aparado");
         helper.assertValueEqual(snapshot.tier(), RouterTier.BASIC, "tier");
         helper.assertValueEqual(snapshot.facing(), Direction.UP, "facing");
-        helper.assertValueEqual(snapshot.network(ResourceType.ITEM), Optional.of(own.id()), "rede");
+        helper.assertTrue(Objects.equals(snapshot.network(ResourceType.ITEM, Direction.UP), Optional.of(own.id())), "rede");
         helper.assertTrue(snapshot.networks().contains(new RouterSnapshot.NetworkEntry(own.id(), own.name(),
                 own.color(), true)), "rede própria fora do seletor");
         helper.assertFalse(snapshot.networks().stream().anyMatch(e -> e.id().equals(foreign.id())),
@@ -100,7 +105,8 @@ public final class RouterMenuGameTests {
         helper.assertTrue(snapshot.machine().is(Items.CHEST), "ícone da máquina");
         helper.assertValueEqual(snapshot.faces().size(), ResourceType.values().length * 6, "faces");
         helper.assertValueEqual(snapshot.face(ResourceType.ITEM, Direction.UP),
-                new RouterSnapshot.FaceView(PortMode.EXTRACT, 5, RedstoneMode.HIGH, 27, 0, false), "itens em cima");
+                new RouterSnapshot.FaceView(PortMode.EXTRACT, 5, RedstoneMode.HIGH, 27, 0, false, Optional.of(own.id())),
+                "itens em cima");
         helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).mode(), PortMode.INSERT,
                 "fluido ao norte");
         helper.assertValueEqual(snapshot.face(ResourceType.FLUID, Direction.NORTH).slots(), -1, "baú sem tanque");
@@ -116,7 +122,7 @@ public final class RouterMenuGameTests {
 
         // Rede removida: o snapshot fica sem rede.
         data.remove(foreign.id());
-        helper.assertValueEqual(RouterSnapshot.capture(router, player).network(ResourceType.ITEM), Optional.<UUID>empty(),
+        helper.assertTrue(RouterSnapshot.capture(router, player).network(ResourceType.ITEM, Direction.UP).isEmpty(),
                 "rede removida");
 
         // Ida e volta pelo codec de rede.
@@ -167,8 +173,56 @@ public final class RouterMenuGameTests {
         helper.succeed();
     }
 
+    /** Compara redes que podem ser nulas (o {@code assertValueEqual} com {@code null} derruba o servidor). */
+    private static void assertNetwork(GameTestHelper helper, @Nullable UUID actual, @Nullable UUID expected, String what) {
+        helper.assertTrue(Objects.equals(actual, expected), what + ": esperava " + expected + ", veio " + actual);
+    }
+
+    private static SetNetworkPayload setNetwork(RouterMenu menu, ResourceType type, Direction face,
+            @Nullable UUID network) {
+        return new SetNetworkPayload(menu.containerId, type, face, Optional.ofNullable(network));
+    }
+
     @GameTest(template = "empty")
-    public static void setNetworkChecksPermission(GameTestHelper helper) {
+    public static void setFaceNetworkThroughPayload(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, CHEST);
+        ServerPlayer player = playerNear(helper, router);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork own = data.create(player.getUUID(), "Mina");
+        WaNetwork other = data.create(player.getUUID(), "Armazém");
+        router.setNetworkId(ResourceType.ITEM, other.id());
+        RouterMenu menu = openMenu(player, router);
+        try {
+            // Na presa, a face do pacote é absoluta: só ela muda, e só no tipo do pacote.
+            helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.NORTH,
+                    own.id())), "recusou a própria rede");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.NORTH), own.id(), "face Norte");
+            for (Direction face : Direction.values()) {
+                if (face != Direction.NORTH) {
+                    assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, face), other.id(), "itens " + face);
+                }
+                assertNetwork(helper, router.faceNetwork(ResourceType.FLUID, face), null, "fluidos " + face);
+            }
+            helper.assertFalse(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.CHEMICAL,
+                    Direction.NORTH, own.id())), "aceitou químicos sem o Mekanism");
+            helper.assertFalse(ModPayloads.handleSetNetwork(player, new SetNetworkPayload(menu.containerId + 1,
+                    ResourceType.ITEM, Direction.UP, Optional.of(own.id()))), "aceitou outro containerId");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), other.id(), "face Cima mudou");
+
+            // O snapshot seguinte traz a rede na face.
+            RouterSnapshot snapshot = RouterSnapshot.capture(router, player);
+            helper.assertTrue(snapshot.network(ResourceType.ITEM, Direction.NORTH).equals(Optional.of(own.id())),
+                    "snapshot sem a rede da face");
+            helper.assertTrue(snapshot.networks(ResourceType.ITEM).containsAll(List.of(own.id(), other.id())),
+                    "resumo sem as duas redes");
+        } finally {
+            close(player);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void setFaceNetworkRefusesForeign(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, CHEST);
         ServerPlayer player = playerNear(helper, router);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
@@ -177,17 +231,17 @@ public final class RouterMenuGameTests {
         RouterMenu menu = openMenu(player, router);
         try {
             helper.assertFalse(player.hasPermissions(2), "jogador falso é operador");
-            helper.assertTrue(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(own.id()))), "recusou a própria rede");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede própria");
-            helper.assertFalse(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(foreign.id()))), "aceitou rede alheia");
-            helper.assertFalse(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.of(UUID.randomUUID()))), "aceitou rede inexistente");
-            helper.assertValueEqual(router.networkId(ResourceType.ITEM), own.id(), "rede mudou numa recusa");
-            helper.assertTrue(ModPayloads.handleSetNetwork(player,
-                    new SetNetworkPayload(menu.containerId, ResourceType.ITEM, Optional.empty())), "recusou tirar da rede");
-            helper.assertTrue(router.networkId(ResourceType.ITEM) == null, "continuou na rede");
+            helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.UP,
+                    own.id())), "recusou a própria rede");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), own.id(), "rede própria");
+            helper.assertFalse(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.UP,
+                    foreign.id())), "aceitou rede privada alheia");
+            helper.assertFalse(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.UP,
+                    UUID.randomUUID())), "aceitou rede inexistente");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), own.id(), "rede mudou numa recusa");
+            helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.UP,
+                    null)), "recusou tirar da rede");
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), null, "continuou na rede");
 
             helper.assertTrue(ModPayloads.handleRename(player, new RenameRouterPayload(menu.containerId, " Forno ")),
                     "recusou o nome");
@@ -198,6 +252,52 @@ public final class RouterMenuGameTests {
         } finally {
             close(player);
         }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void snapshotCarriesFaceNetworksAndFront(GameTestHelper helper) {
+        // Fornalha com a frente para o Sul e o roteador preso por cima.
+        helper.setBlock(CHEST, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
+        helper.setBlock(CHEST.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(CHEST.above());
+        ServerPlayer player = playerNear(helper, router);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork mine = data.create(player.getUUID(), "Mina");
+        WaNetwork store = data.create(player.getUUID(), "Armazém");
+        WaNetwork foreign = data.create(UUID.randomUUID(), "Alheia");
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, mine.id());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, store.id());
+        router.setFaceNetwork(ResourceType.ENERGY, Direction.NORTH, foreign.id());
+
+        RouterSnapshot snapshot = RouterSnapshot.capture(router, player);
+        helper.assertValueEqual(snapshot.attachedFront(), Direction.SOUTH.ordinal(), "frente da fornalha");
+        helper.assertTrue(snapshot.network(ResourceType.ITEM, Direction.UP).equals(Optional.of(mine.id())), "Cima");
+        helper.assertTrue(snapshot.network(ResourceType.ITEM, Direction.DOWN).equals(Optional.of(store.id())), "Baixo");
+        helper.assertTrue(snapshot.network(ResourceType.ITEM, Direction.NORTH).isEmpty(), "Norte sem rede");
+        helper.assertTrue(snapshot.networks(ResourceType.ITEM).equals(List.of(store.id(), mine.id())),
+                "redes distintas da aba: " + snapshot.networks(ResourceType.ITEM));
+        // A rede alheia numa face de outro tipo entra no seletor, sem ser do jogador.
+        helper.assertTrue(snapshot.networks().contains(new RouterSnapshot.NetworkEntry(foreign.id(), foreign.name(),
+                foreign.color(), false)), "rede alheia da face fora do seletor");
+
+        // Ida e volta pelo codec, com a frente e as redes das faces.
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
+        RouterSnapshot decoded = RouterSnapshot.STREAM_CODEC.decode(buf);
+        helper.assertTrue(decoded.equals(snapshot), "snapshot mudou pelo codec");
+
+        // Rede apagada: a face vem sem rede (a face continua com o UUID).
+        data.remove(mine.id());
+        RouterSnapshot after = RouterSnapshot.capture(router, player);
+        helper.assertTrue(after.network(ResourceType.ITEM, Direction.UP).isEmpty(), "rede apagada continuou na face");
+        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.UP), mine.id(), "UUID guardado na face");
+
+        // Frente vertical (barril para cima) vale como sem frente: -1.
+        helper.setBlock(B, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        helper.setBlock(B.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity chestRouter = helper.getBlockEntity(B.above());
+        helper.assertValueEqual(RouterSnapshot.capture(chestRouter, player).attachedFront(), -1, "barril para cima sem frente");
         helper.succeed();
     }
 

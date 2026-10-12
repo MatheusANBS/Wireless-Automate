@@ -6,32 +6,43 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -655,5 +666,120 @@ public final class FaceNetworkGameTests {
             NetworkSavedData.get(server).remove(net);
         }
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ tela do roteador, alvo remoto
+
+    private static final int CONTAINER_ID = 43;
+
+    /**
+     * Liga o Upgrade de Alcance, vincula as duas fornalhas e abre a tela do roteador para um jogador
+     * falso perto dele ({@code out[0]}).
+     */
+    @SuppressWarnings("removal")
+    private static RouterMenu openRangeMenu(GameTestHelper helper, RouterBlockEntity router, ServerPlayer[] out) {
+        router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+        helper.assertTrue(router.rangeActive(), "o upgrade de alcance não vale no Avançado");
+        helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_A)), "não vinculou a fornalha A");
+        helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_B)), "não vinculou a fornalha B");
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+        RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router, RouterSnapshot.capture(router, player));
+        player.containerMenu = menu;
+        out[0] = player;
+        return menu;
+    }
+
+    private static SetNetworkPayload setNetwork(RouterMenu menu, Direction face, @Nullable UUID network) {
+        return new SetNetworkPayload(menu.containerId, ResourceType.ITEM, face, Optional.ofNullable(network));
+    }
+
+    @GameTest(template = "empty")
+    public static void groupProfileNetworkThroughPayload(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithFurnaces(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openRangeMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        WaNetwork own = NetworkSavedData.get(helper.getLevel().getServer())
+                                .create(player.getUUID(), "Perfil");
+                        RemoteMachines remotes = router.remoteMachines();
+                        int indexA = remotes.index(helper.absolutePos(FURNACE_A));
+                        int group = remotes.machine(indexA).group();
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.group(menu.containerId,
+                                group, BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE))), "não escolheu o grupo");
+
+                        // Face canônica SOUTH = Trás: a rede vai para o perfil, não para a presa nem vira exceção.
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.SOUTH, own.id())),
+                                "recusou a rede no grupo");
+                        assertNetwork(helper, router.faceNetwork(EditTarget.group(group), ResourceType.ITEM, Direction.SOUTH),
+                                own.id(), "perfil");
+                        assertNetwork(helper, router.faceNetwork(EditTarget.group(group), ResourceType.ITEM, Direction.NORTH),
+                                null, "outra face do perfil");
+                        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.SOUTH), null, "a presa mudou");
+                        helper.assertFalse(remotes.machine(indexA).hasException(), "mudar o perfil criou exceção");
+                        assertNetwork(helper, router.faceNetwork(EditTarget.machine(indexA), ResourceType.ITEM,
+                                Direction.SOUTH), own.id(), "a máquina não segue o perfil");
+
+                        // O snapshot do grupo traz a rede na face canônica.
+                        RouterSnapshot snapshot = RouterSnapshot.capture(router, player, EditTarget.group(group));
+                        helper.assertTrue(snapshot.network(ResourceType.ITEM, Direction.SOUTH).equals(Optional.of(own.id())),
+                                "snapshot do grupo sem a rede");
+
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.SOUTH, null)),
+                                "recusou tirar a rede do perfil");
+                        assertNetwork(helper, router.faceNetwork(EditTarget.group(group), ResourceType.ITEM, Direction.SOUTH),
+                                null, "o perfil continuou na rede");
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
+    public static void machineNetworkCreatesException(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithFurnaces(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openRangeMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        WaNetwork own = NetworkSavedData.get(helper.getLevel().getServer())
+                                .create(player.getUUID(), "Exceção");
+                        RemoteMachines remotes = router.remoteMachines();
+                        BlockPos b = helper.absolutePos(FURNACE_B);
+                        int indexB = remotes.index(b);
+                        int indexA = remotes.index(helper.absolutePos(FURNACE_A));
+                        EditTarget group = EditTarget.group(remotes.machine(indexB).group());
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.machine(menu.containerId, indexB, b)), "não escolheu a máquina");
+
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.NORTH, own.id())),
+                                "recusou a rede na máquina");
+                        helper.assertTrue(remotes.machine(indexB).hasException(), "a rede não criou a exceção");
+                        assertNetwork(helper, router.faceNetwork(EditTarget.machine(indexB), ResourceType.ITEM,
+                                Direction.NORTH), own.id(), "rede da exceção");
+                        helper.assertValueEqual(router.face(EditTarget.machine(indexB), ResourceType.ITEM, Direction.NORTH)
+                                .mode(), router.face(group, ResourceType.ITEM, Direction.NORTH).mode(),
+                                "a exceção mudou o modo");
+                        assertNetwork(helper, router.faceNetwork(group, ResourceType.ITEM, Direction.NORTH), null,
+                                "a rede foi para o perfil");
+                        helper.assertFalse(remotes.machine(indexA).hasException(), "a outra máquina ganhou exceção");
+
+                        // Voltar à rede do perfil apaga a exceção que só diferia pela rede.
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.NORTH, null)),
+                                "recusou tirar a rede da máquina");
+                        helper.assertFalse(remotes.machine(indexB).hasException(), "a exceção ficou igual ao perfil");
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                })
+                .thenSucceed();
     }
 }

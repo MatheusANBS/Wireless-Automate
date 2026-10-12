@@ -186,10 +186,12 @@ public final class MachineView3D {
      * @param selected face selecionada na tela
      * @param pointedOutside face apontada fora do visor (o botão dela sob o mouse), realçada como a
      *                       face sob o mouse; {@code null} se nenhuma
+     * @param networkColor cor (RGB) da rede da face selecionada, para o anel dela; {@code -1} sem rede
+     *                     (o anel fica na cor do tier)
      */
     public void render(GuiGraphics g, BlockState machine, @Nullable Direction facing, RouterTier tier,
             Function<Direction, FaceView> faces, Direction selected, @Nullable Direction pointedOutside,
-            int mouseX, int mouseY) {
+            int networkColor, int mouseX, int mouseY) {
         hasMachine = machine.getRenderShape() != RenderShape.INVISIBLE;
         if (facing != viewFacing || machine != viewMachine) {
             resetAngles(facing, machine);
@@ -231,7 +233,8 @@ public final class MachineView3D {
 
         if (hasMachine) {
             renderOverlays(buffers.getBuffer(RenderType.debugQuads()), pose.last().pose(), faces, selected,
-                    hovered != null ? hovered : pointedOutside, GuiPaint.tierColor(tier));
+                    hovered != null ? hovered : pointedOutside,
+                    networkColor >= 0 ? networkColor : GuiPaint.tierColor(tier));
             buffers.endBatch();
         }
         pose.popPose();
@@ -268,10 +271,10 @@ public final class MachineView3D {
 
     /**
      * Modo de cada face (moldura e véu na cor do modo), face sem acesso apagada, mouse (véu coral) e
-     * seleção (anel na cor do tier).
+     * seleção (anel na cor da rede da face, ou na do tier sem rede).
      */
     private static void renderOverlays(VertexConsumer out, Matrix4f m, Function<Direction, FaceView> faces,
-            Direction selected, @Nullable Direction pointed, int tierColor) {
+            Direction selected, @Nullable Direction pointed, int selectedColor) {
         for (Direction face : DIRECTIONS) {
             FaceView view = faces.apply(face);
             if (!view.available()) {
@@ -285,7 +288,7 @@ public final class MachineView3D {
                 quad(out, m, face, 0, 0, 1, 1, LIFT * 3, POINTED_VEIL);
             }
             if (face == selected) {
-                ring(out, m, face, 0, PX * 1.5f, LIFT * 3, 0xFF000000 | tierColor);
+                ring(out, m, face, 0, PX * 1.5f, LIFT * 3, 0xFF000000 | selectedColor);
             }
         }
     }

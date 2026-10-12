@@ -147,4 +147,4 @@ Nenhum.
 
 ## Feedback do dono no teste (11/10/2026)
 
-- Alternar entre a lista e o visor pelo botão Máquinas não é óbvio ("cadê o 3D?"): na etapa 2, mostrar a lista e o visor lado a lado quando a janela é larga, como no mockup; no tamanho mínimo, continua alternando, com o botão mais claro.
+- Alternar entre a lista e o visor pelo botão Máquinas não é óbvio ("cadê o 3D?"): feito no mesmo dia (commit 641a91f): com a coluna da esquerda larga, a lista e o visor ficam lado a lado e o botão vira só o título; no tamanho mínimo, continuam alternando.

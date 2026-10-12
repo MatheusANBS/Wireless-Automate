@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.netty.buffer.Unpooled;
 import java.util.List;
@@ -118,7 +119,7 @@ public final class RouterMenuGameTests {
         router.setNetworkId(foreign.id());
         RouterSnapshot other = RouterSnapshot.capture(router, player);
         helper.assertTrue(other.networks().contains(new RouterSnapshot.NetworkEntry(foreign.id(), foreign.name(),
-                foreign.color(), false)), "rede atual alheia fora do seletor");
+                foreign.color(), false, false)), "rede atual alheia fora do seletor, ou marcada como utilizável");
 
         // Rede removida: o snapshot fica sem rede.
         data.remove(foreign.id());
@@ -221,6 +222,37 @@ public final class RouterMenuGameTests {
         helper.succeed();
     }
 
+    /**
+     * Na presa o pacote fala em face absoluta, mesmo com a frente da máquina fora do Norte: numa fornalha
+     * virada para o Sul, a face absoluta Norte é a Trás, e só ela muda (com o quadro canônico, mudaria a
+     * Frente, que é a Sul).
+     */
+    @GameTest(template = "empty")
+    public static void setFaceNetworkAbsoluteOnSouthFront(GameTestHelper helper) {
+        helper.setBlock(CHEST, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
+        helper.setBlock(CHEST.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(CHEST.above());
+        ServerPlayer player = playerNear(helper, router);
+        WaNetwork own = NetworkSavedData.get(helper.getLevel().getServer()).create(player.getUUID(), "Trás");
+        RouterMenu menu = openMenu(player, router);
+        try {
+            helper.assertValueEqual(router.attachedFront(), Direction.SOUTH.ordinal(), "frente da fornalha");
+            helper.assertValueEqual(RemoteSide.fromAbsolute(router.attachedFront(), Direction.NORTH.ordinal()),
+                    RemoteSide.BACK, "a face Norte não é a Trás");
+            helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, ResourceType.ITEM, Direction.NORTH,
+                    own.id())), "recusou a rede");
+            for (Direction face : Direction.values()) {
+                assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, face), face == Direction.NORTH ? own.id() : null,
+                        "itens " + face);
+            }
+            assertNetwork(helper, router.faceNetwork(ResourceType.ITEM,
+                    Direction.values()[RemoteSide.BACK.toAbsolute(router.attachedFront())]), own.id(), "a Trás da fornalha");
+        } finally {
+            close(player);
+        }
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void setFaceNetworkRefusesForeign(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, CHEST);
@@ -278,8 +310,11 @@ public final class RouterMenuGameTests {
         helper.assertTrue(snapshot.networks(ResourceType.ITEM).equals(List.of(store.id(), mine.id())),
                 "redes distintas da aba: " + snapshot.networks(ResourceType.ITEM));
         // A rede alheia numa face de outro tipo entra no seletor, sem ser do jogador.
+        // Privada e de outro dono: vem só para mostrar o nome, não utilizável (o servidor recusaria).
         helper.assertTrue(snapshot.networks().contains(new RouterSnapshot.NetworkEntry(foreign.id(), foreign.name(),
-                foreign.color(), false)), "rede alheia da face fora do seletor");
+                foreign.color(), false, false)), "rede alheia da face fora do seletor, ou marcada como utilizável");
+        helper.assertTrue(snapshot.networks().stream().filter(e -> e.id().equals(mine.id()))
+                .allMatch(RouterSnapshot.NetworkEntry::usable), "rede própria não utilizável");
 
         // Ida e volta pelo codec, com a frente e as redes das faces.
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());

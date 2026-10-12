@@ -303,6 +303,13 @@ public final class NetworkManager {
         return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
     }
 
+    /** O mesmo do {@link #sourceSleepInterval} para o sono de destino (o de "cheio"); para os GameTests. */
+    public int destinationSleepInterval(RouterBlockEntity node, ResourceType type, Direction face) {
+        NodePorts ports = nodes.get(node);
+        Port port = ports == null ? null : ports.peek(type, face);
+        return port == null ? -1 : port.destinationBackoff.nextIntervalTicks();
+    }
+
     /**
      * Para GameTests e diagnóstico: como {@link #sourceSleepInterval}, na porta da máquina remota em
      * {@code machinePos} (face absoluta); -1 se a porta não existe.

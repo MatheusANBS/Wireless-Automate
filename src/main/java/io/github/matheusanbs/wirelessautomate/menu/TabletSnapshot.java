@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
@@ -143,9 +144,9 @@ public record TabletSnapshot(
             return networks.get(type.ordinal());
         }
 
-        /** Redes distintas somando todos os tipos (uma rede em dois tipos conta uma vez). */
+        /** Redes distintas somando os tipos carregados (uma rede em dois tipos conta uma vez), como a dica. */
         public int distinctNetworks() {
-            return (int) networks.stream().flatMap(List::stream).distinct().count();
+            return (int) LoadedTypes.LIST.stream().flatMap(type -> networks(type).stream()).distinct().count();
         }
     }
 

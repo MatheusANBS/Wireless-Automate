@@ -17,6 +17,8 @@ public enum LinkerProblem {
     TOO_FAR,
     /** Nenhuma aba marcada que valha aqui (por exemplo só Químicos, sem o Mekanism). */
     NO_TABS,
+    /** Nenhuma face marcada (Único e Área; o modo Máquinas não usa as faces). */
+    NO_FACES,
     /** A rede ativa é de outro dono e o jogador não é operador. */
     FOREIGN_NETWORK;
 

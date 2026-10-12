@@ -5,12 +5,14 @@ import com.mojang.serialization.DataResult;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
@@ -48,6 +50,10 @@ import org.jetbrains.annotations.Nullable;
  * os atalhos de {@link LinkerTabs#next}) escolhem o que o clique muda: só as abas marcadas do
  * roteador entram na rede. Químicos contam só com o Mekanism.
  *
+ * <p>As faces ({@link ModDataComponents#LINKER_FACES}, a linha Faces da tela) escolhem quais lados da
+ * máquina presa, relativos à frente dela, entram: em Único e Área, cada roteador usa a frente da
+ * própria máquina. O modo Máquinas ignora as faces.
+ *
  * <p>Com "Nenhuma (desvincular)" escolhida na tela ({@link ModDataComponents#LINKER_UNLINK}), os
  * mesmos gestos tiram as abas marcadas da rede em vez de pôr; nesse modo nenhuma rede é criada.
  */
@@ -74,6 +80,11 @@ public class LinkerItem extends Item {
             Codec.STRING.listOf().xmap(LinkerTabs::fromNames, LinkerTabs::names);
     public static final StreamCodec<ByteBuf, LinkerTabs> TABS_STREAM_CODEC =
             ByteBufCodecs.VAR_INT.map(LinkerTabs::new, LinkerTabs::mask);
+
+    /** Codec das faces: a máscara de 6 bits por {@link RemoteSide}; bits a mais são descartados. */
+    public static final Codec<LinkerFaces> FACES_CODEC = Codec.INT.xmap(LinkerFaces::of, LinkerFaces::mask);
+    public static final StreamCodec<ByteBuf, LinkerFaces> FACES_STREAM_CODEC =
+            ByteBufCodecs.VAR_INT.map(LinkerFaces::of, LinkerFaces::mask);
 
     public LinkerItem(Properties properties) {
         super(properties);
@@ -142,6 +153,54 @@ public class LinkerItem extends Item {
                 text.append(" + ");
             }
             text.append(typeName(effective.get(i)));
+        }
+        return text;
+    }
+
+    // ------------------------------------------------------------------ faces
+
+    /** Faces guardadas no Vinculador; sem o componente, Todas. */
+    public static LinkerFaces faces(ItemStack stack) {
+        return stack.getOrDefault(ModDataComponents.LINKER_FACES.get(), LinkerFaces.ALL);
+    }
+
+    /** Grava as faces (Todas apaga o componente). Vazio é gravado: vincular avisa e não faz nada. */
+    public static void setFaces(ItemStack stack, LinkerFaces faces) {
+        if (faces.isAll()) {
+            stack.remove(ModDataComponents.LINKER_FACES.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_FACES.get(), faces);
+        }
+    }
+
+    /** Letra de um lado ("T" para Trás), a mesma dos botões de face da tela do roteador. */
+    public static Component sideLetter(RemoteSide side) {
+        return Component.translatable("gui.wirelessautomate.router.side.letter." + side.key());
+    }
+
+    /** Nome inteiro de um lado ("Trás"). */
+    public static Component sideName(RemoteSide side) {
+        return Component.translatable("gui.wirelessautomate.router.side." + side.key());
+    }
+
+    /** "T, B": as letras dos lados marcados, na ordem dos botões. */
+    public static Component facesLetters(LinkerFaces faces) {
+        return joined(faces, true);
+    }
+
+    /** "Trás, Baixo": os nomes dos lados marcados, na ordem dos botões. */
+    public static Component facesNames(LinkerFaces faces) {
+        return joined(faces, false);
+    }
+
+    private static Component joined(LinkerFaces faces, boolean letters) {
+        MutableComponent text = Component.empty();
+        List<RemoteSide> marked = faces.marked();
+        for (int i = 0; i < marked.size(); i++) {
+            if (i > 0) {
+                text.append(", ");
+            }
+            text.append(letters ? sideLetter(marked.get(i)) : sideName(marked.get(i)));
         }
         return text;
     }
@@ -292,6 +351,13 @@ public class LinkerItem extends Item {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable(KEY + "tooltip.mode", modeName(mode(stack))).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable(KEY + "tooltip.tabs", tabsName(tabs(stack))).withStyle(ChatFormatting.AQUA));
+        if (mode(stack) != LinkerMode.MACHINES) {
+            LinkerFaces faces = faces(stack);
+            tooltip.add(Component.translatable(KEY + "tooltip.faces", faces.isAll()
+                    ? Component.translatable(KEY + "faces.all")
+                    : faces.isEmpty() ? Component.translatable(KEY + "faces.none") : facesNames(faces))
+                    .withStyle(faces.isEmpty() ? ChatFormatting.GOLD : ChatFormatting.AQUA));
+        }
         if (unlink(stack)) {
             tooltip.add(Component.translatable(KEY + "tooltip.unlink").withStyle(ChatFormatting.GOLD));
         }

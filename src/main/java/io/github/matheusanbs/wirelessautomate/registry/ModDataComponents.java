@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -61,6 +62,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("linker_tabs", builder -> builder
                     .persistent(LinkerItem.TABS_CODEC)
                     .networkSynchronized(LinkerItem.TABS_STREAM_CODEC));
+
+    /**
+     * Faces (lados relativos à máquina presa) que o Vinculador vincula ou desvincula: máscara de 6 bits
+     * pelo {@code ordinal} do {@code RemoteSide}; sem o componente, Todas (63).
+     */
+    public static final Supplier<DataComponentType<LinkerFaces>> LINKER_FACES =
+            DATA_COMPONENTS.registerComponentType("linker_faces", builder -> builder
+                    .persistent(LinkerItem.FACES_CODEC)
+                    .networkSynchronized(LinkerItem.FACES_STREAM_CODEC));
 
     /** Vinculador no modo desvincular ("Nenhuma" na escolha da rede); sem o componente, vincula. */
     public static final Supplier<DataComponentType<Boolean>> LINKER_UNLINK =

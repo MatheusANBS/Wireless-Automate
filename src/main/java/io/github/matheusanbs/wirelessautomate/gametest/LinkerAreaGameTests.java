@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions.LinkResult;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
@@ -17,12 +18,14 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -33,17 +36,21 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Vinculador em modo Área: marcar cantos com Shift + clique, contar e vincular os roteadores da
  * caixa nas abas marcadas, o limite de volume e de distância, rede de outro dono recusada e as
  * ações da tela. Também o modo desvincular ("Nenhuma") no clique e na área, as abas combinadas e o
- * componente antigo {@code linker_type}. Pedras em y=1 com o roteador em cima; os cantos pegam A e
+ * componente antigo {@code linker_type}, e a linha Faces (lados relativos à máquina presa). Pedras em y=1 com o roteador em cima; os cantos pegam A e
  * B, e C fica de fora.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -690,6 +697,242 @@ public final class LinkerAreaGameTests {
             helper.assertFalse(LinkerItem.unlink(linker), "escolher uma rede não saiu do desvincular");
         } finally {
             cleanup(helper, player, before, own.id());
+        }
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ faces (rede por face)
+
+    /** Roteador em cima da máquina {@code state} em {@code machine}, com todas as faces em {@code network}. */
+    private static RouterBlockEntity routerOn(GameTestHelper helper, BlockPos machine, BlockState state,
+            UUID network) {
+        helper.setBlock(machine, state);
+        BlockPos pos = machine.above();
+        helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(pos);
+        router.setNetworkId(network);
+        return router;
+    }
+
+    private static LinkerFaces faces(RemoteSide... sides) {
+        LinkerFaces faces = LinkerFaces.NONE;
+        for (RemoteSide side : sides) {
+            faces = faces.toggle(side);
+        }
+        return faces;
+    }
+
+    /** Confere a rede de cada face absoluta do tipo: as de {@code marked} em {@code inside}, as outras em {@code outside}. */
+    private static void assertFaces(GameTestHelper helper, RouterBlockEntity router, ResourceType type,
+            List<Direction> marked, @Nullable UUID inside, @Nullable UUID outside, String what) {
+        for (Direction face : Direction.values()) {
+            UUID expected = marked.contains(face) ? inside : outside;
+            UUID actual = router.faceNetwork(type, face);
+            helper.assertTrue(Objects.equals(expected, actual),
+                    what + ": " + type + " " + face + " em " + actual + ", esperava " + expected);
+        }
+    }
+
+    /**
+     * Fornalha virada para o Sul com o roteador em cima: com Trás e Baixo, o clique põe só as faces
+     * absolutas Norte e Baixo de itens na rede; as outras e os fluidos ficam. Na área, cada roteador
+     * usa a frente da própria máquina (outra fornalha virada para o Leste: Trás = Oeste).
+     */
+    @GameTest(template = "empty")
+    public static void linkFacesRelativeToFront(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-frente-antes").id();
+        RouterBlockEntity a = routerOn(helper, A,
+                Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH), before);
+        RouterBlockEntity b = routerOn(helper, B,
+                Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST), before);
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+        LinkerItem.setFaces(linker, faces(RemoteSide.BACK, RemoteSide.BOTTOM));
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-faces-frente");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        WaNetwork second = data.create(player.getUUID(), "teste-faces-frente-area");
+        try {
+            helper.assertTrue(LinkerActions.single(player, linker, a), "o clique não mudou o roteador");
+            assertFaces(helper, a, ResourceType.ITEM, List.of(Direction.NORTH, Direction.DOWN), active.id(), before,
+                    "clique");
+            assertFaces(helper, a, ResourceType.FLUID, List.of(), null, before, "clique");
+            helper.assertFalse(LinkerActions.single(player, linker, a), "segundo clique mudou de novo");
+
+            LinkerItem.setMode(linker, LinkerMode.AREA);
+            LinkerItem.setFaces(linker, faces(RemoteSide.BACK));
+            data.setActiveNetwork(player.getUUID(), second.id());
+            markArea(helper, player);
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.linked() == 2, "área: " + result);
+            helper.assertTrue(result.faces().equals(faces(RemoteSide.BACK)), "faces no resultado " + result.faces());
+            helper.assertTrue(Objects.equals(a.faceNetwork(ResourceType.ITEM, Direction.NORTH), second.id()),
+                    "área: a face Norte de A não mudou");
+            helper.assertTrue(Objects.equals(a.faceNetwork(ResourceType.ITEM, Direction.DOWN), active.id()),
+                    "área: a face de baixo de A mudou");
+            helper.assertTrue(Objects.equals(a.faceNetwork(ResourceType.ITEM, Direction.SOUTH), before),
+                    "área: a face Sul de A mudou");
+            assertFaces(helper, b, ResourceType.ITEM, List.of(Direction.WEST), second.id(), before, "área B (Oeste)");
+        } finally {
+            cleanup(helper, player, before, active.id(), second.id());
+        }
+        helper.succeed();
+    }
+
+    /** Barril virado para cima (frente vertical): Frente = Norte, então só a face Norte entra. */
+    @GameTest(template = "empty")
+    public static void linkFacesWithoutFront(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-sem-frente-antes").id();
+        RouterBlockEntity a = routerOn(helper, A,
+                Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP), before);
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+        LinkerItem.setFaces(linker, faces(RemoteSide.FRONT));
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-faces-sem-frente");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        try {
+            helper.assertValueEqual(a.attachedFront(), -1, "frente do barril para cima");
+            helper.assertTrue(LinkerActions.single(player, linker, a), "o clique não mudou o roteador");
+            assertFaces(helper, a, ResourceType.ITEM, List.of(Direction.NORTH), active.id(), before, "Frente = Norte");
+        } finally {
+            cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * "Nenhuma (desvincular)" com Trás e Baixo: no clique e na área, só essas faces ficam sem rede; as
+     * outras continuam na rede de antes.
+     */
+    @GameTest(template = "empty")
+    public static void unlinkFaces(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-desvincular").id();
+        RouterBlockEntity a = router(helper, A, before);
+        RouterBlockEntity b = router(helper, B, before);
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+        LinkerItem.setFaces(linker, faces(RemoteSide.BACK, RemoteSide.BOTTOM));
+        LinkerItem.setUnlink(linker, true);
+        ServerPlayer player = player(helper, linker);
+        try {
+            // pedra: sem frente, Trás = Sul
+            helper.assertTrue(LinkerActions.single(player, linker, a), "o clique não desvinculou");
+            assertFaces(helper, a, ResourceType.ITEM, List.of(Direction.SOUTH, Direction.DOWN), null, before, "clique");
+            helper.assertFalse(LinkerActions.single(player, linker, a), "segundo clique mudou de novo");
+
+            LinkerItem.setMode(linker, LinkerMode.AREA);
+            markArea(helper, player);
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.unlink() && result.linked() == 1 && result.already() == 1,
+                    "área: " + result);
+            assertFaces(helper, b, ResourceType.ITEM, List.of(Direction.SOUTH, Direction.DOWN), null, before, "área");
+            assertFaces(helper, b, ResourceType.FLUID, List.of(), null, before, "área");
+            assertNoNetworkCreated(helper, player);
+        } finally {
+            cleanup(helper, player, before);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * "Já estavam" conta o roteador em que todas as faces marcadas, nas abas marcadas, já estão na rede
+     * alvo (A, inteiro nela) e não o que tem só uma delas (B, só a Norte).
+     */
+    @GameTest(template = "empty")
+    public static void alreadyCountsMarkedFaces(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-ja-antes").id();
+        ItemStack linker = areaLinker(LinkerTabs.of(ResourceType.ITEM));
+        LinkerItem.setFaces(linker, faces(RemoteSide.FRONT, RemoteSide.BACK));
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-faces-ja");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        RouterBlockEntity a = router(helper, A, active.id());
+        RouterBlockEntity b = router(helper, B, before);
+        b.setFaceNetwork(ResourceType.ITEM, Direction.NORTH, active.id());
+        try {
+            markArea(helper, player);
+            LinkerSnapshot snapshot = LinkerSnapshot.capture(player, linker, null);
+            helper.assertTrue(snapshot.inside() == 2 && snapshot.already() == 1,
+                    "prévia: " + snapshot.inside() + " na área, " + snapshot.already() + " já estavam");
+            helper.assertTrue(snapshot.faces().equals(LinkerItem.faces(linker)), "a tela não recebeu as faces");
+            LinkResult result = LinkerActions.link(player, linker);
+            helper.assertTrue(result.ok() && result.linked() == 1 && result.already() == 1, "área: " + result);
+            assertFaces(helper, b, ResourceType.ITEM, List.of(Direction.NORTH, Direction.SOUTH), active.id(), before,
+                    "B");
+            assertFaces(helper, a, ResourceType.ITEM, List.of(), null, active.id(), "A");
+        } finally {
+            cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Sem nenhuma face marcada, o clique e a área não mudam nada ({@code check} devolve
+     * {@link LinkerProblem#NO_FACES}). Pela tela, {@code SET_FACES} grava a máscara (vazia também; bits a
+     * mais são descartados) e Todas apaga o componente.
+     */
+    @GameTest(template = "empty")
+    public static void noFacesRefuses(GameTestHelper helper) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID before = data.create(UUID.randomUUID(), "teste-faces-nenhuma").id();
+        RouterBlockEntity a = router(helper, A, before);
+        RouterBlockEntity b = router(helper, B, before);
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
+        ServerPlayer player = player(helper, linker);
+        WaNetwork active = data.create(player.getUUID(), "teste-faces-nenhuma-ativa");
+        data.setActiveNetwork(player.getUUID(), active.id());
+        try {
+            markArea(helper, player);
+            LinkerMenu menu = new LinkerMenu(CONTAINER_ID, player.getInventory(), InteractionHand.MAIN_HAND,
+                    LinkerSnapshot.capture(player, linker, null));
+            player.containerMenu = menu;
+            helper.assertTrue(menu.snapshot().faces().isAll(), "o padrão não é Todas");
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_FACES,
+                    Optional.empty(), "", 0)), "recusou as faces vazias");
+            helper.assertTrue(LinkerItem.faces(linker).isEmpty(), "as faces não ficaram vazias");
+            LinkerSnapshot afterFaces = menu.poll();
+            helper.assertTrue(afterFaces != null && afterFaces.faces().isEmpty()
+                    && afterFaces.problem() == LinkerProblem.NO_FACES, "a tela não recebeu as faces: " + afterFaces);
+
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_FACES, "check");
+            helper.assertValueEqual(LinkerActions.link(player, linker).problem(), LinkerProblem.NO_FACES, "área");
+            helper.assertFalse(LinkerActions.single(player, linker, a), "o clique sem faces mudou o roteador");
+            for (ResourceType type : ResourceType.values()) {
+                assertFaces(helper, a, type, List.of(), null, before, "A sem faces");
+                assertFaces(helper, b, type, List.of(), null, before, "B sem faces");
+            }
+
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_FACES,
+                    Optional.empty(), "", 64 | 2)), "recusou a máscara com bits a mais");
+            helper.assertValueEqual(LinkerItem.faces(linker).mask(), 2, "bits a mais ficaram");
+            helper.assertTrue(LinkerActions.handle(player, new LinkerActionPayload(CONTAINER_ID, Op.SET_FACES,
+                    Optional.empty(), "", LinkerFaces.ALL.mask())), "recusou Todas");
+            helper.assertFalse(linker.has(ModDataComponents.LINKER_FACES.get()), "Todas deixou o componente");
+        } finally {
+            cleanup(helper, player, before, active.id());
+        }
+        helper.succeed();
+    }
+
+    /** No modo Máquinas o Vinculador não usa as faces: {@code check} não as olha. */
+    @GameTest(template = "empty")
+    public static void machinesModeIgnoresFaces(GameTestHelper helper) {
+        ItemStack linker = areaLinker(LinkerTabs.ALL);
+        LinkerItem.setMode(linker, LinkerMode.MACHINES);
+        LinkerItem.setFaces(linker, LinkerFaces.NONE);
+        ServerPlayer player = player(helper, linker);
+        try {
+            markArea(helper, player);
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NONE, "Máquinas olhou as faces");
+            LinkerItem.setMode(linker, LinkerMode.AREA);
+            helper.assertValueEqual(LinkerActions.check(player, linker), LinkerProblem.NO_FACES, "Área sem faces");
+        } finally {
+            cleanup(helper, player);
         }
         helper.succeed();
     }

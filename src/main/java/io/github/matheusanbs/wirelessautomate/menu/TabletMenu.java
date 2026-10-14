@@ -63,6 +63,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -118,6 +120,15 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private static final Pattern SEARCH_SPLIT = Pattern.compile("[\\s,]+");
     /** Fichas de remontagem forçada por jogador; sobrevivem a fechar e abrir o Tablet. Só no servidor. */
     private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
+    /**
+     * Onde cada jogador deixou o Tablet (ao fechar o menu, inclusive para abrir o filtro de um nó): o Tablet
+     * reabre igual. Só na memória do servidor, some quando ele para.
+     */
+    private static final Map<UUID, State> STATES = new HashMap<>();
+
+    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele. */
+    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target) {
+    }
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
     private static final ResourceType[] TRANSFER_TYPES = ResourceType.values();
@@ -151,10 +162,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
     private @Nullable TabletPanelPayload panel;
     private int panelVersion;
+    /** Cliente: a aba e o nó escolhido que o servidor restaurou ao abrir. */
+    private int restoredTab;
+    private @Nullable NodeKey restoredNode;
 
     // Só no servidor.
     private final @Nullable ServerPlayer viewer;
     private Query query = Query.DEFAULT;
+    private int tab;
     private String[] searchWords = new String[0];
     private Set<ResourceLocation> textMachines = Set.of();
     private Set<ResourceLocation> machineLabels = Set.of();
@@ -202,20 +217,76 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = viewer;
         this.sampleTick = viewer.server.getTickCount();
+        restore(STATES.get(viewer.getUUID()));
         this.snapshot = build(true);
         this.sent = snapshot;
     }
 
     /** Cliente: o snapshot inicial vem no buffer de abertura. */
     public TabletMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, inventory, TabletSnapshot.STREAM_CODEC.decode(buf));
+        this(containerId, inventory, TabletSnapshot.STREAM_CODEC.decode(buf), buf.readVarInt(),
+                NODE_CODEC.decode(buf).orElse(null));
     }
 
     /** Cliente (e a captura de tela de desenvolvimento): só o snapshot. */
     public TabletMenu(int containerId, Inventory inventory, TabletSnapshot snapshot) {
+        this(containerId, inventory, snapshot, 0, null);
+    }
+
+    private TabletMenu(int containerId, Inventory inventory, TabletSnapshot snapshot, int restoredTab,
+            @Nullable NodeKey restoredNode) {
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = null;
         this.snapshot = snapshot;
+        this.restoredTab = restoredTab;
+        this.restoredNode = restoredNode;
+    }
+
+    private static final StreamCodec<RegistryFriendlyByteBuf, Optional<NodeKey>> NODE_CODEC =
+            ByteBufCodecs.optional(NodeKey.STREAM_CODEC.<RegistryFriendlyByteBuf>cast());
+
+    /**
+     * Põe o estado de antes: a consulta, a aba e, se o nó ainda existe e o jogador o vê, o nó escolhido e o
+     * alvo dele. Só no servidor, antes da primeira montagem.
+     */
+    private void restore(@Nullable State saved) {
+        if (saved == null || viewer == null) {
+            return;
+        }
+        setQuery(saved.query());
+        tab = saved.tab();
+        if (saved.chosen() != null && chooseNode(saved.chosen())) {
+            targetRef = saved.target();
+        }
+    }
+
+    /** Esquece o estado de todos os jogadores (o servidor parou). */
+    public static void resetStates() {
+        STATES.clear();
+        FORCED_LIMITS.clear();
+    }
+
+    /** O estado guardado do jogador, ou {@code null}. */
+    public static @Nullable State savedState(UUID player) {
+        return STATES.get(player);
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        if (viewer != null) {
+            STATES.put(viewer.getUUID(), new State(tab, query, chosen, targetRef));
+        }
+    }
+
+    /** Servidor: a aba que a tela mostra. */
+    public void setTab(int tab) {
+        this.tab = Math.max(0, tab);
+    }
+
+    @Override
+    public FilterOrigin filterOrigin() {
+        return FilterOrigin.TABLET;
     }
 
     /** Abre o Tablet para o jogador; o snapshot inicial vai no buffer de abertura. */
@@ -225,7 +296,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             created[0] = new TabletMenu(containerId, inventory, player);
             return created[0];
         }, Component.translatable("item.wirelessautomate.network_tablet")),
-                buf -> TabletSnapshot.STREAM_CODEC.encode(buf, created[0].snapshot));
+                buf -> created[0].writeOpenData(buf));
+    }
+
+    /** O que vai no buffer de abertura: o snapshot, a aba restaurada e o nó escolhido restaurado. */
+    public void writeOpenData(RegistryFriendlyByteBuf buf) {
+        TabletSnapshot.STREAM_CODEC.encode(buf, snapshot);
+        buf.writeVarInt(tab);
+        NODE_CODEC.encode(buf, Optional.ofNullable(chosen));
     }
 
     /** O jogador tem um Tablet no inventário (mochila, barra, armadura ou mão secundária). */
@@ -252,6 +330,21 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         int range = tier.range().get();
         return range <= 0 || player.position().distanceToSqr(Vec3.atCenterOf(router.getBlockPos()))
                 <= (double) range * range;
+    }
+
+    /** Servidor: a aba que a tela mostra. */
+    public int tab() {
+        return tab;
+    }
+
+    /** Cliente: a aba que o servidor restaurou ao abrir. */
+    public int restoredTab() {
+        return restoredTab;
+    }
+
+    /** Cliente: o nó escolhido que o servidor restaurou ao abrir, ou {@code null}. */
+    public @Nullable NodeKey restoredNode() {
+        return restoredNode;
     }
 
     public TabletSnapshot snapshot() {

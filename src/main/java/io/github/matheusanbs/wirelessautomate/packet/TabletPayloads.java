@@ -25,6 +25,8 @@ public final class TabletPayloads {
                 TabletPayloads::onPanel);
         registrar.playToServer(TabletSelectNodePayload.TYPE, TabletSelectNodePayload.STREAM_CODEC,
                 (payload, context) -> handleSelectNode(serverPlayer(context), payload));
+        registrar.playToServer(TabletTabPayload.TYPE, TabletTabPayload.STREAM_CODEC,
+                (payload, context) -> handleTab(serverPlayer(context), payload));
         registrar.playToServer(TabletQueryPayload.TYPE, TabletQueryPayload.STREAM_CODEC,
                 (payload, context) -> handleQuery(serverPlayer(context), payload));
         registrar.playToServer(TabletMoveNodesPayload.TYPE, TabletMoveNodesPayload.STREAM_CODEC,
@@ -78,6 +80,16 @@ public final class TabletPayloads {
             return false;
         }
         menu.setQuery(payload.query());
+        return true;
+    }
+
+    /** A aba do Tablet aberto, guardada para reabrir na mesma. */
+    public static boolean handleTab(@Nullable ServerPlayer player, TabletTabPayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        if (menu == null) {
+            return false;
+        }
+        menu.setTab(payload.tab());
         return true;
     }
 

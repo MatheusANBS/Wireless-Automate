@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
@@ -77,6 +78,7 @@ public final class WirelessAutomate {
         RemoteIndex.reset();
         SourceTankLevels.reset();
         RecipeEditor.reset();
+        TabletMenu.resetStates();
     }
 
     private static void onChunkLoad(ChunkEvent.Load event) {

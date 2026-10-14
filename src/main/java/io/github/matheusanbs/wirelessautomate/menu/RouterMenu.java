@@ -64,7 +64,7 @@ import org.jetbrains.annotations.Nullable;
  * com a {@link RangeView} presente o snapshot é recapturado a cada {@link #SAMPLE_TICKS} ticks e só vai se
  * ficou diferente.
  */
-public class RouterMenu extends AbstractContainerMenu {
+public class RouterMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Faixa da prioridade aceita da tela; valores fora dela são limitados. */
     public static final int MIN_PRIORITY = -999;
     public static final int MAX_PRIORITY = 999;
@@ -251,6 +251,21 @@ public class RouterMenu extends AbstractContainerMenu {
                 buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot));
     }
 
+    @Override
+    public int containerId() {
+        return containerId;
+    }
+
+    @Override
+    public @Nullable RouterBlockEntity editedRouter() {
+        return router;
+    }
+
+    @Override
+    public boolean canEdit(ServerPlayer player) {
+        return stillValid(player);
+    }
+
     /** O roteador; só existe no servidor. */
     public @Nullable RouterBlockEntity router() {
         return router;
@@ -321,6 +336,7 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     /** A referência ao alvo (servidor), para o filtro de face lembrar dele e a volta reabrir nele. */
+    @Override
     public EditTargetRef targetRef() {
         return targetRef;
     }
@@ -330,6 +346,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * que mudou de índice segue pela posição; um alvo que sumiu (ou sem o upgrade) volta para a presa.
      * Só no servidor.
      */
+    @Override
     public EditTarget validTarget() {
         if (router == null) {
             return target();
@@ -368,6 +385,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * deixou de existir e voltou para a presa: a ação é ignorada, porque a tela pensava editar outra
      * coisa. Só no servidor.
      */
+    @Override
     public @Nullable EditTarget actionTarget() {
         boolean wasRemote = !targetRef.target().attached();
         EditTarget target = validTarget();
@@ -379,6 +397,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * ({@code pos}) ou o bloco do grupo ({@code block}). Um alvo remoto exige o Upgrade de Alcance
      * valendo. Só no servidor; devolve se trocou.
      */
+    @Override
     public boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
         if (router == null) {
             return false;

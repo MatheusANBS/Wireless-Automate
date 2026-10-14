@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.router;
 
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;

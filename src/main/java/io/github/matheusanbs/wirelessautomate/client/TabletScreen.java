@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
+import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;

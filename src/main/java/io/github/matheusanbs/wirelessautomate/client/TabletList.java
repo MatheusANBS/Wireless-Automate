@@ -4,6 +4,8 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Candidate;
 import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Group;
 import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Suggestion;
+import io.github.matheusanbs.wirelessautomate.client.router.FaceNet;
+import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;

@@ -69,9 +69,6 @@ import org.lwjgl.glfw.GLFW;
  * item; os botões fixos são {@link FlatButton}s que leem o estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    /** Cor de destaque do Tablet (a do item). */
-    static final int ACCENT = GuiPaint.ACCENT;
-    private static final int DANGER = GuiPaint.DANGER;
     // O mínimo é o tamanho de sempre; a tela cresce pela borda direita, pela de baixo e pelo canto, e
     // o tamanho fica lembrado na sessão.
     private static final int MIN_W = 300;
@@ -1368,7 +1365,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int y = topPos + HEAD_Y - 2;
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        GuiPaint.box(g, x, y, width, 16, GuiPaint.INSET, ACCENT);
+        GuiPaint.box(g, x, y, width, 16, GuiPaint.INSET, GuiPaint.ACCENT);
         GuiText.draw(g, font, noticeText, x + 6, y + 4, width - 12, GuiPaint.FG);
         g.pose().popPose();
     }
@@ -1383,7 +1380,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         TabletSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.panel(g, x, y, w, h, ACCENT);
+        GuiPaint.panel(g, x, y, w, h, GuiPaint.ACCENT);
         GuiPaint.text(g, font, tr("title"), x + X0, y + HEAD_Y + 3, GuiPaint.FG);
         Component meta = plural("meta.nodes", s.totalNodes()).copy().append(" · ")
                 .append(plural("meta.networks", s.networks().size()));
@@ -1399,14 +1396,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             case GROUPS -> renderGroups(g, mouseX, mouseY);
         }
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), ACCENT);
+        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), GuiPaint.ACCENT);
     }
 
     private void renderList(GuiGraphics g, int mouseX, int mouseY) {
         TabletSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.box(g, x + X0, y + BODY_Y, 128, ROW_H, GuiPaint.INSET, searchBox.isFocused() ? ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x + X0, y + BODY_Y, 128, ROW_H, GuiPaint.INSET, searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         int hovered = nodeRowAt(mouseX, mouseY);
         List<NodeView> nodes = s.nodes();
         if (nodes.isEmpty()) {
@@ -1421,13 +1418,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             boolean picked = selected.contains(node.key());
             if (index == hovered || picked) {
                 GuiPaint.box(g, rx, ry, x1() - X0, NODE_ROW - 1, GuiPaint.BUTTON,
-                        picked ? ACCENT : GuiPaint.LINE);
+                        picked ? GuiPaint.ACCENT : GuiPaint.LINE);
             } else if (i > 0) {
                 g.fill(rx + 2, ry - 1, x + x1() - 2, ry, GuiPaint.LINE);
             }
             int cx = rx + 3;
             if (multi) {
-                GuiPaint.checkbox(g, cx, ry + 6, picked, ACCENT);
+                GuiPaint.checkbox(g, cx, ry + 6, picked, GuiPaint.ACCENT);
                 cx += 13;
             }
             g.renderItem(icon(node), cx, ry + 2);
@@ -1710,7 +1707,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             int ry = y + i * ROW_H;
             if (row.selected) {
                 g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_SELECTED);
-                g.fill(x + 1, ry + 1, x + 2, ry + ROW_H, ACCENT);
+                g.fill(x + 1, ry + 1, x + 2, ry + ROW_H, GuiPaint.ACCENT);
             } else if (index == hovered) {
                 g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_HOVER);
             }
@@ -1728,7 +1725,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         // nova rede ou grupo, recolhido
         if (newOpen) {
             GuiPaint.box(g, x, topPos + newBoxY(), SIDE_W - 44, ROW_H, GuiPaint.INSET,
-                    newBox.isFocused() ? ACCENT : GuiPaint.LINE);
+                    newBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         }
     }
 
@@ -1782,16 +1779,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos + RX;
         int y = topPos + BODY_Y;
         if (renaming != Rename.NONE) {
-            GuiPaint.box(g, x, y, rw(), ROW_H, GuiPaint.INSET, ACCENT);
+            GuiPaint.box(g, x, y, rw(), ROW_H, GuiPaint.INSET, GuiPaint.ACCENT);
             return;
         }
         boolean hovered = canRename && overTitle(mouseX, mouseY);
         GuiPaint.eye(g, x, y + 4, color);
-        GuiText.draw(g, font, name, x + 9, y + 3, rw() - 10, hovered ? ACCENT : GuiPaint.FG);
+        GuiText.draw(g, font, name, x + 9, y + 3, rw() - 10, hovered ? GuiPaint.ACCENT : GuiPaint.FG);
         if (hovered) {
             int width = Math.min(font.width(name), rw() - 10);
             for (int i = 0; i < width; i += 2) {
-                g.fill(x + 9 + i, y + 12, x + 10 + i, y + 13, ACCENT);
+                g.fill(x + 9 + i, y + 12, x + 10 + i, y + 13, GuiPaint.ACCENT);
             }
         }
     }
@@ -1842,7 +1839,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             if (index == hovered) {
                 g.fill(x, ry, x + rw(), ry + GROUP_NET_ROW, GuiPaint.ROW_SELECTED);
             }
-            GuiPaint.checkbox(g, x + 2, ry + 2, group.networks().contains(n.id()), ACCENT);
+            GuiPaint.checkbox(g, x + 2, ry + 2, group.networks().contains(n.id()), GuiPaint.ACCENT);
             GuiPaint.eye(g, x + 15, ry + 4, 0xFF000000 | n.color());
             GuiText.draw(g, font, Component.literal(n.name()), x + 24, ry + 3, rw() - 26,
                     group.manageable() ? GuiPaint.FG : GuiPaint.MUTED);
@@ -1880,8 +1877,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void paintToggle(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean on) {
-        int fill = on ? GuiPaint.mix(GuiPaint.BUTTON, ACCENT, 0.3f) : GuiPaint.BUTTON;
-        int border = on ? ACCENT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        int fill = on ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.ACCENT, 0.3f) : GuiPaint.BUTTON;
+        int border = on ? GuiPaint.ACCENT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 3, GuiPaint.FG);
     }
@@ -1903,11 +1900,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void paintDanger(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean armed) {
-        int fill = armed ? GuiPaint.mix(GuiPaint.BUTTON, DANGER, 0.3f) : GuiPaint.BUTTON;
-        int border = armed || hovered ? DANGER : GuiPaint.BUTTON_BORDER;
+        int fill = armed ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.DANGER, 0.3f) : GuiPaint.BUTTON;
+        int border = armed || hovered ? GuiPaint.DANGER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 3,
-                armed || hovered ? DANGER : GuiPaint.FG);
+                armed || hovered ? GuiPaint.DANGER : GuiPaint.FG);
     }
 
     /** Chip do filtro de tipo: ícone e "Só Energia ✕", na cor do tipo. */

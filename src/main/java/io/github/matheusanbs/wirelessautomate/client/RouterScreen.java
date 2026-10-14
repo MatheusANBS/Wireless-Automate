@@ -1422,12 +1422,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             } else if (pointed != null) {
                 Component label = sideName(pointed);
                 g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
-                        GHOST_VEIL);
+                        GuiPaint.alpha(GuiPaint.INSET, 0xD8));
                 GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.FG);
             } else if (remote() && !remoteLoaded()) {
                 Component label = access(view());
                 g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
-                        GHOST_VEIL);
+                        GuiPaint.alpha(GuiPaint.INSET, 0xD8));
                 GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.WARN);
             }
         }
@@ -1551,15 +1551,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiText.draw(g, font, b.getMessage(), b.getX() + 12, b.getY() + 2, b.getWidth() - 15, GuiPaint.FG);
     }
 
-    /** Véu de porcelana translúcida sobre os itens apagados e sob o rótulo da face no visor. */
-    private static final int GHOST_VEIL = 0xD8DDD3BF;
-
     /** Upgrade apagado no fundo de um slot de upgrade vazio. */
     private void ghostItem(GuiGraphics g, ItemStack ghost, int x, int y) {
         g.renderFakeItem(ghost, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
-        g.fill(x, y, x + 16, y + 16, GHOST_VEIL);
+        g.fill(x, y, x + 16, y + 16, GuiPaint.alpha(GuiPaint.INSET, 0xD8));
         g.pose().popPose();
     }
 
@@ -1568,7 +1565,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         g.renderFakeItem(GHOST_CARD, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
-        g.fill(x, y, x + 16, y + 16, GHOST_VEIL);
+        g.fill(x, y, x + 16, y + 16, GuiPaint.alpha(GuiPaint.INSET, 0xD8));
         g.pose().popPose();
     }
 

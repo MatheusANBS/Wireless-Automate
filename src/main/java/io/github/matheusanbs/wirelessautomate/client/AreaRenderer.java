@@ -34,8 +34,10 @@ import org.jetbrains.annotations.Nullable;
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class AreaRenderer {
-    /** Cor do contorno do Configurador: coral; o Vinculador usa a cor da tela dele (a mesma). */
-    private static final int CONFIGURATOR_COLOR = GuiPaint.ACCENT & 0xFFFFFF;
+    /** Cor do contorno do Configurador: coral. Contorno no mundo: não segue o tema das telas. */
+    private static final int CONFIGURATOR_COLOR = 0xF0603E;
+    /** Cor do contorno do Vinculador: coral. Contorno no mundo: não segue o tema das telas. */
+    private static final int LINKER_COLOR = 0xFFF0603E;
 
     private AreaRenderer() {
     }
@@ -60,7 +62,7 @@ public final class AreaRenderer {
             return;
         }
         LinkerMode mode = linker ? LinkerItem.mode(stack) : ConfiguratorItem.mode(stack);
-        int color = linker ? LinkerScreen.ACCENT : CONFIGURATOR_COLOR;
+        int color = linker ? LINKER_COLOR : CONFIGURATOR_COLOR;
         float r = ((color >> 16) & 0xFF) / 255f;
         float g = ((color >> 8) & 0xFF) / 255f;
         float b = (color & 0xFF) / 255f;

@@ -64,10 +64,6 @@ import org.lwjgl.glfw.GLFW;
 public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?>> {
     private static final int X0 = 8;
     private static final int HEAD_Y = 6;
-    /** Véu de grafite translúcido sobre a célula sob o mouse. */
-    private static final int HOVER_VEIL = 0x282A2730;
-    /** Véu sobre um tipo que acabou enquanto a ordem está travada pelo Shift. */
-    private static final int GHOST_VEIL = 0xC0DDD3BF;
     /** Quantidade no canto da célula: branco com sombra, como as pilhas do próprio jogo. */
     private static final int COUNT_TEXT = 0xFFFFFFFF;
     private static final int SEARCH_Y = 21;
@@ -853,7 +849,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
                 drawCount(g, count, cx, cy);
             } else {
                 // acabou com a ordem travada pelo Shift: a célula fica apagada até soltar
-                g.fill(RenderType.guiOverlay(), cx, cy, cx + 16, cy + 16, GHOST_VEIL);
+                g.fill(RenderType.guiOverlay(), cx, cy, cx + 16, cy + 16, GuiPaint.alpha(GuiPaint.INSET, 0xC0));
             }
         }
         Object hovered = keyAt(mouseX, mouseY);
@@ -862,7 +858,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             int row = (int) Math.floor((mouseY - y - GRID_Y + 1) / (double) CELL);
             int hx = x + GRID_X + col * CELL;
             int hy = y + GRID_Y + row * CELL;
-            g.fill(hx, hy, hx + 16, hy + 16, HOVER_VEIL);
+            g.fill(hx, hy, hx + 16, hy + 16, GuiPaint.alpha(GuiPaint.FG, 0x28));
         }
         if (shown.isEmpty()) {
             // Quebrado em linhas dentro da grade: na largura mínima a frase não cabe numa só.

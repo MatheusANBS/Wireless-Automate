@@ -30,8 +30,6 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
     private static final int HEAD_Y = 8;
     private static final int BAR_Y = 30;
     private static final int BAR_H = 22;
-    private static final int CHARGING = GuiPaint.OK;
-    private static final int DRAINING = GuiPaint.WARN;
     /** Materiais {@code energia} e {@code source} de {@code identidade.py} (tons 2, 1 e 3). */
     private static final int ENERGY = 0xFFFFD042;
     private static final int ENERGY_DARK = 0xFFD9931A;
@@ -139,7 +137,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         Component flow = rate > 0 ? tr("charging", RateFormat.abbreviate(rate))
                 : rate < 0 ? tr("draining", RateFormat.abbreviate(-rate))
                 : tr("idle");
-        int color = rate > 0 ? CHARGING : rate < 0 ? DRAINING : GuiPaint.MUTED;
+        int color = rate > 0 ? GuiPaint.OK : rate < 0 ? GuiPaint.WARN : GuiPaint.MUTED;
         GuiPaint.dot(g, barX, barY + BAR_H + 20, color);
         GuiText.draw(g, font, flow, barX + 9, barY + BAR_H + 19, barW - 10, GuiPaint.MUTED);
 

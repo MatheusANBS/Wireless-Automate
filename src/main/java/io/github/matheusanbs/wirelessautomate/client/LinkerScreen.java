@@ -60,12 +60,6 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int HEAD_Y = 8;
     private static final int SEP_Y = 26;
     private static final int BODY_Y = 31;
-    /** Cor de destaque do Vinculador (a do item). */
-    static final int ACCENT = GuiPaint.ACCENT;
-    private static final int WARN = GuiPaint.WARN;
-    private static final int GOOD = GuiPaint.OK;
-    /** Cor do modo desvincular. */
-    private static final int UNLINK = GuiPaint.DANGER;
 
     // coluna da esquerda: redes e tipo
     private static final int LW = 144;
@@ -237,7 +231,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     private int activeColor() {
         if (unlink()) {
-            return UNLINK;
+            return GuiPaint.DANGER;
         }
         NetworkEntry entry = snapshot().activeEntry();
         return entry == null ? GuiPaint.MUTED : 0xFF000000 | entry.color();
@@ -727,7 +721,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         LinkerSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.panel(g, x, y, w, h, ACCENT);
+        GuiPaint.panel(g, x, y, w, h, GuiPaint.ACCENT);
 
         int titleW = font.width(title);
         GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
@@ -735,7 +729,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
         int headW = x1() - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
-        GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? UNLINK : GuiPaint.MUTED);
+        GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? GuiPaint.DANGER : GuiPaint.MUTED);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
         // rede ativa
@@ -752,7 +746,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
             GuiPaint.text(g, font, Component.literal("▼"), x + X0 + LW - 9, y + LIST_Y + listH() - 10, GuiPaint.MUTED);
         }
         if (creating) {
-            GuiPaint.box(g, x + X0, y + newY(), LW - 28, 14, GuiPaint.INSET, ACCENT);
+            GuiPaint.box(g, x + X0, y + newY(), LW - 28, 14, GuiPaint.INSET, GuiPaint.ACCENT);
         }
 
         GuiPaint.text(g, font, tr("type.label"), x + X0, y + typeLabelY(), GuiPaint.MUTED);
@@ -764,7 +758,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         } else {
             renderArea(g, s, x + RX, y + BODY_Y, mouseX, mouseY);
         }
-        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), ACCENT);
+        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), GuiPaint.ACCENT);
     }
 
     private void renderSingle(GuiGraphics g, int x, int y) {
@@ -782,7 +776,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         colors.add(GuiPaint.MUTED);
         if (faces().isEmpty()) {
             hints.add(tr("problem.no_faces"));
-            colors.add(WARN);
+            colors.add(GuiPaint.WARN);
         } else if (!faces().isAll()) {
             hints.add(tr(unlink() ? "single.unlink.faces" : "single.faces", LinkerItem.facesNames(faces())));
             colors.add(GuiPaint.MUTED);
@@ -972,10 +966,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         Component head = s.outcome().map(this::outcomeText).orElse(status(s));
         Component detail = s.outcome().isPresent() ? outcomeDetail(s.outcome().get()) : detail(s);
         // sem detalhe, o resultado pode ocupar as duas linhas (até o botão)
-        GuiText.wrap(g, font, head, x, sy, rw(), detail == null ? 2 : 1, s.outcome().isPresent() ? GOOD : GuiPaint.FG);
+        GuiText.wrap(g, font, head, x, sy, rw(), detail == null ? 2 : 1, s.outcome().isPresent() ? GuiPaint.OK : GuiPaint.FG);
         if (detail != null) {
             boolean unloaded = s.outcome().map(o -> o.unloadedChunks() > 0).orElse(s.unloadedChunks() > 0);
-            GuiText.draw(g, font, detail, x, sy + 11, rw(), unloaded ? WARN : GuiPaint.MUTED);
+            GuiText.draw(g, font, detail, x, sy + 11, rw(), unloaded ? GuiPaint.WARN : GuiPaint.MUTED);
         }
     }
 
@@ -1032,7 +1026,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return switch (s.problem()) {
             case NONE -> GuiPaint.FG;
             case NO_AREA, INCOMPLETE -> GuiPaint.MUTED;
-            default -> WARN;
+            default -> GuiPaint.WARN;
         };
     }
 
@@ -1145,9 +1139,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                         selected ? GuiPaint.ROW_SELECTED : GuiPaint.ROW_HOVER);
             }
             if (selected) {
-                g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), UNLINK);
+                g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), GuiPaint.DANGER);
             }
-            GuiPaint.outline(g, b.getX() + 5, b.getY() + 3, 6, 6, UNLINK);
+            GuiPaint.outline(g, b.getX() + 5, b.getY() + 3, 6, 6, GuiPaint.DANGER);
             GuiText.draw(g, font, tr("network.unlink"), b.getX() + 14, b.getY() + 2, b.getWidth() - 18 - scrollSpace,
                     selected ? GuiPaint.FG : GuiPaint.MUTED);
             return;
@@ -1155,7 +1149,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         boolean selected = !unlink() && Optional.of(entry.id()).equals(snapshot().active());
         if (selected) {
             g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.ROW_SELECTED);
-            g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), ACCENT);
+            g.fill(b.getX(), b.getY(), b.getX() + 1, b.getY() + b.getHeight(), GuiPaint.ACCENT);
         } else if (hovered && entry.owned()) {
             g.fill(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), GuiPaint.ROW_HOVER);
         }
@@ -1199,7 +1193,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Chip de um tipo: ícone e nome; marcado, borda e fundo na cor do tipo (ou do desvincular). */
     private void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
         boolean checked = snapshot().tabs().contains(t);
-        int color = unlink() ? UNLINK : ResourceStyle.color(t);
+        int color = unlink() ? GuiPaint.DANGER : ResourceStyle.color(t);
         int border = checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         int fill = checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
@@ -1236,7 +1230,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Todos: botão de texto, na cor do Vinculador quando todas as abas estão marcadas. */
     private void paintAll(GuiGraphics g, FlatButton b, boolean hovered) {
         boolean checked = allTabs();
-        int color = unlink() ? UNLINK : ACCENT;
+        int color = unlink() ? GuiPaint.DANGER : GuiPaint.ACCENT;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
                 checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
                 checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);

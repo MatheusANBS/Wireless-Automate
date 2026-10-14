@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;

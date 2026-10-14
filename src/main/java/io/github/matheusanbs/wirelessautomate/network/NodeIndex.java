@@ -63,6 +63,13 @@ public final class NodeIndex extends SavedData {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final RemoteSide[] SIDES = RemoteSide.values();
     private static final PortMode[] MODES = PortMode.values();
+    /** Os 2 bits por face de {@link #faceModes(RouterBlockEntity)} cabem num {@code long}: um tipo ou um modo a mais falha aqui, não em silêncio. */
+    static {
+        if (MODES.length > 4 || TYPES.length * SIDES.length * 2 > Long.SIZE) {
+            throw new IllegalStateException("Os modos das faces não cabem num long: " + TYPES.length + " tipos × "
+                    + SIDES.length + " lados × " + MODES.length + " modos");
+        }
+    }
     private static final UUID[] NO_NETWORKS = new UUID[0];
 
     /** Dimensão e posição de um roteador. */

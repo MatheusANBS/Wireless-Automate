@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload.Action;
@@ -155,6 +156,9 @@ final class TabletList {
     private @Nullable NodePanel panel;
     private @Nullable NodeKey panelNode;
     private int panelVersion = -1;
+    /** O nó do último painel do servidor e a versão do painel já conferida por {@link #followServerDrop}. */
+    private @Nullable NodeKey serverNode;
+    private int dropCheckedVersion = -1;
 
     // geometria (absoluta), refeita a cada quadro
     private int x0;
@@ -183,6 +187,7 @@ final class TabletList {
         typeFilter.ifPresent(t -> chipType = t);
         this.chosen = screen.getMenu().restoredNode();
         this.revealKey = chosen;
+        this.serverNode = chosen;
     }
 
     /** A caixa de busca da tela (um widget dela), refeita a cada {@code init}. */
@@ -391,6 +396,32 @@ final class TabletList {
         if (textTicks > 0 && --textTicks == 0) {
             sendQuery();
         }
+        followServerDrop();
+    }
+
+    /**
+     * O servidor largou a escolha (o nó sumiu ou deixou de ser visível) e mandou um painel sem nó: larga aqui
+     * também, para um clique novo na mesma linha pedir o nó de novo. Só se a escolha daqui é a que o servidor
+     * tinha; um painel sem nó atrasado não larga um nó escolhido depois.
+     */
+    private void followServerDrop() {
+        int version = screen.getMenu().panelVersion();
+        if (version == dropCheckedVersion) {
+            return;
+        }
+        dropCheckedVersion = version;
+        TabletPanelPayload payload = screen.getMenu().panel();
+        if (payload == null) {
+            return;
+        }
+        if (payload.node().isPresent()) {
+            serverNode = payload.node().get();
+            return;
+        }
+        if (chosen != null && chosen.equals(serverNode)) {
+            chosen = null;
+        }
+        serverNode = null;
     }
 
     private void refreshSuggestions() {

@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;

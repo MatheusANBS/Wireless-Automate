@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * Servidor → cliente: um aviso curto do painel do nó, com o que o botão Desfazer faz. A tela que
- * hospeda o painel o mostra por alguns segundos ({@code client/PanelNotices}).
+ * hospeda o painel o mostra por alguns segundos ({@link PanelNotices}).
  *
  * <p>{@code containerId}, {@code resource} e {@code face} só valem para {@code Undo.CLEAR_FACE_NETWORK}:
  * o cliente manda o {@link SetNetworkPayload} sem rede para aquela face, no quadro do alvo de edição.

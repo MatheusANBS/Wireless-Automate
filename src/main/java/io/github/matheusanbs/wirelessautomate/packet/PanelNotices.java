@@ -1,11 +1,13 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.packet;
 
-import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O último aviso do painel do nó, guardado com o instante em que chegou. As telas que hospedam o
  * painel desenham {@link #current()} e, no Desfazer, agem pelo {@link PanelNoticePayload#undo()}.
+ *
+ * <p>Só o cliente o usa, mas é Java puro e fica fora de {@code client/}: o handler do {@link PanelNoticePayload},
+ * registrado no código comum ({@link ModPayloads}), guarda o aviso aqui.
  */
 public final class PanelNotices {
     /** Por quanto tempo o aviso aparece. */

@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.client.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;

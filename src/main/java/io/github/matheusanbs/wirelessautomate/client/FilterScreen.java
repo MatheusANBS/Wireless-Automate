@@ -138,13 +138,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private static final int SUGGEST_MORE_H = 11;
     private static final ItemStack BOOK = new ItemStack(Items.ENCHANTED_BOOK);
 
-    private static final int ACCENT = GuiPaint.ACCENT;
-    private static final int DANGER = GuiPaint.DANGER;
     /** Roxo da regra por propriedade (a lente do Ultimate) e o tom mais escuro para o texto dela. */
     private static final int RULE_COLOR = 0xFF7B4FE0;
-    private static final int RULE_TEXT = 0xFF5A36B0;
-    private static final int SEL_ROW = GuiPaint.ROW_SELECTED;
-    private static final int HOVER_ROW = GuiPaint.ROW_HOVER;
     private static final long CLEAR_CONFIRM_MS = 3000;
     /** JEI instalado: as dicas falam dele e o plugin em {@code compat/jei} oferece arrastar e clicar. */
     private static final boolean JEI = ModList.get().isLoaded("jei");
@@ -166,7 +161,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private final Map<String, List<FluidStack>> fluidIcons = new HashMap<>();
 
     private int lastVersion = -1;
-    private int trim = ACCENT;
+    /** Cor do tier; nulo = sem tier, e vale o destaque do tema (lido na hora, para seguir o tema). */
+    private @Nullable Integer trim;
     private @Nullable Integer trimOverride;
     private Tab tab = Tab.ENTRY;
     private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
@@ -449,8 +445,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         }
     }
 
-    /** Cor do tier do roteador (ou do armazenamento), lida do bloco no mundo do cliente; sem ele, o destaque padrão. */
-    private int resolveTrim() {
+    private int trim() {
+        return trim != null ? trim : GuiPaint.ACCENT;
+    }
+
+    /** Cor do tier do roteador (ou do armazenamento), lida do bloco no mundo do cliente; sem ele, nulo (o destaque do tema). */
+    private @Nullable Integer resolveTrim() {
         if (trimOverride != null) {
             return trimOverride;
         }
@@ -462,7 +462,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 return GuiPaint.tierColor(state.getValue(RouterBlock.TIER));
             }
         }
-        return ACCENT;
+        return null;
     }
 
     // ------------------------------------------------------------------ montagem
@@ -1894,7 +1894,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int y = topPos;
         int w = imageWidth;
         int h = imageHeight;
-        GuiPaint.panel(g, x, y, w, h, trim);
+        GuiPaint.panel(g, x, y, w, h, trim());
 
         // cabeçalho
         GuiPaint.text(g, font, tr("title"), x + X0, y + HEAD_Y + 3, GuiPaint.FG);
@@ -1918,7 +1918,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case MORE -> renderMoreTab(g);
         }
         ResizeGrip.renderSolid(g, leftPos, topPos, imageWidth, imageHeight,
-                resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight), ACCENT);
+                resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight), GuiPaint.ACCENT);
     }
 
     private void renderList(GuiGraphics g, int mouseX, int mouseY) {
@@ -1929,7 +1929,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         Component label = entries.size() >= Filter.MAX_ENTRIES ? tr("entries.full", entries.size())
                 : tr("entries", entries.size());
         GuiPaint.text(g, font, label, x + X0, y + LABEL_Y, GuiPaint.MUTED);
-        GuiPaint.box(g, x + X0, y + SEARCH_Y, lw, FIELD_H, GuiPaint.INSET, searchBox.isFocused() ? ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x + X0, y + SEARCH_Y, lw, FIELD_H, GuiPaint.INSET, searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
 
         int rows = listRows();
         int top = y + LIST_Y;
@@ -1951,19 +1951,19 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             int ry = top + r * ROW;
             int rx = x + X0 + 1;
             if (index == selectedIndex) {
-                g.fill(rx, ry, x + X0 + lw - 6, ry + ROW, SEL_ROW);
-                g.fill(rx, ry, rx + 1, ry + ROW, ACCENT);
+                g.fill(rx, ry, x + X0 + lw - 6, ry + ROW, GuiPaint.ROW_SELECTED);
+                g.fill(rx, ry, rx + 1, ry + ROW, GuiPaint.ACCENT);
             } else if (index == hovered) {
-                g.fill(rx, ry, x + X0 + lw - 6, ry + ROW, HOVER_ROW);
+                g.fill(rx, ry, x + X0 + lw - 6, ry + ROW, GuiPaint.ROW_HOVER);
             }
             renderEntryIcon(g, entry, rx + 2, ry + 1);
             String stock = entry.stock() > 0 ? "≥ " + stockShort(entry.stock()) : "";
             int stockW = stock.isEmpty() ? 0 : font.width(stock) + 4;
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, entryName(entry), textW - stockW), rx + 21, ry + 1,
-                    entry instanceof RuleEntry ? RULE_TEXT : GuiPaint.FG);
+                    entry instanceof RuleEntry ? GuiPaint.RULE_TEXT : GuiPaint.FG);
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, entryKind(entry), textW), rx + 21, ry + 10, GuiPaint.DISABLED);
             if (!stock.isEmpty()) {
-                GuiPaint.textRight(g, font, Component.literal(stock), x + X0 + lw - 8, ry + 1, ACCENT);
+                GuiPaint.textRight(g, font, Component.literal(stock), x + X0 + lw - 8, ry + 1, GuiPaint.ACCENT);
             }
         }
         // barra de rolagem
@@ -1975,7 +1975,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             int thumb = thumbHeight(hh, rows, shown.size());
             int ty = top + Math.round((hh - thumb) * (scroll / (float) max));
             boolean active = draggingBar || overBar(mouseX, mouseY);
-            g.fill(bx, ty, bx + 4, ty + thumb, active ? ACCENT : GuiPaint.BEVEL_DARK);
+            g.fill(bx, ty, bx + 4, ty + thumb, active ? GuiPaint.ACCENT : GuiPaint.BEVEL_DARK);
         }
     }
 
@@ -1998,8 +1998,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             if (slot.hasItem() && test.test(slot.getItem())) {
                 int sx = x + slot.x - 1;
                 int sy = y + slot.y - 1;
-                g.fill(sx + 1, sy + 1, sx + 17, sy + 17, GuiPaint.mix(GuiPaint.INSET, ACCENT, 0.35f));
-                GuiPaint.outline(g, sx, sy, 18, 18, ACCENT);
+                g.fill(sx + 1, sy + 1, sx + 17, sy + 17, GuiPaint.mix(GuiPaint.INSET, GuiPaint.ACCENT, 0.35f));
+                GuiPaint.outline(g, sx, sy, 18, 18, GuiPaint.ACCENT);
             }
         }
     }
@@ -2015,7 +2015,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         GuiPaint.slot(g, x - 1, y + BOX_Y + 5);
         renderEntryIcon(g, selected, x, y + BOX_Y + 6);
         int lines = wrapped(g, entryName(selected), x + 21, y + BOX_Y + 6, IW - 21, 2,
-                selected instanceof RuleEntry ? RULE_TEXT : GuiPaint.FG);
+                selected instanceof RuleEntry ? GuiPaint.RULE_TEXT : GuiPaint.FG);
         int ty = y + BOX_Y + 6 + Math.max(2, lines) * 10;
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(entryId(selected)), IW), x, ty, GuiPaint.DISABLED);
         ty += 12;
@@ -2025,7 +2025,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case ModEntry e -> ty = renderMembers(g, e, x, ty, stockLabelY);
             case RuleEntry e -> {
                 int n = inventoryMatches(currentHighlight());
-                wrapped(g, tr("rule.inventory", n), x, ty, IW, 2, ACCENT);
+                wrapped(g, tr("rule.inventory", n), x, ty, IW, 2, GuiPaint.ACCENT);
             }
             case ItemEntry e -> {
                 long tags = e.stack().getTags().count();
@@ -2039,7 +2039,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, white ? tr("stock") : tr("stock.blacklist"), IW), x, stockLabelY,
                 GuiPaint.MUTED);
         int fy = y + innerBottom() - BTN_H - 4 - BTN_H;
-        GuiPaint.box(g, x + 16, fy, IW - 32, BTN_H, GuiPaint.PANEL, stockBox.isFocused() ? ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x + 16, fy, IW - 32, BTN_H, GuiPaint.PANEL, stockBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         if (inMb()) {
             GuiPaint.textRight(g, font, tr("unit.mb"), x + IW - 20, fy + 3, GuiPaint.MUTED);
         }
@@ -2087,7 +2087,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             // inspetor
             GuiPaint.slot(g, x - 1, y + INSPECT_Y - 1);
             if (overInspector(mouseX, mouseY)) {
-                GuiPaint.outline(g, x - 1, y + INSPECT_Y - 1, 18, 18, ACCENT);
+                GuiPaint.outline(g, x - 1, y + INSPECT_Y - 1, 18, 18, GuiPaint.ACCENT);
             }
             Component name;
             Component sub;
@@ -2108,10 +2108,10 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, sub, textW), x + 21, y + INSPECT_Y + 9, GuiPaint.MUTED);
             if (hasInspected()) {
                 GuiPaint.text(g, font, Component.literal("×"), x + IW - 7, y + INSPECT_Y,
-                        overInspectorClear(mouseX, mouseY) ? DANGER : GuiPaint.MUTED);
+                        overInspectorClear(mouseX, mouseY) ? GuiPaint.DANGER : GuiPaint.MUTED);
             }
         }
-        GuiPaint.box(g, x, y + TAG_SEARCH_Y, IW, FIELD_H, GuiPaint.PANEL, tagSearchBox.isFocused() ? ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x, y + TAG_SEARCH_Y, IW, FIELD_H, GuiPaint.PANEL, tagSearchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
 
         // linhas
         int rows = candRows();
@@ -2126,9 +2126,9 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             boolean had = inFilter(c.entry());
             boolean on = had || checked.contains(c.entry());
             if (c == hoveredCandidate) {
-                g.fill(x - 2, ry, x + IW + 2, ry + CAND_ROW, HOVER_ROW);
+                g.fill(x - 2, ry, x + IW + 2, ry + CAND_ROW, GuiPaint.ROW_HOVER);
             }
-            GuiPaint.checkbox(g, x, ry + 1, on, had ? GuiPaint.DISABLED : ACCENT);
+            GuiPaint.checkbox(g, x, ry + 1, on, had ? GuiPaint.DISABLED : GuiPaint.ACCENT);
             String count = c.count() < 0 ? "" : RateFormat.abbreviate(c.count());
             int countW = count.isEmpty() ? 0 : font.width(count) + 4;
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, Component.literal(c.label()), IW - 12 - countW), x + 12, ry + 2,
@@ -2195,11 +2195,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (draft.enchantment().isPresent()) {
             ry += COND_ROW + 1;
             boolean nameOk = enchantFieldValid() || suggestionsShown();
-            int nameBorder = !nameOk ? DANGER : enchantBox.isFocused() ? ACCENT : GuiPaint.LINE;
+            int nameBorder = !nameOk ? GuiPaint.DANGER : enchantBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
             GuiPaint.box(g, x, ry, enchantFieldW(), FIELD_H, GuiPaint.PANEL, nameBorder);
             int levelX = x + IW - LEVEL_W;
             GuiPaint.text(g, font, Component.literal("≥"), levelX - 3 - font.width("≥"), ry + 2, GuiPaint.MUTED);
-            int levelBorder = !levelFieldValid() ? DANGER : levelBox.isFocused() ? ACCENT : GuiPaint.LINE;
+            int levelBorder = !levelFieldValid() ? GuiPaint.DANGER : levelBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
             GuiPaint.box(g, levelX, ry, LEVEL_W, FIELD_H, GuiPaint.PANEL, levelBorder);
             ry += FIELD_H - COND_ROW;
         } else {
@@ -2211,7 +2211,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         ry += COND_ROW + 3;
         GuiPaint.text(g, font, tr("rule.scope"), x, ry + 3, draft.scope().isEmpty() ? GuiPaint.MUTED : GuiPaint.FG);
         int scopeX = x + font.width(tr("rule.scope")) + 5;
-        int border = !draft.validScope() ? DANGER : scopeBox.isFocused() ? ACCENT : GuiPaint.LINE;
+        int border = !draft.validScope() ? GuiPaint.DANGER : scopeBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
         GuiPaint.box(g, scopeX, ry, x + IW - scopeX, FIELD_H, GuiPaint.PANEL, border);
         ry += FIELD_H + 5;
         int limit = y + innerBottom() - BTN_H - 3;
@@ -2223,13 +2223,13 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (draft.isEmpty()) {
             GuiText.wrap(g, font, tr("rule.empty"), x, ry, IW, (limit - ry) / 10, GuiPaint.DISABLED);
         } else if (!draft.validScope()) {
-            GuiText.wrap(g, font, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
         } else if (!enchantFieldValid()) {
-            GuiText.wrap(g, font, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
         } else if (!levelFieldValid()) {
-            GuiText.wrap(g, font, tr("rule.level.invalid"), x, ry, IW, (limit - ry) / 10, DANGER);
+            GuiText.wrap(g, font, tr("rule.level.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
         } else {
-            int used = GuiText.wrap(g, font, ruleText(draft), x, ry, IW, Math.max(1, (limit - ry) / 10 - 1), RULE_TEXT);
+            int used = GuiText.wrap(g, font, ruleText(draft), x, ry, IW, Math.max(1, (limit - ry) / 10 - 1), GuiPaint.RULE_TEXT);
             int n = inventoryMatches(draftPredicate());
             // quebra nas linhas que sobram até os botões; o que ainda não couber vai para a dica
             GuiText.wrap(g, font, tr("rule.inventory", n), x, ry + used, IW, (limit - ry - used) / 10, GuiPaint.MUTED);
@@ -2252,15 +2252,15 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
         g.fill(x + 1, y + h, x + IW + 1, y + h + 2, GuiPaint.BEVEL_DARK);
-        GuiPaint.box(g, x, y, IW, h, GuiPaint.INSET, ACCENT);
+        GuiPaint.box(g, x, y, IW, h, GuiPaint.INSET, GuiPaint.ACCENT);
         for (int i = 0; i < suggestVisible(); i++) {
             int index = suggestTop + i;
             Holder<Enchantment> holder = suggestions.get(index);
             int ry = y + 1 + i * SUGGEST_ROW;
             if (index == suggestSel) {
-                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, GuiPaint.mix(GuiPaint.INSET, ACCENT, 0.22f));
+                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, GuiPaint.mix(GuiPaint.INSET, GuiPaint.ACCENT, 0.22f));
             } else if (index == hover) {
-                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, HOVER_ROW);
+                g.fill(x + 1, ry, x + IW - 1, ry + SUGGEST_ROW, GuiPaint.ROW_HOVER);
             }
             g.pose().pushPose();
             g.pose().translate(x + 3, ry + 1, 0);
@@ -2298,7 +2298,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             int cx = left;
             GuiPaint.text(g, font, Component.literal(name.substring(0, at)), cx, ty, GuiPaint.FG);
             cx += font.width(name.substring(0, at));
-            GuiPaint.text(g, font, Component.literal(name.substring(at, end)), cx, ty, ACCENT);
+            GuiPaint.text(g, font, Component.literal(name.substring(at, end)), cx, ty, GuiPaint.ACCENT);
             cx += font.width(name.substring(at, end));
             GuiPaint.text(g, font, Component.literal(name.substring(end)), cx, ty, GuiPaint.FG);
         } else {
@@ -2359,7 +2359,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             case FluidEntry e -> GuiPaint.fluid(g, e.stack(), x, y);
             case TagEntry e -> renderMark(g, e, "#", x, y);
             case ModEntry e -> renderMark(g, e, "@", x, y);
-            case ChemicalEntry e -> GuiPaint.chemical(g, font, e.chemical(), x, y, trim);
+            case ChemicalEntry e -> GuiPaint.chemical(g, font, e.chemical(), x, y, trim());
             case RuleEntry e -> renderRuleIcon(g, x, y);
         }
     }
@@ -2392,7 +2392,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 g.renderItem(members.get((int) (Util.getMillis() / 1000 % count)), x, y);
             }
         }
-        int color = mark.equals("@") ? GuiPaint.BRASS : ACCENT;
+        int color = mark.equals("@") ? GuiPaint.BRASS : GuiPaint.ACCENT;
         g.pose().pushPose();
         g.pose().translate(0, 0, 200);
         if (count == 0) {
@@ -2625,7 +2625,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     // ------------------------------------------------------------------ pintura dos botões
 
     private void paintTextButton(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean pressed) {
-        int border = pressed ? ACCENT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        int border = pressed ? GuiPaint.ACCENT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), b.active ? GuiPaint.BUTTON : GuiPaint.INSET,
                 b.active ? border : GuiPaint.LINE);
         FormattedCharSequence label = GuiPaint.ellipsize(font, text, b.getWidth() - 4);
@@ -2652,11 +2652,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             paintTextButton(g, b, false, text, false);
             return;
         }
-        int fill = armed ? GuiPaint.mix(GuiPaint.BUTTON, DANGER, 0.3f) : GuiPaint.BUTTON;
-        int border = armed || hovered ? DANGER : GuiPaint.BUTTON_BORDER;
+        int fill = armed ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.DANGER, 0.3f) : GuiPaint.BUTTON;
+        int border = armed || hovered ? GuiPaint.DANGER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
         GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
-                armed || hovered ? DANGER : GuiPaint.FG);
+                armed || hovered ? GuiPaint.DANGER : GuiPaint.FG);
     }
 
     /** Parte de um controle segmentado (lista, abas): a escolhida fica cheia de grafite. */
@@ -2674,7 +2674,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     /** Uma opção de — / Sim / Não: a escolhida cheia (Não em vermelho). */
     private void paintTri(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected, boolean negative) {
-        int color = negative ? DANGER : GuiPaint.SELECTED;
+        int color = negative ? GuiPaint.DANGER : GuiPaint.SELECTED;
         if (selected) {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), color, color);
         } else {
@@ -2687,7 +2687,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     /** Caixa de marcar com o texto ao lado, sem moldura. */
     private void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean on) {
-        GuiPaint.checkbox(g, b.getX(), b.getY() + 1, on, ACCENT);
+        GuiPaint.checkbox(g, b.getX(), b.getY() + 1, on, GuiPaint.ACCENT);
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, text, 64), b.getX() + 12, b.getY() + 2,
                 on || hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
@@ -2696,7 +2696,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         boolean on = filter().matchComponents();
         GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
                 hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        GuiPaint.checkbox(g, b.getX() + 3, b.getY() + 2, on, ACCENT);
+        GuiPaint.checkbox(g, b.getX() + 3, b.getY() + 2, on, GuiPaint.ACCENT);
         GuiPaint.text(g, font, tr("components"), b.getX() + 16, b.getY() + 3, on ? GuiPaint.FG : GuiPaint.MUTED);
     }
 

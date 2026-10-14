@@ -19,11 +19,12 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Filtro de uma face de um roteador, para um tipo, no alvo de edição da tela ({@code target}): a face
  * absoluta da máquina presa, ou a face canônica do perfil de um grupo ou de uma máquina remota. Grava
+ * {@code origin} diz de onde veio e portanto até onde vale. Grava
  * pelo {@link RouterBlockEntity#setFilter(EditTarget, ResourceType, Direction, Filter)}, que salva e
  * avisa o motor. Um alvo remoto que deixou de existir fecha a tela ({@link #stillValid}) e não grava.
  */
 public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face,
-        EditTargetRef target) implements FilterTarget {
+        EditTargetRef target, FilterOrigin origin) implements FilterTarget {
     public RouterFaceFilterTarget {
         if (!hasFilter(type)) {
             throw new IllegalArgumentException("Filtro de " + type);
@@ -32,7 +33,12 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
 
     /** Filtro de uma face (absoluta) da máquina presa. */
     public RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face) {
-        this(router, type, face, EditTargetRef.ATTACHED);
+        this(router, type, face, EditTargetRef.ATTACHED, FilterOrigin.NEAR);
+    }
+
+    /** Filtro de uma face do alvo {@code target}, aberto da tela do roteador perto. */
+    public RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type, Direction face, EditTargetRef target) {
+        this(router, type, face, target, FilterOrigin.NEAR);
     }
 
     /** O alvo conferido no roteador, ou {@code null} se ele deixou de existir. */
@@ -73,15 +79,30 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
         }
     }
 
-    /** A mesma regra do {@link RouterMenu}: roteador no mundo, mesma dimensão e até 8 blocos. */
+    /**
+     * Da tela do roteador perto ({@link FilterOrigin#NEAR}), a mesma regra do {@link RouterMenu}: roteador
+     * no mundo, mesma dimensão e até 8 blocos. Do Tablet ou da tela à distância, a regra do Tablet:
+     * roteador no mundo e ao alcance dele ({@link TabletMenu#inReach}), com o jogador ainda tendo o Tablet.
+     */
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(router, player) && current() != null;
+        if (current() == null) {
+            return false;
+        }
+        if (origin == FilterOrigin.NEAR) {
+            return stillValid(router, player);
+        }
+        return inWorld(router, player) && player instanceof ServerPlayer serverPlayer
+                && TabletMenu.hasTablet(serverPlayer) && TabletMenu.inReach(serverPlayer, router);
+    }
+
+    private static boolean inWorld(RouterBlockEntity router, Player player) {
+        return !router.isRemoved() && router.getLevel() == player.level()
+                && player.level().getBlockEntity(router.getBlockPos()) == router;
     }
 
     static boolean stillValid(RouterBlockEntity router, Player player) {
-        if (router.isRemoved() || router.getLevel() != player.level()
-                || player.level().getBlockEntity(router.getBlockPos()) != router) {
+        if (!inWorld(router, player)) {
             return false;
         }
         return player.getEyePosition().distanceToSqr(Vec3.atCenterOf(router.getBlockPos()))

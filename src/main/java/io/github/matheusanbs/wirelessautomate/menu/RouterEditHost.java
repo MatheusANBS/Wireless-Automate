@@ -41,6 +41,11 @@ public interface RouterEditHost {
      */
     boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block);
 
+    /** De onde o filtro de uma face aberta por este host vale e volta. */
+    default FilterOrigin filterOrigin() {
+        return FilterOrigin.NEAR;
+    }
+
     /** Um pacote mudou o roteador ou o alvo; o host reenvia o que o painel mostra, se precisar. */
     default void editApplied() {
     }

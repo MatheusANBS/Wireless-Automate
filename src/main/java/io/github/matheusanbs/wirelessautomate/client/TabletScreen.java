@@ -22,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTabPayload;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -172,6 +173,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.search = menu.snapshot().query().text();
         this.typeFilter = menu.snapshot().query().type();
         this.lastNoticeId = menu.snapshot().noticeId();
+        if (menu.restoredTab() >= 0 && menu.restoredTab() < Tab.values().length) {
+            this.tab = Tab.values()[menu.restoredTab()];
+        }
     }
 
     // ------------------------------------------------------------------ estado
@@ -561,6 +565,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private void switchTab(Tab t) {
         if (tab != t) {
             tab = t;
+            send(new TabletTabPayload(menu.containerId, t.ordinal()));
             cardRects.clear();
             renaming = Rename.NONE;
             newOpen = false;

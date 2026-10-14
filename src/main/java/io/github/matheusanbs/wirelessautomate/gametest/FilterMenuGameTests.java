@@ -3,15 +3,28 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
+import io.github.matheusanbs.wirelessautomate.menu.FilterOrigin;
+import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTabPayload;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.EditFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.EditFilterPayload.Op;
@@ -26,6 +39,8 @@ import com.mojang.serialization.JavaOps;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -410,5 +425,148 @@ public final class FilterMenuGameTests {
             close(player);
         }
         helper.succeed();
+    }
+
+    /** Elite com a máquina embaixo, na rede do jogador e visível a ele no Tablet. */
+    private static RouterBlockEntity eliteOf(GameTestHelper helper, ServerPlayer player, String network) {
+        helper.setBlock(CHEST, Blocks.CHEST);
+        BlockPos pos = CHEST.above();
+        helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        RouterBlockEntity router = helper.getBlockEntity(pos);
+        router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(player.getUUID(), network).id());
+        NodeIndex.placedBy(router, player.getUUID());
+        return router;
+    }
+
+    private static NodeKey keyOf(RouterBlockEntity router) {
+        return NodeKey.of(router.getLevel(), router.getBlockPos());
+    }
+
+    /** O filtro aberto pelo painel do Tablet vale a 40 blocos; sem o Tablet ou com o roteador removido, fecha. */
+    @GameTest(template = "empty")
+    public static void filterFromTheTabletValidAtDistance(GameTestHelper helper) {
+        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-longe");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(elite), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        Vec3 center = Vec3.atCenterOf(elite.getBlockPos());
+                        player.moveTo(center.add(40, 0, 0));
+                        TabletMenu tablet = new TabletMenu(60, player.getInventory(), player);
+                        player.containerMenu = tablet;
+                        helper.assertTrue(tablet.chooseNode(keyOf(elite)), "não escolheu o nó");
+                        helper.assertTrue(ModPayloads.handleOpenFilter(player,
+                                new OpenFilterPayload(60, ResourceType.ITEM, Direction.UP)), "recusou abrir o filtro de longe");
+                        if (!(player.containerMenu instanceof FilterMenu menu)
+                                || !(menu.target() instanceof RouterFaceFilterTarget target)) {
+                            throw new GameTestAssertException("tela de filtro não abriu");
+                        }
+                        helper.assertValueEqual(target.origin(), FilterOrigin.TABLET, "origem");
+                        helper.assertTrue(menu.stillValid(player), "o filtro do Tablet fechou a 40 blocos");
+                        helper.assertTrue(edit(player, menu, Op.ADD_MOD, 0, 0, "minecraft"), "recusou editar de longe");
+
+                        player.getInventory().setItem(0, ItemStack.EMPTY);
+                        helper.assertFalse(menu.stillValid(player), "valeu sem o Tablet");
+                        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+                        helper.assertTrue(menu.stillValid(player), "não voltou a valer com o Tablet");
+                        elite.setRemoved();
+                        helper.assertFalse(menu.stillValid(player), "valeu com o roteador removido");
+                    } finally {
+                        close(player);
+                    }
+                    helper.succeed();
+                });
+    }
+
+    /** Origem NEAR: os 8 blocos de sempre. */
+    @GameTest(template = "empty")
+    public static void nearFilterStillClosesBeyondEightBlocks(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper);
+        MockPlayer player = playerNear(helper, router);
+        try {
+            FilterMenu menu = openFace(player, router, ResourceType.ITEM);
+            helper.assertValueEqual(((RouterFaceFilterTarget) menu.target()).origin(), FilterOrigin.NEAR, "origem");
+            helper.assertTrue(menu.stillValid(player), "fechou perto");
+            player.moveTo(Vec3.atCenterOf(router.getBlockPos()).add(40, 0, 0));
+            helper.assertFalse(menu.stillValid(player), "valeu a 40 blocos");
+        } finally {
+            close(player);
+        }
+        helper.succeed();
+    }
+
+    /** Aberto da tela do roteador à distância: vale no alcance, e o Voltar reabre a tela à distância. */
+    @GameTest(template = "empty")
+    public static void filterFromTheRemoteRouterBacksToIt(GameTestHelper helper) {
+        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-remoto");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(elite), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        player.moveTo(Vec3.atCenterOf(elite.getBlockPos()).add(40, 0, 0));
+                        RemoteRouterMenu.open(player, elite);
+                        int id = player.containerMenu.containerId;
+                        helper.assertTrue(ModPayloads.handleOpenFilter(player,
+                                new OpenFilterPayload(id, ResourceType.ITEM, Direction.UP)), "recusou abrir o filtro");
+                        FilterMenu menu = (FilterMenu) player.containerMenu;
+                        helper.assertValueEqual(((RouterFaceFilterTarget) menu.target()).origin(),
+                                FilterOrigin.REMOTE_ROUTER, "origem");
+                        helper.assertTrue(menu.stillValid(player), "fechou a 40 blocos");
+                        helper.assertTrue(edit(player, menu, Op.BACK), "recusou voltar");
+                        helper.assertTrue(player.containerMenu instanceof RemoteRouterMenu back && back.router() == elite,
+                                "não voltou para a tela à distância");
+                        helper.assertTrue(player.containerMenu.stillValid(player), "a tela à distância fechou");
+                    } finally {
+                        close(player);
+                    }
+                    helper.succeed();
+                });
+    }
+
+    /** Voltar do filtro do Tablet reabre o Tablet na aba, com a consulta e o nó escolhido de antes; o estado vai no buffer. */
+    @GameTest(template = "empty")
+    public static void backFromTheTabletFilterRestoresTheTablet(GameTestHelper helper) {
+        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-volta");
+        TabletSnapshot.Query query = TabletSnapshot.Query.of("elite").withType(Optional.of(ResourceType.ITEM));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(elite), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        player.moveTo(Vec3.atCenterOf(elite.getBlockPos()).add(40, 0, 0));
+                        TabletMenu.open(player);
+                        int id = player.containerMenu.containerId;
+                        helper.assertTrue(TabletPayloads.handleQuery(player, new TabletQueryPayload(id, query)), "consulta");
+                        helper.assertTrue(TabletPayloads.handleTab(player, new TabletTabPayload(id, 2)), "aba");
+                        helper.assertTrue(TabletPayloads.handleSelectNode(player,
+                                new TabletSelectNodePayload(id, Optional.of(keyOf(elite)))), "escolha");
+                        helper.assertTrue(ModPayloads.handleOpenFilter(player,
+                                new OpenFilterPayload(id, ResourceType.ITEM, Direction.UP)), "recusou abrir o filtro");
+                        FilterMenu menu = (FilterMenu) player.containerMenu;
+                        helper.assertTrue(edit(player, menu, Op.BACK), "recusou voltar");
+                        if (!(player.containerMenu instanceof TabletMenu back)) {
+                            throw new GameTestAssertException("não voltou para o Tablet");
+                        }
+                        helper.assertTrue(Objects.equals(back.chosenNode(), keyOf(elite)), "nó escolhido de antes");
+                        helper.assertValueEqual(back.query().text(), "elite", "consulta");
+                        helper.assertTrue(back.query().type().equals(Optional.of(ResourceType.ITEM)), "tipo da consulta");
+                        helper.assertValueEqual(back.tab(), 2, "aba");
+                        helper.assertValueEqual(back.snapshot().query().text(), "elite", "snapshot com a consulta");
+
+                        TabletMenu client = new TabletMenu(back.containerId, player.getInventory(), player.openData);
+                        helper.assertValueEqual(client.restoredTab(), 2, "aba no buffer");
+                        helper.assertTrue(Objects.equals(client.restoredNode(), keyOf(elite)), "nó no buffer");
+                        helper.assertValueEqual(client.snapshot().query().text(), "elite", "consulta no buffer");
+                    } finally {
+                        close(player);
+                    }
+                    helper.succeed();
+                });
     }
 }

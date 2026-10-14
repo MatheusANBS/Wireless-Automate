@@ -15,9 +15,11 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
+import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
@@ -406,8 +408,8 @@ public final class ModPayloads {
         if (host.actionTarget() == null) {
             return false;
         }
-        new RouterFaceFilterTarget(host.editedRouter(), payload.resource(), payload.face(), host.targetRef())
-                .open(player);
+        new RouterFaceFilterTarget(host.editedRouter(), payload.resource(), payload.face(), host.targetRef(),
+                host.filterOrigin()).open(player);
         return true;
     }
 
@@ -491,7 +493,11 @@ public final class ModPayloads {
             }
             case BACK -> {
                 if (target instanceof RouterFaceFilterTarget face) {
-                    RouterMenu.open(player, face.router(), face.target());
+                    switch (face.origin()) {
+                        case NEAR -> RouterMenu.open(player, face.router(), face.target());
+                        case REMOTE_ROUTER -> RemoteRouterMenu.open(player, face.router(), face.target());
+                        case TABLET -> TabletMenu.open(player);
+                    }
                 } else if (target instanceof StorageFilterTarget storage) {
                     storage.storage().open(player);
                 } else {

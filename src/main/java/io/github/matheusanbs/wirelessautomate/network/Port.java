@@ -41,7 +41,7 @@ final class Port {
     /** Duração da última visita que parou num teto, para as voltas extras do tick caberem no orçamento. */
     long visitNanos;
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
-    @Nullable ItemTransfer.StockTally tally;
+    @Nullable ItemStockTally tally;
     /**
      * Motivo do último sono da origem, gravado onde ela dorme ({@link SourceSleep}): {@code true} se
      * todos os destinos dormiam ou se ela ofereceu algo e foi recusada (espera destino); {@code false}

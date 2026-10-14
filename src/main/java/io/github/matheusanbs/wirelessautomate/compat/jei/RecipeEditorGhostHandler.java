@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.compat.jei;
 
-import io.github.matheusanbs.wirelessautomate.client.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeDraft;
 import java.util.ArrayList;
 import java.util.List;

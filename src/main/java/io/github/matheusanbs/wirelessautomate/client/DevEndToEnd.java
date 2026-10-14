@@ -14,6 +14,8 @@ import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
+import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
+import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;

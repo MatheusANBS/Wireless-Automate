@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.storage;
 
 import java.util.ArrayList;
 import java.util.List;

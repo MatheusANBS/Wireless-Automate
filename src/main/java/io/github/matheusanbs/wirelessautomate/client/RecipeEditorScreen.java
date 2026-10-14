@@ -291,9 +291,8 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         searchBox = new EditBox(font, x + LIST_X + 4, y + SEARCH_Y + 3, LIST_W - 8, 9, tr("search"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(64);
-        searchBox.setTextColor(GuiPaint.FG);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        searchBox.setHint(tr("search").copy().withColor(GuiPaint.DISABLED));
+        inkVersion = -1;
         searchBox.setValue(search);
         searchBox.setResponder(value -> {
             search = value;
@@ -586,8 +585,20 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
 
     // ------------------------------------------------------------------ desenho
 
+    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
+    private int inkVersion = -1;
+
+    /** Cor do texto e da dica do campo: o EditBox guarda a cor, então segue o tema por aqui. */
+    private void inkBoxes() {
+        inkVersion = GuiThemes.version();
+        GuiPaint.ink(searchBox, tr("search"));
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (inkVersion != GuiThemes.version()) {
+            inkBoxes();
+        }
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
@@ -858,7 +869,7 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
     private static void overlay(GuiGraphics g, int x, int y, int w, int h, int color, int alpha) {
         g.pose().pushPose();
         g.pose().translate(0, 0, 200);
-        g.fill(x, y, x + w, y + h, (color & 0x00FFFFFF) | alpha << 24);
+        g.fill(x, y, x + w, y + h, GuiPaint.alpha(color, alpha));
         g.pose().popPose();
     }
 

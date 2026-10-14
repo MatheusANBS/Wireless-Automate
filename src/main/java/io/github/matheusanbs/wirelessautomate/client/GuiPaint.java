@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -131,6 +132,20 @@ public final class GuiPaint {
     /** A cor com outra transparência ({@code alpha} de 0 a 255): os véus seguem o tema. */
     public static int alpha(int color, int alpha) {
         return (color & 0x00FFFFFF) | alpha << 24;
+    }
+
+    /**
+     * Tinta de um campo de texto: o EditBox guarda a cor no próprio widget, então a tela reaplica
+     * isto quando o tema muda ({@link GuiThemes#version()}), não só no init.
+     */
+    public static void ink(EditBox box) {
+        box.setTextColor(FG);
+    }
+
+    /** A tinta do campo, com a dica (o texto de cor apagada de quando ele está vazio). */
+    public static void ink(EditBox box, Component hint) {
+        ink(box);
+        box.setHint(hint.copy().withColor(DISABLED));
     }
 
     private static final ResourceLocation PORT_NONE = WirelessAutomate.id("textures/gui/port_none.png");

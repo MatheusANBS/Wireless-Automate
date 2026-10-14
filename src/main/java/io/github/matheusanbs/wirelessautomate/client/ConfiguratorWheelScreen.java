@@ -393,15 +393,15 @@ public final class ConfiguratorWheelScreen extends Screen {
                 segments);
     }
 
-    /**
-     * Setor de anel de {@code r1} a {@code r2} e de {@code a0} a {@code a1} (0 no topo, horário), com as
-     * bordas laterais recuadas {@code inset} (em pixels, na perpendicular, não em ângulo) para dentro.
-     */
     /** Fundo da fatia sob o mouse: o tom salmão no claro; no escuro, o painel tingido com o destaque (o nome é claro). */
     private static int hotFill() {
         return GuiThemes.current() == GuiTheme.DARK ? GuiPaint.mix(GuiPaint.PANEL, GuiPaint.ACCENT, 0.3f) : HOT_FILL;
     }
 
+    /**
+     * Setor de anel de {@code r1} a {@code r2} e de {@code a0} a {@code a1} (0 no topo, horário), com as
+     * bordas laterais recuadas {@code inset} (em pixels, na perpendicular, não em ângulo) para dentro.
+     */
     private static void sector(BufferBuilder buffer, Matrix4f matrix, double r1, double r2, double a0, double a1,
             double inset, int color, int segments) {
         double inner = Math.max(0, r1);

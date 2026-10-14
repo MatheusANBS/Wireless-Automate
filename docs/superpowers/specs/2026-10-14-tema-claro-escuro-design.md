@@ -60,7 +60,7 @@ Contraste mínimo (WCAG, contra `PANEL`), conferido por JUnit nos dois temas: `F
 ## Testes
 
 - JUnit: `GuiPaletteTest` (todos os tokens preenchidos e opacos, os contrastes acima, `other()` alterna).
-- e2e (`DevEndToEnd`): uma volta no escuro depois da volta normal: clica no botão do tema na tela do roteador, confere `GuiThemes.current() == DARK` e o valor da config, captura `escuro-roteador`, `escuro-tablet`, `escuro-filtro`, `escuro-vinculador`, `escuro-bau`, `escuro-bateria` e `escuro-receitas` com `GuiText.clipCount() == 0`, e volta ao claro pelo botão. As capturas claras de antes não podem mudar.
+- e2e (`DevEndToEnd`): uma volta no escuro depois da volta normal: clica no botão do tema na tela do roteador, confere `GuiThemes.current() == DARK` e o valor da config, captura `escuro-roteador`, `escuro-tablet`, `escuro-filtro`, `escuro-vinculador`, `escuro-bau`, `escuro-bateria` e `escuro-receitas` conferindo os textos cortados pelo `clipCheck` (corte só é aceito com a dica do texto inteiro), e volta ao claro pelo botão. Um passo digita na busca do Baú, clica no botão e confere a cor do texto do campo (`textColor` do `EditBox`) nos dois sentidos, com a captura `escuro-bau-texto`: os campos de texto guardam a cor no próprio widget, então cada tela reaplica a tinta quando o tema muda (`GuiThemes.version()`). As CORES das capturas claras de antes não mudam (o cabeçalho ganhou o botão e recuou de propósito).
 - GameTests: nenhum novo (é só cliente); as quatro runs continuam passando, provando que o servidor dedicado carrega sem as classes de cliente.
 
 ## Guia e docs

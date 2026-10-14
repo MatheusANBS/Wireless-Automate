@@ -333,11 +333,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         nameBox = new EditBox(font, x + X0 + 4, y + newY() + 3, LW - 34, 9, tr("network.name"));
         nameBox.setBordered(false);
         nameBox.setMaxLength(LinkerActionPayload.MAX_NAME_LENGTH);
-        nameBox.setTextColor(GuiPaint.FG);
         nameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         nameBox.setValue(draft);
         nameBox.setResponder(value -> draft = value);
-        nameBox.setHint(tr("network.name").copy().withColor(GuiPaint.DISABLED));
+        inkVersion = -1;
         addRenderableWidget(nameBox);
         if (creating) {
             setFocused(nameBox);
@@ -696,8 +695,20 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     // ------------------------------------------------------------------ desenho
 
+    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
+    private int inkVersion = -1;
+
+    /** Cor do texto e da dica do campo: o EditBox guarda a cor, então segue o tema por aqui. */
+    private void inkBoxes() {
+        inkVersion = GuiThemes.version();
+        GuiPaint.ink(nameBox, tr("network.name"));
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (inkVersion != GuiThemes.version()) {
+            inkBoxes();
+        }
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);

@@ -1,0 +1,432 @@
+<title>Mapa do fluxo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: uma tarefa do jogador por bloco, hoje à esquerda e depois à direita, cada passo com o chip da ferramenta; no fim, a tabela função → lugar e as decisões. */
+:root {
+  --page: #ECE5D6; --fg: #2A2730; --mu: #6E675B; --line: #CFC5B0; --card: #F6F1E6; --card2: #FFFBF3;
+  --coral: #F0603E; --ok: #2F9D5C; --warn: #C27712;
+  --c-router: #2F6FD6; --c-tablet: #F0603E; --c-linker: #1FA7A0; --c-conf: #7B4FD0; --c-filter: #C8782E; --c-walk: #8A8172; --c-cmd: #4A4560;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --fg: #EDE6D8; --mu: #A79F90; --line: #3A363F; --card: #222026; --card2: #2A272F; --c-cmd: #9A93B8; --c-walk: #A79F90; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --fg: #EDE6D8; --mu: #A79F90; --line: #3A363F; --card: #222026; --card2: #2A272F; --c-cmd: #9A93B8; --c-walk: #A79F90; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 10px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 18px; margin: 0; text-wrap: balance }
+.lede { color: var(--mu); max-width: 80ch; margin: 8px 0 0 }
+p, li { max-width: 78ch }
+section.part { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 28px }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 16px; font-size: 14px; color: var(--mu) }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pix); font-size: 13px; line-height: 1; padding: 3px 7px 4px; border: 1.5px solid currentColor; border-radius: 3px; white-space: nowrap; background: var(--card2) }
+.chip::before { content: ""; width: 7px; height: 7px; background: currentColor; border-radius: 1px }
+.r { color: var(--c-router) } .t { color: var(--c-tablet) } .l { color: var(--c-linker) } .c { color: var(--c-conf) } .f { color: var(--c-filter) } .w { color: var(--c-walk) } .m { color: var(--c-cmd) }
+.task { margin-top: 26px; background: var(--card); border: 1px solid var(--line); padding: 18px 18px 16px }
+.task-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 12px }
+.task-head .q { color: var(--mu); font-size: 14px }
+.etapa { font-family: var(--pix); font-size: 13px; padding: 1px 7px; border: 1px solid var(--line); color: var(--mu); margin-left: auto; white-space: nowrap }
+.etapa.e1 { color: var(--coral); border-color: var(--coral) } .etapa.e2 { color: var(--ok); border-color: var(--ok) }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 18px }
+@media (max-width: 760px) { .cmp { grid-template-columns: 1fr } }
+.cmp > div { min-width: 0 }
+.col-h { display: flex; align-items: baseline; gap: 10px; font-family: var(--pix); font-size: 14px; color: var(--mu); margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px }
+.col-h b { font-weight: 500; color: var(--fg) }
+.col-h .n { margin-left: auto; font-variant-numeric: tabular-nums }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: s }
+ol.steps li { display: grid; grid-template-columns: 22px auto 1fr; gap: 8px; align-items: start; counter-increment: s; font-size: 14px }
+ol.steps li::before { content: counter(s); font-family: var(--pix); font-size: 13px; color: var(--mu); text-align: right; padding-top: 2px; font-variant-numeric: tabular-nums }
+ol.steps li > span:last-child { min-width: 0 }
+.switch { grid-column: 2 / -1; font-size: 12.5px; color: var(--warn); font-family: var(--pix); letter-spacing: .02em; margin: -2px 0 0 }
+.pain { margin-top: 10px; font-size: 13.5px; color: var(--warn) }
+.pain::before { content: "⚠ " }
+.gain { margin-top: 10px; font-size: 13.5px; color: var(--ok) }
+.gain::before { content: "✓ " }
+.tbl { overflow-x: auto; margin-top: 14px }
+table { border-collapse: collapse; font-size: 14px; min-width: 760px; width: 100% }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-family: var(--pix); font-weight: 500; font-size: 14px; color: var(--mu) }
+td .chip { margin: 0 4px 4px 0 }
+td.fn { font-weight: 700; min-width: 180px }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 16px }
+.roles > div { min-width: 0; background: var(--card); border: 1px solid var(--line); padding: 14px 16px }
+.roles h3 { margin-bottom: 6px; display: flex; align-items: center; gap: 8px }
+.roles p { margin: 0; font-size: 14px; color: var(--mu) }
+.roles ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px } .roles li { margin-bottom: 4px }
+.dec { display: grid; gap: 12px; margin-top: 14px; counter-reset: d }
+.dec > div { counter-increment: d; display: grid; grid-template-columns: 34px 1fr; gap: 10px; background: var(--card); border: 1px solid var(--line); padding: 12px 14px }
+.dec > div::before { content: "D" counter(d); font-family: var(--pix); color: var(--coral); font-size: 16px }
+.dec b { display: block }
+.dec span { font-size: 14px; color: var(--mu) }
+.dec > div > div { min-width: 0 }
+.sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 18px }
+.sum > div { background: var(--card); border: 1px solid var(--line); padding: 12px 14px; min-width: 0 }
+.sum b { font-family: var(--pix); font-weight: 500; font-size: 26px; display: block; font-variant-numeric: tabular-nums }
+.sum span { font-size: 13.5px; color: var(--mu) }
+/* prévia do tema: cores fixas de cada tema do jogo, independentes do tema da página */
+.themes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 16px }
+.mini { min-width: 0; position: relative; font-family: var(--pix); font-size: 14px; line-height: 1; padding: 16px 14px 14px; border: 2px solid var(--k-ink); background: var(--k-panel); color: var(--k-ink); box-shadow: 4px 4px 0 var(--k-shadow); display: grid; gap: 10px }
+.mini.light { --k-panel: #F2EBDD; --k-paper: #FFFBF3; --k-inset: #DDD3BF; --k-line: #BDB19A; --k-ink: #2A2730; --k-mu: #7A7366; --k-ac: #F0603E; --k-ok: #2F9D5C; --k-warn: #D88A1A; --k-shadow: #BDB19A }
+.mini.dark { --k-panel: #26232B; --k-paper: #312D37; --k-inset: #1C1A20; --k-line: #4A4550; --k-ink: #ECE5D6; --k-mu: #A79F90; --k-ac: #F26A48; --k-ok: #3DB56E; --k-warn: #E39A2E; --k-shadow: #0E0D11 }
+.mtop { position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--k-ac) }
+.mhead { display: flex; align-items: center; gap: 10px }
+.mmu { color: var(--k-mu); font-size: 12.5px }
+.mtog { margin-left: auto; width: 24px; height: 22px; display: grid; place-items: center; border: 2px solid var(--k-ink); background: var(--k-paper); font-size: 13px }
+.mtabs { display: flex; gap: 12px; border-bottom: 2px solid var(--k-line); padding-bottom: 6px; font-size: 13px; color: var(--k-mu) }
+.mtabs .on { color: var(--k-ink); box-shadow: 0 4px 0 -1px var(--k-ac) }
+.mfaces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+.mfaces span { display: flex; align-items: center; gap: 6px; padding: 6px; border: 2px solid var(--k-ink); background: var(--k-paper); font-size: 12.5px; min-width: 0 }
+.mfaces span.sel { border-color: var(--k-ac) }
+.mfaces span.off { border-style: dashed; border-color: var(--k-line); color: var(--k-mu) }
+.mfaces i { width: 10px; height: 10px; flex: none; outline: 1px solid var(--k-ink) }
+.mrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
+.mrow > .mmu { width: 44px }
+.mdrop { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 2px solid var(--k-ink); background: var(--k-paper); font-size: 12.5px; white-space: nowrap; overflow: hidden }
+.mdrop b { width: 8px; height: 8px; border-radius: 50%; flex: none }
+.mbtn { padding: 5px 8px; border: 2px solid var(--k-ink); background: var(--k-paper); font-size: 12.5px }
+.mbtn.ok { background: var(--k-ok); color: #fff }
+.mwarn { color: var(--k-warn); font-size: 12.5px; margin-left: auto }
+table.pal { min-width: 480px }
+.sw { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; border: 1px solid var(--line) }
+</style>
+
+<div class="wrap">
+  <h1>Mapa do fluxo</h1>
+  <p class="lede">Cada tarefa comum do jogador, por onde ela passa hoje (1.9.1, lido no código) e por onde passaria com a proposta: um painel do nó só, usado na tela do roteador e no Tablet, o Tablet como central e as ferramentas no mundo seguindo as mesmas regras. As trocas de ferramenta estão marcadas em laranja.</p>
+
+  <div class="legend">
+    <span class="chip r">Roteador</span>
+    <span class="chip t">Tablet</span>
+    <span class="chip l">Vinculador</span>
+    <span class="chip c">Configurador</span>
+    <span class="chip f">Filtro</span>
+    <span class="chip w">Andar até</span>
+    <span class="chip m">Comando</span>
+  </div>
+
+  <div class="sum">
+    <div><b>4</b><span>lugares para criar rede hoje; depois, 1 (o Tablet), mais a criação automática do Vinculador</span></div>
+    <div><b>5</b><span>caminhos para pôr faces numa rede, com 3 regras diferentes; depois, os mesmos caminhos com 1 regra</span></div>
+    <div><b>2</b><span>jeitos de copiar configuração que não se conhecem; depois, 1 perfil, no Tablet e no Configurador</span></div>
+    <div><b>2</b><span>coisas chamadas "grupos" (de redes e de máquinas); depois, nomes diferentes</span></div>
+  </div>
+
+  <section class="part">
+    <div class="eyebrow">Tarefas do jogador</div>
+    <h2>Hoje e depois</h2>
+
+    <!-- 1 -->
+    <div class="task">
+      <div class="task-head"><h3>1. Ligar uma máquina nova</h3><span class="q">Prender o roteador numa fornalha e fazer ela receber minério</span><span class="etapa e1">Etapa 1</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">5 passos · 2 trocas</span></div>
+          <ol class="steps">
+            <li><span class="chip w">Mundo</span><span>Prende o roteador na fornalha</span></li>
+            <li><span class="chip l">Vinculador</span><span>Pega o Vinculador e clica no roteador: as faces marcadas entram na rede ativa (ou ele cria uma rede, se não houver)</span></li>
+            <li class="switch">troca: Vinculador → mãos vazias</li>
+            <li><span class="chip r">Roteador</span><span>Abre a tela, escolhe a aba Itens e a face Cima</span></li>
+            <li><span class="chip r">Roteador</span><span>Escolhe o modo Insere</span></li>
+            <li><span class="chip r">Roteador</span><span>Confere a linha Rede da face (o Vinculador pode ter posto outras faces na rede sem modo)</span></li>
+          </ol>
+          <p class="pain">Dois passos de ferramentas diferentes para uma coisa só: "esta face recebe da rede X".</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">3 passos · 0 trocas</span></div>
+          <ol class="steps">
+            <li><span class="chip w">Mundo</span><span>Prende o roteador na fornalha</span></li>
+            <li><span class="chip r">Roteador</span><span>Abre a tela (o mesmo painel do Tablet), aba Itens, face Cima</span></li>
+            <li><span class="chip r">Roteador</span><span>Escolhe Insere: a face sem rede entra na rede ativa sozinha (D1)</span></li>
+          </ol>
+          <p class="gain">O Vinculador continua servindo para ligar vários de uma vez ou numa área, mas não é mais obrigatório para começar.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="task">
+      <div class="task-head"><h3>2. Configurar dez fornalhas iguais</h3><span class="q">O pedido do taccio3</span><span class="etapa e1">Etapa 1</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">4 passos + 9 caminhadas · 1 troca</span></div>
+          <ol class="steps">
+            <li><span class="chip r">Roteador</span><span>Configura a primeira fornalha</span></li>
+            <li class="switch">troca: mãos vazias → Configurador</li>
+            <li><span class="chip c">Configurador</span><span>Shift + clique na primeira para copiar</span></li>
+            <li><span class="chip w">Andar até</span><span>Vai até cada uma das outras nove (ou marca os dois cantos de uma área, se estiverem juntas)</span></li>
+            <li><span class="chip c">Configurador</span><span>Clica em cada uma para colar (ou clica no ar para colar na área)</span></li>
+          </ol>
+          <p class="pain">Não dá para fazer de longe, e o Configurador ignora os grupos e as exceções do roteador de alcance.</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">4 passos · 0 trocas</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Lista: escolhe a primeira fornalha e configura no painel ao lado</span></li>
+            <li><span class="chip t">Tablet</span><span>Copiar (ou <code>Ctrl</code>+<code>C</code>)</span></li>
+            <li><span class="chip t">Tablet</span><span>Selecionar, busca "fornalha", Todos</span></li>
+            <li><span class="chip t">Tablet</span><span>Colar nos 9 marcados</span></li>
+          </ol>
+          <p class="gain">Os quadradinhos de cada linha mostram as faces das dez sem abrir nenhuma. O Configurador continua igual para quem prefere andando, e o perfil passa a levar os grupos (D3).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="task">
+      <div class="task-head"><h3>3. Achar por que algo parou</h3><span class="q">"Meu minério não chega no forno"</span><span class="etapa e1">Etapa 1</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">4 passos · 1 troca</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Estatísticas: vê "11 destinos cheios" no cartão Itens</span></li>
+            <li><span class="chip t">Tablet</span><span>Clica no cartão: a Lista abre filtrada</span></li>
+            <li><span class="chip t">Tablet</span><span>Clica no nó: a tela do roteador abre à distância</span></li>
+            <li class="switch">troca: Tablet → tela do roteador</li>
+            <li><span class="chip r">Roteador</span><span>Olha face por face; para ver o filtro precisa estar a até 8 blocos (a tela de filtro fecha sozinha)</span></li>
+          </ol>
+          <p class="pain">O limite de 8 blocos do filtro não aparece em lugar nenhum: a tela só fecha.</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">3 passos · 0 trocas</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Estatísticas → cartão Itens → Lista filtrada (como hoje)</span></li>
+            <li><span class="chip t">Tablet</span><span>Clica no nó: o painel mostra as faces, a rede e o motivo ("destino cheio")</span></li>
+            <li><span class="chip f">Filtro</span><span>Editar abre o filtro à distância, no mesmo alcance de abrir o nó; Voltar retorna ao Tablet (D5)</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="task">
+      <div class="task-head"><h3>4. Mudar várias máquinas de rede</h3><span class="q">Separar a linha de fundição numa rede própria</span><span class="etapa e2">Etapa 2</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">dois caminhos, dois resultados</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Selecionar, marca os nós, Mover para a rede: muda <b>todas</b> as faces, inclusive grupos e exceções do alcance</span></li>
+            <li><span class="chip l">Vinculador</span><span>Ou: modo Área, marca os cantos, Vincular: muda <b>só as faces marcadas</b> da máquina presa</span></li>
+          </ol>
+          <p class="pain">Parecem a mesma ação e deixam a base em estados diferentes.</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">os mesmos caminhos, uma regra</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Mover, com a mesma escolha de faces e abas do Vinculador</span></li>
+            <li><span class="chip l">Vinculador</span><span>Área, como hoje</span></li>
+          </ol>
+          <p class="gain">Os dois seguem a mesma regra (D2): só as faces que já estão em alguma rede mudam, e os grupos do alcance acompanham.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="task">
+      <div class="task-head"><h3>5. Criar e organizar redes</h3><span class="q">Nova rede, cor, privada, qual é a ativa</span><span class="etapa e2">Etapa 2</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">4 lugares</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Redes: criar, renomear, cor, privada, Usar (ativa), remover</span></li>
+            <li><span class="chip l">Vinculador</span><span>Tela do Vinculador: criar rede e escolher a ativa (sem cor nem privacidade)</span></li>
+            <li><span class="chip l">Vinculador</span><span>Primeiro clique sem rede ativa: cria uma sozinho</span></li>
+            <li><span class="chip m">Comando</span><span><code>/wa network create</code>, <code>use</code>, <code>remove</code></span></li>
+          </ol>
+          <p class="pain">Duas listas de redes diferentes (Tablet e Vinculador), cada uma com uma parte das opções.</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">1 lugar + atalhos</span></div>
+          <ol class="steps">
+            <li><span class="chip t">Tablet</span><span>Redes: tudo, como hoje</span></li>
+            <li><span class="chip l">Vinculador</span><span>Mostra a rede ativa; Trocar abre a mesma lista do Tablet (o mesmo componente)</span></li>
+            <li><span class="chip l">Vinculador</span><span>A criação automática no primeiro clique continua</span></li>
+            <li><span class="chip m">Comando</span><span>Comandos continuam, para admins</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="task">
+      <div class="task-head"><h3>6. Um roteador com várias máquinas</h3><span class="q">Upgrade de Alcance, oito fornalhas em volta</span><span class="etapa e2">Etapa 2</span></div>
+      <div class="cmp">
+        <div>
+          <div class="col-h"><b>Hoje</b><span class="n">5 passos · 2 trocas</span></div>
+          <ol class="steps">
+            <li><span class="chip r">Roteador</span><span>Põe o Upgrade de Alcance no slot</span></li>
+            <li class="switch">troca: mãos vazias → Vinculador (modo Máquinas)</li>
+            <li><span class="chip l">Vinculador</span><span>Clica no roteador e depois em cada fornalha (ou numa área)</span></li>
+            <li class="switch">troca: Vinculador → mãos vazias</li>
+            <li><span class="chip r">Roteador</span><span>Máquinas → escolhe o grupo "Fornalha" e configura o perfil</span></li>
+            <li><span class="chip r">Roteador</span><span>Exceção: escolhe uma máquina e muda só ela; "Voltar ao perfil" desfaz</span></li>
+          </ol>
+          <p class="pain">Esses "grupos" são de máquinas; os "Grupos" do Tablet são de redes. O Tablet não mostra as máquinas remotas na Lista.</p>
+        </div>
+        <div>
+          <div class="col-h"><b>Depois</b><span class="n">4 passos · 1 troca</span></div>
+          <ol class="steps">
+            <li><span class="chip r">Roteador</span><span>Põe o Upgrade de Alcance</span></li>
+            <li class="switch">troca: mãos vazias → Vinculador (modo Máquinas)</li>
+            <li><span class="chip l">Vinculador</span><span>Vincula as fornalhas, como hoje</span></li>
+            <li><span class="chip t">Tablet</span><span>Ou no roteador: o painel mostra "Fornalha (perfil, 8 máquinas)" e cada máquina abaixo, com os quadradinhos (D4)</span></li>
+          </ol>
+          <p class="gain">Os grupos de máquinas ganham outro nome (D6) e entram no perfil copiado.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Quem faz o quê</div>
+    <h2>Cada lugar com um papel</h2>
+    <div class="roles">
+      <div>
+        <h3><span class="chip r">Roteador</span></h3>
+        <p>A máquina na sua frente.</p>
+        <ul>
+          <li>O painel do nó (o mesmo do Tablet)</li>
+          <li>Mais o que pede o bloco perto: visor 3D, slots de cartão e de upgrade</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="chip t">Tablet</span></h3>
+        <p>A base inteira, de qualquer lugar.</p>
+        <ul>
+          <li>Lista de máquinas com o painel do nó ao lado</li>
+          <li>Copiar e colar perfil, em um ou em vários</li>
+          <li>O único lugar que gerencia redes e grupos de redes</li>
+          <li>Mapa e Estatísticas, como hoje</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="chip l">Vinculador</span> <span class="chip c">Configurador</span></h3>
+        <p>Atalhos no mundo, para quem anda pela base.</p>
+        <ul>
+          <li>Vinculador: pôr e tirar da rede, por clique ou área, e vincular máquinas ao alcance</li>
+          <li>Configurador: copiar e colar andando, o mesmo perfil do Tablet</li>
+          <li>As mesmas regras do Tablet, sem nada que só exista neles</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Função → lugar</div>
+    <h2>Onde cada coisa existe</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Função</th><th>Hoje</th><th>Depois</th></tr></thead>
+        <tbody>
+          <tr><td class="fn">Criar rede</td><td><span class="chip t">Tablet</span><span class="chip l">Vinculador (tela)</span><span class="chip l">Vinculador (automático)</span><span class="chip m">Comando</span></td><td><span class="chip t">Tablet</span><span class="chip l">Vinculador (automático)</span><span class="chip m">Comando</span></td></tr>
+          <tr><td class="fn">Escolher a rede ativa</td><td><span class="chip t">Tablet</span><span class="chip l">Vinculador (tela)</span><span class="chip m">Comando</span></td><td><span class="chip t">Tablet</span><span class="chip l">Vinculador (a mesma lista)</span><span class="chip m">Comando</span></td></tr>
+          <tr><td class="fn">Cor, privada, remover rede</td><td><span class="chip t">Tablet</span> (remover também por comando)</td><td>igual</td></tr>
+          <tr><td class="fn">Modo, prioridade, redstone da face</td><td><span class="chip r">Roteador</span><span class="chip c">Configurador (colar)</span><span class="chip m">Comando</span></td><td><span class="chip r">Roteador</span><span class="chip t">Tablet (painel)</span><span class="chip c">Configurador (colar)</span><span class="chip m">Comando</span></td></tr>
+          <tr><td class="fn">Pôr face numa rede</td><td><span class="chip r">Roteador</span><span class="chip l">Vinculador</span><span class="chip t">Tablet Mover</span><span class="chip c">Configurador</span><span class="chip m">Comando</span> · 3 regras</td><td>os mesmos, mais <span class="chip t">Tablet (painel)</span> e o modo que já põe na ativa · 1 regra</td></tr>
+          <tr><td class="fn">Filtro da face</td><td><span class="chip r">Roteador</span> → <span class="chip f">Filtro</span> (à distância, só até 8 blocos)</td><td><span class="chip r">Roteador</span><span class="chip t">Tablet</span> → <span class="chip f">Filtro</span> (no alcance de abrir o nó)</td></tr>
+          <tr><td class="fn">Copiar configuração</td><td><span class="chip c">Configurador</span> (sem grupos) · perfil de grupo do alcance</td><td><span class="chip t">Tablet</span><span class="chip c">Configurador</span> · um perfil, com grupos</td></tr>
+          <tr><td class="fn">Ver a base</td><td><span class="chip t">Tablet</span> (Lista sem as faces, Mapa, Estatísticas)</td><td><span class="chip t">Tablet</span> (Lista com as faces e as máquinas do alcance)</td></tr>
+          <tr><td class="fn">Cartões e upgrades</td><td><span class="chip r">Roteador</span></td><td><span class="chip r">Roteador</span> (são itens, pedem slots)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Para você decidir</div>
+    <h2>Decisões</h2>
+    <div class="dec">
+      <div><div><b>Modo numa face sem rede põe na rede ativa</b><span>Escolher Extrai, Insere ou Armazém numa face que não tem rede a coloca na rede ativa do jogador. Tira o Vinculador do caminho obrigatório. Recomendo sim; quem quiser outra rede troca na linha Rede.</span></div></div>
+      <div><div><b>Uma regra para mudar várias de rede</b><span>Tablet Mover e Vinculador Área passam a mudar as mesmas faces: as que já estão em alguma rede (e os grupos do alcance juntos), com a escolha de faces e abas nos dois. Hoje o Mover muda tudo e o Vinculador só as faces marcadas da presa.</span></div></div>
+      <div><div><b>O perfil copiado leva os grupos do alcance</b><span>Copiar de um roteador com Upgrade de Alcance leva também os perfis dos grupos e as exceções; colar num roteador sem o upgrade aplica só a presa. Vale para o Tablet e o Configurador.</span></div></div>
+      <div><div><b>Máquinas do alcance na Lista do Tablet</b><span>O roteador com alcance aparece com os grupos e as máquinas embaixo, recuados, como no XNet. Alternativa mais simples: só o roteador na Lista, e os grupos dentro do painel.</span></div></div>
+      <div><div><b>Filtro à distância</b><span>A tela de filtro vale no mesmo alcance de abrir o nó, em vez dos 8 blocos de hoje.</span></div></div>
+      <div><div><b>Nome dos grupos</b><span>"Grupos" fica para os grupos de redes do Tablet; os de máquinas do alcance viram "Perfis" (um perfil por tipo de bloco), que é o que eles são.</span></div></div>
+      <div><div><b>Modo claro e escuro em todas as telas</b><span>Um botão no cabeçalho de cada tela do mod troca entre claro e escuro, e a escolha vale para todas de uma vez (roteador, Tablet, Vinculador, filtro, armazenamentos, roda do Configurador e editor de receitas). Fica salva na config do cliente, por jogador. Padrão: claro, como hoje.</span></div></div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">D7 · modo escuro</div>
+    <h2>As mesmas telas, em grafite</h2>
+    <p>Mesma identidade "Porcelana e Sinal": o painel vira grafite quente em vez de porcelana, a tinta vira porcelana, o coral continua a única cor de ação. As cores dos modos, dos tipos e dos tiers não mudam, porque já são saturadas e leem bem nos dois fundos.</p>
+    <div class="themes">
+      <div class="mini light">
+        <div class="mtop"></div>
+        <div class="mhead"><span>Fornalha 3</span><span class="mmu">12 itens/s</span><span class="mtog" title="Modo escuro">☾</span></div>
+        <div class="mtabs"><span class="on">Itens</span><span>Fluidos</span><span>Energia</span></div>
+        <div class="mfaces"><span class="sel"><i style="background:#E8742B"></i>Cima</span><span><i style="background:#2F6FD6"></i>Baixo</span><span class="off"><i style="background:#948870"></i>Frente</span></div>
+        <div class="mrow"><span class="mmu">Rede</span><span class="mdrop"><b style="background:#1FA7A0"></b>Linha de fundição ▾</span></div>
+        <div class="mrow"><span class="mmu">Filtro</span><span class="mdrop">Lista branca · 3 itens</span><span class="mbtn">Editar</span></div>
+        <div class="mrow"><span class="mbtn ok">Colar</span><span class="mbtn">Copiar</span><span class="mwarn">2 destinos cheios</span></div>
+      </div>
+      <div class="mini dark">
+        <div class="mtop"></div>
+        <div class="mhead"><span>Fornalha 3</span><span class="mmu">12 itens/s</span><span class="mtog" title="Modo claro">☀</span></div>
+        <div class="mtabs"><span class="on">Itens</span><span>Fluidos</span><span>Energia</span></div>
+        <div class="mfaces"><span class="sel"><i style="background:#E8742B"></i>Cima</span><span><i style="background:#2F6FD6"></i>Baixo</span><span class="off"><i style="background:#948870"></i>Frente</span></div>
+        <div class="mrow"><span class="mmu">Rede</span><span class="mdrop"><b style="background:#1FA7A0"></b>Linha de fundição ▾</span></div>
+        <div class="mrow"><span class="mmu">Filtro</span><span class="mdrop">Lista branca · 3 itens</span><span class="mbtn">Editar</span></div>
+        <div class="mrow"><span class="mbtn ok">Colar</span><span class="mbtn">Copiar</span><span class="mwarn">2 destinos cheios</span></div>
+      </div>
+    </div>
+    <div class="tbl">
+      <table class="pal">
+        <thead><tr><th>Cor da tela</th><th>Claro (hoje)</th><th>Escuro</th></tr></thead>
+        <tbody>
+          <tr><td>Painel</td><td><span class="sw" style="background:#F2EBDD"></span>#F2EBDD</td><td><span class="sw" style="background:#26232B"></span>#26232B</td></tr>
+          <tr><td>Botão, papel, lista</td><td><span class="sw" style="background:#FFFBF3"></span>#FFFBF3</td><td><span class="sw" style="background:#312D37"></span>#312D37</td></tr>
+          <tr><td>Fundo afundado (slots, barras)</td><td><span class="sw" style="background:#DDD3BF"></span>#DDD3BF</td><td><span class="sw" style="background:#1C1A20"></span>#1C1A20</td></tr>
+          <tr><td>Linhas e sombra</td><td><span class="sw" style="background:#BDB19A"></span>#BDB19A</td><td><span class="sw" style="background:#4A4550"></span>#4A4550</td></tr>
+          <tr><td>Texto e borda de botão</td><td><span class="sw" style="background:#2A2730"></span>#2A2730</td><td><span class="sw" style="background:#ECE5D6"></span>#ECE5D6</td></tr>
+          <tr><td>Texto secundário</td><td><span class="sw" style="background:#7A7366"></span>#7A7366</td><td><span class="sw" style="background:#A79F90"></span>#A79F90</td></tr>
+          <tr><td>Desligado</td><td><span class="sw" style="background:#B5AC9D"></span>#B5AC9D</td><td><span class="sw" style="background:#625C66"></span>#625C66</td></tr>
+          <tr><td>Ação (coral)</td><td><span class="sw" style="background:#F0603E"></span>#F0603E</td><td><span class="sw" style="background:#F26A48"></span>#F26A48</td></tr>
+          <tr><td>OK · aviso · perigo</td><td><span class="sw" style="background:#2F9D5C"></span><span class="sw" style="background:#D88A1A"></span><span class="sw" style="background:#D5453A"></span></td><td><span class="sw" style="background:#3DB56E"></span><span class="sw" style="background:#E39A2E"></span><span class="sw" style="background:#E55A4E"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><b>Onde troca:</b> o botão ☾/☀ no cabeçalho de cada tela, e a mesma opção na config do cliente. Vale na hora, sem reabrir a tela.</li>
+      <li><b>O que muda:</b> só as telas do mod. Itens, fluidos e o visor 3D aparecem iguais; o fundo quadriculado do visor acompanha o tema. O livro-guia (GuideME), o JEI e as telas do Minecraft não são nossos e ficam como estão.</li>
+      <li><b>Como:</b> as cores do <code>GuiPaint</code> passam a vir do tema escolhido, e as cerca de 45 cores soltas em outras telas vão para ele também. Nada muda no servidor.</li>
+    </ul>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Ordem</div>
+    <h2>Etapas</h2>
+    <div class="cols" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:22px">
+      <div style="min-width:0">
+        <h3 style="margin-bottom:6px"><span class="etapa" style="margin:0">Etapa 0</span> Claro e escuro</h3>
+        <ul>
+          <li>Tema nas cores do <code>GuiPaint</code> e as cores soltas levadas para ele</li>
+          <li>Botão ☾/☀ em todas as telas e a opção na config do cliente (D7)</li>
+          <li>Vem primeiro e é pequena: o painel novo já nasce com as cores do tema, sem retrabalho</li>
+        </ul>
+      </div>
+      <div style="min-width:0">
+        <h3 style="margin-bottom:6px"><span class="etapa e1" style="margin:0">Etapa 1</span> Painel do nó</h3>
+        <ul>
+          <li>O painel como componente, na tela do roteador e na Lista do Tablet</li>
+          <li>Copiar e colar no Tablet, em um ou nos marcados</li>
+          <li>Filtro à distância (D5) e modo que põe na rede ativa (D1)</li>
+          <li>Tarefas 1, 2 e 3</li>
+        </ul>
+      </div>
+      <div style="min-width:0">
+        <h3 style="margin-bottom:6px"><span class="etapa e2" style="margin:0">Etapa 2</span> Uma regra só</h3>
+        <ul>
+          <li>Redes num lugar só e a lista do Vinculador (tarefa 5)</li>
+          <li>A mesma regra para Mover e Vinculador (D2)</li>
+          <li>Perfil com os grupos, máquinas do alcance na Lista e o nome Perfis (D3, D4, D6)</li>
+          <li>Tarefas 4, 5 e 6</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>

@@ -23,9 +23,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Para não duplicar nem perder, cada entrega segue: simula a extração, simula a inserção no
  * destino, extrai de verdade só o que o destino aceitaria e insere de verdade exatamente o que
  * saiu. Assim nunca se insere algo que não foi tirado. Se o destino mentiu na simulação e devolve
- * sobra, ela volta para a origem (mesmo slot, depois qualquer slot); se nem a origem aceitar
- * (slot só de saída, por exemplo), a sobra cai no mundo na posição do roteador e o caso vai para o
- * log. Se a extração real der menos que o simulado, só o que saiu é entregue e a visita para.
+ * sobra, ela volta para o mesmo slot da origem; se ele não aceitar (slot só de saída, por exemplo),
+ * vai para os destinos da passada cujo filtro deixe, e só o resto cai no mundo na posição do
+ * roteador, com o caso no log. Se a extração real der menos que o simulado, só o que saiu é entregue e a visita para.
  *
  * <p>Filtros ({@link Port#filter}: o embutido e os dos cartões, montados na montagem das rotas; ver
  * {@link FilterSet}): o da origem decide que slots podem sair, e o do destino o que pode entrar. Um slot recusado pela origem só conta como varrido (a
@@ -283,7 +283,7 @@ final class ItemTransfer {
             ItemStack leftover = execute(bulkTarget, target, taken);
             int delivered = takenCount - leftover.getCount();
             if (!leftover.isEmpty()) {
-                giveBack(source, handler, slot, leftover);
+                giveBack(source, handler, slot, leftover, pass);
             }
             if (delivered > 0) {
                 PLAN.delivered(destination, offered, delivered);
@@ -297,7 +297,7 @@ final class ItemTransfer {
                 if (remaining == 0 && stock == 0 && allowance > 0 && takenCount == offered.getCount()) {
                     // Entregou a extração inteira e o slot pode ter mais (gaveta, upgrade de pilha):
                     // as próximas vão direto para este destino, sem simular.
-                    moved += burst(source, handler, slot, bulkTarget, target, destination, offered, max - moved, allowance);
+                    moved += burst(source, handler, slot, bulkTarget, target, destination, offered, max - moved, allowance, pass);
                 }
             } else {
                 destination.destinationBackoff.sleep(now);
@@ -321,7 +321,7 @@ final class ItemTransfer {
      * Devolve quanto entregou; cada extração conta em {@link #burstSteps}.
      */
     private static int burst(Port source, IItemHandler handler, int slot, @Nullable BulkItems bulkTarget,
-            @Nullable IItemHandler target, Port destination, ItemStack offered, int cap, int allowance) {
+            @Nullable IItemHandler target, Port destination, ItemStack offered, int cap, int allowance, List<Port> pass) {
         int size = offered.getCount();
         int moved = 0;
         while (burstSteps < allowance && moved < cap) {
@@ -336,14 +336,14 @@ final class ItemTransfer {
             burstSteps++;
             if (!ItemStack.isSameItemSameComponents(taken, offered)) {
                 // O filtro do destino aprovou outro item: devolve.
-                giveBack(source, handler, slot, taken);
+                giveBack(source, handler, slot, taken, pass);
                 break;
             }
             int takenCount = taken.getCount();
             ItemStack leftover = execute(bulkTarget, target, taken);
             int delivered = takenCount - leftover.getCount();
             if (!leftover.isEmpty()) {
-                giveBack(source, handler, slot, leftover);
+                giveBack(source, handler, slot, leftover, pass);
             }
             if (delivered > 0 && source.network != null) {
                 source.network.ops++;
@@ -708,19 +708,39 @@ final class ItemTransfer {
         }
     }
 
-    private static void giveBack(Port source, IItemHandler handler, int slot, ItemStack leftover) {
+    /**
+     * Devolve ao mesmo slot da origem o que o destino recusou depois de aceitar na simulação. Outro
+     * slot da origem não serve: pode ser a entrada da máquina (a pedra tirada da saída de um forno
+     * voltava pela entrada e virava pedra lisa), e o filtro da face nem é consultado. O que não couber
+     * vai para os destinos da passada cujo filtro aceite, e só o resto cai no mundo.
+     */
+    private static void giveBack(Port source, IItemHandler handler, int slot, ItemStack leftover, List<Port> pass) {
         ItemStack rest = handler.insertItem(slot, leftover, false);
-        if (!rest.isEmpty()) {
-            rest = ItemHandlerHelper.insertItemStacked(handler, rest, false);
+        for (int i = 0, n = pass.size(); i < n && !rest.isEmpty(); i++) {
+            rest = rescue(pass.get(i), rest);
         }
         if (!rest.isEmpty()) {
             Level level = source.node.getLevel();
-            WirelessAutomate.LOGGER.warn("Destino recusou {} depois de aceitar na simulação e a origem {} não aceitou de volta; soltando no mundo",
+            WirelessAutomate.LOGGER.warn("Destino recusou {} depois de aceitar na simulação e nem a origem {} nem outro destino aceitaram; soltando no mundo",
                     rest, source);
             if (level != null) {
                 Block.popResource(level, source.node.getBlockPos(), rest);
             }
         }
+    }
+
+    /** Insere a sobra no destino, se o filtro dele deixar (sem estoque: é só para não perdê-la). */
+    private static ItemStack rescue(Port destination, ItemStack rest) {
+        if (!destination.filter.testItem(rest)) {
+            return rest;
+        }
+        BulkItems bulk = destination.node.bulkItems(destination.face);
+        if (bulk != null) {
+            long in = bulk.insert(rest, rest.getCount(), false);
+            return rest.copyWithCount(rest.getCount() - (int) in);
+        }
+        IItemHandler target = destination.node.items(destination.face);
+        return target == null ? rest : ItemHandlerHelper.insertItemStacked(target, rest, false);
     }
 
     /**

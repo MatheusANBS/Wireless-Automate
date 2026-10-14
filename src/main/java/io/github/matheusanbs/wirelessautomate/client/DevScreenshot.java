@@ -117,6 +117,8 @@ public final class DevScreenshot {
     private static final UUID LONG = UUID.nameUUIDFromBytes("longa".getBytes());
 
     private static RouterScreen screen;
+    /** O tema de antes das capturas escuras, devolvido depois delas. */
+    private static GuiTheme themeBefore = GuiTheme.LIGHT;
     private static int ticks;
     /** Tiques contados só sem a tela de carregamento por cima. */
     private static int ready;
@@ -194,6 +196,7 @@ public final class DevScreenshot {
             new Step(() -> {
                 // tema escuro só nas capturas, sem gravar a config
                 screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
+                themeBefore = GuiThemes.current();
                 GuiThemes.preview(GuiTheme.DARK);
                 screen.previewType(ResourceType.ITEM);
                 screen.previewFace(Direction.DOWN);
@@ -204,7 +207,7 @@ public final class DevScreenshot {
                 screen.previewNetworkList(false);
                 screen.previewResize(300, 240);
             }, "6d-escuro-estreito"),
-            new Step(() -> GuiThemes.preview(GuiTheme.LIGHT), "6e-estreito"));
+            new Step(() -> GuiThemes.preview(themeBefore), "6e-estreito"));
 
     /** Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador e as galerias (giro, blocos, capa, roda). */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),

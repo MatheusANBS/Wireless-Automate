@@ -672,12 +672,25 @@ public final class NodePanel {
         if (undo != null && undo.contains(mx, my)) {
             return undo;
         }
+        if (netW > 0) {
+            RemoteSide side = FaceNet.sideAt((int) Math.floor(mx) - netX, (int) Math.floor(my) - netY, cellW, cellH,
+                    NET_GAP);
+            if (side != null) {
+                return hot(Kind.FACE, side.ordinal());
+            }
+        }
         for (Hot hot : hots) {
-            if (hot.contains(mx, my)) {
+            if (hot.kind() != Kind.FACE && hot.contains(mx, my)) {
                 return hot;
             }
         }
         return null;
+    }
+
+    /** O ponto está na faixa do aviso do painel (que fica por cima do que estiver embaixo dela). */
+    private boolean inNotice(double mx, double my) {
+        return bodyW > 0 && PanelNotices.current() != null && mx >= bodyX && mx < bodyX + bodyW
+                && my >= noticeY() && my < noticeY() + NOTICE_H;
     }
 
     /** A face do cubo sob o mouse (para o visor realçar a mesma), ou {@code null}. */
@@ -760,6 +773,15 @@ public final class NodePanel {
         arrange();
         if (popup != Popup.NONE) {
             clickPopup(mx, my);
+            return true;
+        }
+        if (inNotice(mx, my)) {
+            // a faixa inteira do aviso engole o clique; só o Desfazer age
+            Hot undo = hot(Kind.UNDO);
+            PanelNoticePayload notice = PanelNotices.current();
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && undo != null && undo.contains(mx, my) && notice != null) {
+                undo(notice);
+            }
             return true;
         }
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -880,6 +902,9 @@ public final class NodePanel {
             return null;
         }
         arrange();
+        if (inNotice(mx, my)) {
+            return null;
+        }
         Hot hot = hotAt(mx, my);
         if (hot == null) {
             return null;
@@ -1157,8 +1182,8 @@ public final class NodePanel {
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
         PortMode mode = lit ? v.mode() : PortMode.NONE;
         if (selected) {
-            GuiPaint.box(g, x, y, w, h, fill, GuiPaint.SELECTED);
-            GuiPaint.outline(g, x + 1, y + 1, w - 2, h - 2, GuiPaint.SELECTED);
+            GuiPaint.box(g, x, y, w, h, fill, GuiPaint.ACCENT);
+            GuiPaint.outline(g, x + 1, y + 1, w - 2, h - 2, GuiPaint.ACCENT);
         } else if (mode == PortMode.NONE) {
             dashed(g, x, y, w, h, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         } else {
@@ -1171,12 +1196,13 @@ public final class NodePanel {
         NetworkEntry entry = network(direction);
         int marks = (entry != null ? 6 : 0) + (routerHere ? 7 : 0);
         int room = w - 6 - marks;
-        Component full = sideName(side);
-        Component shortName = tr("side.short." + side.key());
+        // na face onde o roteador está preso, "roteador" no lugar do lado (o lado vai na dica)
+        Component full = routerHere ? panelTr("face.router") : sideName(side);
+        Component shortName = routerHere ? panelTr("face.router.short") : tr("side.short." + side.key());
         Component label = switch (FaceNet.label(font.width(full), font.width(shortName), room)) {
             case FULL -> full;
             case SHORT -> shortName;
-            case LETTER -> tr("side.letter." + side.key());
+            case LETTER -> routerHere ? panelTr("face.router.letter") : tr("side.letter." + side.key());
         };
         int textY = y + Math.max(3, (h - 8) / 2 + 1);
         GuiText.draw(g, font, label, x + 3, textY, room, !lit ? GuiPaint.DISABLED : selected ? GuiPaint.FG : GuiPaint.MUTED);

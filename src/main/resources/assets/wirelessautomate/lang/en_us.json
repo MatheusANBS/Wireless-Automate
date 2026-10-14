@@ -879,5 +879,8 @@
   "gui.wirelessautomate.panel.filter.none": "No filter",
   "gui.wirelessautomate.panel.priority": "Prior.",
   "gui.wirelessautomate.panel.redstone.hint": "Click to choose when the face works",
-  "gui.wirelessautomate.panel.notice.undo": "Undo"
+  "gui.wirelessautomate.panel.notice.undo": "Undo",
+  "gui.wirelessautomate.panel.face.router": "router",
+  "gui.wirelessautomate.panel.face.router.short": "rtr.",
+  "gui.wirelessautomate.panel.face.router.letter": "R"
 }

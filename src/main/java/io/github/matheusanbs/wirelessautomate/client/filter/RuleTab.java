@@ -158,13 +158,6 @@ final class RuleTab {
         ruleAddButton.active = draft.isValid() && picker.enchantFieldValid() && picker.levelFieldValid();
     }
 
-    private int scopeRowY() {
-        int ry = COND_Y + Property.values().length * COND_ROW + 3;
-        if (draft.enchantment().isPresent()) {
-            ry += FIELD_H + 1;
-        }
-        return ry + 2 * (COND_ROW + 3);
-    }
 
     /** A visão mudou: a regra em edição sumiu do filtro (ou mudou de lugar para outra coisa) e não é mais editada. */
     void dropStaleEditing(Filter f) {

@@ -307,7 +307,7 @@ final class StorageGrid {
         }
     }
 
-    /** Quantidade abreviada no canto da célula, em meia escala, por cima do tipo (mB nos tanques). */
+    /** Quantidade abreviada no canto da célula, em meia escala, por cima do tipo (nos tanques, em mB, sem a unidade). */
     private void drawCount(GuiGraphics g, Font font, long count, int cx, int cy) {
         if (count <= 1 && screen.items()) {
             return;

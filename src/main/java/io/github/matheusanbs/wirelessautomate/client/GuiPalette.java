@@ -12,19 +12,19 @@ public record GuiPalette(
         int panel, int bevelLight, int inset, int bevelDark, int rowHover,
         int fg, int muted, int disabled, int tabIdle,
         int accent, int accentDeep, int ok, int warn, int danger, int paused, int brass, int ruleText,
-        int tooltipMuted, int darkText, int ring) {
+        int tooltipMuted, int tooltipAccent, int darkText, int ring) {
 
     public static final GuiPalette LIGHT = new GuiPalette(
             0xFFF2EBDD, 0xFFFFFBF3, 0xFFDDD3BF, 0xFFBDB19A, 0xFFF8F3E8,
             0xFF2A2730, 0xFF7A7366, 0xFFB5AC9D, 0xFF5A5660,
             0xFFF0603E, 0xFFC2442A, 0xFF2F9D5C, 0xFFD88A1A, 0xFFD5453A, 0xFF6B6FD0, 0xFFB48E2E, 0xFF5A36B0,
-            0xFFBDB19A, 0xFF0F0E12, 0xFF1B1920);
+            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920);
 
     public static final GuiPalette DARK = new GuiPalette(
             0xFF26232B, 0xFF312D37, 0xFF1C1A20, 0xFF4A4550, 0xFF3A3640,
             0xFFECE5D6, 0xFFA79F90, 0xFF625C66, 0xFF9A9284,
             0xFFF26A48, 0xFFC2442A, 0xFF3DB56E, 0xFFE39A2E, 0xFFE55A4E, 0xFF8A8EE8, 0xFFD2AE4E, 0xFFB79AF5,
-            0xFFBDB19A, 0xFF0F0E12, 0xFF1B1920);
+            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920);
 
     public static GuiPalette of(GuiTheme theme) {
         return theme == GuiTheme.DARK ? DARK : LIGHT;

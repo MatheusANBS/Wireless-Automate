@@ -67,6 +67,8 @@ public final class GuiPaint {
     public static int DISABLED;
     /** Texto secundário dentro das dicas do jogo, que têm fundo escuro: porcelana apagada. */
     public static int TOOLTIP_MUTED;
+    /** Destaque dentro das dicas do jogo (fundo escuro nos dois temas): coral claro. */
+    public static int TOOLTIP_ACCENT;
     /** Abas inativas: só o texto, em {@code grafite.4}. */
     public static int TAB_IDLE;
     /** Texto sobre uma cor clara (tier, recurso, modo): {@code grafite.0}. */
@@ -116,6 +118,7 @@ public final class GuiPaint {
         MUTED = p.muted();
         DISABLED = p.disabled();
         TOOLTIP_MUTED = p.tooltipMuted();
+        TOOLTIP_ACCENT = p.tooltipAccent();
         TAB_IDLE = p.tabIdle();
         DARK_TEXT = p.darkText();
         RING = p.ring();

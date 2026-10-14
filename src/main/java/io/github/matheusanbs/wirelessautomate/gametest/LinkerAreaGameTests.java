@@ -922,7 +922,7 @@ public final class LinkerAreaGameTests {
     /**
      * No modo Máquinas o Vinculador não usa as faces: {@code check} não as olha e a prévia conta com
      * Todas (A, inteiro na rede ativa, já estava; B, só com a Norte, não). O Vincular do modo Máquinas
-     * com as faces vazias é conferido no {@code RangeGameTests.linkerAreaLinksBlockEntitiesOfMarkedTabs}.
+     * com as faces vazias é conferido no {@code RangeLinkerGameTests.linkerAreaLinksBlockEntitiesOfMarkedTabs}.
      */
     @GameTest(template = "empty")
     public static void machinesModeIgnoresFaces(GameTestHelper helper) {

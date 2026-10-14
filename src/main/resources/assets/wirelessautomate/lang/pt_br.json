@@ -879,5 +879,8 @@
   "gui.wirelessautomate.recipes.tooltip.clear": "Clique direito: limpar",
   "gui.wirelessautomate.recipes.tooltip.pick": "Clique e escolha um item no inventário",
   "gui.wirelessautomate.recipes.reload_failed": "A recarga falhou; veja o log do servidor",
-  "gui.wirelessautomate.recipes.reload_busy": "Uma recarga já está em andamento"
+  "gui.wirelessautomate.recipes.reload_busy": "Uma recarga já está em andamento",
+  "gui.wirelessautomate.panel.notice.joined": "%s entrou em %s",
+  "gui.wirelessautomate.panel.network.choose": "Escolha a rede desta face",
+  "gui.wirelessautomate.panel.network.no_active": "Você não tem uma rede ativa. Com uma, a face entra sozinha."
 }

@@ -1,6 +1,8 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;

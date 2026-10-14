@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
+import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;

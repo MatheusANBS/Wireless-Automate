@@ -1,11 +1,11 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Candidate;
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Group;
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Suggestion;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Candidate;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Group;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Suggestion;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

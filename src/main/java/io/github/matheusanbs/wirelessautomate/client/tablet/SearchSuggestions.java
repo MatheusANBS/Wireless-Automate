@@ -1,8 +1,10 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.tablet;
 
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Candidate;
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Group;
-import io.github.matheusanbs.wirelessautomate.client.TabletSearch.Suggestion;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Candidate;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Group;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Suggestion;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -193,7 +195,7 @@ final class SearchSuggestions {
         int sy = y + 1;
         for (Line line : lines()) {
             if (line.title() != null) {
-                GuiText.draw(g, font, TabletScreen.tr("list.suggest." + line.title().name().toLowerCase(Locale.ROOT)),
+                GuiText.draw(g, font, TabletText.tr("list.suggest." + line.title().name().toLowerCase(Locale.ROOT)),
                         x + 5, sy + 1, w - 10, GuiPaint.MUTED);
                 sy += TITLE;
                 continue;
@@ -210,7 +212,7 @@ final class SearchSuggestions {
             sy += ROW;
         }
         g.fill(x + 3, sy, x + w - 3, sy + 1, GuiPaint.LINE);
-        GuiText.draw(g, font, TabletScreen.tr("list.suggest.footer", text.strip()), x + 5, sy + 2, w - 10,
+        GuiText.draw(g, font, TabletText.tr("list.suggest.footer", text.strip()), x + 5, sy + 2, w - 10,
                 GuiPaint.DISABLED);
         g.pose().popPose();
     }

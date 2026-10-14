@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;

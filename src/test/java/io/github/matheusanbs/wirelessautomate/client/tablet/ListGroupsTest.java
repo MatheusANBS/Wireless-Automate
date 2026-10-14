@@ -1,10 +1,10 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.matheusanbs.wirelessautomate.client.ListGroups.Row;
+import io.github.matheusanbs.wirelessautomate.client.tablet.ListGroups.Row;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;

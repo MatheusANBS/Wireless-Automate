@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import java.text.Normalizer;
 import java.util.ArrayList;

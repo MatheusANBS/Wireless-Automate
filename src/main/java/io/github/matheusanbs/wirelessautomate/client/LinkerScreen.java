@@ -96,7 +96,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private final List<FlatButton> faceButtons = new ArrayList<>();
     private int scroll;
     private boolean creating;
-    private String draft = "";
+    /** O nome começado para a rede nova, lembrado na sessão (como o tamanho): volta ao reabrir o campo ou a tela. */
+    private static String draft = "";
 
     private FlatButton newButton;
     private FlatButton createButton;
@@ -560,8 +561,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     private void startCreate() {
         creating = true;
-        draft = "";
-        nameBox.setValue("");
+        nameBox.setValue(draft);
         setFocused(nameBox);
         refresh();
     }
@@ -575,6 +575,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         String name = nameBox.getValue().strip();
         if (commit && !name.isEmpty() && !preview) {
             send(Op.CREATE_NETWORK, Optional.empty(), name, 0);
+            draft = "";
+            nameBox.setValue("");
         }
         refresh();
     }
@@ -641,7 +643,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     /**
      * Refaz os widgets no tamanho lembrado. A rolagem e o modo ficam em campos; o campo de nome de
-     * rede nova é fechado (o texto digitado volta ao reabrir, como no Tablet).
+     * rede nova é fechado, e o texto que já estava nele fica no rascunho ({@link #draft}, lembrado na
+     * sessão) e volta ao reabrir o campo ou a tela; criada a rede, o rascunho fica vazio.
      */
     private void rebuild() {
         creating = false;
@@ -1307,6 +1310,17 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     void previewCancelCreate() {
         finishCreate(false);
+        draft = "";
+    }
+
+    /** e2e: o campo do nome da rede nova. */
+    EditBox nameBox() {
+        return nameBox;
+    }
+
+    /** e2e: o campo do nome está aberto. */
+    boolean creating() {
+        return creating;
     }
 
     /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */

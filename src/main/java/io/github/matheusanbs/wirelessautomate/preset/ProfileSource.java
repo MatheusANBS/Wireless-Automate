@@ -24,6 +24,16 @@ public record ProfileSource(String nodeName, ResourceLocation machine, NodeKey o
     /** Maior nome guardado (o nome de um roteador já é curto; o corte protege o pacote). */
     public static final int MAX_NAME = 64;
 
+    /** O nome entra cortado a {@link #MAX_NAME}: um nome longo vindo do NBT (criativo, {@code /give}) derrubaria a conexão no pacote. */
+    public ProfileSource {
+        nodeName = clip(nodeName);
+    }
+
+    /** {@code name} cortado a {@link #MAX_NAME} caracteres. */
+    public static String clip(String name) {
+        return name.length() > MAX_NAME ? name.substring(0, MAX_NAME) : name;
+    }
+
     public static final Codec<ProfileSource> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("name").forGetter(ProfileSource::nodeName),
             ResourceLocation.CODEC.fieldOf("machine").forGetter(ProfileSource::machine),

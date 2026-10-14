@@ -84,7 +84,8 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
     /**
      * Da tela do roteador perto ({@link FilterOrigin#NEAR}), a mesma regra do {@link RouterMenu}: roteador
      * no mundo, mesma dimensão e até 8 blocos. Do Tablet ou da tela à distância, a regra do Tablet:
-     * roteador no mundo e ao alcance dele ({@link TabletMenu#inReach}), com o jogador ainda tendo o Tablet.
+     * roteador no mundo, ao alcance dele ({@link TabletMenu#inReach}) e visível ao jogador ({@link TabletMenu#canSee}),
+     * com o jogador ainda tendo o Tablet.
      */
     @Override
     public boolean stillValid(Player player) {
@@ -95,7 +96,8 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
             return stillValid(router, player);
         }
         return loadedInOwnLevel(router) && player instanceof ServerPlayer serverPlayer
-                && TabletMenu.hasTablet(serverPlayer) && TabletMenu.inReach(serverPlayer, router);
+                && TabletMenu.hasTablet(serverPlayer) && TabletMenu.inReach(serverPlayer, router)
+                && TabletMenu.canSee(serverPlayer, router);
     }
 
     /** O roteador está no mundo dele, carregado, seja qual for a dimensão do jogador (como a tela à distância). */

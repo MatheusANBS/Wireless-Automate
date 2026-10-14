@@ -5,11 +5,11 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
-import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.What;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -46,6 +46,8 @@ import net.minecraft.resources.ResourceLocation;
  * @param networkFacets as redes visíveis das faces dos nós visíveis, com quantos nós cada uma tem
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
  * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
+ * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
+ * @param originMatches o nó de origem do perfil passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)
  * @param noticeId      muda a cada aviso novo, para a tela mostrá-lo de novo
  */
@@ -66,6 +68,8 @@ public record TabletSnapshot(
         QuickCounts quickCounts,
         Optional<ProfileSummary> profile,
         List<NodeView> nodes,
+        List<Facet<ResourceLocation>> groupCounts,
+        boolean originMatches,
         Component notice,
         int noticeId) {
 
@@ -106,10 +110,12 @@ public record TabletSnapshot(
      *
      * @param sourceName nome do nó de onde o perfil veio
      * @param machine    bloco da máquina de origem
+     * @param origin     o nó de origem, que o colar deixa de fora
      * @param types      os tipos carregados que têm alguma face com modo
      * @param faces      quantas faces (tipo × lado) dos tipos carregados têm modo
      */
-    public record ProfileSummary(String sourceName, ResourceLocation machine, List<ResourceType> types, int faces) {
+    public record ProfileSummary(String sourceName, ResourceLocation machine, NodeKey origin, List<ResourceType> types,
+            int faces) {
     }
 
     /** Um valor (uma máquina, uma rede) e quantos nós visíveis o têm. */
@@ -287,20 +293,26 @@ public record TabletSnapshot(
      * @param roles          papéis em bits ({@code NodeIndex.role})
      * @param machine        bloco da máquina, para o ícone e o nome
      * @param removedNetwork alguma face aponta para uma rede que não existe mais
-     * @param faceModes      os modos das faces da máquina presa ({@link NodeIndex#faceModes})
+     * @param faceModes      os modos das faces da máquina presa, pelos lados dela ({@link NodeIndex#faceModes})
+     * @param rates          a vazão do nó por {@link ResourceType#ordinal()} na última amostra, na unidade da tela
      * @param profile        a comparação com o perfil copiado no Tablet; vazio sem perfil copiado
      */
     public record NodeView(NodeKey key, String name, ResourceLocation machine, RouterTier tier,
             List<List<UUID>> networks, int roles, NodeStatus status, boolean removedNetwork, long faceModes,
-            Optional<ProfileMatch> profile) {
+            List<Long> rates, Optional<ProfileMatch> profile) {
         /** As redes das faces do tipo {@code type}. */
         public List<UUID> networks(ResourceType type) {
             return networks.get(type.ordinal());
         }
 
-        /** O modo da face {@code side} do tipo {@code type}. */
-        public PortMode faceMode(ResourceType type, RelativeSide side) {
+        /** O modo da face do lado {@code side} da máquina, do tipo {@code type}. */
+        public PortMode faceMode(ResourceType type, RemoteSide side) {
             return NodeIndex.faceMode(faceModes, type, side);
+        }
+
+        /** A vazão do tipo na última amostra (0 sem amostra). */
+        public long rate(ResourceType type) {
+            return type.ordinal() < rates.size() ? rates.get(type.ordinal()) : 0;
         }
 
         /** Redes distintas somando os tipos carregados (uma rede em dois tipos conta uma vez), como a dica. */
@@ -314,28 +326,41 @@ public record TabletSnapshot(
      *
      * @param totalNodes    nós visíveis ao jogador, sem filtro
      * @param matchingNodes nós que passam na consulta
+     * @param groupCounts   quantos nós de cada máquina passam na consulta
+     * @param originMatches o nó de origem do perfil passa na consulta
      */
-    public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes) {
+    public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes,
+            List<Facet<ResourceLocation>> groupCounts, boolean originMatches) {
         /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
-        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of());
+        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), List.of(), false);
         public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
                 StreamCodec.of(TabletSnapshot::encodePage, TabletSnapshot::decodePage);
     }
 
     public Page page() {
-        return new Page(query, totalNodes, matchingNodes, nodes);
+        return new Page(query, totalNodes, matchingNodes, nodes, groupCounts, originMatches);
     }
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
-                page.nodes(), notice, noticeId);
+                page.nodes(), page.groupCounts(), page.originMatches(), notice, noticeId);
     }
 
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
     public boolean sameHeader(TabletSnapshot other) {
         return withPage(Page.EMPTY).equals(other.withPage(Page.EMPTY));
+    }
+
+    /** Quantos nós da máquina passam na consulta (0 se nenhum). */
+    public int groupCount(ResourceLocation machine) {
+        for (Facet<ResourceLocation> facet : groupCounts) {
+            if (facet.id().equals(machine)) {
+                return facet.count();
+            }
+        }
+        return 0;
     }
 
     public Optional<NetworkView> network(UUID id) {
@@ -417,6 +442,7 @@ public record TabletSnapshot(
         buf.writeOptional(s.profile, (b, p) -> {
             b.writeUtf(p.sourceName, ProfileSource.MAX_NAME);
             b.writeResourceLocation(p.machine);
+            NodeKey.STREAM_CODEC.encode(b, p.origin);
             b.writeVarInt(p.types.size());
             p.types.forEach(type -> b.writeEnum(type));
             b.writeVarInt(p.faces);
@@ -445,6 +471,9 @@ public record TabletSnapshot(
             buf.writeEnum(n.status);
             buf.writeBoolean(n.removedNetwork);
             buf.writeLong(n.faceModes);
+            for (ResourceType type : ResourceType.values()) {
+                buf.writeVarLong(n.rate(type));
+            }
             buf.writeOptional(n.profile, (b, match) -> {
                 b.writeBoolean(match.equal());
                 if (!match.equal()) {
@@ -454,6 +483,12 @@ public record TabletSnapshot(
                 }
             });
         }
+        buf.writeVarInt(page.groupCounts.size());
+        for (Facet<ResourceLocation> facet : page.groupCounts) {
+            buf.writeResourceLocation(facet.id());
+            buf.writeVarInt(facet.count());
+        }
+        buf.writeBoolean(page.originMatches);
     }
 
     private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
@@ -517,18 +552,19 @@ public record TabletSnapshot(
         Optional<ProfileSummary> profile = buf.readOptional(b -> {
             String sourceName = b.readUtf(ProfileSource.MAX_NAME);
             ResourceLocation machine = b.readResourceLocation();
+            NodeKey origin = NodeKey.STREAM_CODEC.decode(b);
             int typeCount = b.readVarInt();
             List<ResourceType> types = new ArrayList<>(typeCount);
             for (int i = 0; i < typeCount; i++) {
                 types.add(b.readEnum(ResourceType.class));
             }
-            return new ProfileSummary(sourceName, machine, List.copyOf(types), b.readVarInt());
+            return new ProfileSummary(sourceName, machine, origin, List.copyOf(types), b.readVarInt());
         });
         Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
-                List.copyOf(networkFacets), quickCounts, profile, List.of(), notice, noticeId);
+                List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), false, notice, noticeId);
     }
 
     private static Page decodePage(RegistryFriendlyByteBuf buf) {
@@ -555,12 +591,24 @@ public record TabletSnapshot(
             NodeStatus status = buf.readEnum(NodeStatus.class);
             boolean removed = buf.readBoolean();
             long faceModes = buf.readLong();
+            List<Long> rates = new ArrayList<>(ResourceType.values().length);
+            for (int t = 0; t < ResourceType.values().length; t++) {
+                rates.add(buf.readVarLong());
+            }
             Optional<ProfileMatch> profile = buf.readOptional(b -> b.readBoolean() ? ProfileMatch.EQUAL
-                    : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RelativeSide.class),
+                    : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
                             b.readEnum(What.class)));
             nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, status, removed,
-                    faceModes, profile));
+                    faceModes, List.copyOf(rates), profile));
         }
-        return new Page(query, total, matching, List.copyOf(nodes));
+        int groupCount = buf.readVarInt();
+        if (groupCount > MAX_NODES) {
+            throw new DecoderException("groups " + groupCount + " > " + MAX_NODES);
+        }
+        List<Facet<ResourceLocation>> groupCounts = new ArrayList<>(groupCount);
+        for (int i = 0; i < groupCount; i++) {
+            groupCounts.add(new Facet<>(buf.readResourceLocation(), buf.readVarInt()));
+        }
+        return new Page(query, total, matching, List.copyOf(nodes), List.copyOf(groupCounts), buf.readBoolean());
     }
 }

@@ -17,7 +17,6 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
-import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
@@ -28,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.What;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -55,6 +55,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -234,6 +235,9 @@ public final class TabletProfileGameTests {
                         helper.assertTrue(same(source, target), "o alvo não ficou como o perfil");
                         helper.assertTrue(text(menu).contains("pasted"), "aviso: " + text(menu));
                         helper.assertTrue(menu.canUndo(), "sem desfazer depois de colar");
+                        // colar só na origem não cola nada: o aviso diz isso, não "colado em 0 nós"
+                        eq(helper, profile(player, 92, Action.PASTE_ONE, key(source)), 0, "colou na origem");
+                        helper.assertTrue(text(menu).contains("nothing_pasted "), "aviso sem colar: " + text(menu));
                         helper.succeed();
                     } finally {
                         player.containerMenu = player.inventoryMenu;
@@ -505,42 +509,42 @@ public final class TabletProfileGameTests {
         configure(a, one.id());
         configure(b, one.id());
         RouterPreset profile = RouterPreset.copyOf(a);
-        helper.assertTrue(ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).isEmpty(), "cópias diferem");
-        helper.assertTrue(ProfileDiff.match(profile, RouterPreset.copyOf(b)).equal(), "cópias não são iguais");
+        helper.assertTrue(ProfileDiff.firstDifference(profile, b).isEmpty(), "cópias diferem");
+        helper.assertTrue(ProfileDiff.match(profile, b).equal(), "cópias não são iguais");
 
-        // o lado da frente em Itens (FRONT) é o primeiro lado
+        // a face de cima do baú, nos lados da máquina (o painel mostra Cima)
         b.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.MODE), "modo");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.MODE), "modo");
         b.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
 
         b.setFaceNetwork(ResourceType.ITEM, Direction.UP, two.id());
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.NETWORK), "rede");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.NETWORK), "rede");
         b.setFaceNetwork(ResourceType.ITEM, Direction.UP, one.id());
 
         b.setFilter(ResourceType.ITEM, Direction.UP, onlyOf(Items.STONE));
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.FILTER), "filtro");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.FILTER), "filtro");
         b.setFilter(ResourceType.ITEM, Direction.UP, onlyOf(Items.DIAMOND));
 
         b.setPriority(ResourceType.ITEM, Direction.UP, 9);
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.PRIORITY), "prioridade");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.PRIORITY), "prioridade");
         b.setPriority(ResourceType.ITEM, Direction.UP, 5);
 
         b.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.HIGH);
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.REDSTONE), "redstone");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.REDSTONE), "redstone");
         b.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.IGNORE);
 
-        // a ordem é a dos tipos carregados e depois a dos lados: uma diferença em Fluidos vem depois de Itens
+        // a ordem é a dos tipos carregados e depois a dos lados da máquina: uma diferença em Fluidos vem depois de Itens
         b.setMode(ResourceType.FLUID, Direction.DOWN, PortMode.EXTRACT);
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.FLUID, RelativeSide.BACK, What.MODE), "fluido");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.FLUID, RemoteSide.BOTTOM, What.MODE), "fluido");
         b.setPriority(ResourceType.ITEM, Direction.UP, 1);
-        eq(helper, ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).orElse(null),
-                ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.PRIORITY), "itens antes de fluidos");
+        eq(helper, ProfileDiff.firstDifference(profile, b).orElse(null),
+                ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.PRIORITY), "itens antes de fluidos");
 
         // um tipo que o jogo não carrega não conta
         helper.assertTrue(LoadedTypes.contains(ResourceType.ITEM), "Itens sempre carregado");
@@ -549,9 +553,39 @@ public final class TabletProfileGameTests {
         b.setPriority(ResourceType.ITEM, Direction.UP, 5);
         b.setMode(ResourceType.FLUID, Direction.DOWN, PortMode.INSERT);
         b.setFaceNetwork(ResourceType.FLUID, Direction.DOWN, two.id());
-        helper.assertTrue(ProfileDiff.firstDifference(profile, RouterPreset.copyOf(b)).isEmpty(),
+        helper.assertTrue(ProfileDiff.firstDifference(profile, b).isEmpty(),
                 "rede do nó onde o perfil não tem");
         helper.succeed();
+    }
+
+    /**
+     * O lado da diferença e os quadradinhos da Lista são os da máquina, como no painel: com o roteador preso na
+     * lateral de um baú virado para o Sul, a face Leste é a Direita do baú (vista de frente), não a Frente do
+     * roteador.
+     */
+    @GameTest(template = "empty")
+    public static void profileDiffAndIndexNameTheMachineSide(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        WaNetwork network = NetworkSavedData.get(helper.getLevel().getServer()).create(player.getUUID(), "teste-lado");
+        RouterBlockEntity a = owned(helper, player, M1, Blocks.CHEST, "A");
+        configure(a, network.id());
+        RouterPreset profile = RouterPreset.copyOf(a);
+        helper.setBlock(M4, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+        helper.setBlock(M4.east(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.EAST));
+        RouterBlockEntity side = helper.getBlockEntity(M4.east());
+        NodeIndex.placedBy(side, player.getUUID());
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, side))
+                .thenExecute(() -> {
+                    side.setMode(ResourceType.ITEM, Direction.EAST, PortMode.INSERT);
+                    eq(helper, side.attachedFront(), Direction.SOUTH.ordinal(), "frente do baú");
+                    eq(helper, ProfileDiff.firstDifference(profile, side).orElse(null),
+                            ProfileMatch.differs(ResourceType.ITEM, RemoteSide.RIGHT, What.MODE), "lado da diferença");
+                    NodeIndex.Entry entry = NodeIndex.get(helper.getLevel().getServer()).entry(key(side));
+                    eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.RIGHT), PortMode.INSERT, "quadradinho da Direita");
+                    eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.FRONT), PortMode.NONE, "quadradinho da Frente");
+                    helper.succeed();
+                });
     }
 
     @GameTest(template = "empty")
@@ -624,7 +658,7 @@ public final class TabletProfileGameTests {
                                 seen++;
                             } else if (view.key().equals(key(different))) {
                                 eq(helper, view.profile().orElse(null),
-                                        ProfileMatch.differs(ResourceType.ITEM, RelativeSide.FRONT, What.MODE), "diferente");
+                                        ProfileMatch.differs(ResourceType.ITEM, RemoteSide.TOP, What.MODE), "diferente");
                                 seen++;
                             } else if (view.key().equals(ghost)) {
                                 helper.assertTrue(view.profile().isEmpty(), "nó descarregado compara");

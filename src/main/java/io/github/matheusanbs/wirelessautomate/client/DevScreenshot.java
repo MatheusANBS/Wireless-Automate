@@ -32,6 +32,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
@@ -40,7 +41,10 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -508,31 +512,62 @@ public final class DevScreenshot {
     private static TabletScreen tabletScreen;
 
     /**
-     * Tablet de rede com um snapshot de exemplo (os nós do rascunho visual, em volta do jogador):
-     * cada aba, a seleção para mover, o nó escolhido no mapa, a dica de um nó e a nova rede aberta.
+     * Tablet de rede com um snapshot de exemplo (os nós do rascunho visual, em volta do jogador): a Lista com o
+     * painel do nó, a dica de uma linha, as sugestões da busca, o perfil copiado, a seleção, o painel só para ler,
+     * no escuro e no tamanho mínimo, e as outras abas.
      */
     private static List<Step> tabletSteps() {
         return List.of(
                 new Step(() -> {
                     mouseX = mouseY = -1;
-                    TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet());
+                    TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet(false));
                     tabletScreen = new TabletScreen(menu, new Inventory(null),
                             Component.translatable("item.wirelessautomate.network_tablet"), true);
                     Minecraft minecraft = Minecraft.getInstance();
                     tabletScreen.init(minecraft, minecraft.getWindow().getGuiScaledWidth(),
                             minecraft.getWindow().getGuiScaledHeight());
+                    tabletScreen.previewResize(420, 280);
+                    choosePanel(PanelAccess.EDIT);
                 }, "t1-tablet-lista"),
                 new Step(() -> {
-                    int[] center = tabletScreen.nodeRowCenter(sampleTablet().nodes().get(3).key());
+                    int[] center = tabletScreen.nodeRowCenter(tabletNodeKey("Fornalha 2"));
                     mouseX = center[0];
                     mouseY = center[1];
                 }, "t2-tablet-lista-dica"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    tabletScreen.list().previewText("forn");
+                }, "t2b-tablet-busca"),
+                new Step(() -> {
+                    tabletScreen.list().previewText("");
+                    tabletScreen.getMenu().applySnapshot(sampleTablet(true));
+                    tabletScreen.list().previewCollapse(ResourceLocation.withDefaultNamespace("chest"));
+                    tabletScreen.list().previewScrollTo(ResourceLocation.withDefaultNamespace("chest"));
+                    int[] center = tabletScreen.list().pasteGroupCenter(ResourceLocation.withDefaultNamespace("furnace"));
+                    mouseX = center == null ? -1 : center[0];
+                    mouseY = center == null ? -1 : center[1];
+                }, "t2c-tablet-perfil"),
                 new Step(() -> {
                     mouseX = mouseY = -1;
                     tabletScreen.previewMulti(true, 3);
                 }, "t3-tablet-selecionar"),
                 new Step(() -> {
                     tabletScreen.previewMulti(false, 0);
+                    choosePanel(PanelAccess.READ_OUT_OF_REACH);
+                    int[] center = tabletScreen.nodePanel().modeCenter(PortMode.INSERT);
+                    mouseX = center == null ? -1 : center[0];
+                    mouseY = center == null ? -1 : center[1];
+                }, "t3b-tablet-so-leitura"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    choosePanel(PanelAccess.EDIT);
+                    themeBefore = GuiThemes.current();
+                    GuiThemes.preview(GuiTheme.DARK);
+                }, "t3c-tablet-escuro"),
+                new Step(() -> tabletScreen.previewResize(300, 240), "t3d-tablet-escuro-minimo"),
+                new Step(() -> GuiThemes.preview(themeBefore), "t3e-tablet-minimo"),
+                new Step(() -> {
+                    tabletScreen.previewResize(420, 280);
                     tabletScreen.previewTab(TabletScreen.Tab.MAP);
                     tabletScreen.previewMapSelect(3);
                 }, "t4-tablet-mapa"),
@@ -548,6 +583,21 @@ public final class DevScreenshot {
                 new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
     }
 
+    /** Escolhe a "Fornalha 3" na Lista e põe o painel dela, com o acesso dado (a 18 blocos, alcance de 128). */
+    private static void choosePanel(PanelAccess access) {
+        NodeIndex.NodeKey key = tabletNodeKey("Fornalha 3");
+        tabletScreen.list().previewChoose(key);
+        RouterSnapshot s = sample();
+        RouterSnapshot named = new RouterSnapshot(key.pos(), "Fornalha 3", s.tier(), s.facing(), s.attachedFront(),
+                s.networks(), s.powered(), s.machine(), s.machineState(), s.faces());
+        tabletScreen.getMenu().applyPanel(new TabletPanelPayload(0, Optional.of(key), Optional.of(named), access,
+                access == PanelAccess.READ_OUT_OF_REACH ? 300 : 18, 128));
+    }
+
+    private static NodeIndex.NodeKey tabletNodeKey(String name) {
+        return sampleTablet(false).nodes().stream().filter(n -> n.name().equals(name)).findFirst().orElseThrow().key();
+    }
+
     /** Vazões de exemplo na ordem de {@link ResourceType#values()} (itens, fluidos, energia, químicos). */
     private static List<TabletSnapshot.TypeStats> rates(long items, long fluids, long energy, long chemicals) {
         long[] values = {items, fluids, energy, chemicals};
@@ -558,8 +608,17 @@ public final class DevScreenshot {
         return List.copyOf(types);
     }
 
-    /** Nós do rascunho visual em volta do jogador em (0, 64, 0), com redes, um grupo e status variados. */
-    private static TabletSnapshot sampleTablet() {
+    /** {@code bits} com o modo da face do lado {@code side} da máquina, do tipo {@code type}. */
+    private static long mode(long bits, ResourceType type, RemoteSide side, PortMode mode) {
+        return bits | (long) mode.ordinal() << (type.ordinal() * 6 + side.ordinal()) * 2;
+    }
+
+    /**
+     * Nós do rascunho visual em volta do jogador em (0, 64, 0), já na ordem do servidor (máquina e nome), com
+     * redes, um grupo e status variados. Com {@code profile}, o perfil copiado da "Fornalha Elite" e a comparação
+     * de cada nó carregado.
+     */
+    private static TabletSnapshot sampleTablet(boolean profile) {
         UUID base = UUID.nameUUIDFromBytes("base".getBytes());
         UUID fluids = UUID.nameUUIDFromBytes("fluidos".getBytes());
         UUID energy = UUID.nameUUIDFromBytes("energia".getBytes());
@@ -574,47 +633,92 @@ public final class DevScreenshot {
                         0, 9_000, 20, rates(0, 0, 120_000, 0)),
                 new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
                         0, 0, rates(0, 0, 0, 0)),
-                new TabletSnapshot.NetworkView(line, "Linha 5x", 0xA46CFF, "Dev", true, true, false, true, 8, 0, 0, 0,
-                        0, 0, rates(0, 0, 0, 0)));
+                new TabletSnapshot.NetworkView(line, "Linha de fundição", 0xA46CFF, "Dev", true, true, false, true, 8, 0,
+                        0, 0, 0, 0, rates(0, 0, 0, 0)));
         int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
         int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
         int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);
         int extractEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.EXTRACT);
         int insertEnergy = NodeIndex.role(ResourceType.ENERGY, NodeIndex.INSERT);
         int storageItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.STORAGE);
+        long furnace = mode(mode(mode(0, ResourceType.ITEM, RemoteSide.TOP, PortMode.INSERT), ResourceType.ITEM,
+                RemoteSide.BOTTOM, PortMode.EXTRACT), ResourceType.ENERGY, RemoteSide.BACK, PortMode.INSERT);
+        long chest = mode(0, ResourceType.ITEM, RemoteSide.TOP, PortMode.INSERT);
+        long barrel = mode(0, ResourceType.ITEM, RemoteSide.TOP, PortMode.BOTH);
+        long tank = mode(0, ResourceType.FLUID, RemoteSide.TOP, PortMode.INSERT);
+        long reactor = mode(0, ResourceType.ENERGY, RemoteSide.BOTTOM, PortMode.EXTRACT);
+        ProfileDiff.ProfileMatch equal = ProfileDiff.ProfileMatch.EQUAL;
         List<TabletSnapshot.NodeView> nodes = List.of(
-                tabletNode(-5, 66, -2, "Fornalha Norte", "furnace", RouterTier.ELITE, base, base, energy,
-                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.ACTIVE),
-                tabletNode(-5, 66, 2, "Fornalha Sul", "furnace", RouterTier.ELITE, base, base, energy,
-                        extractItems | insertItems, TabletSnapshot.NodeStatus.ACTIVE),
-                tabletNode(5, 66, -2, "", "chest", RouterTier.ELITE, base, null, null, insertItems,
-                        TabletSnapshot.NodeStatus.IDLE),
-                tabletNode(5, 66, 2, "Baú de lingotes 2", "chest", RouterTier.ELITE, base, null, null, insertItems,
-                        TabletSnapshot.NodeStatus.FULL),
-                tabletNode(38, 64, 40, "Tanque de água", "cauldron", RouterTier.ADVANCED, null, fluids, null, insertFluids,
-                        TabletSnapshot.NodeStatus.IDLE),
-                tabletNode(44, 64, 46, "Separador eletrolítico", "blast_furnace", RouterTier.ELITE, ore, fluids, energy,
-                        insertFluids | insertEnergy, TabletSnapshot.NodeStatus.PAUSED),
+                tabletNode(12, 64, -20, "Barril de pedra", "barrel", RouterTier.ADVANCED, line, null, null, storageItems,
+                        TabletSnapshot.NodeStatus.ACTIVE, barrel, 64, profile ? ProfileDiff.ProfileMatch.differs(
+                                ResourceType.ITEM, RemoteSide.TOP, ProfileDiff.What.MODE) : null),
+                tabletNode(14, 64, -20, "Barril de sobras", "barrel", RouterTier.ADVANCED, base, null, null, storageItems,
+                        TabletSnapshot.NodeStatus.ACTIVE, barrel, 12, profile ? ProfileDiff.ProfileMatch.differs(
+                                ResourceType.ITEM, RemoteSide.TOP, ProfileDiff.What.MODE) : null),
                 tabletNode(-60, 40, -75, "Reator de fissão", "beacon", RouterTier.ULTIMATE, null, null, energy,
-                        extractEnergy, TabletSnapshot.NodeStatus.ACTIVE),
-                tabletNode(-70, 70, 47, "Fazenda de cana", "hopper", RouterTier.BASIC, base, null, null, extractItems,
-                        TabletSnapshot.NodeStatus.UNLOADED),
-                tabletNode(12, 64, -20, "Barril de sobras", "barrel", RouterTier.ADVANCED, base, null, null, storageItems,
-                        TabletSnapshot.NodeStatus.ACTIVE),
+                        extractEnergy, TabletSnapshot.NodeStatus.ACTIVE, reactor, 0, null),
+                tabletNode(44, 64, 46, "Separador eletrolítico", "blast_furnace", RouterTier.ELITE, ore, fluids, energy,
+                        insertFluids | insertEnergy, TabletSnapshot.NodeStatus.PAUSED, tank, 0, null),
+                tabletNode(38, 64, 40, "Tanque de água", "cauldron", RouterTier.ADVANCED, null, fluids, null, insertFluids,
+                        TabletSnapshot.NodeStatus.IDLE, tank, 0, null),
+                tabletNode(5, 66, -2, "", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.IDLE, chest, 0, profile ? ProfileDiff.ProfileMatch.differs(
+                                ResourceType.ITEM, RemoteSide.BOTTOM, ProfileDiff.What.MODE) : null),
+                tabletNode(5, 66, 2, "Baú de lingotes 2", "chest", RouterTier.ELITE, base, null, null, insertItems,
+                        TabletSnapshot.NodeStatus.FULL, chest, 0, null),
+                tabletNode(7, 66, 2, "Baú de minério", "chest", RouterTier.BASIC, null, null, null, storageItems,
+                        TabletSnapshot.NodeStatus.NO_NETWORK, barrel, 0, null),
                 tabletNode(0, 64, 9, "", "dropper", RouterTier.BASIC, null, null, null, 0,
-                        TabletSnapshot.NodeStatus.NO_NETWORK));
+                        TabletSnapshot.NodeStatus.NO_NETWORK, 0L, 0, null),
+                tabletNode(-5, 66, -2, "Fornalha 2", "furnace", RouterTier.ELITE, line, null, energy,
+                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.IDLE, furnace, 0,
+                        profile ? equal : null),
+                tabletNode(-5, 66, 2, "Fornalha 3", "furnace", RouterTier.ELITE, line, null, energy,
+                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.ACTIVE, furnace, 8,
+                        profile ? equal : null),
+                tabletNode(-7, 66, 2, "Fornalha 4", "furnace", RouterTier.ELITE, line, null, energy,
+                        extractItems | insertItems, TabletSnapshot.NodeStatus.FULL, furnace, 0,
+                        profile ? ProfileDiff.ProfileMatch.differs(ResourceType.ITEM, RemoteSide.BOTTOM,
+                                ProfileDiff.What.FILTER) : null),
+                tabletNode(-9, 66, 2, "Fornalha Elite", "furnace", RouterTier.ELITE, line, null, energy,
+                        extractItems | insertItems | insertEnergy, TabletSnapshot.NodeStatus.ACTIVE, furnace, 12,
+                        profile ? equal : null),
+                tabletNode(-70, 70, 47, "Fazenda de cana", "hopper", RouterTier.BASIC, base, null, null, extractItems,
+                        TabletSnapshot.NodeStatus.UNLOADED, mode(0, ResourceType.ITEM, RemoteSide.BOTTOM, PortMode.EXTRACT),
+                        0, null));
         List<TabletSnapshot.GroupView> groups = List.of(
                 new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g1".getBytes()), "Linha 5x", "Dev", true, true,
                         List.of(ore, line, fluids)),
                 new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g2".getBytes()), "Base principal", "Dev", true, false,
                         List.of(base)));
+        java.util.Map<ResourceLocation, Integer> machines = new java.util.LinkedHashMap<>();
+        java.util.Map<UUID, Integer> nets = new java.util.LinkedHashMap<>();
+        for (TabletSnapshot.NodeView node : nodes) {
+            machines.merge(node.machine(), 1, Integer::sum);
+            java.util.Set<UUID> distinct = new java.util.HashSet<>();
+            for (ResourceType type : ResourceType.values()) {
+                distinct.addAll(node.networks(type));
+            }
+            distinct.forEach(id -> nets.merge(id, 1, Integer::sum));
+        }
+        List<TabletSnapshot.Facet<ResourceLocation>> machineFacets = new ArrayList<>();
+        machines.forEach((id, count) -> machineFacets.add(new TabletSnapshot.Facet<>(id, count)));
+        List<TabletSnapshot.Facet<UUID>> networkFacets = new ArrayList<>();
+        nets.forEach((id, count) -> networkFacets.add(new TabletSnapshot.Facet<>(id, count)));
+        TabletSnapshot.NodeView elite = nodes.get(12);
+        Optional<TabletSnapshot.ProfileSummary> summary = profile
+                ? Optional.of(new TabletSnapshot.ProfileSummary("Fornalha Elite", elite.machine(), elite.key(),
+                        List.of(ResourceType.ITEM, ResourceType.ENERGY), 3))
+                : Optional.empty();
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
-                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, List.of(), List.of(),
-                TabletSnapshot.QuickCounts.EMPTY, Optional.empty(), nodes, Component.empty(), 0);
+                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
+                groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
+                List.copyOf(machineFacets), profile, Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
-            @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status) {
+            @Nullable UUID items, @Nullable UUID fluids, @Nullable UUID energy, int roles, TabletSnapshot.NodeStatus status,
+            long faceModes, long itemRate, ProfileDiff.@Nullable ProfileMatch match) {
         // uma rede por tipo do registro (Itens, Fluidos e Energia; os outros sem rede)
         List<List<UUID>> networks = new java.util.ArrayList<>();
         for (ResourceType type : ResourceType.values()) {
@@ -626,9 +730,13 @@ public final class DevScreenshot {
             };
             networks.add(id == null ? List.of() : List.of(id));
         }
+        List<Long> rates = new ArrayList<>();
+        for (ResourceType type : ResourceType.values()) {
+            rates.add(type == ResourceType.ITEM ? itemRate : 0L);
+        }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
                 new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
-                false, 0L, Optional.empty());
+                false, faceModes, List.copyOf(rates), Optional.ofNullable(match));
     }
 
     // ------------------------------------------------------------------ Vinculador

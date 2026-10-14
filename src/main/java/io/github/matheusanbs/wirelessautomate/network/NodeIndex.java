@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,7 +61,7 @@ public final class NodeIndex extends SavedData {
     private static final int ROLES_PER_TYPE = 3;
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final Direction[] DIRECTIONS = Direction.values();
-    private static final RelativeSide[] SIDES = RelativeSide.values();
+    private static final RemoteSide[] SIDES = RemoteSide.values();
     private static final PortMode[] MODES = PortMode.values();
     private static final UUID[] NO_NETWORKS = new UUID[0];
 
@@ -158,8 +159,8 @@ public final class NodeIndex extends SavedData {
             return faceModes;
         }
 
-        /** O modo da face {@code side} do tipo {@code type}. */
-        public PortMode faceMode(ResourceType type, RelativeSide side) {
+        /** O modo da face do lado {@code side} da máquina, do tipo {@code type}. */
+        public PortMode faceMode(ResourceType type, RemoteSide side) {
             return NodeIndex.faceMode(faceModes, type, side);
         }
 
@@ -330,26 +331,30 @@ public final class NodeIndex extends SavedData {
     }
 
     /**
-     * Os modos das faces da máquina presa em bits: para cada tipo na ordem do {@link ResourceType} e cada
-     * {@link RelativeSide} na ordem do enum, 2 bits com o ordinal do {@link PortMode}, a partir do menos
-     * significativo (o lado {@code s} do tipo {@code t} começa no bit {@code (t * 6 + s) * 2}).
+     * Os modos das faces da máquina presa em bits, pelos lados dela ({@link RemoteSide}, relativos à frente da
+     * máquina, como o painel do nó mostra): para cada tipo na ordem do {@link ResourceType} e cada lado na ordem
+     * do enum, 2 bits com o ordinal do {@link PortMode}, a partir do menos significativo (o lado {@code s} do tipo
+     * {@code t} começa no bit {@code (t * 6 + s) * 2}). Sem a frente da máquina (chunk dela descarregado), vale a
+     * de Norte, como no painel.
      */
     public static long faceModes(RouterBlockEntity router) {
+        int front = router.attachedFront();
         long bits = 0;
         for (ResourceType type : TYPES) {
-            for (RelativeSide side : SIDES) {
-                bits |= (long) router.face(type, side).mode().ordinal() << faceShift(type, side);
+            for (RemoteSide side : SIDES) {
+                Direction face = DIRECTIONS[side.toAbsolute(front)];
+                bits |= (long) router.face(type, face).mode().ordinal() << faceShift(type, side);
             }
         }
         return bits;
     }
 
-    /** O modo da face {@code side} do tipo {@code type} em {@code faceModes}. */
-    public static PortMode faceMode(long faceModes, ResourceType type, RelativeSide side) {
+    /** O modo da face do lado {@code side} da máquina, do tipo {@code type}, em {@code faceModes}. */
+    public static PortMode faceMode(long faceModes, ResourceType type, RemoteSide side) {
         return MODES[(int) (faceModes >>> faceShift(type, side)) & 3];
     }
 
-    private static int faceShift(ResourceType type, RelativeSide side) {
+    private static int faceShift(ResourceType type, RemoteSide side) {
         return (type.ordinal() * SIDES.length + side.ordinal()) * 2;
     }
 

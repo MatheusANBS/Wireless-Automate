@@ -594,11 +594,13 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 .thenComparingLong(m -> m.entry.key().pos().asLong()));
         RouterPreset profile = storedProfile(viewer);
         ProfileSource source = profile == null ? null : tabletStack(viewer).get(ModDataComponents.PROFILE_SOURCE.get());
-        boolean originMatches = false;
+        Optional<ResourceLocation> originGroup = Optional.empty();
         Map<ResourceLocation, Integer> groupSizes = new HashMap<>();
         for (Match match : matches) {
             groupSizes.merge(match.entry.machine(), 1, Integer::sum);
-            originMatches |= source != null && match.entry.key().equals(source.origin());
+            if (source != null && match.entry.key().equals(source.origin())) {
+                originGroup = Optional.of(match.entry.machine());
+            }
         }
         List<Facet<ResourceLocation>> groupCounts = new ArrayList<>();
         List<NodeView> nodes = new ArrayList<>();
@@ -673,7 +675,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 Math.round(budget.averageUsedNanos()), budget.limitNanos(), query, total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(machineCounts), facets(networkCounts),
                 new QuickCounts(problemCount, noNetworkCount, unloadedCount), profileSummary(viewer, profile),
-                List.copyOf(nodes), List.copyOf(groupCounts), originMatches, notice, noticeId);
+                List.copyOf(nodes), List.copyOf(groupCounts), originGroup, notice, noticeId);
     }
 
     /** As facetas pela contagem, das maiores para as menores (a chave desempata, para o cabeçalho ser estável). */

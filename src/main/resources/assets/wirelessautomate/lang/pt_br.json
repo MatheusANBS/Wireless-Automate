@@ -556,6 +556,7 @@
   "gui.wirelessautomate.tablet.list.group.open": "Clique para abrir o grupo",
   "gui.wirelessautomate.tablet.list.group.close": "Clique para recolher o grupo",
   "gui.wirelessautomate.tablet.list.paste_group": "Colar nas %s",
+  "gui.wirelessautomate.tablet.list.paste_group.short": "Colar %s",
   "gui.wirelessautomate.tablet.list.paste_group.tooltip": "Colar o perfil de %s nos %s nós de %s · a origem fica de fora · dá para desfazer",
   "gui.wirelessautomate.tablet.list.paste_selected": "Colar nos %s marcados",
   "gui.wirelessautomate.tablet.list.paste_selected.tooltip": "Colar o perfil de %s nos %s nós marcados · a origem fica de fora · dá para desfazer",

@@ -49,7 +49,7 @@ class GuiPaletteTest {
         GuiPalette p = GuiPalette.of(theme);
         int[] all = {p.panel(), p.bevelLight(), p.inset(), p.bevelDark(), p.rowHover(), p.fg(), p.muted(),
                 p.disabled(), p.tabIdle(), p.accent(), p.accentDeep(), p.ok(), p.warn(), p.danger(), p.paused(),
-                p.brass(), p.ruleText(), p.tooltipMuted(), p.darkText(), p.ring()};
+                p.brass(), p.ruleText(), p.tooltipMuted(), p.tooltipAccent(), p.darkText(), p.ring()};
         for (int color : all) {
             assertEquals(0xFF, color >>> 24, Integer.toHexString(color));
         }

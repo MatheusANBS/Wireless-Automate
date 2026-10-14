@@ -16,9 +16,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -26,8 +24,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
@@ -40,7 +36,6 @@ final class NodeText {
     private static final List<ResourceType> TYPES = LoadedTypes.LIST;
 
     private final Supplier<TabletSnapshot> snapshot;
-    private final Map<ResourceLocation, ItemStack> icons = new HashMap<>();
 
     NodeText(Supplier<TabletSnapshot> snapshot) {
         this.snapshot = snapshot;
@@ -54,9 +49,6 @@ final class NodeText {
         return BuiltInRegistries.BLOCK.get(node.machine());
     }
 
-    private ItemStack icon(NodeView node) {
-        return icons.computeIfAbsent(node.machine(), id -> new ItemStack(BuiltInRegistries.BLOCK.get(id).asItem()));
-    }
 
     /** Nome do nó; sem nome, o da máquina; sem máquina conhecida, "Roteador". */
     Component nodeName(NodeView node) {

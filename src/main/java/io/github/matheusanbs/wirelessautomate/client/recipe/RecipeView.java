@@ -184,7 +184,7 @@ final class RecipeView {
         int grid = screen.gridSlotAt(mx, my);
         if (grid >= 0) {
             if (draft.locked(grid)) {
-                return List.of(tr("ring.center").copy().withColor(0xFFFFB39E));
+                return List.of(tr("ring.center").copy().withColor(GuiPaint.TOOLTIP_ACCENT));
             }
             List<Component> lines = new ArrayList<>();
             RecipeSlot slot = draft.slots().get(grid);
@@ -195,7 +195,7 @@ final class RecipeView {
                             : empty.substring(0, 1).toUpperCase(Locale.ROOT) + empty.substring(1))
                             .withColor(GuiPaint.TOOLTIP_MUTED));
                     if (edit.canEditGrid()) {
-                        lines.add(tr("tooltip.pick").copy().withColor(0xFFFFB39E));
+                        lines.add(tr("tooltip.pick").copy().withColor(GuiPaint.TOOLTIP_ACCENT));
                     }
                 }
                 case ITEM -> {
@@ -203,7 +203,7 @@ final class RecipeView {
                     lines.add(Component.literal(slot.id()).withColor(GuiPaint.TOOLTIP_MUTED));
                 }
                 case TAG -> {
-                    lines.add(tr("tooltip.any_of").copy().withColor(0xFFFFB39E));
+                    lines.add(tr("tooltip.any_of").copy().withColor(GuiPaint.TOOLTIP_ACCENT));
                     lines.add(Component.literal("#" + slot.id()));
                 }
             }

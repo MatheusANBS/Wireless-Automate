@@ -273,7 +273,7 @@ public final class ModPayloads {
 
     /**
      * Shift + roda do mouse com o Vinculador na mão principal: avança ou volta o atalho de abas dele
-     * (Todos, Itens, Fluidos, Energia, Químicos com o Mekanism; uma combinação vai para Todos) e mostra
+     * (Todos e um por tipo carregado, inclusive Químicos e Source com os mods; uma combinação vai para Todos) e mostra
      * as abas novas na action bar. Não depende de tela aberta; recusa direção 0 e outra coisa na mão.
      */
     public static boolean handleCycleLinkerType(@Nullable ServerPlayer player, CycleLinkerTypePayload payload) {

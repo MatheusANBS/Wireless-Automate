@@ -53,7 +53,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Rede por aba: cada tipo de recurso de um roteador entra numa rede própria. Motor, migração do
+ * Rede por tipo (atalho): as seis faces de cada tipo de um roteador numa rede própria. Motor, migração do
  * NBT antigo, Vinculador com tipo, preset do Configurador e o pacote do seletor do Vinculador.
  * Máquinas em y=1 com o roteador em cima (facing=UP), então a face configurada é {@link Direction#UP}.
  */
@@ -276,8 +276,8 @@ public final class TypeNetworkGameTests {
     }
 
     /**
-     * Shift + roda: Todos → Itens → Fluidos → Energia (→ Químicos com o Mekanism) → Todos, e para
-     * trás; uma combinação vai para Todos; só com o Vinculador na mão.
+     * Shift + roda: Todos → um tipo por vez, só os carregados (Químicos com o Mekanism, Source com o Ars) → Todos, e
+     * para trás; uma combinação vai para Todos; só com o Vinculador na mão.
      */
     @GameTest(template = "empty")
     public static void cycleLinkerTypePayloadCycles(GameTestHelper helper) {

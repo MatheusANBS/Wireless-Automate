@@ -250,7 +250,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox.setMaxLength(64);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         inkVersion = -1;
-        // A busca começa vazia a cada abertura (guardar a última deixava o campo rolado e confuso).
+        // Ao digitar, a lista volta ao topo.
         searchBox.setResponder(value -> scrollRow = 0);
         addRenderableWidget(searchBox);
         layout();

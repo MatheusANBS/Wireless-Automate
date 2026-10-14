@@ -8,7 +8,7 @@ Regras do CurseForge (support.curseforge.com, "Moderation Policies"): avatar de 
 cor sólida, sem NSFW e sem imagem com direitos de terceiros (nada do logo do Minecraft); PNG ou
 JPG (WebP não). Aparece pequeno nas listas, então não leva texto.
 
-A composição é a da primeira capa do mod (a que o dono gosta): o roteador em pixel art no centro,
+A composição: o roteador em pixel art no centro,
 três ondas de wireless acima das antenas, faíscas em volta, sobre um degradê radial com grade de
 pontos. O roteador é o modelo 3D real, renderizado pelo jogo ({@code capa-renders.png}: a vista
 "de frente e do alto", luz cheia, sobre magenta) e ampliado por fator inteiro, sem suavizar, para

@@ -73,7 +73,7 @@ public final class RouterSpinGameTests {
         return helper.getBlockState(ROUTER).getValue(RouterBlock.SPIN);
     }
 
-    /** Modo, prioridade, redstone e filtro no padrão (a rede é do roteador inteiro, posta em {@link #configured}). */
+    /** Modo, prioridade, redstone e filtro no padrão (a rede, posta em todas as faces por {@link #configured}, não entra: {@code copySettingsFrom} não a copia). */
     private static boolean settingsDefault(FaceConfig config) {
         FaceConfig copy = new FaceConfig();
         copy.copySettingsFrom(config);

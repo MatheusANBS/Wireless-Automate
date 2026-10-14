@@ -255,8 +255,8 @@ public class RouterBlockEntity extends BlockEntity {
 
     /**
      * Põe as seis faces da máquina presa, dos perfis de todos os grupos e das exceções, nos tipos
-     * {@code types}, na rede {@code network} ({@code null} tira da rede), com um aviso só. É o que a
-     * rede da aba fazia antes (Tablet, atalhos de teste, bench, comandos).
+     * {@code types}, na rede {@code network} ({@code null} tira da rede), com um aviso só. Usado pelo
+     * Tablet, pelo Vinculador e pelos atalhos {@link #setNetworkId}.
      */
     public void setNetworkAllFaces(Collection<ResourceType> types, @Nullable UUID network) {
         setNetworkAllFaces(types, network, from -> true);
@@ -1294,8 +1294,8 @@ public class RouterBlockEntity extends BlockEntity {
 
     /**
      * Junta todas as mudanças de configuração feitas em {@code changes} num aviso só: salvar, a tela,
-     * o motor (com os tipos que mudaram somados) e o índice. Colar um preset mexe em até 24 faces e 4
-     * redes; sem isso seriam até 28 avisos. Pode ser aninhado: avisa ao sair do mais de fora.
+     * o motor (com os tipos que mudaram somados) e o índice. Colar um preset mexe em dezenas de faces e
+     * várias redes; sem isso seria um aviso por mudança. Pode ser aninhado: avisa ao sair do mais de fora.
      */
     public void batchChanges(Runnable changes) {
         batchDepth++;

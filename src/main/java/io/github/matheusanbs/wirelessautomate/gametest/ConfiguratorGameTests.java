@@ -512,7 +512,7 @@ public final class ConfiguratorGameTests {
 
     /**
      * Seletor em Fluidos: colar muda só as faces e a rede dos fluidos; itens e energia do destino
-     * ficam como estavam (faces e rede). Em Todos, tudo é colado, como antes.
+     * ficam como estavam (faces e rede). Em Todos, tudo é colado.
      */
     @GameTest(template = "empty")
     public static void pasteWithTypeTouchesOnlyThatTab(GameTestHelper helper) {
@@ -564,7 +564,7 @@ public final class ConfiguratorGameTests {
                                 "Todos não recusou a rede alheia");
                         source.setNetworkId(ResourceType.ITEM, items.id());
 
-                        // Todos: o comportamento de sempre, tudo colado.
+                        // Todos: tudo colado.
                         ConfiguratorItem.setType(configurator, null);
                         helper.assertTrue(!configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()),
                                 "Todos deixou o componente");
@@ -634,8 +634,8 @@ public final class ConfiguratorGameTests {
     }
 
     /**
-     * Shift + roda com o Configurador: Todos → Itens → Fluidos → Energia (→ Químicos, só com o
-     * Mekanism) → Todos, e para trás; só com o Configurador na mão.
+     * Shift + roda com o Configurador: Todos → um tipo por vez, só os carregados (Químicos com o
+     * Mekanism, Source com o Ars) → Todos, e para trás; só com o Configurador na mão.
      */
     @GameTest(template = "empty")
     public static void cycleConfiguratorTypeSkipsChemicalsWithoutMekanism(GameTestHelper helper) {

@@ -10,7 +10,7 @@ Regras do GuideME que valem a pena lembrar:
 - anotações de cena (BlockAnnotation, LineAnnotation...) com o texto em linha própria; numa linha
   só, elas não aparecem;
 - o comando de teste é /guidemec wirelessautomate:guide open wirelessautomate:<página>.md;
-- os números da tabela de tiers são os padrões de RouterTier (mantenha em dia).
+- os números das tabelas são os padrões do ResourceType, do StorageKind e do RouterTier (mantenha em dia).
 """
 import os
 

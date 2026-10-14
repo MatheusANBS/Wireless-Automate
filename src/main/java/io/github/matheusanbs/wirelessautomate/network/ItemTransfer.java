@@ -617,7 +617,7 @@ final class ItemTransfer {
             boolean sourceEmpty = false;
             while (remaining > 0) {
                 // Uma entrega pode levar mais que uma pilha: o plano limita cada slot ao que ele aceita
-                // numa chamada (InsertPlan#insert), então um inventário comum recebe o mesmo de antes, e
+                // numa chamada (InsertPlan#insert), então um inventário comum recebe uma pilha por slot, e
                 // um slot de pilha grande (upgrade de pilha, gaveta) recebe tudo o que cabe de uma vez.
                 int chunk = (int) Math.min(remaining, Integer.MAX_VALUE);
                 if (!first) {
@@ -749,11 +749,11 @@ final class ItemTransfer {
      * vazios, na ordem dos slots), mas numa passada: anota os vazios enquanto procura as pilhas
      * iguais e lembra os slots que aceitaram. A inserção real vai direto neles; o que sobrar (destino
      * que mudou ou mentiu na simulação) cai no {@code insertItemStacked}, e o que nem ele aceitar
-     * volta para quem chamou, como antes. Se o destino tem estoque, a mesma passada conta o item
+     * volta para quem chamou. Se o destino tem estoque, a mesma passada conta o item
      * (e então vai até o fim do inventário, ou até a contagem atingir o estoque).
      *
      * <p>Pilha igual já no limite do slot ({@link IItemHandler#getSlotLimit}): a primeira é simulada
-     * na ordem, como antes. Se ela recusou, as outras cheias não são simuladas na hora: vão para o
+     * na ordem (a do {@code insertItemStacked}). Se ela recusou, as outras cheias não são simuladas na hora: vão para o
      * fim, depois dos vazios, e só são tentadas se ainda sobrar. Um destino que aceita numa pilha
      * cheia (um upgrade que anula o excesso) aceita já na primeira, e a ordem não muda. Em
      * inventários de pilhas grandes, as cheias são a maior parte das chamadas, e as mais caras.
@@ -773,7 +773,7 @@ final class ItemTransfer {
         static final int COUNT_ITEM = 1;
         /** Conta pelo item e componentes, como {@link ItemStack#isSameItemSameComponents}. */
         static final int COUNT_COMPONENTS = 2;
-        /** Destinos lembrados por visita; além disso, conta de novo como antes. */
+        /** Destinos lembrados por visita; além disso, a contagem é refeita na varredura. */
         private static final int MEMORY = 32;
 
         private int[] slots = new int[8];

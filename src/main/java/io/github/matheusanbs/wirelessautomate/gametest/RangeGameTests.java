@@ -360,7 +360,7 @@ public final class RangeGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
-                    // Um NBT de antes da etapa: só a máquina presa configurada, sem machines/groups.
+                    // Um NBT sem machines/groups (de antes do Upgrade de Alcance): só a máquina presa configurada.
                     router.configureFace(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 2, RedstoneMode.IGNORE);
                     CompoundTag legacy = router.saveWithFullMetadata(helper.getLevel().registryAccess());
                     helper.assertFalse(legacy.contains("machines") || legacy.contains("groups"),
@@ -989,7 +989,7 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão I2: a origem remota de um roteador entregando na presa do mesmo roteador é uma entrega
+     * A origem remota de um roteador entregando na presa do mesmo roteador é uma entrega
      * (compara a máquina, não o nó). O barril, que espera a presa (cheia de terra) abrir espaço, está num
      * sono longo; a entrega de pedregulho da remota na presa não pode acordá-lo (o tick em que ele
      * acorda não muda).
@@ -1064,7 +1064,7 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão M4: a carga do chunk (o método que o {@code ChunkEvent.Load} chama) acorda a porta
+     * A carga do chunk (o método que o {@code ChunkEvent.Load} chama) acorda a porta
      * dormindo de uma remota do chunk. Aqui a porta já tinha cache de capability; o caso sem cache usa
      * o mesmo caminho (acordar a porta, e a visita seguinte cria o cache), mas não é isolado no teste.
      */
@@ -1095,7 +1095,7 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão M5, pela carga do chunk: a máquina de teste sem block entity ({@link TestMachines#BACK_SLOT})
+     * Pela carga do chunk: a máquina de teste sem block entity ({@link TestMachines#BACK_SLOT})
      * girada no mundo não avisa nada; a carga do chunk relê a frente e "Trás" passa para o lado novo.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
@@ -1130,7 +1130,7 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão final I1: a máquina de teste sem block entity ({@link TestMachines#BACK_SLOT}) girada por
+     * A máquina de teste sem block entity ({@link TestMachines#BACK_SLOT}) girada por
      * {@code setBlock} não chama {@code setChanged} nem invalida a capability, então a frente fica a velha.
      * Uma remontagem vinda de outra coisa (o modo de outra face do roteador) relê a frente e "Trás"
      * passa para o lado novo.
@@ -1171,7 +1171,7 @@ public final class RangeGameTests {
     }
 
     /**
-     * Revisão M5, pelo mixin: uma fornalha remota girada (o block entity fica; a capability não é
+     * Pelo mixin: uma fornalha remota girada (o block entity fica; a capability não é
      * invalidada) relê a frente no {@code setChanged} seguinte.
      */
     @GameTest(template = "empty", timeoutTicks = 200)

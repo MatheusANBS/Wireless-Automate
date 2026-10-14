@@ -73,7 +73,7 @@ import org.jetbrains.annotations.Nullable;
  * ficou diferente do último enviado.
  *
  * <p>Quem vê o quê: as redes do jogador e as públicas (todas para operador nível 2); os grupos do
- * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma aba numa rede dele
+ * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma face numa rede dele
  * (todos para operador).
  */
 public class TabletMenu extends AbstractContainerMenu {
@@ -104,7 +104,7 @@ public class TabletMenu extends AbstractContainerMenu {
         /** Alvo: rede; valor: 1 pública, 0 privada. */
         NETWORK_PUBLIC,
         NETWORK_REMOVE,
-        /** Alvo: rede, que vira a rede ativa do jogador (Vinculador e roteadores colocados). */
+        /** Alvo: rede, que vira a rede ativa do jogador (a que o Vinculador usa). */
         NETWORK_USE,
         /** Texto: nome. */
         GROUP_CREATE,
@@ -143,7 +143,7 @@ public class TabletMenu extends AbstractContainerMenu {
     private final Map<NodeKey, long[]> lastMoved = new HashMap<>();
     /** Nós que moveram algo na última amostra. */
     private final Set<NodeKey> activeNodes = new HashSet<>();
-    /** Vazão por rede na última amostra: itens/s, mB/s e FE/t. */
+    /** Vazão por rede na última amostra, por tipo, na unidade do registro. */
     private final Map<UUID, long[]> networkRates = new HashMap<>();
     private Component notice = Component.empty();
     private int noticeId;

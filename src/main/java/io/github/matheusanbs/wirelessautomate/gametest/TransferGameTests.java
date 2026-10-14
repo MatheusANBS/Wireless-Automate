@@ -37,8 +37,8 @@ import org.jetbrains.annotations.Nullable;
  * paralelo e dividem o gerenciador. Máquinas em y=1 com o roteador em cima (facing=UP), então a
  * face configurada é {@link Direction#UP}.
  *
- * <p>Energia não tem GameTest: o vanilla não tem bloco com {@code IEnergyStorage}. A divisão num
- * passe está coberta por {@code EnergySplitTest} (JUnit).
+ * <p>Energia não tem GameTest aqui (o vanilla não tem bloco com {@code IEnergyStorage}); ver
+ * {@code StorageGameTests} (Bateria). A divisão num passe está coberta por {@code EnergySplitTest} (JUnit).
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)

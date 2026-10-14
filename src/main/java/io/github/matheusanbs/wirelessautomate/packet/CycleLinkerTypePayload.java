@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Cliente → servidor: Shift + roda do mouse com o Vinculador na mão principal troca as abas que ele
- * vincula pelos atalhos (Todos → Itens → Fluidos → Energia → Químicos, este só com o Mekanism; uma
+ * vincula pelos atalhos (Todos → um tipo por vez, só os carregados: Químicos com o Mekanism, Source com o Ars Nouveau; uma
  * combinação marcada na tela vai para Todos; {@code direction} +1 ou −1).
  */
 public record CycleLinkerTypePayload(int direction) implements CustomPacketPayload {

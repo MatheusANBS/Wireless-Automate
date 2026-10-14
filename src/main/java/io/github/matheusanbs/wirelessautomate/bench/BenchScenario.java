@@ -8,8 +8,7 @@ import org.jetbrains.annotations.Nullable;
  * Cenários do benchmark (docs/especificacao.md, "Plano de benchmark", e docs/benchmark.md).
  * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino.
  *
- * <p>Os cenários de muitos nós usam o Elite (2.048 itens/s por face desde o balanceamento ×8; antes era o
- * Básico, a 512): números de antes de 8/10/2026 não se comparam um a um com os de depois.
+ * <p>Os cenários de muitos nós usam o Elite (2.048 itens/s por face).
  *
  * <p>{@code recyclePeriod}: a cada tantos ticks o benchmark reenche as origens e esvazia os
  * destinos, fora do tempo medido, para a rede seguir ocupada durante a medição (0 = nunca).
@@ -38,7 +37,7 @@ public enum BenchScenario {
     STOCK("stock", 20, RouterTier.ELITE, 60, 0,
             "Estoque atingido: origem grande cheia de pedregulho, destino grande com lista branca e o estoque já completo"),
     BIG_STACK("bigstack", 2, RouterTier.ALLTHEMODIUM, 60, 0,
-            "Pilha enorme: origem de 1 slot com 1.000.000 de itens para um ralo, tier Allthemodium (131.072 itens/s, o antigo Elite; máquinas de teste)"),
+            "Pilha enorme: origem de 1 slot com 1.000.000 de itens para um ralo, tier Allthemodium (131.072 itens/s; máquinas de teste)"),
     REDSTONE("redstone", 100, RouterTier.ELITE, 60, 20,
             "Relógio de redstone: como Muitos nós, com um bloco de redstone que liga e desliga a cada tick em cima de cada roteador (nenhum usa redstone)"),
     TABLET("tablet", 1000, RouterTier.ELITE, 60, 20,

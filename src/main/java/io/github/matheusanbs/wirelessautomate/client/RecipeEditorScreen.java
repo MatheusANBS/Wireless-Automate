@@ -45,8 +45,8 @@ import org.lwjgl.glfw.GLFW;
  * do jogador, de onde se escolhem os itens sem tirá-los do lugar.
  *
  * <p>O rascunho editado fica só aqui até Salvar; cada snapshot novo do servidor mantém a receita
- * escolhida e troca o rascunho pelo que está salvo. Tamanho fixo, maior que o do mockup (a fonte do jogo
- * é mais larga que a do mockup, e a barra do inventário passava da borda dele).
+ * escolhida e troca o rascunho pelo que está salvo. Tamanho fixo, maior que o do mockup, porque a fonte
+ * do jogo é mais larga.
  */
 public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu> {
     static final int W = 356;
@@ -965,7 +965,6 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
 
     // ------------------------------------------------------------------ ganchos do e2e
 
-    /** A receita escolhida. */
     @Nullable ResourceLocation selectedId() {
         return selectedId;
     }

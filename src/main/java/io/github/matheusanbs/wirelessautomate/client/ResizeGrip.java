@@ -7,8 +7,9 @@ import net.minecraft.client.gui.GuiGraphics;
 /**
  * Desenho da alça de redimensionar no canto de baixo à direita e do destaque da borda, para as telas
  * que usam {@link ResizeHandle}. A alça e o destaque acendem na cor {@code lit} da tela com o mouse em
- * cima ou arrastando ({@code hover} não nulo, ver {@link ResizeHandle#hover}), que na identidade atual
- * é sempre o coral; parados, a alça fica na cor do texto secundário. Há duas variações, cada uma igual à que as telas já desenhavam.
+ * cima ou arrastando ({@code hover} não nulo, ver {@link ResizeHandle#hover}); {@code lit} é o
+ * destaque da tela (o coral, ou a cor do tier no roteador); parados, a alça fica na cor do texto
+ * secundário.
  */
 public final class ResizeGrip {
 
@@ -16,7 +17,7 @@ public final class ResizeGrip {
     }
 
     /**
-     * Roteador e Baú: três riscos pontilhados na diagonal (2, 3 e 4 pontos); pela alça
+     * Roteador, Vinculador, Tablet e armazenamentos em lista: três riscos pontilhados na diagonal (2, 3 e 4 pontos); pela alça
      * do canto as duas bordas acendem.
      */
     public static void renderDotted(GuiGraphics g, int left, int top, int width, int height,

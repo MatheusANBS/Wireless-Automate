@@ -100,8 +100,8 @@ public class ConfiguratorItem extends Item {
     }
 
     /**
-     * Avança ({@code direction > 0}) ou volta o seletor: Todos → Itens → Fluidos → Energia →
-     * Químicos (só com o Mekanism) → Todos. Devolve o tipo novo ({@code null} = todos).
+     * Avança ({@code direction > 0}) ou volta o seletor: Todos → um tipo por vez, na ordem do registro e só os carregados (Químicos com o Mekanism, Source
+     * com o Ars Nouveau) → Todos. Devolve o tipo novo ({@code null} = todos).
      */
     public static @Nullable ResourceType cycleType(ItemStack stack, int direction) {
         ResourceType next = PasteTypes.next(type(stack), direction, LoadedTypes.LIST);

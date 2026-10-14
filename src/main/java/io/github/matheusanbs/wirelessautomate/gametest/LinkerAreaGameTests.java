@@ -428,7 +428,7 @@ public final class LinkerAreaGameTests {
 
     /**
      * Shift + clique no ar passa por Único, Área e Máquinas. Em Único, Shift + clique num bloco que não é
-     * roteador não marca canto (nem alterna o modo); num roteador, vincula como antes.
+     * roteador não marca canto (nem alterna o modo); num roteador, vincula.
      */
     @GameTest(template = "empty")
     public static void modeToggleAndSingleClicks(GameTestHelper helper) {

@@ -34,7 +34,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Tela do Vinculador (especificação, "Telas da interface › Vinculador"): à esquerda a rede ativa
  * (a linha "Nenhuma (desvincular)", a lista das redes do jogador e Nova rede) e as caixas das abas
- * (Itens, Fluidos, Energia e, com o Mekanism, Químicos); no cabeçalho o modo (Único ou Área). Em
+ * (uma caixa por tipo carregado: Itens, Fluidos, Energia e, com os mods, Químicos e Source); no cabeçalho o modo (Único ou Área). Em
  * Único, só a explicação do clique; em Área, a prévia de cima da caixa marcada com os roteadores
  * dentro dela, os cantos, a contagem e o botão Vincular (ou Desvincular).
  *
@@ -47,7 +47,7 @@ import org.lwjgl.glfw.GLFW;
  * servidor (na captura de desenvolvimento, {@code preview}, muda só o estado local).
  */
 public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
-    /** Tamanho mínimo (o de antes de redimensionar) e margem da janela no máximo. */
+    /** Tamanho mínimo e margem da janela no máximo. */
     private static final int MIN_W = 300;
     private static final int MIN_H = 204;
     private static final int WINDOW_MARGIN = 8;
@@ -83,7 +83,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static final int FACE_STEP = 15;
     private static final RemoteSide[] SIDES = RemoteSide.values();
 
-    /** Caixas das abas, na ordem dos botões (Químicos só aparece com o Mekanism). */
+    /** Caixas das abas, na ordem dos botões (Químicos só com o Mekanism, Source só com o Ars Nouveau). */
     private static final ResourceType[] TABS = ResourceType.values();
 
     private final boolean preview;
@@ -143,7 +143,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return h - MIN_H;
     }
 
-    /** O mapa: no modo Máquinas, a altura de antes; nos outros, {@link #FACES_H} a menos para a linha Faces. */
+    /** O mapa: no modo Máquinas, a altura inteira; nos outros, {@link #FACES_H} a menos para a linha Faces. */
     private int mapH() {
         return MAP_H + extraH() - (machines() ? 0 : FACES_H);
     }

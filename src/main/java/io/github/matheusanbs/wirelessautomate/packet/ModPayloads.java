@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
@@ -46,9 +47,10 @@ import org.jetbrains.annotations.Nullable;
  * {@link RouterMenu} e no {@link FilterMenu}, sem classes de tela.
  *
  * <p>Os handlers rodam na thread principal (o padrão do {@link PayloadRegistrar} é
- * {@code HandlerThread.MAIN}). Os do servidor só agem se o jogador está com a tela daquele roteador
- * aberta ({@code containerId} igual e {@link RouterMenu#stillValid}) e validam os valores; depois de
- * aplicar, o {@link RouterMenu#broadcastChanges()} do próprio menu manda o snapshot novo. A tela
+ * {@code HandlerThread.MAIN}). Os de edição de face só agem se o jogador está com um {@link RouterEditHost}
+ * aberto ({@code containerId} igual e {@link RouterEditHost#canEdit}: a tela do roteador ou outro menu) e
+ * validam os valores; depois de aplicar, o host é avisado ({@link RouterEditHost#editApplied()}) e, na tela
+ * do roteador, o {@link RouterMenu#broadcastChanges()} do próprio menu manda o snapshot novo. A tela
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
@@ -157,19 +159,21 @@ public final class ModPayloads {
     /**
      * Configura uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina
      * remota). Recusa químicos sem o Mekanism, limita a prioridade e ignora a ação se o alvo deixou de
-     * existir ({@link RouterMenu#actionTarget()}).
+     * existir ({@link RouterEditHost#actionTarget()}).
      */
     public static boolean handleSetFace(@Nullable ServerPlayer player, SetFacePayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || !LoadedTypes.contains(payload.resource())) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !LoadedTypes.contains(payload.resource())) {
             return false;
         }
-        EditTarget target = openMenu(player, payload.containerId()).actionTarget();
+        RouterBlockEntity router = host.editedRouter();
+        EditTarget target = host.actionTarget();
         if (target == null) {
             return false;
         }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);
         router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
+        host.editApplied();
         return true;
     }
 
@@ -179,21 +183,27 @@ public final class ModPayloads {
      * ignorado (o menu fica no que estava).
      */
     public static boolean handleSelectTarget(@Nullable ServerPlayer player, SelectTargetPayload payload) {
-        RouterMenu menu = openMenu(player, payload.containerId());
-        if (router(player, payload.containerId()) == null || menu == null) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null) {
             return false;
         }
-        return menu.selectTarget(new EditTarget(payload.kind(), payload.id()), payload.machinePos().orElse(null),
-                payload.block().orElse(null));
+        boolean selected = host.selectTarget(new EditTarget(payload.kind(), payload.id()),
+                payload.machinePos().orElse(null), payload.block().orElse(null));
+        if (selected) {
+            host.editApplied();
+        }
+        return selected;
     }
 
     /** Voltar ao perfil: tira a exceção da máquina remota {@code index}, se ela ainda está na posição {@code pos}. */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || !sameMachine(router, payload.index(), payload.pos())) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
             return false;
         }
-        return router.revertToProfile(payload.index());
+        boolean reverted = host.editedRouter().revertToProfile(payload.index());
+        host.editApplied();
+        return reverted;
     }
 
     /**
@@ -201,13 +211,14 @@ public final class ModPayloads {
      * um grupo que esvazia caem no roteador. A máquina presa não tem índice e não sai por aqui.
      */
     public static boolean handleUnlinkMachine(@Nullable ServerPlayer player, UnlinkMachinePayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || !sameMachine(router, payload.index(), payload.pos())) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
             return false;
         }
-        boolean unlinked = router.unlinkMachine(payload.index());
+        boolean unlinked = host.editedRouter().unlinkMachine(payload.index());
         // Os índices depois dela mudaram: o alvo segue pela posição, ou volta para a presa.
-        openMenu(player, payload.containerId()).validTarget();
+        host.validTarget();
+        host.editApplied();
         return unlinked;
     }
 
@@ -224,20 +235,22 @@ public final class ModPayloads {
      * Põe uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina remota) numa
      * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono ou operador nível 2,
      * a mesma regra do Configurador), ou vazio para tirar a face da rede. Ignora a ação se o alvo deixou
-     * de existir ({@link RouterMenu#actionTarget()}).
+     * de existir ({@link RouterEditHost#actionTarget()}).
      */
     public static boolean handleSetNetwork(@Nullable ServerPlayer player, SetNetworkPayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || !LoadedTypes.contains(payload.resource())) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !LoadedTypes.contains(payload.resource())) {
             return false;
         }
-        EditTarget target = openMenu(player, payload.containerId()).actionTarget();
+        RouterBlockEntity router = host.editedRouter();
+        EditTarget target = host.actionTarget();
         if (target == null) {
             return false;
         }
         Optional<UUID> id = payload.network();
         if (id.isEmpty()) {
             router.setFaceNetwork(target, payload.resource(), payload.face(), null);
+            host.editApplied();
             return true;
         }
         WaNetwork network = NetworkSavedData.get(player.server).network(id.get());
@@ -245,16 +258,18 @@ public final class ModPayloads {
             return false;
         }
         router.setFaceNetwork(target, payload.resource(), payload.face(), network.id());
+        host.editApplied();
         return true;
     }
 
     /** Dá nome ao nó. Recusa nomes maiores que {@link RenameRouterPayload#MAX_LENGTH}. */
     public static boolean handleRename(@Nullable ServerPlayer player, RenameRouterPayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || payload.name().strip().length() > RenameRouterPayload.MAX_LENGTH) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || payload.name().strip().length() > RenameRouterPayload.MAX_LENGTH) {
             return false;
         }
-        router.setName(payload.name());
+        host.editedRouter().setName(payload.name());
+        host.editApplied();
         return true;
     }
 
@@ -336,15 +351,15 @@ public final class ModPayloads {
      * Mekanism, químicos (energia não usa filtro).
      */
     public static boolean handleOpenFilter(@Nullable ServerPlayer player, OpenFilterPayload payload) {
-        RouterBlockEntity router = router(player, payload.containerId());
-        if (router == null || !RouterFaceFilterTarget.hasFilter(payload.resource())) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !RouterFaceFilterTarget.hasFilter(payload.resource())) {
             return false;
         }
-        RouterMenu menu = openMenu(player, payload.containerId());
-        if (menu.actionTarget() == null) {
+        if (host.actionTarget() == null) {
             return false;
         }
-        new RouterFaceFilterTarget(router, payload.resource(), payload.face(), menu.targetRef()).open(player);
+        new RouterFaceFilterTarget(host.editedRouter(), payload.resource(), payload.face(), host.targetRef())
+                .open(player);
         return true;
     }
 
@@ -546,6 +561,18 @@ public final class ModPayloads {
     /** Dono, operador nível 2 ou rede pública ({@link WaNetwork#canUse}). */
     public static boolean canUse(ServerPlayer player, WaNetwork network) {
         return network.canUse(player);
+    }
+
+    /**
+     * O host de edição do menu aberto do jogador, se é ele que o pacote cita, aponta um roteador e ainda
+     * deixa o jogador editar ({@link RouterEditHost#canEdit}).
+     */
+    public static @Nullable RouterEditHost host(@Nullable ServerPlayer player, int containerId) {
+        if (player != null && player.containerMenu instanceof RouterEditHost host && host.containerId() == containerId
+                && host.editedRouter() != null && host.canEdit(player)) {
+            return host;
+        }
+        return null;
     }
 
     /** O roteador da tela aberta, se é ela que o pacote cita e ela ainda vale. */

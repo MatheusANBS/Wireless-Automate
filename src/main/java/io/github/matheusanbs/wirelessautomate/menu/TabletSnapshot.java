@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.What;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -44,6 +45,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param machineFacets as máquinas dos nós visíveis, com quantos nós cada uma tem (sem olhar a consulta)
  * @param networkFacets as redes visíveis das faces dos nós visíveis, com quantos nós cada uma tem
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
+ * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
  * @param notice        aviso da última ação (vazio se não houver)
  * @param noticeId      muda a cada aviso novo, para a tela mostrá-lo de novo
  */
@@ -62,6 +64,7 @@ public record TabletSnapshot(
         List<Facet<ResourceLocation>> machineFacets,
         List<Facet<UUID>> networkFacets,
         QuickCounts quickCounts,
+        Optional<ProfileSummary> profile,
         List<NodeView> nodes,
         Component notice,
         int noticeId) {
@@ -96,6 +99,17 @@ public record TabletSnapshot(
                 case UNLOADED -> unloaded;
             };
         }
+    }
+
+    /**
+     * O resumo do perfil guardado no Tablet, para a faixa da Lista.
+     *
+     * @param sourceName nome do nó de onde o perfil veio
+     * @param machine    bloco da máquina de origem
+     * @param types      os tipos carregados que têm alguma face com modo
+     * @param faces      quantas faces (tipo × lado) dos tipos carregados têm modo
+     */
+    public record ProfileSummary(String sourceName, ResourceLocation machine, List<ResourceType> types, int faces) {
     }
 
     /** Um valor (uma máquina, uma rede) e quantos nós visíveis o têm. */
@@ -315,7 +329,7 @@ public record TabletSnapshot(
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, page.query(),
-                page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts,
+                page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
                 page.nodes(), notice, noticeId);
     }
 
@@ -400,6 +414,13 @@ public record TabletSnapshot(
         buf.writeVarInt(s.quickCounts.problem());
         buf.writeVarInt(s.quickCounts.noNetwork());
         buf.writeVarInt(s.quickCounts.unloaded());
+        buf.writeOptional(s.profile, (b, p) -> {
+            b.writeUtf(p.sourceName, ProfileSource.MAX_NAME);
+            b.writeResourceLocation(p.machine);
+            b.writeVarInt(p.types.size());
+            p.types.forEach(type -> b.writeEnum(type));
+            b.writeVarInt(p.faces);
+        });
         ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
         buf.writeVarInt(s.noticeId);
     }
@@ -493,11 +514,21 @@ public record TabletSnapshot(
             networkFacets.add(new Facet<>(buf.readUUID(), buf.readVarInt()));
         }
         QuickCounts quickCounts = new QuickCounts(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        Optional<ProfileSummary> profile = buf.readOptional(b -> {
+            String sourceName = b.readUtf(ProfileSource.MAX_NAME);
+            ResourceLocation machine = b.readResourceLocation();
+            int typeCount = b.readVarInt();
+            List<ResourceType> types = new ArrayList<>(typeCount);
+            for (int i = 0; i < typeCount; i++) {
+                types.add(b.readEnum(ResourceType.class));
+            }
+            return new ProfileSummary(sourceName, machine, List.copyOf(types), b.readVarInt());
+        });
         Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
-                List.copyOf(networkFacets), quickCounts, List.of(), notice, noticeId);
+                List.copyOf(networkFacets), quickCounts, profile, List.of(), notice, noticeId);
     }
 
     private static Page decodePage(RegistryFriendlyByteBuf buf) {

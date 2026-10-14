@@ -29,6 +29,8 @@ public final class TabletPayloads {
                 (payload, context) -> handleQuery(serverPlayer(context), payload));
         registrar.playToServer(TabletMoveNodesPayload.TYPE, TabletMoveNodesPayload.STREAM_CODEC,
                 (payload, context) -> handleMoveNodes(serverPlayer(context), payload));
+        registrar.playToServer(TabletProfilePayload.TYPE, TabletProfilePayload.STREAM_CODEC,
+                (payload, context) -> handleProfile(serverPlayer(context), payload));
         registrar.playToServer(TabletOpenNodePayload.TYPE, TabletOpenNodePayload.STREAM_CODEC,
                 (payload, context) -> handleOpenNode(serverPlayer(context), payload));
         registrar.playToServer(TabletActionPayload.TYPE, TabletActionPayload.STREAM_CODEC,
@@ -89,6 +91,16 @@ public final class TabletPayloads {
     public static boolean handleSelectNode(@Nullable ServerPlayer player, TabletSelectNodePayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
         return menu != null && menu.chooseNode(payload.node().orElse(null));
+    }
+
+    /**
+     * O perfil do Tablet: copiar, esquecer, colar e desfazer. Devolve quantos nós a ação atingiu (1 para
+     * copiar e esquecer), ou -1 se recusou.
+     */
+    public static int handleProfile(@Nullable ServerPlayer player, TabletProfilePayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null),
+                payload.machine().orElse(null), payload.keys());
     }
 
     public static boolean handleOpenNode(@Nullable ServerPlayer player, TabletOpenNodePayload payload) {

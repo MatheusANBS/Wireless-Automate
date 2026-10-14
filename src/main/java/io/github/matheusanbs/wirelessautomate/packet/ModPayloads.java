@@ -27,7 +27,6 @@ import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
-import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
@@ -221,8 +220,9 @@ public final class ModPayloads {
 
     /** O nome do lado de {@code face} (no quadro do alvo) como o painel mostra: relativo à máquina. */
     private static Component faceName(RouterBlockEntity router, EditTarget target, Direction face) {
+        // o mesmo lado que a tela mostra: relativo à frente da máquina
         String key = target.attached()
-                ? RelativeSide.fromAbsolute(router.facing(), router.spin(), face).key()
+                ? RemoteSide.fromAbsolute(router.attachedFront(), face.ordinal()).key()
                 : RemoteSide.fromCanonical(face.ordinal()).key();
         return Component.translatable("gui.wirelessautomate.router.side." + key);
     }

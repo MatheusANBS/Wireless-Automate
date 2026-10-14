@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -135,11 +136,10 @@ public final class DevScreenshot {
             new Step(() -> {
                 screen.previewType(ResourceType.ITEM);
                 screen.previewFace(Direction.NORTH);
-                screen.previewExpanded(true);
                 int[] center = screen.previewFaceCenter(Direction.UP);
                 mouseX = center[0];
                 mouseY = center[1];
-            }, "3-mais"),
+            }, "3-face-dica"),
             new Step(() -> {
                 mouseX = mouseY = -1;
                 screen.previewNetworkList(true);
@@ -149,9 +149,9 @@ public final class DevScreenshot {
                 screen.previewNetworkList(false);
                 screen.previewType(ResourceType.ENERGY);
                 screen.previewNetworkList(true);
-                int[] center = screen.previewNetworkCenter();
-                mouseX = center[0];
-                mouseY = center[1] + 15 + 2 + 12 + 12 + 6;
+                int[] center = screen.panel().networkRowCenter(0);
+                mouseX = center == null ? -1 : center[0];
+                mouseY = center == null ? -1 : center[1];
             }, "4b-redes-energia"),
             new Step(() -> {
                 screen.previewNetworkList(false);
@@ -178,7 +178,6 @@ public final class DevScreenshot {
             }, "4e-nome-longo"),
             new Step(() -> {
                 screen.previewNetworkList(false);
-                screen.previewExpanded(false);
                 screen.previewType(ResourceType.FLUID);
                 RouterSnapshot s = screen.getMenu().snapshot();
                 screen.getMenu().applySnapshot(new RouterSnapshot(s.pos(), "Fornalha Norte", s.tier(), s.facing(),
@@ -191,7 +190,21 @@ public final class DevScreenshot {
                 mouseX = mouseY = -1;
                 screen.previewType(ResourceType.ITEM);
                 screen.previewRename("Fornalha Norte 2");
-            }, "6-renomear"));
+            }, "6-renomear"),
+            new Step(() -> {
+                // tema escuro só nas capturas, sem gravar a config
+                screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
+                GuiThemes.preview(GuiTheme.DARK);
+                screen.previewType(ResourceType.ITEM);
+                screen.previewFace(Direction.DOWN);
+            }, "6b-escuro"),
+            new Step(() -> screen.previewNetworkList(true), "6c-escuro-redes"),
+            new Step(() -> {
+                // a disposição estreita: abas na largura toda, o cubo embaixo do visor
+                screen.previewNetworkList(false);
+                screen.previewResize(300, 240);
+            }, "6d-escuro-estreito"),
+            new Step(() -> GuiThemes.preview(GuiTheme.LIGHT), "6e-estreito"));
 
     /** Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador e as galerias (giro, blocos, capa, roda). */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
@@ -208,7 +221,7 @@ public final class DevScreenshot {
     private static List<Step> viewSteps() {
         return List.of(
                 new Step(() -> {
-                    screen.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0); // sai da renomeação do passo anterior
+                    screen.previewResize(420, 240);
                     screen.previewType(ResourceType.ITEM);
                     screen.previewFace(Direction.NORTH);
                     screen.previewViewDefault();
@@ -405,13 +418,11 @@ public final class DevScreenshot {
                     mouseX = mouseY = -1;
                     screen.previewType(ResourceType.ENERGY);
                     screen.previewFace(Direction.NORTH);
-                    screen.previewExpanded(true);
-                }, "c3-energia-mais"),
+                }, "c3-energia"),
                 new Step(() -> {
                     // sem servidor, os slots não trocam sozinhos: põe o que o servidor mandaria
                     screen.previewType(ResourceType.FLUID);
                     screen.previewFace(Direction.UP);
-                    screen.previewExpanded(false);
                     screen.getMenu().getSlot(0).set(ItemStack.EMPTY);
                     screen.getMenu().getSlot(1).set(card(ResourceType.FLUID, fluidFilter(), 1));
                 }, "c4-fluidos"));

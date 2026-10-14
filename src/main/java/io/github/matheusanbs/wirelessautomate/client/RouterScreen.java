@@ -1,34 +1,27 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
-import io.github.matheusanbs.wirelessautomate.menu.RangeView;
-import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
-import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
-import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
-import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
-import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
-import io.github.matheusanbs.wirelessautomate.range.EditTarget;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.packet.SelectFacePayload;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -43,43 +36,33 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do roteador (especificação, "Telas da interface › Roteador"): cabeçalho com nome, vazão da
- * aba e tier; abas por tipo e, no canto direito da linha delas, o resumo "N redes" das faces da aba;
- * o visor 3D da máquina com o roteador ({@link MachineView3D}) e os botões das 6 faces logo abaixo,
- * cada um com um ponto na cor da rede da face; a face selecionada com modo, a linha Rede (a rede é
- * da face: cada face, em cada tipo, está numa rede ou em nenhuma), filtro e os slots de Cartão de
- * Filtro; prioridade e redstone recolhidos em "Mais", embaixo das faces; e o inventário do jogador,
- * embaixo da face selecionada, para pôr e tirar cartões. No cabeçalho, à direita do tier, fica o
- * slot do Upgrade de chunk loading (é do roteador, não da face), com uma luz do estado (ativo, no
- * limite, desligado) e a dica.
+ * Tela do roteador (especificação, "Painel do nó › Tela do roteador"): cabeçalho com nome, vazão da aba,
+ * tier, os slots dos upgrades e o botão do tema; o visor 3D da máquina com o roteador
+ * ({@link MachineView3D}); os slots de Cartão de Filtro da face escolhida embaixo do visor; o inventário
+ * do jogador; e o painel do nó ({@link NodePanel}): abas por tipo, as faces desdobradas como um cubo e a
+ * face escolhida com modo, rede, filtro, prioridade e redstone.
  *
- * <p>Os slots de cartão mostram os da face e do tipo selecionados: ao mudar de aba ou de face a
- * tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram, e a
- * sincronização vanilla traz os cartões.
+ * <p>Duas disposições, pela largura. Larga (a de abertura): à esquerda o visor, os cartões e o inventário;
+ * à direita o painel inteiro, com as abas em cima. Estreita (até o mínimo de 300 × 240, a menor escala
+ * automática): as abas na largura toda, o visor com o cubo e os cartões embaixo à esquerda e, à direita, o
+ * resto do painel em cima do inventário.
  *
- * <p>Os botões de face mostram os lados relativos à frente da máquina (Frente, Trás, Esquerda,
- * Direita, Cima, Baixo), na ordem do quadro canônico ({@link #FACE_ORDER}). Na presa, a frente vem do
- * snapshot ({@link RouterSnapshot#attachedFront()}) e o botão age na face absoluta dela
- * ({@link #screenFace}); o resto da tela e os pacotes continuam com a face absoluta. Num alvo remoto, a
- * face da tela já é a canônica.
+ * <p>O visor e o cubo andam juntos: a face clicada num escolhe a mesma no outro, e a face sob o mouse num
+ * realça a do outro. Os slots de cartão mostram os da face e do tipo escolhidos: ao mudar de aba ou de
+ * face a tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram.
  *
  * <p>Com o Upgrade de Alcance valendo ({@link RangeView#present()}), um botão "Máquinas · 3/8" acima do
- * visor alterna o visor com a lista das máquinas ({@link RangeList}). Escolher um grupo ou uma máquina
- * remota troca o alvo de edição: as faces passam ao quadro canônico (Norte = Frente), o visor mostra o
- * bloco do alvo sem o roteador e o cabeçalho da coluna da direita diz o perfil ou a máquina, com
- * Voltar ao perfil e Desvincular; a linha Rede edita a rede da face do perfil ou da exceção. Sem o
- * upgrade a tela é a de sempre.
+ * visor alterna o visor com a lista das máquinas ({@link RangeList}), e o painel ganha a linha Editando.
+ * Escolher um grupo ou uma máquina troca o alvo de edição: as faces passam ao quadro canônico (Norte =
+ * Frente) e o visor mostra o bloco do alvo sem o roteador.
  *
- * <p>Tudo vem de {@link RouterMenu#snapshot()}. Os botões leem o estado a cada quadro e
- * {@link #refresh()} reposiciona o que depende de texto, então um snapshot novo
- * ({@link RouterMenu#version()} mudou) aparece sem recriar widgets e sem perder aba, face ou o que
- * está aberto.
+ * <p>Tudo vem de {@link RouterMenu#snapshot()}; o painel lê o snapshot a cada quadro, então um snapshot
+ * novo aparece sem recriar widgets e sem perder aba, face ou o que está aberto.
  */
 public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
@@ -87,47 +70,34 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     // cresce pela borda direita, pela de baixo e pelo canto, e o tamanho fica lembrado na sessão.
     private static final int MIN_W = 300;
     private static final int MIN_H = 240;
+    /** Largura de abertura: a disposição larga, com o painel inteiro ao lado do visor. */
+    private static final int DEFAULT_W = 420;
     /** Alça do canto (lado, em px) e espessura das bordas que redimensionam. */
     private static final int GRIP = 7;
     private static final int EDGE = 3;
-    private static int savedW = MIN_W;
+    private static int savedW = DEFAULT_W;
     private static int savedH = MIN_H;
     private static final int X0 = 9;
     private static final int HEAD_Y = 8;
     /** Quanto os slots de upgrade recuam para dar lugar ao botão do tema no canto direito do cabeçalho. */
     private static final int HEAD_SHIFT = ThemeToggle.SIZE + 4;
     private static final int PILL_H = 13;
-    private static final int TAB_Y = 26;
-    private static final int TAB_H = 15;
-    private static final int SEP_Y = 45;
-    private static final int BODY_Y = 50;
-    // visor 3D (altura no tamanho mínimo; cresce com a tela) e, logo abaixo, os botões das faces em
-    // duas fileiras (cada coluna é um eixo) e a linha da frente da máquina
-    private static final int VIEW_H = 84;
-    /** Botões de face com 16 px (o ícone do modo ocupa a altura), para a linha da frente caber embaixo. */
-    private static final int FACE_H = 16;
-    private static final int FACE_GAP = 2;
-    // coluna da face selecionada: largura fixa, presa à borda direita
-    private static final int RW = 162;
-    private static final int MODE_Y = 74;
-    private static final int MODE_W = (RW - 2) / 2;
-    private static final int MODE_H = 14;
-    /** Linha Rede da face selecionada, abaixo dos botões de modo: o rótulo e a pílula com a lista. */
-    private static final int NET_Y = 106;
-    private static final int NET_H = 12;
-    private static final int FILTER_Y = 120;
-    /** Slots de cartão (o fundo; o item fica 1 px para dentro, em {@link RouterMenu#CARD_Y}). */
-    private static final int CARD_BG_Y = RouterMenu.CARD_Y - 1;
+    /** Topo das abas (estreita) ou das duas colunas (larga). */
+    private static final int TOP_Y = 26;
+    /** Topo das colunas na disposição estreita, abaixo das abas e da linha. */
+    private static final int NARROW_BODY_Y = 47;
+    /** Inventário (e a coluna da direita na estreita): 9 slots. */
+    private static final int INV_W = 162;
+    private static final int COLUMN_GAP = 8;
+    /** Largura do painel na disposição larga: do mínimo (as abas com o nome da ativa) ao máximo. */
+    private static final int PANEL_MIN = 210;
+    private static final int PANEL_MAX = 240;
+    /** A partir desta largura, a disposição larga. */
+    private static final int WIDE_MIN = 2 * X0 + COLUMN_GAP + INV_W + PANEL_MIN;
+    /** Altura do cubo embaixo do visor, na estreita: 3 linhas de 13 px. */
+    private static final int NARROW_NET_H = 3 * 13 + 2 * 2;
     /** Slot do upgrade (o fundo), no canto direito do cabeçalho; o tier e a vazão ficam à esquerda dele. */
     private static final int UPGRADE_BG_Y = RouterMenu.UPGRADE_Y - 1;
-    // embaixo das faces, na coluna do visor: "Mais" com prioridade e redstone (alturas no tamanho mínimo)
-    private static final int ADV_SEP_Y = 182;
-    private static final int MORE_Y = 186;
-    private static final int PRIO_Y = 201;
-    private static final int REDSTONE_Y = 219;
-    private static final int ROW_H = 14;
-    private static final int DROPDOWN_ROW = 12;
-    private static final int DROPDOWN_MAX_ROWS = 8;
     /** Faixa do botão "Máquinas" acima do visor (tirada da altura dele), com o upgrade de alcance. */
     private static final int RANGE_STRIP = 14;
     /** Largura da lista quando ela fica ao lado do visor ({@link #sideBySide}). */
@@ -137,32 +107,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Largura mínima do visor ao lado da lista: abaixo disso, os dois alternam no mesmo lugar. */
     private static final int SIDE_MIN_VIEW = 140;
     /**
-     * Linha dos botões Voltar ao perfil e Desvincular, no lugar da segunda linha do cabeçalho: 2 px
-     * acima dos botões de modo ({@link #MODE_Y}).
-     */
-    private static final int TARGET_ROW_Y = BODY_Y + 10;
-    private static final int TARGET_ROW_H = 12;
-    /** Folga entre os dois botões e o texto de cada um até a borda (de cada lado). */
-    private static final int TARGET_GAP = 3;
-    private static final int TARGET_PAD = 3;
-    /** Margem mínima do rótulo de uma face até a borda do botão, de cada lado. */
-    private static final int SIDE_PAD = 3;
-    /** Espaço do Olho do roteador à direita do rótulo, no botão da face onde ele está preso. */
-    private static final int FACE_EYE = 7;
-    /**
      * Mostra a lista das máquinas no lugar do visor. Estático de propósito, como {@link #savedW}: a
      * escolha vale para a sessão inteira, então a próxima tela de um roteador com o upgrade já abre na
      * lista (ou no visor) como o jogador deixou.
      */
     private static boolean showList;
 
-    private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
-    /**
-     * Ordem dos botões das faces, no quadro canônico (frente = Norte): em cima Cima, Frente e Esquerda;
-     * embaixo Baixo, Trás e Direita. Na presa, cada um age na face absoluta do lado ({@link #screenFace}).
-     */
-    private static final Direction[] FACE_ORDER = {Direction.UP, Direction.NORTH, Direction.EAST, Direction.DOWN,
-            Direction.SOUTH, Direction.WEST};
     /** Cartão desenhado apagado num slot de cartão vazio. */
     private static final ItemStack GHOST_CARD = new ItemStack(ModItems.FILTER_CARD.get());
     /** Upgrade desenhado apagado no slot de upgrade vazio. */
@@ -171,45 +121,17 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final ItemStack GHOST_RANGE = new ItemStack(ModItems.RANGE_UPGRADE.get());
 
     private final boolean preview;
-    private final List<ResourceType> types = new ArrayList<>();
     private final List<FlatButton> buttons = new ArrayList<>();
-    private final Map<ResourceType, FlatButton> tabButtons = new EnumMap<>(ResourceType.class);
-    private final MachineView3D machineView = new MachineView3D(direction -> {
-        face = direction;
-        networkListOpen = false;
-        refresh();
-    });
-    private final Map<Direction, FlatButton> faceButtons = new EnumMap<>(Direction.class);
+    private final NodePanel panel;
+    private final MachineView3D machineView;
     private final Function<Direction, FaceView> faceViews = this::visorView;
     private final RangeList rangeList = new RangeList();
 
-    private ResourceType type = ResourceType.ITEM;
-    private Direction face;
-    private boolean expanded;
-    private boolean networkListOpen;
-    private int networkScroll;
-    private TabLayout.Mode tabMode = TabLayout.Mode.FULL;
     private boolean renaming;
     private String renameDraft = "";
 
     private FlatButton titleButton;
-    /** Pílula da linha Rede: a rede da face selecionada; abre a lista. */
-    private FlatButton networkButton;
-    /** Resumo "N redes" no canto da linha das abas (só a dica responde ao mouse). */
-    private FlatButton summaryButton;
-    /** Linha "Frente: Sul" abaixo dos botões de face (só a dica responde ao mouse). */
-    private FlatButton frontButton;
-    private FlatButton moreButton;
-    private FlatButton prioMinus;
-    private FlatButton prioPlus;
-    private FlatButton redstoneButton;
-    private FlatButton editFilterButton;
     private FlatButton machinesButton;
-    private FlatButton revertButton;
-    private FlatButton unlinkButton;
-    /** O alvo de edição que a tela mostra; quando o do snapshot muda, a face passa à do menu. */
-    private EditTarget shownTarget;
-    private final List<FlatButton> modeButtons = new ArrayList<>();
     private EditBox renameBox;
 
     private int w = MIN_W;
@@ -228,9 +150,55 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         this.preview = preview;
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.face = menu.selectedFace();
-        this.shownTarget = menu.snapshot().target();
-        types.addAll(LoadedTypes.LIST);
+        this.panel = new NodePanel(new PanelActions(), menu.snapshot(), menu.selectedFace());
+        this.machineView = new MachineView3D(panel::selectFace);
+        // o aviso de outra tela agiria no alvo errado
+        PanelNotices.clear();
+    }
+
+    /** O que o painel manda: pelo menu desta tela, ou só no snapshot local sem servidor. */
+    private final class PanelActions implements NodePanel.Actions {
+        @Override
+        public int containerId() {
+            return menu.containerId;
+        }
+
+        @Override
+        public void send(CustomPacketPayload payload) {
+            if (preview) {
+                applyLocally(payload);
+            } else {
+                PacketDistributor.sendToServer(payload);
+            }
+        }
+
+        @Override
+        public int cardCount() {
+            int count = 0;
+            for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
+                if (menu.getSlot(i).hasItem()) {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
+    /** Captura sem servidor: modo, prioridade, redstone e rede mudam só no snapshot local. */
+    private void applyLocally(CustomPacketPayload payload) {
+        List<FaceView> faces = new ArrayList<>(snapshot().faces());
+        if (payload instanceof SetFacePayload p) {
+            int index = RouterSnapshot.index(p.resource(), p.face());
+            FaceView current = faces.get(index);
+            faces.set(index, new FaceView(p.mode(), p.priority(), p.redstone(), current.slots(), current.filterSize(),
+                    current.blacklist(), current.network()));
+        } else if (payload instanceof SetNetworkPayload p) {
+            int index = RouterSnapshot.index(p.resource(), p.face());
+            faces.set(index, faces.get(index).withNetwork(p.network()));
+        } else {
+            return;
+        }
+        menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
     }
 
     // ------------------------------------------------------------------ estado
@@ -239,12 +207,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return menu.snapshot();
     }
 
-    private FaceView view() {
-        return view(face);
+    private ResourceType type() {
+        return panel.type();
+    }
+
+    private Direction face() {
+        return panel.face();
     }
 
     private FaceView view(Direction direction) {
-        return snapshot().face(type, direction);
+        return snapshot().face(type(), direction);
     }
 
     /** A face no visor: num alvo remoto sem máquina carregada, as faces não aparecem apagadas. */
@@ -275,7 +247,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
      * Máquinas alterna os dois no mesmo lugar.
      */
     private boolean sideBySide() {
-        return rangeShown() && viewW() >= SIDE_LIST_W + SIDE_GAP + SIDE_MIN_VIEW;
+        return rangeShown() && lw() >= SIDE_LIST_W + SIDE_GAP + SIDE_MIN_VIEW;
     }
 
     /** A lista está na tela: ao lado do visor, ou no lugar dele. */
@@ -295,60 +267,30 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Largura do visor (sem a lista, lado a lado). */
     private int viewBoxW() {
-        return sideBySide() ? viewW() - SIDE_LIST_W - SIDE_GAP : viewW();
+        return sideBySide() ? lw() - SIDE_LIST_W - SIDE_GAP : lw();
     }
 
     /** Largura da lista. */
     private int listW() {
-        return sideBySide() ? SIDE_LIST_W : viewW();
+        return sideBySide() ? SIDE_LIST_W : lw();
     }
 
-    /** A máquina remota do alvo, ou {@code null} (presa ou grupo). */
-    private RangeView.@Nullable MachineView targetMachine() {
-        EditTarget target = snapshot().target();
-        return rangeShown() && target.kind() == EditTarget.Kind.MACHINE ? range().machine(target.id()) : null;
-    }
-
-    /** O grupo do alvo (o grupo escolhido ou o da máquina), ou {@code null}. */
-    private RangeView.@Nullable GroupView targetGroup() {
-        EditTarget target = snapshot().target();
-        if (!rangeShown()) {
-            return null;
-        }
-        return switch (target.kind()) {
-            case ATTACHED -> null;
-            case GROUP -> range().group(target.id());
-            case MACHINE -> {
-                RangeView.MachineView machine = range().machine(target.id());
-                yield machine == null ? null : range().group(machine.group());
-            }
-        };
-    }
-
-    /**
-     * Há uma máquina carregada no alvo remoto (a escolhida, ou alguma do grupo): sem ela as faces vêm
-     * sem acesso ({@code slots = -1}), mas continuam editáveis.
-     */
+    /** Há uma máquina carregada no alvo remoto (a escolhida, ou alguma do grupo). */
     private boolean remoteLoaded() {
-        RangeView.MachineView machine = targetMachine();
-        if (machine != null) {
-            return machine.state() == RangeView.MachineState.LOADED;
+        EditTarget target = snapshot().target();
+        if (target.kind() == EditTarget.Kind.MACHINE) {
+            RangeView.MachineView machine = range().machine(target.id());
+            return machine != null && machine.state() == RangeView.MachineState.LOADED;
         }
-        RangeView.GroupView group = targetGroup();
-        if (group == null) {
-            return true;
-        }
-        for (RangeView.MachineView m : range().machines()) {
-            if (m.group() == group.id() && m.state() == RangeView.MachineState.LOADED) {
-                return true;
+        if (target.kind() == EditTarget.Kind.GROUP) {
+            for (RangeView.MachineView m : range().machines()) {
+                if (m.group() == target.id() && m.state() == RangeView.MachineState.LOADED) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
-    }
-
-    /** A face pode ser configurada: tem acesso, ou é de um alvo remoto (o perfil vale para várias). */
-    private boolean editable(FaceView view) {
-        return view.available() || remote();
+        return true;
     }
 
     private int tierColor() {
@@ -363,135 +305,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return s.machine().isEmpty() ? Component.translatable("block.wirelessautomate.router") : s.machine().getHoverName();
     }
 
-    /** A rede da face {@code f} (quadro do alvo) na aba atual, se o seletor a conhece. */
-    private @Nullable NetworkEntry network(Direction f) {
-        Optional<UUID> id = snapshot().network(type, f);
-        return id.isEmpty() ? null : snapshot().entry(id.get());
-    }
-
-    /** O nome da rede da face {@code f}: o da rede, "Sem rede" ou "Rede indisponível". */
-    private Component networkLabel(Direction f) {
-        NetworkEntry entry = network(f);
-        if (entry != null) {
-            return Component.literal(entry.name());
-        }
-        return snapshot().network(type, f).isPresent() ? tr("network.unknown") : tr("network.none");
-    }
-
-    /** A cor da rede da face {@code f} (ARGB), ou {@code MUTED} sem rede. */
-    private int networkColor(Direction f) {
-        NetworkEntry entry = network(f);
-        return entry != null ? 0xFF000000 | entry.color() : GuiPaint.MUTED;
-    }
-
-    /** O resumo da aba: "2 redes", "1 rede" ou "Sem rede" (as redes distintas das faces do alvo). */
-    private Component networkSummary() {
-        int count = snapshot().networks(type).size();
-        if (count == 0) {
-            return tr("network.none");
-        }
-        return count == 1 ? tr("networks.count.one") : tr("networks.count", count);
-    }
-
-    /** Dica do resumo: cada face com rede, "Cima: Mina · Baixo: Armazém", na ordem dos botões. */
-    private Component networkSummaryTooltip() {
-        Component faces = Component.empty();
-        boolean first = true;
-        for (Direction canonical : FACE_ORDER) {
-            Direction f = screenFace(canonical);
-            if (snapshot().network(type, f).isEmpty()) {
-                continue;
-            }
-            if (!first) {
-                faces = faces.copy().append(" · ");
-            }
-            faces = faces.copy().append(sideName(f)).append(": ").append(networkLabel(f));
-            first = false;
-        }
-        Component head = tr("networks.tooltip", typeName(type));
-        Component body = first ? tr("network.none") : faces;
-        return head.copy().append("\n").append(body.copy().withColor(GuiPaint.TOOLTIP_MUTED));
-    }
-
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
     }
 
-    private static Component typeName(ResourceType type) {
-        return ResourceStyle.name(type);
-    }
-
-    private static Component faceName(Direction direction) {
-        return tr("face." + direction.getName());
-    }
-
-    /**
-     * A face da tela (absoluta na presa, canônica num alvo remoto) do botão do lado canônico
-     * {@code canonical}: na presa, a face absoluta do lado pela frente da máquina
-     * ({@link RouterSnapshot#attachedFront()}); num alvo remoto, a própria. É a única conversão entre os
-     * dois quadros na tela.
-     */
-    private Direction screenFace(Direction canonical) {
-        if (remote()) {
-            return canonical;
-        }
-        return Direction.values()[RemoteSide.fromCanonical(canonical.ordinal()).toAbsolute(snapshot().attachedFront())];
-    }
-
-    /** O lado relativo à frente da máquina da face da tela {@code direction}. */
-    private RemoteSide side(Direction direction) {
-        return remote() ? RemoteSide.fromCanonical(direction.ordinal())
-                : RemoteSide.fromAbsolute(snapshot().attachedFront(), direction.ordinal());
-    }
-
-    /** O nome da face na tela: o lado relativo à frente da máquina (na presa e num alvo remoto). */
-    private Component sideName(Direction direction) {
-        return tr("side." + side(direction).key());
-    }
-
-    /** O lado abreviado, para o botão da face. */
-    private Component sideShort(Direction direction) {
-        return tr("side.short." + side(direction).key());
-    }
-
-    /** O lado em uma ou duas letras, para o botão estreito. */
-    private Component sideLetter(Direction direction) {
-        return tr("side.letter." + side(direction).key());
-    }
-
-    /** O nome do lado que cabe em {@code room}: inteiro, abreviado ou a letra; o inteiro vai na dica. */
-    private Component sideLabel(Direction direction, int room) {
-        Component full = sideName(direction);
-        if (font.width(full) - 1 <= room) {
-            return full;
-        }
-        Component shortName = sideShort(direction);
-        return font.width(shortName) - 1 <= room ? shortName : sideLetter(direction);
-    }
-
-    private static Component modeName(PortMode mode) {
-        return tr("mode." + mode.name().toLowerCase(Locale.ROOT));
-    }
-
-    private static Component redstoneName(RedstoneMode mode) {
-        return tr("redstone." + mode.name().toLowerCase(Locale.ROOT));
-    }
-
-    /** O que a face acessa: "27 slots", "1 tanque", "energia" ou "sem acesso". */
-    private Component access(FaceView view) {
-        if (!view.available() && remote() && !remoteLoaded()) {
-            RangeView.MachineView machine = targetMachine();
-            return machine != null && machine.state() == RangeView.MachineState.MISSING
-                    ? tr("range.access.missing") : tr("range.access.unloaded");
-        }
-        if (!view.available()) {
-            return tr("access.none");
-        }
-        return ResourceStyle.access(type, view.slots());
-    }
-
     private Component rate() {
         long[] perType = menu.throughput();
+        ResourceType type = type();
         long value = type.ordinal() < perType.length ? perType[type.ordinal()] : 0L;
         return ResourceStyle.rate(type, value);
     }
@@ -506,8 +326,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         imageHeight = h;
         super.init();
         buttons.clear();
-        tabButtons.clear();
-        modeButtons.clear();
         int x = leftPos;
         int y = topPos;
 
@@ -526,122 +344,43 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             setFocused(renameBox);
         }
 
-        for (ResourceType t : types) {
-            FlatButton tab = add(new FlatButton(0, y + TAB_Y, TabLayout.ICON_TAB, TAB_H, typeName(t),
-                    (g, b, hovered) -> paintTab(g, b, hovered, t), () -> selectType(t))
-                    .tooltip(() -> tr("tab.tooltip", typeName(t))));
-            tabButtons.put(t, tab);
-        }
-        // o resumo das redes da aba, no canto direito da linha das abas
-        summaryButton = add(new FlatButton(x, y + TAB_Y + 1, 40, PILL_H, Component.empty(), this::paintSummary,
-                () -> { }).tooltip(this::networkSummaryTooltip));
-        summaryButton.active = false;
-        layoutTabs();
-
-        // a rede é da face: a linha Rede fica abaixo dos botões de modo
-        int netLabelW = font.width(tr("network.face")) + 5;
-        networkButton = add(new FlatButton(x + rx() + netLabelW, y + NET_Y, RW - netLabelW, NET_H, Component.empty(),
-                this::paintNetwork, () -> {
-                    networkListOpen = !networkListOpen;
-                    networkScroll = 0;
-                }).tooltip(this::networkTooltip));
-
-        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
-        for (int i = 0; i < FACE_ORDER.length; i++) {
-            Direction canonical = FACE_ORDER[i];
-            faceButtons.put(canonical, add(new FlatButton(x + X0 + (i % 3) * (faceW() + FACE_GAP),
-                    y + facesY() + (i / 3) * (FACE_H + FACE_GAP), faceW(), FACE_H, Component.empty(),
-                    (g, b, hovered) -> paintFace(g, b, hovered, screenFace(canonical)), () -> {
-                        face = screenFace(canonical);
-                        networkListOpen = false;
-                    }).tooltip(() -> faceTooltip(screenFace(canonical)))));
-        }
-        frontButton = add(new FlatButton(x + X0, y + frontY(), viewW(), 9, Component.empty(), this::paintFront,
-                () -> { }).tooltip(() -> tr("front.tooltip")));
-        frontButton.active = false;
-
-        machinesButton = add(new FlatButton(x + X0, y + BODY_Y, viewW(), RANGE_STRIP - 2, tr("range.machines", 0, 0),
+        machinesButton = add(new FlatButton(x + X0, y + columnsY(), lw(), RANGE_STRIP - 2, tr("range.machines", 0, 0),
                 this::paintMachines, () -> {
                     // lado a lado não há o que alternar: o botão é só o título
                     if (!sideBySide()) {
                         showList = !showList;
                     }
                 }).tooltip(this::machinesTooltip));
-        revertButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.revert"),
-                (g, b, hovered) -> paintClippedButton(g, b, hovered, tr("range.revert")), this::revertMachine)
-                .tooltip(() -> tr("range.revert.tooltip")));
-        unlinkButton = add(new FlatButton(x + rx(), y + TARGET_ROW_Y, 40, TARGET_ROW_H, tr("range.unlink"),
-                (g, b, hovered) -> paintClippedButton(g, b, hovered, tr("range.unlink")), this::unlinkMachine)
-                .tooltip(() -> tr("range.unlink.tooltip")));
 
-        for (int i = 0; i < MODES.length; i++) {
-            PortMode mode = MODES[i];
-            FlatButton button = add(new FlatButton(x + rx() + (i % 2) * (MODE_W + 2), y + MODE_Y + (i / 2) * (MODE_H + 2),
-                    MODE_W, MODE_H, modeName(mode), (g, b, hovered) -> paintMode(g, b, hovered, mode),
-                    () -> sendFace(mode, view().priority(), view().redstone()))
-                    .tooltip(() -> editable(view()) ? tr("mode." + mode.name().toLowerCase(Locale.ROOT) + ".tooltip")
-                            : tr("mode.unavailable")));
-            modeButtons.add(button);
-        }
-
-        editFilterButton = add(new FlatButton(x + x1() - 40, y + FILTER_Y, 40, ROW_H, tr("filter.edit"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("filter.edit")), this::openFilter)
-                .tooltip(() -> tr("filter.edit.tooltip")));
-
-        moreButton = add(new FlatButton(x + X0, y + moreY(), 60, 12, tr("more"), this::paintMore,
-                () -> expanded = !expanded).tooltip(() -> tr("more.tooltip")));
-
-        prioMinus = add(new FlatButton(x + lx1() - 58, y + prioY(), 14, ROW_H, tr("priority.decrease"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("-")),
-                () -> changePriority(-1)).tooltip(() -> tr("priority.tooltip")));
-        prioPlus = add(new FlatButton(x + lx1() - 14, y + prioY(), 14, ROW_H, tr("priority.increase"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal("+")),
-                () -> changePriority(1)).tooltip(() -> tr("priority.tooltip")));
-        redstoneButton = add(new FlatButton(x + X0, y + redstoneY(), viewW(), ROW_H, tr("redstone"),
-                (g, b, hovered) -> paintTextButton(g, b, hovered, tr("redstone.narration", redstoneName(view().redstone()))),
-                this::cycleRedstone).tooltip(() -> tr("redstone.tooltip")));
-
-        // os slots do menu e o visor acompanham o tamanho da tela
-        menu.placeSlots(rx() + 1, w - 26 - HEAD_SHIFT, w - 26 - 18 - HEAD_SHIFT, inventoryY());
-        machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
+        // os slots do menu acompanham o tamanho da tela
+        menu.placeSlots(X0 + 1, cardsBgY() + 1, inventoryX(), inventoryY(), w - 26 - HEAD_SHIFT,
+                w - 26 - 18 - HEAD_SHIFT);
+        layoutPanel();
         refresh();
     }
 
-    private void selectType(ResourceType t) {
-        type = t;
-        networkListOpen = false;
-        layoutTabs();
-    }
-
-    /** Larguras e posições das abas pelo espaço que sobra depois do resumo das redes, e o resumo no canto. */
-    private void layoutTabs() {
-        int summaryW = font.width(networkSummary()) + 2;
-        summaryButton.setX(leftPos + x1() - summaryW);
-        summaryButton.setWidth(summaryW);
-        summaryButton.setMessage(networkSummary());
-        int[] full = new int[types.size()];
-        int active = 0;
-        for (int i = 0; i < types.size(); i++) {
-            full[i] = 4 + ResourceStyle.ICON + 3 + font.width(typeName(types.get(i))) + 6;
-            if (types.get(i) == type) {
-                active = i;
-            }
-        }
-        int available = (x1() - X0) - summaryW - 6;
-        TabLayout.Result layout = TabLayout.choose(full, active, available);
-        tabMode = layout.mode();
-        int tabX = leftPos + X0;
-        for (int i = 0; i < types.size(); i++) {
-            FlatButton tab = tabButtons.get(types.get(i));
-            tab.setX(tabX);
-            tab.setWidth(layout.widths()[i]);
-            tabX += layout.widths()[i] + TabLayout.GAP;
+    /** O painel no lugar da disposição atual. */
+    private void layoutPanel() {
+        int x = leftPos;
+        int y = topPos;
+        if (wide()) {
+            panel.layout(x + rx(), y + TOP_Y, rw(), h - 8 - TOP_Y);
+        } else {
+            int netY = cardsBgY() - 4 - NARROW_NET_H;
+            int bodyBottom = inventoryY() - 1 - 4;
+            panel.layoutSplit(x + X0, y + TOP_Y, x1() - X0, x + X0, y + netY, lw(), NARROW_NET_H, x + rx(),
+                    y + NARROW_BODY_Y, rw(), bodyBottom - NARROW_BODY_Y);
         }
     }
 
     /** Modo atual das abas (gancho do e2e). */
     public TabLayout.Mode tabMode() {
-        return tabMode;
+        return panel.tabMode();
+    }
+
+    /** O painel do nó (gancho do e2e). */
+    public NodePanel panel() {
+        return panel;
     }
 
     // ------------------------------------------------------------------ geometria (depende do tamanho)
@@ -658,62 +397,29 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return w - 9;
     }
 
-    /** Coluna da direita: largura fixa ({@link #RW}), presa à borda direita. */
+    /** Disposição larga: o painel inteiro ao lado do visor. */
+    private boolean wide() {
+        return w >= WIDE_MIN;
+    }
+
+    /** Largura da coluna da direita: o painel (larga) ou o resto do painel com o inventário (estreita). */
+    private int rw() {
+        return wide() ? Math.max(PANEL_MIN, Math.min(PANEL_MAX, w - 2 * X0 - COLUMN_GAP - INV_W)) : INV_W;
+    }
+
+    /** Começo da coluna da direita, presa à borda direita. */
     private int rx() {
-        return x1() - RW;
+        return x1() - rw();
     }
 
-    /** O visor fica com toda a largura e a altura extras. */
-    private int viewW() {
-        return rx() - 8 - X0;
+    /** Largura da coluna da esquerda (visor, cubo na estreita, cartões e, na larga, o inventário). */
+    private int lw() {
+        return rx() - COLUMN_GAP - X0;
     }
 
-    private int viewH() {
-        return VIEW_H + (h - MIN_H);
-    }
-
-    /** Fim da coluna do visor. */
-    private int lx1() {
-        return X0 + viewW();
-    }
-
-    private int facesY() {
-        return BODY_Y + viewH() + 3;
-    }
-
-    /** A linha da frente da máquina, logo abaixo das duas fileiras de botões de face. */
-    private int frontY() {
-        return facesY() + 2 * FACE_H + FACE_GAP + 1;
-    }
-
-    /** Topo do visor (ou da lista): abaixo do botão Máquinas, com o upgrade de alcance. */
-    private int boxY() {
-        return BODY_Y + (rangeShown() ? RANGE_STRIP : 0);
-    }
-
-    /** Altura do visor (ou da lista). */
-    private int boxH() {
-        return viewH() - (rangeShown() ? RANGE_STRIP : 0);
-    }
-
-    private int faceW() {
-        return (viewW() - 2 * FACE_GAP) / 3;
-    }
-
-    private int advSepY() {
-        return ADV_SEP_Y + (h - MIN_H);
-    }
-
-    private int moreY() {
-        return MORE_Y + (h - MIN_H);
-    }
-
-    private int prioY() {
-        return PRIO_Y + (h - MIN_H);
-    }
-
-    private int redstoneY() {
-        return REDSTONE_Y + (h - MIN_H);
+    /** Topo das colunas. */
+    private int columnsY() {
+        return wide() ? TOP_Y : NARROW_BODY_Y;
     }
 
     /** Topo do inventário do jogador (o canto do item), colado na borda de baixo. */
@@ -721,9 +427,25 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return RouterMenu.INVENTORY_Y + (h - MIN_H);
     }
 
-    /** Fundo do primeiro slot de cartão (o item fica 1 px para dentro). */
-    private int cardBgX() {
-        return rx() + 1 - 1;
+    /** O inventário fica na coluna da esquerda (larga) ou embaixo do painel (estreita). */
+    private int inventoryX() {
+        return (wide() ? X0 : rx()) + 1;
+    }
+
+    /** Fundo dos slots de cartão: embaixo do visor (larga) ou do cubo (estreita). */
+    private int cardsBgY() {
+        return wide() ? inventoryY() - 1 - 4 - 18 : h - 8 - 18;
+    }
+
+    /** Topo do visor (ou da lista): abaixo do botão Máquinas, com o upgrade de alcance. */
+    private int boxY() {
+        return columnsY() + (rangeShown() ? RANGE_STRIP : 0);
+    }
+
+    /** Altura do visor (ou da lista): até o cubo (estreita) ou os cartões (larga). */
+    private int boxH() {
+        int bottom = wide() ? cardsBgY() - 4 : cardsBgY() - 4 - NARROW_NET_H - 4;
+        return bottom - boxY();
     }
 
     /** Fundo do slot do upgrade, no canto direito do cabeçalho. */
@@ -756,21 +478,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Posições, visibilidade e narração que dependem do snapshot ou do estado da tela. */
     private void refresh() {
-        RouterSnapshot s = snapshot();
-        // o alvo mudou (a lista, o servidor ou a volta do filtro): a face passa à que o menu adotou
-        if (!s.target().equals(shownTarget)) {
-            shownTarget = s.target();
-            face = menu.selectedFace();
-        }
-        Component tierText = Component.translatable(s.tier().translationKey());
+        panel.setSnapshot(snapshot());
+        Component tierText = Component.translatable(snapshot().tier().translationKey());
         int tierW = pillWidth(tierText);
         int rateX = leftPos + headEnd() - tierW - 6 - font.width(rate());
-
-        // o resumo muda com o snapshot: as abas abrem espaço para ele
-        layoutTabs();
-        networkButton.setMessage(tr("network.face.narration", sideName(face), typeName(type), networkLabel(face)));
-        frontButton.setMessage(frontLabel());
-
         int titleW = rateX - (leftPos + X0) - 8;
         titleButton.setWidth(Math.min(titleW, font.width(displayName()) + 4));
         titleButton.setMessage(displayName());
@@ -779,71 +490,27 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox.visible = renaming;
         GuiPaint.ink(renameBox, displayName()); // a cor do EditBox é do widget: segue o tema a cada quadro
 
-        FaceView v = view();
-        for (FlatButton button : modeButtons) {
-            button.active = editable(v);
-        }
-        moreButton.setWidth(11 + font.width(expanded ? tr("less") : tr("more")) + 2);
-        moreButton.setMessage(expanded ? tr("less") : tr("more"));
-        prioMinus.visible = prioPlus.visible = redstoneButton.visible = expanded;
-        prioMinus.active = prioPlus.active = redstoneButton.active = editable(v);
-        redstoneButton.setMessage(tr("redstone.narration", redstoneName(v.redstone())));
-        editFilterButton.visible = editFilterButton.active = hasFilter();
-
-        refreshRange();
-
-        List<NetworkEntry> networks = s.networks();
-        networkScroll = Math.max(0, Math.min(networkScroll, networks.size() + 1 - DROPDOWN_MAX_ROWS));
-        syncSelection();
-    }
-
-    /** O botão Máquinas, a lista, o visor abaixo dele, os rótulos das faces e os botões da máquina remota. */
-    private void refreshRange() {
-        boolean shown = rangeShown();
-        machinesButton.visible = shown;
+        machinesButton.visible = rangeShown();
         machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
         machineView.setBounds(leftPos + viewX() + 1, topPos + boxY() + 1, viewBoxW() - 2, boxH() - 2);
         rangeList.setBounds(leftPos + X0, topPos + boxY(), listW(), boxH());
-        if (shown) {
+        if (rangeShown()) {
             rangeList.sync(range(), snapshot().target());
         }
-        for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
-            entry.getValue().setMessage(sideName(screenFace(entry.getKey())));
-        }
-        RangeView.MachineView machine = targetMachine();
-        boolean exception = machine != null && machine.exception();
-        // a largura do texto mais a folga, sem passar da coluna: se não couber, o Desvincular fica com
-        // até metade e o Voltar ao perfil com o resto, e o texto abrevia (com o inteiro na dica)
-        int unlinkW = font.width(tr("range.unlink")) + 2 * TARGET_PAD;
-        int revertW = exception ? font.width(tr("range.revert")) + 2 * TARGET_PAD : 0;
-        if (exception && revertW + TARGET_GAP + unlinkW > RW) {
-            unlinkW = Math.min(unlinkW, (RW - TARGET_GAP) / 2);
-            revertW = RW - TARGET_GAP - unlinkW;
-        }
-        unlinkW = Math.min(unlinkW, RW);
-        int bx = leftPos + rx();
-        revertButton.visible = revertButton.active = exception;
-        if (exception) {
-            revertButton.setX(bx);
-            revertButton.setWidth(revertW);
-            bx += revertW + TARGET_GAP;
-        }
-        unlinkButton.visible = unlinkButton.active = machine != null;
-        unlinkButton.setX(bx);
-        unlinkButton.setWidth(unlinkW);
+        syncSelection();
     }
 
     /**
-     * Aba ou face mudou (por botão, visor ou teclado): os slots de cartão passam a mostrar os da
-     * face e do tipo novos. O menu local muda já, para a previsão dos cliques; o servidor, pelo pacote.
+     * Aba ou face mudou (pelo painel, pelo visor ou pelo alvo novo): os slots de cartão passam a mostrar
+     * os da face e do tipo novos. O menu local muda já, para a previsão dos cliques; o servidor, pelo pacote.
      */
     private void syncSelection() {
-        if (type == menu.selectedType() && face == menu.selectedFace()) {
+        if (type() == menu.selectedType() && face() == menu.selectedFace()) {
             return;
         }
-        menu.select(type, face);
+        menu.select(type(), face());
         if (!preview) {
-            send(new SelectFacePayload(menu.containerId, type, face));
+            PacketDistributor.sendToServer(new SelectFacePayload(menu.containerId, type(), face()));
         }
     }
 
@@ -853,72 +520,26 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     // ------------------------------------------------------------------ ações
 
-    private void send(CustomPacketPayload payload) {
-        PacketDistributor.sendToServer(payload);
-    }
-
-    private void sendFace(PortMode mode, int priority, RedstoneMode redstone) {
-        FaceView current = view();
-        if (!editable(current)) {
-            return;
-        }
-        if (preview) {
-            List<FaceView> faces = new ArrayList<>(snapshot().faces());
-            faces.set(RouterSnapshot.index(type, face), new FaceView(mode, priority, redstone, current.slots(),
-                    current.filterSize(), current.blacklist(), current.network()));
-            menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
-            return;
-        }
-        send(new SetFacePayload(menu.containerId, type, face, mode, priority, redstone));
-    }
-
-    /** Itens, fluidos e químicos têm filtro; energia não. */
-    private boolean hasFilter() {
-        return RouterFaceFilterTarget.hasFilter(type);
-    }
-
-    /** Editar: o servidor troca esta tela pela de filtro da face. */
-    private void openFilter() {
-        if (hasFilter() && !preview) {
-            send(new OpenFilterPayload(menu.containerId, type, face));
-        }
-    }
-
     /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */
     private void selectTarget(RangeList.Row row) {
         if (preview) {
             return;
         }
         switch (row.kind()) {
-            case ATTACHED -> send(SelectTargetPayload.attached(menu.containerId));
+            case ATTACHED -> PacketDistributor.sendToServer(SelectTargetPayload.attached(menu.containerId));
             case GROUP -> {
                 RangeView.GroupView group = range().group(row.group());
                 if (group != null) {
-                    send(SelectTargetPayload.group(menu.containerId, group.id(), group.block()));
+                    PacketDistributor.sendToServer(SelectTargetPayload.group(menu.containerId, group.id(), group.block()));
                 }
             }
             case MACHINE -> {
                 RangeView.MachineView machine = range().machine(row.machine());
                 if (machine != null) {
-                    send(SelectTargetPayload.machine(menu.containerId, row.machine(), machine.pos()));
+                    PacketDistributor.sendToServer(SelectTargetPayload.machine(menu.containerId, row.machine(),
+                            machine.pos()));
                 }
             }
-        }
-    }
-
-    /** Voltar ao perfil: a máquina escolhida perde a exceção. */
-    private void revertMachine() {
-        RangeView.MachineView machine = targetMachine();
-        if (machine != null && !preview) {
-            send(new RevertMachinePayload(menu.containerId, snapshot().target().id(), machine.pos()));
-        }
-    }
-
-    /** Desvincular: a máquina escolhida sai do roteador e a tela volta para a presa. */
-    private void unlinkMachine() {
-        RangeView.MachineView machine = targetMachine();
-        if (machine != null && !preview) {
-            send(new UnlinkMachinePayload(menu.containerId, snapshot().target().id(), machine.pos()));
         }
     }
 
@@ -944,36 +565,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
         BlockState state = minecraft.level.getBlockState(s.pos().relative(s.facing().getOpposite()));
         return new ItemStack(state.getBlock().asItem());
-    }
-
-    /** Rótulo da linha do filtro: "Filtro" ou, com entradas, "Filtro · lista branca". */
-    private Component filterLabel(FaceView view) {
-        if (!hasFilter() || view.filterSize() == 0) {
-            return tr("filter.label");
-        }
-        return tr(view.blacklist() ? "filter.black" : "filter.white");
-    }
-
-    /** "Passa tudo", "12 entradas", "2 cartões" ou "12 entradas · 2 cartões". */
-    private Component filterSummary(FaceView view) {
-        int cards = cardCount();
-        Component entries = view.filterSize() == 1 ? tr("filter.count.one") : tr("filter.count", view.filterSize());
-        if (cards == 0) {
-            return view.filterSize() == 0 ? tr("filter.none") : entries;
-        }
-        Component cardText = cards == 1 ? tr("filter.cards.one") : tr("filter.cards", cards);
-        return view.filterSize() == 0 ? cardText : tr("filter.summary", entries, cardText);
-    }
-
-    /** Cartões nos slots da face selecionada (os slots já mostram a seleção da tela). */
-    private int cardCount() {
-        int count = 0;
-        for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
-            if (menu.getSlot(i).hasItem()) {
-                count++;
-            }
-        }
-        return count;
     }
 
     private static boolean isCardSlot(@Nullable Slot slot) {
@@ -1047,48 +638,13 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Dica de um slot de cartão vazio: o tipo, a regra do conjunto e como pôr um cartão. */
     private Component cardSlotTooltip() {
-        return tr("cards.tooltip", typeName(type)).copy()
+        return tr("cards.tooltip", ResourceStyle.name(type())).copy()
                 .append("\n").append(tr("cards.tooltip.rule").copy().withColor(GuiPaint.TOOLTIP_MUTED))
                 .append("\n").append(tr("cards.tooltip.add").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
-    private void changePriority(int direction) {
-        int step = hasShiftDown() ? 10 : 1;
-        int value = Math.max(RouterMenu.MIN_PRIORITY, Math.min(RouterMenu.MAX_PRIORITY, view().priority() + direction * step));
-        if (value != view().priority()) {
-            sendFace(view().mode(), value, view().redstone());
-        }
-    }
-
-    private void cycleRedstone() {
-        RedstoneMode[] all = RedstoneMode.values();
-        sendFace(view().mode(), view().priority(), all[(view().redstone().ordinal() + 1) % all.length]);
-    }
-
-    /**
-     * Põe a face selecionada na rede {@code network} (vazio = sem rede). O servidor confere e o snapshot
-     * seguinte traz a rede nova; sem servidor (captura), muda só o snapshot local. "Sem rede" vai
-     * sempre ao servidor: uma face numa rede apagada chega no snapshot como vazia, mas guarda o UUID,
-     * e só assim sai dela.
-     */
-    private void chooseNetwork(Optional<UUID> network) {
-        networkListOpen = false;
-        if (network.isPresent() && network.equals(snapshot().network(type, face))) {
-            return;
-        }
-        if (preview) {
-            List<FaceView> faces = new ArrayList<>(snapshot().faces());
-            int index = RouterSnapshot.index(type, face);
-            faces.set(index, faces.get(index).withNetwork(network));
-            menu.applySnapshot(snapshot().withFaces(List.copyOf(faces)));
-            return;
-        }
-        send(new SetNetworkPayload(menu.containerId, type, face, network));
-    }
-
     private void startRename() {
         renaming = true;
-        networkListOpen = false;
         renameDraft = snapshot().name();
         renameBox.setValue(renameDraft);
         renameBox.moveCursorToEnd(false);
@@ -1109,7 +665,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 menu.applySnapshot(new RouterSnapshot(s.pos(), name, s.tier(), s.facing(), s.attachedFront(), s.networks(),
                         s.powered(), s.machine(), s.machineState(), s.faces(), s.chunkLoad()));
             } else {
-                send(new RenameRouterPayload(menu.containerId, name));
+                PacketDistributor.sendToServer(new RenameRouterPayload(menu.containerId, name));
             }
         }
         refresh();
@@ -1119,27 +675,21 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!networkListOpen && ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+        boolean popup = panel.popupOpen();
+        if (!popup && ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
-        if (button == 0 && !networkListOpen && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
+        if (button == 0 && !popup && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
-        if (networkListOpen) {
-            int row = dropdownRowAt(mouseX, mouseY);
-            if (row >= 0) {
-                List<NetworkEntry> networks = snapshot().networks();
-                // uma rede que o jogador não pode usar fica na lista só para mostrar o nome: sem clique
-                if (row >= networks.size() || networks.get(row).usable()) {
-                    chooseNetwork(row < networks.size() ? Optional.of(networks.get(row).id()) : Optional.empty());
-                }
-            } else if (!dropdownContains(mouseX, mouseY)) {
-                networkListOpen = false;
-            }
-            return true;
+        if (popup) {
+            return panel.mouseClicked(mouseX, mouseY, button);
         }
         if (renaming && !renameBox.isMouseOver(mouseX, mouseY)) {
             finishRename(true);
+        }
+        if (panel.mouseClicked(mouseX, mouseY, button)) {
+            return true;
         }
         if (listShown() && button == 0
                 && rangeList.click(range(), snapshot().target(), mouseX, mouseY, this::selectTarget)) {
@@ -1206,8 +756,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     /**
-     * Refaz os widgets no tamanho lembrado: aba, face, lista de redes e "Mais" ficam em campos e
-     * sobrevivem; o nome em edição é fechado sem gravar.
+     * Refaz os widgets no tamanho lembrado: aba, face e o que está aberto ficam no painel e sobrevivem; o
+     * nome em edição é fechado sem gravar.
      */
     private void rebuild() {
         if (renaming) {
@@ -1224,16 +774,20 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     @Override
+    public void removed() {
+        PanelNotices.clear();
+        super.removed();
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (networkListOpen && dropdownContains(mouseX, mouseY)) {
-            networkScroll -= (int) Math.signum(scrollY);
-            refresh();
+        if (panel.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
-        if (!networkListOpen && listShown() && rangeList.scroll(range(), mouseX, mouseY, scrollY)) {
+        if (listShown() && rangeList.scroll(range(), mouseX, mouseY, scrollY)) {
             return true;
         }
-        if (!networkListOpen && viewShown() && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
+        if (viewShown() && machineView.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -1252,8 +806,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
             return true;
         }
-        if (networkListOpen && keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            networkListOpen = false;
+        if (panel.keyPressed(keyCode)) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -1275,14 +828,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         // de estado feitas pelo teclado, sem recriar widgets
         refresh();
         GuiText.beginFrame();
-        boolean overList = networkListOpen && dropdownContains(mouseX, mouseY);
-        // com a lista de redes aberta, os botões embaixo dela não ficam realçados
-        super.render(g, overList ? -1 : mouseX, overList ? -1 : mouseY, partialTick);
-        if (networkListOpen) {
-            renderNetworkList(g, mouseX, mouseY);
-            Component clippedName = GuiText.clipAt(mouseX, mouseY);
-            if (clippedName != null) {
-                setTooltipForNextRenderPass(clippedName);
+        boolean popup = panel.popupOpen();
+        // com uma lista do painel aberta, o que está embaixo dela não fica realçado
+        super.render(g, popup ? -1 : mouseX, popup ? -1 : mouseY, partialTick);
+        panel.renderOverlay(g, mouseX, mouseY);
+        if (popup) {
+            Component clipped = GuiText.clipAt(mouseX, mouseY);
+            if (clipped != null) {
+                setTooltipForNextRenderPass(clipped);
             }
             return;
         }
@@ -1302,6 +855,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 }
                 return;
             }
+        }
+        Component panelTip = panel.tooltip(mouseX, mouseY);
+        if (panelTip != null) {
+            setTooltipForNextRenderPass(panelTip);
+            return;
         }
         if (isCardSlot(hoveredSlot) && !hoveredSlot.hasItem() && menu.getCarried().isEmpty()) {
             setTooltipForNextRenderPass(cardSlotTooltip());
@@ -1382,7 +940,49 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int rateW = Math.min(font.width(rate), Math.max(0, rateSpace));
         GuiText.draw(g, font, rate, tierX - 6 - rateW, y + HEAD_Y + 3, rateW, GuiPaint.MUTED);
 
-        // slot do upgrade de chunk loading, no canto do cabeçalho, com a luz do estado (sobre o item)
+        renderUpgradeSlots(g, x, y);
+
+        // na larga, uma linha entre a coluna do visor e a do painel
+        if (wide()) {
+            int lineX = x + rx() - COLUMN_GAP / 2;
+            g.fill(lineX, y + TOP_Y, lineX + 1, y + h - 8, GuiPaint.LINE);
+        }
+
+        // visor 3D: máquina e roteador; com uma lista do painel aberta, nada de realce sob o mouse
+        boolean popup = panel.popupOpen();
+        int pointerX = popup ? -1 : mouseX;
+        int pointerY = popup ? -1 : mouseY;
+        if (listShown()) {
+            rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
+        }
+        if (viewShown()) {
+            renderView(g, s, pointerX, pointerY);
+        }
+
+        renderCards(g, x, y);
+
+        // inventário do jogador, colado na borda de baixo
+        int invX = x + inventoryX();
+        int invY = y + inventoryY();
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                GuiPaint.slot(g, invX - 1 + col * 18, invY - 1 + row * 18);
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            GuiPaint.slot(g, invX - 1 + col * 18, invY + 57);
+        }
+
+        panel.render(g, pointerX, pointerY, viewShown() && !popup ? machineView.hoveredFace() : null);
+
+        // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
+        ResizeHandle.Edge hover = resizeHandle.dragging() || !popup
+                ? resizeHandle.hover(mouseX, mouseY, x, y, w, h) : null;
+        ResizeGrip.renderDotted(g, x, y, w, h, hover, trim);
+    }
+
+    /** Os slots de chunk loading (com a luz do estado) e de alcance, no canto do cabeçalho. */
+    private void renderUpgradeSlots(GuiGraphics g, int x, int y) {
         int ux = x + upgradeBgX();
         int uy = y + UPGRADE_BG_Y;
         GuiPaint.slot(g, ux, uy);
@@ -1398,155 +998,78 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             g.fill(ux + 12, uy + 2, ux + 14, uy + 4, GuiPaint.mix(color, GuiPaint.BEVEL_LIGHT, 0.5f));
             g.pose().popPose();
         }
-
-        // slot do Upgrade de Alcance, à esquerda do de chunk loading
         int rangeX = x + rangeBgX();
         GuiPaint.slot(g, rangeX, uy);
         if (!menu.getSlot(RouterMenu.RANGE_SLOT).hasItem()) {
             ghostItem(g, GHOST_RANGE, rangeX + 1, uy + 1);
         }
+    }
 
-        // separador sob as abas
-        g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
-
-        // visor 3D: máquina e roteador; com a lista de redes aberta, nada de realce sob o mouse
-        int vx = x + viewX();
-        int vy = y + boxY();
+    /** O visor: num alvo remoto só o bloco dele, com o anel da face escolhida na cor da rede dela. */
+    private void renderView(GuiGraphics g, RouterSnapshot s, int pointerX, int pointerY) {
+        int vx = leftPos + viewX();
+        int vy = topPos + boxY();
         int viewW = viewBoxW();
         int viewH = boxH();
-        int pointerX = networkListOpen ? -1 : mouseX;
-        int pointerY = networkListOpen ? -1 : mouseY;
-        if (listShown()) {
-            rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
+        GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
+        GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
+        Optional<UUID> id = s.network(type(), face());
+        NetworkEntry selected = id.isEmpty() ? null : s.entry(id.get());
+        machineView.render(g, s.machineState(), remote() ? null : s.facing(), s.tier(), faceViews, face(),
+                panel.hoveredFace(pointerX, pointerY), selected == null ? -1 : selected.color() & 0xFFFFFF,
+                pointerX, pointerY);
+        Direction pointed = machineView.hoveredFace();
+        if (s.machineState().isAir()) {
+            GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
+        } else if (pointed != null) {
+            Component label = tr("side." + sideKey(pointed));
+            g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
+                    GuiPaint.alpha(GuiPaint.INSET, 0xD8));
+            GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.FG);
+        } else if (remote() && !remoteLoaded()) {
+            RangeView.MachineView machine = snapshot().target().kind() == EditTarget.Kind.MACHINE
+                    ? range().machine(snapshot().target().id()) : null;
+            Component label = machine != null && machine.state() == RangeView.MachineState.MISSING
+                    ? tr("range.access.missing") : tr("range.access.unloaded");
+            g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
+                    GuiPaint.alpha(GuiPaint.INSET, 0xD8));
+            GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.WARN);
         }
-        if (viewShown()) {
-            GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
-            GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
-            Direction buttonHovered = null;
-            for (Map.Entry<Direction, FlatButton> entry : faceButtons.entrySet()) {
-                if (!networkListOpen && entry.getValue().isMouseOver(mouseX, mouseY)) {
-                    buttonHovered = screenFace(entry.getKey());
-                }
-            }
-            // num alvo remoto: só o bloco dele, com a frente para quem olha; o anel da face selecionada
-            // fica na cor da rede dela
-            NetworkEntry selectedNetwork = network(face);
-            machineView.render(g, s.machineState(), remote() ? null : s.facing(), s.tier(), faceViews, face,
-                    buttonHovered, selectedNetwork == null ? -1 : selectedNetwork.color() & 0xFFFFFF,
-                    pointerX, pointerY);
-            Direction pointed = machineView.hoveredFace();
-            if (s.machineState().isAir()) {
-                GuiPaint.textCentered(g, font, tr("machine.none"), vx + viewW / 2, vy + viewH - 12, GuiPaint.MUTED);
-            } else if (pointed != null) {
-                Component label = sideName(pointed);
-                g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
-                        GuiPaint.alpha(GuiPaint.INSET, 0xD8));
-                GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.FG);
-            } else if (remote() && !remoteLoaded()) {
-                Component label = access(view());
-                g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
-                        GuiPaint.alpha(GuiPaint.INSET, 0xD8));
-                GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.WARN);
-            }
-        }
+    }
 
-        // face selecionada (ou, num alvo remoto, o alvo e a face)
-        FaceView v = view();
-        if (remote()) {
-            renderTargetHeader(g, v);
-        } else {
-            GuiText.draw(g, font, sideName(face), x + rx(), y + BODY_Y + 1, RW, GuiPaint.FG);
-            Component detail = access(v);
-            if (face == s.facing()) {
-                detail = detail.copy().append(" · ").append(tr("face.attached"));
-            }
-            GuiText.draw(g, font, detail, x + rx(), y + BODY_Y + 12, RW, GuiPaint.MUTED);
-        }
-
-        // linha Rede: o rótulo; a pílula é o networkButton
-        GuiText.draw(g, font, tr("network.face"), x + rx(), y + NET_Y + 2, networkButton.getX() - (x + rx()) - 2,
-                GuiPaint.MUTED);
-
-        // filtro: rótulo com Editar e, embaixo, os slots de cartão com o resumo do conjunto
-        if (hasFilter()) {
-            GuiText.draw(g, font, filterLabel(v), x + rx(), y + FILTER_Y + 3, RW - 44, GuiPaint.MUTED);
-            for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
-                int sx = x + cardBgX() + i * 18;
-                GuiPaint.slot(g, sx, y + CARD_BG_Y);
-                if (!menu.getSlot(i).hasItem()) {
-                    ghostCard(g, sx + 1, y + CARD_BG_Y + 1);
-                }
-            }
-            int textX = x + cardBgX() + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
-            GuiText.draw(g, font, filterSummary(v), textX, y + CARD_BG_Y + 5, x + x1() - textX, GuiPaint.FG);
-        } else {
-            int used = GuiText.wrap(g, font, tr("filter.untyped", typeName(type)), x + rx(), y + FILTER_Y + 3, RW, 2,
-                    GuiPaint.DISABLED);
-            long tierRate = Config.TIERS.get(s.tier()).rate(type);
-            Component rateText = tierRate == 0 ? tr("rate.unlimited") : ResourceStyle.rate(type, tierRate);
-            GuiText.draw(g, font, tr("rate.tier", rateText), x + rx(), y + FILTER_Y + 3 + used + 4, RW, GuiPaint.MUTED);
-        }
-
-        // recolhido, embaixo das faces: prioridade e redstone
-        g.fill(x + X0, y + advSepY(), x + lx1(), y + advSepY() + 1, GuiPaint.LINE);
-        if (expanded) {
-            GuiText.draw(g, font, tr("priority"), x + X0, y + prioY() + 3, viewW - 60, GuiPaint.MUTED);
-            int boxX = x + lx1() - 43;
-            GuiPaint.box(g, boxX, y + prioY(), 28, ROW_H, GuiPaint.INSET, GuiPaint.LINE);
-            GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())), boxX + 14,
-                    y + prioY() + 3, editable(v) ? GuiPaint.FG : GuiPaint.DISABLED);
-        } else {
-            // em duas linhas: a coluna é estreita para "Prioridade 0 · Com sinal"
-            Component priority = tr("priority").copy().append(" " + v.priority());
-            Component redstone = tr("redstone.narration", redstoneName(v.redstone()));
-            GuiText.draw(g, font, priority, x + X0, y + prioY() + 1, viewW, GuiPaint.MUTED);
-            GuiText.draw(g, font, redstone, x + X0, y + prioY() + 12, viewW, GuiPaint.MUTED);
-        }
-
-        // inventário do jogador, na coluna da direita e colado na borda de baixo
-        int invX = x + rx() + 1;
-        int invY = y + inventoryY();
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                GuiPaint.slot(g, invX - 1 + col * 18, invY - 1 + row * 18);
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            GuiPaint.slot(g, invX - 1 + col * 18, invY + 57);
-        }
-
-        // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        ResizeHandle.Edge hover = resizeHandle.dragging() || !networkListOpen
-                ? resizeHandle.hover(mouseX, mouseY, x, y, w, h) : null;
-        ResizeGrip.renderDotted(g, x, y, w, h, hover, trim);
+    /** O lado relativo da face {@code direction} da tela, para o rótulo do visor. */
+    private String sideKey(Direction direction) {
+        return (remote() ? RemoteSide.fromCanonical(direction.ordinal())
+                : RemoteSide.fromAbsolute(snapshot().attachedFront(), direction.ordinal())).key();
     }
 
     /**
-     * Cabeçalho da coluna da direita num alvo remoto. Grupo: a face com o acesso e, embaixo,
-     * "Perfil: Fornalha · vale para 3 de 4". Máquina: "Fornalha #3 · exceção" e, embaixo, os botões
-     * Voltar ao perfil (só na exceção) e Desvincular, no lugar da linha da face (o botão escolhido e o
-     * visor já dizem qual é).
+     * Os slots de cartão da face escolhida e, ao lado, de qual face são; num tipo sem filtro, no lugar
+     * deles, a vazão do tier. O texto só aparece se couber inteiro em duas linhas.
      */
-    private void renderTargetHeader(GuiGraphics g, FaceView v) {
-        int hx = leftPos + rx();
-        int hy = topPos + BODY_Y;
-        RangeView.MachineView machine = targetMachine();
-        if (machine != null) {
-            int index = snapshot().target().id();
-            Component state = machine.exception()
-                    ? tr("range.machine.exception").copy().withColor(GuiPaint.ACCENT)
-                    : tr("range.machine.follows").copy().withColor(GuiPaint.MUTED);
-            Component text = tr("range.scope.machine", RangeList.machineName(range(), index), state);
-            GuiText.draw(g, font, text, hx, hy + 1, RW, GuiPaint.FG);
-            return;
+    private void renderCards(GuiGraphics g, int x, int y) {
+        int cy = y + cardsBgY();
+        int textX = x + X0 + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
+        int room = x + X0 + lw() - textX;
+        Component text;
+        if (RouterFaceFilterTarget.hasFilter(type())) {
+            for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
+                int sx = x + X0 + i * 18;
+                GuiPaint.slot(g, sx, cy);
+                if (!menu.getSlot(i).hasItem()) {
+                    ghostItem(g, GHOST_CARD, sx + 1, cy + 1);
+                }
+            }
+            text = tr("cards.label", tr("side." + sideKey(face())));
+        } else {
+            textX = x + X0;
+            room = lw();
+            long tierRate = Config.TIERS.get(snapshot().tier()).rate(type());
+            text = tr("rate.tier", tierRate == 0 ? tr("rate.unlimited") : ResourceStyle.rate(type(), tierRate));
         }
-        Component detail = sideName(face).copy().append(" · ").append(access(v));
-        GuiText.draw(g, font, detail, hx, hy + 1, RW, GuiPaint.FG);
-        RangeView.GroupView group = targetGroup();
-        if (group != null) {
-            Component scope = tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(),
-                    group.count());
-            GuiText.draw(g, font, scope, hx, hy + 12, RW, GuiPaint.MUTED);
+        int lines = font.split(text, Math.max(1, room)).size();
+        if (room > 0 && lines <= 2) {
+            GuiText.wrap(g, font, text, textX, cy + (lines == 1 ? 5 : 0), room, 2, GuiPaint.MUTED);
         }
     }
 
@@ -1569,18 +1092,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiText.draw(g, font, b.getMessage(), b.getX() + 12, b.getY() + 2, b.getWidth() - 15, GuiPaint.FG);
     }
 
-    /** Upgrade apagado no fundo de um slot de upgrade vazio. */
+    /** Item apagado no fundo de um slot vazio (cartão ou upgrade). */
     private void ghostItem(GuiGraphics g, ItemStack ghost, int x, int y) {
         g.renderFakeItem(ghost, x, y);
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 250);
-        g.fill(x, y, x + 16, y + 16, GuiPaint.alpha(GuiPaint.INSET, 0xD8));
-        g.pose().popPose();
-    }
-
-    /** Cartão apagado no fundo de um slot de cartão vazio. */
-    private void ghostCard(GuiGraphics g, int x, int y) {
-        g.renderFakeItem(GHOST_CARD, x, y);
         g.pose().pushPose();
         g.pose().translate(0, 0, 250);
         g.fill(x, y, x + 16, y + 16, GuiPaint.alpha(GuiPaint.INSET, 0xD8));
@@ -1598,279 +1112,15 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         }
     }
 
-    /** Dica da pílula: de qual face e aba é a rede, o nome e como trocar. */
-    private Component networkTooltip() {
-        return tr("network.face.tooltip", sideName(face), typeName(type)).copy()
-                .append("\n").append(networkLabel(face))
-                .append("\n").append(tr("network.face.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED));
-    }
-
-    /** A pílula da linha Rede: borda e ponto na cor da rede da face; cinza em "Sem rede". */
-    private void paintNetwork(GuiGraphics g, FlatButton b, boolean hovered) {
-        NetworkEntry entry = network(face);
-        int color = networkColor(face);
-        int fill = hovered || networkListOpen ? GuiPaint.BUTTON : GuiPaint.PANEL;
-        GuiPaint.pill(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, entry != null ? color : GuiPaint.LINE);
-        if (entry != null) {
-            GuiPaint.eye(g, b.getX() + 4, b.getY() + 3, color);
-        } else {
-            GuiPaint.outline(g, b.getX() + 4, b.getY() + 3, 5, 5, GuiPaint.MUTED);
-        }
-        int textX = b.getX() + 13;
-        GuiText.draw(g, font, networkLabel(face), textX, b.getY() + 2, b.getX() + b.getWidth() - 12 - textX,
-                entry != null ? GuiPaint.FG : GuiPaint.MUTED);
-        GuiPaint.arrowDown(g, b.getX() + b.getWidth() - 9, b.getY() + 4, hovered ? GuiPaint.FG : GuiPaint.MUTED);
-    }
-
-    /** O resumo "2 redes" no canto da linha das abas, discreto. */
-    private void paintSummary(GuiGraphics g, FlatButton b, boolean hovered) {
-        GuiText.draw(g, font, b.getMessage(), b.getX(), b.getY() + 3, b.getWidth(), GuiPaint.MUTED);
-    }
-
-    /** "Frente: Sul", "Sem frente (= Norte)" ou, num alvo remoto, "Lados por máquina" (a dica explica). */
-    private Component frontLabel() {
-        if (remote()) {
-            return tr("front.remote");
-        }
-        int front = snapshot().attachedFront();
-        return front < 0 ? tr("front.none") : tr("front.known", faceName(Direction.values()[front]));
-    }
-
-    /** A linha da frente da máquina, abaixo dos botões de face. */
-    private void paintFront(GuiGraphics g, FlatButton b, boolean hovered) {
-        GuiText.draw(g, font, b.getMessage(), b.getX(), b.getY(), b.getWidth(), GuiPaint.MUTED);
-    }
-
-    private void paintTab(GuiGraphics g, FlatButton b, boolean hovered, ResourceType t) {
-        boolean selected = t == type;
-        GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), selected, hovered);
-        if (b.getWidth() > TabLayout.ICON_TAB) {
-            ResourceStyle.drawIcon(g, t, b.getX() + 4, b.getY() + 3);
-            int textX = b.getX() + 4 + ResourceStyle.ICON + 3;
-            GuiText.draw(g, font, typeName(t), textX, b.getY() + 4, b.getX() + b.getWidth() - 4 - textX,
-                    GuiPaint.tabText(selected, hovered));
-        } else {
-            ResourceStyle.drawIcon(g, t, b.getX() + (b.getWidth() - ResourceStyle.ICON) / 2, b.getY() + 3);
-        }
-    }
-
-    /**
-     * Botão de uma face ({@code direction} no quadro do alvo): o ícone do modo e o lado relativo
-     * (inteiro, abreviado ou a letra, com o inteiro na dica), o ponto na cor da rede no canto de cima
-     * (sem ponto = sem rede) e, na presa, o Olho do roteador na face onde ele está preso. Na presa a face
-     * sem a capability fica apagada; num alvo remoto ela continua editável mesmo sem a máquina carregada.
-     */
-    private void paintFace(GuiGraphics g, FlatButton b, boolean hovered, Direction direction) {
-        FaceView v = view(direction);
-        boolean lit = v.available() || remote();
-        boolean selected = direction == face;
-        // a face sob o mouse no visor também realça o botão dela
-        boolean pointed = hovered || viewShown() && direction == machineView.hoveredFace();
-        int x = b.getX();
-        int y = b.getY();
-        int border = selected ? GuiPaint.SELECTED : pointed ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, x, y, b.getWidth(), b.getHeight(), lit ? GuiPaint.BUTTON : GuiPaint.INSET, border);
-        if (selected) {
-            GuiPaint.outline(g, x + 1, y + 1, b.getWidth() - 2, b.getHeight() - 2, GuiPaint.SELECTED);
-        }
-        // o sprite tem 1 px transparente em volta: no botão de 16 px ele vai rente ao topo
-        GuiPaint.port(g, lit ? v.mode() : PortMode.NONE, x + 1, y, lit ? 1f : 0.3f);
-        boolean attached = !remote() && direction == snapshot().facing();
-        NetworkEntry entry = network(direction);
-        int room = b.getWidth() - 19 - SIDE_PAD - (attached ? FACE_EYE : 0);
-        GuiText.draw(g, font, sideLabel(direction, room), x + 19, y + 4, room,
-                lit ? (selected ? GuiPaint.FG : GuiPaint.MUTED) : GuiPaint.DISABLED);
-        if (attached) {
-            // marca do roteador preso nesta face: o Olho na cor do tier, à direita do rótulo
-            GuiPaint.eye(g, x + b.getWidth() - 9, y + 7, tierColor());
-        }
-        if (entry != null) {
-            // o ponto da rede, no canto de cima, acima da linha do rótulo (que começa em y + 4)
-            int color = 0xFF000000 | entry.color();
-            int mx = x + b.getWidth() - 6;
-            g.fill(mx + 1, y + 1, mx + 3, y + 2, color);
-            g.fill(mx, y + 2, mx + 4, y + 4, color);
-        }
-    }
-
-    /**
-     * Dica de uma face: o lado relativo e, na presa, o absoluto junto ("Trás · Norte"); o modo e o
-     * acesso; a rede ("Rede: Armazém" ou "Sem rede").
-     */
-    private Component faceTooltip(Direction direction) {
-        FaceView v = view(direction);
-        Component head = remote() ? sideName(direction)
-                : sideName(direction).copy().append(" · ").append(faceName(direction));
-        Component line = v.available() || remote()
-                ? modeName(v.mode()).copy().append(" · ").append(access(v))
-                : access(v);
-        NetworkEntry entry = network(direction);
-        Component net = entry != null ? tr("network.face.line", entry.name())
-                : v.network().isPresent() ? tr("network.unknown") : tr("network.none");
-        Component text = head.copy().append("\n").append(line).append("\n")
-                .append(net.copy().withColor(GuiPaint.TOOLTIP_MUTED));
-        if (!remote() && direction == snapshot().facing()) {
-            text = text.copy().append("\n").append(tr("face.attached.tooltip"));
-        }
-        return text;
-    }
-
-    private void paintMode(GuiGraphics g, FlatButton b, boolean hovered, PortMode mode) {
-        FaceView v = view();
-        boolean selected = v.available() && v.mode() == mode;
-        int color = GuiPaint.modeColor(mode);
-        int fill = selected ? GuiPaint.mix(GuiPaint.BUTTON, color, 0.28f) : GuiPaint.BUTTON;
-        int border = selected ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
-        // o botão tem 14 px: o ícone do modo vai a 3/4 (12 px)
-        g.pose().pushPose();
-        g.pose().translate(b.getX() + 2, b.getY() + 1, 0);
-        g.pose().scale(0.75f, 0.75f, 1f);
-        GuiPaint.port(g, mode, 0, 0, b.active ? 1f : 0.3f);
-        g.pose().popPose();
-        GuiText.draw(g, font, modeName(mode), b.getX() + 17, b.getY() + 3, b.getWidth() - 18,
-                b.active ? GuiPaint.FG : GuiPaint.DISABLED);
-    }
-
-    /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
-    private void paintClippedButton(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
-        int border = hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
-        int room = b.getWidth() - 2 * TARGET_PAD;
-        int textW = Math.min(font.width(text), room);
-        GuiText.draw(g, font, text, b.getX() + TARGET_PAD + (room - textW + 1) / 2, b.getY() + (b.getHeight() - 8) / 2,
-                room, GuiPaint.FG);
-    }
-
-    private void paintTextButton(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
-        int border = hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), b.active ? GuiPaint.BUTTON : GuiPaint.INSET,
-                b.active ? border : GuiPaint.LINE);
-        GuiPaint.textCentered(g, font, text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
-                b.active ? GuiPaint.FG : GuiPaint.DISABLED);
-    }
-
-    private void paintMore(GuiGraphics g, FlatButton b, boolean hovered) {
-        int color = hovered || expanded ? GuiPaint.FG : GuiPaint.MUTED;
-        if (expanded) {
-            GuiPaint.arrowDown(g, b.getX() + 1, b.getY() + 3, color);
-        } else {
-            GuiPaint.arrowRight(g, b.getX() + 2, b.getY() + 2, color);
-        }
-        GuiPaint.text(g, font, expanded ? tr("less") : tr("more"), b.getX() + 10, b.getY() + 1, color);
-    }
-
-    // ------------------------------------------------------------------ lista de redes
-
-    private int dropdownWidth() {
-        int width = networkButton.getWidth();
-        for (NetworkEntry entry : snapshot().networks()) {
-            width = Math.max(width, font.width(entry.name()) + 24);
-        }
-        width = Math.max(width, font.width(tr("network.none")) + 24);
-        width = Math.max(width, font.width(listTitle()) + 12);
-        return Math.min(width, RW);
-    }
-
-    private int dropdownX() {
-        return Math.min(networkButton.getX(), leftPos + x1() - dropdownWidth());
-    }
-
-    private int dropdownY() {
-        return networkButton.getY() + NET_H + 1;
-    }
-
-    private int dropdownRows() {
-        return Math.min(DROPDOWN_MAX_ROWS, snapshot().networks().size() + 1);
-    }
-
-    /** Título da lista: de qual face e aba é a rede que se escolhe. */
-    private Component listTitle() {
-        return tr("network.list.title", sideName(face), typeName(type));
-    }
-
-    /** Altura da lista: o título e as linhas visíveis. */
-    private int dropdownHeight() {
-        return (dropdownRows() + 1) * DROPDOWN_ROW + 4;
-    }
-
-    private boolean dropdownContains(double mouseX, double mouseY) {
-        return mouseX >= dropdownX() && mouseX < dropdownX() + dropdownWidth()
-                && mouseY >= dropdownY() && mouseY < dropdownY() + dropdownHeight();
-    }
-
-    /** Índice na lista (redes e depois "Sem rede") sob o mouse, ou -1 (fora dela ou no título). */
-    private int dropdownRowAt(double mouseX, double mouseY) {
-        if (!dropdownContains(mouseX, mouseY)) {
-            return -1;
-        }
-        int row = (int) Math.floor((mouseY - dropdownY() - 2) / DROPDOWN_ROW) - 1;
-        if (row < 0 || row >= dropdownRows()) {
-            return -1;
-        }
-        return row + networkScroll;
-    }
-
-    private void renderNetworkList(GuiGraphics g, int mouseX, int mouseY) {
-        List<NetworkEntry> networks = snapshot().networks();
-        int x = dropdownX();
-        int y = dropdownY();
-        int w = dropdownWidth();
-        int rows = dropdownRows();
-        int hoveredRow = dropdownRowAt(mouseX, mouseY);
-        Optional<UUID> current = snapshot().network(type, face);
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 400);
-        GuiPaint.box(g, x, y, w, dropdownHeight(), GuiPaint.PANEL, GuiPaint.BUTTON_BORDER);
-        GuiText.draw(g, font, listTitle(), x + 5, y + 4, w - 10, GuiPaint.MUTED);
-        g.fill(x + 3, y + 2 + DROPDOWN_ROW, x + w - 3, y + 3 + DROPDOWN_ROW, GuiPaint.LINE);
-        for (int i = 0; i < rows; i++) {
-            int index = i + networkScroll;
-            int ry = y + 2 + (i + 1) * DROPDOWN_ROW;
-            boolean none = index >= networks.size();
-            NetworkEntry entry = none ? null : networks.get(index);
-            boolean selected = none ? current.isEmpty() : current.isPresent() && current.get().equals(entry.id());
-            boolean usable = none || entry.usable();
-            if (index == hoveredRow && usable) {
-                g.fill(x + 1, ry, x + w - 1, ry + DROPDOWN_ROW, GuiPaint.ROW_SELECTED);
-            }
-            if (selected) {
-                g.fill(x + 1, ry, x + 2, ry + DROPDOWN_ROW, GuiPaint.ACCENT);
-            }
-            int color = none ? GuiPaint.MUTED
-                    : usable ? 0xFF000000 | entry.color() : GuiPaint.mix(0xFF000000 | entry.color(), GuiPaint.PANEL, 0.6f);
-            if (none) {
-                GuiPaint.outline(g, x + 6, ry + 3, 5, 5, color);
-            } else {
-                GuiPaint.eye(g, x + 6, ry + 3, color);
-            }
-            Component label = none ? tr("network.none") : Component.literal(entry.name());
-            GuiText.draw(g, font, label, x + 15, ry + 2, w - 20,
-                    none ? GuiPaint.MUTED : usable ? GuiPaint.FG : GuiPaint.DISABLED);
-        }
-        if (networkScroll > 0) {
-            GuiPaint.text(g, font, Component.literal("▲"), x + w - 9, y + 2 + DROPDOWN_ROW, GuiPaint.MUTED);
-        }
-        if (networkScroll + rows < networks.size() + 1) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + w - 9, y + (rows + 1) * DROPDOWN_ROW - 8, GuiPaint.MUTED);
-        }
-        g.pose().popPose();
-    }
-
     // ------------------------------------------------------------------ captura de desenvolvimento
 
     void previewType(ResourceType type) {
-        selectType(type);
+        panel.select(type);
         refresh();
     }
 
     void previewFace(Direction face) {
-        this.face = face;
-        refresh();
-    }
-
-    void previewExpanded(boolean expanded) {
-        this.expanded = expanded;
+        panel.selectFace(face);
         refresh();
     }
 
@@ -1891,13 +1141,28 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return new int[] {w, h};
     }
 
+    /** A disposição larga (o painel inteiro ao lado do visor) está valendo (gancho do e2e). */
+    public boolean wideLayout() {
+        return wide();
+    }
+
+    /** A face da máquina sob o mouse no visor (gancho do e2e). */
+    @Nullable Direction viewHoveredFace() {
+        return machineView.hoveredFace();
+    }
+
+    /** Largura da coluna do visor (gancho do e2e). */
+    public int viewColumnWidth() {
+        return lw();
+    }
+
     void previewNetworkList(boolean open) {
-        this.networkListOpen = open;
+        panel.previewNetworkList(open);
     }
 
     /** A lista de redes da linha Rede está aberta (gancho do e2e). */
     public boolean networkListShown() {
-        return networkListOpen;
+        return panel.networkListShown();
     }
 
     /** Centro da linha do alvo {@code target} na lista (aberta), ou {@code null} se fora da vista (gancho do e2e). */
@@ -1920,22 +1185,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return rangeShown() && viewShown();
     }
 
-    /**
-     * O rótulo do botão da face {@code direction} no quadro do alvo (absoluta na presa): o lado relativo à
-     * frente da máquina (gancho do e2e, que acha o botão pela mensagem).
-     */
-    public Component attachedFaceLabel(Direction direction) {
-        return sideName(direction);
-    }
-
-    /** Centro do botão da face, para simular o mouse em cima na captura. */
+    /** Centro da face no cubo do painel, para simular o mouse em cima na captura. */
     int[] previewFaceCenter(Direction direction) {
-        for (FlatButton button : buttons) {
-            if (button.getMessage().equals(sideName(direction))) {
-                return new int[] {button.getX() + button.getWidth() / 2, button.getY() + button.getHeight() / 2};
-            }
-        }
-        return new int[] {-1, -1};
+        return orNowhere(panel.faceCenter(direction));
     }
 
     /** Visor no ângulo inicial do snapshot atual. */
@@ -1970,22 +1222,22 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     int[] previewEditFilterCenter() {
-        return new int[] {editFilterButton.getX() + 20, editFilterButton.getY() + 7};
+        return orNowhere(panel.editCenter());
     }
 
     int[] previewModeCenter(PortMode mode) {
-        return center(modeButtons.get(List.of(MODES).indexOf(mode)));
+        return orNowhere(panel.modeCenter(mode));
     }
 
     int[] previewTabCenter(ResourceType t) {
-        return center(tabButtons.get(t));
+        return orNowhere(panel.tabCenter(t));
     }
 
     int[] previewNetworkCenter() {
-        return center(networkButton);
+        return orNowhere(panel.networkCenter());
     }
 
-    private static int[] center(FlatButton button) {
-        return new int[] {button.getX() + button.getWidth() / 2, button.getY() + button.getHeight() / 2};
+    private static int[] orNowhere(int @Nullable [] point) {
+        return point == null ? new int[] {-1, -1} : point;
     }
 }

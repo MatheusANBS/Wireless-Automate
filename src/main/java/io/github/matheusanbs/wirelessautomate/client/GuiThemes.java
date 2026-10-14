@@ -33,6 +33,11 @@ public final class GuiThemes {
         ClientConfig.SPEC.save();
     }
 
+    /** Aplica o tema sem gravar na config (capturas de desenvolvimento). */
+    static void preview(GuiTheme theme) {
+        apply(theme);
+    }
+
     public static void toggle() {
         set(current.other());
     }

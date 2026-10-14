@@ -874,6 +874,12 @@
   "gui.wirelessautomate.recipes.reload_failed": "A recarga falhou; veja o log do servidor",
   "gui.wirelessautomate.recipes.reload_busy": "Uma recarga já está em andamento",
   "gui.wirelessautomate.panel.notice.joined": "%s entrou em %s",
+  "gui.wirelessautomate.panel.notice.pasted": "Perfil colado em %s",
+  "gui.wirelessautomate.panel.notice.pasted_many": "Perfil colado em %s nós",
+  "gui.wirelessautomate.panel.notice.pasted_skipped": "Perfil colado em %s nós · %s ficaram de fora (descarregados ou fora do alcance)",
+  "gui.wirelessautomate.panel.notice.kept_networks": "%s faces ficaram com a rede que já tinham",
+  "gui.wirelessautomate.panel.notice.undone": "Colar desfeito em %s nós",
+  "gui.wirelessautomate.panel.notice.undone_skipped": "Colar desfeito em %s nós · %s ficaram de fora (descarregados ou fora do alcance)",
   "gui.wirelessautomate.panel.network.choose": "Escolha a rede desta face",
   "gui.wirelessautomate.panel.network.no_active": "Você não tem uma rede ativa. Com uma, a face entra sozinha."
 }

@@ -2,12 +2,14 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Facet;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickCounts;
@@ -19,23 +21,37 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.NodeProbe;
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RateLimiter;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
+import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -44,8 +60,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -174,6 +193,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private long panelTick;
     /** O último snapshot lido do nó escolhido, mostrado (só para ler) enquanto ele está descarregado. */
     private @Nullable RouterSnapshot lastKnown;
+    /** O último colar do Tablet: o que cada nó era antes; some ao fechar o menu. */
+    private final Map<NodeKey, RouterPreset> undo = new LinkedHashMap<>();
+    private @Nullable Component lastNotice;
 
     /** Servidor. */
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
@@ -461,6 +483,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 .thenComparing(m -> m.entry.name(), String.CASE_INSENSITIVE_ORDER)
                 .thenComparing(m -> m.entry.key().dimension().location())
                 .thenComparingLong(m -> m.entry.key().pos().asLong()));
+        RouterPreset profile = storedProfile(viewer);
         List<NodeView> nodes = new ArrayList<>();
         for (int i = 0; i < Math.min(matches.size(), TabletSnapshot.MAX_NODES); i++) {
             Match match = matches.get(i);
@@ -480,8 +503,12 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 }
                 networks.add(List.copyOf(existing));
             }
+            RouterBlockEntity loadedNode = entry.router();
+            // só nós carregados e com perfil guardado comparam; o descarregado não tem o que ler
+            Optional<ProfileDiff.ProfileMatch> comparison = profile == null || loadedNode == null ? Optional.empty()
+                    : Optional.of(ProfileDiff.match(profile, RouterPreset.copyOf(loadedNode)));
             nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), match.status, removed, entry.faceModes(), Optional.empty()));
+                    entry.roles(), match.status, removed, entry.faceModes(), comparison));
         }
 
         Map<UUID, NetworkStats> stats = new HashMap<>();
@@ -520,7 +547,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
                 Math.round(budget.averageUsedNanos()), budget.limitNanos(), query, total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(machineCounts), facets(networkCounts),
-                new QuickCounts(problemCount, noNetworkCount, unloadedCount), List.copyOf(nodes), notice, noticeId);
+                new QuickCounts(problemCount, noNetworkCount, unloadedCount), profileSummary(viewer, profile),
+                List.copyOf(nodes), notice, noticeId);
     }
 
     /** As facetas pela contagem, das maiores para as menores (a chave desempata, para o cabeçalho ser estável). */
@@ -963,6 +991,276 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         }
         sentPanel = built;
         return built;
+    }
+
+    // ------------------------------------------------------------------ perfil (servidor)
+
+    /**
+     * O Tablet que guarda o perfil: o da mão principal, o da mão secundária ou o primeiro do inventário (o
+     * mesmo critério de {@link #hasTablet}); {@link ItemStack#EMPTY} sem nenhum.
+     */
+    public static ItemStack tabletStack(Player player) {
+        ItemStack main = player.getMainHandItem();
+        if (main.is(ModItems.NETWORK_TABLET.get())) {
+            return main;
+        }
+        ItemStack off = player.getOffhandItem();
+        if (off.is(ModItems.NETWORK_TABLET.get())) {
+            return off;
+        }
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (inventory.getItem(i).is(ModItems.NETWORK_TABLET.get())) {
+                return inventory.getItem(i);
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    /** O perfil guardado no Tablet do jogador, ou {@code null}: vale só com o preset e a origem juntos. */
+    private static @Nullable RouterPreset storedProfile(Player player) {
+        ItemStack tablet = tabletStack(player);
+        return tablet.has(ModDataComponents.PROFILE_SOURCE.get()) ? tablet.get(ModDataComponents.PRESET.get()) : null;
+    }
+
+    /** O resumo do perfil para o cabeçalho: os tipos carregados e quantas faces têm modo. */
+    private static Optional<ProfileSummary> profileSummary(Player player, @Nullable RouterPreset profile) {
+        ProfileSource source = profile == null ? null : tabletStack(player).get(ModDataComponents.PROFILE_SOURCE.get());
+        if (source == null) {
+            return Optional.empty();
+        }
+        List<ResourceType> types = new ArrayList<>();
+        int faces = 0;
+        for (ResourceType type : LoadedTypes.LIST) {
+            int withMode = 0;
+            for (RelativeSide side : RelativeSide.values()) {
+                if (profile.face(type, side).mode() != PortMode.NONE) {
+                    withMode++;
+                }
+            }
+            if (withMode > 0) {
+                types.add(type);
+                faces += withMode;
+            }
+        }
+        return Optional.of(new ProfileSummary(source.nodeName(), source.machine(), List.copyOf(types), faces));
+    }
+
+    /** Servidor: o último colar ainda pode ser desfeito. */
+    public boolean canUndo() {
+        return !undo.isEmpty();
+    }
+
+    /** Servidor: o texto do último aviso de colar ou desfazer mandado ao jogador, ou {@code null}. */
+    public @Nullable Component lastNotice() {
+        return lastNotice;
+    }
+
+    /**
+     * Uma ação do perfil, validada: o menu aberto e o Tablet no inventário, e para cada nó, na ordem, que o
+     * jogador o vê, que está carregado (sem carregar chunk) e ao alcance; a regra das redes é a do
+     * {@link PresetApplier}. Colar deixa a origem do perfil de fora. Devolve quantos nós a ação atingiu (1 para
+     * copiar e esquecer), ou -1 se recusou.
+     */
+    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
+            List<NodeKey> keys) {
+        if (viewer == null || keys.size() > TabletProfilePayload.MAX_KEYS || !stillValid(viewer)) {
+            return -1;
+        }
+        ItemStack tablet = tabletStack(viewer);
+        int result = switch (action) {
+            case COPY -> copyProfile(tablet, key);
+            case FORGET -> {
+                tablet.remove(ModDataComponents.PRESET.get());
+                tablet.remove(ModDataComponents.PROFILE_SOURCE.get());
+                yield 1;
+            }
+            case PASTE_ONE -> key == null ? -1 : pasteProfile(tablet, List.of(key), true);
+            case PASTE_GROUP -> machine == null ? -1 : pasteProfile(tablet, groupKeys(machine), false);
+            case PASTE_SELECTED -> keys.isEmpty() ? -1 : pasteProfile(tablet, keys, false);
+            case UNDO -> undoPaste();
+        };
+        if (result >= 0) {
+            forced = true;
+        }
+        return result;
+    }
+
+    /** Guarda no Tablet o perfil do nó: o preset das faces e a origem. */
+    private int copyProfile(ItemStack tablet, @Nullable NodeKey key) {
+        RouterBlockEntity router = key == null ? null : reachableRouter(key);
+        if (router == null) {
+            return -1;
+        }
+        String name = router.name();
+        tablet.set(ModDataComponents.PRESET.get(), PresetPaste.copy(viewer, router));
+        tablet.set(ModDataComponents.PROFILE_SOURCE.get(), new ProfileSource(
+                name.length() > ProfileSource.MAX_NAME ? name.substring(0, ProfileSource.MAX_NAME) : name,
+                ConfiguratorArea.machine(viewer.serverLevel(), router), key));
+        return 1;
+    }
+
+    /** O roteador do nó, se o jogador o vê, está carregado e ao alcance; senão {@code null}. */
+    private @Nullable RouterBlockEntity reachableRouter(NodeKey key) {
+        MinecraftServer server = viewer.server;
+        NodeIndex index = NodeIndex.get(server);
+        NodeIndex.Entry entry = index.entry(key);
+        if (entry == null || !visible(entry, NetworkSavedData.get(server), viewer.hasPermissions(2), viewer.getUUID())) {
+            return null;
+        }
+        RouterBlockEntity router = loadedRouter(server, index, entry);
+        return router != null && inReach(viewer, router) ? router : null;
+    }
+
+    /**
+     * Os nós da máquina que casam com a consulta atual do jogador (a mesma da Lista, reavaliada agora),
+     * visíveis, no máximo {@link #MAX_MOVE}. A origem do perfil sai no colar.
+     */
+    private List<NodeKey> groupKeys(ResourceLocation machine) {
+        MinecraftServer server = viewer.server;
+        NetworkSavedData data = NetworkSavedData.get(server);
+        boolean operator = viewer.hasPermissions(2);
+        Map<UUID, String> networkNames = searchWords.length == 0 ? Map.of() : searchNames(data);
+        List<NodeKey> result = new ArrayList<>();
+        for (NodeIndex.Entry entry : NodeIndex.get(server).entries()) {
+            if (result.size() >= MAX_MOVE) {
+                break;
+            }
+            if (entry.machine().equals(machine) && visible(entry, data, operator, viewer.getUUID())
+                    && matchesQuery(entry, data, networkNames)) {
+                result.add(entry.key());
+            }
+        }
+        return result;
+    }
+
+    /** A consulta atual vale para o nó: filtros rápidos, etiquetas, tipo e texto. */
+    private boolean matchesQuery(NodeIndex.Entry entry, NetworkSavedData data, Map<UUID, String> networkNames) {
+        boolean loaded = entry.router() != null;
+        NodeStatus status = status(entry, loaded, fullNodes.contains(entry.key()) ? 1 : 0,
+                activeNodes.contains(entry.key()), data);
+        boolean problem = status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK || status == NodeStatus.FULL;
+        return matchesQuick(problem, !hasExistingNetwork(entry, data), !loaded) && matchesLabels(entry)
+                && matchesType(entry, query.type()) && matchesText(entry, networkNames);
+    }
+
+    /**
+     * Cola o perfil guardado nos nós, menos a origem. O que o jogador não vê é ignorado (com um nó só, recusa);
+     * o descarregado e o fora do alcance ficam de fora e são contados no aviso. Guarda o que cada nó era
+     * ({@link RouterPreset#copyOf}) para o desfazer, só se algo foi colado. Devolve quantos nós receberam.
+     */
+    private int pasteProfile(ItemStack tablet, Collection<NodeKey> keys, boolean single) {
+        RouterPreset profile = storedProfile(viewer);
+        ProfileSource source = tablet.get(ModDataComponents.PROFILE_SOURCE.get());
+        if (profile == null || source == null) {
+            return -1;
+        }
+        MinecraftServer server = viewer.server;
+        NodeIndex index = NodeIndex.get(server);
+        NetworkSavedData data = NetworkSavedData.get(server);
+        boolean operator = viewer.hasPermissions(2);
+        Map<NodeKey, RouterPreset> before = new LinkedHashMap<>();
+        PresetApplier.Checked rule = null;
+        Component lastName = Component.empty();
+        int skipped = 0;
+        for (NodeKey key : new LinkedHashSet<>(keys)) {
+            NodeIndex.Entry entry = index.entry(key);
+            if (entry == null || !visible(entry, data, operator, viewer.getUUID())) {
+                if (single) {
+                    return -1;
+                }
+                continue;
+            }
+            if (key.equals(source.origin())) {
+                continue;
+            }
+            RouterBlockEntity router = loadedRouter(server, index, entry);
+            if (router == null || !inReach(viewer, router)) {
+                skipped++;
+                continue;
+            }
+            before.put(key, RouterPreset.copyOf(router));
+            rule = PresetPaste.paste(viewer, router, profile, null);
+            lastName = nodeName(entry);
+        }
+        if (!before.isEmpty()) {
+            undo.clear();
+            undo.putAll(before);
+        }
+        int pasted = before.size();
+        if (pasted > 0 || skipped > 0) {
+            sendPasteNotice(pasted, skipped, lastName, rule == null ? 0 : keptFaces(profile, rule));
+        }
+        return pasted;
+    }
+
+    /** Quantas faces do perfil ficaram com a rede de antes, porque o jogador não pode usar a rede delas. */
+    private static int keptFaces(RouterPreset profile, PresetApplier.Checked rule) {
+        int faces = 0;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (RelativeSide side : RelativeSide.values()) {
+                UUID network = profile.network(type, side);
+                if (network != null && rule.kept().contains(network)) {
+                    faces++;
+                }
+            }
+        }
+        return faces;
+    }
+
+    /** O nome que o aviso dá ao nó: o nome do roteador ou, sem ele, o da máquina. */
+    private static Component nodeName(NodeIndex.Entry entry) {
+        return entry.name().isEmpty() ? RouterBlock.machineName(BuiltInRegistries.BLOCK.get(entry.machine()))
+                : Component.literal(entry.name());
+    }
+
+    private void sendPasteNotice(int pasted, int skipped, Component name, int keptFaces) {
+        String base = "gui.wirelessautomate.panel.notice.";
+        MutableComponent message;
+        if (skipped > 0) {
+            message = Component.translatable(base + "pasted_skipped", pasted, skipped);
+        } else if (pasted == 1) {
+            message = Component.translatable(base + "pasted", name);
+        } else {
+            message = Component.translatable(base + "pasted_many", pasted);
+        }
+        if (keptFaces > 0) {
+            message.append(" · ").append(Component.translatable(base + "kept_networks", keptFaces));
+        }
+        announce(new PanelNoticePayload(message, pasted > 0 ? PanelNoticePayload.Undo.UNDO_PASTE
+                : PanelNoticePayload.Undo.NONE, containerId, ResourceType.ITEM, Direction.UP));
+    }
+
+    /**
+     * Devolve cada nó do último colar ao que era ({@link RouterPreset#restoreTo}), se ainda é visível, está
+     * carregado e ao alcance, e esquece o colar. Devolve quantos voltaram, ou -1 sem nada para desfazer.
+     */
+    private int undoPaste() {
+        if (undo.isEmpty()) {
+            return -1;
+        }
+        Map<NodeKey, RouterPreset> pending = new LinkedHashMap<>(undo);
+        undo.clear();
+        int restored = 0;
+        int skipped = 0;
+        for (Map.Entry<NodeKey, RouterPreset> entry : pending.entrySet()) {
+            RouterBlockEntity router = reachableRouter(entry.getKey());
+            if (router == null) {
+                skipped++;
+                continue;
+            }
+            entry.getValue().restoreTo(router);
+            restored++;
+        }
+        String base = "gui.wirelessautomate.panel.notice.";
+        announce(PanelNoticePayload.plain(skipped > 0 ? Component.translatable(base + "undone_skipped", restored, skipped)
+                : Component.translatable(base + "undone", restored)));
+        return restored;
+    }
+
+    private void announce(PanelNoticePayload notice) {
+        lastNotice = notice.message();
+        ModPayloads.sendNotice(viewer, notice);
     }
 
     // ------------------------------------------------------------------ ações (servidor)

@@ -596,7 +596,7 @@ public final class DevScreenshot {
                         List.of(base)));
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
                 Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, List.of(), List.of(),
-                TabletSnapshot.QuickCounts.EMPTY, nodes, Component.empty(), 0);
+                TabletSnapshot.QuickCounts.EMPTY, Optional.empty(), nodes, Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,

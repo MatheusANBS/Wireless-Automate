@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
 import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.preset.PasteTypes;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
 import java.util.List;
@@ -259,14 +260,8 @@ public class ConfiguratorItem extends Item {
     }
 
     private static void copy(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
-        RouterPreset preset = RouterPreset.copyOf(router);
+        RouterPreset preset = PresetPaste.copy(player, router);
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        for (UUID id : preset.distinctNetworks()) {
-            if (data.network(id) == null) {
-                // Rede removida: o id órfão não serve para nada colado noutro roteador.
-                preset = preset.withoutNetwork(id);
-            }
-        }
         stack.set(ModDataComponents.PRESET.get(), preset);
         stack.set(ModDataComponents.CONFIGURATOR_MACHINE.get(), ConfiguratorArea.machine(player.serverLevel(), router));
         List<Component> names = names(data, preset.distinctNetworks());
@@ -296,9 +291,8 @@ public class ConfiguratorItem extends Item {
             return;
         }
         ResourceType type = type(stack);
-        PresetApplier.Checked checked = PresetApplier.check(player, preset, type);
+        PresetApplier.Checked checked = PresetPaste.paste(player, router, preset, type);
         NetworkSavedData data = NetworkSavedData.get(player.server);
-        checked.preset().applyTo(router, type);
         Component message = pasteMessage(data, checked.applied(), checked.keptTypes(), checked.kept(),
                 checked.denied());
         Component only = onlyTab(type);

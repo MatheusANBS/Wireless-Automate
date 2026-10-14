@@ -874,6 +874,12 @@
   "gui.wirelessautomate.recipes.reload_failed": "Reload failed; see the server log",
   "gui.wirelessautomate.recipes.reload_busy": "A reload is already running",
   "gui.wirelessautomate.panel.notice.joined": "%s joined %s",
+  "gui.wirelessautomate.panel.notice.pasted": "Profile pasted on %s",
+  "gui.wirelessautomate.panel.notice.pasted_many": "Profile pasted on %s nodes",
+  "gui.wirelessautomate.panel.notice.pasted_skipped": "Profile pasted on %s nodes · %s left out (unloaded or out of range)",
+  "gui.wirelessautomate.panel.notice.kept_networks": "%s faces kept the network they already had",
+  "gui.wirelessautomate.panel.notice.undone": "Paste undone on %s nodes",
+  "gui.wirelessautomate.panel.notice.undone_skipped": "Paste undone on %s nodes · %s left out (unloaded or out of range)",
   "gui.wirelessautomate.panel.network.choose": "Choose this face's network",
   "gui.wirelessautomate.panel.network.no_active": "You have no active network. With one, the face joins it on its own."
 }

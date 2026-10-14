@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -20,18 +19,14 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTabPayload;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -55,8 +50,9 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com cinco abas:
  * <ul>
- *   <li><b>Lista:</b> busca, filtro por papel e Selecionar para mover vários nós de rede (por aba
- *       ou todas); cada nó mostra status e etiquetas de papel; clicar abre o nó à distância;
+ *   <li><b>Lista:</b> a busca com sugestões e etiquetas, os filtros rápidos, os nós agrupados pela máquina e
+ *       o painel do nó escolhido, com copiar e colar o perfil ({@link TabletList}); Selecionar para mover ou
+ *       colar em vários nós;
  *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar
  *       seleciona e mostra o nó, com Abrir;
  *   <li><b>Estatísticas:</b> tempo do mod por tick, vazão por tipo e, por rede, vazão, ms/tick,
@@ -71,15 +67,17 @@ import org.lwjgl.glfw.GLFW;
  * item; os botões fixos são {@link FlatButton}s que leem o estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    // O mínimo é 300×240; a tela cresce pela borda direita, pela de baixo e pelo canto, e
-    // o tamanho fica lembrado na sessão.
+    // O mínimo é 300×240 e abre em 420×280 (a lista e o painel lado a lado); a tela cresce pela
+    // borda direita, pela de baixo e pelo canto, e o tamanho fica lembrado na sessão.
     private static final int MIN_W = 300;
     private static final int MIN_H = 240;
+    private static final int DEFAULT_W = 420;
+    private static final int DEFAULT_H = 280;
     /** Alça do canto (lado, em px) e espessura das bordas que redimensionam. */
     private static final int GRIP = 7;
     private static final int EDGE = 3;
-    private static int savedW = MIN_W;
-    private static int savedH = MIN_H;
+    private static int savedW = DEFAULT_W;
+    private static int savedH = DEFAULT_H;
     private static final int X0 = 9;
     private static final int HEAD_Y = 8;
     private static final int TAB_Y = 26;
@@ -87,9 +85,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private static final int SEP_Y = 45;
     private static final int BODY_Y = 50;
     private static final int ROW_H = 14;
-    // lista
-    private static final int LIST_Y = BODY_Y + 18;
-    private static final int NODE_ROW = 22;
     // mapa
     private static final int MAP_H = 136;
     // estatísticas
@@ -126,14 +121,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private long noticeUntil;
     private Component noticeText = Component.empty();
     // lista
+    private final TabletList list;
     private EditBox searchBox;
-    private String search = "";
-    private int searchTicks = -1;
-    /** Só os nós com este tipo (vem do clique num cartão das Estatísticas); vazio = todos. */
-    private Optional<ResourceType> typeFilter = Optional.empty();
-    private int listScroll;
-    private boolean multi;
-    private final Set<NodeKey> selected = new LinkedHashSet<>();
     /** Índice em {@link #MOVE_TYPES}; -1 = todas as abas. */
     private int moveType = -1;
     private Optional<UUID> moveNetwork = Optional.empty();
@@ -170,12 +159,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.preview = preview;
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.search = menu.snapshot().query().text();
-        this.typeFilter = menu.snapshot().query().type();
         this.lastNoticeId = menu.snapshot().noticeId();
         if (menu.restoredTab() >= 0 && menu.restoredTab() < Tab.values().length) {
             this.tab = Tab.values()[menu.restoredTab()];
         }
+        this.list = new TabletList(this);
+        // o aviso de outra tela agiria no alvo errado
+        PanelNotices.clear();
     }
 
     // ------------------------------------------------------------------ estado
@@ -365,40 +355,41 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             tabX += width + 3;
         }
 
-        // Lista
-        searchBox = new EditBox(font, x + X0 + 4, y + BODY_Y + 3, searchW() - 8, 9, tr("search"));
+        // Lista: a busca (posição e largura acertadas pela lista a cada quadro) e os botões do Selecionar
+        list.layout(x + X0, y + BODY_Y, x1() - X0, y + h - 8);
+        int lw = list.listWidth();
+        searchBox = new EditBox(font, x + X0 + 4, y + BODY_Y + 3, lw - 8, 9, tr("search"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_TEXT);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         inkVersion = -1;
-        searchBox.setValue(search);
-        searchBox.setResponder(value -> {
-            if (!value.equals(search)) {
-                search = value;
-                searchTicks = 6;
-            }
-        });
+        list.attach(searchBox);
         addRenderableWidget(searchBox);
-        add(Tab.LIST, new FlatButton(x + x1() - 60, y + BODY_Y, 60, ROW_H, tr("select"),
-                (g, b, hovered) -> paintToggle(g, b, hovered, multi ? tr("select.done") : tr("select"), multi),
+        int selectW = Math.max(56, font.width(tr("select")) + 10);
+        add(Tab.LIST, new FlatButton(x + X0 + lw - selectW, list.barY(), selectW, ROW_H, tr("select"),
+                (g, b, hovered) -> paintToggle(g, b, hovered, list.multi() ? tr("select.done") : tr("select"), list.multi()),
                 this::toggleMulti).tooltip(() -> tr("select.tooltip")));
-        // barra de mover (só selecionando)
-        add(Tab.LIST, new FlatButton(x + X0 + 64, y + actionY(), 86, ROW_H, Component.empty(),
+        // barra de mover (só selecionando): tipo, rede e Mover
+        int cycleW = (lw - 4) * 36 / 100;
+        add(Tab.LIST, new FlatButton(x + X0, list.multiBarY(), cycleW, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, moveTypeText()),
                 () -> moveType = Math.floorMod(moveType + 1 + (hasShiftDown() ? -1 : 1), MOVE_TYPES.size() + 1) - 1)
                 .tooltip(() -> tr("move.type.tooltip")));
-        add(Tab.LIST, new FlatButton(x + X0 + 154, y + actionY(), 82, ROW_H, Component.empty(),
+        add(Tab.LIST, new FlatButton(x + X0 + cycleW + 2, list.multiBarY(), cycleW, ROW_H, Component.empty(),
                 (g, b, hovered) -> paintCycle(g, b, hovered, networkName(effectiveMoveNetwork())),
                 () -> cycleMoveNetwork(hasShiftDown() ? -1 : 1)).tooltip(() -> tr("move.network.tooltip")));
-        add(Tab.LIST, new FlatButton(x + x1() - 44, y + actionY(), 44, ROW_H, tr("move"),
+        add(Tab.LIST, new FlatButton(x + X0 + 2 * cycleW + 4, list.multiBarY(), lw - 2 * cycleW - 4, ROW_H, tr("move"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, tr("move")), this::moveSelected)
-                .tooltip(() -> tr("move.tooltip", selected.size())));
-        add(Tab.LIST, new FlatButton(x + X0 + 84, y + pagerY(), 34, ROW_H, tr("select.all"),
-                (g, b, hovered) -> paintText(g, b, hovered, tr("select.all")), this::selectPage)
+                .tooltip(() -> tr("move.tooltip", list.selected().size())));
+        int allW = font.width(tr("select.all")) + 10;
+        add(Tab.LIST, new FlatButton(x + X0, list.barY(), allW, ROW_H, tr("select.all"),
+                (g, b, hovered) -> paintText(g, b, hovered, tr("select.all")), list::selectAll)
                 .tooltip(() -> tr("select.all.tooltip")));
-        // "Só Energia ✕": o filtro de tipo que veio de um cartão das Estatísticas; clicar tira
-        add(Tab.LIST, new FlatButton(x + X0, y + pagerY(), 60, ROW_H, tr("list.type.tooltip"), this::paintTypeChip,
-                this::clearTypeFilter).tooltip(() -> tr("list.type.tooltip")));
+        // colar o perfil nos marcados (só com perfil copiado)
+        add(Tab.LIST, new FlatButton(x + X0 + allW + 2, list.barY(), lw - allW - selectW - 4, ROW_H, Component.empty(),
+                (g, b, hovered) -> paintClipped(g, b, hovered, tr("list.paste_selected", list.selected().size())),
+                list::pasteSelected).tooltip(() -> snapshot().profile()
+                        .map(p -> tr("list.paste_selected.tooltip", p.sourceName(), list.selected().size())).orElse(null)));
 
         // Mapa
         add(Tab.MAP, new FlatButton(x + x1() - 46, y + mapInfoY(), 46, 16, tr("open"),
@@ -451,6 +442,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         addRenderableWidget(renameBox);
         refresh();
+        if (tab == Tab.LIST) {
+            focusSearch();
+        }
     }
 
     private FlatButton newToggle(Component label) {
@@ -487,19 +481,15 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
         }
         searchBox.visible = tab == Tab.LIST;
-        List<FlatButton> list = tabWidgets.get(Tab.LIST);
-        // [Selecionar, tipo, rede, Mover, Todos, chip do tipo]
+        List<FlatButton> listButtons = tabWidgets.get(Tab.LIST);
+        // [Selecionar, tipo, rede, Mover, Todos, Colar nos marcados]
         for (int i = 1; i <= 4; i++) {
-            list.get(i).visible = tab == Tab.LIST && multi;
+            listButtons.get(i).visible = tab == Tab.LIST && list.multi();
         }
-        list.get(3).active = !selected.isEmpty();
-        // [5] o chip do tipo: só com filtro e fora do Selecionar (que usa a mesma linha)
-        FlatButton chip = list.get(5);
-        chip.visible = tab == Tab.LIST && !multi && typeFilter.isPresent();
-        if (typeFilter.isPresent()) {
-            int chipW = font.width(typeChipText(typeFilter.get())) + 10 + ResourceStyle.ICON + 3;
-            chip.setWidth(Math.min(chipW, chipMaxWidth()));
-        }
+        listButtons.get(3).active = !list.selected().isEmpty();
+        FlatButton pasteSelected = listButtons.get(5);
+        pasteSelected.visible = tab == Tab.LIST && list.multi() && snapshot().profile().isPresent();
+        pasteSelected.active = !list.selected().isEmpty();
 
         tabWidgets.get(Tab.MAP).get(0).visible = tab == Tab.MAP && mapNode() != null;
 
@@ -551,12 +541,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (!moveNetworkChosen) {
             moveNetwork = s.activeNetwork();
         }
-        listScroll = Math.min(listScroll, Math.max(0, s.nodes().size() - nodeRows()));
+        list.onSnapshot();
     }
 
     // ------------------------------------------------------------------ ações
 
-    private void send(CustomPacketPayload payload) {
+    void send(CustomPacketPayload payload) {
         if (!preview) {
             PacketDistributor.sendToServer(payload);
         }
@@ -571,69 +561,22 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             newOpen = false;
             removeArmedUntil = 0;
             setFocused(null);
-        }
-    }
-
-    private void sendQuery() {
-        send(new TabletQueryPayload(menu.containerId,
-                Query.of(search).withTextMachines(textMachines()).withType(typeFilter)));
-    }
-
-    /**
-     * As máquinas cujo nome, no idioma do jogador, contém o texto da busca: o servidor só conhece os ids, então
-     * a busca pelo nome "Fornalha" chega como o id do bloco.
-     */
-    private List<ResourceLocation> textMachines() {
-        String text = search.strip().toLowerCase(Locale.ROOT);
-        List<ResourceLocation> ids = new ArrayList<>();
-        if (text.isEmpty()) {
-            return ids;
-        }
-        for (TabletSnapshot.Facet<ResourceLocation> facet : snapshot().machineFacets()) {
-            Block block = BuiltInRegistries.BLOCK.get(facet.id());
-            if (block != Blocks.AIR
-                    && RouterBlock.machineName(block).getString().toLowerCase(Locale.ROOT).contains(text)) {
-                ids.add(facet.id());
+            if (t == Tab.LIST) {
+                focusSearch();
             }
         }
-        return ids;
     }
 
-    private static Component typeChipText(ResourceType type) {
-        return tr("list.type", ResourceStyle.name(type));
-    }
-
-    /** O chip fica na metade da esquerda da linha; a da direita é a contagem do resultado. */
-    private int chipMaxWidth() {
-        return (x1() - X0) / 2;
-    }
-
-    /** A largura da caixa de busca: vai até o botão Selecionar. */
-    private int searchW() {
-        return x1() - X0 - 64;
-    }
-
-    private void clearTypeFilter() {
-        typeFilter = Optional.empty();
-        listScroll = 0;
-        sendQuery();
+    /** A busca com o cursor: digitar na Lista procura. */
+    private void focusSearch() {
+        if (searchBox != null) {
+            searchBox.visible = true;
+            setFocused(searchBox);
+        }
     }
 
     private void toggleMulti() {
-        multi = !multi;
-        if (!multi) {
-            selected.clear();
-        }
-    }
-
-    /** Todos da página: marca todos os nós da página; se já estavam, desmarca. */
-    private void selectPage() {
-        List<NodeKey> keys = snapshot().nodes().stream().map(NodeView::key).toList();
-        if (selected.containsAll(keys)) {
-            keys.forEach(selected::remove);
-        } else {
-            selected.addAll(keys);
-        }
+        list.toggleMulti();
     }
 
     private Component moveTypeText() {
@@ -660,20 +603,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void moveSelected() {
-        if (selected.isEmpty()) {
+        if (list.selected().isEmpty()) {
             return;
         }
-        List<NodeKey> keys = new ArrayList<>(selected);
+        List<NodeKey> keys = new ArrayList<>(list.selected());
         if (keys.size() > TabletMenu.MAX_MOVE) {
             keys = keys.subList(0, TabletMenu.MAX_MOVE);
         }
         send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys),
                 moveType < 0 ? Optional.empty() : Optional.of(MOVE_TYPES.get(moveType)), effectiveMoveNetwork()));
-        selected.clear();
-        multi = false;
+        list.toggleMulti();
     }
 
-    private void openNode(NodeKey key) {
+    void openNode(NodeKey key) {
         send(new TabletOpenNodePayload(menu.containerId, key));
     }
 
@@ -684,7 +626,17 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     /** Escolhe o nó do painel no servidor ({@code null}: nenhum); o painel volta num {@link TabletPanelPayload}. */
     public void chooseNode(@Nullable NodeKey key) {
-        send(new TabletSelectNodePayload(menu.containerId, Optional.ofNullable(key)));
+        list.choose(key);
+    }
+
+    /** A aba Lista (busca, nós e o painel), para os ganchos do e2e e das capturas. */
+    TabletList list() {
+        return list;
+    }
+
+    /** O painel do nó escolhido na Lista, ou {@code null}. */
+    public @Nullable NodePanel nodePanel() {
+        return list.panel();
     }
 
     private @Nullable Boolean isSelectedPublic() {
@@ -790,11 +742,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (searchTicks > 0 && --searchTicks == 0) {
-            searchTicks = -1;
-            listScroll = 0;
-            sendQuery();
-        }
+        list.tick();
+    }
+
+    @Override
+    public void removed() {
+        PanelNotices.clear();
+        super.removed();
     }
 
     // ------------------------------------------------------------------ geometria
@@ -809,19 +763,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private int x1() {
         return w - 9;
-    }
-
-    /** Linhas da lista: 6 no tamanho mínimo, mais uma a cada {@link #NODE_ROW} px de altura extra. */
-    private int nodeRows() {
-        return 6 + (h - MIN_H) / NODE_ROW;
-    }
-
-    private int actionY() {
-        return LIST_Y + NODE_ROW * nodeRows() + 4;
-    }
-
-    private int pagerY() {
-        return actionY() + 16;
     }
 
     private int mapH() {
@@ -883,17 +824,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private int maxH() {
         return Math.max(MIN_H, height - 8);
-    }
-
-    /** Linha da lista de nós sob o mouse (índice no snapshot), ou -1. */
-    private int nodeRowAt(double mouseX, double mouseY) {
-        int x = leftPos + X0;
-        int y = topPos + LIST_Y;
-        if (mouseX < x || mouseX >= leftPos + x1() || mouseY < y || mouseY >= y + NODE_ROW * nodeRows()) {
-            return -1;
-        }
-        int index = (int) ((mouseY - y) / NODE_ROW) + listScroll;
-        return index < snapshot().nodes().size() ? index : -1;
     }
 
     private int mapX0() {
@@ -1040,6 +970,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (removeArmed() && !overRemoveButton(mouseX, mouseY)) {
             removeArmedUntil = 0;
         }
+        if (tab == Tab.LIST && list.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && clickBody(mouseX, mouseY)) {
             return true;
         }
@@ -1061,20 +994,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Cliques nas partes desenhadas (linhas, pontos, cores). Devolve se tratou. */
     private boolean clickBody(double mouseX, double mouseY) {
         switch (tab) {
-            case LIST -> {
-                int row = nodeRowAt(mouseX, mouseY);
-                if (row >= 0) {
-                    NodeKey key = snapshot().nodes().get(row).key();
-                    if (multi) {
-                        if (!selected.remove(key)) {
-                            selected.add(key);
-                        }
-                    } else {
-                        openNode(key);
-                    }
-                    return true;
-                }
-            }
             case MAP -> {
                 if (overMap(mouseX, mouseY)) {
                     NodeView node = mapNodeAt(mouseX, mouseY);
@@ -1130,12 +1049,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             case STATS -> {
                 ResourceType card = cardAt(mouseX, mouseY);
                 if (card != null) {
-                    typeFilter = Optional.of(card);
-                    listScroll = 0;
                     switchTab(Tab.LIST);
-                    sendQuery();
+                    list.filterType(card);
                     return true;
                 }
+            }
+            case LIST -> {
             }
         }
         return false;
@@ -1205,7 +1124,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int step = -(int) Math.signum(scrollY);
         switch (tab) {
-            case LIST -> listScroll = Mth.clamp(listScroll + step, 0, Math.max(0, snapshot().nodes().size() - nodeRows()));
+            case LIST -> list.mouseScrolled(mouseX, mouseY, scrollY);
             case MAP -> {
                 if (overMap(mouseX, mouseY)) {
                     mapZoom = Mth.clamp(mapZoom * (scrollY > 0 ? 1.25f : 0.8f), 0.25f, 16f);
@@ -1228,6 +1147,18 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (tab == Tab.LIST) {
+            if (list.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                // sem busca nem filtro, Esc fecha o Tablet
+                return super.keyPressed(keyCode, scanCode, modifiers);
+            }
+            if (getFocused() != searchBox) {
+                focusSearch();
+            }
+        }
         if (getFocused() instanceof EditBox box && box.isFocused()) {
             boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
             if (box == renameBox && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
@@ -1247,6 +1178,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (tab == Tab.LIST && getFocused() != searchBox) {
+            focusSearch();
+        }
         if (getFocused() instanceof EditBox box && box.isFocused()) {
             return box.charTyped(codePoint, modifiers);
         }
@@ -1261,7 +1195,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Cor do texto e da dica dos campos: o EditBox guarda a cor, então segue o tema por aqui. */
     private void inkBoxes() {
         inkVersion = GuiThemes.version();
-        GuiPaint.ink(searchBox, tr("search"));
+        // a dica da busca é desenhada pela lista, que a corta e a mostra também com o cursor na caixa
+        GuiPaint.ink(searchBox);
         GuiPaint.ink(newBox);
         GuiPaint.ink(renameBox);
     }
@@ -1273,8 +1208,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         refresh();
         GuiText.beginFrame();
-        super.render(g, mouseX, mouseY, partialTick);
+        boolean popup = tab == Tab.LIST && list.panel() != null && list.panel().popupOpen();
+        super.render(g, popup ? -1 : mouseX, popup ? -1 : mouseY, partialTick);
+        if (tab == Tab.LIST) {
+            list.renderOverlay(g, mouseX, mouseY);
+        }
         renderNotice(g);
+        if (popup) {
+            Component clipped = GuiText.clipAt(mouseX, mouseY);
+            if (clipped != null) {
+                setTooltipForNextRenderPass(clipped);
+            }
+            return;
+        }
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
             return;
@@ -1306,10 +1252,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private @Nullable Component bodyTooltip(int mouseX, int mouseY) {
         if (tab == Tab.LIST) {
-            int row = nodeRowAt(mouseX, mouseY);
-            if (row >= 0) {
-                return nodeTooltip(snapshot().nodes().get(row), !multi);
-            }
+            return list.tooltip(mouseX, mouseY);
         } else if (tab == Tab.MAP) {
             NodeView node = mapNodeAt(mouseX, mouseY);
             if (node != null) {
@@ -1352,7 +1295,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     /** Nome, onde fica, tier, máquina, as redes das faces de cada tipo, avisos de rede, papéis e status. */
-    private Component nodeTooltip(NodeView node, boolean clickOpens) {
+    Component nodeTooltip(NodeView node, boolean clickOpens) {
         MutableComponent text = nodeName(node).copy();
         text.append("\n").append(coords(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.TOOLTIP_MUTED))
@@ -1418,7 +1361,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
         switch (tab) {
-            case LIST -> renderList(g, mouseX, mouseY);
+            case LIST -> list.render(g, mouseX, mouseY);
             case MAP -> renderMap(g, mouseX, mouseY);
             case STATS -> renderStats(g);
             case NETWORKS -> renderNetworks(g, mouseX, mouseY);
@@ -1426,74 +1369,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
         ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), GuiPaint.ACCENT);
-    }
-
-    private void renderList(GuiGraphics g, int mouseX, int mouseY) {
-        TabletSnapshot s = snapshot();
-        int x = leftPos;
-        int y = topPos;
-        GuiPaint.box(g, x + X0, y + BODY_Y, searchW(), ROW_H, GuiPaint.INSET, searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
-        int hovered = nodeRowAt(mouseX, mouseY);
-        List<NodeView> nodes = s.nodes();
-        if (nodes.isEmpty()) {
-            GuiPaint.textCentered(g, font, s.totalNodes() == 0 ? tr("list.empty") : tr("list.no_match"),
-                    x + w / 2, y + LIST_Y + 40, GuiPaint.MUTED);
-        }
-        for (int i = 0; i < nodeRows() && i + listScroll < nodes.size(); i++) {
-            int index = i + listScroll;
-            NodeView node = nodes.get(index);
-            int rx = x + X0;
-            int ry = y + LIST_Y + i * NODE_ROW;
-            boolean picked = selected.contains(node.key());
-            if (index == hovered || picked) {
-                GuiPaint.box(g, rx, ry, x1() - X0, NODE_ROW - 1, GuiPaint.BUTTON,
-                        picked ? GuiPaint.ACCENT : GuiPaint.LINE);
-            } else if (i > 0) {
-                g.fill(rx + 2, ry - 1, x + x1() - 2, ry, GuiPaint.LINE);
-            }
-            int cx = rx + 3;
-            if (multi) {
-                GuiPaint.checkbox(g, cx, ry + 6, picked, GuiPaint.ACCENT);
-                cx += 13;
-            }
-            g.renderItem(icon(node), cx, ry + 2);
-            int textX = cx + 20;
-            Component status = statusName(node.status());
-            int statusW = font.width(status) + 9;
-            GuiPaint.dot(g, x + x1() - statusW - 2, ry + 4, statusColor(node.status()));
-            GuiPaint.text(g, font, status, x + x1() - statusW + 6, ry + 3, statusColor(node.status()));
-            GuiText.draw(g, font, nodeName(node), textX, ry + 3, x + x1() - statusW - 8 - textX, GuiPaint.FG);
-            MutableComponent line = coords(node).copy().withColor(GuiPaint.MUTED);
-            for (Component label : networkLabels(node, GuiPaint.MUTED)) {
-                line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
-            }
-            for (Component label : roleLabels(node.roles())) {
-                line.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(label);
-            }
-            GuiText.draw(g, font, line, textX, ry + 12, x + x1() - 4 - textX, GuiPaint.MUTED);
-        }
-        if (listScroll > 0) {
-            GuiPaint.text(g, font, Component.literal("▲"), x + x1() - 8, y + LIST_Y - 9, GuiPaint.MUTED);
-        }
-        if (listScroll + nodeRows() < nodes.size()) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + x1() - 8, y + actionY() - 4, GuiPaint.MUTED);
-        }
-
-        // barra de baixo: mover (selecionando) ou a dica; depois a seleção e as páginas
-        if (multi) {
-            GuiPaint.text(g, font, tr("move.to"), x + X0, y + actionY() + 3, GuiPaint.MUTED);
-            GuiText.draw(g, font, plural("selected", selected.size()), x + X0, y + pagerY() + 3, 80, GuiPaint.FG);
-        } else {
-            GuiText.draw(g, font, tr("list.hint"), x + X0, y + actionY() + 3, x1() - X0, GuiPaint.DISABLED);
-        }
-        // o resultado: quantos casaram, ou o limite de nós que a lista mostra
-        Component count = s.matchingNodes() > s.nodes().size()
-                ? tr("list.limit", s.nodes().size(), s.matchingNodes())
-                : s.matchingNodes() < s.totalNodes() ? tr("list.count", s.matchingNodes(), s.totalNodes()) : null;
-        if (count != null) {
-            int countW = Math.min(font.width(count), x1() - X0 - chipMaxWidth() - 8);
-            GuiText.draw(g, font, count, x + x1() - countW, y + pagerY() + 3, countW, GuiPaint.MUTED);
-        }
     }
 
     private void renderMap(GuiGraphics g, int mouseX, int mouseY) {
@@ -1938,19 +1813,15 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 armed || hovered ? GuiPaint.DANGER : GuiPaint.FG);
     }
 
-    /** Chip do filtro de tipo: ícone e "Só Energia ✕", na cor do tipo. */
-    private void paintTypeChip(GuiGraphics g, FlatButton b, boolean hovered) {
-        if (typeFilter.isEmpty()) {
-            return;
-        }
-        ResourceType type = typeFilter.get();
-        int color = ResourceStyle.color(type);
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.mix(GuiPaint.BUTTON, color, 0.18f),
-                hovered ? color : GuiPaint.BUTTON_BORDER);
-        ResourceStyle.drawIcon(g, type, b.getX() + 4, b.getY() + 3);
-        int textX = b.getX() + 4 + ResourceStyle.ICON + 3;
-        GuiText.draw(g, font, typeChipText(type), textX, b.getY() + 3, b.getX() + b.getWidth() - 4 - textX,
-                hovered ? GuiPaint.FG : color);
+    /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
+    private void paintClipped(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
+        int border = hovered && b.active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), b.active ? GuiPaint.BUTTON : GuiPaint.INSET,
+                b.active ? border : GuiPaint.LINE);
+        int room = b.getWidth() - 8;
+        int textW = Math.min(font.width(text), room);
+        GuiText.draw(g, font, text, b.getX() + 4 + (room - textW + 1) / 2, b.getY() + (b.getHeight() - 8) / 2, room,
+                b.active ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
     private void paintMore(GuiGraphics g, FlatButton b, boolean hovered, Component label) {
@@ -1970,11 +1841,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     void previewMulti(boolean on, int count) {
-        multi = on;
-        selected.clear();
-        if (on) {
-            snapshot().nodes().stream().limit(count).forEach(node -> selected.add(node.key()));
-        }
+        list.previewMulti(on, count);
     }
 
     void previewMapSelect(int index) {
@@ -2017,15 +1884,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return tab;
     }
 
-    /** Centro da linha do nó na lista (página atual, sem rolagem), ou {@code null} se ele não aparece. */
+    /** Centro da linha do nó na lista, ou {@code null} se ele não aparece (grupo recolhido ou rolado). */
     int @Nullable [] nodeRowCenter(NodeKey key) {
-        List<NodeView> nodes = snapshot().nodes();
-        for (int i = listScroll; i < Math.min(nodes.size(), listScroll + nodeRows()); i++) {
-            if (nodes.get(i).key().equals(key)) {
-                return new int[] {leftPos + w / 2, topPos + LIST_Y + (i - listScroll) * NODE_ROW + NODE_ROW / 2};
-            }
-        }
-        return null;
+        return list.nodeRowCenter(key);
     }
 
     /** Centro da linha do grupo na lista lateral, ou {@code null}. */

@@ -18,7 +18,6 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
-import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
@@ -29,6 +28,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
@@ -613,13 +613,14 @@ public final class TabletGameTests {
                 .thenExecute(() -> {
                     try {
                         NodeIndex.Entry entry = index(helper).entry(key);
-                        // facing UP: Cima é a Frente, Baixo é o Trás; 2 bits por lado, 6 lados por tipo
-                        eq(helper, entry.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.EXTRACT, "itens, frente");
-                        eq(helper, entry.faceMode(ResourceType.FLUID, RelativeSide.BACK), PortMode.BOTH, "fluidos, trás");
-                        eq(helper, entry.faceMode(ResourceType.ENERGY, RelativeSide.LEFT), PortMode.NONE, "energia, esquerda");
-                        eq(helper, entry.faceModes() & 3L, (long) PortMode.EXTRACT.ordinal(), "bits dos itens, frente");
-                        eq(helper, (entry.faceModes() >> ((1 * 6 + RelativeSide.BACK.ordinal()) * 2)) & 3L,
-                                (long) PortMode.BOTH.ordinal(), "bits dos fluidos, trás");
+                        // pelos lados da máquina: Cima e Baixo do baú; 2 bits por lado, 6 lados por tipo
+                        eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.EXTRACT, "itens, cima");
+                        eq(helper, entry.faceMode(ResourceType.FLUID, RemoteSide.BOTTOM), PortMode.BOTH, "fluidos, baixo");
+                        eq(helper, entry.faceMode(ResourceType.ENERGY, RemoteSide.LEFT), PortMode.NONE, "energia, esquerda");
+                        eq(helper, (entry.faceModes() >> (RemoteSide.TOP.ordinal() * 2)) & 3L,
+                                (long) PortMode.EXTRACT.ordinal(), "bits dos itens, cima");
+                        eq(helper, (entry.faceModes() >> ((1 * 6 + RemoteSide.BOTTOM.ordinal()) * 2)) & 3L,
+                                (long) PortMode.BOTH.ordinal(), "bits dos fluidos, baixo");
 
                         // o Tablet leva os modos no nó
                         NodeView view = node(fresh(menu), key);
@@ -638,12 +639,12 @@ public final class TabletGameTests {
                         }
                         NodeIndex.Entry old = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
                         eq(helper, old.faceModes(), 0L, "índice antigo");
-                        eq(helper, old.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.NONE, "modo no índice antigo");
+                        eq(helper, old.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.NONE, "modo no índice antigo");
 
                         // mudar o modo de uma face muda o índice
                         int before = index(helper).dataVersion();
                         router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                        eq(helper, entry.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.INSERT, "modo novo");
+                        eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.INSERT, "modo novo");
                         helper.assertTrue(index(helper).dataVersion() != before, "dataVersion não mudou");
                         helper.succeed();
                     } finally {

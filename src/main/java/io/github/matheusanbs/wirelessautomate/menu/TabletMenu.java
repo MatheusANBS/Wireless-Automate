@@ -193,6 +193,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final Map<NodeKey, long[]> lastMoved = new HashMap<>();
     /** Nós que moveram algo na última amostra. */
     private final Set<NodeKey> activeNodes = new HashSet<>();
+    /** Vazão por nó na última amostra, por tipo, na unidade do registro (só os que moveram algo). */
+    private final Map<NodeKey, long[]> nodeRates = new HashMap<>();
     /** Vazão por rede na última amostra, por tipo, na unidade do registro. */
     private final Map<UUID, long[]> networkRates = new HashMap<>();
     private Component notice = Component.empty();
@@ -506,6 +508,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (sample) {
             sampleTick = now;
             activeNodes.clear();
+            nodeRates.clear();
         }
         boolean probeAll = sample || fullTick == Long.MIN_VALUE || now - fullTick >= SAMPLE_TICKS;
         if (probeAll) {
@@ -590,6 +593,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 .thenComparing(m -> m.entry.key().dimension().location())
                 .thenComparingLong(m -> m.entry.key().pos().asLong()));
         RouterPreset profile = storedProfile(viewer);
+        ProfileSource source = profile == null ? null : tabletStack(viewer).get(ModDataComponents.PROFILE_SOURCE.get());
+        boolean originMatches = false;
+        Map<ResourceLocation, Integer> groupSizes = new HashMap<>();
+        for (Match match : matches) {
+            groupSizes.merge(match.entry.machine(), 1, Integer::sum);
+            originMatches |= source != null && match.entry.key().equals(source.origin());
+        }
+        List<Facet<ResourceLocation>> groupCounts = new ArrayList<>();
         List<NodeView> nodes = new ArrayList<>();
         for (int i = 0; i < Math.min(matches.size(), TabletSnapshot.MAX_NODES); i++) {
             Match match = matches.get(i);
@@ -612,9 +623,17 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             RouterBlockEntity loadedNode = entry.router();
             // só nós carregados e com perfil guardado comparam; o descarregado não tem o que ler
             Optional<ProfileDiff.ProfileMatch> comparison = profile == null || loadedNode == null ? Optional.empty()
-                    : Optional.of(ProfileDiff.match(profile, RouterPreset.copyOf(loadedNode)));
+                    : Optional.of(ProfileDiff.match(profile, loadedNode));
+            long[] rates = nodeRates.get(entry.key());
+            List<Long> rateList = new ArrayList<>(ResourceType.values().length);
+            for (ResourceType type : ResourceType.values()) {
+                rateList.add(rates == null ? 0L : rates[type.ordinal()]);
+            }
             nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), match.status, removed, entry.faceModes(), comparison));
+                    entry.roles(), match.status, removed, entry.faceModes(), List.copyOf(rateList), comparison));
+            if (groupCounts.isEmpty() || !groupCounts.getLast().id().equals(entry.machine())) {
+                groupCounts.add(new Facet<>(entry.machine(), groupSizes.get(entry.machine())));
+            }
         }
 
         Map<UUID, NetworkStats> stats = new HashMap<>();
@@ -654,7 +673,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 Math.round(budget.averageUsedNanos()), budget.limitNanos(), query, total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(machineCounts), facets(networkCounts),
                 new QuickCounts(problemCount, noNetworkCount, unloadedCount), profileSummary(viewer, profile),
-                List.copyOf(nodes), notice, noticeId);
+                List.copyOf(nodes), List.copyOf(groupCounts), originMatches, notice, noticeId);
     }
 
     /** As facetas pela contagem, das maiores para as menores (a chave desempata, para o cabeçalho ser estável). */
@@ -713,6 +732,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             long delta = Math.max(0, now - last[type.ordinal()]);
             if (delta > 0) {
                 moved = true;
+                nodeRates.computeIfAbsent(entry.key(), key -> new long[ResourceType.values().length])[type.ordinal()] =
+                        RateMath.rate(delta, elapsed, type.ratePerTick());
                 for (UUID id : entry.networks(type)) {
                     Totals network = totals.get(id);
                     if (network != null) {
@@ -1149,7 +1170,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 faces += withMode;
             }
         }
-        return Optional.of(new ProfileSummary(source.nodeName(), source.machine(), List.copyOf(types), faces));
+        return Optional.of(new ProfileSummary(source.nodeName(), source.machine(), source.origin(), List.copyOf(types),
+                faces));
     }
 
     /** Servidor: o último colar ainda pode ser desfeito. */
@@ -1294,9 +1316,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             undo.putAll(before);
         }
         int pasted = before.size();
-        if (pasted > 0 || skipped > 0) {
-            sendPasteNotice(pasted, skipped, lastName, rule == null ? 0 : keptFaces(profile, rule));
-        }
+        sendPasteNotice(pasted, skipped, lastName, rule == null ? 0 : keptFaces(profile, rule));
         return pasted;
     }
 
@@ -1323,7 +1343,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private void sendPasteNotice(int pasted, int skipped, Component name, int keptFaces) {
         String base = "gui.wirelessautomate.panel.notice.";
         MutableComponent message;
-        if (skipped > 0) {
+        if (pasted == 0) {
+            message = skipped > 0 ? Component.translatable(base + "nothing_pasted_skipped", skipped)
+                    : Component.translatable(base + "nothing_pasted");
+        } else if (skipped > 0) {
             message = Component.translatable(base + "pasted_skipped", pasted, skipped);
         } else if (pasted == 1) {
             message = Component.translatable(base + "pasted", name);

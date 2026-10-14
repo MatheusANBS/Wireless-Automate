@@ -473,7 +473,12 @@ public final class NodePanel {
         List<ResourceType> types = LoadedTypes.LIST;
         Component summary = networkSummary();
         int summaryW = font.width(summary) + 2;
-        hots.add(new Hot(Kind.SUMMARY, tabsX + tabsW - summaryW, tabsY + 1, summaryW, 13, 0));
+        // o resumo "N redes" sai quando nem as abas só com ícone cabem ao lado dele
+        int icons = types.size() * TabLayout.ICON_TAB + Math.max(0, types.size() - 1) * TabLayout.GAP;
+        boolean showSummary = tabsW - summaryW - 6 >= icons;
+        if (showSummary) {
+            hots.add(new Hot(Kind.SUMMARY, tabsX + tabsW - summaryW, tabsY + 1, summaryW, 13, 0));
+        }
         int[] full = new int[types.size()];
         int active = 0;
         for (int i = 0; i < types.size(); i++) {
@@ -482,7 +487,7 @@ public final class NodePanel {
                 active = i;
             }
         }
-        TabLayout.Result layout = TabLayout.choose(full, active, tabsW - summaryW - 6);
+        TabLayout.Result layout = TabLayout.choose(full, active, showSummary ? tabsW - summaryW - 6 : tabsW);
         tabMode = layout.mode();
         int x = tabsX;
         for (int i = 0; i < types.size(); i++) {
@@ -927,8 +932,8 @@ public final class NodePanel {
                             .append(panelTr("redstone.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED))
                     : disabled;
             case TARGET -> readOnly != null ? readOnly : targetTooltip();
-            case REVERT -> tr("range.revert.tooltip");
-            case UNLINK -> tr("range.unlink.tooltip");
+            case REVERT -> readOnly != null ? readOnly : tr("range.revert.tooltip");
+            case UNLINK -> readOnly != null ? readOnly : tr("range.unlink.tooltip");
             case UNDO -> null;
         };
     }

@@ -1,0 +1,289 @@
+<title>Painel do Tablet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: estudo em seções verticais; a tela do jogo em escala de pixels de GUI (--u), com as cores fixas do GuiPaint; a página em volta segue o tema. */
+:root {
+  --u: 2.6px;
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-hover: #F8F3E8; --g-selbg: #FBE7DE;
+  --g-ink: #2A2730; --g-mu: #7A7366; --g-ring: #1B1920; --g-ac: #F0603E;
+  --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-un: #948870;
+  --m-ext: #2F6FD6; --m-ins: #E8742B; --m-both: #2F9D5C; --m-none: #D9CFBC;
+  --t-item: #C8782E; --t-fluid: #2F6FD6; --t-energy: #E0A21E; --t-chem: #4E9A2F; --t-source: #7B4FD0;
+  --n1: #1FA7A0; --n2: #4A4560; --n3: #D5453A;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+@media (max-width: 1100px) { :root { --u: calc((100vw - 40px) / 372) } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 10px; text-wrap: balance }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px; margin-left: 12px; vertical-align: 6px }
+.lede { color: var(--page-mu); max-width: 78ch; margin: 8px 0 0 }
+p, li { max-width: 76ch }
+section.part { border-top: 1px solid var(--page-line); margin-top: 40px; padding-top: 28px }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 26px; margin-top: 20px; font-size: 14px; color: var(--page-mu) }
+.notes > div { min-width: 0 }
+.notes b { color: var(--page-fg) }
+.notes ol, .notes ul { margin: 0; padding-left: 20px } .notes li { margin-bottom: 6px }
+kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg) }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 26px; margin-top: 12px }
+.cols > * { min-width: 0 }
+ul.tight { margin: 0; padding-left: 18px } ul.tight li { margin-bottom: 6px }
+.tbl { overflow-x: auto; margin-top: 12px }
+table { border-collapse: collapse; font-size: 14px; min-width: 560px; width: 100% }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top }
+th { font-family: var(--pix); font-weight: 500; color: var(--page-mu) }
+.shot { overflow-x: auto; padding-bottom: 8px }
+
+/* ---- tela do jogo: 360 x 240 de GUI (o Tablet é redimensionável; mínimo 300 x 240) ---- */
+.gui { position: relative; width: calc(var(--u) * 360); height: calc(var(--u) * 240); background: var(--g-panel); border: var(--u) solid var(--g-ink);
+  box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-dark); font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--g-ink); user-select: none; overflow: hidden }
+.t { position: absolute; white-space: nowrap }
+.gmu { color: var(--g-mu) }
+.top { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--u) * 3); background: var(--g-ac) }
+.tab { position: absolute; top: calc(var(--u) * 19); height: calc(var(--u) * 12); padding: 0 calc(var(--u) * 4); display: flex; align-items: center; color: var(--g-mu); font-size: calc(var(--u) * 7.5) }
+.tab.on { color: var(--g-ink); border: var(--u) solid var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac) }
+.rule { position: absolute; height: var(--u); background: var(--g-dark) }
+.vrule { position: absolute; width: var(--u); background: var(--g-dark) }
+.field { position: absolute; height: calc(var(--u) * 12); background: var(--g-light); border: var(--u) solid var(--g-dark); color: var(--g-mu); display: flex; align-items: center; padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 7) }
+.gbtn { position: absolute; height: calc(var(--u) * 12); font: inherit; font-size: calc(var(--u) * 7); color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-ink);
+  padding: 0 calc(var(--u) * 3); display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2); white-space: nowrap; cursor: pointer }
+.gbtn:hover { border-color: var(--g-ac) }
+.gbtn.ok { background: var(--g-ok); color: #fff }
+.gbtn.dim { border-color: var(--g-dark); color: var(--g-mu) }
+.list { position: absolute; background: var(--g-light); box-shadow: inset 0 0 0 var(--u) var(--g-dark); overflow: hidden }
+.row { height: calc(var(--u) * 20); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); border-bottom: var(--u) solid var(--g-inset) }
+.row.sel { background: var(--g-selbg); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
+.row.flash { background: #E3F2E8 }
+.dot { flex: none; width: calc(var(--u) * 5); height: calc(var(--u) * 5); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-ring) }
+.nm { display: flex; flex-direction: column; gap: calc(var(--u) * 2); min-width: 0; flex: 1 }
+.nm b { font-weight: 400; font-size: calc(var(--u) * 7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.nm span { font-size: calc(var(--u) * 5.5); color: var(--g-mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.chips { flex: none; display: grid; grid-template-columns: repeat(3, calc(var(--u) * 5)); gap: calc(var(--u) * 1) }
+.chips i { width: calc(var(--u) * 5); height: calc(var(--u) * 5); background: var(--m-none); outline: calc(var(--u) * .6) solid var(--g-dark) }
+.chips i.e { background: var(--m-ext) } .chips i.n { background: var(--m-ins) } .chips i.b { background: var(--m-both) }
+.ttab { position: absolute; top: calc(var(--u) * 54); width: calc(var(--u) * 13); height: calc(var(--u) * 13); display: grid; place-items: center; border: var(--u) solid transparent }
+.ttab.on { border-color: var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac); background: var(--g-light) }
+.ttab span { width: calc(var(--u) * 7); height: calc(var(--u) * 7); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-ring) }
+.face { position: absolute; height: calc(var(--u) * 15); background: var(--g-light); border: var(--u) solid var(--g-ink); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 6.5); cursor: pointer }
+.face.sel { box-shadow: inset 0 0 0 var(--u) var(--g-ac); border-color: var(--g-ac) }
+.face .m { width: calc(var(--u) * 7); height: calc(var(--u) * 7); flex: none; outline: calc(var(--u) * .6) solid var(--g-ring) }
+.face .nd { margin-left: auto; width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; flex: none }
+.face.off { color: var(--g-mu); border-style: dashed; border-color: var(--g-dark) }
+.mode { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.5); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 2) }
+.mode i { width: calc(var(--u) * 6); height: calc(var(--u) * 6); flex: none; outline: calc(var(--u) * .6) solid var(--g-ring) }
+.mode.on { background: #D8E4F7; border-color: var(--m-ext) }
+.drop { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.5); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3) }
+.drop .car { margin-left: auto }
+.lab { position: absolute; font-size: calc(var(--u) * 6.5); color: var(--g-mu); white-space: nowrap }
+.toast { position: absolute; background: var(--g-ink); color: var(--g-light); font-size: calc(var(--u) * 6.5); padding: calc(var(--u) * 3) calc(var(--u) * 5); white-space: nowrap }
+.clip { position: absolute; height: calc(var(--u) * 12); border: var(--u) dashed var(--g-ac); background: var(--g-light); font-size: calc(var(--u) * 6); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3); white-space: nowrap; color: var(--g-ink) }
+.clip .x { margin-left: auto; color: var(--g-mu) }
+</style>
+
+<div class="wrap">
+  <h1>Painel do Tablet <span class="status">mockup · para aprovar</span></h1>
+  <p class="lede">Pedido do taccio3 no CurseForge, com o Controller do XNet como referência: uma tela central onde se vê todas as máquinas da rede e se configura qualquer uma, com copiar e colar perfil. A aba Lista do Tablet vira esse painel. Configurar a base não pede mais trocar de ferramenta nem andar até o roteador; Vinculador e Configurador continuam existindo para quem prefere fazer no mundo.</p>
+
+  <section class="part">
+    <div class="eyebrow">A tela · aba Lista do Tablet</div>
+    <h2>Máquinas à esquerda, o nó escolhido à direita</h2>
+    <div class="shot">
+    <div class="gui" aria-label="Tablet, aba Lista com o painel do nó Fornalha 3">
+      <div class="top"></div>
+      <div class="t" style="left:calc(var(--u)*8);top:calc(var(--u)*8)">Tablet de rede</div>
+      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*8);font-size:calc(var(--u)*7)">12 nós · 3 redes</div>
+      <div class="tab on" style="left:calc(var(--u)*8)">Lista</div>
+      <div class="tab" style="left:calc(var(--u)*38)">Mapa</div>
+      <div class="tab" style="left:calc(var(--u)*68)">Estatísticas</div>
+      <div class="tab" style="left:calc(var(--u)*130)">Redes</div>
+      <div class="tab" style="left:calc(var(--u)*164)">Grupos</div>
+      <div class="rule" style="left:calc(var(--u)*8);right:calc(var(--u)*8);top:calc(var(--u)*33)"></div>
+
+      <!-- coluna das máquinas -->
+      <div class="field" style="left:calc(var(--u)*8);top:calc(var(--u)*38);width:calc(var(--u)*96)">Buscar nó</div>
+      <div class="gbtn" style="left:calc(var(--u)*106);top:calc(var(--u)*38);width:calc(var(--u)*30)">Sel.</div>
+      <div class="list" style="left:calc(var(--u)*8);top:calc(var(--u)*53);width:calc(var(--u)*128);height:calc(var(--u)*162)">
+        <div class="row">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Fornalha Elite</b><span>Fornalha · Elite</span></div>
+          <span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Fornalha 2</b><span>Fornalha · Avançado</span></div>
+          <span class="chips"><i class="n"></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="row sel">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Fornalha 3</b><span>Fornalha · Elite</span></div>
+          <span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-warn)"></span>
+          <div class="nm"><b>Baú de minério</b><span>Barrel · Básico</span></div>
+          <span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Smelter</b><span>Elite Smelting Factory</span></div>
+          <span class="chips"><i class="n"></i><i></i><i class="e"></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-un)"></span>
+          <div class="nm"><b>Gerador</b><span>Descarregado</span></div>
+          <span class="chips"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Tanque de lava</b><span>Tanque · Elite</span></div>
+          <span class="chips"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--g-ok)"></span>
+          <div class="nm"><b>Armazém central</b><span>Baú Wireless · Esmeralda</span></div>
+          <span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+      </div>
+      <div class="t gmu" style="left:calc(var(--u)*8);top:calc(var(--u)*222);font-size:calc(var(--u)*6)">1–8 de 12 ›</div>
+
+      <div class="vrule" style="left:calc(var(--u)*142);top:calc(var(--u)*38);height:calc(var(--u)*194)"></div>
+
+      <!-- painel do nó -->
+      <div class="t" style="left:calc(var(--u)*150);top:calc(var(--u)*39);font-size:calc(var(--u)*8)">Fornalha 3</div>
+      <div class="t gmu" style="left:calc(var(--u)*208);top:calc(var(--u)*40);font-size:calc(var(--u)*6.5)">Fornalha · 12 itens/s</div>
+      <div class="gbtn" style="right:calc(var(--u)*8);top:calc(var(--u)*36);width:calc(var(--u)*30)" title="Abre a tela completa do roteador (visor 3D, cartões e upgrades)">Abrir</div>
+
+      <div class="ttab on" style="left:calc(var(--u)*150)"><span style="background:var(--t-item)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*165)"><span style="background:var(--t-fluid)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*180)"><span style="background:var(--t-energy)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*195)"><span style="background:var(--t-chem)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*210)"><span style="background:var(--t-source)"></span></div>
+      <div class="t" style="left:calc(var(--u)*228);top:calc(var(--u)*58);font-size:calc(var(--u)*7)">Itens</div>
+      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*58);font-size:calc(var(--u)*6.5)">2 redes</div>
+
+      <!-- seis faces -->
+      <div class="face" style="left:calc(var(--u)*150);top:calc(var(--u)*71);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-ins)"></i>Cima<span class="nd" style="background:var(--n1)"></span></div>
+      <div class="face off" style="left:calc(var(--u)*218);top:calc(var(--u)*71);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-none)"></i>Frente</div>
+      <div class="face off" style="left:calc(var(--u)*286);top:calc(var(--u)*71);width:calc(var(--u)*66)"><i class="m" style="background:var(--m-none)"></i>Esquerda</div>
+      <div class="face sel" style="left:calc(var(--u)*150);top:calc(var(--u)*88);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-ext)"></i>Baixo<span class="nd" style="background:var(--n2)"></span></div>
+      <div class="face off" style="left:calc(var(--u)*218);top:calc(var(--u)*88);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-none)"></i>Trás</div>
+      <div class="face off" style="left:calc(var(--u)*286);top:calc(var(--u)*88);width:calc(var(--u)*66)"><i class="m" style="background:var(--m-none)"></i>Direita</div>
+
+      <div class="rule" style="left:calc(var(--u)*150);right:calc(var(--u)*8);top:calc(var(--u)*108)"></div>
+
+      <!-- a face escolhida -->
+      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*113)">Baixo · 2 slots</div>
+      <div class="mode on" style="left:calc(var(--u)*150);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-ext)"></i>Extrai</div>
+      <div class="mode" style="left:calc(var(--u)*200);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-ins)"></i>Insere</div>
+      <div class="mode" style="left:calc(var(--u)*250);top:calc(var(--u)*122);width:calc(var(--u)*52)"><i style="background:var(--m-both)"></i>Armazém</div>
+      <div class="mode" style="left:calc(var(--u)*304);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-none)"></i>Nenhum</div>
+
+      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*142)">Rede</div>
+      <div class="drop" style="left:calc(var(--u)*186);top:calc(var(--u)*139);width:calc(var(--u)*166)"><span class="dot" style="background:var(--n2)"></span>Armazém<span class="car">▾</span></div>
+      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*157)">Filtro</div>
+      <div class="drop" style="left:calc(var(--u)*186);top:calc(var(--u)*154);width:calc(var(--u)*130)">Lista branca · 3 itens</div>
+      <div class="gbtn" style="left:calc(var(--u)*318);top:calc(var(--u)*154);width:calc(var(--u)*34)">Editar</div>
+      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*172)">Prioridade</div>
+      <div class="gbtn" style="left:calc(var(--u)*186);top:calc(var(--u)*169);width:calc(var(--u)*12)">−</div>
+      <div class="t" style="left:calc(var(--u)*203);top:calc(var(--u)*172);font-size:calc(var(--u)*7)">0</div>
+      <div class="gbtn" style="left:calc(var(--u)*212);top:calc(var(--u)*169);width:calc(var(--u)*12)">+</div>
+      <div class="lab" style="left:calc(var(--u)*232);top:calc(var(--u)*172)">Redstone</div>
+      <div class="drop" style="left:calc(var(--u)*268);top:calc(var(--u)*169);width:calc(var(--u)*84)">Ignorar<span class="car">▾</span></div>
+
+      <div class="rule" style="left:calc(var(--u)*150);right:calc(var(--u)*8);top:calc(var(--u)*188)"></div>
+
+      <!-- perfil -->
+      <div class="gbtn" style="left:calc(var(--u)*150);top:calc(var(--u)*194);width:calc(var(--u)*46)">Copiar</div>
+      <div class="gbtn ok" style="left:calc(var(--u)*199);top:calc(var(--u)*194);width:calc(var(--u)*46)">Colar</div>
+      <div class="clip" style="left:calc(var(--u)*248);top:calc(var(--u)*194);width:calc(var(--u)*104)">▣ Perfil: Fornalha Elite<span class="x">✕</span></div>
+      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*212)">Colar nesta máquina: todas as abas e faces</div>
+
+      <div class="toast" style="left:calc(var(--u)*150);top:calc(var(--u)*223)">Perfil de Fornalha Elite colado em Fornalha 3</div>
+    </div>
+    </div>
+
+    <div class="notes">
+      <div>
+        <b>Coluna das máquinas</b>
+        <ol>
+          <li>A mesma lista de hoje: busca, status (bolinha) e páginas.</li>
+          <li>Os <b>seis quadradinhos</b> são as faces na aba escolhida à direita, na cor do modo (azul Extrai, laranja Insere, verde Armazém, bege Nenhum). Dá para ler a base inteira sem abrir nada, como a grade do XNet.</li>
+          <li>Clicar numa linha a escolhe e mostra o nó à direita. Duplo clique abre a tela completa, como o clique de hoje.</li>
+        </ol>
+      </div>
+      <div>
+        <b>Painel do nó</b>
+        <ol>
+          <li>Abas por tipo, as seis faces com modo e bolinha da rede, e a face escolhida embaixo: <b>modo, rede, filtro, prioridade e redstone</b>, os mesmos controles da tela do roteador.</li>
+          <li><b>Editar</b> abre a tela de filtro; Voltar retorna ao Tablet, na mesma máquina.</li>
+          <li><b>Abrir</b> leva à tela completa do roteador para o que fica só lá: visor 3D, cartões de filtro e upgrades (são itens, precisam de slots).</li>
+        </ol>
+      </div>
+      <div>
+        <b>Copiar e colar</b>
+        <ol>
+          <li><b>Copiar</b> guarda o perfil do nó no Tablet; <b>Colar</b> aplica no nó escolhido. A faixa mostra de onde veio o perfil; ✕ esquece.</li>
+          <li>Atalhos como no XNet: <kbd>Ctrl</kbd>+<kbd>C</kbd> e <kbd>Ctrl</kbd>+<kbd>V</kbd> na máquina escolhida, e as setas <kbd>↑</kbd> <kbd>↓</kbd> andam pela lista.</li>
+          <li>Em <b>Sel.</b> (o modo de marcar vários que já existe), aparece <b>Colar nos N marcados</b> ao lado de Mover. Busca "fornalha", Todos, Colar: todas as fornalhas configuradas de uma vez.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Tela pequena</div>
+    <h2>No tamanho mínimo (300 × 240)</h2>
+    <p>A coluna das máquinas encolhe e esconde os quadradinhos; as faces viram três por linha com o nome curto (Fren., Esq., Dir.), como já acontece na tela do roteador. Com o Tablet aumentado pela borda, o espaço extra vai para a lista.</p>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Decisões</div>
+    <div class="cols">
+      <div>
+        <h2>Como funciona</h2>
+        <ul class="tight">
+          <li>As mudanças vão ao servidor pelos mesmos pedidos da tela do roteador, que valida tudo. O servidor manda a configuração só do nó escolhido e só com o Tablet aberto (sem custo com a tela fechada).</li>
+          <li>Vale o mesmo alcance e as mesmas condições de abrir à distância hoje: chunk carregado e dentro do alcance do tier. Fora disso, o painel mostra o motivo e fica só leitura.</li>
+          <li>O perfil é o <b>mesmo preset do Configurador</b>, com a mesma regra das redes (só cola a rede que o jogador pode usar) e faces relativas à frente da máquina.</li>
+          <li>Fica guardado <b>no Tablet</b>, um por Tablet, e sobrevive a fechar a tela e a sair do jogo.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Fica de fora</h2>
+        <ul class="tight">
+          <li>Cartões de filtro e upgrades no painel: continuam na tela completa (botão Abrir).</li>
+          <li>O visor 3D no painel.</li>
+          <li>Colar só uma aba: cola o perfil inteiro, como o Configurador.</li>
+          <li>Biblioteca de perfis e área de transferência do sistema.</li>
+          <li>Mudar Vinculador e Configurador: continuam iguais.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="eyebrow">Antes e depois</div>
+    <h2>Configurar dez fornalhas</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Hoje</th><th>Com o painel</th></tr></thead>
+        <tbody>
+          <tr><td>Configura a primeira na tela do roteador</td><td>Configura a primeira no painel</td></tr>
+          <tr><td>Pega o Configurador, Shift + clique na primeira</td><td>Copiar</td></tr>
+          <tr><td>Anda até cada uma das outras nove e clica (ou marca uma área)</td><td>Sel., busca "fornalha", Todos, Colar nos 9 marcados</td></tr>
+          <tr><td>Abre cada uma para conferir</td><td>Os quadradinhos de cada linha já mostram as faces</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

@@ -12,7 +12,7 @@ O dono não gosta de imagens montadas a partir de capturas soltas do e2e ("ficou
 
 ## Peças
 
-- `client/DevEndToEnd.java`, seção "Vitrine (WA_SHOWCASE)":
+- `client/dev/E2eShowcaseWorld.java` (a casa, montada no servidor; os passos e as fotos ficam no `E2eShowcase.java`):
   - `showcaseHouse`: piso em xadrez de quartzo liso e calcita com borda de ardósia, paredes de tijolo de quartzo com colunas a cada 4 blocos e janelas, a parede sul baixa para a câmera ver por cima, lanternas, tapete ciano, plantas, cerejeiras, cerca viva, flores e caminho com postes.
   - `showcaseSmelting`: fornalhas acesas com carvão, alimentadas pelo baú de entrada.
   - `showcaseStorage`: os cinco armazenamentos, cada um mandando para um cofre sob o piso, para o Tablet mostrar vazão de verdade.

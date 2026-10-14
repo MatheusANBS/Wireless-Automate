@@ -19,6 +19,8 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -668,6 +670,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private void openNode(NodeKey key) {
         send(new TabletOpenNodePayload(menu.containerId, key));
+    }
+
+    /** O último painel do nó escolhido que o servidor mandou (snapshot, acesso e distância), ou {@code null}. */
+    public @Nullable TabletPanelPayload panel() {
+        return menu.panel();
+    }
+
+    /** Escolhe o nó do painel no servidor ({@code null}: nenhum); o painel volta num {@link TabletPanelPayload}. */
+    public void chooseNode(@Nullable NodeKey key) {
+        send(new TabletSelectNodePayload(menu.containerId, Optional.ofNullable(key)));
     }
 
     private @Nullable Boolean isSelectedPublic() {

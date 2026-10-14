@@ -21,6 +21,10 @@ public final class TabletPayloads {
                 TabletPayloads::onHeader);
         registrar.playToClient(TabletPagePayload.TYPE, TabletPagePayload.STREAM_CODEC,
                 TabletPayloads::onPage);
+        registrar.playToClient(TabletPanelPayload.TYPE, TabletPanelPayload.STREAM_CODEC,
+                TabletPayloads::onPanel);
+        registrar.playToServer(TabletSelectNodePayload.TYPE, TabletSelectNodePayload.STREAM_CODEC,
+                (payload, context) -> handleSelectNode(serverPlayer(context), payload));
         registrar.playToServer(TabletQueryPayload.TYPE, TabletQueryPayload.STREAM_CODEC,
                 (payload, context) -> handleQuery(serverPlayer(context), payload));
         registrar.playToServer(TabletMoveNodesPayload.TYPE, TabletMoveNodesPayload.STREAM_CODEC,
@@ -51,6 +55,13 @@ public final class TabletPayloads {
         }
     }
 
+    private static void onPanel(TabletPanelPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
+            menu.applyPanel(payload);
+        }
+    }
+
     /** O Tablet aberto com esse id, se ainda vale. */
     private static @Nullable TabletMenu menu(@Nullable ServerPlayer player, int containerId) {
         return player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == containerId
@@ -72,6 +83,12 @@ public final class TabletPayloads {
     public static int handleMoveNodes(@Nullable ServerPlayer player, TabletMoveNodesPayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
         return menu == null ? -1 : menu.moveNodes(payload.nodes(), payload.resource(), payload.network());
+    }
+
+    /** Escolhe (ou, vazio, larga) o nó do painel; recusa um nó que o jogador não vê. */
+    public static boolean handleSelectNode(@Nullable ServerPlayer player, TabletSelectNodePayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu != null && menu.chooseNode(payload.node().orElse(null));
     }
 
     public static boolean handleOpenNode(@Nullable ServerPlayer player, TabletOpenNodePayload payload) {

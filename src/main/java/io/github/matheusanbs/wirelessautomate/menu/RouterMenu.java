@@ -198,24 +198,24 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     /**
-     * Põe os slots no layout da tela (só no cliente, depois de redimensionar): cartões e inventário a
-     * partir de {@code rightX}, inventário com o topo em {@code inventoryY}, upgrade de chunk loading em
-     * {@code upgradeX} e o de alcance em {@code rangeX}. A posição do {@link Slot} é final: cada slot é
-     * trocado por um igual, no mesmo índice.
+     * Põe os slots no layout da tela (só no cliente, depois de redimensionar): os cartões a partir de
+     * ({@code cardX}, {@code cardY}), o inventário a partir de ({@code inventoryX}, {@code inventoryY}),
+     * o upgrade de chunk loading em {@code upgradeX} e o de alcance em {@code rangeX}. A posição do
+     * {@link Slot} é final: cada slot é trocado por um igual, no mesmo índice.
      */
-    public void placeSlots(int rightX, int upgradeX, int rangeX, int inventoryY) {
+    public void placeSlots(int cardX, int cardY, int inventoryX, int inventoryY, int upgradeX, int rangeX) {
         for (int i = 0; i < slots.size(); i++) {
             Slot old = slots.get(i);
             Slot moved;
             if (old instanceof CardSlot) {
-                moved = new CardSlot(old.container, old.getContainerSlot(), rightX + old.getContainerSlot() * 18, CARD_Y);
+                moved = new CardSlot(old.container, old.getContainerSlot(), cardX + old.getContainerSlot() * 18, cardY);
             } else if (old instanceof UpgradeSlot) {
                 moved = new UpgradeSlot(old.container, upgradeX, UPGRADE_Y);
             } else if (old instanceof RangeSlot) {
                 moved = new RangeSlot(old.container, rangeX, UPGRADE_Y);
             } else {
                 int c = old.getContainerSlot();
-                int sx = rightX + (c % 9) * 18;
+                int sx = inventoryX + (c % 9) * 18;
                 int sy = c < 9 ? inventoryY + 58 : inventoryY + (c / 9 - 1) * 18;
                 if (old.x == sx && old.y == sy) {
                     continue;

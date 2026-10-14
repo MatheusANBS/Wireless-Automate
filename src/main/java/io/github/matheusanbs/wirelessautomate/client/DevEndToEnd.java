@@ -26,6 +26,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -38,10 +39,12 @@ import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
@@ -171,9 +174,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * {@code OK} ou {@code FALHA: <passo> <motivo>} na primeira linha e o log dos passos embaixo;
  * depois sai do mundo e fecha o jogo.
  *
- * <p>Os widgets são achados pela mensagem ou pela dica (as chaves de tradução); só a linha da lista
- * de redes usa a geometria da {@link RouterScreen} (altura da linha, {@link #DROPDOWN_ROW}, e o
- * título da lista na primeira linha).
+ * <p>Os widgets são achados pela mensagem ou pela dica (as chaves de tradução); os controles do painel
+ * do nó ({@link NodePanel}), que não são widgets, pelos ganchos dele (o centro de cada um).
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevEndToEnd {
@@ -193,8 +195,6 @@ public final class DevEndToEnd {
     private static final String ENERGY_NETWORK = "E2E Energia";
     private static final String NODE_NAME = "Baú B E2E";
     private static final String TAG_RULE = "#c:stones";
-    /** Altura de uma linha da lista de redes da {@link RouterScreen}. */
-    private static final int DROPDOWN_ROW = 12;
     private static final long STEP_TIMEOUT_MS = 20_000;
     private static final long WORLD_TIMEOUT_MS = 180_000;
 
@@ -480,8 +480,8 @@ public final class DevEndToEnd {
         list.add(open("abrir A", () -> routerA));
         list.add(new Step("A: Cima e Extrai", STEP_TIMEOUT_MS, () -> {
             versionBefore = routerScreen().getMenu().version();
-            click(widget(byMessage(face(Direction.UP)), "face Cima"));
-            click(widget(byMessage(mode(PortMode.EXTRACT)), "Extrai"));
+            clickFace(Direction.UP);
+            clickMode(PortMode.EXTRACT);
         }, () -> onServer(server -> router(server, routerA).face(ResourceType.ITEM, Direction.UP).mode())
                 == PortMode.EXTRACT && clientMode() == PortMode.EXTRACT && routerScreen().getMenu().version() > versionBefore,
                 () -> "servidor e tela em " + clientModeText()));
@@ -491,8 +491,8 @@ public final class DevEndToEnd {
         list.add(open("abrir B", () -> routerB));
         list.add(new Step("B: Cima e Insere", STEP_TIMEOUT_MS, () -> {
             versionBefore = routerScreen().getMenu().version();
-            click(widget(byMessage(face(Direction.UP)), "face Cima"));
-            click(widget(byMessage(mode(PortMode.INSERT)), "Insere"));
+            clickFace(Direction.UP);
+            clickMode(PortMode.INSERT);
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode())
                 == PortMode.INSERT && clientMode() == PortMode.INSERT && routerScreen().getMenu().version() > versionBefore,
                 () -> "servidor e tela em " + clientModeText()));
@@ -520,7 +520,7 @@ public final class DevEndToEnd {
         list.add(open("abrir B de novo", () -> routerB));
 
         list.add(new Step("abrir filtro (Editar)", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar")),
+                () -> clickPanel(panel().editCenter(), "Editar"),
                 () -> Minecraft.getInstance().screen instanceof FilterScreen screen
                         && screen.getMenu().view().router().equals(Optional.of(routerB))
                         && screen.getMenu().view().face().equals(Optional.of(Direction.UP)),
@@ -679,8 +679,7 @@ public final class DevEndToEnd {
                         + routerScreen().getMenu().snapshot().name() + "\""));
         // A rede é da face: a linha Rede troca só a face selecionada (Cima); as outras ficam na principal.
         list.add(new Step("abrir a lista da linha Rede", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"),
-                        "pílula da linha Rede")),
+                () -> clickPanel(panel().networkCenter(), "pílula da linha Rede"),
                 () -> routerScreen().networkListShown() && stepTicks >= 2,
                 () -> "lista " + routerScreen().networkListShown()));
         list.add(capture("5a-roteador-b-lista-rede"));
@@ -697,7 +696,7 @@ public final class DevEndToEnd {
         list.add(capture("5-roteador-b-rede-itens"));
         list.add(allFacesShortcut("B: as outras faces de Itens na mesma rede", ResourceType.ITEM, () -> otherNetwork));
         list.add(new Step("aba Energia", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.energy")), "aba Energia")),
+                () -> clickTab(ResourceType.ENERGY),
                 () -> {
                     UUID playerId = Minecraft.getInstance().player.getUUID();
                     return routerScreen().getMenu().selectedType() == ResourceType.ENERGY && onServer(server ->
@@ -719,54 +718,53 @@ public final class DevEndToEnd {
         list.add(capture("5b-roteador-b-rede-energia"));
         list.add(allFacesShortcut("B: as outras faces de Energia na mesma rede", ResourceType.ENERGY, () -> energyNetwork));
         list.add(new Step("de volta à aba Itens", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
+                () -> clickTab(ResourceType.ITEM),
                 () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                 () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         if (LoadedTypes.contains(ResourceType.SOURCE)) {
             list.add(new Step("aba Source", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.source")), "aba Source")),
+                    () -> clickTab(ResourceType.SOURCE),
                     () -> routerScreen().getMenu().selectedType() == ResourceType.SOURCE,
                     () -> "aba na tela " + routerScreen().getMenu().selectedType()));
             list.add(clipCheck("aba Source"));
             list.add(capture("1d-roteador-aba-source"));
             list.add(new Step("de volta à aba Itens depois da Source", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.item")), "aba Itens")),
+                    () -> clickTab(ResourceType.ITEM),
                     () -> routerScreen().getMenu().selectedType() == ResourceType.ITEM,
                     () -> "aba na tela " + routerScreen().getMenu().selectedType()));
         }
-        // Com 5 tipos ou mais (Mekanism e Ars no runClient) as abas não cabem com todos os nomes no
-        // mínimo (300): só a ativa tem nome. Em 420 todos os nomes cabem, com o resumo das redes no
-        // canto (o seletor de rede saiu da linha das abas).
-        boolean manyTypes = LoadedTypes.LIST.size() >= 5;
-        TabLayout.Mode tabsAtMinimum = TabLayout.Mode.ACTIVE_NAME;
-        TabLayout.Mode tabsAtLarge = TabLayout.Mode.FULL;
-        list.add(new Step("abas no tamanho mínimo", STEP_TIMEOUT_MS,
+        // A tela abre na disposição larga (o painel inteiro ao lado do visor). Com 5 tipos (Mekanism e Ars no
+        // runClient) só a aba ativa tem nome, no painel e no mínimo (300), onde as abas vão na largura toda.
+        TabLayout.Mode tabsWithName = TabLayout.Mode.ACTIVE_NAME;
+        list.add(new Step("abas na largura de abertura", STEP_TIMEOUT_MS,
                 () -> { },
-                () -> routerScreen().tabMode() == tabsAtMinimum,
-                () -> "modo das abas " + routerScreen().tabMode()));
+                () -> routerScreen().wideLayout() && routerScreen().tabMode() == tabsWithName,
+                () -> "larga " + routerScreen().wideLayout() + ", modo das abas " + routerScreen().tabMode()));
         list.add(capture("1b-roteador-abas"));
-        // Maior (420 x 300): a largura extra vai para o visor; a coluna da direita e o inventário vão
-        // junto com a borda direita.
+        // Maior (420 x 300): a disposição larga, com o inventário embaixo do visor, à esquerda.
         list.add(new Step("roteador maior", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(420, 300),
                 () -> routerScreen().size()[0] == Math.min(420, Math.max(300, routerScreen().width - 8))
-                        && routerScreen().tabMode() == tabsAtLarge
-                        && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x
-                                == routerScreen().size()[0] - 9 - 162 + 1,
+                        && routerScreen().wideLayout() && routerScreen().tabMode() == tabsWithName
+                        && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x == 9 + 1,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
         list.add(capture("1c-roteador-grande"));
-        if (manyTypes) {
-            // Bem largo, com os 5 tipos, todos os nomes passam a caber.
-            list.add(new Step("roteador largo, abas com todos os nomes", STEP_TIMEOUT_MS,
-                    () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
-                    () -> routerScreen().tabMode() == TabLayout.Mode.FULL,
-                    () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
-            list.add(capture("1f-roteador-largo"));
-        }
-        list.add(new Step("roteador de volta ao mínimo", STEP_TIMEOUT_MS,
+        // Bem largo: o painel para de crescer e a largura extra vai para o visor.
+        list.add(new Step("roteador largo, o visor fica com a largura extra", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
+                () -> routerScreen().size()[0] > 500 && routerScreen().viewColumnWidth() > 250,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", visor "
+                        + routerScreen().viewColumnWidth()));
+        list.add(capture("1f-roteador-largo"));
+        list.add(new Step("roteador no mínimo, disposição estreita", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(300, 240),
-                () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240,
-                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+                () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240 && !routerScreen().wideLayout()
+                        && routerScreen().tabMode() == tabsWithName
+                        && routerScreen().getMenu().slots.get(RouterMenu.INVENTORY_START).x == 300 - 9 - 162 + 1,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", abas " + routerScreen().tabMode()));
+        list.add(clipCheck("roteador no mínimo"));
+        list.add(capture("1g-roteador-minimo"));
+        panelSteps(list);
         attachedFrameSteps(list);
         cardSteps(list);
         chunkUpgradeSteps(list);
@@ -790,6 +788,127 @@ public final class DevEndToEnd {
     }
 
     /**
+     * O painel do nó na tela do roteador B, na largura de abertura: a prioridade e o redstone sempre à
+     * vista (sem "Mais"), o visor e o cubo andando juntos e a regra D1 (Extrai numa face sem rede, com rede
+     * ativa, põe a face nela e mostra o aviso; Desfazer tira a rede só dela). Termina no mínimo.
+     */
+    private static void panelSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        list.add(new Step("painel: largura de abertura", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(420, 240),
+                () -> routerScreen().wideLayout() && routerScreen().size()[0] == Math.min(420, routerScreen().width - 8),
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+        int[] priority = new int[1];
+        list.add(new Step("painel: prioridade + sem Mais", STEP_TIMEOUT_MS, () -> {
+            clickFace(Direction.UP);
+            priority[0] = onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority());
+            clickPanel(panel().priorityCenter(1), "o + da prioridade");
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority()) == priority[0] + 1
+                && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0] + 1,
+                () -> "prioridade no servidor " + onServer(server -> router(server, routerB).face(ResourceType.ITEM,
+                        Direction.UP).priority()) + ", antes " + priority[0]));
+        list.add(new Step("painel: prioridade de volta pelo -", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().priorityCenter(-1), "o - da prioridade"),
+                () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority()) == priority[0]
+                        && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0],
+                () -> "prioridade " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority()));
+        list.add(new Step("painel: abrir a lista do redstone", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().redstoneCenter(), "o redstone"),
+                () -> panel().redstoneRowCenter(RedstoneMode.HIGH) != null && stepTicks >= 2,
+                () -> "lista do redstone fechada"));
+        list.add(capture("1h-painel-redstone"));
+        for (RedstoneMode mode : new RedstoneMode[] {RedstoneMode.HIGH, RedstoneMode.IGNORE}) {
+            list.add(new Step("painel: redstone " + mode, STEP_TIMEOUT_MS, () -> {
+                if (panel().redstoneRowCenter(mode) == null) {
+                    clickPanel(panel().redstoneCenter(), "o redstone");
+                }
+                clickPanel(panel().redstoneRowCenter(mode), "a linha " + mode + " do redstone");
+            }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).redstone()) == mode
+                    && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).redstone() == mode
+                    && !panel().popupOpen(),
+                    () -> "redstone na tela " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM,
+                            Direction.UP).redstone()));
+        }
+
+        // o visor e o cubo andam juntos: a face sob o mouse no visor, clicada, é a escolhida no painel
+        int[] viewPoint = new int[2];
+        Direction[] viewFace = new Direction[1];
+        list.add(new Step("painel: mouse numa face do visor", STEP_TIMEOUT_MS, () -> {
+            RouterScreen screen = routerScreen();
+            screen.previewViewDefault();
+            int[] point = screen.previewViewFaceCenter(Direction.SOUTH);
+            viewPoint[0] = point[0];
+            viewPoint[1] = point[1];
+            moveMouse(point[0], point[1]);
+        }, () -> {
+            viewFace[0] = routerScreen().viewHoveredFace();
+            return stepTicks >= 3 && viewFace[0] != null && viewFace[0] != panel().face();
+        }, () -> "face sob o mouse no visor " + routerScreen().viewHoveredFace() + ", no painel " + panel().face()));
+        list.add(new Step("painel: clicar no visor escolhe a face no cubo", STEP_TIMEOUT_MS,
+                () -> click(routerScreen(), viewPoint[0], viewPoint[1]),
+                () -> panel().face() == viewFace[0] && routerScreen().getMenu().selectedFace() == viewFace[0]
+                        && onServer(server -> server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu m
+                                && m.selectedFace() == viewFace[0]),
+                () -> "face no painel " + panel().face() + ", esperada " + viewFace[0]));
+        list.add(capture("1i-painel-visor-sincronizado"));
+
+        // D1: a face Oeste do baú B, sem modo e sem rede, com a rede principal ativa
+        Direction d1 = Direction.WEST;
+        PortMode[] modeBefore = new PortMode[1];
+        UUID[] networkBefore = new UUID[1];
+        list.add(new Step("painel D1: face sem modo e sem rede", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            RouterBlockEntity router = router(server, routerB);
+            modeBefore[0] = router.face(ResourceType.ITEM, d1).mode();
+            networkBefore[0] = router.faceNetwork(ResourceType.ITEM, d1);
+            router.configureFace(ResourceType.ITEM, d1, PortMode.NONE, 0, RedstoneMode.IGNORE);
+            router.setFaceNetwork(ResourceType.ITEM, d1, null);
+            NetworkSavedData.get(server).setActiveNetwork(playerId, mainNetwork);
+            return null;
+        }), () -> {
+            FaceView v = routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1);
+            return v.mode() == PortMode.NONE && v.network().isEmpty();
+        }, () -> "face na tela " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1)));
+        list.add(new Step("painel D1: Extrai põe a face na rede ativa, com aviso", STEP_TIMEOUT_MS, () -> {
+            clickFace(d1);
+            clickMode(PortMode.EXTRACT);
+        }, () -> {
+            PanelNoticePayload notice = PanelNotices.current();
+            return onServer(server -> router(server, routerB).face(ResourceType.ITEM, d1).mode() == PortMode.EXTRACT
+                    && mainNetwork.equals(router(server, routerB).faceNetwork(ResourceType.ITEM, d1)))
+                    && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).equals(Optional.of(mainNetwork))
+                    && notice != null && notice.undo() == PanelNoticePayload.Undo.CLEAR_FACE_NETWORK
+                    && notice.message().getString().contains(Component.translatable("gui.wirelessautomate.router.side."
+                            + RemoteSide.fromAbsolute(routerScreen().getMenu().snapshot().attachedFront(), d1.ordinal()).key())
+                            .getString())
+                    && panel().undoCenter() != null;
+        }, () -> "rede no servidor " + onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1))
+                + ", aviso " + PanelNotices.current()));
+        list.add(capture("1j-painel-d1-aviso"));
+        list.add(new Step("painel D1: Desfazer tira a rede só desta face", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().undoCenter(), "o Desfazer do aviso"),
+                () -> onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1) == null
+                        && router(server, routerB).face(ResourceType.ITEM, d1).mode() == PortMode.EXTRACT
+                        && router(server, routerB).faceNetwork(ResourceType.ITEM, Direction.UP) != null)
+                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).isEmpty()
+                        && PanelNotices.current() == null,
+                () -> "rede no servidor " + onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1))));
+        list.add(clipCheck("painel D1: face sem rede"));
+        list.add(capture("1k-painel-escolha-a-rede"));
+        list.add(new Step("painel D1: a face volta ao que era", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            RouterBlockEntity router = router(server, routerB);
+            router.configureFace(ResourceType.ITEM, d1, modeBefore[0], 0, RedstoneMode.IGNORE);
+            router.setFaceNetwork(ResourceType.ITEM, d1, networkBefore[0]);
+            return null;
+        }), () -> routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1).mode() == modeBefore[0]
+                && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).equals(Optional.ofNullable(networkBefore[0])),
+                () -> "face na tela " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1)));
+        list.add(new Step("painel: de volta ao mínimo", STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(300, 240),
+                () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
+    }
+
+    /**
      * Cartão de Filtro num slot de face pela tela: o servidor dá um cartão (lista branca de
      * diamante) ao jogador, a tela muda para a face Norte (o servidor troca o que os slots mostram)
      * e o cartão vai do inventário para o primeiro slot de cartão com dois cliques, como o jogador
@@ -808,7 +927,7 @@ public final class DevEndToEnd {
             });
         }, () -> inventoryCardSlot() != null, () -> "cartão no slot " + inventoryCardSlot()));
         list.add(new Step("face Norte", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(face(Direction.NORTH)), "face Norte")),
+                () -> clickFace(Direction.NORTH),
                 () -> {
                     UUID playerId = Minecraft.getInstance().player.getUUID();
                     return routerScreen().getMenu().selectedFace() == Direction.NORTH && onServer(server ->
@@ -909,20 +1028,11 @@ public final class DevEndToEnd {
         return null;
     }
 
-    /**
-     * Abre a pílula da linha Rede (a rede da face selecionada, abaixo dos botões de modo) e clica na
-     * linha da rede: a lista abre logo abaixo da pílula, com 1 px de folga, 2 px de borda, o título e
-     * uma linha por rede.
-     */
+    /** Abre a lista da linha Rede do painel e clica na linha da rede (ou em "Sem rede", a última). */
     private static void chooseNetwork(@Nullable UUID network, String name) throws StepFailure {
         RouterScreen screen = routerScreen();
-        AbstractWidget pill = widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"),
-                "pílula da linha Rede");
-        if (pill.getY() - screen.getGuiTop() < 100) {
-            throw new StepFailure("a pílula de rede não está abaixo dos modos (y " + (pill.getY() - screen.getGuiTop()) + ")");
-        }
         if (!screen.networkListShown()) {
-            click(pill);
+            clickPanel(panel().networkCenter(), "pílula da linha Rede");
         }
         List<NetworkEntry> networks = screen.getMenu().snapshot().networks();
         // "Sem rede" é a última linha, depois das redes
@@ -935,9 +1045,7 @@ public final class DevEndToEnd {
         if (row < 0) {
             throw new StepFailure("a rede " + name + " não está na lista da tela: " + networks);
         }
-        int x = pill.getX() + pill.getWidth() / 2;
-        int y = pill.getY() + pill.getHeight() + 1 + 2 + (row + 1) * DROPDOWN_ROW + DROPDOWN_ROW / 2;
-        click(screen, x, y);
+        clickPanel(panel().networkRowCenter(row), "a linha da rede " + name);
     }
 
     /**
@@ -967,8 +1075,7 @@ public final class DevEndToEnd {
         for (RemoteSide side : new RemoteSide[] {RemoteSide.BACK, RemoteSide.FRONT}) {
             Direction expected = side == RemoteSide.BACK ? Direction.NORTH : Direction.SOUTH;
             list.add(new Step("B: botão " + side.key() + " é a face " + expected.getName(), STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.side." + side.key())),
-                            "botão " + side.key())),
+                    () -> clickSide(side),
                     () -> routerScreen().getMenu().selectedFace() == expected && onServer(server ->
                             server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
                                     && menu.selectedFace() == expected),
@@ -1441,22 +1548,22 @@ public final class DevEndToEnd {
         list.add(showLook("perto da fornalha", -9.5, 0.5, -11, -11, 1, -11, true));
         list.add(open("abrir a fornalha", () -> showFurnace.above()));
         list.add(new Step("filtro da fornalha", STEP_TIMEOUT_MS, () -> {
-            click(widget(byMessage(face(Direction.UP)), "face Cima"));
-        }, () -> find(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit"))) != null, () -> "Editar"));
+            clickFace(Direction.UP);
+        }, () -> panel().editCenter() != null, () -> "Editar"));
         list.add(capture("s4-roteador-fornalha"));
         // Rede por face: a fornalha larga, face de baixo (na rede dos armazenamentos) com a lista de redes aberta.
         list.add(new Step("fornalha larga, face de baixo", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300);
-            click(widget(byMessage(face(Direction.DOWN)), "face Baixo"));
+            clickFace(Direction.DOWN);
         }, () -> routerScreen().size()[0] > 400 && routerScreen().getMenu().selectedFace() == Direction.DOWN,
                 () -> "face " + routerScreen().getMenu().selectedFace()));
         list.add(new Step("abrir a lista de redes", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"), "pílula da Rede")),
+                () -> clickPanel(panel().networkCenter(), "pílula da Rede"),
                 () -> routerScreen().networkListShown() && stepTicks >= 4, () -> "lista " + routerScreen().networkListShown()));
         list.add(capture("s3b-roteador-redes"));
         list.add(new Step("fechar a lista e voltar à face de cima", STEP_TIMEOUT_MS, () -> {
-            click(widget(byMessageKey("gui.wirelessautomate.router.network.face.narration"), "pílula da Rede"));
-            click(widget(byMessage(face(Direction.UP)), "face Cima"));
+            routerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+            clickFace(Direction.UP);
         }, () -> !routerScreen().networkListShown() && routerScreen().getMenu().selectedFace() == Direction.UP,
                 () -> "lista " + routerScreen().networkListShown()));
         list.add(new Step("abrir o filtro", STEP_TIMEOUT_MS, () -> {
@@ -1465,7 +1572,7 @@ public final class DevEndToEnd {
                 showcaseInventory(server, server.getPlayerList().getPlayer(playerId));
                 return null;
             });
-            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar"));
+            clickPanel(panel().editCenter(), "Editar");
         }, () -> Minecraft.getInstance().screen instanceof FilterScreen, () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("s5-filtro"));
         list.add(new Step("filtro: tags do minério de ferro", STEP_TIMEOUT_MS, () -> {
@@ -1520,7 +1627,7 @@ public final class DevEndToEnd {
                         && stepTicks >= 4,
                 () -> "alvo " + routerScreen().getMenu().snapshot().target()));
         list.add(new Step("alcance: face de cima e vazão", 20_000,
-                () -> click(widget(byMessage(side(RemoteSide.TOP)), "face Topo")),
+                () -> clickSide(RemoteSide.TOP),
                 () -> routerScreen().getMenu().selectedFace() == Direction.UP
                         && (routerScreen().getMenu().throughput()[ResourceType.ITEM.ordinal()] > 0 || stepTicks > 300),
                 () -> "face " + routerScreen().getMenu().selectedFace() + ", vazão "
@@ -1558,7 +1665,7 @@ public final class DevEndToEnd {
                     () -> routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300),
                     () -> routerScreen().size()[0] > 400, () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
             list.add(new Step("aba Source", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type.source")), "aba Source")),
+                    () -> clickTab(ResourceType.SOURCE),
                     () -> routerScreen().getMenu().selectedType() == ResourceType.SOURCE
                             && routerScreen().getMenu().throughput()[ResourceType.SOURCE.ordinal()] > 0,
                     () -> "aba " + routerScreen().getMenu().selectedType()));
@@ -2863,7 +2970,7 @@ public final class DevEndToEnd {
         list.add(themeClick("Escuro: clicar no botão do tema", GuiTheme.DARK));
         darkShot(list, "escuro-roteador");
         list.add(new Step("Escuro: abrir o filtro", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar")),
+                () -> clickPanel(panel().editCenter(), "Editar"),
                 () -> Minecraft.getInstance().screen instanceof FilterScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         darkShot(list, "escuro-filtro");
@@ -3424,12 +3531,12 @@ public final class DevEndToEnd {
                     () -> clickRow(EditTarget.group(rangeGroup(Blocks.CHEST))),
                     () -> rangeTargetIs(EditTarget.group(rangeGroup(Blocks.CHEST)))
                             && routerScreen().getMenu().selectedFace() == Direction.NORTH
-                            && find(byMessage(side(RemoteSide.BACK))) != null,
+                            && panel().sideCenter(RemoteSide.BACK) != null,
                     () -> "alvo " + routerScreen().getMenu().snapshot().target() + ", face "
                             + routerScreen().getMenu().selectedFace()));
             list.add(new Step(label + "grupo: Trás em Extrair", STEP_TIMEOUT_MS, () -> {
-                click(widget(byMessage(side(RemoteSide.BACK)), "face Trás"));
-                click(widget(byMessage(mode(PortMode.EXTRACT)), "Extrai"));
+                clickSide(RemoteSide.BACK);
+                clickMode(PortMode.EXTRACT);
             }, () -> {
                 int chests = rangeGroup(Blocks.CHEST);
                 return routerScreen().getMenu().selectedFace() == Direction.SOUTH
@@ -3516,21 +3623,21 @@ public final class DevEndToEnd {
                             && routerScreen().getMenu().selectedFace() == Direction.NORTH,
                     () -> "alvo " + routerScreen().getMenu().snapshot().target()));
             list.add(new Step(label + "fornalha: Frente em Inserir vira exceção", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessage(mode(PortMode.INSERT)), "Insere")),
+                    () -> clickMode(PortMode.INSERT),
                     () -> {
                         RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
                         return machine != null && machine.exception()
-                                && find(byMessageKey("gui.wirelessautomate.router.range.revert")) != null
+                                && panel().revertCenter() != null
                                 && onServer(server -> serverException(server, rangeFurnace));
                     }, () -> "alcance " + rangeView()));
             list.add(rangeClipCheck(label + "exceção"));
             list.add(capture("range-3-excecao" + suffix));
             list.add(new Step(label + "Voltar ao perfil", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.revert"), "Voltar ao perfil")),
+                    () -> clickPanel(panel().revertCenter(), "Voltar a igual às outras"),
                     () -> {
                         RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
                         return machine != null && !machine.exception()
-                                && find(byMessageKey("gui.wirelessautomate.router.range.revert")) == null
+                                && panel().revertCenter() == null
                                 && !onServer(server -> serverException(server, rangeFurnace));
                     }, () -> "alcance " + rangeView()));
             if (pt) {
@@ -3550,7 +3657,7 @@ public final class DevEndToEnd {
                         () -> rangeTargetIs(EditTarget.machine(rangeMachine(rangeChestB))),
                         () -> "alvo " + routerScreen().getMenu().snapshot().target()));
                 list.add(new Step(label + "Desvincular", STEP_TIMEOUT_MS,
-                        () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.unlink"), "Desvincular")),
+                        () -> clickPanel(panel().unlinkCenter(), "Desvincular"),
                         () -> rangeView().machines().size() == 2 && routerScreen().getMenu().snapshot().target().attached()
                                 && onServer(server -> !router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
                         () -> "alcance " + rangeView()));
@@ -3569,7 +3676,6 @@ public final class DevEndToEnd {
                     return !menu.snapshot().range().present() && menu.snapshot().target().attached()
                             && menu.selectedFace() == Direction.UP && serverFace == Direction.UP
                             && find(byMessageKey("gui.wirelessautomate.router.range.machines")) == null
-                            && find(byMessage(face(Direction.UP))) != null
                             && !onServer(server -> router(server, rangeRouter).rangeActive()) && stepTicks >= 4;
                 }, () -> "face no cliente " + routerScreen().getMenu().selectedFace() + ", alcance "
                         + routerScreen().getMenu().snapshot().range().present() + ", alvo "
@@ -3654,10 +3760,6 @@ public final class DevEndToEnd {
         return routerScreen().getMenu().snapshot().target().equals(target) && onServer(server ->
                 server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
                         && menu.target().equals(target));
-    }
-
-    private static Component side(RemoteSide side) {
-        return Component.translatable("gui.wirelessautomate.router.side." + side.key());
     }
 
     /** Nenhum texto cortado na tela do roteador de alcance (mouse fora dela, alguns quadros depois). */
@@ -4164,16 +4266,35 @@ public final class DevEndToEnd {
         return minecraft.level != null && minecraft.level.getBlockState(pos).getBlock() instanceof RouterBlock;
     }
 
-    /**
-     * O rótulo do botão da face absoluta {@code direction} da máquina presa na tela aberta: o lado
-     * relativo à frente da máquina ("Cima", "Trás"...).
-     */
-    private static Component face(Direction direction) throws StepFailure {
-        return routerScreen().attachedFaceLabel(direction);
+    /** O painel do nó da tela do roteador aberta. */
+    private static NodePanel panel() throws StepFailure {
+        return routerScreen().panel();
     }
 
-    private static Component mode(PortMode mode) {
-        return Component.translatable("gui.wirelessautomate.router.mode." + mode.name().toLowerCase(java.util.Locale.ROOT));
+    /** Clique no ponto de um controle do painel (um gancho dele); {@code null} = o controle não está lá. */
+    private static void clickPanel(int @Nullable [] point, String what) throws StepFailure {
+        if (point == null) {
+            throw new StepFailure("não achei " + what + " no painel da tela " + describe(Minecraft.getInstance().screen));
+        }
+        click(routerScreen(), point[0], point[1]);
+    }
+
+    /** Clique na face {@code direction} (absoluta na presa, canônica num alvo do alcance) do cubo. */
+    private static void clickFace(Direction direction) throws StepFailure {
+        clickPanel(panel().faceCenter(direction), "a face " + direction.getName());
+    }
+
+    /** Clique na face do lado {@code side} (relativo à frente da máquina) do cubo. */
+    private static void clickSide(RemoteSide side) throws StepFailure {
+        clickPanel(panel().sideCenter(side), "a face " + side.key());
+    }
+
+    private static void clickMode(PortMode mode) throws StepFailure {
+        clickPanel(panel().modeCenter(mode), "o modo " + mode);
+    }
+
+    private static void clickTab(ResourceType type) throws StepFailure {
+        clickPanel(panel().tabCenter(type), "a aba " + type);
     }
 
     /**

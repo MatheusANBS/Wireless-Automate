@@ -58,22 +58,27 @@ behind it drops the router.
 | Step | How |
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
-| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the Front, Back, Left, Right, Top and Bottom buttons (machine sides, below). |
-| **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
-| **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate) or on the panel's **unfolded cube**: both choices move together, and the face under the mouse lights up in both. |
+| **3. Pick the mode** | Extract, Insert, Storage or None (table below). Picking a mode on a face with no network, while you have an active [network](networks.md), puts the face on it; the notice at the bottom of the panel has an **Undo** button. |
+| **4. Settings (optional)** | Priority and redstone are always in view on the panel. **Edit** opens the face's [filter](filters.md). |
 | **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
 
-## Machine sides
+## The panel and the cube
 
-The face buttons name the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and
-Bottom. Below the buttons, the screen tells where the front is (for example **Front: South**). A
-machine without a front, or facing up or down, like a barrel: **Front = North**.
+The panel on the right is the same one the [Network Tablet](network-tablet.md) shows for a node. At
+the top, the **unfolded cube** shows the machine's six faces at once: each in its mode's color with
+a dot in its network's color. A face with no mode has a dashed border, and one with a mode but no
+network gets a coral outline and the prompt **Pick this face's network**. The eye marks the face the
+router is attached to.
 
-| On the screen | What it shows |
+The names are the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and Bottom.
+A machine without a front, or facing up or down, like a barrel: **Front = North**.
+
+| On the panel | What it shows |
 | --- | --- |
-| **Dot above a button** | The color of that face's network (no dot: no network). |
+| **Dot on a face** | The color of that face's network (no dot: no network). |
 | **Network row** | The selected face's network; click to change it. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 
@@ -90,7 +95,7 @@ machine without a front, or facing up or down, like a barrel: **Front = North**.
 
 | Setting | Values | Effect |
 | --- | --- | --- |
-| **Priority** | −999 to 999 (default 0) | Higher-priority destinations receive first; ties take turns. |
+| **Priority** | −999 to 999 (default 0) | Higher-priority destinations receive first; ties take turns. The − and + buttons step by 1; hold Shift to step by 10. |
 | **Redstone: Ignore** | Default | The face always works. |
 | **Redstone: With signal** | | The face only works with a redstone signal on the router. |
 | **Redstone: No signal** | | The face only works without a signal. |

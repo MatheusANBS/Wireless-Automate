@@ -78,6 +78,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
@@ -120,11 +121,19 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private static final Pattern SEARCH_SPLIT = Pattern.compile("[\\s,]+");
     /** Fichas de remontagem forçada por jogador; sobrevivem a fechar e abrir o Tablet. Só no servidor. */
     private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
+    /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
+    public static final int BULK_PER_SECOND = 4;
+    /** Fichas das ações em massa do perfil por jogador. Só no servidor. */
+    private static final Map<UUID, RateLimiter> BULK_LIMITS = new HashMap<>();
     /**
      * Onde cada jogador deixou o Tablet (ao fechar o menu, inclusive para abrir o filtro de um nó): o Tablet
      * reabre igual. Só na memória do servidor, some quando ele para.
      */
     private static final Map<UUID, State> STATES = new HashMap<>();
+
+    /** Um nó do último colar: como era antes e como ficou logo depois (o desfazer só volta se ainda está assim). */
+    private record Pasted(RouterPreset before, RouterPreset after) {
+    }
 
     /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele. */
     public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target) {
@@ -210,8 +219,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private long panelTick;
     /** O último snapshot lido do nó escolhido, mostrado (só para ler) enquanto ele está descarregado. */
     private @Nullable RouterSnapshot lastKnown;
-    /** O último colar do Tablet: o que cada nó era antes; some ao fechar o menu. */
-    private final Map<NodeKey, RouterPreset> undo = new LinkedHashMap<>();
+    /** O último colar do Tablet: o que cada nó era antes e logo depois; some ao fechar o menu. */
+    private final Map<NodeKey, Pasted> undo = new LinkedHashMap<>();
     private @Nullable Component lastNotice;
 
     /** Servidor. */
@@ -266,6 +275,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static void resetStates() {
         STATES.clear();
         FORCED_LIMITS.clear();
+        BULK_LIMITS.clear();
     }
 
     /** O estado guardado do jogador, ou {@code null}. */
@@ -276,7 +286,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (viewer != null) {
+        if (viewer != null && !viewer.hasDisconnected()) {
             STATES.put(viewer.getUUID(), new State(tab, query, chosen, targetRef));
         }
     }
@@ -297,6 +307,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static void forget(UUID player) {
         STATES.remove(player);
         FORCED_LIMITS.remove(player);
+        BULK_LIMITS.remove(player);
     }
 
     @Override
@@ -478,7 +489,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /** Gasta uma remontagem forçada do jogador, se houver. */
     private static boolean takeForced(UUID player, long now) {
-        RateLimiter limiter = FORCED_LIMITS.computeIfAbsent(player, id -> new RateLimiter(FORCED_PER_SECOND));
+        return take(FORCED_LIMITS.computeIfAbsent(player, id -> new RateLimiter(FORCED_PER_SECOND)), now);
+    }
+
+    private static boolean take(RateLimiter limiter, long now) {
         if (limiter.available(now) < 1) {
             return false;
         }
@@ -695,6 +709,17 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         return full;
     }
 
+    /** O jogador vê o roteador pelo Tablet (a regra de {@link #visible}); fora do índice, não. */
+    public static boolean canSee(ServerPlayer player, RouterBlockEntity router) {
+        Level level = router.getLevel();
+        if (level == null) {
+            return false;
+        }
+        MinecraftServer server = player.server;
+        NodeIndex.Entry entry = NodeIndex.get(server).entry(NodeKey.of(level, router.getBlockPos()));
+        return entry != null && visible(entry, NetworkSavedData.get(server), player.hasPermissions(2), player.getUUID());
+    }
+
     /** O jogador vê o nó: operador, quem o colocou, ou alguma face numa rede dele. */
     private static boolean visible(NodeIndex.Entry entry, NetworkSavedData data, boolean operator, UUID me) {
         if (operator || me.equals(entry.placedBy())) {
@@ -824,9 +849,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (networkLabels.isEmpty()) {
             return true;
         }
-        for (UUID id : networkLabels) {
-            if (entry.inNetwork(id)) {
-                return true;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                if (networkLabels.contains(id)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -1172,8 +1199,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 faces += withMode;
             }
         }
-        return Optional.of(new ProfileSummary(source.nodeName(), source.machine(), source.origin(), List.copyOf(types),
-                faces));
+        return Optional.of(new ProfileSummary(ProfileSource.clip(source.nodeName()), source.machine(), source.origin(),
+                List.copyOf(types), faces));
     }
 
     /** Servidor: o último colar ainda pode ser desfeito. */
@@ -1195,6 +1222,17 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
             List<NodeKey> keys) {
         if (viewer == null || keys.size() > TabletProfilePayload.MAX_KEYS || !stillValid(viewer)) {
+            return -1;
+        }
+        boolean bulk = switch (action) {
+            case PASTE_GROUP -> machine != null;
+            case PASTE_SELECTED -> !keys.isEmpty();
+            case UNDO -> !undo.isEmpty();
+            default -> false;
+        };
+        if (bulk && !take(BULK_LIMITS.computeIfAbsent(viewer.getUUID(), id -> new RateLimiter(BULK_PER_SECOND)),
+                viewer.server.getTickCount())) {
+            announce(PanelNoticePayload.plain(Component.translatable("gui.wirelessautomate.panel.notice.busy")));
             return -1;
         }
         ItemStack tablet = tabletStack(viewer);
@@ -1222,12 +1260,22 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (router == null) {
             return -1;
         }
-        String name = router.name();
         tablet.set(ModDataComponents.PRESET.get(), PresetPaste.copy(viewer, router));
-        tablet.set(ModDataComponents.PROFILE_SOURCE.get(), new ProfileSource(
-                name.length() > ProfileSource.MAX_NAME ? name.substring(0, ProfileSource.MAX_NAME) : name,
-                ConfiguratorArea.machine(viewer.serverLevel(), router), key));
+        tablet.set(ModDataComponents.PROFILE_SOURCE.get(), new ProfileSource(router.name(), machineOf(router, key), key));
         return 1;
+    }
+
+    /**
+     * O bloco da máquina do nó, lido no mundo do roteador (não no do jogador, que pode estar em outra dimensão)
+     * e só com o chunk carregado; senão, o do índice.
+     */
+    private ResourceLocation machineOf(RouterBlockEntity router, NodeKey key) {
+        if (router.getLevel() instanceof ServerLevel level && level.isLoaded(router.machinePos())) {
+            return ConfiguratorArea.machine(level, router);
+        }
+        NodeIndex.Entry entry = NodeIndex.get(viewer.server).entry(key);
+        return entry == null ? BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR)
+                : entry.machine();
     }
 
     /** O roteador do nó, se o jogador o vê, está carregado e ao alcance; senão {@code null}. */
@@ -1289,7 +1337,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         NodeIndex index = NodeIndex.get(server);
         NetworkSavedData data = NetworkSavedData.get(server);
         boolean operator = viewer.hasPermissions(2);
-        Map<NodeKey, RouterPreset> before = new LinkedHashMap<>();
+        Map<NodeKey, Pasted> before = new LinkedHashMap<>();
         PresetApplier.Checked rule = null;
         Component lastName = Component.empty();
         int skipped = 0;
@@ -1309,8 +1357,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 skipped++;
                 continue;
             }
-            before.put(key, RouterPreset.copyOf(router));
+            RouterPreset was = RouterPreset.copyOf(router);
             rule = PresetPaste.paste(viewer, router, profile, null);
+            before.put(key, new Pasted(was, RouterPreset.copyOf(router)));
             lastName = nodeName(entry);
         }
         if (!before.isEmpty()) {
@@ -1364,23 +1413,24 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /**
      * Devolve cada nó do último colar ao que era ({@link RouterPreset#restoreTo}), se ainda é visível, está
-     * carregado e ao alcance, e esquece o colar. Devolve quantos voltaram, ou -1 sem nada para desfazer.
+     * carregado e ao alcance e se ninguém o mudou depois do colar (senão o desfazer apagaria a mudança), e esquece
+     * o colar. Devolve quantos voltaram, ou -1 sem nada para desfazer.
      */
     private int undoPaste() {
         if (undo.isEmpty()) {
             return -1;
         }
-        Map<NodeKey, RouterPreset> pending = new LinkedHashMap<>(undo);
+        Map<NodeKey, Pasted> pending = new LinkedHashMap<>(undo);
         undo.clear();
         int restored = 0;
         int skipped = 0;
-        for (Map.Entry<NodeKey, RouterPreset> entry : pending.entrySet()) {
+        for (Map.Entry<NodeKey, Pasted> entry : pending.entrySet()) {
             RouterBlockEntity router = reachableRouter(entry.getKey());
-            if (router == null) {
+            if (router == null || !RouterPreset.copyOf(router).equals(entry.getValue().after())) {
                 skipped++;
                 continue;
             }
-            entry.getValue().restoreTo(router);
+            entry.getValue().before().restoreTo(router);
             restored++;
         }
         String base = "gui.wirelessautomate.panel.notice.";

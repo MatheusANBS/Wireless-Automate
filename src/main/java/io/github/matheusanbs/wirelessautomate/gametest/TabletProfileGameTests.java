@@ -710,4 +710,118 @@ public final class TabletProfileGameTests {
         helper.assertTrue(ProfileSource.STREAM_CODEC.decode(buf).equals(source), "ProfileSource pela rede");
         helper.succeed();
     }
+
+    /** Um nome longo vindo do NBT (criativo, /give) é cortado no codec e o pacote ainda codifica. */
+    @GameTest(template = "empty")
+    public static void profileSourceLongNameIsCut(GameTestHelper helper) {
+        ProfileSource source = new ProfileSource("Nó", CHEST, NodeKey.of(helper.getLevel(), BlockPos.ZERO));
+        CompoundTag tag = (CompoundTag) ProfileSource.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, source)
+                .getOrThrow();
+        tag.putString("name", "x".repeat(300));
+        ProfileSource parsed = ProfileSource.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).getOrThrow();
+        eq(helper, parsed.nodeName().length(), ProfileSource.MAX_NAME, "nome não foi cortado");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        ProfileSource.STREAM_CODEC.encode(buf, parsed);
+        helper.assertTrue(ProfileSource.STREAM_CODEC.decode(buf).equals(parsed), "ProfileSource longo pela rede");
+        helper.succeed();
+    }
+
+    /** Copiar com o jogador em outra dimensão (tier com crossDimension) grava a máquina do nó, não a do mundo do jogador. */
+    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    public static void copyAcrossDimensionsRecordsTheNodeMachine(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        helper.setBlock(M1, Blocks.CHEST);
+        helper.setBlock(M1.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        RouterBlockEntity source = helper.getBlockEntity(M1.above());
+        source.setName("Origem");
+        NodeIndex.placedBy(source, player.getUUID());
+        configure(source, null);
+        TabletMenu menu = openTablet(player, 120);
+        net.minecraft.server.level.ServerLevel home = helper.getLevel();
+        boolean before = io.github.matheusanbs.wirelessautomate.Config.TIERS.get(RouterTier.ELITE).crossDimension().get();
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, source))
+                .thenExecute(() -> {
+                    try {
+                        io.github.matheusanbs.wirelessautomate.Config.TIERS.get(RouterTier.ELITE).crossDimension().set(true);
+                        net.minecraft.server.level.ServerLevel nether = home.getServer()
+                                .getLevel(net.minecraft.world.level.Level.NETHER);
+                        helper.assertTrue(nether != null, "sem o Nether");
+                        BlockPos machinePos = source.machinePos();
+                        boolean wasLoaded = nether.hasChunkAt(machinePos);
+                        player.setServerLevel(nether);
+                        helper.assertTrue(profile(player, 120, Action.COPY, key(source)) >= 0, "recusou copiar");
+                        ProfileSource from = player.getInventory().getItem(0).get(ModDataComponents.PROFILE_SOURCE.get());
+                        helper.assertTrue(from != null, "sem origem no Tablet");
+                        eq(helper, from.machine(), CHEST, "máquina gravada");
+                        if (!wasLoaded) {
+                            helper.assertFalse(nether.hasChunkAt(machinePos), "copiar carregou o chunk no Nether");
+                        }
+                        helper.succeed();
+                    } finally {
+                        player.setServerLevel(home);
+                        io.github.matheusanbs.wirelessautomate.Config.TIERS.get(RouterTier.ELITE).crossDimension().set(before);
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                });
+    }
+
+    /** Desfazer pula o nó que mudou depois do colar e conta-o no aviso; os outros voltam. */
+    @GameTest(template = "empty")
+    public static void undoSkipsNodesChangedAfterThePaste(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        RouterBlockEntity source = owned(helper, player, M1, Blocks.CHEST, "Origem");
+        RouterBlockEntity changed = owned(helper, player, M2, Blocks.CHEST, "Mudado");
+        RouterBlockEntity kept = owned(helper, player, M3, Blocks.CHEST, "Intacto");
+        configure(source, null);
+        TabletMenu menu = openTablet(player, 121);
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, source, changed, kept))
+                .thenExecute(() -> {
+                    try {
+                        RouterPreset keptBefore = RouterPreset.copyOf(kept);
+                        profile(player, 121, Action.COPY, key(source));
+                        eq(helper, profile(player, 121, Action.PASTE_SELECTED, null, null,
+                                List.of(key(changed), key(kept))), 2, "colados");
+                        changed.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.BOTH);
+                        RouterPreset changedNow = RouterPreset.copyOf(changed);
+                        eq(helper, profile(player, 121, Action.UNDO, null), 1, "restaurados");
+                        helper.assertTrue(RouterPreset.copyOf(changed).equals(changedNow), "desfez por cima da mudança");
+                        helper.assertTrue(RouterPreset.copyOf(kept).equals(keptBefore), "o intacto não voltou");
+                        helper.assertTrue(text(menu).contains("undone_skipped"), "aviso sem os de fora: " + text(menu));
+                        helper.succeed();
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                });
+    }
+
+    /** Colar em vários nós e desfazer gastam fichas por jogador; sem ficha, recusa com um aviso. */
+    @GameTest(template = "empty")
+    public static void bulkProfileActionsAreRateLimited(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        RouterBlockEntity source = owned(helper, player, M1, Blocks.CHEST, "Origem");
+        RouterBlockEntity target = owned(helper, player, M2, Blocks.CHEST, "Alvo");
+        configure(source, null);
+        TabletMenu menu = openTablet(player, 122);
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, source, target))
+                .thenExecute(() -> {
+                    try {
+                        profile(player, 122, Action.COPY, key(source));
+                        int refused = 0;
+                        for (int i = 0; i < 12; i++) {
+                            if (profile(player, 122, Action.PASTE_SELECTED, null, null, List.of(key(target))) < 0) {
+                                refused++;
+                            }
+                        }
+                        helper.assertTrue(refused > 0, "nenhum colar recusado em 12 seguidos");
+                        helper.assertTrue(text(menu).contains("busy"), "aviso sem a recusa: " + text(menu));
+                        helper.succeed();
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                });
+    }
 }

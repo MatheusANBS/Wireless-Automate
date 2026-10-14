@@ -440,7 +440,7 @@ public record TabletSnapshot(
         buf.writeVarInt(s.quickCounts.noNetwork());
         buf.writeVarInt(s.quickCounts.unloaded());
         buf.writeOptional(s.profile, (b, p) -> {
-            b.writeUtf(p.sourceName, ProfileSource.MAX_NAME);
+            b.writeUtf(ProfileSource.clip(p.sourceName), ProfileSource.MAX_NAME);
             b.writeResourceLocation(p.machine);
             NodeKey.STREAM_CODEC.encode(b, p.origin);
             b.writeVarInt(p.types.size());

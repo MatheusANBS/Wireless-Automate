@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -10,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
+import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterOrigin;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
@@ -53,6 +55,7 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.MenuProvider;
@@ -63,6 +66,7 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
@@ -544,6 +548,8 @@ public final class FilterMenuGameTests {
                         int id = player.containerMenu.containerId;
                         helper.assertTrue(TabletPayloads.handleQuery(player, new TabletQueryPayload(id, query)), "consulta");
                         helper.assertTrue(TabletPayloads.handleTab(player, new TabletTabPayload(id, 2)), "aba");
+                        helper.assertFalse(TabletPayloads.handleTab(player, new TabletTabPayload(id, 99)), "aba que não existe");
+                        helper.assertFalse(TabletPayloads.handleTab(player, new TabletTabPayload(id, -1)), "aba negativa");
                         helper.assertTrue(TabletPayloads.handleSelectNode(player,
                                 new TabletSelectNodePayload(id, Optional.of(keyOf(elite)))), "escolha");
                         helper.assertTrue(ModPayloads.handleOpenFilter(player,
@@ -564,6 +570,42 @@ public final class FilterMenuGameTests {
                         helper.assertTrue(Objects.equals(client.restoredNode(), keyOf(elite)), "nó no buffer");
                         helper.assertValueEqual(client.snapshot().query().text(), "elite", "consulta no buffer");
                     } finally {
+                        close(player);
+                    }
+                    helper.succeed();
+                });
+    }
+
+    /** Com um tier que cruza dimensão, o filtro do Tablet e o da tela à distância valem com o jogador em outra dimensão; o NEAR não. */
+    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    public static void filterFromTheTabletValidAcrossDimensions(GameTestHelper helper) {
+        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-dimensao");
+        boolean before = Config.TIERS.get(RouterTier.ELITE).crossDimension().get();
+        Config.TIERS.get(RouterTier.ELITE).crossDimension().set(true);
+        ServerLevel home = helper.getLevel();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(elite), "sem onLoad"))
+                .thenExecute(() -> {
+                    try {
+                        ServerLevel nether = home.getServer().getLevel(Level.NETHER);
+                        helper.assertTrue(nether != null, "sem o Nether");
+                        player.setServerLevel(nether);
+                        EditTargetRef ref = EditTargetRef.ATTACHED;
+                        for (FilterOrigin origin : new FilterOrigin[] {FilterOrigin.TABLET, FilterOrigin.REMOTE_ROUTER}) {
+                            RouterFaceFilterTarget target = new RouterFaceFilterTarget(elite, ResourceType.ITEM,
+                                    Direction.UP, ref, origin);
+                            helper.assertTrue(target.stillValid(player), origin + " fechou em outra dimensão");
+                        }
+                        RouterFaceFilterTarget near = new RouterFaceFilterTarget(elite, ResourceType.ITEM, Direction.UP);
+                        helper.assertFalse(near.stillValid(player), "NEAR valeu em outra dimensão");
+                        Config.TIERS.get(RouterTier.ELITE).crossDimension().set(false);
+                        helper.assertFalse(new RouterFaceFilterTarget(elite, ResourceType.ITEM, Direction.UP, ref,
+                                FilterOrigin.TABLET).stillValid(player), "valeu sem crossDimension");
+                    } finally {
+                        player.setServerLevel(home);
+                        Config.TIERS.get(RouterTier.ELITE).crossDimension().set(before);
                         close(player);
                     }
                     helper.succeed();

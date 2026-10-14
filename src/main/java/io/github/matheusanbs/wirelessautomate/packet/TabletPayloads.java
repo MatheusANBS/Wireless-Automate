@@ -86,11 +86,7 @@ public final class TabletPayloads {
     /** A aba do Tablet aberto, guardada para reabrir na mesma. */
     public static boolean handleTab(@Nullable ServerPlayer player, TabletTabPayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
-        if (menu == null) {
-            return false;
-        }
-        menu.setTab(payload.tab());
-        return true;
+        return menu != null && menu.setTab(payload.tab());
     }
 
     /** Devolve quantos nós mudaram de rede, ou -1 se recusou. */

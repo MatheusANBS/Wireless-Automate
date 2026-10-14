@@ -1,16 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 /**
  * A tela do roteador aberta à distância pelo Tablet. É um {@link RouterMenu} comum (o cliente nem
  * sabe a diferença) que só troca a regra de continuar aberta: em vez de 8 blocos, vale enquanto o
- * jogador tiver o Tablet e o roteador estiver carregado e ao alcance ({@link TabletMenu#inReach}).
+ * jogador tiver o Tablet e o roteador estiver carregado, ao alcance ({@link TabletMenu#inReach}) e
+ * visível para ele ({@link TabletMenu#canSee}).
  * Os pacotes da tela usam {@code stillValid}, então a mesma regra vale para eles.
  *
  * <p>O filtro aberto daqui vale na mesma regra ({@link FilterOrigin#REMOTE_ROUTER}) e o Voltar dele reabre
@@ -55,11 +58,12 @@ public class RemoteRouterMenu extends RouterMenu {
         if (router == null) {
             return true;
         }
-        if (router.isRemoved() || router.getLevel() == null
-                || router.getLevel().getBlockEntity(router.getBlockPos()) != router) {
+        Level level = router.getLevel();
+        BlockPos pos = router.getBlockPos();
+        if (router.isRemoved() || level == null || !level.isLoaded(pos) || level.getBlockEntity(pos) != router) {
             return false;
         }
         return player instanceof ServerPlayer serverPlayer && TabletMenu.hasTablet(serverPlayer)
-                && TabletMenu.inReach(serverPlayer, router);
+                && TabletMenu.inReach(serverPlayer, router) && TabletMenu.canSee(serverPlayer, router);
     }
 }

@@ -824,4 +824,32 @@ public final class TabletProfileGameTests {
                     }
                 });
     }
+
+    /** A tela do roteador aberta pelo Tablet fecha quando o jogador deixa de ver o nó (a face saiu da rede dele). */
+    @GameTest(template = "empty")
+    public static void remoteRouterClosesWhenTheNodeIsNoLongerVisible(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork net = data.create(player.getUUID(), "teste-remota-visivel");
+        RouterBlockEntity router = owned(helper, player, M1, Blocks.CHEST, "Alheio");
+        NodeIndex.placedBy(router, UUID.randomUUID());
+        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, net.id());
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        var target = io.github.matheusanbs.wirelessautomate.menu.EditTargetRef.ATTACHED;
+                        var remote = new io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu(130,
+                                player.getInventory(), router,
+                                io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.capture(router, player,
+                                        target.target()));
+                        helper.assertTrue(remote.stillValid(player), "fechou com o nó visível");
+                        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, null);
+                        helper.assertFalse(remote.stillValid(player), "valeu com o nó invisível");
+                        helper.succeed();
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                });
+    }
 }

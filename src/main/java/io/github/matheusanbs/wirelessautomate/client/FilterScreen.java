@@ -215,11 +215,11 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     private FlatButton backButton;
 
-    private int themeX() {
+    int themeX() {
         return leftPos + imageWidth - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + HEAD_Y + (SEG_H - ThemeToggle.SIZE) / 2;
     }
     private FlatButton whiteButton;

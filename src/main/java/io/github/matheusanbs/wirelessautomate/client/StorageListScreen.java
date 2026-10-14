@@ -157,11 +157,11 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         return FIXED_H + rows * CELL;
     }
 
-    private int themeX() {
+    int themeX() {
         return leftPos + imageWidth - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + HEAD_Y + (ROW_H - ThemeToggle.SIZE) / 2;
     }
 

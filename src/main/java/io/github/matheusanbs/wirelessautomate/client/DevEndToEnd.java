@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import io.github.matheusanbs.wirelessautomate.ClientConfig;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -406,6 +408,10 @@ public final class DevEndToEnd {
     /** Escreve o resultado (falha se {@code failedStep} não for nulo), sai do mundo e fecha o jogo. */
     private static void finish(Minecraft minecraft, @Nullable String failedStep, @Nullable String reason) {
         phase = Phase.DONE;
+        // um e2e que falhou no escuro não deixa o cliente de dev escuro
+        if (GuiThemes.current() != GuiTheme.LIGHT) {
+            GuiThemes.set(GuiTheme.LIGHT);
+        }
         String head = failedStep == null ? "OK" : "FALHA: " + failedStep + " " + reason;
         if (failedStep != null) {
             log.add("[FALHA] " + failedStep + ": " + reason);
@@ -776,6 +782,7 @@ public final class DevEndToEnd {
             sourceTankSteps(list);
         }
         recipeEditorSteps(list);
+        darkSteps(list);
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
         }
@@ -2355,6 +2362,8 @@ public final class DevEndToEnd {
             RouterTier.ULTIMATE};
     private static final long[] SOURCE_TANK_CONTENTS = {0L, 24_000L, 384_000L, 3_000_000_000L};
     private static BlockPos storageA = BlockPos.ZERO;
+    /** A Bateria do passo dos armazenamentos, que a volta no escuro abre de novo. */
+    private static BlockPos batteryPos = BlockPos.ZERO;
     private static BlockPos storageB = BlockPos.ZERO;
 
     /**
@@ -2608,7 +2617,8 @@ public final class DevEndToEnd {
                     .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             level.setBlockAndUpdate(more[1], ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                     .setValue(RouterBlock.TIER, RouterTier.EMERALD));
-            StorageTankBlockEntity tank = (StorageTankBlockEntity) level.getBlockEntity(more[0]);
+            batteryPos = more[1];
+            StorageTankBlockEntity tank =(StorageTankBlockEntity) level.getBlockEntity(more[0]);
             tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
             tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
             StorageBatteryBlockEntity battery = (StorageBatteryBlockEntity) level.getBlockEntity(more[1]);
@@ -2832,6 +2842,142 @@ public final class DevEndToEnd {
         Minecraft minecraft = Minecraft.getInstance();
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.SOUTH, pos, false);
         minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
+    }
+
+    // ------------------------------------------------------------------ tema escuro
+
+    /**
+     * A volta no escuro: clica no botão do tema da tela do roteador (pelo {@code mouseClicked}, como o
+     * jogador), confere o tema e a config, fotografa as sete telas do mod no escuro ({@code escuro-*})
+     * conferindo que nenhum texto fica cortado e clica de novo no botão, na última tela, para voltar ao
+     * claro. O {@code finish} devolve o claro se algum passo falhar no meio.
+     */
+    private static void darkSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        list.add(handStep("Escuro: mão vazia", playerId, ItemStack.EMPTY));
+        // o roteador B fica longe de onde os passos dos armazenamentos deixaram o jogador: vai até ele e volta
+        Vec3[] back = new Vec3[1];
+        list.add(teleport("Escuro: ir até o roteador B", playerId, back, () -> new Vec3(routerB.getX() + 0.5, routerB.getY() - 1, routerB.getZ() + 2.5)));
+        list.add(open("Escuro: abrir B", () -> routerB));
+        list.add(themeClick("Escuro: clicar no botão do tema", GuiTheme.DARK));
+        darkShot(list, "escuro-roteador");
+        list.add(new Step("Escuro: abrir o filtro", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.filter.edit")), "Editar")),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        darkShot(list, "escuro-filtro");
+        list.add(new Step("Escuro: voltar ao roteador", STEP_TIMEOUT_MS,
+                () -> click(widget(byTooltip(Component.translatable("gui.wirelessautomate.filter.back.tooltip")), "Voltar")),
+                () -> Minecraft.getInstance().screen instanceof RouterScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(close("Escuro: fechar B"));
+        list.add(teleport("Escuro: voltar", playerId, null, () -> back[0]));
+        list.add(handStep("Escuro: Tablet na mão", playerId, new ItemStack(ModItems.NETWORK_TABLET.get())));
+        list.add(useInAir("Escuro: abrir o Tablet", TabletScreen.class));
+        darkShot(list, "escuro-tablet");
+        list.add(close("Escuro: fechar o Tablet"));
+        list.add(handStep("Escuro: Vinculador na mão", playerId, new ItemStack(ModItems.LINKER.get())));
+        list.add(useInAir("Escuro: abrir o Vinculador", LinkerScreen.class));
+        darkShot(list, "escuro-vinculador");
+        list.add(close("Escuro: fechar o Vinculador"));
+        list.add(handStep("Escuro: mão vazia de novo", playerId, ItemStack.EMPTY));
+        list.add(new Step("Escuro: abrir o Baú", STEP_TIMEOUT_MS, () -> useOn(storageB),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        darkShot(list, "escuro-bau");
+        list.add(close("Escuro: fechar o Baú"));
+        list.add(new Step("Escuro: abrir a Bateria", STEP_TIMEOUT_MS, () -> useOn(batteryPos),
+                () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        darkShot(list, "escuro-bateria");
+        list.add(close("Escuro: fechar a Bateria"));
+        // o editor de receitas é a última tela: o segundo clique no botão volta ao claro
+        list.add(new Step("Escuro: abrir o editor de receitas", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().player.connection.sendCommand("wa recipes"),
+                () -> Minecraft.getInstance().screen instanceof RecipeEditorScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        darkShot(list, "escuro-receitas");
+        list.add(themeClick("Escuro: clicar de novo, volta ao claro", GuiTheme.LIGHT));
+        list.add(close("Escuro: fechar o editor de receitas"));
+    }
+
+    /** Leva o jogador a um ponto (guardando onde estava em {@code saved}, se não for nulo) e espera o cliente ver. */
+    private static Step teleport(String name, UUID playerId, Vec3 @Nullable [] saved, Supplier<Vec3> to) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            if (saved != null) {
+                saved[0] = Minecraft.getInstance().player.position();
+            }
+            Vec3 target = to.get();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.teleportTo(player.serverLevel(), target.x, target.y, target.z, 180f, 30f);
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.position().distanceTo(to.get()) < 0.5,
+                () -> "distância " + Minecraft.getInstance().player.position().distanceTo(to.get()));
+    }
+
+    /** Põe o item na mão do jogador, no servidor, e espera o cliente ver. */
+    private static Step handStep(String name, UUID playerId, ItemStack stack) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND, stack.copy());
+            return null;
+        }), () -> ItemStack.isSameItem(Minecraft.getInstance().player.getMainHandItem(), stack),
+                () -> "na mão " + Minecraft.getInstance().player.getMainHandItem());
+    }
+
+    /** Usa o item da mão no ar (abre a tela do Tablet ou do Vinculador). */
+    private static Step useInAir(String name, Class<? extends Screen> screenClass) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> screenClass.isInstance(Minecraft.getInstance().screen),
+                () -> "tela " + describe(Minecraft.getInstance().screen));
+    }
+
+    /** Clique de mouse no botão do tema da tela aberta; termina com o tema e a config no valor esperado. */
+    private static Step themeClick(String name, GuiTheme expected) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            Screen screen = Minecraft.getInstance().screen;
+            int[] at = themeButton(screen);
+            click(screen, at[0] + ThemeToggle.SIZE / 2, at[1] + ThemeToggle.SIZE / 2);
+        }, () -> GuiThemes.current() == expected && ClientConfig.THEME.get() == expected,
+                () -> "tema " + GuiThemes.current() + ", config " + ClientConfig.THEME.get());
+    }
+
+    /** A posição do botão do tema na tela aberta (cada uma das sete a calcula). */
+    private static int[] themeButton(@Nullable Screen screen) throws StepFailure {
+        if (screen instanceof RouterScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof TabletScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof FilterScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof LinkerScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof StorageListScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof StorageScalarScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof RecipeEditorScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        }
+        throw new StepFailure("sem botão do tema na tela " + describe(screen));
+    }
+
+    /**
+     * Captura a tela no escuro e confere que nenhum texto ficou cortado sem tooltip com o texto inteiro (o
+     * nome de rede comprido que o passo em português deixa numa face corta no cabeçalho, com a dica).
+     */
+    private static void darkShot(List<Step> list, String file) {
+        list.add(new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+            if (stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), file);
+            return GuiThemes.current() == GuiTheme.DARK;
+        }, () -> "tema " + GuiThemes.current()));
+        list.add(clipCheck(file));
     }
 
     // ------------------------------------------------------------------ Guia (GuideME)

@@ -27,9 +27,9 @@ public final class ThemeToggle {
         boolean hover = hovered(x, y, mouseX, mouseY);
         GuiPaint.box(g, x, y, SIZE, SIZE, GuiPaint.BUTTON, hover ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         if (GuiThemes.current() == GuiTheme.LIGHT) {
-            moon(g, x + 3, y + 3, GuiPaint.FG);
+            moon(g, x + 2, y + 2, GuiPaint.FG);
         } else {
-            sun(g, x + 3, y + 3, GuiPaint.FG);
+            sun(g, x + 2, y + 2, GuiPaint.FG);
         }
     }
 
@@ -49,21 +49,38 @@ public final class ThemeToggle {
                 Component.translatable("gui.wirelessautomate.theme.hint").withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
-    /** Lua crescente, 5 × 5 px. */
+    /** Lua crescente inclinada com uma estrela, 7 × 7 px. */
     private static void moon(GuiGraphics g, int x, int y, int color) {
-        g.fill(x + 1, y, x + 3, y + 1, color);
-        g.fill(x, y + 1, x + 2, y + 4, color);
-        g.fill(x + 1, y + 4, x + 3, y + 5, color);
-        g.fill(x + 3, y + 3, x + 5, y + 4, color);
-        g.fill(x + 3, y + 4, x + 4, y + 5, color);
+        pattern(g, x, y, color,
+                "..X....",
+                ".XX..X.",
+                "XX.....",
+                "XX.....",
+                "XXX....",
+                ".XXX...",
+                "..XXX..");
     }
 
-    /** Sol: miolo 3 × 3 e quatro raios, 5 × 5 px. */
+    /** Sol: miolo 3 × 3, quatro raios e quatro diagonais, 7 × 7 px. */
     private static void sun(GuiGraphics g, int x, int y, int color) {
-        g.fill(x + 1, y + 1, x + 4, y + 4, color);
-        g.fill(x + 2, y, x + 3, y + 1, color);
-        g.fill(x + 2, y + 4, x + 3, y + 5, color);
-        g.fill(x, y + 2, x + 1, y + 3, color);
-        g.fill(x + 4, y + 2, x + 5, y + 3, color);
+        pattern(g, x, y, color,
+                "...X...",
+                ".X...X.",
+                "..XXX..",
+                "X.XXX.X",
+                "..XXX..",
+                ".X...X.",
+                "...X...");
+    }
+
+    /** Pinta um pixel por {@code X}, uma linha de texto por linha da tela. */
+    private static void pattern(GuiGraphics g, int x, int y, int color, String... rows) {
+        for (int row = 0; row < rows.length; row++) {
+            for (int col = 0; col < rows[row].length(); col++) {
+                if (rows[row].charAt(col) == 'X') {
+                    g.fill(x + col, y + row, x + col + 1, y + row + 1, color);
+                }
+            }
+        }
     }
 }

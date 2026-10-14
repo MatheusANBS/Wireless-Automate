@@ -500,11 +500,11 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         return handled;
     }
 
-    private int themeX() {
+    int themeX() {
         return leftPos + W - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + 7;
     }
 

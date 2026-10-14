@@ -647,11 +647,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     // ------------------------------------------------------------------ geometria (depende do tamanho)
 
-    private int themeX() {
+    int themeX() {
         return leftPos + w - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + HEAD_Y + 1;
     }
 

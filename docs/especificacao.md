@@ -53,6 +53,8 @@ A vazão vale por face e por tipo. Os números ficam no arquivo de config do ser
 
 São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não tem tela), todas com a mesma hierarquia: o essencial à vista, ajustes secundários recolhidos e um botão principal na cor do tier.
 
+**Tema claro e escuro:** todas as telas têm um botão de 11 × 11 px no canto direito do cabeçalho (uma lua no claro, um sol no escuro; a dica diz "Modo escuro" ou "Modo claro"). Clicar troca o tema de todas as telas de uma vez, na hora, sem reabrir; a escolha fica salva na config do cliente (`config/wirelessautomate-client.toml`, `gui.theme`, `LIGHT` ou `DARK`, padrão `LIGHT`). A roda do Configurador, que não tem cabeçalho, segue o tema. As paletas estão em `docs/identidade-visual.md`.
+
 ### Roteador
 
 - **Abre com:** clique direito no roteador, ou à distância pelo Tablet. Shift + clique com as mãos vazias gira o roteador em vez de abrir a tela.

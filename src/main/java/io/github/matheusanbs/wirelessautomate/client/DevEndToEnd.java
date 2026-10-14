@@ -1078,9 +1078,9 @@ public final class DevEndToEnd {
         }, () -> {
             TabletScreen screen = tabletScreen();
             TabletSnapshot snapshot = screen.getMenu().snapshot();
-            return snapshot.query().search().equals(NODE_NAME) && snapshot.nodes().size() == 1
+            return snapshot.query().text().equals(NODE_NAME) && snapshot.nodes().size() == 1
                     && screen.nodeRowCenter(nodeB()) != null;
-        }, () -> "busca \"" + tabletScreen().getMenu().snapshot().query().search() + "\", nós "
+        }, () -> "busca \"" + tabletScreen().getMenu().snapshot().query().text() + "\", nós "
                 + tabletScreen().getMenu().snapshot().nodes().stream().map(n -> n.key().pos().toShortString()).toList()));
         list.add(capture("7-tablet-lista"));
         list.add(new Step("aba Estatísticas", STEP_TIMEOUT_MS,

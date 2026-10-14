@@ -10,7 +10,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -110,7 +109,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** O que o campo de nome está renomeando. */
     private enum Rename { NONE, NETWORK, GROUP }
 
-    private static final RoleFilter[] ROLE_FILTERS = RoleFilter.values();
     /** Tipos que o Mover oferece, depois de "Todas as abas". */
     private static final List<ResourceType> MOVE_TYPES = LoadedTypes.LIST;
 
@@ -128,10 +126,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private EditBox searchBox;
     private String search = "";
     private int searchTicks = -1;
-    private RoleFilter role = RoleFilter.ALL;
     /** Só os nós com este tipo (vem do clique num cartão das Estatísticas); vazio = todos. */
     private Optional<ResourceType> typeFilter = Optional.empty();
-    private int page;
     private int listScroll;
     private boolean multi;
     private final Set<NodeKey> selected = new LinkedHashSet<>();
@@ -171,10 +167,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.preview = preview;
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.search = menu.snapshot().query().search();
-        this.role = menu.snapshot().query().role();
+        this.search = menu.snapshot().query().text();
         this.typeFilter = menu.snapshot().query().type();
-        this.page = menu.snapshot().query().page();
         this.lastNoticeId = menu.snapshot().noticeId();
     }
 
@@ -366,9 +360,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
 
         // Lista
-        searchBox = new EditBox(font, x + X0 + 4, y + BODY_Y + 3, 120, 9, tr("search"));
+        searchBox = new EditBox(font, x + X0 + 4, y + BODY_Y + 3, searchW() - 8, 9, tr("search"));
         searchBox.setBordered(false);
-        searchBox.setMaxLength(TabletSnapshot.MAX_SEARCH);
+        searchBox.setMaxLength(TabletSnapshot.MAX_TEXT);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         inkVersion = -1;
         searchBox.setValue(search);
@@ -379,9 +373,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
         });
         addRenderableWidget(searchBox);
-        add(Tab.LIST, new FlatButton(x + X0 + 134, y + BODY_Y, 84, ROW_H, Component.empty(),
-                (g, b, hovered) -> paintCycle(g, b, hovered, roleText()), () -> cycleRole(hasShiftDown() ? -1 : 1))
-                .tooltip(() -> tr("role.tooltip")));
         add(Tab.LIST, new FlatButton(x + x1() - 60, y + BODY_Y, 60, ROW_H, tr("select"),
                 (g, b, hovered) -> paintToggle(g, b, hovered, multi ? tr("select.done") : tr("select"), multi),
                 this::toggleMulti).tooltip(() -> tr("select.tooltip")));
@@ -399,10 +390,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         add(Tab.LIST, new FlatButton(x + X0 + 84, y + pagerY(), 34, ROW_H, tr("select.all"),
                 (g, b, hovered) -> paintText(g, b, hovered, tr("select.all")), this::selectPage)
                 .tooltip(() -> tr("select.all.tooltip")));
-        add(Tab.LIST, new FlatButton(x + x1() - 120, y + pagerY(), 14, ROW_H, tr("page.previous"),
-                (g, b, hovered) -> paintText(g, b, hovered, Component.literal("‹")), () -> changePage(-1)));
-        add(Tab.LIST, new FlatButton(x + x1() - 14, y + pagerY(), 14, ROW_H, tr("page.next"),
-                (g, b, hovered) -> paintText(g, b, hovered, Component.literal("›")), () -> changePage(1)));
         // "Só Energia ✕": o filtro de tipo que veio de um cartão das Estatísticas; clicar tira
         add(Tab.LIST, new FlatButton(x + X0, y + pagerY(), 60, ROW_H, tr("list.type.tooltip"), this::paintTypeChip,
                 this::clearTypeFilter).tooltip(() -> tr("list.type.tooltip")));
@@ -495,15 +482,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         }
         searchBox.visible = tab == Tab.LIST;
         List<FlatButton> list = tabWidgets.get(Tab.LIST);
-        // [papel, Selecionar, tipo, rede, Mover, Todos, ‹, ›, chip do tipo]
-        for (int i = 2; i <= 5; i++) {
+        // [Selecionar, tipo, rede, Mover, Todos, chip do tipo]
+        for (int i = 1; i <= 4; i++) {
             list.get(i).visible = tab == Tab.LIST && multi;
         }
-        list.get(4).active = !selected.isEmpty();
-        list.get(6).active = page > 0;
-        list.get(7).active = page + 1 < snapshot().pages();
-        // [8] o chip do tipo: só com filtro e fora do Selecionar (que usa a mesma linha)
-        FlatButton chip = list.get(8);
+        list.get(3).active = !selected.isEmpty();
+        // [5] o chip do tipo: só com filtro e fora do Selecionar (que usa a mesma linha)
+        FlatButton chip = list.get(5);
         chip.visible = tab == Tab.LIST && !multi && typeFilter.isPresent();
         if (typeFilter.isPresent()) {
             int chipW = font.width(typeChipText(typeFilter.get())) + 10 + ResourceStyle.ICON + 3;
@@ -534,12 +519,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         renameBox.visible = renaming != Rename.NONE && (tab == Tab.NETWORKS || tab == Tab.GROUPS);
     }
 
-    /** Snapshot novo: a seleção que sumiu sai, a página volta ao que o servidor respondeu, e o aviso aparece. */
+    /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
     private void onSnapshot() {
         TabletSnapshot s = snapshot();
-        if (searchTicks < 0) {
-            page = s.query().page();
-        }
         if (s.noticeId() != lastNoticeId) {
             lastNoticeId = s.noticeId();
             noticeText = s.notice();
@@ -586,43 +568,48 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     private void sendQuery() {
-        send(new TabletQueryPayload(menu.containerId, new Query(search, role, typeFilter, page)));
+        send(new TabletQueryPayload(menu.containerId,
+                Query.of(search).withTextMachines(textMachines()).withType(typeFilter)));
+    }
+
+    /**
+     * As máquinas cujo nome, no idioma do jogador, contém o texto da busca: o servidor só conhece os ids, então
+     * a busca pelo nome "Fornalha" chega como o id do bloco.
+     */
+    private List<ResourceLocation> textMachines() {
+        String text = search.strip().toLowerCase(Locale.ROOT);
+        List<ResourceLocation> ids = new ArrayList<>();
+        if (text.isEmpty()) {
+            return ids;
+        }
+        for (TabletSnapshot.Facet<ResourceLocation> facet : snapshot().machineFacets()) {
+            Block block = BuiltInRegistries.BLOCK.get(facet.id());
+            if (block != Blocks.AIR
+                    && RouterBlock.machineName(block).getString().toLowerCase(Locale.ROOT).contains(text)) {
+                ids.add(facet.id());
+            }
+        }
+        return ids;
     }
 
     private static Component typeChipText(ResourceType type) {
         return tr("list.type", ResourceStyle.name(type));
     }
 
-    /** O chip não passa do botão de página anterior ({@code x1() - 120}). */
+    /** O chip fica na metade da esquerda da linha; a da direita é a contagem do resultado. */
     private int chipMaxWidth() {
-        return x1() - 124 - X0;
+        return (x1() - X0) / 2;
+    }
+
+    /** A largura da caixa de busca: vai até o botão Selecionar. */
+    private int searchW() {
+        return x1() - X0 - 64;
     }
 
     private void clearTypeFilter() {
         typeFilter = Optional.empty();
-        page = 0;
         listScroll = 0;
         sendQuery();
-    }
-
-    private Component roleText() {
-        return tr("role." + role.name().toLowerCase(Locale.ROOT));
-    }
-
-    private void cycleRole(int direction) {
-        role = ROLE_FILTERS[Math.floorMod(role.ordinal() + direction, ROLE_FILTERS.length)];
-        page = 0;
-        listScroll = 0;
-        sendQuery();
-    }
-
-    private void changePage(int direction) {
-        int next = Mth.clamp(page + direction, 0, snapshot().pages() - 1);
-        if (next != page) {
-            page = next;
-            listScroll = 0;
-            sendQuery();
-        }
     }
 
     private void toggleMulti() {
@@ -788,7 +775,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         super.containerTick();
         if (searchTicks > 0 && --searchTicks == 0) {
             searchTicks = -1;
-            page = 0;
             listScroll = 0;
             sendQuery();
         }
@@ -1128,7 +1114,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 ResourceType card = cardAt(mouseX, mouseY);
                 if (card != null) {
                     typeFilter = Optional.of(card);
-                    page = 0;
                     listScroll = 0;
                     switchTab(Tab.LIST);
                     sendQuery();
@@ -1430,7 +1415,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         TabletSnapshot s = snapshot();
         int x = leftPos;
         int y = topPos;
-        GuiPaint.box(g, x + X0, y + BODY_Y, 128, ROW_H, GuiPaint.INSET, searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x + X0, y + BODY_Y, searchW(), ROW_H, GuiPaint.INSET, searchBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         int hovered = nodeRowAt(mouseX, mouseY);
         List<NodeView> nodes = s.nodes();
         if (nodes.isEmpty()) {
@@ -1484,12 +1469,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         } else {
             GuiText.draw(g, font, tr("list.hint"), x + X0, y + actionY() + 3, x1() - X0, GuiPaint.DISABLED);
         }
-        int from = s.matchingNodes() == 0 ? 0 : s.query().page() * TabletSnapshot.PAGE_SIZE + 1;
-        int to = Math.min(s.matchingNodes(), (s.query().page() + 1) * TabletSnapshot.PAGE_SIZE);
-        // entre ‹ e ›, centrado
-        Component pageText = tr("page", from, to, s.matchingNodes());
-        int pageW = Math.min(font.width(pageText), 90);
-        GuiText.draw(g, font, pageText, x + x1() - 60 - pageW / 2, y + pagerY() + 3, pageW, GuiPaint.MUTED);
+        // o resultado: quantos casaram, ou o limite de nós que a lista mostra
+        Component count = s.matchingNodes() > s.nodes().size()
+                ? tr("list.limit", s.nodes().size(), s.matchingNodes())
+                : s.matchingNodes() < s.totalNodes() ? tr("list.count", s.matchingNodes(), s.totalNodes()) : null;
+        if (count != null) {
+            int countW = Math.min(font.width(count), x1() - X0 - chipMaxWidth() - 8);
+            GuiText.draw(g, font, count, x + x1() - countW, y + pagerY() + 3, countW, GuiPaint.MUTED);
+        }
     }
 
     private void renderMap(GuiGraphics g, int mouseX, int mouseY) {

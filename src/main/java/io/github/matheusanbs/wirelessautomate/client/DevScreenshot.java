@@ -595,8 +595,8 @@ public final class DevScreenshot {
                 new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g2".getBytes()), "Base principal", "Dev", true, false,
                         List.of(base)));
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
-                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, nodes,
-                Component.empty(), 0);
+                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, 10, 10, networks, groups, List.of(), List.of(),
+                TabletSnapshot.QuickCounts.EMPTY, nodes, Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
@@ -614,7 +614,7 @@ public final class DevScreenshot {
         }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
                 new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
-                false);
+                false, 0L, Optional.empty());
     }
 
     // ------------------------------------------------------------------ Vinculador

@@ -12,12 +12,13 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
@@ -35,6 +36,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -44,6 +46,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
@@ -219,15 +224,15 @@ public final class TabletGameTests {
             eq(helper, view.networks(ResourceType.ITEM), List.of(own.id()), "rede do nó");
             helper.assertTrue(view.status() != NodeStatus.UNLOADED, "nó carregado aparece descarregado");
 
-            // papel e busca
+            // filtro rápido e busca
             helper.assertTrue(TabletPayloads.handleQuery(player, new TabletQueryPayload(70,
-                    new Query("", RoleFilter.INSERT, Optional.empty(), 0))), "consulta recusada");
+                    Query.DEFAULT.withQuick(Set.of(QuickFilter.NO_NETWORK)))), "consulta recusada");
             menu.pollSnapshot();
-            helper.assertFalse(listed(menu.snapshot(), key(mine)), "filtro por papel deixou passar");
-            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("propria", RoleFilter.EXTRACT, Optional.empty(), 0)));
+            helper.assertFalse(listed(menu.snapshot(), key(mine)), "filtro rápido deixou passar");
+            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, Query.of("propria")));
             menu.pollSnapshot();
             helper.assertTrue(listed(menu.snapshot(), key(mine)), "busca pelo nome da rede");
-            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, new Query("nada-assim", RoleFilter.ALL, Optional.empty(), 0)));
+            TabletPayloads.handleQuery(player, new TabletQueryPayload(70, Query.of("nada-assim")));
             menu.pollSnapshot();
             helper.assertTrue(menu.snapshot().nodes().isEmpty(), "busca sem resultado trouxe nós");
             helper.assertFalse(TabletPayloads.handleQuery(player, new TabletQueryPayload(71, Query.DEFAULT)),
@@ -271,7 +276,7 @@ public final class TabletGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(energy), "sem onLoad"))
                 .thenExecute(() -> {
-                    menu.setQuery(new Query("", RoleFilter.ALL, Optional.of(ResourceType.ENERGY), 0));
+                    menu.setQuery(Query.DEFAULT.withType(Optional.of(ResourceType.ENERGY)));
                     TabletSnapshot s = fresh(menu);
                     helper.assertTrue(listed(s, key(energy)), "nó de energia fora do filtro de energia");
                     helper.assertFalse(listed(s, key(items)), "nó só de itens no filtro de energia");
@@ -290,9 +295,9 @@ public final class TabletGameTests {
         int requests = TabletMenu.FORCED_PER_SECOND * 2;
         int built = 0;
         for (int i = 0; i < requests; i++) {
-            menu.setQuery(new Query("limite-" + i, RoleFilter.ALL, Optional.empty(), 0));
+            menu.setQuery(Query.of("limite-" + i));
             menu.pollSnapshot();
-            if (menu.snapshot().query().search().equals("limite-" + i)) {
+            if (menu.snapshot().query().text().equals("limite-" + i)) {
                 built++;
             }
         }
@@ -301,15 +306,15 @@ public final class TabletGameTests {
 
         // Fechar e abrir de novo não devolve as fichas.
         TabletMenu again = openTablet(player, 79);
-        again.setQuery(new Query("reaberto", RoleFilter.ALL, Optional.empty(), 0));
+        again.setQuery(Query.of("reaberto"));
         again.pollSnapshot();
-        helper.assertFalse(again.snapshot().query().search().equals("reaberto"), "reabrir zerou o limite");
+        helper.assertFalse(again.snapshot().query().text().equals("reaberto"), "reabrir zerou o limite");
 
         helper.startSequence()
                 // o pedido não se perde: é atendido quando a ficha volta
                 .thenWaitUntil(() -> {
                     again.pollSnapshot();
-                    helper.assertTrue(again.snapshot().query().search().equals("reaberto"), "pedido perdido");
+                    helper.assertTrue(again.snapshot().query().text().equals("reaberto"), "pedido perdido");
                 })
                 .thenExecute(() -> {
                     // cabeçalho e página vão à parte; o cliente junta os dois
@@ -325,6 +330,325 @@ public final class TabletGameTests {
                     helper.assertTrue(client.snapshot().equals(server), "cliente diferente do servidor");
                     close(player);
                     helper.succeed();
+                });
+    }
+
+    // ------------------------------------------------------------------ consulta
+
+    private static ResourceLocation id(Block block) {
+        return BuiltInRegistries.BLOCK.getKey(block);
+    }
+
+    /** Máquina {@code block} em {@code machine} com um roteador em cima, nomeado e colocado pelo jogador. */
+    private static RouterBlockEntity owned(GameTestHelper helper, ServerPlayer player, BlockPos machine, Block block,
+            @Nullable UUID network, String name) {
+        helper.setBlock(machine, block);
+        BlockPos pos = machine.above();
+        helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(pos);
+        router.setNetworkId(network);
+        router.setName(name);
+        NodeIndex.placedBy(router, player.getUUID());
+        return router;
+    }
+
+    private static void loaded(GameTestHelper helper, RouterBlockEntity... routers) {
+        for (RouterBlockEntity router : routers) {
+            helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad");
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void tabletQueryMatchesText(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork alpha = data(helper).create(player.getUUID(), "teste-consulta-alfa");
+        RouterBlockEntity chest = owned(helper, player, A, Blocks.CHEST, alpha.id(), "Cofre do fundo");
+        RouterBlockEntity furnace = owned(helper, player, B, Blocks.FURNACE, null, "Forja");
+        TabletMenu menu = openTablet(player, 100);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, chest, furnace))
+                .thenExecute(() -> {
+                    try {
+                        TabletSnapshot s = search(menu, "fundo");
+                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(furnace)), "pelo nome");
+                        s = search(menu, "furnace");
+                        helper.assertTrue(listed(s, key(furnace)) && !listed(s, key(chest)), "pelo id da máquina");
+                        s = search(menu, "cofre fundo");
+                        helper.assertTrue(listed(s, key(chest)), "palavras se somam");
+                        s = search(menu, "cofre forja");
+                        helper.assertTrue(!listed(s, key(chest)) && !listed(s, key(furnace)), "palavras são E");
+                        s = search(menu, "alfa");
+                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(furnace)), "pelo nome da rede");
+                        BlockPos at = helper.absolutePos(B.above());
+                        s = search(menu, at.getX() + " " + at.getY() + " " + at.getZ());
+                        helper.assertTrue(listed(s, key(furnace)), "pelas coordenadas");
+                        // o nome localizado da máquina é resolvido pelo cliente: o servidor recebe os ids
+                        menu.setQuery(Query.of("forno").withTextMachines(List.of(id(Blocks.FURNACE))));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(listed(s, key(furnace)) && !listed(s, key(chest)), "por textMachines");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void tabletQueryAddsMachineAndNetworkLabels(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork alpha = data(helper).create(player.getUUID(), "teste-etiqueta-alfa");
+        WaNetwork beta = data(helper).create(player.getUUID(), "teste-etiqueta-beta");
+        RouterBlockEntity chest = owned(helper, player, A, Blocks.CHEST, alpha.id(), "Baú");
+        RouterBlockEntity furnace = owned(helper, player, B, Blocks.FURNACE, beta.id(), "Forja");
+        RouterBlockEntity bare = owned(helper, player, new BlockPos(2, 1, 0), Blocks.CHEST, null, "Solto");
+        TabletMenu menu = openTablet(player, 101);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, chest, furnace, bare))
+                .thenExecute(() -> {
+                    try {
+                        menu.setQuery(Query.DEFAULT.withMachines(List.of(id(Blocks.CHEST))));
+                        menu.pollSnapshot();
+                        TabletSnapshot s = menu.snapshot();
+                        helper.assertTrue(listed(s, key(chest)) && listed(s, key(bare)) && !listed(s, key(furnace)),
+                                "etiqueta de máquina");
+                        menu.setQuery(Query.DEFAULT.withMachines(List.of(id(Blocks.CHEST)))
+                                .withNetworks(List.of(alpha.id())));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(bare)) && !listed(s, key(furnace)),
+                                "máquina e rede somam");
+                        menu.setQuery(Query.DEFAULT.withNetworks(List.of(alpha.id(), beta.id())));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(listed(s, key(chest)) && listed(s, key(furnace)) && !listed(s, key(bare)),
+                                "duas redes: alguma delas");
+                        menu.setQuery(Query.DEFAULT.withMachines(List.of(id(Blocks.FURNACE)))
+                                .withNetworks(List.of(alpha.id())));
+                        menu.pollSnapshot();
+                        helper.assertTrue(menu.snapshot().nodes().stream().noneMatch(n -> n.key().equals(key(chest))
+                                || n.key().equals(key(furnace))), "máquina de uma e rede de outra");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void tabletQuickFilters(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork alpha = data(helper).create(player.getUUID(), "teste-rapido-alfa");
+        RouterBlockEntity ok = owned(helper, player, A, Blocks.CHEST, alpha.id(), "Normal");
+        RouterBlockEntity bare = owned(helper, player, B, Blocks.CHEST, null, "Sem rede");
+        RouterBlockEntity off = owned(helper, player, new BlockPos(2, 1, 0), Blocks.CHEST, alpha.id(), "Fora");
+        TabletMenu menu = openTablet(player, 102);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, ok, bare, off))
+                .thenExecute(() -> off.onChunkUnloaded())
+                .thenExecute(() -> {
+                    try {
+                        menu.setQuery(Query.DEFAULT.withQuick(Set.of(QuickFilter.NO_NETWORK)));
+                        menu.pollSnapshot();
+                        TabletSnapshot s = menu.snapshot();
+                        helper.assertTrue(!listed(s, key(ok)) && listed(s, key(bare)) && !listed(s, key(off)),
+                                "sem rede");
+                        menu.setQuery(Query.DEFAULT.withQuick(Set.of(QuickFilter.UNLOADED)));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(!listed(s, key(ok)) && !listed(s, key(bare)) && listed(s, key(off)),
+                                "descarregados");
+                        menu.setQuery(Query.DEFAULT.withQuick(Set.of(QuickFilter.PROBLEM)));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(!listed(s, key(ok)) && listed(s, key(bare)) && listed(s, key(off)),
+                                "com problema");
+                        menu.setQuery(Query.DEFAULT.withQuick(Set.of(QuickFilter.NO_NETWORK, QuickFilter.UNLOADED)));
+                        menu.pollSnapshot();
+                        s = menu.snapshot();
+                        helper.assertTrue(!listed(s, key(ok)) && !listed(s, key(bare)) && !listed(s, key(off)),
+                                "filtros ligados juntos são E");
+                        // as contagens são dos nós visíveis, sem olhar a consulta
+                        eq(helper, s.quickCounts().problem(), 2, "contagem com problema");
+                        eq(helper, s.quickCounts().noNetwork(), 1, "contagem sem rede");
+                        eq(helper, s.quickCounts().unloaded(), 1, "contagem descarregados");
+                        off.onLoad();
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void tabletListIsOrderedByMachineThenName(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork net = data(helper).create(player.getUUID(), "teste-ordem");
+        RouterBlockEntity beta = owned(helper, player, A, Blocks.CHEST, net.id(), "Beta");
+        RouterBlockEntity forge = owned(helper, player, B, Blocks.FURNACE, net.id(), "Aaa");
+        RouterBlockEntity alfa = owned(helper, player, new BlockPos(2, 1, 0), Blocks.CHEST, net.id(), "alfa");
+        TabletMenu menu = openTablet(player, 103);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, beta, forge, alfa))
+                .thenExecute(() -> {
+                    try {
+                        List<NodeKey> order = fresh(menu).nodes().stream().map(NodeView::key).toList();
+                        eq(helper, order, List.of(key(alfa), key(beta), key(forge)),
+                                "máquina, depois nome sem diferenciar maiúsculas");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void tabletListStopsAt256(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork net = data(helper).create(player.getUUID(), "teste-limite");
+        int count = TabletSnapshot.MAX_NODES + 4;
+        List<RouterBlockEntity> routers = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            BlockPos machine = new BlockPos(i % 3, 5 + (i / 9) * 2, (i % 9) / 3);
+            routers.add(owned(helper, player, machine, Blocks.CHEST, net.id(), String.format("n%03d", i)));
+        }
+        TabletMenu menu = openTablet(player, 104);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, routers.toArray(RouterBlockEntity[]::new)))
+                .thenExecute(() -> {
+                    try {
+                        TabletSnapshot s = fresh(menu);
+                        eq(helper, s.nodes().size(), TabletSnapshot.MAX_NODES, "nós enviados");
+                        eq(helper, s.matchingNodes(), count, "total que casou");
+                        eq(helper, s.totalNodes(), count, "total visível");
+                        eq(helper, s.nodes().get(0).name(), "n000", "primeiro");
+                        eq(helper, s.nodes().get(TabletSnapshot.MAX_NODES - 1).name(),
+                                String.format("n%03d", TabletSnapshot.MAX_NODES - 1), "último");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    @GameTest(template = "empty")
+    public static void tabletHeaderCarriesFacets(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        WaNetwork alpha = data(helper).create(player.getUUID(), "teste-facetas-alfa");
+        WaNetwork beta = data(helper).create(player.getUUID(), "teste-facetas-beta");
+        RouterBlockEntity one = owned(helper, player, A, Blocks.CHEST, alpha.id(), "Um");
+        RouterBlockEntity two = owned(helper, player, B, Blocks.CHEST, alpha.id(), "Dois");
+        RouterBlockEntity forge = owned(helper, player, new BlockPos(2, 1, 0), Blocks.FURNACE, alpha.id(), "Forja");
+        forge.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, beta.id());
+        TabletMenu menu = openTablet(player, 105);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, one, two, forge))
+                .thenExecute(() -> {
+                    try {
+                        // a busca não muda as facetas: elas são dos nós visíveis
+                        menu.setQuery(Query.of("forja"));
+                        menu.pollSnapshot();
+                        TabletSnapshot s = menu.snapshot();
+                        eq(helper, s.matchingNodes(), 1, "casou só a forja");
+                        eq(helper, s.totalNodes(), 3, "nós visíveis");
+                        eq(helper, facet(s.machineFacets(), id(Blocks.CHEST)), 2, "faceta do baú");
+                        eq(helper, facet(s.machineFacets(), id(Blocks.FURNACE)), 1, "faceta da fornalha");
+                        eq(helper, facet(s.networkFacets(), alpha.id()), 3, "faceta da rede alfa");
+                        eq(helper, facet(s.networkFacets(), beta.id()), 1, "faceta da rede beta");
+
+                        // ida e volta pelos codecs
+                        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
+                                helper.getLevel().registryAccess());
+                        TabletSnapshot.STREAM_CODEC.encode(buf, s);
+                        helper.assertTrue(TabletSnapshot.STREAM_CODEC.decode(buf).equals(s), "codec do snapshot");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
+    private static int facet(List<? extends TabletSnapshot.Facet<?>> facets, Object id) {
+        return facets.stream().filter(f -> f.id().equals(id)).mapToInt(TabletSnapshot.Facet::count).findFirst()
+                .orElse(-1);
+    }
+
+    @GameTest(template = "empty")
+    public static void queryCodecKeepsEveryFieldAndCapsLists(GameTestHelper helper) {
+        List<ResourceLocation> many = java.util.stream.IntStream.range(0, 40)
+                .mapToObj(i -> ResourceLocation.fromNamespaceAndPath("teste", "m" + i)).toList();
+        List<UUID> networks = java.util.stream.IntStream.range(0, 12).mapToObj(i -> UUID.randomUUID()).toList();
+        Query query = new Query("x".repeat(100), many, many, networks,
+                Set.of(QuickFilter.PROBLEM, QuickFilter.UNLOADED), Optional.of(ResourceType.FLUID));
+        eq(helper, query.text().length(), TabletSnapshot.MAX_TEXT, "texto cortado");
+        eq(helper, query.textMachines().size(), TabletSnapshot.MAX_TEXT_MACHINES, "textMachines cortado");
+        eq(helper, query.machines().size(), TabletSnapshot.MAX_LABELS, "machines cortado");
+        eq(helper, query.networks().size(), TabletSnapshot.MAX_LABELS, "networks cortado");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        Query.STREAM_CODEC.encode(buf, query);
+        eq(helper, Query.STREAM_CODEC.decode(buf), query, "ida e volta");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ modos por face no índice
+
+    @GameTest(template = "empty")
+    public static void indexKeepsFaceModes(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        UUID network = data(helper).create(player.getUUID(), "teste-modos").id();
+        RouterBlockEntity router = owned(helper, player, A, Blocks.CHEST, network, "Modos");
+        router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        router.setMode(ResourceType.FLUID, Direction.DOWN, PortMode.BOTH);
+        NodeKey key = key(router);
+        TabletMenu menu = openTablet(player, 106);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        NodeIndex.Entry entry = index(helper).entry(key);
+                        // facing UP: Cima é a Frente, Baixo é o Trás; 2 bits por lado, 6 lados por tipo
+                        eq(helper, entry.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.EXTRACT, "itens, frente");
+                        eq(helper, entry.faceMode(ResourceType.FLUID, RelativeSide.BACK), PortMode.BOTH, "fluidos, trás");
+                        eq(helper, entry.faceMode(ResourceType.ENERGY, RelativeSide.LEFT), PortMode.NONE, "energia, esquerda");
+                        eq(helper, entry.faceModes() & 3L, (long) PortMode.EXTRACT.ordinal(), "bits dos itens, frente");
+                        eq(helper, (entry.faceModes() >> ((1 * 6 + RelativeSide.BACK.ordinal()) * 2)) & 3L,
+                                (long) PortMode.BOTH.ordinal(), "bits dos fluidos, trás");
+
+                        // o Tablet leva os modos no nó
+                        NodeView view = node(fresh(menu), key);
+                        eq(helper, view.faceModes(), entry.faceModes(), "faceModes no NodeView");
+                        helper.assertTrue(view.profile().isEmpty(), "sem perfil copiado ainda");
+
+                        // ida e volta pelo arquivo
+                        CompoundTag saved = index(helper).save(new CompoundTag(), helper.getLevel().registryAccess());
+                        NodeIndex.Entry loaded = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                        eq(helper, loaded.faceModes(), entry.faceModes(), "modos salvos");
+
+                        // mundo antigo: sem a chave, tudo Nenhum
+                        ListTag nodes = saved.getList("nodes", Tag.TAG_COMPOUND);
+                        for (int i = 0; i < nodes.size(); i++) {
+                            nodes.getCompound(i).remove("face_modes");
+                        }
+                        NodeIndex.Entry old = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                        eq(helper, old.faceModes(), 0L, "índice antigo");
+                        eq(helper, old.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.NONE, "modo no índice antigo");
+
+                        // mudar o modo de uma face muda o índice
+                        int before = index(helper).dataVersion();
+                        router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                        eq(helper, entry.faceMode(ResourceType.ITEM, RelativeSide.FRONT), PortMode.INSERT, "modo novo");
+                        helper.assertTrue(index(helper).dataVersion() != before, "dataVersion não mudou");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
                 });
     }
 
@@ -449,7 +773,7 @@ public final class TabletGameTests {
 
     /** Liga a busca {@code search} e devolve o snapshot remontado. */
     private static TabletSnapshot search(TabletMenu menu, String search) {
-        menu.setQuery(new Query(search, RoleFilter.ALL, Optional.empty(), 0));
+        menu.setQuery(Query.of(search));
         menu.pollSnapshot();
         return menu.snapshot();
     }

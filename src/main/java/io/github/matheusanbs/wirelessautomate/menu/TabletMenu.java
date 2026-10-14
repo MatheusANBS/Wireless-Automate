@@ -8,8 +8,10 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Facet;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickCounts;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -43,7 +45,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,7 +55,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
@@ -68,9 +69,9 @@ import org.jetbrains.annotations.Nullable;
  * consulta da tela (no máximo {@link #FORCED_PER_SECOND} por segundo por jogador, o resto espera) e,
  * no máximo a cada {@link #REBUILD_TICKS} ticks, quando um dado salvo do índice de nós ou as redes
  * mudaram (chunks que carregam ou descarregam só aparecem na amostra seguinte). Uma montagem
- * percorre o índice uma vez (O(nós visíveis)), mas só sonda o motor para os nós da página. O
- * cabeçalho (estatísticas, redes, grupos) e a página de nós vão em pacotes separados, cada um só se
- * ficou diferente do último enviado.
+ * percorre o índice uma vez (O(nós visíveis)) e sonda o motor uma vez por amostra para saber quais
+ * nós têm destino cheio (as contagens dos filtros rápidos). O cabeçalho (estatísticas, redes, grupos,
+ * facetas) e a página de nós vão em pacotes separados, cada um só se ficou diferente do último enviado.
  *
  * <p>Quem vê o quê: as redes do jogador e as públicas (todas para operador nível 2); os grupos do
  * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma face numa rede dele
@@ -124,6 +125,9 @@ public class TabletMenu extends AbstractContainerMenu {
     private final @Nullable ServerPlayer viewer;
     private Query query = Query.DEFAULT;
     private String[] searchWords = new String[0];
+    private Set<ResourceLocation> textMachines = Set.of();
+    private Set<ResourceLocation> machineLabels = Set.of();
+    private Set<UUID> networkLabels = Set.of();
     private boolean forced;
     private @Nullable TabletSnapshot sent;
     /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
@@ -134,7 +138,7 @@ public class TabletMenu extends AbstractContainerMenu {
     /** {@link NodeIndex#dataVersion()} e versão das redes lidas na última montagem. */
     private int builtIndexVersion;
     private int builtDataVersion;
-    /** Nós cheios na última sondagem de todos (só com o filtro de problemas) e quando ela foi. */
+    /** Nós cheios na última sondagem de todos os nós carregados e quando ela foi. */
     private final Set<NodeKey> fullNodes = new HashSet<>();
     private long fullTick = Long.MIN_VALUE;
     private @Nullable Map<UUID, String> searchNames;
@@ -333,8 +337,7 @@ public class TabletMenu extends AbstractContainerMenu {
             sampleTick = now;
             activeNodes.clear();
         }
-        boolean problems = query.role() == RoleFilter.PROBLEM;
-        boolean probeAll = problems && (sample || fullTick == Long.MIN_VALUE || now - fullTick >= SAMPLE_TICKS);
+        boolean probeAll = sample || fullTick == Long.MIN_VALUE || now - fullTick >= SAMPLE_TICKS;
         if (probeAll) {
             fullNodes.clear();
             fullTick = now;
@@ -348,9 +351,12 @@ public class TabletMenu extends AbstractContainerMenu {
         }
 
         BlockPos center = viewer.blockPosition();
-        ResourceKey<Level> here = viewer.level().dimension();
         Map<UUID, String> networkNames = searchWords.length == 0 ? Map.of() : searchNames(data);
-        Map<ResourceKey<Level>, String> dimensionNames = new HashMap<>();
+        Map<ResourceLocation, Integer> machineCounts = new HashMap<>();
+        Map<UUID, Integer> networkCounts = new HashMap<>();
+        int problemCount = 0;
+        int noNetworkCount = 0;
+        int unloadedCount = 0;
         List<Match> matches = new ArrayList<>();
         Set<NodeKey> seen = sample ? new HashSet<>() : null;
         int total = 0;
@@ -378,12 +384,30 @@ public class TabletMenu extends AbstractContainerMenu {
                 }
             }
             countMembership(entry, totals, loaded);
-            if (!matchesRole(entry, loaded, moved, problems, data) || !matchesType(entry, query.type())
-                    || !matchesSearch(entry, networkNames)) {
+            NodeStatus status = status(entry, loaded, fullNodes.contains(key) ? 1 : 0, moved, data);
+            boolean problem = status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK
+                    || status == NodeStatus.FULL;
+            boolean noNetwork = !hasExistingNetwork(entry, data);
+            if (problem) {
+                problemCount++;
+            }
+            if (noNetwork) {
+                noNetworkCount++;
+            }
+            if (!loaded) {
+                unloadedCount++;
+            }
+            machineCounts.merge(entry.machine(), 1, Integer::sum);
+            for (UUID id : distinctNetworks(entry)) {
+                if (totals.containsKey(id)) {
+                    networkCounts.merge(id, 1, Integer::sum);
+                }
+            }
+            if (!matchesQuick(problem, noNetwork, !loaded) || !matchesLabels(entry) || !matchesType(entry, query.type())
+                    || !matchesText(entry, networkNames)) {
                 continue;
             }
-            matches.add(new Match(entry, loaded, moved, distance(key, here, center),
-                    dimensionNames.computeIfAbsent(key.dimension(), k -> k.location().toString())));
+            matches.add(new Match(entry, status));
         }
         if (sample) {
             lastMoved.keySet().retainAll(seen);
@@ -391,21 +415,14 @@ public class TabletMenu extends AbstractContainerMenu {
             totals.forEach((id, t) -> networkRates.put(id, t.rates(elapsed)));
         }
 
-        matches.sort(Comparator.comparingLong(Match::distance)
-                .thenComparing(Match::dimension)
-                .thenComparing(m -> m.entry.name()));
-        int pages = Math.max(1, (matches.size() + TabletSnapshot.PAGE_SIZE - 1) / TabletSnapshot.PAGE_SIZE);
-        if (query.page() >= pages) {
-            query = new Query(query.search(), query.role(), query.type(), pages - 1);
-        }
-        int from = query.page() * TabletSnapshot.PAGE_SIZE;
+        matches.sort(Comparator.<Match, ResourceLocation>comparing(m -> m.entry.machine())
+                .thenComparing(m -> m.entry.name(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(m -> m.entry.key().dimension().location())
+                .thenComparingLong(m -> m.entry.key().pos().asLong()));
         List<NodeView> nodes = new ArrayList<>();
-        for (int i = from; i < Math.min(matches.size(), from + TabletSnapshot.PAGE_SIZE); i++) {
+        for (int i = 0; i < Math.min(matches.size(), TabletSnapshot.MAX_NODES); i++) {
             Match match = matches.get(i);
             NodeIndex.Entry entry = match.entry;
-            // Só os nós da página são sondados agora.
-            RouterBlockEntity router = entry.router();
-            int full = router == null ? 0 : fullDestinations(router, now);
             // só as redes que existem, só dos tipos carregados (os outros vão vazios); uma face numa
             // rede apagada vira o aviso (sem varrer nada)
             List<List<UUID>> networks = new ArrayList<>();
@@ -422,7 +439,7 @@ public class TabletMenu extends AbstractContainerMenu {
                 networks.add(List.copyOf(existing));
             }
             nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), status(entry, match.loaded, full, match.moved, data), removed));
+                    entry.roles(), match.status, removed, entry.faceModes(), Optional.empty()));
         }
 
         Map<UUID, NetworkStats> stats = new HashMap<>();
@@ -457,10 +474,19 @@ public class TabletMenu extends AbstractContainerMenu {
         }
 
         TickBudget budget = NetworkManager.get().budget();
-        return new TabletSnapshot(operator, here.location(), center,
+        return new TabletSnapshot(operator, viewer.level().dimension().location(), center,
                 Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
                 Math.round(budget.averageUsedNanos()), budget.limitNanos(), query, total, matches.size(),
-                List.copyOf(networks), List.copyOf(groups), List.copyOf(nodes), notice, noticeId);
+                List.copyOf(networks), List.copyOf(groups), facets(machineCounts), facets(networkCounts),
+                new QuickCounts(problemCount, noNetworkCount, unloadedCount), List.copyOf(nodes), notice, noticeId);
+    }
+
+    /** As facetas pela contagem, das maiores para as menores (a chave desempata, para o cabeçalho ser estável). */
+    private static <T extends Comparable<T>> List<Facet<T>> facets(Map<T, Integer> counts) {
+        List<Facet<T>> facets = new ArrayList<>(counts.size());
+        counts.forEach((id, count) -> facets.add(new Facet<>(id, count)));
+        facets.sort(Comparator.<Facet<T>>comparingInt(Facet::count).reversed().thenComparing(Facet::id));
+        return facets;
     }
 
     /** Destinos cheios do nó, nos tipos que o Tablet mostra. */
@@ -576,19 +602,61 @@ public class TabletMenu extends AbstractContainerMenu {
         return moved ? NodeStatus.ACTIVE : NodeStatus.IDLE;
     }
 
-    /** Papel da consulta. Problemas usa o estado do nó, com os cheios da última sondagem de todos. */
-    private boolean matchesRole(NodeIndex.Entry entry, boolean loaded, boolean moved, boolean problems,
-            NetworkSavedData data) {
-        return switch (query.role()) {
-            case ALL -> true;
-            case EXTRACT -> hasRole(entry, NodeIndex.EXTRACT);
-            case INSERT -> hasRole(entry, NodeIndex.INSERT);
-            case STORAGE -> hasRole(entry, NodeIndex.STORAGE);
-            case PROBLEM -> {
-                NodeStatus status = status(entry, loaded, fullNodes.contains(entry.key()) ? 1 : 0, moved, data);
-                yield status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK || status == NodeStatus.FULL;
+    /** Os filtros rápidos ligados valem todos (E). */
+    private boolean matchesQuick(boolean problem, boolean noNetwork, boolean unloaded) {
+        for (QuickFilter filter : query.quick()) {
+            boolean on = switch (filter) {
+                case PROBLEM -> problem;
+                case NO_NETWORK -> noNetwork;
+                case UNLOADED -> unloaded;
+            };
+            if (!on) {
+                return false;
             }
-        };
+        }
+        return true;
+    }
+
+    /** Etiquetas: a máquina do nó está entre as escolhidas e alguma face dele está numa das redes escolhidas. */
+    private boolean matchesLabels(NodeIndex.Entry entry) {
+        if (!machineLabels.isEmpty() && !machineLabels.contains(entry.machine())) {
+            return false;
+        }
+        if (networkLabels.isEmpty()) {
+            return true;
+        }
+        for (UUID id : networkLabels) {
+            if (entry.inNetwork(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Alguma face do nó está numa rede que existe. */
+    private static boolean hasExistingNetwork(NodeIndex.Entry entry, NetworkSavedData data) {
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                if (data.network(id) != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** As redes das faces do nó nos tipos carregados, sem repetir. */
+    private static Set<UUID> distinctNetworks(NodeIndex.Entry entry) {
+        Set<UUID> ids = null;
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (UUID id : entry.networks(type)) {
+                if (ids == null) {
+                    ids = new HashSet<>();
+                }
+                ids.add(id);
+            }
+        }
+        return ids == null ? Set.of() : ids;
     }
 
     /** Sem tipo escolhido passa tudo; com tipo, só nós com algum papel (extrai, insere, armazém) nele. */
@@ -602,11 +670,12 @@ public class TabletMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Cada palavra da busca precisa aparecer no nome, na máquina, nas coordenadas
-     * ({@link NodeIndex.Entry#searchText()}) ou no nome de uma rede do nó.
+     * Cada palavra do texto precisa aparecer no nome, na máquina, nas coordenadas
+     * ({@link NodeIndex.Entry#searchText()}) ou no nome de uma rede do nó; ou o nó é de uma máquina cujo
+     * nome o cliente achou no texto ({@code textMachines}).
      */
-    private boolean matchesSearch(NodeIndex.Entry entry, Map<UUID, String> networkNames) {
-        if (searchWords.length == 0) {
+    private boolean matchesText(NodeIndex.Entry entry, Map<UUID, String> networkNames) {
+        if (searchWords.length == 0 || textMachines.contains(entry.machine())) {
             return true;
         }
         String text = entry.searchText();
@@ -650,23 +719,6 @@ public class TabletMenu extends AbstractContainerMenu {
                 .toArray(String[]::new);
     }
 
-    private static boolean hasRole(NodeIndex.Entry entry, int role) {
-        for (ResourceType type : ResourceType.values()) {
-            if ((entry.roles() & NodeIndex.role(type, role)) != 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Distância ao quadrado no mesmo mundo; outra dimensão vai para o fim. */
-    private static long distance(NodeKey key, ResourceKey<Level> here, BlockPos center) {
-        if (!key.dimension().equals(here)) {
-            return Long.MAX_VALUE;
-        }
-        return (long) key.pos().distSqr(center);
-    }
-
     private static String ownerName(MinecraftServer server, UUID owner, Map<UUID, String> cache) {
         return cache.computeIfAbsent(owner, id -> {
             ServerPlayer online = server.getPlayerList().getPlayer(id);
@@ -683,8 +735,8 @@ public class TabletMenu extends AbstractContainerMenu {
         });
     }
 
-    /** Um nó que passou na consulta; {@code dimension} é o nome da dimensão, para desempatar. */
-    private record Match(NodeIndex.Entry entry, boolean loaded, boolean moved, long distance, String dimension) {
+    /** Um nó que passou na consulta, com o estado que a lista mostra. */
+    private record Match(NodeIndex.Entry entry, NodeStatus status) {
     }
 
     /** Somas de uma rede numa montagem. */
@@ -713,11 +765,14 @@ public class TabletMenu extends AbstractContainerMenu {
         forced = true;
     }
 
-    /** A tela mudou busca, papel ou página. */
+    /** A tela mudou a busca, as etiquetas, os filtros ou o tipo. */
     public void setQuery(Query query) {
-        if (!query.search().equals(this.query.search())) {
-            searchWords = searchWords(query.search());
+        if (!query.text().equals(this.query.text())) {
+            searchWords = searchWords(query.text());
         }
+        textMachines = Set.copyOf(query.textMachines());
+        machineLabels = Set.copyOf(query.machines());
+        networkLabels = Set.copyOf(query.networks());
         this.query = query;
         forced = true;
     }

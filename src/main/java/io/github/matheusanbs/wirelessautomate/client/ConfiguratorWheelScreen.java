@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Hit;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Ring;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
@@ -388,7 +389,7 @@ public final class ConfiguratorWheelScreen extends Screen {
         int border = current ? CURRENT_BORDER : BORDER;
         int segments = Math.max(12, (int) Math.ceil((a1 - a0) / (Math.PI / 48)));
         sector(buffer, matrix, r1, r2, a0, a1, side, current ? GuiPaint.ACCENT : GuiPaint.FG, segments);
-        sector(buffer, matrix, r1 + border, r2 - border, a0, a1, side + border, hot ? HOT_FILL : GuiPaint.PANEL,
+        sector(buffer, matrix, r1 + border, r2 - border, a0, a1, side + border, hot ? hotFill() : GuiPaint.PANEL,
                 segments);
     }
 
@@ -396,6 +397,11 @@ public final class ConfiguratorWheelScreen extends Screen {
      * Setor de anel de {@code r1} a {@code r2} e de {@code a0} a {@code a1} (0 no topo, horário), com as
      * bordas laterais recuadas {@code inset} (em pixels, na perpendicular, não em ângulo) para dentro.
      */
+    /** Fundo da fatia sob o mouse: o tom salmão no claro; no escuro, o painel tingido com o destaque (o nome é claro). */
+    private static int hotFill() {
+        return GuiThemes.current() == GuiTheme.DARK ? GuiPaint.mix(GuiPaint.PANEL, GuiPaint.ACCENT, 0.3f) : HOT_FILL;
+    }
+
     private static void sector(BufferBuilder buffer, Matrix4f matrix, double r1, double r2, double a0, double a1,
             double inset, int color, int segments) {
         double inner = Math.max(0, r1);
@@ -562,7 +568,9 @@ public final class ConfiguratorWheelScreen extends Screen {
         y += GuiText.wrapCentered(g, font, title, 0, y, width, TITLE_LINES,
                 hot != null ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         if (desc != null) {
-            GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES, GuiPaint.TOOLTIP_MUTED);
+            // no escuro o miolo aceso é claro: a descrição vira o tom apagado escuro, que lê sobre ele
+            GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES,
+                    GuiThemes.current() == GuiTheme.DARK ? GuiPaint.DISABLED : GuiPaint.TOOLTIP_MUTED);
         }
     }
 

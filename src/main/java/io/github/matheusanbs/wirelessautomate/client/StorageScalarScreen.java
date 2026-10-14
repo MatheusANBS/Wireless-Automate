@@ -63,6 +63,22 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
                 : RouterTier.BASIC;
     }
 
+    private int themeX() {
+        return leftPos + W - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + 1;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
     private boolean onBar(double mouseX, double mouseY) {
         return mouseX >= leftPos + X0 && mouseX < leftPos + W - X0 && mouseY >= topPos + BAR_Y && mouseY < topPos + BAR_Y + BAR_H;
     }
@@ -70,6 +86,10 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         if (onBar(mouseX, mouseY) && menu.received()) {
             Component exact = menu.capacity() <= 0
                     ? tr("exact.unlimited", TierCoreItem.grouped(menu.stored()))
@@ -94,11 +114,13 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
         // cabeçalho: nome e tier (o nome cortado com reticências se não couber)
         Component tierName = Component.translatable(tier.translationKey());
         int pillW = font.width(tierName) + 8;
-        int titleW = Math.min(font.width(title), W - 2 * X0 - pillW - 6);
+        int headEnd = W - 4 - ThemeToggle.SIZE - 4;
+        int titleW = Math.min(font.width(title), headEnd - X0 - pillW - 6);
         GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
         int pillX = x + X0 + titleW + 6;
         GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.PANEL, trim);
         GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, GuiPaint.FG);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
 
         // barra: fundo afundado, energia com brilho em cima e marcas a cada 10%
         int barX = x + X0;

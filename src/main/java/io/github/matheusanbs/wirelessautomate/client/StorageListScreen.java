@@ -157,6 +157,14 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         return FIXED_H + rows * CELL;
     }
 
+    private int themeX() {
+        return leftPos + imageWidth - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + (ROW_H - ThemeToggle.SIZE) / 2;
+    }
+
     private int x1() {
         return panelW() - 8;
     }
@@ -258,7 +266,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         imageHeight = panelH();
         leftPos = (width - imageWidth) / 2;
         topPos = (height - imageHeight) / 2;
-        filterButton.setPosition(leftPos + x1() - filterButton.getWidth(), topPos + HEAD_Y);
+        filterButton.setPosition(leftPos + x1() - ThemeToggle.SIZE - 4 - filterButton.getWidth(), topPos + HEAD_Y);
         sortButton.setPosition(leftPos + x1() - SORT_W, topPos + SEARCH_Y);
         searchBox.setPosition(leftPos + X0 + 4, topPos + SEARCH_Y + 3);
         searchBox.setWidth(x1() - X0 - SORT_W - 12);
@@ -634,6 +642,9 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
             return true;
         }
@@ -783,6 +794,10 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         rebuild();
         super.render(g, mouseX, mouseY, partialTick);
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
                 Component tooltip = button.currentTooltip();
@@ -827,6 +842,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         int pillX = x + X0 + font.width(titleText) + 6;
         GuiPaint.pill(g, pillX, y + HEAD_Y + 1, pillW, 11, GuiPaint.PANEL, trim);
         GuiPaint.text(g, font, tierName, pillX + 4, y + HEAD_Y + 3, GuiPaint.FG);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
 
         // busca
         GuiPaint.box(g, x + X0, y + SEARCH_Y, searchBox.getWidth() + 8, ROW_H, GuiPaint.INSET,

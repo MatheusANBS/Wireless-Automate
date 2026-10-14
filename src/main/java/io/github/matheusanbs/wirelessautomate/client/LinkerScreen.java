@@ -58,6 +58,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private static int savedH = MIN_H;
     private static final int X0 = 9;
     private static final int HEAD_Y = 8;
+    /**
+     * Quanto os botões de modo recuam para dar lugar ao botão do tema: ele começa a 15 px da borda e os
+     * modos acabavam a 9, então só 10 px de recuo deixam 4 de folga (o texto do cabeçalho não cede mais que isso).
+     */
+    private static final int HEAD_SHIFT = ThemeToggle.SIZE - 1;
     private static final int SEP_Y = 26;
     private static final int BODY_Y = 31;
 
@@ -117,6 +122,14 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     }
 
     // tamanho: a largura extra vai para a coluna da direita, a altura para o mapa e a lista de redes
+
+    private int themeX() {
+        return leftPos + w - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + 1;
+    }
 
     private int x1() {
         return w - 9;
@@ -300,7 +313,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         LinkerMode[] modes = LinkerMode.values();
         for (int i = 0; i < modes.length; i++) {
             LinkerMode mode = modes[i];
-            add(new FlatButton(x + x1() - (modes.length - i) * (modeW + 2) + 2, y + HEAD_Y - 1, modeW, 15, modeName(mode),
+            add(new FlatButton(x + x1() - HEAD_SHIFT - (modes.length - i) * (modeW + 2) + 2, y + HEAD_Y - 1, modeW, 15, modeName(mode),
                     (g, b, hovered) -> paintChoice(g, b, hovered, modeName(mode), snapshot().mode() == mode),
                     () -> setMode(mode)).tooltip(() -> tr("mode." + mode.getSerializedName() + ".tooltip")));
         }
@@ -571,6 +584,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
@@ -685,6 +701,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         for (FlatButton button : buttons) {
             if (button.visible && button.isHovered()) {
                 Component tooltip = button.currentTooltip();
@@ -728,8 +748,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         Component typeText = unlink() ? tr("head.unlink", tabsName()) : tr("head.type", tabsName());
         int headX = X0 + titleW + 8;
         // até os botões de modo, à direita
-        int headW = x1() - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
+        int headW = x1() - HEAD_SHIFT - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
         GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, unlink() ? GuiPaint.DANGER : GuiPaint.MUTED);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
         // rede ativa

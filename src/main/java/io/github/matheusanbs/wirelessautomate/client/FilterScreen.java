@@ -214,6 +214,14 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private Predicate<ItemStack> highlight = stack -> false;
 
     private FlatButton backButton;
+
+    private int themeX() {
+        return leftPos + imageWidth - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + (SEG_H - ThemeToggle.SIZE) / 2;
+    }
     private FlatButton whiteButton;
     private FlatButton blackButton;
     private FlatButton componentsButton;
@@ -640,7 +648,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int w = imageWidth;
         Component back = backLabel();
         backButton.setWidth(font.width(back) + 12);
-        backButton.setPosition(x + w - X0 - backButton.getWidth(), y + HEAD_Y);
+        backButton.setPosition(x + w - X0 - ThemeToggle.SIZE - 4 - backButton.getWidth(), y + HEAD_Y);
         backButton.setMessage(back);
         whiteButton.setPosition(x + X0, y + ROW2_Y);
         blackButton.setPosition(x + X0 + whiteButton.getWidth() + 2, y + ROW2_Y);
@@ -1598,6 +1606,9 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         if (getFocused() == stockBox && !stockBox.isMouseOver(mouseX, mouseY)) {
             commitStock();
             unfocus();
@@ -1817,6 +1828,10 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (resizeHandle.dragging()) {
             return;
         }
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         if (overSuggestions(mouseX, mouseY)) {
             int index = suggestionAt(mouseX, mouseY);
             if (index >= 0) {
@@ -1904,6 +1919,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         int contextW = Math.max(0, Math.min(font.width(context), contextRight - titleRight));
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, context, contextW), contextRight - contextW, y + HEAD_Y + 3,
                 GuiPaint.MUTED);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
 
         renderList(g, mouseX, mouseY);
         renderInventory(g);

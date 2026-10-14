@@ -3,38 +3,42 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-/* Layout: estudo em seções verticais; a tela do jogo em escala de pixels de GUI (--u), com as cores fixas do GuiPaint; a página em volta segue o tema. */
+/* Layout: estudo em seções verticais, uma por momento de uso; cada tela do jogo em escala de pixels de GUI (--u), com as cores do GuiPaint (claro e escuro); a página em volta segue o tema do leitor. */
 :root {
-  --u: 2.6px;
+  --u: 2.5px;
   --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
   --coral: #F0603E;
   --pix: "Pixelify Sans", "Courier New", monospace;
   --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-hover: #F8F3E8; --g-selbg: #FBE7DE;
-  --g-ink: #2A2730; --g-mu: #7A7366; --g-ring: #1B1920; --g-ac: #F0603E;
-  --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-un: #948870;
-  --m-ext: #2F6FD6; --m-ins: #E8742B; --m-both: #2F9D5C; --m-none: #D9CFBC;
-  --t-item: #C8782E; --t-fluid: #2F6FD6; --t-energy: #E0A21E; --t-chem: #4E9A2F; --t-source: #7B4FD0;
-  --n1: #1FA7A0; --n2: #4A4560; --n3: #D5453A;
+  --m-ext: #2F6FD6; --m-ins: #E8742B; --m-both: #2F9D5C;
+  --t-item: #B57A3A; --t-fluid: #2F6FD6; --t-energy: #D9931A; --t-chem: #5E9A2B; --t-source: #8E4FC9;
+  --n1: #1FA7A0; --n2: #4A6FD0; --n3: #D5453A; --ring: #1B1920;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
 :root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
-@media (max-width: 1100px) { :root { --u: calc((100vw - 40px) / 372) } }
+@media (max-width: 1120px) { :root { --u: calc((100vw - 40px) / 392) } }
 * { box-sizing: border-box }
 body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding: 0 16px }
 .wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
 h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
 h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 10px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 0 0 6px }
 .status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px; margin-left: 12px; vertical-align: 6px }
-.lede { color: var(--page-mu); max-width: 78ch; margin: 8px 0 0 }
-p, li { max-width: 76ch }
+.lede { color: var(--page-mu); max-width: 82ch; margin: 8px 0 0 }
+p, li { max-width: 78ch }
 section.part { border-top: 1px solid var(--page-line); margin-top: 40px; padding-top: 28px }
 .eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
-.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 26px; margin-top: 20px; font-size: 14px; color: var(--page-mu) }
-.notes > div { min-width: 0 }
-.notes b { color: var(--page-fg) }
-.notes ol, .notes ul { margin: 0; padding-left: 20px } .notes li { margin-bottom: 6px }
-kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg) }
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px }
+.principles > div { min-width: 0; background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px; font-size: 14px; color: var(--page-mu) }
+.principles b { display: block; color: var(--page-fg); font-family: var(--pix); font-weight: 500; font-size: 15px; margin-bottom: 3px }
+.stage { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; margin-top: 16px }
+.stage > .shot { flex: none; max-width: 100% }
+.side { flex: 1 1 280px; min-width: 0; font-size: 14px; color: var(--page-mu) }
+.side b { color: var(--page-fg) }
+.side ol, .side ul { margin: 0; padding-left: 20px } .side li { margin-bottom: 7px }
+.shot { overflow-x: auto; padding-bottom: 8px }
+.cap { font-family: var(--pix); font-size: 13px; color: var(--page-mu); margin: 0 0 6px }
+kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg); white-space: nowrap }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 26px; margin-top: 12px }
 .cols > * { min-width: 0 }
 ul.tight { margin: 0; padding-left: 18px } ul.tight li { margin-bottom: 6px }
@@ -42,66 +46,134 @@ ul.tight { margin: 0; padding-left: 18px } ul.tight li { margin-bottom: 6px }
 table { border-collapse: collapse; font-size: 14px; min-width: 560px; width: 100% }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top }
 th { font-family: var(--pix); font-weight: 500; color: var(--page-mu) }
-.shot { overflow-x: auto; padding-bottom: 8px }
+.dec { display: grid; gap: 12px; margin-top: 14px }
+.dec > div { display: grid; grid-template-columns: 38px 1fr; gap: 10px; background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px }
+.dec > div > b:first-child { font-family: var(--pix); color: var(--coral); font-weight: 500; font-size: 16px }
+.dec > div > div { min-width: 0 }
+.dec span { display: block; font-size: 14px; color: var(--page-mu) }
 
-/* ---- tela do jogo: 360 x 240 de GUI (o Tablet é redimensionável; mínimo 300 x 240) ---- */
-.gui { position: relative; width: calc(var(--u) * 360); height: calc(var(--u) * 240); background: var(--g-panel); border: var(--u) solid var(--g-ink);
-  box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-dark); font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--g-ink); user-select: none; overflow: hidden }
+/* ---- telas do jogo ---- */
+.gui {
+  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-hover: #F8F3E8;
+  --g-ink: #2A2730; --g-mu: #7A7366; --g-dis: #B5AC9D; --g-ac: #F0603E; --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-danger: #D5453A; --g-un: #948870;
+  --g-selbg: #FBE7DE; --g-flash: #E3F2E8; --g-modeon: #D8E4F7; --m-none: #E6DCC8; --g-shadow: #BDB19A; --g-grp: #E9E0CE;
+  position: relative; background: var(--g-panel); border: var(--u) solid var(--g-ink);
+  box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-shadow); font-family: var(--pix); font-size: calc(var(--u) * 8); line-height: 1; color: var(--g-ink); user-select: none; overflow: hidden }
+.gui.dark {
+  --g-panel: #26232B; --g-light: #312D37; --g-dark: #4A4550; --g-inset: #1C1A20; --g-hover: #3A3640;
+  --g-ink: #ECE5D6; --g-mu: #A79F90; --g-dis: #625C66; --g-ac: #F26A48; --g-ok: #3DB56E; --g-warn: #E39A2E; --g-danger: #E55A4E;
+  --g-selbg: #3E2E2C; --g-flash: #24382C; --g-modeon: #2A3550; --m-none: #3A3640; --g-shadow: #0E0D11; --g-grp: #2C2930 }
+.w380 { width: calc(var(--u) * 380); height: calc(var(--u) * 250) }
+.w300 { width: calc(var(--u) * 300); height: calc(var(--u) * 240) }
 .t { position: absolute; white-space: nowrap }
 .gmu { color: var(--g-mu) }
 .top { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--u) * 3); background: var(--g-ac) }
 .tab { position: absolute; top: calc(var(--u) * 19); height: calc(var(--u) * 12); padding: 0 calc(var(--u) * 4); display: flex; align-items: center; color: var(--g-mu); font-size: calc(var(--u) * 7.5) }
-.tab.on { color: var(--g-ink); border: var(--u) solid var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac) }
+.tab.on { color: var(--g-ink); border: var(--u) solid var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac); background: var(--g-light) }
 .rule { position: absolute; height: var(--u); background: var(--g-dark) }
 .vrule { position: absolute; width: var(--u); background: var(--g-dark) }
-.field { position: absolute; height: calc(var(--u) * 12); background: var(--g-light); border: var(--u) solid var(--g-dark); color: var(--g-mu); display: flex; align-items: center; padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 7) }
-.gbtn { position: absolute; height: calc(var(--u) * 12); font: inherit; font-size: calc(var(--u) * 7); color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-ink);
-  padding: 0 calc(var(--u) * 3); display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2); white-space: nowrap; cursor: pointer }
-.gbtn:hover { border-color: var(--g-ac) }
-.gbtn.ok { background: var(--g-ok); color: #fff }
-.gbtn.dim { border-color: var(--g-dark); color: var(--g-mu) }
+.search { position: absolute; height: calc(var(--u) * 14); background: var(--g-light); border: var(--u) solid var(--g-ink); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 6.5); color: var(--g-mu); overflow: hidden; white-space: nowrap }
+.search.focus { border-color: var(--g-ac); box-shadow: 0 0 0 var(--u) var(--g-ac) }
+.search .lupa { flex: none; width: calc(var(--u) * 7); height: calc(var(--u) * 7); border: calc(var(--u) * 1.2) solid var(--g-mu); border-radius: 50%; position: relative }
+.search .lupa::after { content: ""; position: absolute; width: calc(var(--u) * 3); height: calc(var(--u) * 1.2); background: var(--g-mu); right: calc(var(--u) * -2.6); bottom: calc(var(--u) * -1.4); transform: rotate(45deg) }
+.search .txt { color: var(--g-ink) }
+.search .caret { width: var(--u); height: calc(var(--u) * 8); background: var(--g-ink); margin-left: calc(var(--u) * -2) }
+.chip { display: inline-flex; align-items: center; gap: calc(var(--u) * 2); height: calc(var(--u) * 9); padding: 0 calc(var(--u) * 2.5); border: var(--u) solid var(--g-ink); background: var(--g-panel); color: var(--g-ink); font-size: calc(var(--u) * 6); white-space: nowrap }
+.chip .k { color: var(--g-mu) }
+.chip .x { color: var(--g-mu) }
+.qf { position: absolute; display: flex; gap: calc(var(--u) * 3); font-size: calc(var(--u) * 6) }
+.qf span { display: inline-flex; align-items: center; gap: calc(var(--u) * 2); height: calc(var(--u) * 10); padding: 0 calc(var(--u) * 3); border: var(--u) solid var(--g-dark); color: var(--g-mu); background: var(--g-panel); white-space: nowrap }
+.qf span.on { border-color: var(--g-ink); color: var(--g-ink); background: var(--g-light); box-shadow: inset 0 calc(var(--u) * -1.5) 0 var(--g-ac) }
+.qf i { width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; flex: none }
 .list { position: absolute; background: var(--g-light); box-shadow: inset 0 0 0 var(--u) var(--g-dark); overflow: hidden }
-.row { height: calc(var(--u) * 20); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); border-bottom: var(--u) solid var(--g-inset) }
+.grp { height: calc(var(--u) * 13); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); background: var(--g-grp); border-bottom: var(--u) solid var(--g-inset); font-size: calc(var(--u) * 6.5); white-space: nowrap }
+.grp .n { color: var(--g-mu) }
+.grp .act { margin-left: auto; height: calc(var(--u) * 9); display: inline-flex; align-items: center; padding: 0 calc(var(--u) * 3); border: var(--u) solid var(--g-ink); background: var(--g-ok); color: #fff; font-size: calc(var(--u) * 6) }
+.row { height: calc(var(--u) * 17); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3) 0 calc(var(--u) * 6); border-bottom: var(--u) solid var(--g-inset) }
 .row.sel { background: var(--g-selbg); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
-.row.flash { background: #E3F2E8 }
-.dot { flex: none; width: calc(var(--u) * 5); height: calc(var(--u) * 5); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-ring) }
-.nm { display: flex; flex-direction: column; gap: calc(var(--u) * 2); min-width: 0; flex: 1 }
-.nm b { font-weight: 400; font-size: calc(var(--u) * 7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.nm span { font-size: calc(var(--u) * 5.5); color: var(--g-mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.chips { flex: none; display: grid; grid-template-columns: repeat(3, calc(var(--u) * 5)); gap: calc(var(--u) * 1) }
-.chips i { width: calc(var(--u) * 5); height: calc(var(--u) * 5); background: var(--m-none); outline: calc(var(--u) * .6) solid var(--g-dark) }
+.row.flash { background: var(--g-flash) }
+.row.src .nm b::after { content: " ▣"; color: var(--g-ac) }
+.dot { flex: none; width: calc(var(--u) * 5); height: calc(var(--u) * 5); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--ring) }
+.nm { display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); min-width: 0; flex: 1 }
+.nm b { font-weight: 400; font-size: calc(var(--u) * 6.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.nm span { font-size: calc(var(--u) * 5.3); color: var(--g-mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.nm span.warn { color: var(--g-warn) } .nm span.bad { color: var(--g-danger) }
+.chips { flex: none; display: grid; grid-template-columns: repeat(3, calc(var(--u) * 4.5)); gap: calc(var(--u) * .9) }
+.chips i { width: calc(var(--u) * 4.5); height: calc(var(--u) * 4.5); background: var(--m-none); outline: calc(var(--u) * .6) solid var(--g-dark) }
 .chips i.e { background: var(--m-ext) } .chips i.n { background: var(--m-ins) } .chips i.b { background: var(--m-both) }
-.ttab { position: absolute; top: calc(var(--u) * 54); width: calc(var(--u) * 13); height: calc(var(--u) * 13); display: grid; place-items: center; border: var(--u) solid transparent }
-.ttab.on { border-color: var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac); background: var(--g-light) }
-.ttab span { width: calc(var(--u) * 7); height: calc(var(--u) * 7); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--g-ring) }
-.face { position: absolute; height: calc(var(--u) * 15); background: var(--g-light); border: var(--u) solid var(--g-ink); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 6.5); cursor: pointer }
-.face.sel { box-shadow: inset 0 0 0 var(--u) var(--g-ac); border-color: var(--g-ac) }
-.face .m { width: calc(var(--u) * 7); height: calc(var(--u) * 7); flex: none; outline: calc(var(--u) * .6) solid var(--g-ring) }
-.face .nd { margin-left: auto; width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; flex: none }
-.face.off { color: var(--g-mu); border-style: dashed; border-color: var(--g-dark) }
-.mode { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.5); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 2) }
-.mode i { width: calc(var(--u) * 6); height: calc(var(--u) * 6); flex: none; outline: calc(var(--u) * .6) solid var(--g-ring) }
-.mode.on { background: #D8E4F7; border-color: var(--m-ext) }
-.drop { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.5); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3) }
+.box { flex: none; width: calc(var(--u) * 8); height: calc(var(--u) * 8); border: var(--u) solid var(--g-ink); background: var(--g-light); display: grid; place-items: center; font-size: calc(var(--u) * 6) }
+.box.on { background: var(--g-ink); color: var(--g-light) }
+.ttab { position: absolute; height: calc(var(--u) * 13); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 2.5); border: var(--u) solid transparent; font-size: calc(var(--u) * 6.5); color: var(--g-mu) }
+.ttab.on { border-color: var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac); background: var(--g-light); color: var(--g-ink) }
+.ttab span { width: calc(var(--u) * 6); height: calc(var(--u) * 6); border-radius: 50%; box-shadow: 0 0 0 calc(var(--u) * .7) var(--ring); flex: none }
+/* planificação do cubo */
+.net { position: absolute; display: grid; grid-template-columns: repeat(4, calc(var(--u) * 27)); grid-template-rows: repeat(3, calc(var(--u) * 17)); gap: calc(var(--u) * 2) }
+.cell { border: var(--u) solid var(--g-ink); background: var(--g-light); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: calc(var(--u) * 1.5); font-size: calc(var(--u) * 5.6); position: relative }
+.cell .m { width: 100%; height: calc(var(--u) * 3); position: absolute; top: 0; left: 0 }
+.cell .lbl { margin-top: calc(var(--u) * 2) }
+.cell .nd { width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); border-radius: 50%; position: absolute; right: calc(var(--u) * 1.5); bottom: calc(var(--u) * 1.5) }
+.cell.sel { border-color: var(--g-ac); box-shadow: inset 0 0 0 var(--u) var(--g-ac) }
+.cell.off { border-style: dashed; border-color: var(--g-dark); color: var(--g-mu) }
+.cell.here { background: var(--g-inset); color: var(--g-mu); border-style: solid; border-color: var(--g-dark) }
+.cell.blank { visibility: hidden }
+.mode { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.3); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 2) }
+.mode i { width: calc(var(--u) * 6); height: calc(var(--u) * 6); flex: none; outline: calc(var(--u) * .6) solid var(--ring) }
+.mode.on { background: var(--g-modeon); border-color: var(--m-ext) }
+.drop { position: absolute; height: calc(var(--u) * 12); border: var(--u) solid var(--g-ink); background: var(--g-light); font-size: calc(var(--u) * 6.3); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3); white-space: nowrap; overflow: hidden }
 .drop .car { margin-left: auto }
-.lab { position: absolute; font-size: calc(var(--u) * 6.5); color: var(--g-mu); white-space: nowrap }
-.toast { position: absolute; background: var(--g-ink); color: var(--g-light); font-size: calc(var(--u) * 6.5); padding: calc(var(--u) * 3) calc(var(--u) * 5); white-space: nowrap }
-.clip { position: absolute; height: calc(var(--u) * 12); border: var(--u) dashed var(--g-ac); background: var(--g-light); font-size: calc(var(--u) * 6); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3); white-space: nowrap; color: var(--g-ink) }
-.clip .x { margin-left: auto; color: var(--g-mu) }
+.drop.hint { border-color: var(--g-ac); box-shadow: 0 0 0 var(--u) var(--g-ac) }
+.gbtn { position: absolute; height: calc(var(--u) * 12); font: inherit; font-size: calc(var(--u) * 6.5); color: var(--g-ink); background: var(--g-light); border: var(--u) solid var(--g-ink);
+  padding: 0 calc(var(--u) * 3); display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 2); white-space: nowrap }
+.gbtn.ok { background: var(--g-ok); color: #fff }
+.lab { position: absolute; font-size: calc(var(--u) * 6.2); color: var(--g-mu); white-space: nowrap }
+.ink { color: var(--g-ink) }
+.tog { position: absolute; width: calc(var(--u) * 11); height: calc(var(--u) * 11); border: var(--u) solid var(--g-ink); background: var(--g-light); display: grid; place-items: center; font-size: calc(var(--u) * 6.5); color: var(--g-ink) }
+.banner { position: absolute; height: calc(var(--u) * 13); background: var(--g-light); border: var(--u) dashed var(--g-ac); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 6); white-space: nowrap; overflow: hidden }
+.banner .k { color: var(--g-mu) }
+.banner .x { margin-left: auto; color: var(--g-mu) }
+.toast { position: absolute; background: var(--g-ink); color: var(--g-panel); font-size: calc(var(--u) * 6.3); height: calc(var(--u) * 13); display: flex; align-items: center; gap: calc(var(--u) * 5); padding: 0 calc(var(--u) * 5); white-space: nowrap; z-index: 3 }
+.toast u { text-decoration: none; border-bottom: var(--u) solid var(--g-ac); color: var(--g-panel) }
+.pop { position: absolute; background: var(--g-light); border: var(--u) solid var(--g-ink); box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-shadow); z-index: 3; font-size: calc(var(--u) * 6.3) }
+.pop .h { height: calc(var(--u) * 10); display: flex; align-items: center; padding: 0 calc(var(--u) * 4); color: var(--g-mu); font-size: calc(var(--u) * 5.5); letter-spacing: .04em; background: var(--g-panel) }
+.pop .it { height: calc(var(--u) * 13); display: flex; align-items: center; gap: calc(var(--u) * 3); padding: 0 calc(var(--u) * 4); white-space: nowrap }
+.pop .it.hi { background: var(--g-selbg); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
+.pop .it .r { margin-left: auto; color: var(--g-mu) }
+.pop .it mark { background: none; color: var(--g-ac); text-decoration: underline }
+.pop .foot { height: calc(var(--u) * 10); display: flex; align-items: center; padding: 0 calc(var(--u) * 4); color: var(--g-mu); font-size: calc(var(--u) * 5.5); border-top: var(--u) solid var(--g-inset) }
+.tip { position: absolute; background: #1B1920; color: #ECE5D6; font-size: calc(var(--u) * 5.8); padding: calc(var(--u) * 3) calc(var(--u) * 4); line-height: 1.35; white-space: nowrap; z-index: 4; border: var(--u) solid #4A2A6A }
+.tip .m { color: #BDB19A }
+.empty { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * 4); text-align: center; font-size: calc(var(--u) * 6.5); color: var(--g-mu) }
+.empty b { color: var(--g-ink); font-weight: 400; font-size: calc(var(--u) * 7.5) }
+.view { position: absolute; background-color: var(--g-light);
+  background-image: linear-gradient(var(--g-inset) 1px, transparent 1px), linear-gradient(90deg, var(--g-inset) 1px, transparent 1px);
+  background-size: calc(var(--u) * 8) calc(var(--u) * 8); box-shadow: inset 0 0 0 var(--u) var(--g-dark) }
+.machine { position: absolute; background: #6B6B6B; border: var(--u) solid var(--ring); box-shadow: inset calc(var(--u) * -6) calc(var(--u) * -6) 0 #4C4C4C }
+.machine::after { content: ""; position: absolute; left: 30%; right: 30%; bottom: 14%; height: 22%; background: #E8742B; box-shadow: 0 0 calc(var(--u) * 4) #F2A64A }
+.slot { position: absolute; width: calc(var(--u) * 18); height: calc(var(--u) * 18); background: var(--g-inset); box-shadow: inset var(--u) var(--u) 0 var(--g-dark) }
 </style>
 
 <div class="wrap">
-  <h1>Painel do Tablet <span class="status">mockup · para aprovar</span></h1>
-  <p class="lede">Pedido do taccio3 no CurseForge, com o Controller do XNet como referência: uma tela central onde se vê todas as máquinas da rede e se configura qualquer uma, com copiar e colar perfil. A aba Lista do Tablet vira esse painel. Configurar a base não pede mais trocar de ferramenta nem andar até o roteador; Vinculador e Configurador continuam existindo para quem prefere fazer no mundo.</p>
+  <h1>Painel do Tablet <span class="status">etapa 1 · mockup v3 para aprovar</span></h1>
+  <p class="lede">O painel estilo XNet pedido pelo taccio3, repensado pelo que o jogador faz de fato: achar a máquina, entender o estado dela, configurar e repetir nas parecidas. Tudo na aba Lista do Tablet, e o mesmo painel do nó na tela do roteador. As telas seguem o tema claro ou escuro da etapa 0.</p>
 
+  <div class="principles">
+    <div><b>Achar sem aprender nada</b>Uma busca só, que entende nome, tipo de máquina e rede e mostra sugestões enquanto você digita. Nada de sintaxe para decorar.</div>
+    <div><b>Ver o estado sem abrir</b>Cada linha diz o que está errado em palavras ("destino cheio", "sem rede") e mostra as faces em seis quadradinhos.</div>
+    <div><b>Faces onde elas estão</b>As faces aparecem desdobradas como um cubo: Cima em cima, Esquerda à esquerda. Dá para achar a face sem pensar.</div>
+    <div><b>Repetir com um clique</b>Copiou um perfil? Cada grupo de máquinas iguais ganha "Colar em todas". E todo colar tem Desfazer.</div>
+  </div>
+
+  <!-- ===================== 1. Visão geral ===================== -->
   <section class="part">
-    <div class="eyebrow">A tela · aba Lista do Tablet</div>
-    <h2>Máquinas à esquerda, o nó escolhido à direita</h2>
+    <div class="eyebrow">Tela 1 · a aba Lista ao abrir o Tablet</div>
+    <h2>Busca em cima, máquinas agrupadas, o nó ao lado</h2>
+    <div class="stage">
     <div class="shot">
-    <div class="gui" aria-label="Tablet, aba Lista com o painel do nó Fornalha 3">
+    <div class="gui w380" id="geral" aria-label="Tablet, aba Lista, com a busca, os filtros rápidos, a lista agrupada e o painel do nó">
       <div class="top"></div>
       <div class="t" style="left:calc(var(--u)*8);top:calc(var(--u)*8)">Tablet de rede</div>
-      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*8);font-size:calc(var(--u)*7)">12 nós · 3 redes</div>
+      <div class="t gmu" style="right:calc(var(--u)*22);top:calc(var(--u)*8);font-size:calc(var(--u)*6.5)">42 nós · 4 redes</div>
+      <div class="tog tog-x" style="right:calc(var(--u)*6);top:calc(var(--u)*5)">☾</div>
       <div class="tab on" style="left:calc(var(--u)*8)">Lista</div>
       <div class="tab" style="left:calc(var(--u)*38)">Mapa</div>
       <div class="tab" style="left:calc(var(--u)*68)">Estatísticas</div>
@@ -109,181 +181,370 @@ th { font-family: var(--pix); font-weight: 500; color: var(--page-mu) }
       <div class="tab" style="left:calc(var(--u)*164)">Grupos</div>
       <div class="rule" style="left:calc(var(--u)*8);right:calc(var(--u)*8);top:calc(var(--u)*33)"></div>
 
-      <!-- coluna das máquinas -->
-      <div class="field" style="left:calc(var(--u)*8);top:calc(var(--u)*38);width:calc(var(--u)*96)">Buscar nó</div>
-      <div class="gbtn" style="left:calc(var(--u)*106);top:calc(var(--u)*38);width:calc(var(--u)*30)">Sel.</div>
-      <div class="list" style="left:calc(var(--u)*8);top:calc(var(--u)*53);width:calc(var(--u)*128);height:calc(var(--u)*162)">
-        <div class="row">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Fornalha Elite</b><span>Fornalha · Elite</span></div>
-          <span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Fornalha 2</b><span>Fornalha · Avançado</span></div>
-          <span class="chips"><i class="n"></i><i></i><i></i><i></i><i></i><i></i></span>
-        </div>
-        <div class="row sel">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Fornalha 3</b><span>Fornalha · Elite</span></div>
-          <span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-warn)"></span>
-          <div class="nm"><b>Baú de minério</b><span>Barrel · Básico</span></div>
-          <span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Smelter</b><span>Elite Smelting Factory</span></div>
-          <span class="chips"><i class="n"></i><i></i><i class="e"></i><i></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-un)"></span>
-          <div class="nm"><b>Gerador</b><span>Descarregado</span></div>
-          <span class="chips"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Tanque de lava</b><span>Tanque · Elite</span></div>
-          <span class="chips"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--g-ok)"></span>
-          <div class="nm"><b>Armazém central</b><span>Baú Wireless · Esmeralda</span></div>
-          <span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span>
-        </div>
+      <div class="search focus" style="left:calc(var(--u)*8);top:calc(var(--u)*37);width:calc(var(--u)*148)"><span class="lupa"></span>Buscar máquina, rede ou nome</div>
+      <div class="qf" style="left:calc(var(--u)*8);top:calc(var(--u)*55)">
+        <span><i style="background:var(--g-warn)"></i>Com problema 3</span>
+        <span><i style="background:var(--g-dis)"></i>Sem rede 1</span>
+        <span><i style="background:var(--g-un)"></i>Descarr. 2</span>
       </div>
-      <div class="t gmu" style="left:calc(var(--u)*8);top:calc(var(--u)*222);font-size:calc(var(--u)*6)">1–8 de 12 ›</div>
 
-      <div class="vrule" style="left:calc(var(--u)*142);top:calc(var(--u)*38);height:calc(var(--u)*194)"></div>
+      <div class="list" style="left:calc(var(--u)*8);top:calc(var(--u)*69);width:calc(var(--u)*148);height:calc(var(--u)*162)">
+        <div class="grp">▾ Fornalha <span class="n">· 10</span></div>
+        <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha Elite</b><span>Linha de fundição · 12 itens/s</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row sel"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha 3</b><span>Linha de fundição · 8 itens/s</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row"><span class="dot" style="background:var(--g-warn)"></span><div class="nm"><b>Fornalha 4</b><span class="warn">destino cheio</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha 2</b><span>Linha de fundição · 0 itens/s</span></div><span class="chips"><i class="n"></i><i></i><i></i><i></i><i></i><i></i></span></div>
+        <div class="grp">▸ Elite Smelting Factory <span class="n">· 4</span></div>
+        <div class="grp">▾ Sophisticated Barrel <span class="n">· 6</span></div>
+        <div class="row"><span class="dot" style="background:var(--g-dis)"></span><div class="nm"><b>Baú de minério</b><span class="bad">sem rede</span></div><span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span></div>
+        <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Barril de pedra</b><span>Armazém · 64 itens/s</span></div><span class="chips"><i class="b"></i><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="vrule" style="left:calc(var(--u)*162);top:calc(var(--u)*37);height:calc(var(--u)*204)"></div>
 
       <!-- painel do nó -->
-      <div class="t" style="left:calc(var(--u)*150);top:calc(var(--u)*39);font-size:calc(var(--u)*8)">Fornalha 3</div>
-      <div class="t gmu" style="left:calc(var(--u)*208);top:calc(var(--u)*40);font-size:calc(var(--u)*6.5)">Fornalha · 12 itens/s</div>
-      <div class="gbtn" style="right:calc(var(--u)*8);top:calc(var(--u)*36);width:calc(var(--u)*30)" title="Abre a tela completa do roteador (visor 3D, cartões e upgrades)">Abrir</div>
+      <div class="t" style="left:calc(var(--u)*170);top:calc(var(--u)*39)">Fornalha 3</div>
+      <div class="t gmu" style="left:calc(var(--u)*170);top:calc(var(--u)*49);font-size:calc(var(--u)*5.8)">Fornalha · Elite · 18 blocos daqui</div>
+      <div class="gbtn" style="right:calc(var(--u)*8);top:calc(var(--u)*38);width:calc(var(--u)*56)">Tela completa</div>
 
-      <div class="ttab on" style="left:calc(var(--u)*150)"><span style="background:var(--t-item)"></span></div>
-      <div class="ttab" style="left:calc(var(--u)*165)"><span style="background:var(--t-fluid)"></span></div>
-      <div class="ttab" style="left:calc(var(--u)*180)"><span style="background:var(--t-energy)"></span></div>
-      <div class="ttab" style="left:calc(var(--u)*195)"><span style="background:var(--t-chem)"></span></div>
-      <div class="ttab" style="left:calc(var(--u)*210)"><span style="background:var(--t-source)"></span></div>
-      <div class="t" style="left:calc(var(--u)*228);top:calc(var(--u)*58);font-size:calc(var(--u)*7)">Itens</div>
-      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*58);font-size:calc(var(--u)*6.5)">2 redes</div>
+      <div class="ttab on" style="left:calc(var(--u)*170);top:calc(var(--u)*59)"><span style="background:var(--t-item)"></span>Itens</div>
+      <div class="ttab" style="left:calc(var(--u)*205);top:calc(var(--u)*59)"><span style="background:var(--t-fluid)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*220);top:calc(var(--u)*59)"><span style="background:var(--t-energy)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*235);top:calc(var(--u)*59)"><span style="background:var(--t-chem)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*250);top:calc(var(--u)*59)"><span style="background:var(--t-source)"></span></div>
+      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*63);font-size:calc(var(--u)*6)">2 redes</div>
 
-      <!-- seis faces -->
-      <div class="face" style="left:calc(var(--u)*150);top:calc(var(--u)*71);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-ins)"></i>Cima<span class="nd" style="background:var(--n1)"></span></div>
-      <div class="face off" style="left:calc(var(--u)*218);top:calc(var(--u)*71);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-none)"></i>Frente</div>
-      <div class="face off" style="left:calc(var(--u)*286);top:calc(var(--u)*71);width:calc(var(--u)*66)"><i class="m" style="background:var(--m-none)"></i>Esquerda</div>
-      <div class="face sel" style="left:calc(var(--u)*150);top:calc(var(--u)*88);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-ext)"></i>Baixo<span class="nd" style="background:var(--n2)"></span></div>
-      <div class="face off" style="left:calc(var(--u)*218);top:calc(var(--u)*88);width:calc(var(--u)*65)"><i class="m" style="background:var(--m-none)"></i>Trás</div>
-      <div class="face off" style="left:calc(var(--u)*286);top:calc(var(--u)*88);width:calc(var(--u)*66)"><i class="m" style="background:var(--m-none)"></i>Direita</div>
+      <div class="net" style="left:calc(var(--u)*170);top:calc(var(--u)*76)">
+        <div class="cell blank"></div>
+        <div class="cell"><i class="m" style="background:var(--m-ins)"></i><span class="lbl">Cima</span><span class="nd" style="background:var(--n1)"></span></div>
+        <div class="cell blank"></div><div class="cell blank"></div>
+        <div class="cell off"><span class="lbl">Esq.</span></div>
+        <div class="cell off"><span class="lbl">Frente</span></div>
+        <div class="cell off"><span class="lbl">Dir.</span></div>
+        <div class="cell here"><span class="lbl">Trás</span><span style="font-size:calc(var(--u)*4.5)">roteador</span></div>
+        <div class="cell blank"></div>
+        <div class="cell sel"><i class="m" style="background:var(--m-ext)"></i><span class="lbl">Baixo</span><span class="nd" style="background:var(--n2)"></span></div>
+        <div class="cell blank"></div><div class="cell blank"></div>
+      </div>
 
-      <div class="rule" style="left:calc(var(--u)*150);right:calc(var(--u)*8);top:calc(var(--u)*108)"></div>
-
-      <!-- a face escolhida -->
-      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*113)">Baixo · 2 slots</div>
-      <div class="mode on" style="left:calc(var(--u)*150);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-ext)"></i>Extrai</div>
-      <div class="mode" style="left:calc(var(--u)*200);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-ins)"></i>Insere</div>
-      <div class="mode" style="left:calc(var(--u)*250);top:calc(var(--u)*122);width:calc(var(--u)*52)"><i style="background:var(--m-both)"></i>Armazém</div>
-      <div class="mode" style="left:calc(var(--u)*304);top:calc(var(--u)*122);width:calc(var(--u)*48)"><i style="background:var(--m-none)"></i>Nenhum</div>
-
-      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*142)">Rede</div>
-      <div class="drop" style="left:calc(var(--u)*186);top:calc(var(--u)*139);width:calc(var(--u)*166)"><span class="dot" style="background:var(--n2)"></span>Armazém<span class="car">▾</span></div>
-      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*157)">Filtro</div>
-      <div class="drop" style="left:calc(var(--u)*186);top:calc(var(--u)*154);width:calc(var(--u)*130)">Lista branca · 3 itens</div>
-      <div class="gbtn" style="left:calc(var(--u)*318);top:calc(var(--u)*154);width:calc(var(--u)*34)">Editar</div>
-      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*172)">Prioridade</div>
-      <div class="gbtn" style="left:calc(var(--u)*186);top:calc(var(--u)*169);width:calc(var(--u)*12)">−</div>
-      <div class="t" style="left:calc(var(--u)*203);top:calc(var(--u)*172);font-size:calc(var(--u)*7)">0</div>
-      <div class="gbtn" style="left:calc(var(--u)*212);top:calc(var(--u)*169);width:calc(var(--u)*12)">+</div>
-      <div class="lab" style="left:calc(var(--u)*232);top:calc(var(--u)*172)">Redstone</div>
-      <div class="drop" style="left:calc(var(--u)*268);top:calc(var(--u)*169);width:calc(var(--u)*84)">Ignorar<span class="car">▾</span></div>
-
-      <div class="rule" style="left:calc(var(--u)*150);right:calc(var(--u)*8);top:calc(var(--u)*188)"></div>
-
-      <!-- perfil -->
-      <div class="gbtn" style="left:calc(var(--u)*150);top:calc(var(--u)*194);width:calc(var(--u)*46)">Copiar</div>
-      <div class="gbtn ok" style="left:calc(var(--u)*199);top:calc(var(--u)*194);width:calc(var(--u)*46)">Colar</div>
-      <div class="clip" style="left:calc(var(--u)*248);top:calc(var(--u)*194);width:calc(var(--u)*104)">▣ Perfil: Fornalha Elite<span class="x">✕</span></div>
-      <div class="lab" style="left:calc(var(--u)*150);top:calc(var(--u)*212)">Colar nesta máquina: todas as abas e faces</div>
-
-      <div class="toast" style="left:calc(var(--u)*150);top:calc(var(--u)*223)">Perfil de Fornalha Elite colado em Fornalha 3</div>
+      <div class="lab ink" style="left:calc(var(--u)*170);top:calc(var(--u)*136)">Baixo <span class="gmu">· a saída da fornalha</span></div>
+      <div class="mode on" style="left:calc(var(--u)*170);top:calc(var(--u)*145);width:calc(var(--u)*48)"><i style="background:var(--m-ext)"></i>Extrai</div>
+      <div class="mode" style="left:calc(var(--u)*220);top:calc(var(--u)*145);width:calc(var(--u)*48)"><i style="background:var(--m-ins)"></i>Insere</div>
+      <div class="mode" style="left:calc(var(--u)*270);top:calc(var(--u)*145);width:calc(var(--u)*52)"><i style="background:var(--m-both)"></i>Armazém</div>
+      <div class="mode" style="left:calc(var(--u)*324);top:calc(var(--u)*145);width:calc(var(--u)*48)"><i style="background:var(--m-none)"></i>Nenhum</div>
+      <div class="lab" style="left:calc(var(--u)*170);top:calc(var(--u)*160)">Tira da fornalha e manda para a rede.</div>
+      <div class="lab" style="left:calc(var(--u)*170);top:calc(var(--u)*174)">Rede</div>
+      <div class="drop" style="left:calc(var(--u)*204);top:calc(var(--u)*171);width:calc(var(--u)*168)"><span class="dot" style="background:var(--n2)"></span>Armazém<span class="car">▾</span></div>
+      <div class="lab" style="left:calc(var(--u)*170);top:calc(var(--u)*188)">Filtro</div>
+      <div class="drop" style="left:calc(var(--u)*204);top:calc(var(--u)*185);width:calc(var(--u)*130)">Só lingotes · 3 itens</div>
+      <div class="gbtn" style="left:calc(var(--u)*336);top:calc(var(--u)*185);width:calc(var(--u)*36)">Editar</div>
+      <div class="lab" style="left:calc(var(--u)*170);top:calc(var(--u)*202)">Prior.</div>
+      <div class="gbtn" style="left:calc(var(--u)*204);top:calc(var(--u)*199);width:calc(var(--u)*12)">−</div>
+      <div class="t" style="left:calc(var(--u)*221);top:calc(var(--u)*202);font-size:calc(var(--u)*6.5)">0</div>
+      <div class="gbtn" style="left:calc(var(--u)*230);top:calc(var(--u)*199);width:calc(var(--u)*12)">+</div>
+      <div class="drop" style="left:calc(var(--u)*248);top:calc(var(--u)*199);width:calc(var(--u)*124)">Redstone: ignorar<span class="car">▾</span></div>
+      <div class="rule" style="left:calc(var(--u)*170);right:calc(var(--u)*8);top:calc(var(--u)*216)"></div>
+      <div class="gbtn" style="left:calc(var(--u)*170);top:calc(var(--u)*222);width:calc(var(--u)*72)">Copiar perfil</div>
+      <div class="lab" style="left:calc(var(--u)*248);top:calc(var(--u)*225)">para colar em outras máquinas</div>
     </div>
     </div>
-
-    <div class="notes">
-      <div>
-        <b>Coluna das máquinas</b>
-        <ol>
-          <li>A mesma lista de hoje: busca, status (bolinha) e páginas.</li>
-          <li>Os <b>seis quadradinhos</b> são as faces na aba escolhida à direita, na cor do modo (azul Extrai, laranja Insere, verde Armazém, bege Nenhum). Dá para ler a base inteira sem abrir nada, como a grade do XNet.</li>
-          <li>Clicar numa linha a escolhe e mostra o nó à direita. Duplo clique abre a tela completa, como o clique de hoje.</li>
-        </ol>
-      </div>
-      <div>
-        <b>Painel do nó</b>
-        <ol>
-          <li>Abas por tipo, as seis faces com modo e bolinha da rede, e a face escolhida embaixo: <b>modo, rede, filtro, prioridade e redstone</b>, os mesmos controles da tela do roteador.</li>
-          <li><b>Editar</b> abre a tela de filtro; Voltar retorna ao Tablet, na mesma máquina.</li>
-          <li><b>Abrir</b> leva à tela completa do roteador para o que fica só lá: visor 3D, cartões de filtro e upgrades (são itens, precisam de slots).</li>
-        </ol>
-      </div>
-      <div>
-        <b>Copiar e colar</b>
-        <ol>
-          <li><b>Copiar</b> guarda o perfil do nó no Tablet; <b>Colar</b> aplica no nó escolhido. A faixa mostra de onde veio o perfil; ✕ esquece.</li>
-          <li>Atalhos como no XNet: <kbd>Ctrl</kbd>+<kbd>C</kbd> e <kbd>Ctrl</kbd>+<kbd>V</kbd> na máquina escolhida, e as setas <kbd>↑</kbd> <kbd>↓</kbd> andam pela lista.</li>
-          <li>Em <b>Sel.</b> (o modo de marcar vários que já existe), aparece <b>Colar nos N marcados</b> ao lado de Mover. Busca "fornalha", Todos, Colar: todas as fornalhas configuradas de uma vez.</li>
-        </ol>
-      </div>
+    <div class="side">
+      <ol>
+        <li><b>A busca já vem com o cursor.</b> Abriu o Tablet, é só digitar. <kbd>Esc</kbd> limpa; <kbd>↑</kbd> <kbd>↓</kbd> andam pela lista; <kbd>Enter</kbd> escolhe.</li>
+        <li><b>Filtros rápidos</b> de um clique, com a contagem: Com problema, Sem rede, Descarregados. Clicar de novo desliga. Somem quando o número é 0.</li>
+        <li><b>Agrupado por tipo de máquina</b>, com o grupo recolhível (▾ ▸). É o jeito natural de pensar ("minhas fornalhas") e é onde o colar em todas aparece.</li>
+        <li><b>Cada linha diz o estado em palavras</b> na segunda linha: a rede e a vazão quando está tudo bem, "destino cheio" em âmbar, "sem rede" em vermelho. A bolinha só reforça.</li>
+        <li><b>As faces desdobradas</b>: o quadradinho de cima é Cima, o do meio é Frente, e assim por diante. A tarja colorida no topo de cada face é o modo; a bolinha é a cor da rede.</li>
+        <li><b>Uma frase diz o que o modo faz</b> nesta máquina ("Tira da fornalha e manda para a rede"), e a face diz o que ela acessa ("a saída da fornalha").</li>
+      </ol>
+    </div>
     </div>
   </section>
 
+  <!-- ===================== 2. Busca ===================== -->
   <section class="part">
-    <div class="eyebrow">Tela pequena</div>
-    <h2>No tamanho mínimo (300 × 240)</h2>
-    <p>A coluna das máquinas encolhe e esconde os quadradinhos; as faces viram três por linha com o nome curto (Fren., Esq., Dir.), como já acontece na tela do roteador. Com o Tablet aumentado pela borda, o espaço extra vai para a lista.</p>
+    <div class="eyebrow">Tela 2 · procurar</div>
+    <h2>Digitar mostra o que dá para achar, separado por tipo</h2>
+    <div class="stage">
+    <div class="shot">
+    <div class="gui w380" style="height:calc(var(--u)*150)" aria-label="Busca com sugestões">
+      <div class="search focus" style="left:calc(var(--u)*8);top:calc(var(--u)*8);width:calc(var(--u)*170)"><span class="lupa"></span><span class="txt">fund</span><span class="caret"></span></div>
+      <div class="pop" style="left:calc(var(--u)*8);top:calc(var(--u)*24);width:calc(var(--u)*170)">
+        <div class="h">MÁQUINAS</div>
+        <div class="it hi">Alto-<mark>fund</mark>idor<span class="r">2 nós</span></div>
+        <div class="h">REDES</div>
+        <div class="it"><span class="dot" style="background:var(--n1)"></span>Linha de <mark>fund</mark>ição<span class="r">12 nós</span></div>
+        <div class="h">NOMES</div>
+        <div class="it"><mark>Fund</mark>ição de ouro<span class="r">Fornalha</span></div>
+        <div class="foot">Enter: procurar "fund" em tudo · ↑↓ escolher</div>
+      </div>
+
+      <div class="t gmu" style="left:calc(var(--u)*196);top:calc(var(--u)*10);font-size:calc(var(--u)*6.5)">depois de escolher a rede:</div>
+      <div class="search" style="left:calc(var(--u)*196);top:calc(var(--u)*22);width:calc(var(--u)*176)"><span class="lupa"></span><span class="chip"><span class="dot" style="background:var(--n1);width:calc(var(--u)*4);height:calc(var(--u)*4)"></span><span class="k">Rede</span> Linha de fundição <span class="x">✕</span></span></div>
+      <div class="t gmu" style="left:calc(var(--u)*196);top:calc(var(--u)*41);font-size:calc(var(--u)*6)">12 de 42 nós · <span style="color:var(--g-ac)">Limpar</span></div>
+      <div class="list" style="left:calc(var(--u)*196);top:calc(var(--u)*51);width:calc(var(--u)*176);height:calc(var(--u)*56)">
+        <div class="grp">▾ Fornalha <span class="n">· 10</span></div>
+        <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha Elite</b><span>Linha de fundição · 12 itens/s</span></div></div>
+        <div class="grp">▾ Alto-fundidor <span class="n">· 2</span></div>
+      </div>
+
+      <div class="t gmu" style="left:calc(var(--u)*196);top:calc(var(--u)*114);font-size:calc(var(--u)*6.5)">nada encontrado:</div>
+      <div class="list" style="left:calc(var(--u)*196);top:calc(var(--u)*124);width:calc(var(--u)*176);height:calc(var(--u)*20)">
+        <div class="empty" style="inset:0">Nenhum nó com "xyz" · <span style="color:var(--g-ac)">Limpar a busca</span></div>
+      </div>
+    </div>
+    </div>
+    <div class="side">
+      <ol>
+        <li><b>Uma caixa só.</b> Digitar procura ao mesmo tempo no <b>nome</b> do nó, no <b>tipo de máquina</b> (o nome do bloco, como aparece no jogo) e na <b>rede</b>. Sem ligar ou desligar opção nenhuma.</li>
+        <li><b>As sugestões aparecem separadas por tipo</b>, com o trecho digitado destacado e quantos nós cada uma pega. Escolher uma (clique ou <kbd>Enter</kbd>) vira uma <b>etiqueta</b> na caixa: "Rede: Linha de fundição ✕". Fica claro o que está filtrando e como tirar.</li>
+        <li><b>Dá para somar</b>: uma etiqueta de máquina e uma de rede juntas mostram só as fornalhas daquela rede. <kbd>Backspace</kbd> com a caixa vazia tira a última etiqueta.</li>
+        <li><b>Sempre diz quantos achou</b> ("12 de 42 nós") e oferece Limpar. Sem nada, a lista diz por quê e oferece limpar, em vez de ficar em branco.</li>
+        <li>Os filtros rápidos (Com problema...) funcionam junto com a busca.</li>
+        <li>A busca é feita no cliente, na lista que o Tablet já recebe; não pede nada novo ao servidor a cada letra.</li>
+      </ol>
+    </div>
+    </div>
   </section>
 
+  <!-- ===================== 3. Copiar e colar ===================== -->
   <section class="part">
-    <div class="eyebrow">Decisões</div>
+    <div class="eyebrow">Tela 3 · copiar e colar</div>
+    <h2>Copiou uma vez, cola onde quiser, e sempre dá para desfazer</h2>
+    <div class="stage">
+    <div class="shot">
+    <div class="gui w380" style="height:calc(var(--u)*170)" aria-label="Lista com perfil copiado, colar em todas e desfazer">
+      <div class="banner" style="left:calc(var(--u)*8);top:calc(var(--u)*8);width:calc(var(--u)*364)"><span style="color:var(--g-ac)">▣</span>Perfil copiado de <b style="font-weight:400">Fornalha Elite</b> <span class="k">· Fornalha · Itens e Energia em 2 faces</span><span class="x">esquecer ✕</span></div>
+      <div class="list" style="left:calc(var(--u)*8);top:calc(var(--u)*26);width:calc(var(--u)*364);height:calc(var(--u)*120)">
+        <div class="grp">▾ Fornalha <span class="n">· 10 · 3 diferentes do perfil</span><span class="act">Colar nas 9</span></div>
+        <div class="row src"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha Elite</b><span>a origem do perfil</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row flash"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha 2</b><span style="color:var(--g-ok)">colado agora · igual ao perfil</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="nm"><b>Fornalha 3</b><span>igual ao perfil</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="row"><span class="dot" style="background:var(--g-warn)"></span><div class="nm"><b>Fornalha 4</b><span class="warn">diferente: Baixo sem filtro</span></div><span class="chips"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div>
+        <div class="grp">▾ Elite Smelting Factory <span class="n">· 4 · outra máquina</span><span class="act" style="background:var(--g-light);color:var(--g-ink)">Colar nas 4</span></div>
+      </div>
+      <div class="toast" style="left:calc(var(--u)*8);top:calc(var(--u)*152)">Perfil colado em Fornalha 2 <u>Desfazer</u> <span style="opacity:.6">Ctrl+Z</span></div>
+      <div class="tip" style="left:calc(var(--u)*220);top:calc(var(--u)*40)">Colar o perfil de Fornalha Elite nas 9 fornalhas<br><span class="m">a origem fica de fora · dá para desfazer</span></div>
+    </div>
+    </div>
+    <div class="side">
+      <ol>
+        <li><b>Copiar perfil</b> no painel (ou <kbd>Ctrl</kbd>+<kbd>C</kbd>) guarda o perfil no Tablet. Uma faixa em cima da lista diz de onde ele veio e o que ele tem, e fica até você clicar em esquecer.</li>
+        <li><b>Cada grupo ganha "Colar nas N"</b>: as fornalhas iguais à de origem levam o botão verde. Grupos de outra máquina também podem receber, com o botão neutro, porque o perfil é por face e pode não fazer sentido nela.</li>
+        <li><b>Cada linha diz se já está igual ao perfil</b> ou o que difere ("Baixo sem filtro"), então dá para ver quem falta antes de colar.</li>
+        <li><b>Colar numa máquina só</b>: <kbd>Ctrl</kbd>+<kbd>V</kbd> na linha, ou Colar perfil no painel.</li>
+        <li><b>Todo colar tem Desfazer</b> no aviso (ou <kbd>Ctrl</kbd>+<kbd>Z</kbd>), que devolve as máquinas ao que eram. Vale para o último colar, enquanto o Tablet estiver aberto.</li>
+        <li>Para escolher máquinas soltas, o modo Selecionar de hoje ganha "Colar nos marcados", ao lado de Mover.</li>
+      </ol>
+    </div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. Escuro ===================== -->
+  <section class="part">
+    <div class="eyebrow">A Tela 1 no escuro</div>
+    <h2>O mesmo desenho, com a paleta da etapa 0</h2>
+    <div class="shot" id="geral-escuro"></div>
+  </section>
+
+  <!-- ===================== 5. Roteador ===================== -->
+  <section class="part">
+    <div class="eyebrow">Tela 4 · tela do roteador</div>
+    <h2>O mesmo painel, ao lado do visor 3D</h2>
+    <div class="stage">
+    <div class="shot">
+    <div class="gui w380" aria-label="Tela do roteador com o painel do nó">
+      <div class="top" style="background:#1FA9A0"></div>
+      <div class="t" style="left:calc(var(--u)*8);top:calc(var(--u)*8)">Fornalha 3</div>
+      <div class="t gmu" style="right:calc(var(--u)*100);top:calc(var(--u)*8);font-size:calc(var(--u)*6.5)">8 itens/s</div>
+      <div class="gbtn" style="right:calc(var(--u)*60);top:calc(var(--u)*5);width:calc(var(--u)*34);border-color:#1FA9A0">● Elite</div>
+      <div class="slot" style="right:calc(var(--u)*38);top:calc(var(--u)*2)"></div>
+      <div class="slot" style="right:calc(var(--u)*19);top:calc(var(--u)*2)"></div>
+      <div class="tog" style="right:calc(var(--u)*4);top:calc(var(--u)*5)">☾</div>
+      <div class="view" style="left:calc(var(--u)*8);top:calc(var(--u)*24);width:calc(var(--u)*150);height:calc(var(--u)*120)"></div>
+      <div class="machine" style="left:calc(var(--u)*58);top:calc(var(--u)*58);width:calc(var(--u)*50);height:calc(var(--u)*50)"></div>
+      <div class="lab" style="left:calc(var(--u)*12);top:calc(var(--u)*136)">clique numa face · arraste para girar</div>
+      <div class="slot" style="left:calc(var(--u)*8);top:calc(var(--u)*150)"></div>
+      <div class="slot" style="left:calc(var(--u)*28);top:calc(var(--u)*150)"></div>
+      <div class="lab" style="left:calc(var(--u)*50);top:calc(var(--u)*156)">cartões de filtro da face Baixo</div>
+      <div class="lab" style="left:calc(var(--u)*8);top:calc(var(--u)*176)">inventário</div>
+      <div class="slot" style="left:calc(var(--u)*8);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*27);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*46);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*65);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*84);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*103);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*122);top:calc(var(--u)*186)"></div><div class="slot" style="left:calc(var(--u)*141);top:calc(var(--u)*186)"></div>
+      <div class="slot" style="left:calc(var(--u)*8);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*27);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*46);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*65);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*84);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*103);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*122);top:calc(var(--u)*208)"></div><div class="slot" style="left:calc(var(--u)*141);top:calc(var(--u)*208)"></div>
+      <div class="vrule" style="left:calc(var(--u)*166);top:calc(var(--u)*24);height:calc(var(--u)*218)"></div>
+
+      <div class="ttab on" style="left:calc(var(--u)*172);top:calc(var(--u)*24)"><span style="background:var(--t-item)"></span>Itens</div>
+      <div class="ttab" style="left:calc(var(--u)*207);top:calc(var(--u)*24)"><span style="background:var(--t-fluid)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*222);top:calc(var(--u)*24)"><span style="background:var(--t-energy)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*237);top:calc(var(--u)*24)"><span style="background:var(--t-chem)"></span></div>
+      <div class="ttab" style="left:calc(var(--u)*252);top:calc(var(--u)*24)"><span style="background:var(--t-source)"></span></div>
+      <div class="t gmu" style="right:calc(var(--u)*8);top:calc(var(--u)*28);font-size:calc(var(--u)*6)">2 redes</div>
+      <div class="net" style="left:calc(var(--u)*172);top:calc(var(--u)*42)">
+        <div class="cell blank"></div>
+        <div class="cell"><i class="m" style="background:var(--m-ins)"></i><span class="lbl">Cima</span><span class="nd" style="background:var(--n1)"></span></div>
+        <div class="cell blank"></div><div class="cell blank"></div>
+        <div class="cell off"><span class="lbl">Esq.</span></div>
+        <div class="cell here"><span class="lbl">Frente</span><span style="font-size:calc(var(--u)*4.5)">roteador</span></div>
+        <div class="cell off"><span class="lbl">Dir.</span></div>
+        <div class="cell off"><span class="lbl">Trás</span></div>
+        <div class="cell blank"></div>
+        <div class="cell sel"><i class="m" style="background:var(--m-ext)"></i><span class="lbl">Baixo</span><span class="nd" style="background:var(--n2)"></span></div>
+        <div class="cell blank"></div><div class="cell blank"></div>
+      </div>
+      <div class="lab ink" style="left:calc(var(--u)*172);top:calc(var(--u)*102)">Baixo <span class="gmu">· a saída da fornalha</span></div>
+      <div class="mode on" style="left:calc(var(--u)*172);top:calc(var(--u)*111);width:calc(var(--u)*48)"><i style="background:var(--m-ext)"></i>Extrai</div>
+      <div class="mode" style="left:calc(var(--u)*222);top:calc(var(--u)*111);width:calc(var(--u)*48)"><i style="background:var(--m-ins)"></i>Insere</div>
+      <div class="mode" style="left:calc(var(--u)*272);top:calc(var(--u)*111);width:calc(var(--u)*52)"><i style="background:var(--m-both)"></i>Armazém</div>
+      <div class="mode" style="left:calc(var(--u)*326);top:calc(var(--u)*111);width:calc(var(--u)*46)"><i style="background:var(--m-none)"></i>Nenhum</div>
+      <div class="lab" style="left:calc(var(--u)*172);top:calc(var(--u)*126)">Tira da fornalha e manda para a rede.</div>
+      <div class="lab" style="left:calc(var(--u)*172);top:calc(var(--u)*140)">Rede</div>
+      <div class="drop" style="left:calc(var(--u)*206);top:calc(var(--u)*137);width:calc(var(--u)*166)"><span class="dot" style="background:var(--n2)"></span>Armazém<span class="car">▾</span></div>
+      <div class="lab" style="left:calc(var(--u)*172);top:calc(var(--u)*154)">Filtro</div>
+      <div class="drop" style="left:calc(var(--u)*206);top:calc(var(--u)*151);width:calc(var(--u)*128)">Só lingotes · 3 itens</div>
+      <div class="gbtn" style="left:calc(var(--u)*336);top:calc(var(--u)*151);width:calc(var(--u)*36)">Editar</div>
+      <div class="lab" style="left:calc(var(--u)*172);top:calc(var(--u)*168)">Prior.</div>
+      <div class="gbtn" style="left:calc(var(--u)*206);top:calc(var(--u)*165);width:calc(var(--u)*12)">−</div>
+      <div class="t" style="left:calc(var(--u)*223);top:calc(var(--u)*168);font-size:calc(var(--u)*6.5)">0</div>
+      <div class="gbtn" style="left:calc(var(--u)*232);top:calc(var(--u)*165);width:calc(var(--u)*12)">+</div>
+      <div class="drop" style="left:calc(var(--u)*250);top:calc(var(--u)*165);width:calc(var(--u)*122)">Redstone: ignorar<span class="car">▾</span></div>
+    </div>
+    </div>
+    <div class="side">
+      <ol>
+        <li><b>O painel é o mesmo da Lista do Tablet</b>, peça por peça. Aprendeu num lugar, sabe usar no outro.</li>
+        <li><b>O visor e a planificação andam juntos</b>: clicar numa face do visor escolhe a mesma face no cubo desdobrado, e vice-versa. A face onde o roteador está preso aparece apagada, com "roteador".</li>
+        <li>Saem o "Mais" (prioridade e redstone sempre à vista) e a linha de seis botões embaixo do visor (as faces estão no painel).</li>
+        <li>Ficam o visor, os slots de cartão e de upgrade, o inventário, renomear pelo título e o giro com Shift + clique.</li>
+        <li>Copiar e colar continua sendo do Tablet e do Configurador.</li>
+      </ol>
+    </div>
+    </div>
+  </section>
+
+  <!-- ===================== 6. Ligar sem Vinculador + alcance ===================== -->
+  <section class="part">
+    <div class="eyebrow">Casos que pedem cuidado</div>
+    <h2>Face nova, roteador de alcance e máquina longe</h2>
     <div class="cols">
       <div>
-        <h2>Como funciona</h2>
-        <ul class="tight">
-          <li>As mudanças vão ao servidor pelos mesmos pedidos da tela do roteador, que valida tudo. O servidor manda a configuração só do nó escolhido e só com o Tablet aberto (sem custo com a tela fechada).</li>
-          <li>Vale o mesmo alcance e as mesmas condições de abrir à distância hoje: chunk carregado e dentro do alcance do tier. Fora disso, o painel mostra o motivo e fica só leitura.</li>
-          <li>O perfil é o <b>mesmo preset do Configurador</b>, com a mesma regra das redes (só cola a rede que o jogador pode usar) e faces relativas à frente da máquina.</li>
-          <li>Fica guardado <b>no Tablet</b>, um por Tablet, e sobrevive a fechar a tela e a sair do jogo.</li>
+        <h3>Face sem rede (D1)</h3>
+        <div class="shot">
+        <div class="gui w300" style="height:calc(var(--u)*78)" aria-label="Face sem rede pedindo escolha">
+          <div class="lab ink" style="left:calc(var(--u)*8);top:calc(var(--u)*8)">Cima <span class="gmu">· a entrada da fornalha</span></div>
+          <div class="mode" style="left:calc(var(--u)*8);top:calc(var(--u)*18);width:calc(var(--u)*66)"><i style="background:var(--m-ext)"></i>Extrai</div>
+          <div class="mode on" style="left:calc(var(--u)*77);top:calc(var(--u)*18);width:calc(var(--u)*66);border-color:var(--m-ins)"><i style="background:var(--m-ins)"></i>Insere</div>
+          <div class="mode" style="left:calc(var(--u)*146);top:calc(var(--u)*18);width:calc(var(--u)*70)"><i style="background:var(--m-both)"></i>Armazém</div>
+          <div class="mode" style="left:calc(var(--u)*219);top:calc(var(--u)*18);width:calc(var(--u)*73)"><i style="background:var(--m-none)"></i>Nenhum</div>
+          <div class="lab" style="left:calc(var(--u)*8);top:calc(var(--u)*40)">Rede</div>
+          <div class="drop hint" style="left:calc(var(--u)*40);top:calc(var(--u)*37);width:calc(var(--u)*252)"><span class="dot" style="background:var(--g-dis)"></span>Escolha a rede desta face<span class="car">▾</span></div>
+          <div class="lab" style="left:calc(var(--u)*40);top:calc(var(--u)*55)">Você não tem uma rede ativa. Com uma, a face entra sozinha.</div>
+        </div>
+        </div>
+        <ul class="tight" style="margin-top:10px">
+          <li>Escolher Extrai, Insere ou Armazém numa face sem rede a põe na <b>rede ativa</b>, com o aviso "Cima entrou em Linha de fundição · Desfazer".</li>
+          <li>Sem rede ativa, a linha Rede pede a escolha, como acima. Nada é criado sozinho.</li>
+          <li>Voltar para Nenhum não tira a rede; "Sem rede" na lista tira.</li>
         </ul>
       </div>
       <div>
-        <h2>Fica de fora</h2>
+        <h3>Roteador de alcance</h3>
+        <div class="shot">
+        <div class="gui w300" style="height:calc(var(--u)*108)" aria-label="Linha Alvo aberta">
+          <div class="t" style="left:calc(var(--u)*8);top:calc(var(--u)*8)">Linha de fundição</div>
+          <div class="t gmu" style="left:calc(var(--u)*100);top:calc(var(--u)*9);font-size:calc(var(--u)*6)">alcance · 8 de 16 máquinas</div>
+          <div class="lab" style="left:calc(var(--u)*8);top:calc(var(--u)*24)">Editando</div>
+          <div class="drop" style="left:calc(var(--u)*48);top:calc(var(--u)*21);width:calc(var(--u)*244)">Todas as Fornalhas (7)<span class="car">▾</span></div>
+          <div class="pop" style="left:calc(var(--u)*48);top:calc(var(--u)*35);width:calc(var(--u)*244)">
+            <div class="it">A máquina presa <span class="r">Fornalha</span></div>
+            <div class="it hi">Todas as Fornalhas<span class="r">7</span></div>
+            <div class="it" style="padding-left:calc(var(--u)*12)">Fornalha em 12, 64, −3<span class="r" style="color:var(--g-warn)">tem exceção</span></div>
+            <div class="it">Todos os Alto-fundidores<span class="r">1</span></div>
+          </div>
+        </div>
+        </div>
+        <ul class="tight" style="margin-top:10px">
+          <li>Uma linha <b>Editando</b> diz em palavras o que muda: a máquina presa, "Todas as Fornalhas" (o perfil por bloco) ou uma máquina só.</li>
+          <li>Mexer numa máquina só cria a exceção; a lista avisa "tem exceção", e o painel oferece "Voltar a igual às outras".</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Máquina longe ou descarregada</h3>
         <ul class="tight">
-          <li>Cartões de filtro e upgrades no painel: continuam na tela completa (botão Abrir).</li>
-          <li>O visor 3D no painel.</li>
-          <li>Colar só uma aba: cola o perfil inteiro, como o Configurador.</li>
-          <li>Biblioteca de perfis e área de transferência do sistema.</li>
-          <li>Mudar Vinculador e Configurador: continuam iguais.</li>
+          <li>O painel edita no mesmo alcance de abrir à distância hoje (chunk carregado e dentro do alcance do tier). A linha do painel diz a distância ("18 blocos daqui").</li>
+          <li>Fora do alcance ou descarregada, o painel mostra a configuração guardada, só para ler, com o motivo em cima: "Descarregada: chegue mais perto ou carregue o chunk". Os botões ficam apagados com a mesma dica.</li>
+          <li>Colar em vários pula essas e diz quantas ficaram de fora e por quê.</li>
+          <li>O filtro abre à distância no mesmo alcance (D5); Voltar retorna ao Tablet na mesma máquina.</li>
         </ul>
       </div>
     </div>
   </section>
 
+  <!-- ===================== 7. Atalhos ===================== -->
   <section class="part">
-    <div class="eyebrow">Antes e depois</div>
-    <h2>Configurar dez fornalhas</h2>
+    <div class="eyebrow">Teclado</div>
+    <h2>Tudo dá para fazer só com o teclado</h2>
     <div class="tbl">
       <table>
-        <thead><tr><th>Hoje</th><th>Com o painel</th></tr></thead>
+        <thead><tr><th>Tecla</th><th>Na Lista</th></tr></thead>
         <tbody>
-          <tr><td>Configura a primeira na tela do roteador</td><td>Configura a primeira no painel</td></tr>
-          <tr><td>Pega o Configurador, Shift + clique na primeira</td><td>Copiar</td></tr>
-          <tr><td>Anda até cada uma das outras nove e clica (ou marca uma área)</td><td>Sel., busca "fornalha", Todos, Colar nos 9 marcados</td></tr>
-          <tr><td>Abre cada uma para conferir</td><td>Os quadradinhos de cada linha já mostram as faces</td></tr>
+          <tr><td>digitar</td><td>Procura (a busca já vem com o cursor)</td></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Anda pelas máquinas; o painel acompanha</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>Escolhe a sugestão da busca; numa linha, abre a tela completa</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Limpa a busca; com ela vazia, fecha o Tablet</td></tr>
+          <tr><td><kbd>Backspace</kbd></td><td>Com a busca vazia, tira a última etiqueta</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> · <kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Copia o perfil da máquina escolhida · cola nela</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Desfaz o último colar</td></tr>
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Recolhe e abre o grupo da máquina escolhida</td></tr>
         </tbody>
       </table>
     </div>
   </section>
+
+  <!-- ===================== Decisões ===================== -->
+  <section class="part">
+    <div class="eyebrow">Decisões novas da v3</div>
+    <h2>Para você aprovar</h2>
+    <div class="dec">
+      <div><b>1</b><div>Busca única com sugestões e etiquetas<span>Procura em nome, tipo de máquina e rede; as sugestões vêm separadas por tipo e viram etiquetas removíveis. Some o filtro por papel de hoje: os filtros rápidos (Com problema, Sem rede, Descarregados) ficam no lugar.</span></div></div>
+      <div><b>2</b><div>Lista agrupada por tipo de máquina<span>Grupos recolhíveis com a contagem; é onde aparece "Colar nas N". As páginas de hoje saem: com grupos recolhíveis e a busca, a lista rola.</span></div></div>
+      <div><b>3</b><div>Faces desdobradas como um cubo<span>Na Lista e na tela do roteador, no lugar da grade 2 × 3. Cima em cima, Esquerda à esquerda, Trás à direita da Direita, a face do roteador apagada.</span></div></div>
+      <div><b>4</b><div>Igual ou diferente do perfil<span>Com um perfil copiado, cada linha diz se já está igual ou o que difere, comparando a configuração que a Lista já mostra (modo, rede e filtro por face).</span></div></div>
+      <div><b>5</b><div>Desfazer o último colar<span>No aviso e com Ctrl+Z, enquanto o Tablet estiver aberto. O servidor guarda como as máquinas estavam antes do último colar daquele jogador, e só isso.</span></div></div>
+      <div><b>6</b><div>O estado em palavras<span>A segunda linha de cada máquina diz o estado ("destino cheio", "sem rede", "descarregada") além da bolinha colorida.</span></div></div>
+    </div>
+    <div class="cols" style="margin-top:22px">
+      <div>
+        <h3>Continua valendo da v2</h3>
+        <ul class="tight">
+          <li>Um componente só, no Tablet e na tela do roteador.</li>
+          <li>D1 (modo põe na rede ativa) e D5 (filtro à distância).</li>
+          <li>O perfil é o do Configurador (a máquina presa); com grupos do alcance é a D3, da etapa 2.</li>
+          <li>Na tela do roteador saem o "Mais" e a linha de botões de face.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Fica para a etapa 2</h3>
+        <ul class="tight">
+          <li>Redes só no Tablet e a lista do Vinculador.</li>
+          <li>A mesma regra para Mover e Vinculador (D2).</li>
+          <li>O perfil com os grupos do alcance (D3), as máquinas do alcance como linhas na Lista (D4) e o nome Perfis (D6).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 </div>
+
+<script>
+// A Tela 1 no escuro: o mesmo desenho com a paleta escura da etapa 0 e o sol no botão.
+(function () {
+  var src = document.getElementById('geral');
+  var dst = document.getElementById('geral-escuro');
+  if (!src || !dst) return;
+  var copy = src.cloneNode(true);
+  copy.id = '';
+  copy.classList.add('dark');
+  copy.setAttribute('aria-label', 'A mesma tela no tema escuro');
+  var tog = copy.querySelector('.tog-x');
+  if (tog) tog.textContent = '☀';
+  dst.appendChild(copy);
+})();
+</script>

@@ -63,10 +63,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -279,9 +279,22 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         }
     }
 
-    /** Servidor: a aba que a tela mostra. */
-    public void setTab(int tab) {
-        this.tab = Math.max(0, tab);
+    /** Quantas abas a tela tem ({@code TabletScreen.Tab}); o servidor só guarda uma posição dentro delas. */
+    public static final int TAB_COUNT = 5;
+
+    /** Servidor: a aba que a tela mostra. Devolve se o valor era de uma aba que existe. */
+    public boolean setTab(int tab) {
+        if (tab < 0 || tab >= TAB_COUNT) {
+            return false;
+        }
+        this.tab = tab;
+        return true;
+    }
+
+    /** Esquece o estado de um jogador (saiu do servidor). */
+    public static void forget(UUID player) {
+        STATES.remove(player);
+        FORCED_LIMITS.remove(player);
     }
 
     @Override

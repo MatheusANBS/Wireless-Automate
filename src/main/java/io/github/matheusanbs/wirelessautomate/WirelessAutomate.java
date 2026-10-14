@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate;
 import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
@@ -13,7 +14,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
@@ -26,6 +26,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -53,6 +54,7 @@ public final class WirelessAutomate {
 
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedOut);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
         // Roteador de alcance: a carga de um chunk acorda as máquinas remotas vinculadas nele.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
@@ -71,6 +73,10 @@ public final class WirelessAutomate {
     private static void onServerTick(ServerTickEvent.Post event) {
         NetworkManager.get().tick(event.getServer());
         SourceTankLevels.tick();
+    }
+
+    private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        TabletMenu.forget(event.getEntity().getUUID());
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {

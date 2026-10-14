@@ -8,17 +8,19 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Optional;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Filtro de uma face de um roteador, para um tipo, no alvo de edição da tela ({@code target}): a face
- * absoluta da máquina presa, ou a face canônica do perfil de um grupo ou de uma máquina remota. Grava
+ * absoluta da máquina presa, ou a face canônica do perfil de um grupo ou de uma máquina remota.
  * {@code origin} diz de onde veio e portanto até onde vale. Grava
  * pelo {@link RouterBlockEntity#setFilter(EditTarget, ResourceType, Direction, Filter)}, que salva e
  * avisa o motor. Um alvo remoto que deixou de existir fecha a tela ({@link #stillValid}) e não grava.
@@ -92,17 +94,20 @@ public record RouterFaceFilterTarget(RouterBlockEntity router, ResourceType type
         if (origin == FilterOrigin.NEAR) {
             return stillValid(router, player);
         }
-        return inWorld(router, player) && player instanceof ServerPlayer serverPlayer
+        return loadedInOwnLevel(router) && player instanceof ServerPlayer serverPlayer
                 && TabletMenu.hasTablet(serverPlayer) && TabletMenu.inReach(serverPlayer, router);
     }
 
-    private static boolean inWorld(RouterBlockEntity router, Player player) {
-        return !router.isRemoved() && router.getLevel() == player.level()
-                && player.level().getBlockEntity(router.getBlockPos()) == router;
+    /** O roteador está no mundo dele, carregado, seja qual for a dimensão do jogador (como a tela à distância). */
+    private static boolean loadedInOwnLevel(RouterBlockEntity router) {
+        Level level = router.getLevel();
+        BlockPos pos = router.getBlockPos();
+        return !router.isRemoved() && level != null && level.isLoaded(pos) && level.getBlockEntity(pos) == router;
     }
 
     static boolean stillValid(RouterBlockEntity router, Player player) {
-        if (!inWorld(router, player)) {
+        if (router.isRemoved() || router.getLevel() != player.level()
+                || player.level().getBlockEntity(router.getBlockPos()) != router) {
             return false;
         }
         return player.getEyePosition().distanceToSqr(Vec3.atCenterOf(router.getBlockPos()))

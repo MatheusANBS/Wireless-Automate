@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.compat.jei;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.client.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;

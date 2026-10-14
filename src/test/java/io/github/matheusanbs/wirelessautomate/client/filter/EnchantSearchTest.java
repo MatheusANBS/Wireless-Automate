@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.filter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

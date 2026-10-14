@@ -1,10 +1,15 @@
-package io.github.matheusanbs.wirelessautomate.client;
+package io.github.matheusanbs.wirelessautomate.client.storage;
 
-import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.RateFormat;
+import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
+import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
+import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.List;
@@ -63,11 +68,11 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
                 : RouterTier.BASIC;
     }
 
-    int themeX() {
+    public int themeX() {
         return leftPos + W - 4 - ThemeToggle.SIZE;
     }
 
-    int themeY() {
+    public int themeY() {
         return topPos + HEAD_Y + 1;
     }
 

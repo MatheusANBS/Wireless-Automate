@@ -4049,6 +4049,67 @@ public final class DevEndToEnd {
                 () -> serverLinker(stack -> LinkerItem.faces(stack).isAll())
                         && linkerScreen().getMenu().snapshot().faces().isAll(),
                 () -> "faces " + linkerScreen().getMenu().snapshot().faces()));
+        draftSteps(list);
+    }
+
+    private static final String DRAFT_NAME = "Rascunho e2e";
+
+    /**
+     * O nome começado para uma rede nova volta ao reabrir o campo e a tela, e depois de criar a rede o
+     * campo volta vazio. Termina com a rede de área ativa de novo.
+     */
+    private static void draftSteps(List<Step> list) {
+        String newKey = "gui.wirelessautomate.linker.network.new";
+        list.add(new Step("rascunho: abrir o campo da rede nova", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
+                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().isEmpty(),
+                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
+        list.add(new Step("rascunho: digitar o nome", STEP_TIMEOUT_MS, () -> type(DRAFT_NAME),
+                () -> linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
+                () -> "texto '" + linkerScreen().nameBox().getValue() + "'"));
+        list.add(new Step("rascunho: fechar o campo com Esc", STEP_TIMEOUT_MS,
+                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
+        list.add(new Step("rascunho: reabrir o campo, o texto volta", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
+                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
+                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
+        list.add(new Step("rascunho: fechar o campo de novo", STEP_TIMEOUT_MS,
+                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
+        list.add(close("rascunho: fechar a tela"));
+        list.add(new Step("rascunho: reabrir a tela", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen != null) {
+                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
+            }
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
+                && screen.getMenu().snapshot().active().isPresent(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("rascunho: abrir o campo na tela nova, o texto volta", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
+                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
+                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
+        list.add(new Step("rascunho: Enter cria a rede", STEP_TIMEOUT_MS,
+                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
+                () -> {
+                    UUID playerId = Minecraft.getInstance().player.getUUID();
+                    return !linkerScreen().creating()
+                            && onServer(server -> NetworkSavedData.get(server).byName(playerId, DRAFT_NAME) != null);
+                },
+                () -> "criando " + linkerScreen().creating() + ", ativa " + linkerScreen().getMenu().snapshot().active()));
+        list.add(new Step("rascunho: depois de criar, o campo volta vazio", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
+                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().isEmpty(),
+                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
+        list.add(new Step("rascunho: fechar o campo vazio", STEP_TIMEOUT_MS,
+                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
+        list.add(new Step("rascunho: de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
+                () -> linkerScreen().getMenu().snapshot().active().equals(Optional.of(areaNetwork)),
+                () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
     }
 
     /** Aperta ou solta o Shift como o teclado; termina quando o servidor vê o jogador agachado ou não. */

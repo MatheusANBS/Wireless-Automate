@@ -713,7 +713,7 @@ public final class DevScreenshot {
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
                 Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
-                List.copyOf(machineFacets), profile, Component.empty(), 0);
+                List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,

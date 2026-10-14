@@ -556,6 +556,7 @@
   "gui.wirelessautomate.tablet.list.group.open": "Click to expand the group",
   "gui.wirelessautomate.tablet.list.group.close": "Click to collapse the group",
   "gui.wirelessautomate.tablet.list.paste_group": "Paste on %s",
+  "gui.wirelessautomate.tablet.list.paste_group.short": "Paste %s",
   "gui.wirelessautomate.tablet.list.paste_group.tooltip": "Paste the profile of %s on the %s nodes of %s · the source is left out · can be undone",
   "gui.wirelessautomate.tablet.list.paste_selected": "Paste on %s marked",
   "gui.wirelessautomate.tablet.list.paste_selected.tooltip": "Paste the profile of %s on the %s marked nodes · the source is left out · can be undone",

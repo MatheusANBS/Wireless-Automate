@@ -1289,6 +1289,7 @@ public final class DevEndToEnd {
                 () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
         list.add(capture("7h-tablet-perfil"));
         list.add(clipCheck("Tablet: perfil copiado"));
+        list.add(listClipTooltip("Tablet: perfil copiado"));
         list.add(new Step("Colar nas N cola e mostra o aviso", STEP_TIMEOUT_MS, () -> {
             aBeforePaste = onServer(server -> RouterPreset.copyOf(router(server, routerA)));
             int[] c = tabletScreen().list().pasteGroupCenter(CHEST_ID);
@@ -1360,6 +1361,7 @@ public final class DevEndToEnd {
                 () -> tabletScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("Tablet: Lista no mínimo"));
+        list.add(listClipTooltip("Tablet: Lista no mínimo"));
         // o "Só Energia ✕" tira o filtro: os passos seguintes procuram B na Lista sem filtro de tipo
         list.add(new Step("tirar o filtro de tipo", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().list().typeChipCenter();
@@ -1488,6 +1490,27 @@ public final class DevEndToEnd {
         }), () -> onServer(server -> NodeIndex.get(server).entry(new NodeIndex.NodeKey(
                 net.minecraft.world.level.Level.OVERWORLD, tabletLoneChest.above())) == null),
                 () -> "nó sem rede ainda no índice"));
+    }
+
+    /**
+     * Cada texto cortado da tela do Tablet tem, na dica da Lista naquele ponto, o texto inteiro (a dica da linha
+     * ou do cabeçalho não esconde a segunda linha nem o "N diferentes" cortados).
+     */
+    private static Step listClipTooltip(String name) {
+        String[] missing = {""};
+        return new Step(name + ": dica com o texto cortado inteiro", STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            TabletScreen screen = tabletScreen();
+            for (int[] c : GuiText.clipCenters()) {
+                Component clipped = GuiText.clipAt(c[0], c[1]);
+                Component tip = screen.list().tooltip(c[0], c[1]);
+                if (clipped != null && (tip == null || !tip.getString().contains(clipped.getString()))) {
+                    missing[0] = clipped.getString() + " -> " + (tip == null ? "sem dica" : tip.getString());
+                    return false;
+                }
+            }
+            return true;
+        }, () -> "dica sem o texto inteiro: " + missing[0]);
     }
 
     private static TabletScreen tabletScreen() throws StepFailure {

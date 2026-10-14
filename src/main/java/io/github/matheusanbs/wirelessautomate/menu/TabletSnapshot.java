@@ -47,7 +47,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
  * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
  * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
- * @param originMatches o nó de origem do perfil passa na consulta
+ * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)
  * @param noticeId      muda a cada aviso novo, para a tela mostrá-lo de novo
  */
@@ -69,7 +69,7 @@ public record TabletSnapshot(
         Optional<ProfileSummary> profile,
         List<NodeView> nodes,
         List<Facet<ResourceLocation>> groupCounts,
-        boolean originMatches,
+        Optional<ResourceLocation> originGroup,
         Component notice,
         int noticeId) {
 
@@ -327,25 +327,25 @@ public record TabletSnapshot(
      * @param totalNodes    nós visíveis ao jogador, sem filtro
      * @param matchingNodes nós que passam na consulta
      * @param groupCounts   quantos nós de cada máquina passam na consulta
-     * @param originMatches o nó de origem do perfil passa na consulta
+     * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
      */
     public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes,
-            List<Facet<ResourceLocation>> groupCounts, boolean originMatches) {
+            List<Facet<ResourceLocation>> groupCounts, Optional<ResourceLocation> originGroup) {
         /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
-        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), List.of(), false);
+        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), List.of(), Optional.empty());
         public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
                 StreamCodec.of(TabletSnapshot::encodePage, TabletSnapshot::decodePage);
     }
 
     public Page page() {
-        return new Page(query, totalNodes, matchingNodes, nodes, groupCounts, originMatches);
+        return new Page(query, totalNodes, matchingNodes, nodes, groupCounts, originGroup);
     }
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
-                page.nodes(), page.groupCounts(), page.originMatches(), notice, noticeId);
+                page.nodes(), page.groupCounts(), page.originGroup(), notice, noticeId);
     }
 
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
@@ -488,7 +488,7 @@ public record TabletSnapshot(
             buf.writeResourceLocation(facet.id());
             buf.writeVarInt(facet.count());
         }
-        buf.writeBoolean(page.originMatches);
+        buf.writeOptional(page.originGroup, (b, id) -> b.writeResourceLocation(id));
     }
 
     private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
@@ -564,7 +564,7 @@ public record TabletSnapshot(
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
-                List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), false, notice, noticeId);
+                List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), Optional.empty(), notice, noticeId);
     }
 
     private static Page decodePage(RegistryFriendlyByteBuf buf) {
@@ -609,6 +609,7 @@ public record TabletSnapshot(
         for (int i = 0; i < groupCount; i++) {
             groupCounts.add(new Facet<>(buf.readResourceLocation(), buf.readVarInt()));
         }
-        return new Page(query, total, matching, List.copyOf(nodes), List.copyOf(groupCounts), buf.readBoolean());
+        return new Page(query, total, matching, List.copyOf(nodes), List.copyOf(groupCounts),
+                buf.readOptional(b -> b.readResourceLocation()));
     }
 }

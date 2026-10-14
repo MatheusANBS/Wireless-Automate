@@ -45,7 +45,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
@@ -79,10 +78,9 @@ final class TabletList {
     private static final int CHIPS_MIN_LIST = 150;
     private static final int CHIP = 4;
     private static final int LABEL_H = 10;
-    private static final int SUGGEST_ROW = 12;
-    private static final int SUGGEST_TITLE = 10;
-    private static final int SUGGEST_FOOT = 11;
     private static final int SUGGEST_MAX_W = 230;
+    /** Espaço que o nome do grupo guarda ao lado do "Colar nas N" (o botão encurta antes). */
+    private static final int GROUP_NAME_MIN = 60;
     private static final long DOUBLE_CLICK_MS = 400;
     /** Tiques entre a última letra e a consulta. */
     private static final int DEBOUNCE = 6;
@@ -90,7 +88,7 @@ final class TabletList {
     private static final int NET_SMALL = 3 * 13 + 2 * 2;
     private static final int TALL = 300;
 
-    private enum Kind { LABEL, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, SUGGESTION, FULL_SCREEN, COPY,
+    private enum Kind { LABEL, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
         PASTE, UNDO }
 
     /** Uma área que responde ao mouse. */
@@ -108,10 +106,6 @@ final class TabletList {
     private record Label(@Nullable ResourceLocation machine, @Nullable UUID network) {
     }
 
-    /** Um item da lista de sugestões aberta: o título de um grupo ou uma sugestão (índice em {@link #suggestions}). */
-    private record SuggestLine(@Nullable Group title, int index) {
-    }
-
     private final TabletScreen screen;
     private EditBox searchBox;
 
@@ -123,9 +117,23 @@ final class TabletList {
     private Optional<ResourceType> typeFilter = Optional.empty();
 
     // sugestões
-    private List<Suggestion<?>> suggestions = List.of();
-    private boolean suggestOpen;
-    private int highlight = -1;
+    private final SearchSuggestions suggestions = new SearchSuggestions();
+    private final SearchSuggestions.Picker picker = new SearchSuggestions.Picker() {
+        @Override
+        public void machine(ResourceLocation id) {
+            addLabel(new Label(id, null));
+        }
+
+        @Override
+        public void network(UUID id) {
+            addLabel(new Label(null, id));
+        }
+
+        @Override
+        public void name(String name) {
+            pickName(name);
+        }
+    };
     private final Map<ResourceLocation, String> machineNames = new HashMap<>();
 
     // lista
@@ -186,8 +194,7 @@ final class TabletList {
                 text = value;
                 textTicks = DEBOUNCE;
                 refreshSuggestions();
-                suggestOpen = !suggestions.isEmpty();
-                highlight = -1;
+                suggestions.reopen();
             }
         });
     }
@@ -399,36 +406,24 @@ final class TabletList {
         }
         List<Candidate<String>> nameList = new ArrayList<>();
         names.forEach((name, count) -> nameList.add(new Candidate<>(name, name, count)));
-        suggestions = TabletSearch.suggest(text, machineCandidates(), networks, nameList);
-        if (highlight >= suggestions.size()) {
-            highlight = -1;
-        }
+        suggestions.update(text, machineCandidates(), networks, nameList);
     }
 
-    /** Escolhe a sugestão: máquina e rede viram etiqueta; um nome vira o texto da busca (e escolhe o nó, se é um só). */
-    private void pick(Suggestion<?> suggestion) {
-        suggestOpen = false;
-        highlight = -1;
-        switch (suggestion.group()) {
-            case MACHINES -> addLabel(new Label((ResourceLocation) suggestion.id(), null));
-            case NETWORKS -> addLabel(new Label(null, (UUID) suggestion.id()));
-            case NAMES -> {
-                setText(suggestion.label());
-                NodeView only = null;
-                for (NodeView node : snapshot().nodes()) {
-                    if (node.name().equals(suggestion.label())) {
-                        only = only == null ? node : null;
-                        if (only == null) {
-                            break;
-                        }
-                    }
-                }
-                if (only != null) {
-                    choose(only.key());
-                }
-                sendQuery();
+    /** A sugestão de um nome vira o texto da busca e escolhe o nó, se é um só com esse nome. */
+    private void pickName(String name) {
+        setText(name);
+        NodeView only = null;
+        int count = 0;
+        for (NodeView node : snapshot().nodes()) {
+            if (node.name().equals(name)) {
+                only = node;
+                count++;
             }
         }
+        if (count == 1) {
+            choose(only.key());
+        }
+        sendQuery();
     }
 
     private void addLabel(Label label) {
@@ -452,7 +447,7 @@ final class TabletList {
         if (searchBox != null) {
             searchBox.setValue(value);
         }
-        suggestOpen = false;
+        suggestions.close();
     }
 
     /** Tira a busca, as etiquetas, os filtros rápidos e o de tipo. */
@@ -547,6 +542,22 @@ final class TabletList {
         }
     }
 
+    /**
+     * O texto do "Colar nas N" do cabeçalho: inteiro, "Colar N" ou só o número, o primeiro que deixa o nome do
+     * grupo legível ao lado (a dica do botão diz tudo).
+     */
+    private Component pasteGroupLabel(Font font, ListGroups.Row<ResourceLocation> row, int n) {
+        int name = font.width(machineName(row.group()) + " · " + Math.max(row.count(), snapshot().groupCount(row.group())));
+        int want = Math.min(name, GROUP_NAME_MIN);
+        for (Component label : List.of(tr("list.paste_group", n), tr("list.paste_group.short", n),
+                Component.literal(Integer.toString(n)))) {
+            if (listW - 11 - 5 - (font.width(label) + 8) - 2 >= want) {
+                return label;
+            }
+        }
+        return Component.literal(Integer.toString(n));
+    }
+
     /** Quantos nós do grupo o "Colar nas N" atinge: os da consulta, menos a origem do perfil. */
     int pasteCount(ResourceLocation machine) {
         ProfileSummary summary = profile().orElse(null);
@@ -555,7 +566,7 @@ final class TabletList {
         }
         TabletSnapshot s = snapshot();
         int count = s.groupCount(machine);
-        if (s.originMatches() && summary.machine().equals(machine)) {
+        if (s.originGroup().equals(Optional.of(machine))) {
             count--;
         }
         return Math.min(count, TabletMenu.MAX_MOVE);
@@ -594,7 +605,7 @@ final class TabletList {
     void previewText(String value) {
         setText(value);
         refreshSuggestions();
-        suggestOpen = !suggestions.isEmpty();
+        suggestions.reopen();
     }
 
     void previewCollapse(ResourceLocation machine) {
@@ -609,7 +620,7 @@ final class TabletList {
 
     /** Snapshot novo: as sugestões e a seleção que sumiu. */
     void onSnapshot() {
-        if (suggestOpen) {
+        if (suggestions.shown()) {
             refreshSuggestions();
         }
         Set<NodeKey> present = new HashSet<>();
@@ -704,18 +715,7 @@ final class TabletList {
             }
             searchBox.setY(y0 + 3);
         }
-        if (suggestOpen && !suggestions.isEmpty()) {
-            List<SuggestLine> lines = suggestLines();
-            int sy = suggestTop() + 1;
-            for (SuggestLine line : lines) {
-                if (line.title() != null) {
-                    sy += SUGGEST_TITLE;
-                } else {
-                    hots.add(new Hot(Kind.SUGGESTION, x0, sy, suggestWidth(), SUGGEST_ROW, line.index()));
-                    sy += SUGGEST_ROW;
-                }
-            }
-        }
+        suggestions.place(x0, y0 + SEARCH_H + 1, Math.max(listW, Math.min(SUGGEST_MAX_W, panelX + panelW - x0)));
     }
 
     private int arrangeQuick(Font font, int y) {
@@ -816,7 +816,7 @@ final class TabletList {
                 hots.add(new Hot(Kind.HEADER, x0, y, listW, h, r));
                 int n = pasteCount(row.group());
                 if (n > 0) {
-                    Component label = tr("list.paste_group", n);
+                    Component label = pasteGroupLabel(font, row, n);
                     int bw = font.width(label) + 8;
                     hots.add(new Hot(Kind.PASTE_GROUP, x0 + listW - bw - 2, y + 1, bw, h - 2, r));
                 }
@@ -881,41 +881,6 @@ final class TabletList {
         return bottom - 13;
     }
 
-    private int suggestTop() {
-        return y0 + SEARCH_H + 1;
-    }
-
-    private int suggestWidth() {
-        return Math.max(listW, Math.min(SUGGEST_MAX_W, panelX + panelW - x0));
-    }
-
-    private List<SuggestLine> suggestLines() {
-        List<SuggestLine> lines = new ArrayList<>();
-        Group last = null;
-        for (int i = 0; i < suggestions.size(); i++) {
-            Group group = suggestions.get(i).group();
-            if (group != last) {
-                lines.add(new SuggestLine(group, -1));
-                last = group;
-            }
-            lines.add(new SuggestLine(null, i));
-        }
-        return lines;
-    }
-
-    private int suggestHeight() {
-        int h = 0;
-        for (SuggestLine line : suggestLines()) {
-            h += line.title() != null ? SUGGEST_TITLE : SUGGEST_ROW;
-        }
-        return h + SUGGEST_FOOT + 2;
-    }
-
-    private boolean inSuggestions(double mx, double my) {
-        return suggestOpen && !suggestions.isEmpty() && mx >= x0 && mx < x0 + suggestWidth() && my >= suggestTop()
-                && my < suggestTop() + suggestHeight();
-    }
-
     private @Nullable Hot hot(Kind kind, int arg) {
         for (Hot hot : hots) {
             if (hot.kind() == kind && hot.arg() == arg) {
@@ -926,17 +891,12 @@ final class TabletList {
     }
 
     private @Nullable Hot hotAt(double mx, double my) {
-        if (inSuggestions(mx, my)) {
-            for (Hot hot : hots) {
-                if (hot.kind() == Kind.SUGGESTION && hot.contains(mx, my)) {
-                    return hot;
-                }
-            }
+        if (suggestions.contains(mx, my)) {
             return null;
         }
         Hot found = null;
         for (Hot hot : hots) {
-            if (hot.kind() != Kind.SUGGESTION && hot.contains(mx, my)) {
+            if (hot.contains(mx, my)) {
                 // o botão do cabeçalho fica por cima do cabeçalho
                 if (found == null || hot.kind() == Kind.PASTE_GROUP) {
                     found = hot;
@@ -985,15 +945,14 @@ final class TabletList {
         if (p != null && p.popupOpen()) {
             return p.mouseClicked(mx, my, button);
         }
-        if (inSuggestions(mx, my)) {
-            Hot hot = hotAt(mx, my);
-            if (hot != null && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-                pick(suggestions.get(hot.arg()));
+        if (suggestions.contains(mx, my)) {
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                suggestions.click(mx, my, picker);
             }
             return true;
         }
-        if (suggestOpen && !(searchBox != null && searchBox.isMouseOver(mx, my))) {
-            suggestOpen = false;
+        if (suggestions.shown() && !(searchBox != null && searchBox.isMouseOver(mx, my))) {
+            suggestions.close();
         }
         if (p != null && mx >= panelX && p.mouseClicked(mx, my, button)) {
             return true;
@@ -1007,7 +966,6 @@ final class TabletList {
         }
         List<NodeView> nodes = snapshot().nodes();
         switch (hot.kind()) {
-            case SUGGESTION -> pick(suggestions.get(hot.arg()));
             case LABEL -> removeLabel(hot.arg());
             case QUICK -> toggleQuick(QuickFilter.values()[hot.arg()]);
             case TYPE_CHIP -> clearType();
@@ -1091,7 +1049,9 @@ final class TabletList {
             copyProfile();
             return true;
         }
-        if (ctrl && keyCode == GLFW.GLFW_KEY_V && profile().isPresent() && chosen != null) {
+        // com texto na busca focada, Ctrl+V cola texto
+        boolean typing = searchBox != null && searchBox.isFocused() && !text.isEmpty();
+        if (ctrl && keyCode == GLFW.GLFW_KEY_V && profile().isPresent() && chosen != null && !typing) {
             pasteProfile();
             return true;
         }
@@ -1100,11 +1060,11 @@ final class TabletList {
             undo();
             return true;
         }
-        boolean suggesting = suggestOpen && !suggestions.isEmpty();
+        boolean suggesting = suggestions.shown();
         switch (keyCode) {
             case GLFW.GLFW_KEY_ESCAPE -> {
                 if (suggesting) {
-                    suggestOpen = false;
+                    suggestions.close();
                     return true;
                 }
                 if (filtering()) {
@@ -1116,7 +1076,7 @@ final class TabletList {
             case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN -> {
                 int direction = keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1;
                 if (suggesting) {
-                    highlight = Math.max(-1, Math.min(suggestions.size() - 1, highlight + direction));
+                    suggestions.move(direction);
                 } else {
                     int next = groups().next(indexOf(chosen), direction);
                     if (next >= 0) {
@@ -1126,10 +1086,10 @@ final class TabletList {
                 return true;
             }
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
-                if (suggesting && highlight >= 0) {
-                    pick(suggestions.get(highlight));
-                } else if (suggestOpen || textTicks > 0) {
-                    suggestOpen = false;
+                if (suggestions.hasHighlight()) {
+                    suggestions.pickHighlighted(picker);
+                } else if (suggesting || textTicks > 0) {
+                    suggestions.close();
                     sendQuery();
                 } else if (chosen != null) {
                     open(chosen);
@@ -1161,13 +1121,25 @@ final class TabletList {
         }
     }
 
-    /** A dica do ponto, ou {@code null}. */
+    /**
+     * A dica do ponto, ou {@code null}. Um texto cortado sob o mouse ({@link GuiText#clipAt}) vem inteiro
+     * primeiro e a dica da área depois: a segunda linha de um nó e o cabeçalho do grupo cortados ficam legíveis.
+     */
     @Nullable Component tooltip(double mx, double my) {
         arrange();
         NodePanel p = panel;
         if (p != null && p.popupOpen()) {
             return null;
         }
+        Component area = areaTooltip(p, mx, my);
+        Component clipped = GuiText.clipAt(mx, my);
+        if (clipped == null || (area != null && area.getString().contains(clipped.getString()))) {
+            return area;
+        }
+        return area == null ? clipped : clipped.copy().append("\n").append(area);
+    }
+
+    private @Nullable Component areaTooltip(@Nullable NodePanel p, double mx, double my) {
         if (p != null && mx >= panelX) {
             Component tip = p.tooltip(mx, my);
             if (tip != null) {
@@ -1195,7 +1167,7 @@ final class TabletList {
             case COPY -> canEditChosen() ? tr("list.copy.tooltip") : readOnlyTip();
             case PASTE -> !canEditChosen() ? readOnlyTip()
                     : profile().map(s -> tr("list.paste.tooltip", s.sourceName())).orElse(null);
-            case CLEAR, SUGGESTION, UNDO -> null;
+            case CLEAR, UNDO -> null;
         };
     }
 
@@ -1216,7 +1188,7 @@ final class TabletList {
         arrange();
         Font font = font();
         NodePanel p = panel;
-        boolean covered = (p != null && p.popupOpen()) || inSuggestions(mouseX, mouseY);
+        boolean covered = (p != null && p.popupOpen()) || suggestions.contains(mouseX, mouseY);
         int mx = covered ? -1 : mouseX;
         int my = covered ? -1 : mouseY;
         renderSearch(g, font, mx, my);
@@ -1238,9 +1210,7 @@ final class TabletList {
         } else {
             renderOwnNotice(g, font, mouseX, mouseY);
         }
-        if (suggestOpen && !suggestions.isEmpty()) {
-            renderSuggestions(g, font, mouseX, mouseY);
-        }
+        suggestions.render(g, font, mouseX, mouseY, this::suggestRight);
     }
 
     private Component labelText(Label label) {
@@ -1475,7 +1445,7 @@ final class TabletList {
             int fill = same ? (over ? GuiPaint.mix(GuiPaint.OK, GuiPaint.FG, 0.2f) : GuiPaint.OK)
                     : over ? GuiPaint.BUTTON : GuiPaint.PANEL;
             GuiPaint.box(g, paste.x(), paste.y(), paste.w(), paste.h(), fill, same ? fill : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, tr("list.paste_group", pasteCount(row.group())),
+            GuiPaint.textCentered(g, font, pasteGroupLabel(font, row, pasteCount(row.group())),
                     paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         }
     }
@@ -1640,7 +1610,7 @@ final class TabletList {
         if (p == null) {
             return;
         }
-        p.render(g, inSuggestions(mx, my) ? -1 : mx, my, null);
+        p.render(g, suggestions.contains(mx, my) ? -1 : mx, my, null);
         boolean edit = payload.access() == PanelAccess.EDIT;
         Hot copy = hot(Kind.COPY, 0);
         if (copy != null) {
@@ -1683,48 +1653,6 @@ final class TabletList {
         g.pose().popPose();
     }
 
-    private void renderSuggestions(GuiGraphics g, Font font, int mouseX, int mouseY) {
-        int x = x0;
-        int y = suggestTop();
-        int w = suggestWidth();
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 400);
-        GuiPaint.box(g, x, y, w, suggestHeight(), GuiPaint.PANEL, GuiPaint.BUTTON_BORDER);
-        int sy = y + 1;
-        for (SuggestLine line : suggestLines()) {
-            if (line.title() != null) {
-                GuiText.draw(g, font, tr("list.suggest." + line.title().name().toLowerCase(Locale.ROOT)), x + 5, sy + 1,
-                        w - 10, GuiPaint.MUTED);
-                sy += SUGGEST_TITLE;
-                continue;
-            }
-            Suggestion<?> s = suggestions.get(line.index());
-            boolean hi = line.index() == highlight || (mouseX >= x && mouseX < x + w && mouseY >= sy
-                    && mouseY < sy + SUGGEST_ROW);
-            if (hi) {
-                g.fill(x + 1, sy, x + w - 1, sy + SUGGEST_ROW, GuiPaint.ROW_SELECTED);
-                g.fill(x + 1, sy, x + 3, sy + SUGGEST_ROW, GuiPaint.ACCENT);
-            }
-            Component right = suggestRight(s);
-            int rightW = Math.min(font.width(right), w / 3);
-            GuiText.draw(g, font, right, x + w - 5 - rightW, sy + 2, rightW, GuiPaint.MUTED);
-            GuiText.draw(g, font, highlighted(s), x + 8, sy + 2, w - 18 - rightW, GuiPaint.FG);
-            sy += SUGGEST_ROW;
-        }
-        g.fill(x + 3, sy, x + w - 3, sy + 1, GuiPaint.LINE);
-        GuiText.draw(g, font, tr("list.suggest.footer", text.strip()), x + 5, sy + 2, w - 10, GuiPaint.DISABLED);
-        g.pose().popPose();
-    }
-
-    /** O nome com o trecho casado em coral e sublinhado. */
-    private static Component highlighted(Suggestion<?> s) {
-        String label = s.label();
-        return Component.literal(label.substring(0, s.start()))
-                .append(Component.literal(label.substring(s.start(), s.end()))
-                        .withStyle(Style.EMPTY.withColor(GuiPaint.ACCENT).withUnderlined(true)))
-                .append(Component.literal(label.substring(s.end())));
-    }
-
     /** À direita da sugestão: quantos nós pega; num nome de um nó só, a máquina dele. */
     private Component suggestRight(Suggestion<?> s) {
         if (s.group() == Group.NAMES && s.count() == 1) {
@@ -1763,13 +1691,7 @@ final class TabletList {
     /** Centro da sugestão do valor {@code id} (máquina, rede ou nome) na lista aberta, ou {@code null}. */
     int @Nullable [] suggestionCenter(Object id) {
         arrange();
-        for (int i = 0; i < suggestions.size(); i++) {
-            if (suggestions.get(i).id().equals(id)) {
-                Hot hot = hot(Kind.SUGGESTION, i);
-                return hot == null ? null : hot.center();
-            }
-        }
-        return null;
+        return suggestions.center(id);
     }
 
     /** Centro do ✕ da etiqueta {@code index}. */
@@ -1848,7 +1770,7 @@ final class TabletList {
     }
 
     boolean suggestionsOpen() {
-        return suggestOpen && !suggestions.isEmpty();
+        return suggestions.shown();
     }
 
     List<Object> labelIds() {

@@ -26,6 +26,8 @@ import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.ArrayList;
@@ -73,11 +75,18 @@ import org.jetbrains.annotations.Nullable;
  * nós têm destino cheio (as contagens dos filtros rápidos). O cabeçalho (estatísticas, redes, grupos,
  * facetas) e a página de nós vão em pacotes separados, cada um só se ficou diferente do último enviado.
  *
+ * <p>Nó escolhido (servidor): o painel do Tablet mostra e edita um nó ({@link #chooseNode}). O menu é o
+ * {@link RouterEditHost} desse nó, então os pacotes de face de sempre editam o roteador à distância
+ * enquanto ele é visível, está carregado (sem carregar chunk) e ao alcance ({@link #inReach}). O
+ * {@link TabletPanelPayload} (o {@link RouterSnapshot} do nó e o acesso) só sai com um nó escolhido: ao
+ * escolher, quando a versão do roteador ou das redes muda, ao trocar o alvo, depois de uma edição e a cada
+ * {@link #SAMPLE_TICKS} ticks (alcance e vazão), e só se ficou diferente do último enviado.
+ *
  * <p>Quem vê o quê: as redes do jogador e as públicas (todas para operador nível 2); os grupos do
  * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma face numa rede dele
  * (todos para operador).
  */
-public class TabletMenu extends AbstractContainerMenu {
+public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
     public static final int SAMPLE_TICKS = 20;
     /** Intervalo mínimo entre remontagens provocadas por mudanças no mundo. */
@@ -120,6 +129,9 @@ public class TabletMenu extends AbstractContainerMenu {
 
     private TabletSnapshot snapshot;
     private int version;
+    /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
+    private @Nullable TabletPanelPayload panel;
+    private int panelVersion;
 
     // Só no servidor.
     private final @Nullable ServerPlayer viewer;
@@ -151,6 +163,17 @@ public class TabletMenu extends AbstractContainerMenu {
     private final Map<UUID, long[]> networkRates = new HashMap<>();
     private Component notice = Component.empty();
     private int noticeId;
+    /** O nó do painel e o alvo de edição dele (a presa, um grupo ou uma máquina); trocar de nó volta à presa. */
+    private @Nullable NodeKey chosen;
+    private EditTargetRef targetRef = EditTargetRef.ATTACHED;
+    /** Um pedido, o alvo ou uma edição pede o painel de novo na próxima oportunidade. */
+    private boolean panelForced;
+    private @Nullable TabletPanelPayload sentPanel;
+    private int panelChangeVersion;
+    private int panelDataVersion;
+    private long panelTick;
+    /** O último snapshot lido do nó escolhido, mostrado (só para ler) enquanto ele está descarregado. */
+    private @Nullable RouterSnapshot lastKnown;
 
     /** Servidor. */
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
@@ -233,6 +256,22 @@ public class TabletMenu extends AbstractContainerMenu {
         applySnapshot(snapshot.withPage(page));
     }
 
+    /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
+    public void applyPanel(TabletPanelPayload panel) {
+        this.panel = panel;
+        panelVersion++;
+    }
+
+    /** Cliente: o último painel recebido, ou {@code null} sem nó escolhido. */
+    public @Nullable TabletPanelPayload panel() {
+        return panel;
+    }
+
+    /** Muda a cada painel recebido. */
+    public int panelVersion() {
+        return panelVersion;
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
@@ -250,15 +289,18 @@ public class TabletMenu extends AbstractContainerMenu {
     public void broadcastChanges() {
         super.broadcastChanges();
         TabletSnapshot changed = pollSnapshot();
-        if (changed == null || viewer == null || viewer.connection == null) {
-            return;
+        if (changed != null && viewer != null && viewer.connection != null) {
+            // O cabeçalho antes da página: os nós apontam para as redes dele.
+            if (headerChanged) {
+                send(new TabletHeaderPayload(containerId, changed));
+            }
+            if (pageChanged) {
+                send(new TabletPagePayload(containerId, changed.page()));
+            }
         }
-        // O cabeçalho antes da página: os nós apontam para as redes dele.
-        if (headerChanged) {
-            send(new TabletHeaderPayload(containerId, changed));
-        }
-        if (pageChanged) {
-            send(new TabletPagePayload(containerId, changed.page()));
+        TabletPanelPayload panelNow = pollPanel();
+        if (panelNow != null) {
+            send(panelNow);
         }
     }
 
@@ -755,6 +797,172 @@ public class TabletMenu extends AbstractContainerMenu {
             }
             return rates;
         }
+    }
+
+    // ------------------------------------------------------------------ nó escolhido (servidor)
+
+    @Override
+    public int containerId() {
+        return containerId;
+    }
+
+    /** O nó escolhido, se há, é visível e está carregado (sem carregar chunk); senão {@code null}. */
+    @Override
+    public @Nullable RouterBlockEntity editedRouter() {
+        NodeIndex.Entry entry = chosenEntry();
+        return entry == null ? null : loadedRouter(viewer.server, NodeIndex.get(viewer.server), entry);
+    }
+
+    /** A entrada do índice do nó escolhido, se ainda existe e o jogador a vê. */
+    private NodeIndex.@Nullable Entry chosenEntry() {
+        if (viewer == null || chosen == null) {
+            return null;
+        }
+        MinecraftServer server = viewer.server;
+        NodeIndex.Entry entry = NodeIndex.get(server).entry(chosen);
+        return entry != null && visible(entry, NetworkSavedData.get(server), viewer.hasPermissions(2), viewer.getUUID())
+                ? entry : null;
+    }
+
+    /** Nó escolhido, visível, carregado e ao alcance, e o jogador ainda com o Tablet. */
+    @Override
+    public boolean canEdit(ServerPlayer player) {
+        RouterBlockEntity router = editedRouter();
+        return router != null && stillValid(player) && inReach(player, router);
+    }
+
+    /**
+     * Escolhe o nó do painel ({@code null}: nenhum). Recusa um nó que não está no índice ou que o jogador
+     * não vê. O alvo de edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
+     */
+    public boolean chooseNode(@Nullable NodeKey key) {
+        if (viewer == null) {
+            return false;
+        }
+        if (key != null) {
+            MinecraftServer server = viewer.server;
+            NodeIndex.Entry entry = NodeIndex.get(server).entry(key);
+            if (entry == null || !visible(entry, NetworkSavedData.get(server), viewer.hasPermissions(2), viewer.getUUID())) {
+                return false;
+            }
+        }
+        if (!java.util.Objects.equals(key, chosen)) {
+            chosen = key;
+            targetRef = EditTargetRef.ATTACHED;
+            lastKnown = null;
+            sentPanel = null;
+        }
+        panelForced = true;
+        return true;
+    }
+
+    /** O nó escolhido, ou {@code null}. Só no servidor. */
+    public @Nullable NodeKey chosenNode() {
+        return chosen;
+    }
+
+    @Override
+    public EditTargetRef targetRef() {
+        return targetRef;
+    }
+
+    /** Confere o alvo no roteador: uma máquina que mudou de índice segue pela posição; um alvo que sumiu volta à presa. */
+    @Override
+    public EditTarget validTarget() {
+        RouterBlockEntity router = editedRouter();
+        if (router == null) {
+            return targetRef.target();
+        }
+        EditTargetRef fresh = targetRef.refresh(router);
+        if (!fresh.equals(targetRef)) {
+            targetRef = fresh;
+            panelForced = true;
+        }
+        return targetRef.target();
+    }
+
+    @Override
+    public @Nullable EditTarget actionTarget() {
+        boolean wasRemote = !targetRef.target().attached();
+        EditTarget target = validTarget();
+        return wasRemote && target.attached() ? null : target;
+    }
+
+    @Override
+    public boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
+        RouterBlockEntity router = editedRouter();
+        if (router == null) {
+            return false;
+        }
+        EditTargetRef resolved = EditTargetRef.resolve(router, target, pos, block);
+        if (resolved == null) {
+            return false;
+        }
+        validTarget();
+        if (!resolved.equals(targetRef)) {
+            targetRef = resolved;
+            panelForced = true;
+        }
+        return true;
+    }
+
+    /** Uma edição pelos pacotes de face: o painel mostra o resultado na próxima oportunidade. */
+    @Override
+    public void editApplied() {
+        panelForced = true;
+    }
+
+    /**
+     * O painel novo do nó escolhido, se é hora (pedido, versão do roteador ou das redes mudou, ou passaram
+     * {@link #SAMPLE_TICKS} ticks) e ele ficou diferente do último enviado; senão {@code null}. Marca como
+     * enviado. Nó carregado: o snapshot de agora, com acesso de edição ao alcance e de leitura fora dele;
+     * descarregado: o último lido (vazio se nunca houve). Um nó que sumiu ou deixou de ser visível larga
+     * a escolha e manda um painel sem nó. Só no servidor; público para os GameTests.
+     */
+    public @Nullable TabletPanelPayload pollPanel() {
+        if (viewer == null || chosen == null) {
+            return null;
+        }
+        MinecraftServer server = viewer.server;
+        NodeIndex.Entry entry = chosenEntry();
+        if (entry == null) {
+            chosen = null;
+            targetRef = EditTargetRef.ATTACHED;
+            lastKnown = null;
+            sentPanel = null;
+            return new TabletPanelPayload(containerId, Optional.empty(), Optional.empty(), PanelAccess.READ_UNLOADED, -1, 0);
+        }
+        RouterBlockEntity router = loadedRouter(server, NodeIndex.get(server), entry);
+        long now = server.getTickCount();
+        int dataVersion = NetworkSavedData.get(server).version();
+        int changeVersion = router == null ? 0 : router.changeVersion();
+        boolean due = panelForced || sentPanel == null || now - panelTick >= SAMPLE_TICKS
+                || changeVersion != panelChangeVersion || dataVersion != panelDataVersion;
+        if (!due) {
+            return null;
+        }
+        panelForced = false;
+        panelTick = now;
+        panelChangeVersion = changeVersion;
+        panelDataVersion = dataVersion;
+        PanelAccess access = PanelAccess.READ_UNLOADED;
+        int distance = -1;
+        int range = 0;
+        if (router != null) {
+            lastKnown = RouterSnapshot.capture(router, viewer, validTarget());
+            access = inReach(viewer, router) ? PanelAccess.EDIT : PanelAccess.READ_OUT_OF_REACH;
+            range = Config.TIERS.get(router.tier()).range().get();
+            if (router.getLevel() == viewer.level()) {
+                distance = (int) Math.round(Math.sqrt(viewer.position().distanceToSqr(Vec3.atCenterOf(router.getBlockPos()))));
+            }
+        }
+        TabletPanelPayload built = new TabletPanelPayload(containerId, Optional.of(chosen),
+                Optional.ofNullable(lastKnown), access, distance, range);
+        if (built.equals(sentPanel)) {
+            return null;
+        }
+        sentPanel = built;
+        return built;
     }
 
     // ------------------------------------------------------------------ ações (servidor)

@@ -34,7 +34,7 @@ public final class GuiThemes {
     }
 
     /** Aplica o tema sem gravar na config (capturas de desenvolvimento). */
-    static void preview(GuiTheme theme) {
+    public static void preview(GuiTheme theme) {
         apply(theme);
     }
 

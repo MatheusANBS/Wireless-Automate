@@ -40,8 +40,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@code /wa}: profiler embutido ({@code profile}), gerência de redes ({@code network}) e
- * configuração de faces sem tela ({@code face}: modo e prioridade, ou a rede da face), usada em
- * testes manuais antes das telas, e o conteúdo dos Baús guardado no servidor ({@code storage}).
+ * configuração de faces sem tela ({@code face}: modo e prioridade, ou a rede da face) e o
+ * conteúdo dos armazenamentos do mod guardado no servidor ({@code storage}).
  */
 public final class WaCommand {
     public static final int MAX_NAME_LENGTH = 32;

@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * selecionados na tela, seguidos do inventário do jogador. A seleção é da tela: ela avisa o
  * servidor ({@code SelectFacePayload} → {@link #select}) e os slots de cartão passam a mostrar os
  * daquela face, por um {@link Container} que lê e grava direto no roteador. A sincronização vanilla
- * de slots leva o resultado ao cliente. Energia e químicos não têm cartões: os slots ficam inativos.
+ * de slots leva o resultado ao cliente. Só itens e fluidos têm cartões: nos outros tipos os slots ficam inativos.
  * Depois do inventário vem o slot do Upgrade de chunk loading ({@link #UPGRADE_SLOT}), que lê e grava
  * direto no roteador; o dono do upgrade é o jogador da tela. Em seguida, o slot do Upgrade de Alcance
  * ({@link #RANGE_SLOT}), à esquerda do outro no cabeçalho, que só aceita o upgrade se o raio do tier

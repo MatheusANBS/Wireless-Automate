@@ -844,7 +844,7 @@ public final class TabletGameTests {
         RouterBlockEntity router = chestWithRouter(helper, A, network.id());
         Vec3 routerCenter = Vec3.atCenterOf(router.getBlockPos());
         try {
-            // 20 blocos: longe para a tela comum (8), dentro do alcance do Básico (128)
+            // 20 blocos: longe para a tela comum (8), dentro do alcance do Básico (64)
             player.moveTo(routerCenter.add(20, 0, 0));
             TabletPayloads.handleOpenTablet(player);
             helper.assertTrue(player.containerMenu instanceof TabletMenu, "tecla de atalho não abriu o Tablet");

@@ -266,7 +266,6 @@ final class RangeList {
         return tr("range.machine.state." + state.name().toLowerCase(Locale.ROOT));
     }
 
-    /** A dica de uma linha. */
     Component tooltip(RangeView view, Row row, Component attachedName) {
         return switch (row.kind()) {
             case ATTACHED -> tr("range.attached").copy()
@@ -399,7 +398,7 @@ final class RangeList {
 
     // ------------------------------------------------------------------ captura de desenvolvimento
 
-    /** Centro da linha {@code index} de {@link #rows}, na tela (gancho do e2e); {@code null} se fora da vista. */
+    /** Centro da linha do alvo {@code target} em {@link #rows}, na tela (gancho do e2e); {@code null} se fora da vista. */
     int @Nullable [] rowCenter(RangeView view, EditTarget target) {
         for (Row row : rows(view)) {
             if (row.target().equals(target)) {

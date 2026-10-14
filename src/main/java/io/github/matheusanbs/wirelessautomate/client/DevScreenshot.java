@@ -193,7 +193,7 @@ public final class DevScreenshot {
                 screen.previewRename("Fornalha Norte 2");
             }, "6-renomear"));
 
-    /** Todos os passos, na ordem: os da tela, os do visor 3D, os da tela de filtro e os dos cartões. */
+    /** Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador e as galerias (giro, blocos, capa, roda). */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
                     upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
             .flatMap(List::stream)

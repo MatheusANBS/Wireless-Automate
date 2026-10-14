@@ -41,7 +41,7 @@ import org.lwjgl.glfw.GLFW;
  * Roda radial do Configurador (segurar a tecla {@link ConfiguratorWheelKeys#WHEEL}): o anel de dentro
  * escolhe o modo de colar, o de fora o tipo colado (Todos e os tipos carregados). Soltar a tecla
  * escolhe a fatia sob o mouse e fecha; clique esquerdo escolhe sem fechar; Esc fecha. Não pausa o jogo
- * nem escurece a tela inteira: só um disco translúcido atrás da roda. Visual do mockup aprovado: fatias
+ * nem escurece a tela inteira: só um disco translúcido atrás da roda. Fatias
  * na cor do painel com contorno de tinta, a atual de cada anel com contorno de destaque mais grosso,
  * a sob o mouse cresce 6 % e clareia; o centro mostra o nome e a descrição dela.
  */
@@ -150,7 +150,6 @@ public final class ConfiguratorWheelScreen extends Screen {
         return layout;
     }
 
-    /** A fatia do modo {@code mode}. */
     public Hit hitOf(PasteMode mode) {
         return new Hit(Ring.INNER, mode.ordinal());
     }

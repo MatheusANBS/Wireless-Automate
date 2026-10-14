@@ -69,7 +69,7 @@ import org.lwjgl.glfw.GLFW;
  * item; os botões fixos são {@link FlatButton}s que leem o estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    // O mínimo é o tamanho de sempre; a tela cresce pela borda direita, pela de baixo e pelo canto, e
+    // O mínimo é 300×240; a tela cresce pela borda direita, pela de baixo e pelo canto, e
     // o tamanho fica lembrado na sessão.
     private static final int MIN_W = 300;
     private static final int MIN_H = 240;
@@ -92,7 +92,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private static final int MAP_H = 136;
     // estatísticas
     private static final int STAT_CARD = 34;
-    /** 3 cartões por linha no tamanho mínimo, 5 numa linha a partir de 470 px. */
+    /** 3 cartões por linha no tamanho mínimo, 5 numa linha a partir de 464 px (com os 5 tipos carregados). */
     private static final int CARD_MIN_W = 86;
     private static final int CARD_GAP = 4;
     /** Nome, vazão e até duas linhas de detalhe (26 + 2 × 10 + 1). */

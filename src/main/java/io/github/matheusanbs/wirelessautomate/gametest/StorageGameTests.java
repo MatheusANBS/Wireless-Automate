@@ -70,9 +70,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Baú do mod: o conteúdo por tipo e quantidade {@code long}, a capacidade por tier, a visão como
- * inventário comum, quebrar e colocar sem perder nem duplicar, e o atalho do roteador entre Baús e
- * com baús vanilla. Máquinas em y=1 com o roteador em cima (facing=UP), como em
+ * Armazenamentos do mod (Baú, Tanque, Bateria e Tanque de Source): o conteúdo por tipo e quantidade
+ * {@code long}, a capacidade por tier, a visão como inventário comum, quebrar e colocar sem perder
+ * nem duplicar, e o atalho do roteador entre eles e com baús vanilla. Máquinas em y=1 com o roteador em cima (facing=UP), como em
  * {@link TransferGameTests}; cada teste cria a própria rede.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -138,7 +138,6 @@ public final class StorageGameTests {
         }
     }
 
-    /** Guardar e tirar por tipo, com o total somado de todos os tipos e o tipo zerado saindo da lista. */
     /**
      * A colisão e a seleção de cada armazenamento ({@code StorageShapes}) abraçam o modelo: dentro do bloco,
      * encostadas no chão e com o topo a pelo menos 15/16 (o jogador anda por cima), no Tanque de Source em
@@ -166,6 +165,7 @@ public final class StorageGameTests {
         helper.succeed();
     }
 
+    /** Guardar e tirar por tipo, com o total somado de todos os tipos e o tipo zerado saindo da lista. */
     @GameTest(template = "empty")
     public static void storesByTypeAndCount(GameTestHelper helper) {
         ItemStorage storage = storageChest(helper, A, RouterTier.ULTIMATE).storage();
@@ -215,8 +215,7 @@ public final class StorageGameTests {
     }
 
     /**
-     * Baú → Baú no Ultimate: os 12 milhões de pedregulho (o teste do dono que parava em ~274 mil
-     * itens/s entre barris) passam numa visita, sem item criado nem perdido em nenhum tick.
+     * Baú → Baú no Ultimate: os 12 milhões de pedregulho passam numa visita, sem item criado nem perdido em nenhum tick.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void chestToChestMovesMillionsAtOnce(GameTestHelper helper) {
@@ -551,8 +550,8 @@ public final class StorageGameTests {
     }
 
     /**
-     * O bug do dono: quebrado no criativo, o Baú não dropava nada e o conteúdo ficava órfão no
-     * servidor. Agora ele solta o item com o conteúdo, como a caixa de shulker.
+     * Quebrado no criativo, o Baú solta o item com o conteúdo, como a caixa de shulker (o conteúdo não
+     * fica órfão no servidor).
      */
     @GameTest(template = "empty")
     public static void creativeBreakDropsTheContents(GameTestHelper helper) {
@@ -571,7 +570,7 @@ public final class StorageGameTests {
         breakByPlayer(helper, GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 3_456);
     }
 
-    /** Explosão: o Baú cheio também vira item (a loot table não tem mais a condição de sobreviver). */
+    /** Explosão: o Baú cheio também vira item (a loot table dos armazenamentos não tem a condição de sobreviver à explosão). */
     @GameTest(template = "empty")
     public static void explosionDropsTheContents(GameTestHelper helper) {
         storageChest(helper, A, RouterTier.BASIC).storage().insert(new ItemStack(Items.COBBLESTONE), 5_000, false);

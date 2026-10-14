@@ -29,9 +29,7 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Repositórios das integrações opcionais (JEI, Mekanism, AE2...) entram aqui quando forem usadas.
-
-    // JEI (integração opcional, ver compat/jei). O modmaven.dev espelha o mesmo grupo.
+        // JEI (integração opcional, ver compat/jei). O modmaven.dev espelha o mesmo grupo.
     maven {
         name = 'BlameJared'
         url = 'https://maven.blamejared.com/'
@@ -143,8 +141,8 @@ tasks.named('test', Test).configure {
 // --- Benchmark (docs/benchmark.md) ---
 // Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth,
 // copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
-// dev (runClient, também o do e2e) carrega o Sophisticated Storage, o Observable, o Mekanism, o Ars Nouveau,
-// o GuideME e o Mouse Tweaks, copiados para run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
+// dev (runClient, também o do e2e) carrega os mods de configurations.clientMods (abaixo), copiados para
+// run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }

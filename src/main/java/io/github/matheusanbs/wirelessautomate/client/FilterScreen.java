@@ -87,7 +87,7 @@ import org.lwjgl.glfw.GLFW;
  * acerta sem recriar widgets. Cada ação vira um pacote ({@link EditFilterPayload},
  * {@link FilterEntriesPayload}); o servidor valida e manda a visão nova.
  *
- * <p>"Aba JEI": a parte pública "Ingredientes fantasmas" desta tela serve o plugin em
+ * <p>Ingredientes fantasmas (JEI): a parte pública com esse nome serve o plugin em
  * {@code compat/jei}: arrastar um ingrediente para a lista acrescenta a entrada exata, e para o
  * slot do inspetor (aba Tags) mostra as tags dele. Esta classe não conhece nenhuma classe do JEI.
  */

@@ -64,7 +64,7 @@ public record TabletSnapshot(
     public enum NodeStatus {
         /** Chunk descarregado: o nó não está no motor. */
         UNLOADED,
-        /** Nenhuma aba numa rede que exista. */
+        /** Nenhuma face numa rede que exista. */
         NO_NETWORK,
         /** Todas as redes do nó estão em grupos pausados. */
         PAUSED,
@@ -101,7 +101,7 @@ public record TabletSnapshot(
     }
 
     /**
-     * Uma rede visível. Vazões da última amostra: itens/s, mB/s, FE/t e mB/s de químico; o tempo e as operações vêm
+     * Uma rede visível. Vazões da última amostra, por tipo (unidade do registro); o tempo e as operações vêm
      * do profiler do motor ({@code /wa profile}).
      *
      * @param manageable o jogador pode renomear, mudar cor e privacidade e remover (dono ou op)

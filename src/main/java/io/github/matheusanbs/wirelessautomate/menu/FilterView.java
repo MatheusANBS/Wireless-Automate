@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  * presentes), o de entrada de um Baú ({@code router} com a posição do Baú, sem {@code face}) ou de
  * um Cartão de Filtro (os dois vazios).
  *
- * @param type     ITEM ou FLUID (energia não usa filtro)
+ * @param type     tipo com filtro (itens, fluidos ou químicos)
  * @param hasCard  o jogador tem um Cartão de Filtro na mão principal (habilita importar/exportar)
  */
 public record FilterView(ResourceType type, Optional<BlockPos> router, Optional<Direction> face, Filter filter,

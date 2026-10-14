@@ -20,8 +20,6 @@ import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
-import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
-import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -31,26 +29,17 @@ import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
 import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import io.github.matheusanbs.wirelessautomate.storage.BulkFluids;
 import io.github.matheusanbs.wirelessautomate.storage.BulkItems;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.util.StringUtil;
-import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -81,16 +70,19 @@ import org.jetbrains.annotations.Nullable;
  * força os chunks é o {@link RouterChunkLoader}, avisado quando o upgrade muda, quando o nó carrega,
  * descarrega ou sai do mundo. Como os cartões, o upgrade sai do roteador quebrado e fica no upgrade
  * de tier (o block entity é mantido).
+ *
+ * <p>Este block entity é a API do nó para o resto do mod e delega às partes: as faces e as redes
+ * ({@link RouterFaces}), os cartões ({@link RouterCards}), os upgrades ({@link RouterUpgrades}), a edição
+ * por alvo ({@link RouterTargets}), o alcance ({@link RouterRange}, com os caches das remotas em
+ * {@link RouterRemoteCaches}), o aviso das mudanças ({@link RouterChanges}) e o NBT ({@link RouterNbt}).
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
-    private static final RelativeSide[] SIDES = RelativeSide.values();
-    private static final int FACES = Direction.values().length;
 
     /** Nome do nó dado pelo jogador; vazio = sem nome. */
     private String name = "";
-    /** [tipo][lado relativo], tudo alocado de início: consultas não alocam. */
-    private final FaceConfig[][] faces = new FaceConfig[TYPES.length][SIDES.length];
+    /** Configuração das faces da presa, por tipo e lado relativo. */
+    private final RouterFaces faces = new RouterFaces();
     private boolean powered;
     /** Muda a cada alteração do que a tela mostra. Não é salvo. */
     private int changeVersion;
@@ -98,17 +90,10 @@ public class RouterBlockEntity extends BlockEntity {
     private final long[] moved = new long[TYPES.length];
     /** Slots de cartão por face e por tipo. */
     public static final int CARD_SLOTS = 2;
-    /** Tipos com slots de cartão, na ordem de {@link #cards}. */
-    private static final ResourceType[] CARD_TYPES = Arrays.stream(TYPES).filter(ResourceType::cards)
-            .toArray(ResourceType[]::new);
-    private static final int CARD_TYPES_MASK = cardTypesMask();
-    /** [tipo de {@link #CARD_TYPES}][lado relativo][slot], nunca nulos. */
-    private final ItemStack[][][] cards = new ItemStack[CARD_TYPES.length][SIDES.length][CARD_SLOTS];
-    /** Upgrade de chunk loading no slot (ou vazio) e quem o pôs. */
-    private ItemStack upgrade = ItemStack.EMPTY;
-    private @Nullable UUID upgradeOwner;
-    /** Upgrade de Alcance no segundo slot (ou vazio). */
-    private ItemStack rangeUpgrade = ItemStack.EMPTY;
+    /** Cartões de Filtro da presa, por tipo, lado relativo e slot. */
+    private final RouterCards cards = new RouterCards();
+    /** Os slots dos upgrades de chunk loading (com o dono) e de alcance. */
+    private final RouterUpgrades upgrades = new RouterUpgrades();
     /** Máquinas remotas vinculadas e os grupos delas; guardadas mesmo sem o upgrade (aí não viram porta). */
     private final RemoteMachines remotes = new RemoteMachines();
     /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
@@ -116,22 +101,17 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Caches de capability da máquina presa; apontados de novo quando o roteador gira. */
     private final MachineCaches attachedCaches = MachineCaches.attached(this, BlockPos.ZERO);
-    /** Caches das máquinas remotas, por {@code pos.asLong()}, criados sob demanda e descartados ao desvincular. */
-    private @Nullable Long2ObjectOpenHashMap<MachineCaches> remoteCaches;
+    /** O alcance: vincular, desvincular, a frente das remotas e os caches delas. */
+    private final RouterRange range = new RouterRange(this, remotes);
+    /** A edição por alvo (presa, grupo ou máquina remota). */
+    private final RouterTargets targets = new RouterTargets(this, remotes);
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
-    /** Profundidade de {@link #batchChanges} e os tipos que mudaram dentro dele. */
-    private int batchDepth;
-    private int batchTypes;
+    /** O aviso das mudanças, com o lote de {@link #batchChanges}. */
+    private final RouterChanges changes = new RouterChanges(this);
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ROUTER.get(), pos, state);
-        for (FaceConfig[] row : faces) {
-            for (int i = 0; i < row.length; i++) {
-                row[i] = new FaceConfig();
-            }
-        }
-        clearCards();
     }
 
     public RouterTier tier() {
@@ -145,14 +125,7 @@ public class RouterBlockEntity extends BlockEntity {
      * {@link #faceNetwork(EditTarget, ResourceType, Direction)} ou {@link #networks(ResourceType)}.
      */
     public @Nullable UUID networkId(ResourceType type) {
-        FaceConfig[] row = faces[type.ordinal()];
-        UUID network = row[0].network();
-        for (int i = 1; i < row.length; i++) {
-            if (!Objects.equals(network, row[i].network())) {
-                return null;
-            }
-        }
-        return network;
+        return faces.commonNetwork(type);
     }
 
     /**
@@ -210,11 +183,7 @@ public class RouterBlockEntity extends BlockEntity {
      * outras edições por alvo.
      */
     public void setFaceNetwork(EditTarget target, ResourceType type, Direction side, @Nullable UUID network) {
-        if (target.attached()) {
-            setFaceNetwork(type, side, network);
-            return;
-        }
-        editRemote(target, type, side, config -> config.setNetwork(network));
+        targets.setFaceNetwork(target, type, side, network);
     }
 
     /**
@@ -224,16 +193,7 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
         int[] count = new int[1];
-        batchChanges(() -> {
-            for (ResourceType type : types) {
-                for (Direction face : Direction.values()) {
-                    if ((absoluteFaceMask & (1 << face.ordinal())) != 0 && face(type, face).setNetwork(network)) {
-                        count[0]++;
-                        changed(NetworkManager.typeBit(type));
-                    }
-                }
-            }
-        });
+        batchChanges(() -> changed(faces.setAttachedNetwork(types, facing(), spin(), absoluteFaceMask, network, count)));
         return count[0];
     }
 
@@ -242,15 +202,7 @@ public class RouterBlockEntity extends BlockEntity {
      * já estão na rede {@code network} (o "já estavam" do Vinculador).
      */
     public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        for (ResourceType type : types) {
-            for (Direction face : Direction.values()) {
-                if ((absoluteFaceMask & (1 << face.ordinal())) != 0
-                        && !Objects.equals(network, face(type, face).network())) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return faces.attachedIn(types, facing(), spin(), absoluteFaceMask, network);
     }
 
     /**
@@ -272,50 +224,13 @@ public class RouterBlockEntity extends BlockEntity {
         int[] kept = new int[1];
         batchChanges(() -> {
             for (ResourceType type : types) {
-                boolean changed = false;
-                for (FaceConfig config : faces[type.ordinal()]) {
-                    changed |= moveFace(config, network, canLeave, kept);
-                }
-                for (MachineGroup group : remotes.groups()) {
-                    changed |= setNetwork(group.profile(), type, network, canLeave, kept);
-                }
-                for (RemoteMachine machine : remotes.machines()) {
-                    MachineConfig exception = machine.exception();
-                    if (exception != null) {
-                        changed |= setNetwork(exception, type, network, canLeave, kept);
-                    }
-                }
-                if (changed) {
+                if (faces.setNetworkAll(remotes, type, network, canLeave, kept)) {
                     changed(NetworkManager.typeBit(type));
                 }
             }
-            // como no editRemote: a exceção que ficou igual ao perfil do grupo some
-            for (RemoteMachine machine : remotes.machines()) {
-                MachineConfig exception = machine.exception();
-                if (exception != null && exception.sameAs(remotes.groupOf(machine).profile())) {
-                    machine.setException(null);
-                }
-            }
+            RouterFaces.dropExceptionsLikeProfile(remotes);
         });
         return kept[0];
-    }
-
-    private static boolean setNetwork(MachineConfig config, ResourceType type, @Nullable UUID network,
-            Predicate<UUID> canLeave, int[] kept) {
-        boolean changed = false;
-        for (RemoteSide side : RemoteSide.values()) {
-            changed |= moveFace(config.face(type, side), network, canLeave, kept);
-        }
-        return changed;
-    }
-
-    private static boolean moveFace(FaceConfig config, @Nullable UUID network, Predicate<UUID> canLeave, int[] kept) {
-        UUID from = config.network();
-        if (from != null && !from.equals(network) && !canLeave.test(from)) {
-            kept[0]++;
-            return false;
-        }
-        return config.setNetwork(network);
     }
 
     /**
@@ -324,32 +239,7 @@ public class RouterBlockEntity extends BlockEntity {
      * chamam.
      */
     public UUID[] networks(ResourceType type) {
-        Set<UUID> found = new LinkedHashSet<>();
-        for (FaceConfig config : faces[type.ordinal()]) {
-            addNetwork(found, config);
-        }
-        for (MachineGroup group : remotes.groups()) {
-            addNetworks(found, group.profile(), type);
-        }
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineConfig exception = machine.exception();
-            if (exception != null) {
-                addNetworks(found, exception, type);
-            }
-        }
-        return found.toArray(UUID[]::new);
-    }
-
-    private static void addNetworks(Set<UUID> found, MachineConfig config, ResourceType type) {
-        for (RemoteSide side : RemoteSide.values()) {
-            addNetwork(found, config.face(type, side));
-        }
-    }
-
-    private static void addNetwork(Set<UUID> found, FaceConfig config) {
-        if (config.network() != null) {
-            found.add(config.network());
-        }
+        return faces.networks(remotes, type);
     }
 
     /** Alguma face (presa, perfil ou exceção) de algum tipo está numa rede. */
@@ -466,23 +356,9 @@ public class RouterBlockEntity extends BlockEntity {
         if (level == null || level.isClientSide || newSpin == oldSpin) {
             return;
         }
-        Direction facing = facing();
-        int[] target = new int[SIDES.length];
-        for (RelativeSide side : SIDES) {
-            target[side.ordinal()] = RelativeSide.fromAbsolute(facing, newSpin, side.toAbsolute(facing, oldSpin)).ordinal();
-        }
-        for (FaceConfig[] row : faces) {
-            FaceConfig[] old = row.clone();
-            for (int i = 0; i < old.length; i++) {
-                row[target[i]] = old[i];
-            }
-        }
-        for (ItemStack[][] byType : cards) {
-            ItemStack[][] old = byType.clone();
-            for (int i = 0; i < old.length; i++) {
-                byType[target[i]] = old[i];
-            }
-        }
+        int[] target = RouterFaces.spinTargets(facing(), oldSpin, newSpin);
+        faces.rotate(target);
+        cards.rotate(target);
         setChanged();
         level.setBlock(worldPosition, getBlockState().setValue(RouterBlock.SPIN, newSpin), Block.UPDATE_ALL);
     }
@@ -499,7 +375,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Configuração pelo lado relativo ao {@code facing}, como presets a guardam. Nunca nula. */
     public FaceConfig face(ResourceType type, RelativeSide side) {
-        return faces[type.ordinal()][side.ordinal()];
+        return faces.get(type, side);
     }
 
     public void setMode(ResourceType type, Direction machineFace, PortMode mode) {
@@ -546,23 +422,6 @@ public class RouterBlockEntity extends BlockEntity {
         return type.cards();
     }
 
-    private static int cardTypesMask() {
-        int mask = 0;
-        for (ResourceType type : CARD_TYPES) {
-            mask |= NetworkManager.typeBit(type);
-        }
-        return mask;
-    }
-
-    private static int cardIndex(ResourceType type) {
-        for (int i = 0; i < CARD_TYPES.length; i++) {
-            if (CARD_TYPES[i] == type) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     /** {@code stack} pode ir num slot de cartão de {@code type}: um Cartão de Filtro do mesmo tipo. */
     public static boolean acceptsCard(ResourceType type, ItemStack stack) {
         return hasCardSlots(type) && FilterCardItem.isCard(stack) && FilterCardItem.contents(stack).type() == type;
@@ -570,11 +429,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** O cartão no slot; vazio se não houver ou se o tipo não tem slots. Não altere a pilha devolvida. */
     public ItemStack card(ResourceType type, RelativeSide side, int slot) {
-        int index = cardIndex(type);
-        if (index < 0 || slot < 0 || slot >= CARD_SLOTS) {
-            return ItemStack.EMPTY;
-        }
-        return cards[index][side.ordinal()][slot];
+        return cards.get(type, side, slot);
     }
 
     /**
@@ -583,32 +438,19 @@ public class RouterBlockEntity extends BlockEntity {
      * vale para o tipo fica guardado, mas o motor o ignora.
      */
     public void setCard(ResourceType type, RelativeSide side, int slot, ItemStack stack) {
-        int index = cardIndex(type);
-        if (index < 0 || slot < 0 || slot >= CARD_SLOTS) {
-            return;
+        if (cards.set(type, side, slot, stack)) {
+            changed(NetworkManager.typeBit(type));
         }
-        cards[index][side.ordinal()][slot] = stack;
-        changed(NetworkManager.typeBit(type));
     }
 
     /** Um cartão foi mexido no lugar (pilha do slot alterada): salva e remonta as rotas. */
     public void cardsChanged() {
-        changed(CARD_TYPES_MASK);
+        changed(RouterCards.CARD_TYPES_MASK);
     }
 
     /** Cartões nos slots da face (absoluta) para o tipo. */
     public int cardCount(ResourceType type, Direction machineFace) {
-        int index = cardIndex(type);
-        if (index < 0) {
-            return 0;
-        }
-        int count = 0;
-        for (ItemStack stack : cards[index][RelativeSide.fromAbsolute(facing(), spin(), machineFace).ordinal()]) {
-            if (!stack.isEmpty()) {
-                count++;
-            }
-        }
-        return count;
+        return cards.count(type, RelativeSide.fromAbsolute(facing(), spin(), machineFace));
     }
 
     /**
@@ -617,21 +459,7 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public FilterSet filterSet(ResourceType type, Direction machineFace) {
         RelativeSide side = RelativeSide.fromAbsolute(facing(), spin(), machineFace);
-        Filter embedded = face(type, side).filter();
-        int index = cardIndex(type);
-        if (index < 0) {
-            return embedded.asSet();
-        }
-        List<Filter> fromCards = null;
-        for (ItemStack stack : cards[index][side.ordinal()]) {
-            if (acceptsCard(type, stack)) {
-                if (fromCards == null) {
-                    fromCards = new ArrayList<>(CARD_SLOTS);
-                }
-                fromCards.add(FilterCardItem.contents(stack).filter());
-            }
-        }
-        return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
+        return cards.filterSet(type, side, face(type, side).filter());
     }
 
     /**
@@ -640,50 +468,18 @@ public class RouterBlockEntity extends BlockEntity {
      * motor na montagem das rotas; sem cartões não aloca.
      */
     public FilterSet filterSet(RemoteMachine machine, ResourceType type, RemoteSide side) {
-        Filter embedded = remotes.effective(machine).face(type, side).filter();
-        if (MachineGroup.cardIndex(type) < 0) {
-            return embedded.asSet();
-        }
-        MachineGroup group = remotes.groupOf(machine);
-        List<Filter> fromCards = null;
-        for (int slot = 0; slot < CARD_SLOTS; slot++) {
-            ItemStack stack = group.card(type, side, slot);
-            if (acceptsCard(type, stack)) {
-                if (fromCards == null) {
-                    fromCards = new ArrayList<>(CARD_SLOTS);
-                }
-                fromCards.add(FilterCardItem.contents(stack).filter());
-            }
-        }
-        return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
+        return RouterCards.remoteFilterSet(remotes, machine, type, side);
     }
 
     /** Tira todos os cartões (para soltar no mundo quando o roteador sai). */
     public NonNullList<ItemStack> removeAllCards() {
         NonNullList<ItemStack> removed = NonNullList.create();
-        for (ItemStack[][] byType : cards) {
-            for (ItemStack[] bySide : byType) {
-                for (int i = 0; i < bySide.length; i++) {
-                    if (!bySide[i].isEmpty()) {
-                        removed.add(bySide[i]);
-                        bySide[i] = ItemStack.EMPTY;
-                    }
-                }
-            }
-        }
+        cards.removeAll(removed);
         removed.addAll(remotes.removeAllCards());
         if (!removed.isEmpty()) {
-            changed(CARD_TYPES_MASK);
+            changed(RouterCards.CARD_TYPES_MASK);
         }
         return removed;
-    }
-
-    private void clearCards() {
-        for (ItemStack[][] byType : cards) {
-            for (ItemStack[] bySide : byType) {
-                Arrays.fill(bySide, ItemStack.EMPTY);
-            }
-        }
     }
 
     // ------------------------------------------------------------------ upgrade de chunk loading
@@ -695,17 +491,17 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** O upgrade no slot; vazio se não houver. Não altere a pilha devolvida. */
     public ItemStack upgrade() {
-        return upgrade;
+        return upgrades.chunk();
     }
 
     /** Há um Upgrade de chunk loading no slot. */
     public boolean hasChunkUpgrade() {
-        return acceptsUpgrade(upgrade);
+        return acceptsUpgrade(upgrades.chunk());
     }
 
     /** Quem pôs o upgrade (o dono para o limite de chunks); {@code null} sem upgrade ou sem dono conhecido. */
     public @Nullable UUID upgradeOwner() {
-        return upgradeOwner;
+        return upgrades.chunkOwner();
     }
 
     /**
@@ -713,8 +509,7 @@ public class RouterBlockEntity extends BlockEntity {
      * Não valida o item: quem chama (o slot do menu) já validou com {@link #acceptsUpgrade}.
      */
     public void setUpgrade(ItemStack stack, @Nullable UUID owner) {
-        upgrade = stack;
-        upgradeOwner = stack.isEmpty() ? null : owner;
+        upgrades.setChunk(stack, owner);
         changeVersion++;
         setChanged();
         if (level != null && !level.isClientSide && !isRemoved()) {
@@ -724,7 +519,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Tira o upgrade (para soltar no mundo quando o roteador sai); vazio se não havia. */
     public ItemStack removeUpgrade() {
-        ItemStack removed = upgrade;
+        ItemStack removed = upgrades.chunk();
         if (!removed.isEmpty()) {
             setUpgrade(ItemStack.EMPTY, null);
         }
@@ -745,7 +540,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** O Upgrade de Alcance no slot; vazio se não houver. Não altere a pilha devolvida. */
     public ItemStack rangeUpgrade() {
-        return rangeUpgrade;
+        return upgrades.range();
     }
 
     /**
@@ -753,7 +548,7 @@ public class RouterBlockEntity extends BlockEntity {
      * raio para 0 com o upgrade já colocado, ele fica no slot e só deixa de valer.
      */
     public boolean rangeActive() {
-        return acceptsRangeUpgrade(rangeUpgrade) && Config.machineRadius(tier()) > 0;
+        return acceptsRangeUpgrade(upgrades.range()) && Config.machineRadius(tier()) > 0;
     }
 
     /**
@@ -761,15 +556,15 @@ public class RouterBlockEntity extends BlockEntity {
      * portas do nó. Não valida o item: quem chama (o slot do menu) já validou.
      */
     public void setRangeUpgrade(ItemStack stack) {
-        rangeUpgrade = stack;
-        pruneRemoteCaches();
-        remotesChanged();
+        upgrades.setRange(stack);
+        range.pruneCaches();
+        range.remotesChanged();
         changed(NetworkManager.ALL_TYPES);
     }
 
     /** Tira o upgrade de alcance (para soltar no mundo quando o roteador sai); vazio se não havia. */
     public ItemStack removeRangeUpgrade() {
-        ItemStack removed = rangeUpgrade;
+        ItemStack removed = upgrades.range();
         if (!removed.isEmpty()) {
             setRangeUpgrade(ItemStack.EMPTY);
         }
@@ -802,18 +597,7 @@ public class RouterBlockEntity extends BlockEntity {
      * (a rede ativa de quem vinculou, já conferida por quem chama); um grupo que já existe não muda.
      */
     public boolean linkMachine(BlockPos pos, @Nullable UUID network) {
-        if (level == null || level.isClientSide || !level.isLoaded(pos) || pos.equals(worldPosition)) {
-            return false;
-        }
-        BlockState state = level.getBlockState(pos);
-        if (state.isAir()
-                || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state),
-                        network)) {
-            return false;
-        }
-        remotesChanged();
-        changed(NetworkManager.ALL_TYPES);
-        return true;
+        return range.link(pos, network);
     }
 
     /**
@@ -821,14 +605,7 @@ public class RouterBlockEntity extends BlockEntity {
      * caem na posição do roteador.
      */
     public boolean unlinkMachine(int index) {
-        if (remotes.machine(index) == null) {
-            return false;
-        }
-        dropAtRouter(remotes.unlink(index));
-        pruneRemoteCaches();
-        remotesChanged();
-        changed(NetworkManager.ALL_TYPES);
-        return true;
+        return range.unlink(index);
     }
 
     /** Como {@link #unlinkMachine(int)}, pela posição da máquina. */
@@ -838,34 +615,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
     public boolean revertToProfile(int index) {
-        RemoteMachine machine = remotes.machine(index);
-        if (machine == null || !machine.hasException()) {
-            return false;
-        }
-        machine.setException(null);
-        changed(NetworkManager.ALL_TYPES);
-        return true;
-    }
-
-    private void dropAtRouter(List<ItemStack> stacks) {
-        if (level == null) {
-            return;
-        }
-        for (ItemStack stack : stacks) {
-            Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), stack);
-        }
-    }
-
-    /** O grupo de um alvo remoto (o próprio grupo, ou o da máquina); {@code null} na presa ou num alvo que não existe. */
-    private @Nullable MachineGroup groupFor(EditTarget target) {
-        return switch (target.kind()) {
-            case ATTACHED -> null;
-            case GROUP -> remotes.group(target.id());
-            case MACHINE -> {
-                RemoteMachine machine = remotes.machine(target.id());
-                yield machine == null ? null : remotes.groupOf(machine);
-            }
-        };
+        return range.revertToProfile(index);
     }
 
     /**
@@ -875,17 +625,7 @@ public class RouterBlockEntity extends BlockEntity {
      * alvo que não existe devolve uma configuração padrão solta. Não mude a devolvida; use os setters.
      */
     public FaceConfig face(EditTarget target, ResourceType type, Direction side) {
-        return switch (target.kind()) {
-            case ATTACHED -> face(type, side);
-            case GROUP -> {
-                MachineGroup group = remotes.group(target.id());
-                yield group == null ? new FaceConfig() : group.profile().face(type, remoteSide(side));
-            }
-            case MACHINE -> {
-                RemoteMachine machine = remotes.machine(target.id());
-                yield machine == null ? new FaceConfig() : remotes.effective(machine).face(type, remoteSide(side));
-            }
-        };
+        return targets.face(target, type, side);
     }
 
     /**
@@ -905,72 +645,12 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public void configureFace(EditTarget target, ResourceType type, Direction side, PortMode mode, int priority,
             RedstoneMode redstone, @Nullable UUID joinNetwork) {
-        if (target.attached()) {
-            batchChanges(() -> {
-                configureFace(type, side, mode, priority, redstone);
-                if (joinNetwork != null && faceNetwork(type, side) == null) {
-                    setFaceNetwork(type, side, joinNetwork);
-                }
-            });
-            return;
-        }
-        editRemote(target, type, side, config -> {
-            boolean changed = config.setMode(mode) | config.setPriority(priority) | config.setRedstone(redstone);
-            if (joinNetwork != null && config.network() == null) {
-                changed |= config.setNetwork(joinNetwork);
-            }
-            return changed;
-        });
+        targets.configureFace(target, type, side, mode, priority, redstone, joinNetwork);
     }
 
     /** Troca o filtro embutido de uma face do alvo. */
     public void setFilter(EditTarget target, ResourceType type, Direction side, Filter filter) {
-        if (target.attached()) {
-            setFilter(type, side, filter);
-            return;
-        }
-        editRemote(target, type, side, config -> config.setFilter(filter));
-    }
-
-    /**
-     * Muda uma face de um grupo ou de uma máquina remota. No grupo, muda o perfil (vale para as
-     * máquinas sem exceção) e as exceções que ficaram iguais ao perfil somem. Numa máquina sem
-     * exceção, copia o perfil para a exceção e aplica; se a exceção fica igual ao perfil, ela some. Um
-     * aviso só ao motor, com o tipo.
-     */
-    private boolean editRemote(EditTarget target, ResourceType type, Direction side, Predicate<FaceConfig> edit) {
-        RemoteSide remote = remoteSide(side);
-        if (target.kind() == EditTarget.Kind.GROUP) {
-            MachineGroup group = remotes.group(target.id());
-            if (group == null || !edit.test(group.profile().face(type, remote))) {
-                return false;
-            }
-            for (RemoteMachine machine : remotes.machines()) {
-                MachineConfig exception = machine.exception();
-                if (machine.group() == group.id() && exception != null && exception.sameAs(group.profile())) {
-                    machine.setException(null);
-                }
-            }
-            changed(NetworkManager.typeBit(type));
-            return true;
-        }
-        RemoteMachine machine = remotes.machine(target.id());
-        if (machine == null) {
-            return false;
-        }
-        MachineConfig profile = remotes.groupOf(machine).profile();
-        MachineConfig exception = machine.exception();
-        MachineConfig config = exception != null ? exception : profile.copy();
-        if (!edit.test(config.face(type, remote))) {
-            return false;
-        }
-        machine.setException(config.sameAs(profile) ? null : config);
-        changed(NetworkManager.typeBit(type));
-        return true;
-    }
-
-    private static RemoteSide remoteSide(Direction canonical) {
-        return RemoteSide.fromCanonical(canonical.ordinal());
+        targets.setFilter(target, type, side, filter);
     }
 
     /**
@@ -978,37 +658,17 @@ public class RouterBlockEntity extends BlockEntity {
      * os cartões do grupo (a máquina usa os do grupo dela). Não altere a pilha devolvida.
      */
     public ItemStack card(EditTarget target, ResourceType type, Direction side, int slot) {
-        if (target.attached()) {
-            return card(type, RelativeSide.fromAbsolute(facing(), spin(), side), slot);
-        }
-        MachineGroup group = groupFor(target);
-        return group == null ? ItemStack.EMPTY : group.card(type, remoteSide(side), slot);
+        return targets.card(target, type, side, slot);
     }
 
     /** Põe {@code stack} (guardada como está) no slot de cartão do alvo e avisa o motor. Não valida o cartão. */
     public void setCard(EditTarget target, ResourceType type, Direction side, int slot, ItemStack stack) {
-        if (target.attached()) {
-            setCard(type, RelativeSide.fromAbsolute(facing(), spin(), side), slot, stack);
-            return;
-        }
-        MachineGroup group = groupFor(target);
-        if (group != null && group.setCard(type, remoteSide(side), slot, stack)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        targets.setCard(target, type, side, slot, stack);
     }
 
     /** Cartões nos slots de uma face do alvo para o tipo. */
     public int cardCount(EditTarget target, ResourceType type, Direction side) {
-        if (target.attached()) {
-            return cardCount(type, side);
-        }
-        int count = 0;
-        for (int slot = 0; slot < CARD_SLOTS; slot++) {
-            if (!card(target, type, side, slot).isEmpty()) {
-                count++;
-            }
-        }
-        return count;
+        return targets.cardCount(target, type, side);
     }
 
     /** Estado do upgrade para a tela. Só no servidor; no cliente, {@link ChunkLoadState#NONE}. */
@@ -1066,46 +726,7 @@ public class RouterBlockEntity extends BlockEntity {
      * roteador e vale para todas).
      */
     public int redstoneTypes() {
-        int types = 0;
-        for (ResourceType type : TYPES) {
-            if (usesRedstone(type)) {
-                types |= NetworkManager.typeBit(type);
-            }
-        }
-        return types;
-    }
-
-    private boolean usesRedstone(ResourceType type) {
-        for (FaceConfig config : faces[type.ordinal()]) {
-            if (usesRedstone(config)) {
-                return true;
-            }
-        }
-        for (MachineGroup group : remotes.groups()) {
-            if (usesRedstone(group.profile(), type)) {
-                return true;
-            }
-        }
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineConfig exception = machine.exception();
-            if (exception != null && usesRedstone(exception, type)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean usesRedstone(MachineConfig config, ResourceType type) {
-        for (RemoteSide side : RemoteSide.values()) {
-            if (usesRedstone(config.face(type, side))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean usesRedstone(FaceConfig config) {
-        return config.redstone() != RedstoneMode.IGNORE && config.mode() != PortMode.NONE;
+        return faces.redstoneTypes(remotes);
     }
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
@@ -1191,48 +812,7 @@ public class RouterBlockEntity extends BlockEntity {
      * vinculadas: o motor pede na leitura das portas; desvincular descarta.
      */
     public MachineCaches remoteCaches(BlockPos pos) {
-        if (remoteCaches == null) {
-            remoteCaches = new Long2ObjectOpenHashMap<>();
-        }
-        long key = pos.asLong();
-        MachineCaches caches = remoteCaches.get(key);
-        if (caches == null) {
-            caches = MachineCaches.remote(this, pos);
-            remoteCaches.put(key, caches);
-        }
-        return caches;
-    }
-
-    /**
-     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas; sem o
-     * upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT e quando o upgrade sai.
-     */
-    private void pruneRemoteCaches() {
-        if (remoteCaches == null) {
-            return;
-        }
-        boolean keepAny = rangeActive();
-        var iterator = remoteCaches.long2ObjectEntrySet().fastIterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            if (!keepAny || !remotes.contains(entry.getValue().pos())) {
-                entry.getValue().discard();
-                iterator.remove();
-            }
-        }
-        if (remoteCaches.isEmpty()) {
-            remoteCaches = null;
-        }
-    }
-
-    /**
-     * As máquinas vinculadas ou o upgrade mudaram: refaz o registro no {@link RemoteIndex} (só se o nó
-     * está no motor e o upgrade vale; senão, só tira).
-     */
-    private void remotesChanged() {
-        if (level != null && !level.isClientSide) {
-            RemoteIndex.get().update(this);
-        }
+        return range.caches(pos);
     }
 
     /**
@@ -1244,24 +824,7 @@ public class RouterBlockEntity extends BlockEntity {
      * motor ({@link NetworkManager#wakeMachine}).
      */
     public void remoteMachineChanged(RemoteMachine machine, @Nullable BlockState state) {
-        // Durante uma visita do motor o aviso é a nossa entrega ou extração, que nunca gira a máquina.
-        if (state != null && !NetworkManager.visiting()) {
-            refreshFront(machine, state);
-        }
-        NetworkManager.get().wakeMachine(this, machine.pos());
-    }
-
-    /**
-     * Relê a frente da máquina remota em {@code state}. Se mudou, grava e refaz as rotas do nó (os
-     * lados relativos mudaram) e devolve {@code true}. A regra num lugar só: o aviso da máquina
-     * ({@link #remoteMachineChanged}) e a invalidação da capability ({@link #machineInvalidated}).
-     */
-    private boolean refreshFront(RemoteMachine machine, BlockState state) {
-        if (!storeFront(machine, state)) {
-            return false;
-        }
-        changed(NetworkManager.ALL_TYPES);
-        return true;
+        range.machineChanged(machine, state);
     }
 
     /**
@@ -1270,22 +833,7 @@ public class RouterBlockEntity extends BlockEntity {
      * avisar o motor (quem chama decide o que remontar).
      */
     public boolean rereadFront(RemoteMachine machine) {
-        if (level == null || level.isClientSide || !level.isLoaded(machine.pos())) {
-            return false;
-        }
-        return storeFront(machine, level.getBlockState(machine.pos()));
-    }
-
-    /** Grava a frente de {@code state} na máquina, se mudou (salva e refaz o snapshot), sem avisar o motor. */
-    private boolean storeFront(RemoteMachine machine, BlockState state) {
-        int front = RemoteMachines.frontOf(state);
-        if (front == machine.front()) {
-            return false;
-        }
-        machine.setFront(front);
-        changeVersion++;
-        setChanged();
-        return true;
+        return range.rereadFront(machine);
     }
 
     /**
@@ -1303,14 +851,12 @@ public class RouterBlockEntity extends BlockEntity {
             NetworkManager.get().capabilityChanged(this, type, machineFace);
             return;
         }
-        BlockPos pos = caches.pos();
-        if (level.isLoaded(pos)) {
-            RemoteMachine machine = remotes.machine(remotes.index(pos));
-            if (machine != null && refreshFront(machine, level.getBlockState(pos))) {
-                return;
-            }
-        }
-        NetworkManager.get().capabilityChanged(this, pos, type, machineFace);
+        range.invalidated(level, caches.pos(), type, machineFace);
+    }
+
+    /** O que a tela mostra mudou sem mexer nas rotas: a tela aberta remonta o snapshot. */
+    void bumpChangeVersion() {
+        changeVersion++;
     }
 
     /**
@@ -1319,16 +865,7 @@ public class RouterBlockEntity extends BlockEntity {
      * várias redes; sem isso seria um aviso por mudança. Pode ser aninhado: avisa ao sair do mais de fora.
      */
     public void batchChanges(Runnable changes) {
-        batchDepth++;
-        try {
-            changes.run();
-        } finally {
-            if (--batchDepth == 0 && batchTypes != 0) {
-                int types = batchTypes;
-                batchTypes = 0;
-                notifyChanged(types);
-            }
-        }
+        this.changes.batch(changes);
     }
 
     /**
@@ -1336,21 +873,8 @@ public class RouterBlockEntity extends BlockEntity {
      * {@link NetworkManager#typeBit}) deste nó precisam ser refeitas. Dentro de {@link #batchChanges}
      * só acumula.
      */
-    private void changed(int types) {
-        if (batchDepth > 0) {
-            batchTypes |= types;
-            return;
-        }
-        notifyChanged(types);
-    }
-
-    private void notifyChanged(int types) {
-        changeVersion++;
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            NetworkManager.get().nodeChanged(this, types);
-            NodeIndex.track(this);
-        }
+    void changed(int types) {
+        changes.changed(types);
     }
 
     @Override
@@ -1382,7 +906,7 @@ public class RouterBlockEntity extends BlockEntity {
             NodeIndex.track(this);
             if (tier() != oldTier) {
                 // O raio do tier novo decide se o upgrade de alcance vale.
-                remotesChanged();
+                range.remotesChanged();
             }
         }
     }
@@ -1439,154 +963,19 @@ public class RouterBlockEntity extends BlockEntity {
         if (powered) {
             tag.putBoolean("powered", true);
         }
-        CompoundTag facesTag = new CompoundTag();
-        for (ResourceType type : TYPES) {
-            CompoundTag typeTag = new CompoundTag();
-            for (RelativeSide side : SIDES) {
-                FaceConfig config = face(type, side);
-                if (!config.isDefault()) {
-                    typeTag.put(side.key(), config.save(registries));
-                }
-            }
-            if (!typeTag.isEmpty()) {
-                facesTag.put(type.key(), typeTag);
-            }
-        }
-        if (!facesTag.isEmpty()) {
-            tag.put("faces", facesTag);
-        }
-        CompoundTag cardsTag = new CompoundTag();
-        for (int t = 0; t < CARD_TYPES.length; t++) {
-            CompoundTag typeTag = new CompoundTag();
-            for (RelativeSide side : SIDES) {
-                ListTag list = new ListTag();
-                ItemStack[] slots = cards[t][side.ordinal()];
-                for (int slot = 0; slot < slots.length; slot++) {
-                    if (!slots[slot].isEmpty()) {
-                        CompoundTag slotTag = new CompoundTag();
-                        slotTag.putByte("slot", (byte) slot);
-                        list.add(slots[slot].save(registries, slotTag));
-                    }
-                }
-                if (!list.isEmpty()) {
-                    typeTag.put(side.key(), list);
-                }
-            }
-            if (!typeTag.isEmpty()) {
-                cardsTag.put(CARD_TYPES[t].key(), typeTag);
-            }
-        }
-        if (!cardsTag.isEmpty()) {
-            tag.put("cards", cardsTag);
-        }
-        if (!upgrade.isEmpty()) {
-            tag.put("upgrade", upgrade.save(registries));
-            if (upgradeOwner != null) {
-                tag.putUUID("upgrade_owner", upgradeOwner);
-            }
-        }
-        if (!rangeUpgrade.isEmpty()) {
-            tag.put("range_upgrade", rangeUpgrade.save(registries));
-        }
-        if (!remotes.machines().isEmpty()) {
-            tag.put("machines", remotes.saveMachines(registries));
-        }
-        if (!remotes.groups().isEmpty()) {
-            tag.put("groups", remotes.saveGroups(registries));
-        }
-    }
-
-    /**
-     * Migração da rede da aba: põe {@code network} nas faces do tipo ainda sem rede da presa, dos
-     * perfis e das exceções. Faces que já têm rede ficam. Sem avisar ninguém: o fim da carga avisa.
-     */
-    private void migrateLegacyNetwork(ResourceType type, UUID network) {
-        for (FaceConfig config : faces[type.ordinal()]) {
-            if (config.network() == null) {
-                config.setNetwork(network);
-            }
-        }
-        for (MachineGroup group : remotes.groups()) {
-            migrateLegacyNetwork(group.profile(), type, network);
-        }
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineConfig exception = machine.exception();
-            if (exception != null) {
-                migrateLegacyNetwork(exception, type, network);
-            }
-        }
-    }
-
-    private static void migrateLegacyNetwork(MachineConfig config, ResourceType type, UUID network) {
-        for (RemoteSide side : RemoteSide.values()) {
-            FaceConfig face = config.face(type, side);
-            if (face.network() == null) {
-                face.setNetwork(network);
-            }
-        }
+        RouterNbt.save(tag, registries, faces, cards, upgrades, remotes);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        // Formato antigo (rede da aba em "networks", ou ainda mais antigo, uma rede só em "network"):
-        // só lido, para migrar para as faces depois de carregá-las.
-        UUID single = tag.hasUUID("network") ? tag.getUUID("network") : null;
-        CompoundTag networksTag = tag.getCompound("networks");
-        UUID[] legacy = new UUID[TYPES.length];
-        for (ResourceType type : TYPES) {
-            String key = type.key();
-            legacy[type.ordinal()] = networksTag.hasUUID(key) ? networksTag.getUUID(key) : single;
-        }
+        UUID[] legacy = RouterNbt.legacyNetworks(tag);
         name = sanitizeName(tag.getString("name"));
         powered = tag.getBoolean("powered");
-        CompoundTag facesTag = tag.getCompound("faces");
-        for (ResourceType type : TYPES) {
-            CompoundTag typeTag = facesTag.getCompound(type.key());
-            for (RelativeSide side : SIDES) {
-                FaceConfig config = face(type, side);
-                if (typeTag.contains(side.key(), CompoundTag.TAG_COMPOUND)) {
-                    config.copyFrom(FaceConfig.load(typeTag.getCompound(side.key()), registries));
-                } else {
-                    config.reset();
-                }
-            }
-        }
-        clearCards();
-        CompoundTag cardsTag = tag.getCompound("cards");
-        for (int t = 0; t < CARD_TYPES.length; t++) {
-            CompoundTag typeTag = cardsTag.getCompound(CARD_TYPES[t].key());
-            for (RelativeSide side : SIDES) {
-                ListTag list = typeTag.getList(side.key(), Tag.TAG_COMPOUND);
-                for (int i = 0; i < list.size(); i++) {
-                    CompoundTag slotTag = list.getCompound(i);
-                    int slot = slotTag.getByte("slot");
-                    ItemStack[] slots = cards[t][side.ordinal()];
-                    if (slot >= 0 && slot < CARD_SLOTS) {
-                        // Item de mod removido: a pilha não lê e o slot fica vazio.
-                        ItemStack.parse(registries, slotTag).ifPresent(stack -> slots[slot] = stack);
-                    }
-                }
-            }
-        }
-        upgrade = tag.contains("upgrade", Tag.TAG_COMPOUND)
-                ? ItemStack.parse(registries, tag.getCompound("upgrade")).orElse(ItemStack.EMPTY)
-                : ItemStack.EMPTY;
-        upgradeOwner = !upgrade.isEmpty() && tag.hasUUID("upgrade_owner") ? tag.getUUID("upgrade_owner") : null;
-        rangeUpgrade = tag.contains("range_upgrade", Tag.TAG_COMPOUND)
-                ? ItemStack.parse(registries, tag.getCompound("range_upgrade")).orElse(ItemStack.EMPTY)
-                : ItemStack.EMPTY;
-        // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
-        remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
-        for (ResourceType type : TYPES) {
-            UUID network = legacy[type.ordinal()];
-            if (network != null) {
-                migrateLegacyNetwork(type, network);
-            }
-        }
-        pruneRemoteCaches();
+        RouterNbt.load(tag, registries, faces, cards, upgrades, remotes, legacy);
+        range.pruneCaches();
         // As instâncias de RemoteMachine são outras: o índice do mixin aponta para as novas.
-        remotesChanged();
+        range.remotesChanged();
         changeVersion++;
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (level != null && !level.isClientSide) {

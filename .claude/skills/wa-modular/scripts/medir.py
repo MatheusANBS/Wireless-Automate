@@ -36,7 +36,7 @@ RAIZ = Path(git('rev-parse', '--show-toplevel')[0])
 
 def categoria(caminho):
     partes = caminho.as_posix()
-    if '/gametest/' in partes or '/src/test/' in partes or caminho.name in DEV:
+    if '/gametest/' in partes or '/src/test/' in partes or '/client/dev/' in partes or caminho.name in DEV:
         return 'teste e dev'
     if '/client/' in partes:
         return 'tela'

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teste de ponta a ponta num mundo de verdade: cliente + servidor integrado (client/DevEndToEnd.java).
+# Teste de ponta a ponta num mundo de verdade: cliente + servidor integrado (client/dev/DevEndToEnd.java).
 #
 #   ./scripts/e2e.sh                 roda o teste e guarda tudo em run/e2e
 #   ./scripts/e2e.sh <dir>           guarda em <dir>

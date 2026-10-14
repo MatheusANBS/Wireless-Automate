@@ -799,6 +799,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     // ------------------------------------------------------------------ geometria
 
+    private int themeX() {
+        return leftPos + w - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + 2;
+    }
+
     private int x1() {
         return w - 9;
     }
@@ -1018,6 +1026,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
@@ -1251,6 +1262,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         renderNotice(g);
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
             return;
@@ -1385,8 +1400,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         Component meta = plural("meta.nodes", s.totalNodes()).copy().append(" · ")
                 .append(plural("meta.networks", s.networks().size()));
         int titleEnd = X0 + font.width(tr("title")) + 8;
-        int metaW = Math.min(font.width(meta), x1() - titleEnd);
-        GuiText.draw(g, font, meta, x + x1() - metaW, y + HEAD_Y + 3, metaW, GuiPaint.MUTED);
+        int metaW = Math.min(font.width(meta), x1() - ThemeToggle.SIZE - 4 - titleEnd);
+        GuiText.draw(g, font, meta, x + x1() - ThemeToggle.SIZE - 4 - metaW, y + HEAD_Y + 3, metaW, GuiPaint.MUTED);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
         switch (tab) {
             case LIST -> renderList(g, mouseX, mouseY);

@@ -492,9 +492,20 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
     /** Os botões seguem o estado já no clique seguinte, sem esperar o próximo quadro. */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         boolean handled = click(mouseX, mouseY, button);
         refresh();
         return handled;
+    }
+
+    private int themeX() {
+        return leftPos + W - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + 7;
     }
 
     private boolean click(double mouseX, double mouseY, int button) {
@@ -580,6 +591,10 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         List<Component> tip = tooltipAt(mouseX, mouseY);
         if (tip != null) {
             List<FormattedCharSequence> lines = new ArrayList<>();
@@ -654,10 +669,12 @@ public class RecipeEditorScreen extends AbstractContainerScreen<RecipeEditorMenu
         // cabeçalho: o Olho, o título e a pílula de operador
         Component operator = tr("operator");
         int opW = font.width(operator) + 8;
-        GuiPaint.pill(g, x + W - M - opW, y + 7, opW, 11, GuiPaint.BEVEL_LIGHT, GuiPaint.FG);
-        GuiPaint.text(g, font, operator, x + W - M - opW + 4, y + 9, GuiPaint.FG);
+        int opX = x + W - M - ThemeToggle.SIZE - 4 - opW;
+        GuiPaint.pill(g, opX, y + 7, opW, 11, GuiPaint.BEVEL_LIGHT, GuiPaint.FG);
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
+        GuiPaint.text(g, font, operator, opX + 4, y + 9, GuiPaint.FG);
         GuiPaint.eye(g, x + 8, y + 10, GuiPaint.tierColor(RouterTier.ULTIMATE));
-        GuiText.draw(g, font, title, x + 17, y + 9, W - M - opW - 6 - 17, GuiPaint.FG);
+        GuiText.draw(g, font, title, x + 17, y + 9, W - M - ThemeToggle.SIZE - 4 - opW - 6 - 17, GuiPaint.FG);
 
         renderList(g, x, y, mouseX, mouseY);
 

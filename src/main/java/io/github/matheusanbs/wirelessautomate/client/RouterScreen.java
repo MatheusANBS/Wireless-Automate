@@ -94,6 +94,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static int savedH = MIN_H;
     private static final int X0 = 9;
     private static final int HEAD_Y = 8;
+    /** Quanto os slots de upgrade recuam para dar lugar ao botão do tema no canto direito do cabeçalho. */
+    private static final int HEAD_SHIFT = ThemeToggle.SIZE + 4;
     private static final int PILL_H = 13;
     private static final int TAB_Y = 26;
     private static final int TAB_H = 15;
@@ -601,7 +603,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
                 this::cycleRedstone).tooltip(() -> tr("redstone.tooltip")));
 
         // os slots do menu e o visor acompanham o tamanho da tela
-        menu.placeSlots(rx() + 1, w - 26, w - 26 - 18, inventoryY());
+        menu.placeSlots(rx() + 1, w - 26 - HEAD_SHIFT, w - 26 - 18 - HEAD_SHIFT, inventoryY());
         machineView.setBounds(x + X0 + 1, y + BODY_Y + 1, viewW() - 2, viewH() - 2);
         refresh();
     }
@@ -644,6 +646,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     // ------------------------------------------------------------------ geometria (depende do tamanho)
+
+    private int themeX() {
+        return leftPos + w - 4 - ThemeToggle.SIZE;
+    }
+
+    private int themeY() {
+        return topPos + HEAD_Y + 1;
+    }
 
     private int x1() {
         return w - 9;
@@ -719,7 +729,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     /** Fundo do slot do upgrade, no canto direito do cabeçalho. */
     private int upgradeBgX() {
-        return w - 26 - 1;
+        return w - 26 - 1 - HEAD_SHIFT;
     }
 
     /** Fundo do slot do Upgrade de Alcance, à esquerda do slot de upgrade. */
@@ -1110,6 +1120,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (!networkListOpen && ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == 0 && !networkListOpen && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
@@ -1274,6 +1287,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             }
             return;
         }
+        if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
+            g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
+            return;
+        }
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
             return;
@@ -1357,6 +1374,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         GuiPaint.pill(g, tierX, y + HEAD_Y, tierW, PILL_H, GuiPaint.PANEL, trim);
         GuiPaint.eye(g, tierX + 6, y + HEAD_Y + 4, trim);
         GuiPaint.text(g, font, tierText, tierX + 15, y + HEAD_Y + 3, GuiPaint.FG);
+
+        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
 
         // vazão da aba, ao lado do tier, no espaço entre o título e a pílula
         Component rate = rate();

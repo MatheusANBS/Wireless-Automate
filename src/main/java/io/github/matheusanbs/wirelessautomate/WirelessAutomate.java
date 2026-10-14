@@ -48,6 +48,7 @@ public final class WirelessAutomate {
         modEventBus.addListener(RecipeOverridePack::onAddPackFinders);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);

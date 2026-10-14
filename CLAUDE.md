@@ -17,6 +17,7 @@ Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o
 - `wa-release`: fechar uma versão (changelog separado e unificado, tag, release com o jar).
 - `wa-porte`: portar o mod para outra versão de Minecraft (26.1 do ATM11, 1.20.1 Forge do ATM9): investiga as mudanças com fontes, mede o impacto no código e planeja o ramo `mc/<versão>-<loader>`. Estratégia e estado dos ramos em `docs/portes.md`.
 - `wa-curseforge-imagens`: imagens da página do CurseForge pela vitrine e troca dos links na descrição.
+- `wa-comentarios`: regras dos comentários e a varredura `python -I .claude/skills/wa-comentarios/scripts/varrer.py`, que acha código comentado, histórico, TODO, javadoc trivial e `{@link}` quebrado; a `wa-feature` roda antes de cada commit.
 
 ## Mapa do código
 

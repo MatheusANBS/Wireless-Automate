@@ -42,6 +42,8 @@ Se mexeu em tela, payload ou mundo, rode também o e2e: `WA_E2E="$PWD/run/e2e" .
 
 Cada run de jogo usa uns 3 GB e o build service `oneGame` já serializa as runs. Mesmo assim, nunca dispare dois jogos ao mesmo tempo.
 
+Comentários (skill `wa-comentarios`): antes do commit, rode `python -I .claude/skills/wa-comentarios/scripts/varrer.py` (só os arquivos mudados no ramo) e resolva os candidatos. Diga isso a todo implementador, e peça ao revisor de tarefa e ao revisor final que confiram no diff: código comentado, comentário desatualizado (nome, número ou comportamento que mudou), histórico ("antes era") e redundante.
+
 ## 5. Fechamento da etapa
 
 - `docs/progresso.md`: a tabela de estado, o próximo passo e uma linha no histórico (o que foi feito e os números de testes, por exemplo "157 + 7 + 15 GameTests, e2e OK").

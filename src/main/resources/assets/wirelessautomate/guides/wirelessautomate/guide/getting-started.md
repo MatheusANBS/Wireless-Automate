@@ -40,6 +40,8 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 Once the first router of a line is set up, use the [Configurator](configurator.md) to copy its
 configuration (and networks) to the others.
 
+Every screen of the mod has a moon button in the top-right corner: it switches all of them to dark mode (the sun switches back).
+
 ## Recipes
 
 <RecipeFor id="wirelessautomate:router" />

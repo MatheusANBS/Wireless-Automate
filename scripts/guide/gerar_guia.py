@@ -397,6 +397,8 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 Depois de configurar o primeiro roteador de uma linha, use o [Configurador](configurator.md) para
 copiar a configuração (e as redes) para os outros.
 
+As telas do mod têm um botão com uma lua no canto de cima, à direita: ele troca todas para o modo escuro (e o sol volta ao claro).
+
 ## Receitas
 
 <RecipeFor id="wirelessautomate:router" />
@@ -431,6 +433,8 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 
 Once the first router of a line is set up, use the [Configurator](configurator.md) to copy its
 configuration (and networks) to the others.
+
+Every screen of the mod has a moon button in the top-right corner: it switches all of them to dark mode (the sun switches back).
 
 ## Recipes
 

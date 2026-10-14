@@ -63,11 +63,11 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
                 : RouterTier.BASIC;
     }
 
-    private int themeX() {
+    int themeX() {
         return leftPos + W - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + HEAD_Y + 1;
     }
 

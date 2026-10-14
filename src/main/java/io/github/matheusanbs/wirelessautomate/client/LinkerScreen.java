@@ -123,11 +123,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     // tamanho: a largura extra vai para a coluna da direita, a altura para o mapa e a lista de redes
 
-    private int themeX() {
+    int themeX() {
         return leftPos + w - 4 - ThemeToggle.SIZE;
     }
 
-    private int themeY() {
+    int themeY() {
         return topPos + HEAD_Y + 1;
     }
 

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.client.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
@@ -20,23 +21,30 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
+import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -55,7 +63,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "15";
+    public static final String VERSION = "16";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -110,6 +118,8 @@ public final class ModPayloads {
                 RecipeEditorMenu::onState);
         registrar.playToServer(RecipeEditorActionPayload.TYPE, RecipeEditorActionPayload.STREAM_CODEC,
                 (payload, context) -> RecipeEditorActionPayload.handle(serverPlayer(context), payload));
+        registrar.playToClient(PanelNoticePayload.TYPE, PanelNoticePayload.STREAM_CODEC,
+                (payload, context) -> PanelNotices.show(payload));
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
     }
@@ -172,9 +182,47 @@ public final class ModPayloads {
             return false;
         }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);
-        router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
+        WaNetwork join = joinsActiveNetwork(router, target, payload) ? usableActiveNetwork(player) : null;
+        router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone(),
+                join == null ? null : join.id());
         host.editApplied();
+        if (join != null && Objects.equals(router.faceNetwork(target, payload.resource(), payload.face()), join.id())) {
+            sendNotice(player, new PanelNoticePayload(
+                    Component.translatable("gui.wirelessautomate.panel.notice.joined",
+                            faceName(router, target, payload.face()), join.name()),
+                    PanelNoticePayload.Undo.CLEAR_FACE_NETWORK, host.containerId(), payload.resource(),
+                    payload.face()));
+        }
         return true;
+    }
+
+    /** Manda o aviso do painel; jogadores falsos (GameTests, mods de automação) não negociam os canais do mod. */
+    public static void sendNotice(ServerPlayer player, PanelNoticePayload notice) {
+        if (player.connection != null && player.connection.hasChannel(notice)) {
+            PacketDistributor.sendToPlayer(player, notice);
+        }
+    }
+
+    /** Regra D1: o modo sai de Nenhum e a face está sem rede (a face que já tem rede não muda de rede). */
+    private static boolean joinsActiveNetwork(RouterBlockEntity router, EditTarget target, SetFacePayload payload) {
+        FaceConfig current = router.face(target, payload.resource(), payload.face());
+        return current.mode() == PortMode.NONE && payload.mode() != PortMode.NONE && current.network() == null;
+    }
+
+    /** A rede ativa do jogador, se existe e ele pode usá-la; nunca cria uma. */
+    private static @Nullable WaNetwork usableActiveNetwork(ServerPlayer player) {
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        UUID active = data.activeNetwork(player.getUUID());
+        WaNetwork network = active == null ? null : data.network(active);
+        return network != null && canUse(player, network) ? network : null;
+    }
+
+    /** O nome do lado de {@code face} (no quadro do alvo) como o painel mostra: relativo à máquina. */
+    private static Component faceName(RouterBlockEntity router, EditTarget target, Direction face) {
+        String key = target.attached()
+                ? RelativeSide.fromAbsolute(router.facing(), router.spin(), face).key()
+                : RemoteSide.fromCanonical(face.ordinal()).key();
+        return Component.translatable("gui.wirelessautomate.router.side." + key);
     }
 
     /**

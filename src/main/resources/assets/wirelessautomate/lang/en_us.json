@@ -879,5 +879,8 @@
   "gui.wirelessautomate.recipes.tooltip.clear": "Right click: clear",
   "gui.wirelessautomate.recipes.tooltip.pick": "Click, then pick an item from the inventory",
   "gui.wirelessautomate.recipes.reload_failed": "Reload failed; see the server log",
-  "gui.wirelessautomate.recipes.reload_busy": "A reload is already running"
+  "gui.wirelessautomate.recipes.reload_busy": "A reload is already running",
+  "gui.wirelessautomate.panel.notice.joined": "%s joined %s",
+  "gui.wirelessautomate.panel.network.choose": "Choose this face's network",
+  "gui.wirelessautomate.panel.network.no_active": "You have no active network. With one, the face joins it on its own."
 }

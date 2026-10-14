@@ -894,12 +894,33 @@ public class RouterBlockEntity extends BlockEntity {
      */
     public void configureFace(EditTarget target, ResourceType type, Direction side, PortMode mode, int priority,
             RedstoneMode redstone) {
+        configureFace(target, type, side, mode, priority, redstone, null);
+    }
+
+    /**
+     * Como {@link #configureFace(EditTarget, ResourceType, Direction, PortMode, int, RedstoneMode)}, e
+     * se {@code joinNetwork} não é {@code null} e a face está sem rede, põe a face nela na mesma
+     * edição: um aviso só ao motor na presa e uma exceção só numa máquina remota. Uma face que já
+     * tem rede não muda de rede.
+     */
+    public void configureFace(EditTarget target, ResourceType type, Direction side, PortMode mode, int priority,
+            RedstoneMode redstone, @Nullable UUID joinNetwork) {
         if (target.attached()) {
-            configureFace(type, side, mode, priority, redstone);
+            batchChanges(() -> {
+                configureFace(type, side, mode, priority, redstone);
+                if (joinNetwork != null && faceNetwork(type, side) == null) {
+                    setFaceNetwork(type, side, joinNetwork);
+                }
+            });
             return;
         }
-        editRemote(target, type, side, config -> config.setMode(mode)
-                | config.setPriority(priority) | config.setRedstone(redstone));
+        editRemote(target, type, side, config -> {
+            boolean changed = config.setMode(mode) | config.setPriority(priority) | config.setRedstone(redstone);
+            if (joinNetwork != null && config.network() == null) {
+                changed |= config.setNetwork(joinNetwork);
+            }
+            return changed;
+        });
     }
 
     /** Troca o filtro embutido de uma face do alvo. */

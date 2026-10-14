@@ -2618,7 +2618,7 @@ public final class DevEndToEnd {
             level.setBlockAndUpdate(more[1], ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                     .setValue(RouterBlock.TIER, RouterTier.EMERALD));
             batteryPos = more[1];
-            StorageTankBlockEntity tank =(StorageTankBlockEntity) level.getBlockEntity(more[0]);
+            StorageTankBlockEntity tank = (StorageTankBlockEntity) level.getBlockEntity(more[0]);
             tank.storage().insert(new FluidStack(Fluids.WATER, 1), 80_000_000L, false);
             tank.storage().insert(new FluidStack(Fluids.LAVA, 1), 48_000_000L, false);
             StorageBatteryBlockEntity battery = (StorageBatteryBlockEntity) level.getBlockEntity(more[1]);
@@ -2849,7 +2849,8 @@ public final class DevEndToEnd {
     /**
      * A volta no escuro: clica no botão do tema da tela do roteador (pelo {@code mouseClicked}, como o
      * jogador), confere o tema e a config, fotografa as sete telas do mod no escuro ({@code escuro-*})
-     * conferindo que nenhum texto fica cortado e clica de novo no botão, na última tela, para voltar ao
+     * conferindo que nenhum texto fica cortado sem a dica do texto inteiro (o {@code clipCheck}), confere a
+     * cor do texto de um campo nas duas voltas do botão e clica de novo no botão, na última tela, para voltar ao
      * claro. O {@code finish} devolve o claro se algum passo falhar no meio.
      */
     private static void darkSteps(List<Step> list) {
@@ -2885,6 +2886,15 @@ public final class DevEndToEnd {
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         darkShot(list, "escuro-bau");
+        // O texto de um campo não pode ficar com a cor do tema anterior: digita na busca, troca o tema
+        // pelo botão e confere a cor do campo nos dois sentidos (a captura sai no escuro, com o texto).
+        list.add(new Step("Escuro: digitar na busca do Baú", STEP_TIMEOUT_MS, () -> editBox().setValue("diamante"),
+                () -> "diamante".equals(editBox().getValue()), () -> "campo \"" + editBox().getValue() + "\""));
+        list.add(themeClick("Escuro: campo de texto, clicar no botão (claro)", GuiTheme.LIGHT));
+        list.add(inkCheck("Escuro: texto do campo no claro", GuiTheme.LIGHT));
+        list.add(themeClick("Escuro: campo de texto, clicar no botão (escuro)", GuiTheme.DARK));
+        list.add(inkCheck("Escuro: texto do campo no escuro", GuiTheme.DARK));
+        darkShot(list, "escuro-bau-texto");
         list.add(close("Escuro: fechar o Baú"));
         list.add(new Step("Escuro: abrir a Bateria", STEP_TIMEOUT_MS, () -> useOn(batteryPos),
                 () -> Minecraft.getInstance().screen instanceof StorageScalarScreen screen && screen.getMenu().received(),
@@ -2945,6 +2955,34 @@ public final class DevEndToEnd {
                 () -> "tema " + GuiThemes.current() + ", config " + ClientConfig.THEME.get());
     }
 
+    /** O primeiro campo de texto da tela aberta. */
+    private static EditBox editBox() throws StepFailure {
+        Screen screen = Minecraft.getInstance().screen;
+        if (screen != null) {
+            for (GuiEventListener child : screen.children()) {
+                if (child instanceof EditBox box) {
+                    return box;
+                }
+            }
+        }
+        throw new StepFailure("sem campo de texto na tela " + describe(screen));
+    }
+
+    /** Espera o campo de texto da tela aberta pintar o texto com a tinta do tema (o {@code textColor} do EditBox). */
+    private static Step inkCheck(String name, GuiTheme theme) {
+        int expected = GuiPalette.of(theme).fg();
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            Field field = EditBox.class.getDeclaredField("textColor");
+            field.setAccessible(true);
+            return field.getInt(editBox()) == expected;
+        }, () -> {
+            Field field = EditBox.class.getDeclaredField("textColor");
+            field.setAccessible(true);
+            return "cor do campo " + Integer.toHexString(field.getInt(editBox())) + ", esperada " + Integer.toHexString(expected);
+        });
+    }
+
     /** A posição do botão do tema na tela aberta (cada uma das sete a calcula). */
     private static int[] themeButton(@Nullable Screen screen) throws StepFailure {
         if (screen instanceof RouterScreen s) {
@@ -2967,7 +3005,7 @@ public final class DevEndToEnd {
 
     /**
      * Captura a tela no escuro e confere que nenhum texto ficou cortado sem tooltip com o texto inteiro (o
-     * nome de rede comprido que o passo em português deixa numa face corta no cabeçalho, com a dica).
+     * nome de rede comprido que o passo em português deixa numa face corta no seletor de rede da face, com a dica).
      */
     private static void darkShot(List<Step> list, String file) {
         list.add(new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {

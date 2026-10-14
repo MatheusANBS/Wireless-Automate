@@ -248,9 +248,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         searchBox = new EditBox(font, 0, 0, 10, 9, tr("search"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(64);
-        searchBox.setTextColor(GuiPaint.FG);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
+        inkVersion = -1;
         // A busca começa vazia a cada abertura (guardar a última deixava o campo rolado e confuso).
         searchBox.setResponder(value -> scrollRow = 0);
         addRenderableWidget(searchBox);
@@ -790,8 +789,20 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     // ------------------------------------------------------------------ desenho
 
+    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
+    private int inkVersion = -1;
+
+    /** Cor do texto e da dica do campo: o EditBox guarda a cor, então segue o tema por aqui. */
+    private void inkBoxes() {
+        inkVersion = GuiThemes.version();
+        GuiPaint.ink(searchBox, tr("search.hint"));
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (inkVersion != GuiThemes.version()) {
+            inkBoxes();
+        }
         rebuild();
         super.render(g, mouseX, mouseY, partialTick);
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {

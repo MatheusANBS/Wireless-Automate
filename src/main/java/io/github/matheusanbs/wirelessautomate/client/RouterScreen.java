@@ -517,7 +517,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         renameBox = new EditBox(font, x + X0 + 4, y + HEAD_Y + 3, 80, 9, tr("rename.narration"));
         renameBox.setBordered(false);
         renameBox.setMaxLength(RenameRouterPayload.MAX_LENGTH);
-        renameBox.setTextColor(GuiPaint.FG);
         renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         renameBox.setValue(renameDraft);
         renameBox.setResponder(value -> renameDraft = value);
@@ -778,7 +777,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         titleButton.visible = !renaming;
         renameBox.setWidth(titleW - 8);
         renameBox.visible = renaming;
-        renameBox.setHint(displayName().copy().withColor(GuiPaint.DISABLED));
+        GuiPaint.ink(renameBox, displayName()); // a cor do EditBox é do widget: segue o tema a cada quadro
 
         FaceView v = view();
         for (FlatButton button : modeButtons) {

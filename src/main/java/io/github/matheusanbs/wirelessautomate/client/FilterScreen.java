@@ -512,7 +512,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             searchDraft = value;
             scroll = 0;
         });
-        searchBox.setHint(tr("search.hint").copy().withColor(GuiPaint.DISABLED));
 
         // aba Entrada
         minusButton = add(new FlatButton(0, 0, 14, BTN_H, tr("stock.decrease"),
@@ -523,7 +522,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 () -> stepStock(1)).tooltip(() -> stepTooltip("stock.increase.tooltip")));
         stockBox = box(tr("stock"), 15, stockDraft, value -> stockDraft = value);
         stockBox.setFilter(s -> s.chars().allMatch(Character::isDigit));
-        stockBox.setHint(tr("stock.none").copy().withColor(GuiPaint.DISABLED));
         removeButton = add(new FlatButton(0, 0, 40, BTN_H, tr("remove"),
                 (g, b, hovered) -> paintDangerButton(g, b, hovered, tr("remove"), false), this::removeSelected)
                 .tooltip(() -> tr("remove.tooltip")));
@@ -539,7 +537,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             tagSearchDraft = value;
             candScroll = 0;
         });
-        tagSearchBox.setHint(tr(isChemical() ? "tags.search.chemical" : "tags.search.hint").copy().withColor(GuiPaint.DISABLED));
         addTagsButton = add(new FlatButton(0, 0, IW, BTN_H, tr("tags.add.action"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, addLabel()), this::addChecked)
                 .tooltip(() -> uncheckedCount() == 0 ? tr("tags.add.empty") : null));
@@ -566,7 +563,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 openSuggestions();
             }
         });
-        enchantBox.setHint(tr("rule.enchantment.hint").copy().withColor(GuiPaint.DISABLED));
         levelBox = box(tr("rule.level"), 3, levelText, this::typedLevel);
         levelBox.setFilter(value -> value.chars().allMatch(c -> c >= '0' && c <= '9'));
         for (int v = 0; v < 3; v++) {
@@ -581,7 +577,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                         draft.durability().map(d -> d.percent() + "%").orElse("")), false), () -> stepPercent(10))
                 .tooltip(() -> tr("rule.percent.tooltip")));
         scopeBox = box(tr("rule.scope"), ItemRule.MAX_SCOPE, draft.scope(), value -> setDraft(draft.withScope(value)));
-        scopeBox.setHint(tr("rule.scope.hint").copy().withColor(GuiPaint.DISABLED));
         ruleResetButton = add(new FlatButton(0, 0, 40, BTN_H, Component.empty(),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, editing >= 0 ? tr("rule.cancel") : tr("rule.reset"), false),
                 this::resetRule).tooltip(() -> editing >= 0 ? tr("rule.cancel.tooltip") : tr("rule.reset.tooltip")));
@@ -618,7 +613,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         EditBox box = new EditBox(font, 0, 0, 10, 9, name);
         box.setBordered(false);
         box.setMaxLength(max);
-        box.setTextColor(GuiPaint.FG);
+        inkVersion = -1;
         box.setTextShadow(false); // tinta sobre porcelana, sem sombra
         box.setValue(value);
         box.setResponder(responder);
@@ -1811,8 +1806,25 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     // ------------------------------------------------------------------ desenho
 
+    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
+    private int inkVersion = -1;
+
+    /** Cor do texto e das dicas dos campos: o EditBox guarda a cor, então segue o tema por aqui. */
+    private void inkBoxes() {
+        inkVersion = GuiThemes.version();
+        GuiPaint.ink(searchBox, tr("search.hint"));
+        GuiPaint.ink(stockBox, tr("stock.none"));
+        GuiPaint.ink(tagSearchBox, tr(isChemical() ? "tags.search.chemical" : "tags.search.hint"));
+        GuiPaint.ink(enchantBox, tr("rule.enchantment.hint"));
+        GuiPaint.ink(scopeBox, tr("rule.scope.hint"));
+        GuiPaint.ink(levelBox);
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (inkVersion != GuiThemes.version()) {
+            inkBoxes();
+        }
         if (menu.version() != lastVersion) {
             syncView();
         }

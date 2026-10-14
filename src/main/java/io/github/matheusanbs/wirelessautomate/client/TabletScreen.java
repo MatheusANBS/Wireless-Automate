@@ -369,9 +369,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         searchBox = new EditBox(font, x + X0 + 4, y + BODY_Y + 3, 120, 9, tr("search"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_SEARCH);
-        searchBox.setTextColor(GuiPaint.FG);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        searchBox.setHint(tr("search").copy().withColor(GuiPaint.DISABLED));
+        inkVersion = -1;
         searchBox.setValue(search);
         searchBox.setResponder(value -> {
             if (!value.equals(search)) {
@@ -451,13 +450,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         newBox = new EditBox(font, x + X0 + 4, y + newBoxY() + 3, SIDE_W - 52, 9, tr("name"));
         newBox.setBordered(false);
         newBox.setMaxLength(32);
-        newBox.setTextColor(GuiPaint.FG);
         newBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         addRenderableWidget(newBox);
         renameBox = new EditBox(font, x + RX + 4, y + BODY_Y + 3, rw() - 8, 9, tr("rename"));
         renameBox.setBordered(false);
         renameBox.setMaxLength(32);
-        renameBox.setTextColor(GuiPaint.FG);
         renameBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
         addRenderableWidget(renameBox);
         refresh();
@@ -1256,8 +1253,22 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     // ------------------------------------------------------------------ desenho
 
+    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
+    private int inkVersion = -1;
+
+    /** Cor do texto e da dica dos campos: o EditBox guarda a cor, então segue o tema por aqui. */
+    private void inkBoxes() {
+        inkVersion = GuiThemes.version();
+        GuiPaint.ink(searchBox, tr("search"));
+        GuiPaint.ink(newBox);
+        GuiPaint.ink(renameBox);
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (inkVersion != GuiThemes.version()) {
+            inkBoxes();
+        }
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);

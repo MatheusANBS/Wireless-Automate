@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -326,6 +328,39 @@ public final class TransferGameTests {
                     helper.assertTrue(ticks <= 10, "baú levou " + ticks + " ticks para encher: o slot não repetiu");
                     helper.assertValueEqual(TestMachines.bigSlot(machine).count(), 10_000 - capacity, "na origem");
                 })
+                .thenSucceed();
+    }
+
+    /**
+     * Destino que aceita na simulação e recusa de verdade, com a origem numa máquina de entrada e
+     * saída na mesma face (o forno do Mekanism com face Armazém): a sobra não pode voltar pela
+     * entrada da máquina (a pedra virava pedra lisa) nem cair no mundo; vai para outro destino.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void leftoverDoesNotGoIntoMachineInput(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-sobra");
+        BlockPos machine = helper.absolutePos(A);
+        TestMachines.reset(machine);
+        TestMachines.Furnace furnace = TestMachines.furnace(machine);
+        furnace.slots[1] = new ItemStack(Items.STONE, 10);
+        RouterBlockEntity source = place(helper, A, TestMachines.FURNACE.defaultBlockState(), network);
+        source.setMode(ResourceType.ITEM, Direction.UP, PortMode.BOTH);
+        RouterBlockEntity liar = place(helper, C, TestMachines.LYING_SINK.defaultBlockState(), network);
+        liar.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+
+        helper.onEachTick(() -> {
+            helper.assertTrue(furnace.slots[0].isEmpty(), "a sobra entrou na entrada da máquina: " + furnace.slots[0]);
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(machine).inflate(3)).isEmpty(),
+                    "a sobra caiu no mundo");
+        });
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, liar, target))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.STONE, 10))
                 .thenSucceed();
     }
 

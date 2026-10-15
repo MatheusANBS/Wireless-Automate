@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "TIT",
+    "ICI",
+    "TIT"
+  ],
+  "key": {
+    "T": {
+      "item": "minecraft:white_terracotta"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
+      "item": "wirelessautomate:signal_crystal"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:resonator_casing",
+    "count": 4
+  }
+}

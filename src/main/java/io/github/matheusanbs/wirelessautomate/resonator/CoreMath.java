@@ -8,6 +8,15 @@ public final class CoreMath {
     private CoreMath() {
     }
 
+    /** FE por cristal padrão no tier de posição {@code tierOrdinal}: 64, e ×8 a cada degrau. */
+    public static long defaultFePerCrystal(int tierOrdinal) {
+        long value = 64;
+        for (int i = 0; i < tierOrdinal; i++) {
+            value = mulSat(value, 8);
+        }
+        return value;
+    }
+
     /** Câmaras de cristal: Básico 1 … Ultimate 8. */
     public static int chambers(int tierOrdinal) {
         return tierOrdinal + 1;

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.function.Supplier;
@@ -57,6 +58,16 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.DEEPSLATE_SIGNAL_QUARTZ_ORE.get());
                         output.accept(ModItems.SIGNAL_CRYSTAL.get());
                         output.accept(ModItems.CUT_SIGNAL_CRYSTAL.get());
+                        output.accept(ModItems.RESONATOR_CASING.get());
+                        output.accept(ModItems.RESONATOR_GLASS.get());
+                        for (RouterTier tier : RouterTier.values()) {
+                            if (tier.loaded()) {
+                                output.accept(ResonanceCoreItem.withTier(ModItems.RESONANCE_CORE.get(), tier));
+                            }
+                        }
+                        output.accept(ModItems.RESONATOR_ENERGY_PORT.get());
+                        output.accept(ModItems.RESONATOR_CRYSTAL_PORT.get());
+                        output.accept(ModItems.RESONATOR_TUNER.get());
                         GuideBook.create().ifPresent(output::accept);
                     })
                     .build());

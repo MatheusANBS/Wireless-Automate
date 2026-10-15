@@ -73,7 +73,8 @@ public final class ResonatorFormation {
         };
     }
 
-    static Part partOf(BlockState state) {
+    /** A peça que o bloco é na estrutura; a projeção do cliente lê o mundo por aqui também. */
+    public static Part partOf(BlockState state) {
         Block block = state.getBlock();
         if (block instanceof ResonatorCasingBlock) {
             return Part.CASING;
@@ -123,7 +124,8 @@ public final class ResonatorFormation {
         }
     }
 
-    private static BlockState formedState(BlockState state, ResonatorLayout.Member member) {
+    /** O estado montado do bloco para o membro; a projeção desenha os fantasmas já assim. */
+    public static BlockState formedState(BlockState state, ResonatorLayout.Member member) {
         Block block = state.getBlock();
         if (block instanceof ResonatorCasingBlock) {
             return state.setValue(ResonatorCasingBlock.POSITION, CasingPosition.byName(member.casing()));

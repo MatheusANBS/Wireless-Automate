@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
@@ -18,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
@@ -43,7 +45,8 @@ public final class ClientSetup {
     /**
      * Propriedade {@code wirelessautomate:tier} dos itens do roteador, dos armazenamentos e do Núcleo de Ressonância (a
      * posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
-     * Os cristais ganham {@code wirelessautomate:dull} (1 quando Opacos), que troca o modelo.
+     * Os cristais ganham {@code wirelessautomate:dull} (1 quando Opacos), que troca o modelo. Liga também o clique no
+     * Núcleo de Ressonância à projeção da estrutura.
      */
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {
@@ -60,6 +63,7 @@ public final class ClientSetup {
                 ItemProperties.register(crystal.get(), WirelessAutomate.id("dull"),
                         (stack, level, entity, seed) -> SignalCrystalItem.isDull(stack) ? 1F : 0F);
             }
+            ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
         });
     }
 

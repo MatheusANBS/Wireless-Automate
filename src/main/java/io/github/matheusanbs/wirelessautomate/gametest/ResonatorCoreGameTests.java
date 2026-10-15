@@ -1,5 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.assertFormed;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.assertInserted;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.crystal;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.formed;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.hit;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.survivor;
+
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
@@ -20,11 +27,9 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
@@ -39,8 +44,6 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -53,7 +56,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ResonatorCoreGameTests {
-    private static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
+    private static final BlockPos ORIGIN = ResonatorTestSupport.ORIGIN;
 
     private ResonatorCoreGameTests() {
     }
@@ -498,46 +501,14 @@ public final class ResonatorCoreGameTests {
         return counts;
     }
 
-    private static ServerPlayer survivor(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setGameMode(GameType.SURVIVAL);
-        return player;
-    }
-
-    private static BlockHitResult hit(BlockPos absolute) {
-        return new BlockHitResult(Vec3.atCenterOf(absolute), Direction.EAST, absolute, false);
-    }
-
     /** Jogador com {@code card} na mão usa o cartão no Núcleo em {@code absolute}. */
     private static InteractionResult useCard(ServerPlayer player, ItemStack card, BlockPos absolute) {
         player.setItemInHand(InteractionHand.MAIN_HAND, card);
         return card.getItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit(absolute)));
     }
 
-    /** Monta a Vitrine no tier, espera montar e roda {@code body} num só tick. */
-    private static void formed(GameTestHelper helper, RouterTier tier, Consumer<ResonanceCoreBlockEntity> body) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, tier);
-        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
-                .thenExecute(() -> body.accept(ResonatorTestSupport.core(helper, corePos))).thenSucceed();
-    }
-
     private static void tuned(ResonanceCoreBlockEntity core) {
         core.setStationForTest(98.0);
         core.setDial(98.0);
-    }
-
-    private static ItemStack crystal(boolean cut, int charge) {
-        ItemStack stack = new ItemStack(cut ? ModItems.CUT_SIGNAL_CRYSTAL.get() : ModItems.SIGNAL_CRYSTAL.get());
-        SignalCrystalItem.setCharge(stack, charge);
-        return stack;
-    }
-
-    private static void assertInserted(GameTestHelper helper, ResonanceCoreBlockEntity core, ItemStack stack) {
-        helper.assertTrue(core.insertCrystal(stack).isEmpty(), "o cristal não entrou");
-    }
-
-    private static void assertFormed(GameTestHelper helper, BlockPos corePos, boolean formed) {
-        ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
-        helper.assertTrue(core != null && core.formed() == formed, formed ? "não montou" : "não desmontou");
     }
 }

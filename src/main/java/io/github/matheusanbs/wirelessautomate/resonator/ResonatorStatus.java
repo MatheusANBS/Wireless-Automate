@@ -8,8 +8,8 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A linha da action bar do clique no Núcleo: montado, o tier, os cristais nas câmaras, a eficiência e a geração;
- * solto, o problema que impede montar, com a posição do bloco quando ela importa.
+ * A linha da action bar do clique no Núcleo: montado, o tier, os cristais nas câmaras, a eficiência, a geração e
+ * o modo; solto, o problema que impede montar, com a posição do bloco quando ela importa.
  */
 public final class ResonatorStatus {
     private static final String KEY = "block.wirelessautomate.resonance_core.";
@@ -21,7 +21,7 @@ public final class ResonatorStatus {
         if (core.formed()) {
             return Component.translatable(KEY + "status", Component.translatable(core.tier().translationKey()),
                     crystals(core), core.chambers(), Math.round(core.efficiency() * 100),
-                    TierCoreItem.grouped(core.generationPerTick())).withStyle(ChatFormatting.AQUA);
+                    TierCoreItem.grouped(core.generationPerTick()), mode(core)).withStyle(ChatFormatting.AQUA);
         }
         ResonatorLayout.Broken problem = problem(core);
         if (problem == null) {
@@ -29,6 +29,11 @@ public final class ResonatorStatus {
         }
         return Component.translatable(KEY + "problem." + problem.problem().name().toLowerCase(Locale.ROOT),
                 problem.x() + " " + problem.y() + " " + problem.z()).withStyle(ChatFormatting.RED);
+    }
+
+    /** O nome do modo: Manual ou Sintonizador. */
+    public static Component mode(ResonanceCoreBlockEntity core) {
+        return Component.translatable(KEY + (core.auto() ? "mode.auto" : "mode.manual"));
     }
 
     /** Quantas câmaras do tier têm cristal. */

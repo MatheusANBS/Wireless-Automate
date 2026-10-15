@@ -10,6 +10,11 @@ public final class TuneSignal {
     public static final int BANDS = 8;
     /** O platô de ±0,25 MHz em passos do dial. */
     public static final int PLATEAU_STEPS = (int) Math.round(Tuning.PLATEAU / Tuning.DIAL_STEP);
+    /**
+     * Folga das bordas: sem ela, o erro de ponto flutuante (0,25000000000000006, 3,0000000000000004) apaga a lâmpada
+     * ou sobe a faixa enquanto o ponteiro mostra o valor exato.
+     */
+    private static final double EPSILON = 1e-9;
 
     private TuneSignal() {
     }
@@ -25,10 +30,10 @@ public final class TuneSignal {
     /** 0 só a 0%; 7 acima de 6/7. */
     public static int band(double efficiency) {
         double e = Math.max(0, Math.min(1, efficiency));
-        return (int) Math.ceil(e * (BANDS - 1));
+        return (int) Math.ceil(e * (BANDS - 1) - EPSILON);
     }
 
     public static boolean tuned(double station, double dial) {
-        return Math.abs(station - dial) <= Tuning.PLATEAU;
+        return Math.abs(station - dial) <= Tuning.PLATEAU + EPSILON;
     }
 }

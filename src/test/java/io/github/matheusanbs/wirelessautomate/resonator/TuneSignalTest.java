@@ -34,4 +34,19 @@ class TuneSignalTest {
         assertFalse(TuneSignal.tuned(98.0, 98.3));
         assertEquals(TuneSignal.PLATEAU_STEPS, TuneSignal.steps(98.25, 98.0));
     }
+
+    @Test
+    void lampadaToleraOErroDePontoFlutuanteNaBorda() {
+        assertTrue(TuneSignal.tuned(98.25 + 1e-12, 98.0));
+        assertTrue(TuneSignal.tuned(98.0, 98.25 + 1e-12));
+        assertFalse(TuneSignal.tuned(98.25 + 1e-6, 98.0));
+    }
+
+    @Test
+    void faixaToleraOErroDePontoFlutuanteNaBorda() {
+        // 3/7 calculado por outro caminho: 0,42857142857142866 × 7 = 3,0000000000000004.
+        assertEquals(3, TuneSignal.band(0.42857142857142866));
+        assertEquals(1, TuneSignal.band(0.1428571428571429));
+        assertEquals(4, TuneSignal.band(3.0 / 7 + 1e-6));
+    }
 }

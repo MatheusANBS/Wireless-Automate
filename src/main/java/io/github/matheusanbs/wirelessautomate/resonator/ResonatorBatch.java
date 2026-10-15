@@ -51,12 +51,16 @@ public final class ResonatorBatch {
     }
 
     /**
-     * Sem estação (nunca montou) não há o que derivar; a contagem dos lotes anda mesmo assim. Só o passo da
+     * Sem estação (nunca montou) não há o que derivar; a contagem dos lotes anda mesmo assim. No modo automático o
+     * Sintonizador anda o dial logo depois de a estação andar. Só o passo da
      * deriva marca o Núcleo como mudado: a contagem sozinha não vale uma gravação do chunk.
      */
     private static boolean drift(ServerLevel level, ResonanceCoreBlockEntity core) {
         if (core.countBatch(BATCHES_PER_DRIFT) && core.hasStation()) {
             core.setDrift(Tuning.step(core.station(), core.velocity(), level.random.nextGaussian()));
+            if (core.auto() && core.hasTuner()) {
+                core.setDial(Tuning.autoStep(core.dial(), core.station()));
+            }
             return true;
         }
         return false;

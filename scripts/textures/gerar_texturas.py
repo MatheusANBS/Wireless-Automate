@@ -738,9 +738,9 @@ def prancha_icones(itens: dict[str, Sprite]) -> Image.Image:
 CRISTAL_SINAL = {"4": "#FFF0EA", "3": "#FFC9B8", "2": "#F2917A", "1": "#C9604B", "0": "#8A3A2C"}
 CRISTAL_OPACO = {"4": "#F4F0EA", "3": "#D9D2C8", "2": "#B5ADA2", "1": "#8C857C", "0": "#5E5952"}
 
-BRUTO = ["................", "..........A.....", ".........Aab....", "....A....Aabc...", "...Aab...Aabc...",
-         "...Aabc..Aabc...", "...Aabc.AAabc...", "...Aabc.Aaabc...", "...Aabc.Aaabc.A.", "..AAabcAAaabcAab",
-         "..AaabcAaaabcAbc", "..AaabcAaaabcabc", "..bbbcdbbbbcdbcd", "..cccddcccccddd.", "...dddddddddd...", "................"]
+BRUTO = ["................", ".........A......", "........Aab.....", "...A....Aabc....", "..Aab...Aabc....",
+         "..Aabc..Aabc....", "..Aabc.AAabc....", "..Aabc.Aaabc....", "..Aabc.Aaabc.A..", ".AAabcAAaabcAab.",
+         ".AaabcAaaabcAbc.", ".AaabcAaaabcabc.", ".bbbcdbbbbcdbcd.", ".cccddcccccddd..", "..dddddddddd....", "................"]
 LAPIDADO = ["................", "................", ".......AA.......", "......AAab......", ".....AAaabb.....",
             "....AAaaabbc....", "...AAaaaabbcc...", "...LLLLLllllm...", "...aaaabbbbcc...", "....aaabbbcc....",
             ".....aabbcc.....", "......abcc......", ".......cd.......", "................", "................", "................"]
@@ -771,11 +771,11 @@ def cristal() -> Sprite:
             if 0 <= d <= 1:
                 put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .7 if d == 0 else .4))
         if k in (6, 7):
-            put(img, 10, 1, BRANCO)
+            put(img, 9, 1, BRANCO)
             if k == 6:
                 for dx, dy in ((1, 0), (-1, 0), (0, -1)):
-                    if img.getpixel((10 + dx, 1 + dy))[3] == 0:
-                        put(img, 10 + dx, 1 + dy, cor("#FFC9B8"))
+                    if img.getpixel((9 + dx, 1 + dy))[3] == 0:
+                        put(img, 9 + dx, 1 + dy, cor("#FFC9B8"))
         q.append(img)
     return animacao(q, 4)
 
@@ -807,14 +807,21 @@ def lapidado() -> Sprite:
     return animacao(q, 3)
 
 
-def opaco(grade: list[str]) -> Sprite:
+# Os pixels da brasa do Opaco, no pé de cada forma (todos dentro do contorno).
+BRASA_BRUTO = ((4, 11), (9, 11), (8, 10))
+BRASA_LAPIDADO = ((6, 9), (7, 10), (8, 11))
+
+
+def opaco(grade: list[str], brasa_px: tuple[tuple[int, int], ...]) -> Sprite:
     """O cristal sem carga, na forma da grade dada: pedra cinza com uma brasa fraca que respira (8 × 6 ticks)."""
     q = []
     for k in range(8):
         img = _cristal_base(grade, CRISTAL_OPACO)
+        dentro = _interior_px(img)
         t = (1 + math.cos(2 * math.pi * k / 8)) / 2
         brasa = mistura(cor(CRISTAL_OPACO["1"]), cor("#C9604B"), .55 * t)
-        for p in ((5, 11), (10, 11), (9, 10)):
+        for p in brasa_px:
+            assert p in dentro, f"brasa fora do cristal em {p}"
             put(img, *p, brasa)
         q.append(img)
     return animacao(q, 6)
@@ -838,8 +845,8 @@ def gerar_itens() -> dict[str, Sprite]:
     sprites["item/guide"] = guia()
     sprites["item/signal_crystal"] = cristal()
     sprites["item/cut_signal_crystal"] = lapidado()
-    sprites["item/signal_crystal_dull"] = opaco(BRUTO)
-    sprites["item/cut_signal_crystal_dull"] = opaco(LAPIDADO)
+    sprites["item/signal_crystal_dull"] = opaco(BRUTO, BRASA_BRUTO)
+    sprites["item/cut_signal_crystal_dull"] = opaco(LAPIDADO, BRASA_LAPIDADO)
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()

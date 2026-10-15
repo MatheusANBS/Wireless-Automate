@@ -343,7 +343,6 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 **v2, escala e integrações**
 
 - [ ] Ressonador de Sinal (gerador multibloco): etapa 1 pronta (minério, cristais e a receita do Lapidado); falta a estrutura, o Núcleo, a tela e a câmara. Spec em `docs/superpowers/specs/2026-10-15-ressonador-de-sinal-design.md`
-
 - [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
 - [x] Source do Ars Nouveau (aba Source, sem filtro e sem cartões, vazão por tier)
 - [x] Tablet: lista, mapa, estatísticas, redes e grupos

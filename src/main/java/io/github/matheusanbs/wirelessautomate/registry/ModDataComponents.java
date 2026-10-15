@@ -22,8 +22,8 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ExtraCodecs;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ModDataComponents {
@@ -137,11 +137,12 @@ public final class ModDataComponents {
 
     /**
      * Carga de um Cristal de Sinal ou Lapidado ({@link CrystalCharge}). Sem o componente, o cristal está
-     * cheio; com 0, está Opaco.
+     * cheio; com 0, está Opaco. Um cristal com o componente valendo o cheio (por comando ou datapack) é cheio
+     * para a receita, mas só empilha com o novo depois de passar pelo {@code setCharge}, que tira o componente.
      */
     public static final Supplier<DataComponentType<Integer>> CRYSTAL_CHARGE =
             DATA_COMPONENTS.registerComponentType("crystal_charge", builder -> builder
-                    .persistent(ExtraCodecs.intRange(0, 1_000_000))
+                    .persistent(ExtraCodecs.intRange(0, CrystalCharge.FULL))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
 
     /** Tipo (aba) que o Configurador cola; sem o componente, todos. */

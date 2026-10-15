@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
@@ -64,6 +65,8 @@ public final class ResonatorCrystalGameTests {
         helper.assertTrue(SignalCrystalItem.isFull(stack), "cristal novo está cheio");
         helper.assertFalse(SignalCrystalItem.isDull(stack), "cristal novo não está Opaco");
         SignalCrystalItem.setCharge(stack, 400_000);
+        helper.assertValueEqual(SignalCrystalItem.charge(stack), 400_000, "carga gravada");
+        helper.assertTrue(stack.has(ModDataComponents.CRYSTAL_CHARGE.get()), "carga parcial grava o componente");
         SignalCrystalItem.setCharge(stack, CrystalCharge.FULL);
         helper.assertTrue(ItemStack.isSameItemSameComponents(stack, new ItemStack(ModItems.SIGNAL_CRYSTAL.get())),
                 "cheio de novo volta a empilhar com o novo (sem componente)");

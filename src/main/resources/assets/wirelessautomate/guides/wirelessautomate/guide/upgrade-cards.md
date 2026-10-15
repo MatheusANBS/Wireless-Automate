@@ -60,7 +60,7 @@ limit. Source only with Ars Nouveau.
 
 ¹ Only with the Allthemodium mod. Without it, the Ultimate Card comes after Emerald (16,384 items/s → unlimited).
 
-Each step multiplies throughput by 8. Range and dimensions follow the **sender's** tier.
+Each step multiplies throughput by 8; only Unobtainium energy jumps 64 times over Vibranium. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 

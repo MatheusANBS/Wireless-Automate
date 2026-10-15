@@ -697,7 +697,7 @@ Mockup aprovado pelo dono: `docs/preview/ressonador-projecao.html`. Tudo no **cl
 
 A busca é só ao colocar (cubo de raio 4, com `level.isLoaded` antes de ler; nada por tick). Sem payload novo.
 
-**Arquivos:** `resonator/PlacementFacing.java` (pura, JUnit em `PlacementFacingTest`), `ResonatorPartBlock.getStateForPlacement` (regra 1, senão 2), `ResonanceCoreBlock.getStateForPlacement` (regra 2) e `gametest/ResonatorPlacementGameTests.java` (7 testes, template `empty7`).
+**Arquivos:** `resonator/PlacementFacing.java` (pura, JUnit em `PlacementFacingTest`), `ResonatorPartBlock.getStateForPlacement` (regra 1, senão 2), `ResonanceCoreBlock.getStateForPlacement` (regra 2) e `gametest/ResonatorPlacementGameTests.java` (6 testes, template `empty7`).
 
 **Testes:** JUnit: miolo da face, aresta pelos dois lados, canto, interior e fora da caixa dão `null`, e as seis faces do Núcleo dão as caixas certas. GameTests: `portaNaParedeOlhaParaFora`, `sintonizadorNaArestaOlhaParaOJogador`, `semNucleoOlhaParaOJogador`, `nucleoOlhaParaOJogador`, `montarContinuaVirandoParaFora` e o caminho real do item na mão. Commit: `"Ressonador: as peças nascem de frente para fora da parede ou para o jogador"`.
 

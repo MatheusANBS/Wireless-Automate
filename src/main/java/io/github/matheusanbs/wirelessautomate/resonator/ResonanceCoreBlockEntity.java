@@ -118,6 +118,31 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return stack.copy();
     }
 
+    /**
+     * Põe uma unidade do cristal na câmara {@code chamber}, se ela é do tier e está vazia; devolve se pôs. A Porta
+     * de Cristais entra por aqui, slot a slot.
+     */
+    public boolean insertCrystalAt(int chamber, ItemStack stack) {
+        if (chamber < 0 || chamber >= chambers() || !crystals.get(chamber).isEmpty()
+                || !(stack.getItem() instanceof SignalCrystalItem)) {
+            return false;
+        }
+        crystals.set(chamber, stack.copyWithCount(1));
+        setChanged();
+        return true;
+    }
+
+    /** Tira o cristal da câmara {@code chamber}, ou {@link ItemStack#EMPTY} se ela está vazia ou fora do tier. */
+    public ItemStack takeCrystalAt(int chamber) {
+        if (chamber < 0 || chamber >= chambers() || crystals.get(chamber).isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = crystals.get(chamber);
+        crystals.set(chamber, ItemStack.EMPTY);
+        setChanged();
+        return stack;
+    }
+
     /** Tira o cristal da última câmara ocupada, ou {@link ItemStack#EMPTY} se não há nenhum. */
     public ItemStack takeLastCrystal() {
         for (int i = MAX_CHAMBERS - 1; i >= 0; i--) {
@@ -143,6 +168,12 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             setChanged();
         }
         return added;
+    }
+
+    /** Só para os GameTests: põe a redstone num valor conhecido. */
+    public void setRedstoneForTest(int count) {
+        redstone = Math.max(0, Math.min(MAX_REDSTONE, count));
+        setChanged();
     }
 
     public long energy() {

@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
@@ -49,6 +50,7 @@ public final class WirelessAutomate {
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(ModPayloads::register);
         modEventBus.addListener(StorageCapabilities::register);
+        modEventBus.addListener(ResonatorCapabilities::register);
         modEventBus.addListener(RecipeOverridePack::onAddPackFinders);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);

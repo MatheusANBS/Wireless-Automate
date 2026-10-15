@@ -242,131 +242,163 @@
     },
     "facing=up,formed=true,tier=basic": {
       "model": "wirelessautomate:block/resonance_core_basic",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=advanced": {
       "model": "wirelessautomate:block/resonance_core_advanced",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=elite": {
       "model": "wirelessautomate:block/resonance_core_elite",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=emerald": {
       "model": "wirelessautomate:block/resonance_core_emerald",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=allthemodium": {
       "model": "wirelessautomate:block/resonance_core_allthemodium",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=vibranium": {
       "model": "wirelessautomate:block/resonance_core_vibranium",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=unobtainium": {
       "model": "wirelessautomate:block/resonance_core_unobtainium",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=true,tier=ultimate": {
       "model": "wirelessautomate:block/resonance_core_ultimate",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=basic": {
       "model": "wirelessautomate:block/resonance_core_basic_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=advanced": {
       "model": "wirelessautomate:block/resonance_core_advanced_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=elite": {
       "model": "wirelessautomate:block/resonance_core_elite_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=emerald": {
       "model": "wirelessautomate:block/resonance_core_emerald_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=allthemodium": {
       "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=vibranium": {
       "model": "wirelessautomate:block/resonance_core_vibranium_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=unobtainium": {
       "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false,tier=ultimate": {
       "model": "wirelessautomate:block/resonance_core_ultimate_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=down,formed=true,tier=basic": {
       "model": "wirelessautomate:block/resonance_core_basic",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=advanced": {
       "model": "wirelessautomate:block/resonance_core_advanced",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=elite": {
       "model": "wirelessautomate:block/resonance_core_elite",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=emerald": {
       "model": "wirelessautomate:block/resonance_core_emerald",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=allthemodium": {
       "model": "wirelessautomate:block/resonance_core_allthemodium",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=vibranium": {
       "model": "wirelessautomate:block/resonance_core_vibranium",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=unobtainium": {
       "model": "wirelessautomate:block/resonance_core_unobtainium",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=true,tier=ultimate": {
       "model": "wirelessautomate:block/resonance_core_ultimate",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=basic": {
       "model": "wirelessautomate:block/resonance_core_basic_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=advanced": {
       "model": "wirelessautomate:block/resonance_core_advanced_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=elite": {
       "model": "wirelessautomate:block/resonance_core_elite_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=emerald": {
       "model": "wirelessautomate:block/resonance_core_emerald_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=allthemodium": {
       "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=vibranium": {
       "model": "wirelessautomate:block/resonance_core_vibranium_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=unobtainium": {
       "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false,tier=ultimate": {
       "model": "wirelessautomate:block/resonance_core_ultimate_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     }
   }
 }

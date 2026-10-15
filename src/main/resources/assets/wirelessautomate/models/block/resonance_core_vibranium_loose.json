@@ -6,7 +6,7 @@
     "resonance_core_vibranium_dentro": "wirelessautomate:block/resonance_core_vibranium_dentro",
     "resonance_core_vibranium_solto": "wirelessautomate:block/resonance_core_vibranium_solto",
     "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
-    "particle": "wirelessautomate:block/resonator_casing_solta"
+    "particle": "wirelessautomate:block/resonance_core_vibranium_solto"
   },
   "elements": [
     {

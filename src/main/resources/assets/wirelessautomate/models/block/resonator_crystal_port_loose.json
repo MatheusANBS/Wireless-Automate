@@ -6,7 +6,7 @@
     "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
     "resonator_crystal_port_dentro": "wirelessautomate:block/resonator_crystal_port_dentro",
     "resonator_crystal_port_solto": "wirelessautomate:block/resonator_crystal_port_solto",
-    "particle": "wirelessautomate:block/resonator_casing_solta"
+    "particle": "wirelessautomate:block/resonator_crystal_port_solto"
   },
   "elements": [
     {

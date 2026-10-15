@@ -32,19 +32,23 @@
     },
     "facing=up,formed=true": {
       "model": "wirelessautomate:block/resonator_energy_port",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=up,formed=false": {
       "model": "wirelessautomate:block/resonator_energy_port_loose",
-      "x": 270
+      "x": 270,
+      "y": 180
     },
     "facing=down,formed=true": {
       "model": "wirelessautomate:block/resonator_energy_port",
-      "x": 90
+      "x": 90,
+      "y": 180
     },
     "facing=down,formed=false": {
       "model": "wirelessautomate:block/resonator_energy_port_loose",
-      "x": 90
+      "x": 90,
+      "y": 180
     }
   }
 }

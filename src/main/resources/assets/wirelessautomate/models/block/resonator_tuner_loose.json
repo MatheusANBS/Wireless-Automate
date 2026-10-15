@@ -6,7 +6,7 @@
     "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
     "resonator_forro": "wirelessautomate:block/resonator_forro",
     "resonator_tuner_solto": "wirelessautomate:block/resonator_tuner_solto",
-    "particle": "wirelessautomate:block/resonator_casing_solta"
+    "particle": "wirelessautomate:block/resonator_tuner_solto"
   },
   "elements": [
     {

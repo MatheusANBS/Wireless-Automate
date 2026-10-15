@@ -4,6 +4,7 @@
   "ambientocclusion": true,
   "textures": {
     "resonator_casing_campo": "wirelessautomate:block/resonator_casing_campo",
+    "resonator_forro": "wirelessautomate:block/resonator_forro",
     "particle": "wirelessautomate:block/resonator_casing_campo"
   },
   "elements": [
@@ -26,7 +27,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "down"
         },
         "up": {
@@ -36,7 +37,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "up"
         },
         "north": {
@@ -56,7 +57,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "south"
         },
         "west": {
@@ -66,7 +67,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "west"
         },
         "east": {
@@ -76,7 +77,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "east"
         }
       }

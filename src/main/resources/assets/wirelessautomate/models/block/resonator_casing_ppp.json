@@ -7,6 +7,7 @@
     "resonator_casing_campo": "wirelessautomate:block/resonator_casing_campo",
     "resonator_casing_tl": "wirelessautomate:block/resonator_casing_tl",
     "resonator_casing_tr": "wirelessautomate:block/resonator_casing_tr",
+    "resonator_forro": "wirelessautomate:block/resonator_forro",
     "particle": "wirelessautomate:block/resonator_casing_campo"
   },
   "elements": [
@@ -29,7 +30,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "down"
         },
         "up": {
@@ -49,7 +50,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "north"
         },
         "south": {
@@ -69,7 +70,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_campo",
+          "texture": "#resonator_forro",
           "cullface": "west"
         },
         "east": {

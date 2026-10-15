@@ -25,8 +25,8 @@ import org.jetbrains.annotations.Nullable;
 public class ResonanceCoreBlockEntity extends BlockEntity {
     /** O dial começa no meio da faixa até o jogador mexer. */
     static final double DEFAULT_DIAL = 98.0;
-    /** As câmaras do Ultimate; as do tier do Núcleo são as primeiras. */
-    public static final int MAX_CHAMBERS = 8;
+    /** As câmaras do último tier; as do tier do Núcleo são as primeiras. */
+    public static final int MAX_CHAMBERS = CoreMath.chambers(RouterTier.values().length - 1);
     public static final int MAX_REDSTONE = 64;
 
     private boolean formed;
@@ -98,7 +98,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return CoreMath.chambers(tier().ordinal());
     }
 
-    /** As 8 câmaras; só as {@link #chambers()} primeiras valem. */
+    /** As {@link #MAX_CHAMBERS} câmaras; só as {@link #chambers()} primeiras valem. */
     public NonNullList<ItemStack> crystals() {
         return crystals;
     }

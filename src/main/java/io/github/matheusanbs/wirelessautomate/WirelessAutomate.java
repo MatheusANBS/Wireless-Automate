@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
@@ -90,6 +91,7 @@ public final class WirelessAutomate {
         SourceTankLevels.reset();
         ResonatorManager.reset();
         ResonatorPorts.reset();
+        ResonatorMembers.reset();
         RecipeEditor.reset();
         TabletMenu.resetStates();
     }

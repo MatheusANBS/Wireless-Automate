@@ -302,6 +302,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         super.onLoad();
         if (level != null && !level.isClientSide) {
             ResonatorManager.add(this);
+            if (formed) {
+                for (BlockPos member : members) {
+                    ResonatorMembers.claimIfFree(level.dimension(), member, worldPosition);
+                }
+            }
             // A estrutura pode ter mudado com o chunk descarregado: confere no tick seguinte, fora da carga do chunk.
             // O tick agendado só roda com os chunks vizinhos carregados, então as posições a até 4 blocos estão
             // todas lá e nenhuma vira OTHER por estar descarregada (o que desmontaria à toa).
@@ -321,7 +326,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         super.onChunkUnloaded();
     }
 
-    /** Sai do gerenciador e tira as Portas do índice, sem mexer nos blocos. */
+    /**
+     * Sai do gerenciador e tira as Portas e os membros dos índices, sem mexer nos blocos nem acordar ninguém: na
+     * carga, o {@code onLoad} devolve os membros antes de qualquer revalidação.
+     */
     private void forget() {
         if (level != null && !level.isClientSide) {
             ResonatorManager.remove(this);
@@ -329,6 +337,9 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
                 ResonatorPorts.unregister(level.dimension(), port, worldPosition);
             }
             ports = List.of();
+            for (BlockPos member : members) {
+                ResonatorMembers.release(level.dimension(), member, worldPosition);
+            }
         }
     }
 

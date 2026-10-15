@@ -128,7 +128,7 @@ public final class ResonatorFormationGameTests {
         }).thenSucceed();
     }
 
-    /** Parede dividida: o Núcleo que soltou a Porta não tira o registro que outro Núcleo fez depois. */
+    /** O Núcleo que soltou a Porta não tira o registro que outro Núcleo fez depois. */
     @GameTest(template = "empty")
     public static void unregisterNaoTiraAPortaDeOutroNucleo(GameTestHelper helper) {
         var dimension = helper.getLevel().dimension();

@@ -70,8 +70,13 @@ public final class ResonatorLayout {
     public record Member(int x, int y, int z, Part part, String casing, Face face, int glassBits) {
     }
 
+    /**
+     * O que impede montar. {@code SHARED_WALL} não sai daqui (a regra é do mundo, pelo índice dos membros): a
+     * posição é a do Núcleo dono da parede.
+     */
     public enum Problem {
-        WRONG_BLOCK, INTERIOR_NOT_EMPTY, EXTRA_CORE, MISSING_ENERGY_PORT, MISSING_CRYSTAL_PORT, TOO_MANY_TUNERS
+        WRONG_BLOCK, INTERIOR_NOT_EMPTY, EXTRA_CORE, MISSING_ENERGY_PORT, MISSING_CRYSTAL_PORT, TOO_MANY_TUNERS,
+        SHARED_WALL
     }
 
     public sealed interface Result permits Formed, Broken {

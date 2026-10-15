@@ -14,11 +14,12 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Montar e desmontar o Ressonador: lê a caixa em volta do Núcleo, passa pelo {@link ResonatorLayout} e grava
- * nos blocos os estados conectados (ou os devolve a soltos), com o índice das Portas. Só roda por evento de
- * bloco (o tick agendado do Núcleo), nunca por tick.
+ * nos blocos os estados conectados (ou os devolve a soltos), com o índice dos membros e o das Portas. Só roda por
+ * evento de bloco (o tick agendado do Núcleo), nunca por tick.
  */
 public final class ResonatorFormation {
     /** Jogadores a até 16 blocos do Núcleo veem o aviso de montado. */
@@ -33,7 +34,7 @@ public final class ResonatorFormation {
         if (core.isRemoved() || level.getBlockEntity(at) != core) {
             return;
         }
-        ResonatorLayout.Result result = check(level, at);
+        ResonatorLayout.Result result = evaluate(level, at);
         if (result instanceof ResonatorLayout.Formed formed) {
             core.setLastProblem(null);
             form(level, core, formed);
@@ -50,13 +51,62 @@ public final class ResonatorFormation {
         return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), probe(level, core));
     }
 
-    /** Desmonta: cada membro ainda presente volta a solto e as Portas saem do índice. */
+    /**
+     * Confere a estrutura e, se ela fecha, se algum membro já é de outro Ressonador montado: a parede dividida não
+     * monta ({@link ResonatorLayout.Problem#SHARED_WALL}, com a posição do Núcleo dono). Sem gravar nada.
+     */
+    static ResonatorLayout.Result evaluate(ServerLevel level, BlockPos core) {
+        ResonatorLayout.Result result = check(level, core);
+        if (result instanceof ResonatorLayout.Formed formed) {
+            BlockPos owner = sharedWallOwner(level, core, formed);
+            if (owner != null) {
+                return new ResonatorLayout.Broken(ResonatorLayout.Problem.SHARED_WALL, owner.getX(), owner.getY(),
+                        owner.getZ());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * O Núcleo de outro Ressonador montado dono de algum membro, ou {@code null}. Um dono carregado só vale com o
+     * Núcleo ainda lá e montado (pelo estado do bloco, sem criar block entity); um descarregado continua dono.
+     */
+    private static @Nullable BlockPos sharedWallOwner(ServerLevel level, BlockPos core, ResonatorLayout.Formed formed) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (ResonatorLayout.Member member : formed.members()) {
+            BlockPos owner = ResonatorMembers.owner(level.dimension(), cursor.set(member.x(), member.y(), member.z()));
+            if (owner == null || owner.equals(core)) {
+                continue;
+            }
+            if (!level.isLoaded(owner)) {
+                return owner;
+            }
+            BlockState state = level.getBlockState(owner);
+            if (state.getBlock() instanceof ResonanceCoreBlock && state.getValue(ResonatorPartBlock.FORMED)) {
+                return owner;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Desmonta: cada membro ainda presente e deste Núcleo volta a solto, as Portas saem do índice e os Núcleos
+     * que esperavam por uma parede dele revalidam.
+     */
     public static void disassemble(ServerLevel level, ResonanceCoreBlockEntity core) {
+        BlockPos at = core.getBlockPos();
+        boolean released = false;
         for (BlockPos pos : core.members()) {
-            loosen(level, pos);
+            if (ResonatorMembers.ownedOrFree(level.dimension(), pos, at)) {
+                loosen(level, pos);
+            }
+            released |= ResonatorMembers.release(level.dimension(), pos, at);
         }
         updatePorts(level, core, List.of());
         core.setFormed(false, List.of());
+        if (released) {
+            ResonatorManager.wakeBlockedBy(level, at);
+        }
     }
 
     /** As leituras ficam guardadas: as caixas candidatas se cruzam, e cada posição é lida uma vez só. */
@@ -102,11 +152,13 @@ public final class ResonatorFormation {
 
     private static void form(ServerLevel level, ResonanceCoreBlockEntity core, ResonatorLayout.Formed formed) {
         boolean wasFormed = core.formed();
+        BlockPos at = core.getBlockPos();
         List<BlockPos> members = new ArrayList<>(formed.members().size());
         List<BlockPos> ports = new ArrayList<>();
         for (ResonatorLayout.Member member : formed.members()) {
             BlockPos pos = new BlockPos(member.x(), member.y(), member.z());
             members.add(pos);
+            ResonatorMembers.claim(level.dimension(), pos, at);
             if (member.part() == Part.ENERGY_PORT || member.part() == Part.CRYSTAL_PORT) {
                 ports.add(pos);
             }
@@ -117,13 +169,18 @@ public final class ResonatorFormation {
             }
         }
         Set<BlockPos> current = new HashSet<>(members);
+        boolean released = false;
         for (BlockPos old : core.members()) {
-            if (!current.contains(old)) {
+            if (!current.contains(old) && ResonatorMembers.ownedOrFree(level.dimension(), old, at)) {
                 loosen(level, old);
+                released |= ResonatorMembers.release(level.dimension(), old, at);
             }
         }
         updatePorts(level, core, ports);
         core.setFormed(true, members);
+        if (released) {
+            ResonatorManager.wakeBlockedBy(level, at);
+        }
         if (!wasFormed) {
             announce(level, core);
         }

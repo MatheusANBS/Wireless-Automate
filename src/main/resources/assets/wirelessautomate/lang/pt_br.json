@@ -52,6 +52,7 @@
   "block.wirelessautomate.resonance_core.problem.missing_energy_port": "Falta uma Porta de Energia",
   "block.wirelessautomate.resonance_core.problem.missing_crystal_port": "Falta uma Porta de Cristais",
   "block.wirelessautomate.resonance_core.problem.too_many_tuners": "Só um Sintonizador por Ressonador (outro em %s)",
+  "block.wirelessautomate.resonance_core.problem.shared_wall": "Parede já usada por outro Ressonador (Núcleo em %s)",
   "item.wirelessautomate.configurator": "Configurador",
   "item.wirelessautomate.network_tablet": "Tablet de Rede",
   "item.wirelessautomate.linker": "Vinculador",

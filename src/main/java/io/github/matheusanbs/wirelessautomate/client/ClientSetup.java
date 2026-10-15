@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
+import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
@@ -13,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -83,5 +85,7 @@ public final class ClientSetup {
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
         event.register(ModMenus.RECIPE_EDITOR.get(), (RecipeEditorMenu menu, Inventory inventory, Component title)
                 -> new RecipeEditorScreen(menu, inventory, title));
+        event.register(ModMenus.RESONATOR.get(),
+                (ResonatorMenu menu, Inventory inventory, Component title) -> new ResonatorScreen(menu, inventory, title));
     }
 }

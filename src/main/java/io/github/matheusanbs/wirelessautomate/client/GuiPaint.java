@@ -90,6 +90,12 @@ public final class GuiPaint {
     /** Texto das regras na lista do filtro (roxo da regra, legível no painel). */
     public static int RULE_TEXT;
 
+    // -- o osciloscópio do Núcleo de Ressonância: fora da paleta, iguais nos dois temas, porque o visor é um
+    // instrumento de fundo escuro tanto no claro quanto no escuro (o único fundo escuro da tela)
+    public static final int SCOPE_BG = 0xFF1B1920;
+    public static final int SCOPE_GRID = 0xFF2F2C35;
+    public static final int SCOPE_LINE = 0xFF8EE8E1;
+
     static {
         apply(GuiPalette.LIGHT);
     }

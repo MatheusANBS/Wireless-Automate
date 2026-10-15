@@ -21,6 +21,7 @@ import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -55,6 +56,14 @@ final class TestPlayers {
         return removedAtEnd(helper, player);
     }
 
+    /** Um {@link MenuPlayer} em sobrevivência (o alcance do jogo comum), tirado da lista quando o teste termina. */
+    static MenuPlayer survivalMenuOpener(GameTestHelper helper) {
+        MenuPlayer player = menuOpener(helper);
+        player.creative = false;
+        player.setGameMode(GameType.SURVIVAL);
+        return player;
+    }
+
     /**
      * Jogador falso como o do {@link GameTestHelper#makeMockServerPlayerInLevel()}, mas que abre telas sem mandar o
      * pacote de abertura da NeoForge (a conexão falsa não negocia canais, e o pacote derrubaria o servidor) e guarda
@@ -63,6 +72,7 @@ final class TestPlayers {
     static final class MenuPlayer extends ServerPlayer {
         private static int nextContainerId = 100;
         @Nullable RegistryFriendlyByteBuf openData;
+        private boolean creative = true;
 
         private MenuPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
             super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
@@ -75,7 +85,7 @@ final class TestPlayers {
 
         @Override
         public boolean isCreative() {
-            return true;
+            return creative;
         }
 
         @Override

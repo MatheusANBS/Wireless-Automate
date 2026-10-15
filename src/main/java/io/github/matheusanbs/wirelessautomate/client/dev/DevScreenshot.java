@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotFilter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotGalleries.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotLinker.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotResonator.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRouter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotTablet.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotWheel.*;
@@ -77,9 +78,12 @@ public final class DevScreenshot {
     record Step(Runnable setup, String file) {
     }
 
-    /** Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador e as galerias (giro, blocos, capa, roda). */
+    /**
+     * Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador, Núcleo do
+     * Ressonador e as galerias (giro, blocos, capa, roda).
+     */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
+                    upgradeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -124,7 +128,8 @@ public final class DevScreenshot {
             screen = new RouterScreen(menu, new Inventory(null), Component.translatable("block.wirelessautomate.router"),
                     true);
         }
-        AbstractContainerScreen<?> active = linkerScreen != null ? linkerScreen
+        AbstractContainerScreen<?> active = resonatorScreen != null ? resonatorScreen
+                : linkerScreen != null ? linkerScreen
                 : tabletScreen != null ? tabletScreen
                 : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {

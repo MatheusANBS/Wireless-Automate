@@ -1,6 +1,87 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:cutout",
   "textures": {
-    "all": "wirelessautomate:block/signal_quartz_ore"
-  }
+    "particle": "minecraft:block/stone",
+    "base": "minecraft:block/stone",
+    "camada": "wirelessautomate:block/signal_quartz_ore"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#base",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#base",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#base",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#base",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#base",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#camada",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#camada",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#camada",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#camada",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#camada",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#camada",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
 }

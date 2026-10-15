@@ -1,0 +1,1161 @@
+<title>Ressonador · etapa 3</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mockup da etapa 3 do Ressonador de Sinal: a tela do Núcleo, o Sintonizador automático e a câmara animada.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;700&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Caderno de bancada, como o v7: coluna de leitura de ~70ch; a tela e a câmara saem mais largas. */
+:root {
+  --bg: #F2EBDD; --sheet: #FFFBF3; --inset: #DDD3BF; --rule: #BDB19A;
+  --ink: #2A2730; --muted: #7A7366; --accent: #F0603E; --accent-deep: #C2442A;
+  --ok: #2F9D5C; --warn: #D88A1A; --brass: #B48E2E; --lens: #1FA9A0;
+  --scope-bg: #1B1920; --scope-grid: #2F2C35; --scope-line: #8EE8E1; --lamp-off: #4A4550;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --pixel: "Pixelify Sans", "Silkscreen", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1C1A20; --sheet: #26232B; --inset: #312D37; --rule: #4A4550;
+  --ink: #ECE5D6; --muted: #A79F90; --accent: #F26A48; --accent-deep: #FF8A6B;
+  --ok: #3DB56E; --warn: #E39A2E; --brass: #D2AE4E; --lens: #3CC4BA;
+  --scope-bg: #0F0E12; --scope-grid: #25222A; --scope-line: #8EE8E1; --lamp-off: #3A3640; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1C1A20; --sheet: #26232B; --inset: #312D37; --rule: #4A4550;
+  --ink: #ECE5D6; --muted: #A79F90; --accent: #F26A48; --accent-deep: #FF8A6B;
+  --ok: #3DB56E; --warn: #E39A2E; --brass: #D2AE4E; --lens: #3CC4BA;
+  --scope-bg: #0F0E12; --scope-grid: #25222A; --scope-line: #8EE8E1; --lamp-off: #3A3640; color-scheme: dark }
+
+* { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100% }
+body { background: var(--bg); color: var(--ink); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; font: 17px/1.55 var(--body); margin: 0; padding-inline: 16px; padding-block: 0 64px }
+.wrap { max-width: 1040px; margin: 0 auto }
+.read { max-width: 70ch }
+h1, h2, h3 { font-family: var(--display); font-stretch: 85%; text-wrap: balance; line-height: 1.1; margin: 0 }
+h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; letter-spacing: -.01em }
+h2 { font-size: 1.7rem; font-weight: 750; margin-bottom: .5rem }
+h3 { font-size: 1.15rem; font-weight: 700 }
+p { margin: 0 }
+.eyebrow { font: 600 .78rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-deep) }
+section { padding-block: 56px 0; display: grid; gap: 18px }
+section > *, .wrap > * { min-width: 0; max-width: 100% }
+.stripe { height: 4px; background: var(--accent); width: 64px; border-radius: 2px }
+.mono { font-family: var(--mono); font-size: .88em }
+.muted { color: var(--muted) }
+.note { font-size: .85rem; color: var(--muted) }
+
+header.hero { padding-block: 48px 8px; display: grid; gap: 16px; grid-template-columns: 1fr auto; align-items: end }
+header.hero .lede { font-size: 1.2rem; max-width: 58ch }
+@media (max-width: 720px) { header.hero { grid-template-columns: 1fr } }
+.sprites { display: flex; gap: 10px; flex-wrap: wrap }
+.sprite { display: grid; gap: 6px; justify-items: center; font-size: .78rem; color: var(--muted); text-align: center; width: 88px; margin: 0 }
+.sprite .spr { background-color: var(--inset); border-radius: 6px; outline: 4px solid var(--inset) }
+/* Sprite animado: a tira vertical de quadros do .mcmeta, um quadro a cada `frametime` ticks (50 ms). */
+.spr { display: block; width: var(--h); height: var(--h); background-repeat: no-repeat; image-rendering: pixelated;
+  background-size: var(--h) calc(var(--h) * var(--n, 1));
+  animation: spr calc(var(--n, 1) * var(--ft, 4) * 50ms) steps(var(--n, 1)) infinite }
+@keyframes spr { from { background-position: 0 0 } to { background-position: 0 calc(var(--h) * var(--n, 1) * -1) } }
+@media (prefers-reduced-motion: reduce) { .spr { animation: none } }
+
+.change { background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; max-width: 78ch }
+.change b { font-weight: 600 }
+.change ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start }
+.card ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px }
+.card.rec { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent) }
+.q { border-left: 3px solid var(--accent); padding-left: 12px; display: grid; gap: 4px }
+.q b { font-weight: 600 }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+button, select { font: 600 .9rem var(--body); color: var(--ink); background: var(--inset); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 12px; cursor: pointer }
+button:hover:not(:disabled) { border-color: var(--accent) }
+button:disabled { opacity: .45; cursor: default }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-deep); color: #FFFBF3 }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden }
+.seg button { border: 0; border-radius: 0 }
+.demo-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: .9rem; color: var(--muted) }
+.tablewrap { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: .95rem; min-width: 560px }
+th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--inset); white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+thead th { font: 700 .72rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--inset) }
+tbody tr:last-child td { border-bottom: 0 }
+table.refs { min-width: 720px }
+table.refs td { white-space: normal; text-align: left; vertical-align: top; font-size: .9rem }
+table.refs th { text-align: left }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; border: 2px solid #1B1920; vertical-align: -1px }
+.atm td:first-child::after { content: "¹"; color: var(--muted) }
+td small { color: var(--muted); font-size: .8em; margin-left: 6px }
+
+/* O fluxo da interação no Núcleo */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px }
+.flow .st { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 8px; align-content: start; position: relative }
+.flow .st.novo { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent) }
+.flow .gesture { font: 600 .78rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-deep); padding-right: 92px }
+.flow .st b { font-family: var(--display); font-stretch: 85%; font-size: 1.1rem; font-weight: 700 }
+.flow .st span { color: var(--muted); font-size: .92rem }
+.flow .tag { position: absolute; right: 12px; top: 12px; font: 700 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; background: var(--inset); color: var(--muted) }
+.flow .st.novo .tag { background: var(--accent); color: #FFFBF3 }
+
+/* A vista 3D da câmara (o mesmo código do v7, só o conceito B) */
+.view3d { position: relative; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden }
+.view3d canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; cursor: grab; touch-action: none }
+.view3d canvas:active { cursor: grabbing }
+.view3d .hud { position: absolute; left: 12px; top: 12px; display: grid; gap: 4px; font: 600 .78rem var(--mono); color: var(--muted); pointer-events: none }
+.view3d .hud b { color: var(--ink) }
+.view3d .fallback { padding: 40px 16px; text-align: center; color: var(--muted) }
+.chart { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; display: grid; gap: 6px }
+.chart canvas { width: 100%; height: auto; display: block }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--muted) }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px }
+
+/* ===== A tela do Núcleo, desenhada como o jogo desenha: 1 "pixel de interface" = --u ===== */
+.mcwrap { display: grid; gap: 10px }
+.mcstage { background: #3b3f36; background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), repeating-linear-gradient(0deg, #4a5a3a 0 16px, #44553a 16px 32px), repeating-linear-gradient(90deg, #4a5a3a 0 16px, #425238 16px 32px); background-blend-mode: normal, multiply, normal; border-radius: 10px; padding: 18px; display: grid; justify-items: center; overflow: hidden }
+.mc { --u: min(2px, calc((100vw - 72px) / 352)); position: relative; color: var(--fg); width: calc(352 * var(--u)); height: calc(244 * var(--u)); font-family: var(--pixel); font-size: calc(8 * var(--u)); line-height: 1; letter-spacing: 0; user-select: none; -webkit-font-smoothing: none;
+  --panel: #F2EBDD; --bl: #FFFBF3; --bd: #BDB19A; --ins: #DDD3BF; --fg: #2A2730; --mut: #7A7366; --dis: #B5AC9D; --acc: #F0603E; --okc: #2F9D5C; --wrn: #D88A1A; --dng: #D5453A; --brs: #B48E2E; --ring: #1B1920 }
+.mc[data-mc="dark"] { --panel: #26232B; --bl: #312D37; --bd: #4A4550; --ins: #1C1A20; --fg: #ECE5D6; --mut: #A79F90; --dis: #625C66; --acc: #F26A48; --okc: #3DB56E; --wrn: #E39A2E; --dng: #E55A4E; --brs: #D2AE4E; --ring: #1B1920 }
+.mc .panel { position: absolute; inset: 0; background: var(--panel); box-shadow: 0 0 0 calc(1 * var(--u)) var(--ring), inset calc(2 * var(--u)) calc(2 * var(--u)) 0 var(--bl), inset calc(-2 * var(--u)) calc(-2 * var(--u)) 0 var(--bd); color: var(--fg) }
+.mc .panel::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(2 * var(--u)); background: var(--tier, var(--acc)) }
+.mc .a { position: absolute; left: calc(var(--x) * var(--u)); top: calc(var(--y) * var(--u)); width: calc(var(--w) * var(--u)); height: calc(var(--h) * var(--u)) }
+.mc .head { display: flex; align-items: center; gap: calc(4 * var(--u)) }
+.mc .title { white-space: nowrap }
+.mc .pill { border: calc(1 * var(--u)) solid var(--tier, var(--acc)); border-radius: calc(5 * var(--u)); padding: 0 calc(4 * var(--u)); height: calc(11 * var(--u)); display: inline-flex; align-items: center; gap: calc(3 * var(--u)); color: var(--tier, var(--acc)); white-space: nowrap }
+.mc .pill i { width: calc(3 * var(--u)); height: calc(3 * var(--u)); background: var(--tier, var(--acc)); border-radius: 50% }
+.mc .sp { flex: 1 }
+.mc .theme { width: calc(11 * var(--u)); height: calc(11 * var(--u)); border: calc(1 * var(--u)) solid var(--fg); background: var(--bl); color: var(--fg); padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 0 }
+.mc .theme:hover { border-color: var(--acc) }
+.mc .theme svg { width: calc(9 * var(--u)); height: calc(9 * var(--u)); display: block; shape-rendering: crispEdges; fill: var(--fg) }
+.mc .lbl { color: var(--mut); white-space: nowrap }
+.mc .row { display: flex; justify-content: space-between; align-items: center; white-space: nowrap }
+.mc .inset { background: var(--ins); box-shadow: inset calc(1 * var(--u)) calc(1 * var(--u)) 0 var(--bd), inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 var(--bl) }
+.mc .scope { background: #1B1920; box-shadow: inset 0 0 0 calc(1 * var(--u)) #0F0E12; overflow: hidden }
+.mc canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block }
+.mc .lamp { display: flex; align-items: center; gap: calc(4 * var(--u)); color: var(--mut); white-space: nowrap }
+.mc .lamp i { width: calc(7 * var(--u)); height: calc(7 * var(--u)); border-radius: 50%; background: var(--dis); box-shadow: inset 0 0 0 calc(1 * var(--u)) var(--ring) }
+.mc .lamp.on { color: var(--okc) } .mc .lamp.on i { background: var(--okc); box-shadow: inset 0 0 0 calc(1 * var(--u)) var(--ring), 0 0 calc(4 * var(--u)) var(--okc) }
+.mc .btn { display: inline-flex; align-items: center; justify-content: center; height: calc(14 * var(--u)); border: calc(1 * var(--u)) solid var(--fg); background: var(--bl); color: var(--fg); padding: 0 calc(4 * var(--u)); white-space: nowrap; cursor: pointer; font: inherit; border-radius: 0 }
+.mc .btn:hover:not(.dis) { border-color: var(--acc) }
+.mc .btn.sel { background: var(--fg); color: var(--bl); border-color: var(--fg) }
+.mc .btn.dis { border-color: var(--dis); color: var(--dis); background: var(--panel); cursor: default }
+.mc .btn.sq { width: calc(14 * var(--u)); padding: 0 }
+.mc .field { height: calc(14 * var(--u)); display: flex; align-items: center; justify-content: center; white-space: nowrap }
+.mc .field.dim { color: var(--mut) }
+.mc .slots { display: flex; gap: 0 }
+.mc .slot { position: relative; width: calc(18 * var(--u)); height: calc(18 * var(--u)); background: var(--ins); box-shadow: inset calc(1 * var(--u)) calc(1 * var(--u)) 0 var(--bd), inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 var(--bl) }
+.mc .slot .spr { position: absolute; left: calc(1 * var(--u)); top: calc(1 * var(--u)) }
+.mc .slot .bar { position: absolute; left: calc(3 * var(--u)); top: calc(14 * var(--u)); width: calc(13 * var(--u)); height: calc(2 * var(--u)); background: #1B1920 }
+.mc .slot .bar i { position: absolute; left: 0; top: 0; height: calc(1 * var(--u)); background: var(--acc) }
+.mc .slot .cnt { position: absolute; right: calc(1 * var(--u)); bottom: 0; color: #FFFFFF; text-shadow: calc(1 * var(--u)) calc(1 * var(--u)) 0 #3F3F3F }
+.mc .slot.empty::after { content: ""; position: absolute; inset: calc(4 * var(--u)); border: calc(1 * var(--u)) dashed var(--bd) }
+.mc .meter { position: relative; background: var(--ins); box-shadow: inset 0 0 0 calc(1 * var(--u)) var(--bd); overflow: visible }
+.mc .meter i { position: absolute; left: calc(1 * var(--u)); top: calc(1 * var(--u)); bottom: calc(1 * var(--u)); background: var(--okc) }
+.mc .meter u { position: absolute; top: calc(-2 * var(--u)); bottom: calc(-2 * var(--u)); width: calc(1 * var(--u)); background: var(--fg) }
+.mc .inv { display: grid; grid-template-columns: repeat(9, calc(18 * var(--u))); grid-auto-rows: calc(18 * var(--u)) }
+.mc .inv .slot { box-shadow: inset calc(1 * var(--u)) calc(1 * var(--u)) 0 var(--bd), inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 var(--bl), 0 0 0 0 transparent }
+.mc .tip { position: absolute; z-index: 5; background: rgba(16, 0, 16, .94); color: #FFFFFF; padding: calc(3 * var(--u)) calc(4 * var(--u)); white-space: nowrap; box-shadow: inset 0 0 0 calc(1 * var(--u)) #28007F, 0 0 0 calc(1 * var(--u)) rgba(16, 0, 16, .94); pointer-events: none; display: grid; gap: calc(2 * var(--u)) }
+.mc .tip .t2 { color: #AAAAAA }
+.mc .tip .ok { color: #55FF55 }
+.mc .tip .ac { color: #FFB39E }
+.mc .tip.hide { display: none }
+.mc .mini { position: absolute; width: calc(8 * var(--u)); height: calc(8 * var(--u)) }
+.mc .redstone { position: absolute; left: calc(1 * var(--u)); top: calc(1 * var(--u)); width: calc(16 * var(--u)); height: calc(16 * var(--u)); image-rendering: pixelated }
+.mc .stline { display: flex; justify-content: space-between; white-space: nowrap }
+.mc .stline b { font-weight: 400; color: var(--fg) }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 14px }
+.shot { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; display: grid; gap: 8px; align-content: start }
+.shot .host { width: 100%; display: grid; justify-items: start; overflow: hidden }
+.shot > b { font-weight: 600 }
+.shot > span { font-size: .88rem; color: var(--muted) }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div style="display:grid;gap:14px">
+      <p class="eyebrow">Wireless Automate · Ressonador de Sinal · etapa 3 · mockup para aprovar</p>
+      <h1>A tela, o Sintonizador e a câmara</h1>
+      <p class="lede">A etapa 3 fecha o visual aprovado no v7: a tela do Núcleo entra na família das telas do mod, o Sintonizador passa a sintonizar sozinho no teto do tier, e a câmara B (Lissajous e Chladni) vira o renderer do Núcleo montado. Sem comparador e sem controle por redstone: a automação é o Sintonizador.</p>
+    </div>
+    <div class="sprites" aria-label="Os cristais, com as animações do v7">
+      <figure class="sprite"><i class="spr" data-s="cristal" style="--h:64px"></i><figcaption>Cristal de Sinal</figcaption></figure>
+      <figure class="sprite"><i class="spr" data-s="cristal_lapidado" style="--h:64px"></i><figcaption>Cristal Lapidado</figcaption></figure>
+      <figure class="sprite"><i class="spr" data-s="cristal_opaco" style="--h:64px"></i><figcaption>Cristal Opaco</figcaption></figure>
+    </div>
+  </header>
+
+  <section>
+    <div class="change">
+      <b>O que muda desde o v7</b>
+      <ol>
+        <li><b>Sem comparador e sem controle por redstone.</b> A linha de status com "Comparador: pela eficiência" saiu. Quem automatiza é o Sintonizador.</li>
+        <li><b>Números novos.</b> FE/t por cristal de 128 (Básico) a 1.073.741.824 (Ultimate), 1 a 8 câmaras pelo tier, Lapidado 2×. Um Ultimate com 8 Lapidados a 100% dá <span class="mono">17.2G FE/t</span>; o Sintonizador segura 98% dele. A tela mostra os números na formatação curta do mod (k, M, G, T).</li>
+        <li><b>A tela abre pelo clique no Núcleo montado.</b> No Núcleo solto o clique de mão vazia continua projetando a estrutura. Os slots dos cristais ficam na tela, com a carga de cada um; mais um slot de redstone.</li>
+        <li><b>Sintonizador automático</b> com a peça na estrutura: o dial anda sozinho até a estação (até 0,5 MHz por passo da deriva) e a eficiência para no teto do tier. Sem a peça, o botão fica desabilitado com a dica.</li>
+        <li><b>Tela no estilo do mod</b>, não mais o painel de web do v7: cabeçalho com título, pílula do tier e o botão de tema 11 × 11; inventário embaixo; slots do mod; texto em escala de pixel. O osciloscópio, o ponteiro, a lâmpada e o dial ficam como aprovados.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>A tela do Núcleo</h2>
+    <p class="read">Desenhada em pixels de interface (escala 2 do jogo), 352 × 244, tamanho fixo. À esquerda o sinal: osciloscópio, ponteiro de −2 a +2 MHz, lâmpada EM SINTONIA, dial e o modo. À direita os cristais (só as câmaras do tier), a redstone, a eficiência com a marca do teto, a geração e o buffer. Embaixo, o inventário. A estação continua escondida: o jogador a acha pelo osciloscópio e pelo ponteiro. Teste: escolha um estado, gire o dial pela roda do mouse ou pelos botões, troque o tema pela lua.</p>
+    <div class="demo-bar">
+      <span>Estado:</span>
+      <span class="seg" role="group" aria-label="Estado da tela" id="gui-states"></span>
+      <label for="gui-tier">Tier:</label>
+      <select id="gui-tier"></select>
+      <span class="seg" role="group" aria-label="Tempo do jogo"><button data-speed="0" aria-pressed="true">Parado</button><button data-speed="30" aria-pressed="false">Deriva ×30</button></span>
+    </div>
+    <div class="mcwrap">
+      <div class="mcstage" id="gui-stage"></div>
+      <p class="note" id="gui-note"></p>
+    </div>
+    <h3>Os estados, nos dois temas</h3>
+    <div class="gallery" id="gallery"></div>
+    <div class="cols">
+      <div class="card">
+        <h3>O que cada parte mostra</h3>
+        <ul>
+          <li><b>Osciloscópio:</b> uma senoide limpa em sintonia, chiado fora dela, nada a 0%. O rótulo diz ESTAÇÃO, QUASE LÁ ou CHIADO.</li>
+          <li><b>Ponteiro:</b> acorda a menos de 2 MHz e aponta para que lado girar; a faixa verde é o platô de ±0,25 MHz. Fora disso, "sem sinal: varra o dial".</li>
+          <li><b>Lâmpada EM SINTONIA:</b> acende dentro do platô, com ou sem Sintonizador.</li>
+          <li><b>Dial:</b> « » ±1 MHz, ‹ › ±0,05 MHz, roda do mouse sobre o campo ±0,05 MHz. No modo Sintonizador os botões apagam e o campo mostra o dial andando.</li>
+          <li><b>Cristais:</b> um slot por câmara do tier, com a carga como a barra de durabilidade do item (coral); o Opaco aparece cinza, com a barra da recarga em latão. Shift + clique do inventário põe no primeiro slot vazio.</li>
+          <li><b>Redstone:</b> um slot, até 64, com a contagem. Recarrega um Opaco de cada vez.</li>
+          <li><b>Eficiência, geração e energia:</b> a barra da eficiência tem a marca do teto do tier; a geração sai curta (k, M, G, T); a energia é o buffer de 10 s da saída cheia, como a barra da Bateria.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Família das telas do mod</h3>
+        <ul>
+          <li>Cabeçalho igual ao da Bateria: título à esquerda, pílula do tier na cor dele, botão de tema 11 × 11 no canto direito (lua no claro, sol no escuro). A faixa de 2 px no topo na cor do tier.</li>
+          <li>Botões no estilo Extract/Insert: borda de 1 px, o escolhido preenchido com a tinta do texto. O campo do dial é o campo do Prior.</li>
+          <li>Slots pela mesma rotina do mod (<span class="mono">GuiPaint.slot</span>); o inventário no canto inferior esquerdo como no roteador.</li>
+          <li>Cores só por token do <span class="mono">GuiPaint</span>, nenhuma gravada na tela: o tema troca na hora. O osciloscópio é o único fundo escuro nos dois temas, como aprovado no v7.</li>
+          <li>Todo texto variável passa pelo <span class="mono">GuiText</span> (abrevia e dá o tooltip inteiro); nos dois idiomas.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>A interação no Núcleo</h2>
+    <p class="read">Só uma coisa muda em relação à etapa 2: o clique de mão vazia no Núcleo <b>montado</b> abre a tela, em vez de mostrar o estado na action bar. O resto fica como está.</p>
+    <div class="flow">
+      <div class="st novo"><span class="tag">novo</span><span class="gesture">Núcleo montado · clique de mão vazia</span><b>Abre a tela</b><span>A action bar some para o montado: tudo o que ela dizia (tier, cristais, eficiência, FE/t) está na tela.</span></div>
+      <div class="st"><span class="tag">como hoje</span><span class="gesture">Núcleo solto · clique de mão vazia</span><b>Projeta a estrutura</b><span>Os fantasmas no mundo, Shift + roda troca Vitrine e Faixa, e a action bar diz o que falta.</span></div>
+      <div class="st"><span class="tag">como hoje</span><span class="gesture">Clique com cristal ou redstone</span><b>Põe no Núcleo</b><span>Um cristal na primeira câmara vazia; redstone até 64. Também pela Porta de Cristais com o roteador.</span></div>
+      <div class="st"><span class="tag">como hoje</span><span class="gesture">Shift + clique · duas mãos vazias</span><b>Tira o último cristal</b><span>Sem abrir a tela. Pela tela, qualquer slot: arrastar ou Shift + clique.</span></div>
+      <div class="st"><span class="tag">como hoje</span><span class="gesture">Clique com Cartão de Upgrade</span><b>Sobe o tier</b><span>Mais câmaras aparecem na tela na hora; os cristais ficam onde estão.</span></div>
+      <div class="st novo"><span class="tag">novo</span><span class="gesture">Na tela · botão Sintonizador</span><b>Liga o modo automático</b><span>Só com a peça na estrutura. Se a peça sair com o modo ligado, a tela volta a Manual e o dial fica onde parou.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>O Sintonizador: Manual × automático</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Manual</h3>
+        <ul>
+          <li>O jogador gira o dial: ±1 MHz, ±0,05 MHz, roda do mouse.</li>
+          <li>Pode chegar a <b>100%</b>: dentro de ±0,25 MHz da estação.</li>
+          <li>A estação escorrega (até 0,12 MHz/min): sem mexer, abaixo de 90% em ~14 min e de 50% em ~37 min.</li>
+        </ul>
+      </div>
+      <div class="card rec">
+        <h3>Sintonizador</h3>
+        <ul>
+          <li>Com a peça na estrutura, o botão liga. O dial anda sozinho até a estação: no máximo <b>0,5 MHz por passo da deriva</b> (a cada 20 s de jogo), no lote do Núcleo, nada por tick.</li>
+          <li>A eficiência fica limitada ao <b>teto do tier</b>: 85, 88, 90, 92, 94, 95, 96, 98%. A marca na barra mostra onde ele para.</li>
+          <li>A lâmpada acende do mesmo jeito (o dial está no platô); a barra para no teto.</li>
+          <li>Sem a peça, o botão fica desabilitado com a dica <span class="mono">Coloque um Sintonizador na estrutura</span>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Na prática</h3>
+        <ul>
+          <li>O manual compensa para quem passa pela base a cada 10 a 15 min (97% e 94% na simulação do v7).</li>
+          <li>O Sintonizador vale como sintonizar a cada 15 a 20 min no Elite (90%) e a cada dez no Ultimate (98%), sem ninguém por perto.</li>
+          <li>Depois de a peça entrar, o Sintonizador leva poucos passos para achar a estação a partir de qualquer dial: 20 MHz de distância são 40 passos, ~13 min; de perto, um ou dois.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="chart">
+      <canvas id="tuner-chart" width="1200" height="420" aria-label="30 minutos de jogo: a estação deriva e o Sintonizador a segue em passos; abaixo, a eficiência no teto"></canvas>
+      <div class="legend"><span><i style="background:var(--muted)"></i>estação (escondida do jogador)</span><span><i style="background:var(--lens)"></i>dial no modo Sintonizador</span><span><i style="background:var(--ok)"></i>eficiência</span><span><i style="background:var(--accent)"></i>teto do tier (Elite, 90%)</span></div>
+      <p class="note">30 min de jogo simulados com a deriva do v7. O Sintonizador liga aos 2 min com o dial 6 MHz longe: 12 passos de 0,5 MHz, e depois só retoques quando a estação sai do platô.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Tier</th><th>Câmaras</th><th>FE/t por cristal</th><th>Máx. (Lapidados, 100%)</th><th>Teto</th><th>No teto</th><th>Buffer (10 s)</th></tr></thead>
+        <tbody id="tier-rows"></tbody>
+      </table>
+    </div>
+    <p class="note">¹ Só com o Allthemodium. Os números vêm da config do servidor (<span class="mono">resonator.&lt;tier&gt;.fePerCrystal</span>); a tela sempre mostra o valor em vigor, curto, com o número inteiro no tooltip.</p>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>A câmara</h2>
+    <p class="read">O conceito B do v7, agora só ele, desenhado por um <span class="mono">BlockEntityRenderer</span> do Núcleo, só montado. Escolha o estado e o tier (o número de cristais) e veja: a sequência de acender ao montar, a figura de Lissajous fechando em sintonia com os cristais subindo juntos e os feixes, o rabisco fora da estação, o apagar a 0%, o Opaco caído e cinza voltando com a redstone, e as faíscas até a Porta de Energia.</p>
+    <div class="demo-bar">
+      <span>Estado:</span>
+      <span class="seg" role="group" aria-label="Estado da câmara" id="cam-states"></span>
+      <label for="cam-tier">Tier:</label>
+      <select id="cam-tier"></select>
+    </div>
+    <div class="view3d" id="view3d">
+      <canvas id="c3d" width="1280" height="800" aria-label="O Ressonador em 3D: arraste para girar, roda para aproximar"></canvas>
+      <div class="hud"><span>Estado: <b id="hud-state">montado</b></span><span>Sinal: <b id="hud-sig">—</b></span><span>Cristais: <b id="hud-cry">—</b></span><span>Quads: <b id="hud-quads">—</b></span><span>Partículas vivas: <b id="hud-part">—</b></span></div>
+    </div>
+    <div class="btns">
+      <button id="b-form" aria-pressed="true">Montado</button>
+      <button id="b-layout">Montagem: Vitrine</button>
+      <button id="b-cut" aria-pressed="false">Cortar a frente</button>
+      <button id="b-spin" aria-pressed="true">Girar sozinho</button>
+      <span class="note">Arraste para girar, roda para aproximar. "Cortar a frente" tira a parede da janela para ver a câmara de perto.</span>
+    </div>
+    <div class="tablewrap">
+      <table class="refs">
+        <thead><tr><th>Efeito</th><th>Como no jogo (BER do Núcleo, só montado)</th><th>Custo por quadro</th></tr></thead>
+        <tbody>
+          <tr><td>Traço de Lissajous</td><td>260 pontos calculados por tick e interpolados por <span class="mono">partialTick</span>; cada segmento são 2 quads cruzados aditivos, full bright, como o feixe do beacon. Razões 3 : 2 : 1 travadas em sintonia; escorregam fora dela; alfa a zero a 0%.</td><td>~520 quads</td></tr>
+          <tr><td>Cabeça e halo</td><td>Um quad aditivo virado para a câmera com a textura radial; o miolo é um icosaedro emissivo.</td><td>1 + 20 quads</td></tr>
+          <tr><td>Placa de Chladni</td><td>1 quad no chão. 16 quadros pré-gerados (a figura (3, 2) em <span class="mono">.mcmeta</span>) misturados com um quadro de ruído pela sintonia: duas camadas aditivas com alfa, sem textura dinâmica.</td><td>2 quads</td></tr>
+          <tr><td>Feixes dos cristais</td><td>2 quads cruzados por cristal, do cristal à cabeça, alfa pela sintonia; o Opaco não tem feixe.</td><td>até 16 quads</td></tr>
+          <tr><td>Cristais (1 a 8)</td><td>O modelo do item pelo <span class="mono">ItemRenderer</span>, luz cheia, cor pelo estado (Opaco cinza, voltando à cor pela recarga). Sobem e descem juntos em sintonia; cada um no seu tempo fora dela.</td><td>~8 × 12 quads</td></tr>
+          <tr><td>Lente do Núcleo por dentro</td><td>1 quad aditivo colado na face de dentro do Núcleo, na cor do tier, alfa respirando.</td><td>1 quad</td></tr>
+          <tr><td>Clarão ao sintonizar</td><td>O mesmo quad do halo, escalado e esvaindo em 0,9 s a partir do tick em que a lâmpada acendeu.</td><td>1 quad, 1 s</td></tr>
+          <tr><td>Faíscas e redstone</td><td>Partículas do cliente (<span class="mono">ParticleEngine</span>): faíscas do centro à grelha da Porta de Energia, 2 a 5 por segundo pela geração, no máximo 8 vivas; redstone da boca da Porta de Cristais ao Opaco em recarga, no máximo 4 vivas. Só com o jogador perto.</td><td>0 quads no BER</td></tr>
+          <tr><td>Acender em sequência</td><td>Uma interpolação do tempo desde o tick em que montou, por parte: lente, chão e luz, cristais, figura e feixes (0,9 s cada).</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Total em sintonia no Ultimate: ~700 quads por quadro, só com a estrutura à vista e dentro da distância dos block entities. O HUD da vista mostra a conta para o estado escolhido.</p>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>A parte técnica</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Sincronização com o cliente</h3>
+        <ul>
+          <li><b>Para a câmara</b> (tela fechada): o Núcleo manda o update tag do block entity só quando os cristais ou a redstone mudam (tipo e Opaco de cada câmara, tick em que a recarga começou), quando a eficiência muda de faixa (8 faixas) e quando a lâmpada muda. Com a deriva lenta, isso é um pacote a cada vários minutos. O cliente anima a recarga sozinho pelo tick de início e por <span class="mono">rechargeTicks</span>.</li>
+          <li><b>Com a tela aberta:</b> o menu manda, a cada 5 ticks e só se mudou, a energia, o dial, a eficiência, o modo, se há Sintonizador e o desvio. O desvio só vai dentro de ±2 MHz e em passos de 0,05: exatamente o que o ponteiro mostra, e nada além; fora disso vai "sem sinal". A estação nunca sai do servidor.</li>
+          <li><b>Nada por tick com a tela fechada.</b> O dial e o modo vão do cliente por payload (<span class="mono">ResonatorDialPayload</span>, <span class="mono">ResonatorModePayload</span>), validados no servidor: alcance, Núcleo montado, Sintonizador presente para o modo automático.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Desempenho</h3>
+        <ul>
+          <li>O BER só desenha com o Núcleo montado e dentro da distância dos block entities (<span class="mono">getViewDistance</span> 64); a caixa de render é o 5 × 5 × 5 inteiro, para o frustum cortar a câmara quando a estrutura sai da vista.</li>
+          <li>Os 260 pontos do traço são calculados uma vez por tick do cliente e interpolados por <span class="mono">partialTick</span>; a placa de Chladni são 16 quadros pré-gerados, sem textura dinâmica.</li>
+          <li>Partículas limitadas (8 faíscas e 4 de redstone vivas) e só com o jogador a menos de 32 blocos.</li>
+          <li>Nada do BER toca o servidor: o lote do Núcleo continua a cada 20 ticks, como na etapa 2.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Classes (pela wa-modular)</h3>
+        <ul>
+          <li><span class="mono">menu/ResonatorMenu</span>: slots dos cristais (só as câmaras do tier) e da redstone, inventário, o estado por <span class="mono">ContainerData</span>.</li>
+          <li><span class="mono">client/resonator/screen/</span>: <span class="mono">ResonatorScreen</span> (anfitriã, até 500 linhas) com <span class="mono">ScopeView</span>, <span class="mono">TunePointer</span>, <span class="mono">DialRow</span>, <span class="mono">CrystalSlots</span> e <span class="mono">OutputPanel</span>.</li>
+          <li><span class="mono">client/resonator/render/</span>: <span class="mono">ResonatorRenderer</span> (o BER) com <span class="mono">LissajousTrace</span>, <span class="mono">ChladniPlate</span>, <span class="mono">ChamberCrystals</span> e <span class="mono">ChamberParticles</span>.</li>
+          <li><span class="mono">resonator/Tuning</span> ganha o passo do Sintonizador (puro, JUnit); <span class="mono">ResonatorBatch</span> o chama antes de gerar.</li>
+          <li>GameTests: o menu e os payloads, o modo automático com e sem a peça, a peça saindo com o modo ligado, o teto, os slots pela tela, a faixa da eficiência no update tag.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stripe"></div>
+    <h2>Fica de fora</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Decidido: não entra</h3>
+        <ul>
+          <li>Comparador pela eficiência.</li>
+          <li>Controle por redstone (ligar e desligar o Núcleo).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Etapa 4</h3>
+        <ul>
+          <li>Sintonia à distância pelo Tablet.</li>
+          <li>JEI: a estrutura e as receitas.</li>
+          <li>Guia nos dois idiomas e a vitrine do CurseForge.</li>
+        </ul>
+      </div>
+      <div class="card" style="gap:12px">
+        <h3>Preciso da sua palavra</h3>
+        <div class="q"><b>Carga como barra do item?</b><span class="muted">Nos slots, a carga do cristal aparece como a barra de durabilidade do item (e, por tabela, também no inventário e no JEI). É o jeito mais natural de ler; a alternativa é uma barra só na tela.</span></div>
+        <div class="q"><b>Action bar some no montado?</b><span class="muted">A tela substitui a mensagem do clique no Núcleo montado. No solto, a projeção e o "o que falta" continuam.</span></div>
+        <div class="q"><b>Eficiência por faixa para a câmara?</b><span class="muted">O v7 pedia a câmara "em sintonia × fora", e para isso o cliente precisa saber a eficiência mesmo com a tela fechada. Proposta: 8 faixas, mandadas só quando mudam, nada por tick.</span></div>
+        <div class="q"><b>Bloco Estrutura na tela?</b><span class="muted">O canto embaixo à direita mostra Sintonizador (sim ou não) e quantas Portas de cada. Pode sair se achar que polui.</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmt = n => Math.round(n).toLocaleString("pt-BR");
+  const mhz = v => v.toFixed(2).replace(".", ",");
+  const ANIM = {"cristal": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACgCAYAAAAFOewUAAADEklEQVR42u2ZQWjTUBjH/80ibgfbuQ4RL3rQDocUh6dd9ODNY0HvPQiivTqYehCkFLbLlE12EMGjFqcoDC1M7ECtSNdlTLvFVcyUqsXNrBVW20E82MQ0TdO893C48R708pK8vPfC9+vv+x7gsvm8XRpom8/bpWlqQXM1iPUm/WHt9ROteP1SwyCC9WZ1ecFxuolQf911wfowFmfw6do512sW3L6JeAC9qcsLbAMAABZnmm62QPtp9c0W6jbQ5fTNmy20mqptH4BSahrZjES5BNOgojHinRGjM5uRkJQVHDb11fXX3p6Ulb8DrOzqRmF6CgCQlBXjAbs2fvcRACA6n4fH/FnuDZ6H9PhhyxVE5/MAgLXiqsdDE7JrxVUPVUhzHnAebAIPRJGRB6IAdO8l5kEbALTv7Lh6wfsLbQd7Ufn2BW8TT5GUFQQ3fqDyWTF+OgOCne2NPMhmJCAjIRAZgNrTB8gKOQ8uH9kHAAjFhpF7+aIpGzgPOA/+MQ9EkZEHlogk9wMpBfh2Y0fvUQY/yGUhHjiEPcdPsvmBPxxB+c1zVN/NOvqBR9+DRKjfuFH3g7M3xqDOpQ1vMF9z5IG52bGB8+D/5oEpmOh4YPP3RsaDcqUxmIj9wE0wtfKD9ck4OoPHoOaX6PMFeXToz56s5BnyhdqeNHgDab7Qceo0NopFch6cCOw3+gKRAahzacRv3SbjgR0bzsRuch448iC/xMiDcglf748z+EEtmGZHrtD7gR5MTH4gjw45Srj7fKGJhOs8EFvmC3pEMtUPctkG1JHXD8yoY6kf+MMRlE1sqM8XLDywyxcmBi8iFBuG2tOH6MQrMh5wP9ja+YKDhLvLFxzSYnexYCPh5PUDizdQ1Q/qvIG2nqh7gx6RdCUQKWUsh6me6A9H3PsBdb6wnXhQLTHw4OcqIw9MwUTHg2YSTlQ/aCLhRPUDszdQ1w90b2CvJxY+MNYTpRS+p6cgbv3zBc6DTeNBzQ+q7zNsfrA+GcfHZw/Y/MCQcH6+wM8bOQ94vsDPGzkPOA84DzgPOA+2Nw9+A+0q1V2JQymLAAAAAElFTkSuQmCC", "frames": 10, "frametime": 4}, "cristal_lapidado": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAADACAYAAAANzeNOAAADkUlEQVR42u2aP0gbURzHv++0kCLV1D8YArVDB4eUjg3tnhJwy6aTY61TF6HFrYKQpXRw6ipaOmQ1NJNCqekQ/xSJh9QeakOiklwSxJSAr8N5l7tL3jX3zoLGdxByl/D5vvvzfh/e3T3gfy59vf20r7efcsNUPaZUPXYMkViwerALnJcBOYPDdy/BCpEc4YOfxu+sEIkJt1i+xJ41hUhM2NS6U0i35d+eu6hVV7T1oPaVk1NASFsfDN1HdnsbSDQQa0DmK3wYNjar62sYwoixnd3YwhAeADhqPoRypUj8kQnmZc1ubAEAXiS+oVwpkpYnkRXCglteRnuIE/zPnpieHKPx54+9dWduuEOWa+CDs5IHH5yVgKNfnD44K3nwgQ6bWm/bB7XqCnyBGGr5BJ8PfLlhINdwgvCB8EGn+EAtePCBWgAKvzl9oBY8+ECHTa278gG6oDmhK8PpA8BwgvCB8EGn+CCvePBBXgHKRU4f5BUPPtBhU+vufNBzWdqPtHECnw8unVBfl4UPhA86wgdK1oMPlCzw55zTB0rWgw902NS6Ox8MmMo7EMP+6hSnDwBUE/PCB8IHHeGDvU0PPtjbBC4uOH2wt+nBBzpsat2dDwJWwBeI4aS6yOmD9TXU0XCC8IHwwU31gZzx4AM5Y/ndnQ9ssDsfMOD2fRBshu69eoP91Sk+HwAwnCB8IHwgxgc3enyQk1MIxiLwBWIYXJ1y74MhjKC+I6OOeZxulIQPhA/E84Nr+/xAAgAan6a6D2oDivYJFlALFrBfXcRJ6AB3YqN4+vETTp4cwswQyx6kllqOD5wKS/ig831A49NU7zBcsH4OXIfosNkHbYdY4N3vlKaTtPLhLTNEssP+uWWw3i/455ZhD5GYMKOU7SESE3Z4v2AOITQ+TcnMAunr7af5nfdNQE5OGevBUW2c4B94iHKlqLGWPXDhA3V2HGRmgUgAQGYWiDo7jnZ9oMOWk+gUwoKd+8Hl9U9PjtH05BhfZzL7gLs7c8FXUo1X44N0ktJ0knLDxjlwG6LDFh+0G2KBlR9WH7QIkeywPzIB1vwDf2QC9hCJCbNK2RYiMWGH+QfmEELTSUrC0bZ8oDshEHqt+SCdpN0kHCX6HrDuF8xVeYrPxiGTcPTSB+EoUVNL7fsgtQQSjtp84BDCgpsuY6sQJ/ifncniA97uzAVfSTWK+4XbPT+xUfjwMB9JzFe+bfcLfwFZue/4mNXy1AAAAABJRU5ErkJggg==", "frames": 12, "frametime": 3}, "cristal_opaco": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB0ElEQVR42mNgIBLw8wn9ZyAX8PMJ/f/y4dV/ogxBVwTTfPPSif9b1y7CMIQJXfHTRzfwOre2PAtFngld89NH9xiWzZ9AtJ+ZiLWJZANg4OmjG5QZADHkHs7AZiI3amGBzYQcgMQ6HzmwmQg59emjewxX58/EEL9z+xbD9Ru3sHvh55H9KHztxHQUQ5AtYmZgYGDgYOdsMNFTYXj37i3Du3dvGW5/+81w6co1Bh5OFrgYi5wiw/UbtxguXbnGICUhCmezwEy6fuMW3NRLV65hiCGDlWs2MDAwMDBs3HqAgRE5Wvy9HYiKgY1bDzAwMDAwfPz0jpGRnCz78dM7RrKy9Gh5MFoeDGx5cGHRXNLKgy/HD6PwDeKSUQwhWB7c/foTozxgk5UfLQ9Gy4PR8mDAy4MjK5eTVh68OHcWhW8THoliCLJF8Ox8cO8OuOB7Ll6GS1euoYhJGBnDywBNDbXR8mC0PBgtDwakPNixYQNp5cGdq9dQ+B4BASiGECwPfjOzYJQHKtpao+XBaHkwWh4MeHmwefMW0soD9Fzo6+uDYgjB8gCWpZHFkMuA0fJgtDwYLQ9G2wej5cFoeTBaHoyOH4yOH4yWB6Plwej8wgiZXwAAss8RdQWkWYEAAAAASUVORK5CYII=", "frames": 8, "frametime": 6}, "minerio": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAADACAYAAAANzeNOAAADKElEQVR42u3WMYhdRRSA4d/Lu9PMIDMiU41YbGUKi8VuYTdFILBFtgoE0ljZ2Ky42SqIhCzYBFws3HItFMQuhSDYJLAoFk+sZO2EabywmYHcKTJTaPGcYQNp9NkEp3vvcufMOXPmfpxXDg4O/hRCAJBzxlpLjJF5nlFKMY4jpRTGcSSEgHOOGCM5ZwCG+qMG8N6Tc0YIQc6ZUgrzPANgjGGaJgCklFhrGYwxaK3bjse3d8k5tyDzPCOEQErJxx+8j5SSnDMhBKZpYpBS4r3HObfaaXMLAKUUWmuUUggh8N7D+ZIPXytYazHGrDKIMVLP4PjeXViecX9jVXtNV2uNc46nPz7m159/wXtPCIGUEoPWmpoF58v2UgiBnDPjOJJSIsbIJ3/At2++w/ffPUYphZRylYGUkvsbqi1+9NvvGGMwxgBQSgFowa5d30ZrTYyRhdaaaZp4ICVSSriyw+kPX7GbEpc7pJQihNDOJKW0amOMEWttO1WAa9e3sdailMI5h1KKo8N9jDGtpVJKxnFkmOeZGCNKKQBSSjjn8N6jtQbg6HC/daCWVTNYOOcAWitjjMQYcc4xTRPWWp5+8Wk7m3L1RgvsvWdIKZFSQinFNE1orTk63G+Lp2ni5Jnmm9ff4vRi8VxXnHOri5RSarXdee9dOF/y0RviuTsPcPPWXutKfb6IMQJQS7mcLldvtFtYy9Nat//e+9VFyjkTY8R7z4MnI1++usHpxYKc86q1QN3Ie9/KNcawqA/qwdSSbt7ao5TSAqSUkFJijGkXK4TAUL+Dy/UKIQghtIU1UAihBazv/fce1ED/2oPje3fX9OB82T3oHnQPugfdg+5B96B78JJ7MDQPnoycPNM8urLD6cWClBIhBEIIzPPM0d42IQSEECil/rkHbG6t6cHyrHvQPege9Pmgzwfdg+5B96B70D14oQfHt3fX84DNrTU9+Hta7R50D7oHfT7o80H3oHvQPegedA+6B92D7sHL4sHgnGv3wFpLKYU7O283D+oH9tPnn3Hy9UNKKdSDDyG82AM2t9b0YHnWPegedA/6fNDng+5B96B78H/24C/2NOdIwXQ7JQAAAABJRU5ErkJggg==", "frames": 12, "frametime": 4}, "minerio_ardosia": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAADACAYAAAANzeNOAAADMklEQVR42u3asYsdRRzA8a9vHuy83Z1iLrNWS5qDO2wOvE6OdPkH7ILClZaCBPIXiEUgYCEIVicSTCNCSHkQ9BCtziSNXMgVwlrtPLbYN/vmFYMW+3Y4xEJyNpKZ8jGz77e/38yH37L71p07x3+2rWWz8WitARBCEEKgKAq894QQEELQ9yvyfAFA13UAzJxzAGitEULQdV1c4Jyj71fxgkqVcY7WmiyTzACUKhmGNVJKzh7cYxjWTEOpEiklQgi+P/mCEALGGIQQYwRFUcSrO+fg8CiGOQxrrLV477HWwsU5D2/vA2CtparMGMEwrOn7FY+/+RLOf+Lh7X2klChVAiClBKD/5Ud++/U5IQS01njvmTdNQ5ZJqsrAxXmc5Ny4yBiD9566rvno5wa4weXLF+xUOxizjSDPF3z1Xh0X//DydwCKoojhAjRNA8Du3m6MbJ5lY4I+PL2I2b1czjm4WdC2NiZzWuyci0lumobZlOXpRyEEB+8e0DQNVWXYbDxZJjl78gitdZyXZXIsYwiBpmlQqiTLZEyY1jpGcPrdSayAUuWYr22J50IItNZYazHGxFCnobWm//rzmJt+cZMQQszNrO9XANR1HRdM4RpjGIY1x09f8elScrKcx9Lm+WK8BaVKuq6jbS1SynEvbMO11pLnC0IIdF3HTrWDtZau6yiKgjxfMO/7FVrrWLKr4eob+wzDGqVK6rqmbS1KlYQQ8N5TFAXzPF/EUyel5P3Hz6gqw4vlH+y9LWLIV8dUCWsts2FYx2xPpXPOsbu3i5QSa8dbm/5dSslm46kqQ13XzKvK0LYWay1aa5xz8fhOW9k5h1Ilfb+K52Cq1n/vwdV7fC0Pzp48uqYH20nJg+RB8iB5kDxIHiQPkgdvgAfffvIBt+7ef30PODy6pgfbh7HkQfIgeZD6g9QfJA+SB8mD5EHy4O8enH728fU84PDomh5su9XkQfIgeZD6g9QfJA+SB8mD5EHyIHmQPEge/K89OHtwj1t37/8rD+bT53J1XeP99vO67euQ6XO646evCEFyuZyz9854Gqe98s8ebB8wkwfJg+RB6g9Sf5A8SB4kD95QD/4CxMlbzV4qMEIAAAAASUVORK5CYII=", "frames": 12, "frametime": 4}, "carcaca_solta": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVR42mPUUjf4z0ABYGFgYGC4euUwWZq1dWwhBjAwMDB8/vAKqyJeATGscqeP7WVgYGBgYMKmARngMhgGMAwgpIGgAbi8QZEB+FzFRGrIo7uGZAPQXTMEXUBxIOI0AF9cE8xMDAwMDPu2LSfLAEZKszMAjWgfWy9LUBcAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "carcaca_campo": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVR42mP89PrufwYKABOvgBhRCnGpY6SbC9BdAWPDXcArIMbw+cMr0l0AY5CjGcUAssNgGBhASjRiNYDc0Kd/GODyKtEG4PIqEym2YQMA3T8YSM2Kzx8AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "forro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsINoLuGwgKwwGlwGEwoagAbCwISkaSUkXLMQYgC9dUD8QiUlQyGqYiE2yuNRQ1wv4nI8sh8wGALq6Gypf3JXoAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "carcaca_t": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAU0lEQVR42mOUllT4z0ABYFFWUqFEPwMTA4WA8f/vz5R54fOHVwwMDAwMvAJiDDA2WV4gRzNVwmA4GMArIEaZAeSGPv3DAJdXiTYAl1eZSLENGwAATg8UmOXJ4IgAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "carcaca_r": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYElEQVR42mP89PrufwYSwOsXjxgSM1oZGBgYGO7eu8PAxCsgRpRGXOqYPn94RZQBuNQR7QJcroC7gBiDsLmCiZATCQEmBgrBcDCAlGikKCENfBjgzAvEGoAzL5BiGzYAAML8H6bVi30yAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "carcaca_b": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVR42mP89PrufwYKABOvgBhRCnGpY6SbC9BdAWPDXcArIMbw+cMr0l0AY5CjGcUAssNgGBhASjRiNYDc0IcBltcvHlFkAKOdtcv/AQ1ERmlJBYpcAAAZmRrZxYwSAAAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "carcaca_l": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAS0lEQVR42mOUllT4r6ykwsDAwMBw8MB6hs8fXjGQApiIVcgrIEaZAbhcxkSKc5FdAWOTZACyK2Bskgyg2AujBgx5A+ibF3DZhg0AAMAeEww8tZMwAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "carcaca_tl": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVR42mOUllT4r6ykwsDAwMBw8MB6Bhk5XQZSAAu6AMwwYgETA4UAwwUHD6ynzICtk60Z7GLXk+8FUjRTJQxGDRhSBvAKiFFmwOcPr4g3AJdt2AAAShkOXHozN74AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "carcaca_tr": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeElEQVR42mOUllT4z0ACOLRrPkNiRisDAwMDw917dxhYlJVUGCgBTAwUApaDB9aTpOHejTOoBnz+8IqBgYGBgVdAjAHGxun/xYEMmq4TsXuBkGYGBgYGu9j11A+D4WAAr4AYZQYQE/qDIwxweZVoA3B5lYkU27ABAJxyH2Bv7cozAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "carcaca_bl": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZElEQVR42mOUllT4r6ykwsDAwMBw8MB6hs8fXjGQApiIVcgrIEaZAbhcxkSKc5FdAWOTZACyK2Bskgyg2AujBhBpwKHFgSQZwIIuoOk6keH1i0fkG5CY0UrfMMBwwd17d0gyAACKORkubo+tmwAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "carcaca_br": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAd0lEQVR42mP89PrufwYSwOsXjxgSM1oZGBgYGO7eu8PAxCsgRpRGXOqYPn94RZQBuNQR7QJcroC7gBiDsLmCiZATCQEmBgrBcDCAlGikKCExMDAwHFociCHG8vrFI6IN0HSdiGkALGMQC+bPqKZuILLcvXeHIgMAq8QnemxT+hYAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "carcaca_b_c": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAXElEQVR42mP89PrufwYKABOvgBhRCnGpY6SbC9BdAWPDXcArIMbw+cMr0l0AY5CjGcUAssNgGBhASjRiNYDc0IenxEMuWhSlRBY9GRGKXMDid5uNMi9ISypQ5AUAI1gaJvd5FYQAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "carcaca_bl_c": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZ0lEQVR42mOUllT4r6ykwsDAwMBw8MB6hs8fXjGQApiIVcgrIEaZAbhcxkSKc5FdAWOTZACyK2Bskgyg2AujBhBpwKHFgSQZwIIuwLftD8OFbb7kG6AnI0KZC/xus1FmwN17d0gyAABOrRlOUk0iEgAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "carcaca_br_c": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgUlEQVR42mP89PrufwYSwOsXjxgSM1oZGBgYGO7eu8PAxCsgRpRGXOqYPn94RZQBuNQR7QJcroC7gBiDsLmCiZATCQEmBgrBcDCAlGikKCExMDAwHFociCHGciHSl2gD+BgYGBhc0QzQkxEhyclv0V3gd5uNJAPmoxtw994digIRAIHZJap4WqnOAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_0": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mOUllT4z0ABYGFgYGAomb3oOUUGMDAwMDgY6YSQorF7xoI1B2dPkmRioBDgNEBdTLCPbAPUxQT7br56X0SWAaRoxmoAKZrxhsHgNEBdTDCGbAPUxQRjbr56v4RsA7BppkoYMEpLKvwvmb3o+elTZyjLTAdnT5IkRaN9at7zg7MnSQIAU1QpyxrD2ikAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_1": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdUlEQVR42mOUllT4XzJ70XMHI50QBhJA94wFaw7OniTJxEAhGMQGqIsJ9pFtgLqYYN/NV++LyDKAFM1YDSBF8yCPBRyBG0O2AepigjE3X71fQrYB2DRTJQwYYbnx9KkzZBnAAmMcnD1JkhSN9ql5zw/OniQJAKwvKcfCGkPAAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_2": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVR42mOUllT4z0ABYGFgYGAomb3oOUUGMDAwMDgY6YSQYwATA4UApwHqYoJ9ZBugLibYd/PV+yKyDCBFM1YDSNFM20CkiQHqYoIxZBugLiYYc/PV+yVkG4BNM1XCAJ4XumcsWEORAQdnT5IkxwAAkM4dew3A9ngAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_3": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mOUllT4XzJ70XMHI50QBjIAEwOFYBAboC4m2Ee2Aepign03X70vIssAUjRjNYAUzUMwGtXFBGPINkBdTDDm5qv3S8g2AJtmqoQBC4zRPWPBGooMODh7kiQ5BgAApZ8dd6SCNU8AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_4": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbElEQVR42mOUllT4z0ABYGFgYGAomb3oOUUGMDAwMDgY6YSQorF7xoI1B2dPkmRioBDgNEBdTLCPbAPUxQT7br56X0SWAaRoxmoAKZrxhsHgNEBdTDCGbAPUxQRjbr56v4RsA7BpHoKBiA0AAM0eHXfY3MDLAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_5": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAW0lEQVR42mOUllT4XzJ70XMHI50QBhJA94wFaw7OniTJxEAhGMQGqIsJ9pFtgLqYYN/NV++LyDKAFM1YDSBF8yCPBRyBG0O2AepigjE3X71fQrYB2DQPwUDEBgAmCB1zNAedAQAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "vidro_6": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAY0lEQVR42mOUllT4z0ABYGFgYGAomb3oOUUGMDAwMDgY6YSQYwATA4UApwHqYoJ9ZBugLibYd/PV+yKyDCBFM1YDSNFM20CkiQHqYoIxZBugLiYYc/PV+yVkG4BN8xAMRGwAAP0RGQFr3g2cAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_7": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUUlEQVR42mOUllT4XzJ70XMHI50QBjIAEwOFYBAboC4m2Ee2Aepign03X70vIssAUjRjNYAUzUMwGtXFBGPINkBdTDDm5qv3S8g2AJvmYZIXABHxGP0I8INXAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_8": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVR42mOUllT4z0ABYOzfcugZRQacf/bOihyN3TMWrDk4e5IkEwOFAKcB6mKCfWQboC4m2Hfz1fsisgwgRTNWA0jRjDcMBqcB6mKCMWQboC4mGHPz1fslZBuATTNVwoAxqq6PssxEbna2T817fnD2JEkAWREnTMkZFkQAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_9": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mM8/+ydFQMZoHvGgjUHZ0+SZGKgEAxiA9TFBPvINkBdTLDv5qv3RWQZQIpmrAaQonmQxwKOwI0h2wB1McGYm6/eLyHbAGyaqRIGjFF1fc8oMkBaUuE/ORrtU/OeH5w9SRIAphojEIPnLysAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_10": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mOUllT4z0ABYOzfcugZRQacf/bOihIDmBgoBDgNUBcT7CPbAHUxwb6br94XkWUAKZoHeSDSxAB1McEYsg1QFxOMufnq/ZLBF4iMUXV9lGUmSrMzABESHhRDW5RbAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "vidro_11": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAU0lEQVR42mM8/+ydFQMFgImBQjCIDVAXE+wj2wB1McG+m6/eF5FlACmaGRgYGBhHWDSqiwnGkG2AuphgzM1X75cMvkBkjKrre0aRAdKSCv8pMQAAGhEZ2G4iGGAAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_12": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZElEQVR42mOUllT4z0ABYOzfcugZRQacf/bOihyN3TMWrDk4e5IkEwOFAKcB6mKCfWQboC4m2Hfz1fsisgwgRTNWA0jRjDcMBqcB6mKCMWQboC4mGHPz1fslZBuATfMQDERsAADSaB+vaJ/fDAAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "vidro_13": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAU0lEQVR42mM8/+ydFQMZoHvGgjUHZ0+SZGKgEAxiA9TFBPvINkBdTLDv5qv3RWQZQIpmrAaQonmQxwKOwI0h2wB1McGYm6/eLyHbAGyah2AgYgMAH4Abc35PThYAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "vidro_14": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUklEQVR42mOUllT4z0ABYOzfcugZRQacf/bOihIDmBgoBDgNUBcT7CPbAHUxwb6br94XkWUAKZoHeSDSxAB1McEYsg1QFxOMufnq/ZKRHojYAACcTRp39gemkQAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "vidro_15": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAARklEQVR42mM8/+ydFQMFgImBQjCIDVAXE+wj2wB1McG+m6/eF5FlACmaGRgYGBhHWDSqiwnGkG2AuphgzM1X75eM9EDEBgClTBY7ZtVjEgAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "vidro_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAv0lEQVR42mOUllT4z0ABYGFgYGAomb3oOUUGMDAwMDgY6ZxkYGBgUBcT5L/56v1HQuyUpn6Ng7MnSTIhmwZTdODcFUliDGJgYGBgQtY8c8dhLgYGBoZ0D9tvxGhGMeDmq/cfHYx0nhOyGeY6DAMI+Rmb61ACkZDNDkY6Hwl6gZSAxOkFUgMSwwvoTsUVkAS9QCggMVxAbkAy4dOMLyBhgFFaUuF/yexFz0+fOkNZZjo4e5IkKRrtU/OeH5w9SRIAQwTkaoETN7sAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "sintonizador": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAADACAYAAAANzeNOAAAB40lEQVR42u3ZsUrDQBgH8H/FtdKpEEIhdJHUcri5tHbQxXeIs/gAPkWha3XuKxRc4mDaxTUomeID2EWSzQ7nIN+ZpLGmnSr+DwKB63333d2X33CtJYtYA0C90UT6/oZN2768ZAe76gwAEEx6iMIQV8MEABCFDysBapKBDLy7OYCrFACgPRgDAF4frxGFIVylcHo5zwdKFrFOFrG2LUdPR0rHvqf1MtV6merO4bF518tUx76npyOlbcvRMs4sQWZuD8Y46vZx2/rAy/OTmeio28fL8wzANYIJ8hnYlmNmllmD805u9mxfNou94qZ8zVLepE/2yGSQXXf2sS1H25ZT2jcdqe8MojA06/ytyW9MFsU9qPLEvmcyM3tQJYtiX/r+9l0Hse+tnETZCUgtyLi1hVQMVlZIK6Us9S9FJaUsy7waJqaU641m/lsofkxSnaeX82of0zbNnEK90dwqAD1Y40GZCfSAHtCDXfZg7ycPAOC29ZGrwvZgDFcpBJMePaAH9IAe0AN6QA/oAT2gB/SA9we8P6AH9IAe8P8FekAP/p8HJkB28G+FFPtePkDRgzILNvKgf/+E2cUJPaAH9OBve/CTBZU9EAvoAT2gB/SAHtADekAP6AE9oAe8P+D9AT3YCQ8+AdgngwNenOnNAAAAAElFTkSuQmCC", "frames": 12, "frametime": 5}, "sintonizador_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABO0lEQVR42p2TMW6DQBBFH1ZaR64sJKiSNDR7AkTDEVJTuPIJktai9glSUfgAOYEbyxfIpqAJKaJFsuzGwgdwCjSbBSPFya8QM//Pn9FfrzlUZ4DxZMrpuOevuJEPlxypFIDNKqbUmvmyAaDU6wsBTxwI8eXplkgpAGaLHQBF7lNqTaQUSbbtCFkBlyzEMAgxtbHNIjRfNlZkJEWXHAYhQIccBiGzxY5IKTar2P4fyXSX7BIFpjZWpF0n7TroN4qLfq0dqLo3OLwt7N4uqs8PAO7vHi5qz497kuy1dVBqbff8DdIjLrzmUJ0jlbJZxYMuhlDkPkm2xXy9/9zgGhf92um4lxXWREpR5L494hDZ1MZm4SIHbcK0FelPdckS7cEoS/7dRBa5b9d0UzieTLsC/cck6Uyy7XWP6T/4BvX9uS/kCX5WAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "porta_energia": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAABp0lEQVR42u2ZMUvDQBTH/zmyFjrlO0hF6JJJutitOPQDOLaL+gWETIF+gbZLHf0ADuKmS3HKYhXEyS+gi+ha0KGcJBfz7p6XDpJ3Sy+U37v38pIfRy74eHv5AmO02hE+319/rhWYIw8DQKgnO3sHrEDPj7fFAACwvNhHsghJMB2v0Tu6K2cAAMkixOphVYKeshQA0IkTHB4X/7Pegzz821A+MBlAw+bcbGllgE6ckCvrlm6/BFsWygcuBUjHa2v9V/PdwnWgX6a/PsoB921kPUhbCdBqR34B/qkP7m9OAQDd/pTvgzzM7oINJgNo2Jw7+6Dbn5IrO/mglhJsWSgfuNIHVP3ig+b6YHkeAwB6o4zvgzzM7oINJgNo2Jw7+6A3ysiVnXxQSwm2LJQPXOkDqn7xQXN9cH22+R1MwPdBHmZ3wQaTATRszp19MJjQKzv5oJYSbFkoH7jSB1T94oPm+uDyZJP2cBbxfZCH2V2wwWQADZtzZx8MZxG5spMPainBloXygSt9QNUvPpD9gewPZH8gPhAfyPcD+X4gPhAfQM4X5HyhOecL36rz0Pc2jVGAAAAAAElFTkSuQmCC", "frames": 8, "frametime": 5}, "porta_energia_solta": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAqElEQVR42mP89PrufwYSAK+AGMPnD6/gfCYGEgGyZgYGBgYWGENTz5kkg65f2otqAAMDA8OhxTYMtbNY8GpsTvvDYBd7BNMFDAwMDLWzWBguXLyAoclA34CBgYGB4cLFCwy+2ahyBMMAWTM2wESJZrwGwDSjs9GjFKcBFy5ewGszLEpp7wVCrmCiRDOGAc1pfwj6f/NUHRQ+IywzkZuUGUnNjSQlJGIAADl4RJu0iemdAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "porta_cristais": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB50lEQVR42u2ZP0gCcRTH38khuEhDwyFB4J9BgmsTXFqkQEgLaQoanIIm53AU5yahqSFwEikNAsXFJXDrSBz0nEIOahAXQYKaFP+830+PZ1jw3ni8+973d+/9PvzunTL4ML+BECp2MahH0OSWUVsuENQj4PP6QSQ8L6JML+H49BIAAEqBESoQbzsBAODp4XbRwfjJpcAIdotvqEA5pEF66Jlx4pDdfBHcmRGINSzIuHrg8/on78khe8P3rfelVZAK9Kt56FfzqBupAJYscqPKrG8dntOWILO+0AfjSmRcPYg1LGkZzW5nUka0kTKuHiqQHnoWGkmZ30yyVp5+slDA7mZSqNvZAcRgHizhwYlPo/Hg0bRoZbQKObAKOdSNVABLFrlRZda1syt6J4qsMw+YB/+IB/vbbhoPXj8HtDI2syloZlOoG6kAlixyo8qs713f0DtRZH1GoGXUwOx2IN52QjmkCa0zD5gHm+GB26nSeDAYfdHKWE9GoZ6Mom6kAliyyI0qs35w90zvRJH1lXkwbZ15wDzYDA/mwzYPyGWsJMJQSYQ30AfjOCq+/H4nLuUBfy8wD/h8wOcDPh8wD/4OD3Tq/MBY5/xAtzM/wJINO/MDY53zA506PzB4fsA84P8L/H+BvxdWjh9Dzv0lES+ohQAAAABJRU5ErkJggg==", "frames": 8, "frametime": 5}, "porta_cristais_solta": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAvElEQVR42mP89PrufwYKAAs2QU09Z6yKr1/aS9gATT1nBmUlFQZcBqMbwojsBZ+AdAYGBgaGTaq/sBrgd5uNgYGBgWHLhpmYLoDZvEn1F1whOmjhfMZQ810KxSVM+DTfvXeH4e69O3B+zXcphhbOZwzKSirwcGJioBBgjQVkW5H52AKXNi6A2YTPZqq5AJ4OYDEBiyp80Xj33h14NGJNSC2cz7AaADMYOSExomcmfEkZ2WacBpCamRgpzc4AVnliber8+vcAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "porta_energia_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAg0lEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsINoLuGwgKwxIAczyckoNME5Z8CsG9n+PGUId/uGl778VgRvASCgaZaRl8HqPoBdgmnEFMtFe+PnhKooXZKRlGD59/kTYCzSPBSZikywuNUzEJllcaqjrBXzOR5ZDZgMAT0JH2eiDKhYAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "porta_cristais_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjElEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBgDAwMDC7INMEUtnM+wKq75LoUhxogeBjDNvqdeoCjcbCaB1RAmYjQji6G7jgmXQmwAmxwTA4Vg4AyApQsMA2ChjQ0gy8GinAlbPGMzBFc0YqQDGWkZhox3p/AmJOREx0iTzES2AbhyHLocMhsA1XA2CNStuV8AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_basic": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAABvUlEQVR42u2Yv0/CQBTHvxDiYELCRDTiUprmXPwPRMHFydVBE3dnN2ACNmdHw0Liwu7iL5xcjdGmLZ1w0cVo4qqDVu/sXTkuEoO+txCu3/furu/dJ6+Xenrov0LDsrk8nh/vY+MZAFhYXIWJ3V4dvwcAgOWllZhgfzoEAOy8WLFn5xdnXyuIbHA3EETrmIqeKFeRkQ32w0AqLlr28AD9MMBB5xC+H8DzxUDdTjsWJC2bSeZ8e3MtXZU0wDDnwlwhOYDOzFoBVM58ttKmMyuzULRsdDtt8zSqhEbvYKQtRLU9qqX446w6stpbSHLO5vLqLRAPiAfEA+IB8YB4QDwgHhAPiAfEA+LBZPCg2mh+/r/8+N3mNK16TV0H1UYTrXotkQeRxpgHWoVEPPhNHrTqNaGQZJZYSDIB8WBEHliOIwh2B0cAgL3CmjAeel6cB5bjoHd6Igh7UX/gi+OlckUOlAnvD0LP0+YBr/05HnxPYZIzr/0D/UGGf7OlckXLia9YgQcmTKD+YFzfCzZjUnHgusMD2IxhY3NLeqRtxmJBqD8YBw8C14XNGOZnZ8zSqBLS9wLdH9D9Ad0f/AMevAFBHzqPZzwvUAAAAABJRU5ErkJggg==", "frames": 8, "frametime": 5}, "nucleo_basic_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAqklEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wODo7Mrw+fNnhs+fv6DI3bx+BcMQJmw2YdP88eNHrK7CYQB+zQb6BvgNIMZmogzApRk5tpjItRlnLPDzCTDcvH6F/GjEpZCsMCDJC7C0TSpgRM7OuLIsPgAAJMlEDbUtLmcAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_basic_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Csed7SFQy3b99huHUb1aC1SxdgGII1DLBpvn7tCvGBSKxmnAYQq5mgAfg0w2KNiVybYbHGiC0pUxSNxCQoGWkZuAuYiE2yuNQwMVAImIh1PrIcMhsA/hQ/fG63WnYAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_advanced": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB30lEQVR42u2Yv0vDQBTHvynBoVDo1MEWwbZLCzoYyCYNCO1WcHGQjnVQnNyc+h84iYt16+RScOugJHQLdOnSwaSitIsdKhWchDrUYK7JJSFa0PpufPd97368dx/uTpiMzCkCtFg8gdeXZ4ddBIDc5g7CtF73dhYAAArbikNwEe0DAI7e0o4+ra1+zcBqg+GAEZWxYvVwZyG6Gc2+4SrOpLP+Acy+AeNuH+PHLsZPXaavWDMcQSJuI7k5t/SJ66zcA/g4p5Ip7wBBRg4UgOdsz1Yk7MjcLGTSWRRrBoB4uDTyhKH2QFOb0NRmsCVYtc2ka23DdwaC/TjzjmzgJXg5x+IJ/hKIB8QD4gHxgHhAPCAeEA+IB8QD4gHx4G/woFWXbZZVAMCVzVKq6vw6aNVllKq6Jw8sTWgeADLx4HfzoFTVPwtJ5o7oWUjzAosFBWWXeBCUB4rEfm7u9R4AANe5dcaudgQnDxRpisbNkBE2rPvBPWuvlJPQ2st3P1A7QmAe2LU/x4P5FHo527VLcD8Q7TtbKSeZzoOTcwDA5dkxW6G2ihUmI3P6ncNE94NFvRcUydUMtfPuH0CRRJwebrkeaSDvCEL3g0XwYLbLeSAaMo08Ib0X6P+A/g/o/+Af8OADUz5bNl5JbrEAAAAASUVORK5CYII=", "frames": 8, "frametime": 5}, "nucleo_advanced_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsElEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wBDuo8Xw6+sHhl9fUQ3aeuoDhiFM2GzCpvn5299YXYXTAHyaDfQN8BtAjM1EGYBLM3JsMZFrM85Y4OcTYNh6ioJoxKWQrDAw0DdACXG8XoClbWzpHR9gRM7OuLIsPgAAlZNHUMfbJ0YAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_advanced_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Cs+c6+KIb3Dy8xvH90CUXOrf4OhiFYwwCb5p2nPhEfiMRqxmkAsZoJGoBPMyzWmMi1GRZrjNiSMkXRSEyCkpGWgbuAidgki0sNEwOFgIlY5yPLIbMBpiI/TqcAE+sAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_elite": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB20lEQVR42u2YsUsCURzHv4pEiIIuLjmpgy0h2mah0C6GgXM4RE5S0OzcH1A0VHNQJO2Bhxo1aNBSkGcGtuRgmLTaUGfvuvfO6yrK+v2W4733fb/37n6/34d3z9Jty30YMKfLg8eHe02/DQAmp+Zgxi4vjl8cAEBsNq4RbNgbAIDsk08zJpWKbztQrHXXUokSGFNGhLuw8TrlRp0r9vsCwx3IjTpWzyWcNm9wdttUj+XyGidW3kq8yb3SCXdXXAfDJnsnvPoOjKxsyIFoMhstq9mVhVHw+wKQc3mMmw2jSPihbyAVDyEVD4Vt1izdttz/TDFZ2HIWlazhV9Cb7HR5xFEgHhAPiAfEA+IB8YB4QDwgHhAPiAfEg9HgQfJge9DeeX1OM5pCKiPOg+TBNgqpjC4PFI1pHhhKJOLBT/KgkMqoEolnuomkCJTaj8XnBzxg28QDHR44ZsIqwXptHwCwFl5Q50i5puWBYyaMq70j/vngWt0fTCcAHlBG/HzQK9cM84DVfh0P3odQbzKr/QPnAxv7ZYPpBABga3kRALC0ucttsxlLPPi1/wvuaIQr7lSqwx24oxHEVrLckg5xnND54Dt40KlUEQIAu9tcGEVC+l+g+wO6P6D7g3/Ag2eKbpanB23k6gAAAABJRU5ErkJggg==", "frames": 8, "frametime": 5}, "nucleo_elite_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAs0lEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wGAU5Mfw9usXhjdfvqLKHT2JYQgTNpuwaf7z+g1WV2E1gJBmA30D/AYQYzNRBuDSjBxbTOTajDMW+PkEGD4ePUl+NOJSSFIYGOgboIQ0Oh8ZMH56ffc/JZmJETk748qy+AAAGcRKpZxF290AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_elite_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiElEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Csufj8QYYTD+4znHz4AFWuoAHDEKxhgE3zl8PHiA9EYjXjNIBYzQQNwKcZFmtM5NoMizVGbEmZomgkJkHJSMvAXcBEbJLFpYaJgULARKzzkeWQ2QBNFD8wqM9uzwAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "nucleo_emerald": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB1klEQVR42u2YMUgCURjH/4YUCKaLcpCTShBGIA1Nl0JbYNjWLATRlOTc0NDUHEHg3KbgHGg3RUVwCEF5F4SBdEsauNqgZ3fde+dxFaF9bzm+9/7f9573ve/nu+fpaEoPDpo/GMb726ul3wsAC0trcNPu5Yt+AABIiWmL4MSnAgB2u1HLWE2qfq5Ab82Xpkm0gWl9hLsKL6tTURtMcSwaHx1AURvYk49w/VTHjVo3j+VlS5Ap1kws587lM3NVzACjnCNzEfsATmZ2FIDnbMzWlNuZuVmIReNQ8jJm3KaRJ3T0DmrVEmrVkmMbADwdTel9p5g8xnLmlazjn2Dn7A+G+VkgHhAPiAfEA+IB8YB4QDwgHhAPiAfEg/HgQaacG9png2fSoKlki/x9kCnnUMkWbXmga1zzwFExEQ/+kgeVbNG0kVjNdiPptZ5Kb3LtQjUztIkHDB74xJBJcHx7BQAoLK+Y+ruSZuWBTwzh4fyOfT54NPfPbyUBafLOB11Jc8wDo/bnePA1hXbORu0EnA+8pu05qP/t08P+P9POAdMmHozF90JAFJjittQaHSAgCljdX2eWdAKCJQidD36DB22phQQEYHbRXRp5QvpeoPsDuj+g+4N/wIMPAe65KDYMKEwAAAAASUVORK5CYII=", "frames": 8, "frametime": 5}, "nucleo_emerald_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAtklEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wGAYbMnw7stHhrdfUA36ePQZhiFM2GzCpvn3q29YXYXVAEKaDfQN8BtAjM1EGYBLM3JsMZFrM85Y4OcTYPh49Bn50YhLIVFhYKBvgBLChPgMDAwMjJ9e3/1PSWZiRM7OuLIsPgAAJC5L/ix2/2wAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_emerald_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiElEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4CsueBSG8Pp+1cYzty7gipXeAnDEKxhgE3zp0OPiA9EYjXjNIBYzQQNwKcZFmtM5NoMizVGbEmZomgkJkHJSMvAXcBEbJLFpYaJgULARKzzkeWQ2QDtHj+PKx+wAQAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "nucleo_allthemodium": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB30lEQVR42u2Yv0sCYRjHvxdHQyA4OXQipA52UEOCW56gc1BjENga/QMOTg3+A9Gai0NLQrOCh4s4NpiSZxC65BL2Y0mwoY7e17v3PK6Esucdn/f7PO/73vO8H557pdHQmMDF8PkDeHp8sNhlAFjfTMPLuLmufgQAAG07ZRGcrfQAAEevYcucXq997cAc/UGfE+1g2ZwR7kK2Mxq9rq04Eo7ODmD0uuhf7OOl08Bzp8HNxUvWIEt2K9k5X7XebHdlG2CWc1AJOgdws7KrACJnNltLXlcWZiESjiJegvc0ioSevoFeK0Ovld0dwaxtLl2hjZk7kNjrLLqyro/g5OzzB8RHIB4QD4gHxAPiAfGAeEA8IB4QD4gHxIO/wQO9kGAsqwAAtiy0XFNcB3ohAS3XdOSBqfHMAyBBPPjdPNByzc9CSghXdCykaYHJAi21Szxwy4NMjH/c3Lu/AwBchtY4e6UtWXmQiU1QrA44YdHsD255ezatQK8vXn9QaUuuecBqf44H0yl0cma1C9AfyOyXzaYVbvIwfwoAOD855iuUqVhpNDQm37lM1B/M638ho9qaUWmNZwfIqDLyB1u2Vxpq0hKE+oN58KDSGgNqElA8plEkpP8Fej+g9wN6P/gHPHgHABZQPzI0WNMAAAAASUVORK5CYII=", "frames": 8, "frametime": 5}, "nucleo_allthemodium_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsUlEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wBDlosXw+/Mbhj+f3qLIrb/+AcMQJmw2YdP89OM/rK7CagAhzQb6BvgNIMZmogzApRk5tpjItRlnLPDzCTCsv05BNOJSSFYYGOgboIQ4Xi/A0ja29I4PMCJnZ1xZFh8AAJsSR1zRJd7mAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "nucleo_allthemodium_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAi0lEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Cs+cnKKIavN08wfLl5AkXOeCmmIVjDAJvmTdd+Ex+IxGrGaQCxmgkagE8zLNaYyLUZFmss2KLKeCkD+dFITIKSkZaBu4CJ2CSLSw0TA4WAiVjnI8shswGZkjttBUwmXAAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "nucleo_vibranium": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB2klEQVR42u2YsUvDQBTGv5YiRQx06mIHaUNAEJeCi0gDghQKgqsdrYsOgoNz/gLBxUXctGunQhWEBKc6iUuhTTpoXewiLZRudaixF3OXxqho9b2l3N333l3z7v1yuVCnbQ3gw6RYHN3nJ1d/BADmF1cRxGp3V8MAAJBZUV2C4+kmAGCnl3SNGdf6aAW2tR5bDtE6puwR4SoivE6raXLFqaQ8PoDVNLFbO0P1voHqQ8M5Vii6goR5M/Gcexe33FXxA4xxTswmvAP4mdlXAJEzm61w0JmFWUglZViFIqSgaRQJP/QMDL0EQy8J26yFOm1r8JliCrHlLCpZ33/By1mKxcVZIB4QD4gHxAPiAfGAeEA8IB4QD4gHxIPJ4EG2rI0CvP4uMJpKThPvg2xZQyWnefLA1gTmgb9yJh78IA8qOc2xkXjmuZFsgV37GXXjjQdsm3jgwYOo6kzT4c0lAGB/ac3R39dNNw+iqgzzXOefDxrOfjmvAjygTPj5oK+bvnnAar+OB+9T6OXMav/A+SDCPlk5P3y9nW7vAQC2To64bXbHEg9+7feClFG44q5RHx9AyihYPtjklnQaiisInQ++gwddo440FGBmLlgaRUL6XqD7A7o/oPuDf8CDF6N9mBWZVxfoAAAAAElFTkSuQmCC", "frames": 8, "frametime": 5}, "nucleo_vibranium_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAs0lEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wKAf4sLw9ttnhrffPqPKHbiGYQgTNpuwaf7z/D1WV+E0AJ9mA30D/AYQYzNRBuDSjBxbTOTajDMW+PkEGD4euEZ+NOJSSFIYGOgboIQ0Oh8ZMH56ffc/JZmJETk748qy+AAAGBhKqNoegi8AAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_vibranium_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiElEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4CsOfv6EoaTj24znHx8G1UuZRmGIVjDAJvmbzsvEB+IxGrGaQCxmgkagE8zLNaYyLUZFmuM2JIyRdFITIKSkZaBu4CJ2CSLSw0TA4WAiVjnI8shswE6TD8sFt8WKwAAAABJRU5ErkJggg==", "frames": 1, "frametime": 1}, "nucleo_unobtainium": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB3ElEQVR42u2Yz0sCQRTHv4oEBYInIdOLeunSrcuyodBd7bDVIbqbpw7+FRGdtj8gOpQeROgq7JJ46cchiEDUi6uHpBCDoEt28Ec77ey6bEVoby7Lm/m+N7P75n2YHVevU+/DRvP6/HjpPhr6PQCwvLIOJ+3hrjQIAACxtbhBcLzQAADsvYYNY+ql8rmCUdNaGiNKYG40YroKD6+z3qhxxZFwdHKAeqOG28N7tK6foN08M2PpasoQxM2biedc0i64q+IGmOQcXApaB7Azs60AZs76bLmdzmyahUg4inQ15TyNZkJb30BVClCVgm0bAFy9Tr3/nWJy6cvZrGRtv4KVs9fnN88C8YB4QDwgHhAPiAfEA+IB8YB4QDwgHkwHD/KZ4th+Gz6PdBpJTprvg3ymCElOWvJgpHHMA1vFRDz4Sx5IcpLZSLxmuZEGtf6OWHxDZ4OxVakwtokHHB4IAZER7HRPAACnvl2mv9IuG3kgBETkrs4YYW58PmD7N1e3oUKZufNBpV22zQO99ud48DWFVs567QycDzzM9hzWv5w9BwBkDra4NvFgKv4XhJDIFVea5ckBhJCI/USWW9IIGYPQ+eA3eFBploEQML/oMI1mQvpfoPsDuj+g+4N/wIMP90iv/5qS+S8AAAAASUVORK5CYII=", "frames": 8, "frametime": 5}, "nucleo_unobtainium_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAtklEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wBBkFcrw/d1Phm/vfqE6+9UODEOYsNmETfOL70+xugqrAYQ0G+gb4DeAGJuJMgCXZuTYYiLXZpyxwM8nwHDw1Q7yoxGXQqLCwEDfACWECfEZGBgYGD+9vvufkszEiJydcWVZfAAAanJLeillfqoAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_unobtainium_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Cs+VzvVYanZ94yPDn7DkUu81YAhiFYwwCb5r1PtpAQiERqxmkAsZoJGoBPMyzWmMi1GRZrjNiSMkXRSEyCkpGWgbuAidgki0sNEwOFgIlY5yPLIbMBwwY+yHDII5QAAAAASUVORK5CYII=", "frames": 1, "frametime": 1}, "nucleo_ultimate": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAACACAYAAAAClekiAAAB00lEQVR42u2YsU/CQBTGPwhxMCFhYpEYUhiwg4kzkTaRqYOJcWQwria6EfwXCJuDjrK4mZA4MGHSYlxYMA5IkDYMuMBiIHHFARtae1dq1Sj6bunl7nvvrn3v/XK9wGioT+ChhSNRjJ8HjvEQAKytb8FPe7i/njoAAGlTdghOlw0AwMGL4JjTbtTZDszWf+rbRNtYMme4uwixBnWjyxQnhOR8B7rRxeVZB527MTrNsW2u3JAdToKslVjGTf2KuSu2gznGsZWYuwMvK3tywDO2Rivod2VuFBJCEuWG7D+MPKGnb6CplQ/1ASAwGuqTzxRTwFrOvJL1/ApuxuFIlB8F4gHxgHhAPCAeEA+IB8QD4gHxgHhAPFgMHhTz1dkKb89Di6ZQUvh5UMxXUSgprjwwNb554K2ciQc/yINCSbElEqu5JpKmViDJiqW/49onHjB4kIpLNsHR4BwAcBLdt423e5qTB6m4hNrthU1YM88Hj/bxbDrHBsqCnw/aPc0zD6zar+PB+xC6GVu1f+l80O5p0NQKsuncNNNc+taMJR782v8FUcgwxS2jPt+BKGSwt3vMLGlRcDqh88F38KBl1CEKwOqGzzDyhPS/QPcHdH9A9wf/gAevwXmg2tz8vVQAAAAASUVORK5CYII=", "frames": 8, "frametime": 5}, "nucleo_ultimate_solto": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAtElEQVR42mP89PrufwYiAK+AGMPnD68wxFkYGBgYNPWcGcgB1y/thRjAwMDAYG/rQJLmg4cPIFwAAxcuXiDZFSzYBD9++oBVMT+fAGEDPn76wOBmF87w+f1vhk/v/6DIXX2yCcMQJmw2YdP8/ssTrK7CagAhzQb6BvgNIMZmogzApRk5tpjItRlnLPDzCTBcfbKJ/GjEpZCoMEAOXWLYDAwMDIyfXt/9T0lmYkTOzriyLD4AANKgSnC15oLEAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}, "nucleo_ultimate_dentro": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiklEQVR42mO0s3b5z0ABYMImKCMtQ5QYTgOePH1ClBiKAbhsIARYsNlw994drIqVlVRwG4Csec30Wwy3LnxmuHX+M4rcglMOGIZgDQNsms/f3UR8IBKrGacBxGomaAA+zbBYYyLXZlisMWJLyhRFIzEJSkZaBu4CJmKTLC41TAwUAiZinY8sh8wGAAZPPu78d0UbAAAAAElFTkSuQmCC", "frames": 1, "frametime": 1}};
+
+  /* ---------- sprites animados (tira de quadros, frametime em ticks), os do v7 ---------- */
+  function setSprite(el, name) {
+    if (el.dataset.cur === name) return;
+    const a = ANIM[name];
+    el.dataset.cur = name;
+    el.style.backgroundImage = `url(${a.src})`;
+    el.style.setProperty("--n", a.frames);
+    el.style.setProperty("--ft", a.frametime);
+  }
+  document.querySelectorAll(".spr[data-s]").forEach(el => setSprite(el, el.dataset.s));
+
+  /* ---------- o modelo: tiers, sintonia e a formatação curta do mod (RateFormat) ---------- */
+  const TIERS = [
+    { key: "basic", name: "Básico", color: "#6E7480", k: 1, fe: 128, ceil: .85, atm: 0 },
+    { key: "advanced", name: "Avançado", color: "#D59A1E", k: 2, fe: 1024, ceil: .88, atm: 0 },
+    { key: "elite", name: "Elite", color: "#1FA9A0", k: 3, fe: 8192, ceil: .90, atm: 0 },
+    { key: "emerald", name: "Esmeralda", color: "#22A84E", k: 4, fe: 32768, ceil: .92, atm: 0 },
+    { key: "allthemodium", name: "Allthemodium", color: "#E8740A", k: 5, fe: 262144, ceil: .94, atm: 1 },
+    { key: "vibranium", name: "Vibranium", color: "#18B57A", k: 6, fe: 2097152, ceil: .95, atm: 1 },
+    { key: "unobtainium", name: "Unobtainium", color: "#B23FD0", k: 7, fe: 134217728, ceil: .96, atm: 1 },
+    { key: "ultimate", name: "Ultimate", color: "#7B4FE0", k: 8, fe: 1073741824, ceil: .98, atm: 0 },
+  ];
+  const SUF = ["", "k", "M", "G", "T", "P", "E"];
+  function short(value) {                                   // RateFormat.abbreviate, igual ao Java
+    let v = Math.abs(value), unit = 0;
+    if (v < 1000) return String(Math.floor(v));
+    while (v >= 1000 && unit < 6) { v /= 1000; unit++ }
+    let r = v < 100 ? Math.round(v * 10) / 10 : Math.round(v);
+    if (r >= 1000 && unit < 6) { r = Math.round(r / 100) / 10; unit++ }
+    return String(r) + SUF[unit];
+  }
+  const PLAT = .25, ZERO = 2, VMAX = .12;
+  const eff = d => { d = Math.abs(d); if (d <= PLAT) return 1; if (d >= ZERO) return 0; return 1 - Math.pow((d - PLAT) / (ZERO - PLAT), 1.5) };
+  const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t) };
+  const approach = (v, goal, dt, speed) => v + (goal - v) * Math.min(1, dt * speed);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const buffer = t => t.fe * t.k * 2 * 200;                 // 10 s da saída cheia com lapidados
+  const mult = c => (c.kind === "opaco" ? c.was : c.kind) === "lapidado" ? 2 : 1;
+  const sprOf = c => c.kind === "opaco" ? "cristal_opaco" : c.kind === "lapidado" ? "cristal_lapidado" : "cristal";
+  const lifeMin = c => c.was === "lapidado" ? 20 : 10;
+  function crystal(spec) {                                  // "c.62" cristal com 62% de carga; "l.9"; "o.35" Opaco com 35% da recarga
+    const [k, v] = spec.split("."), p = (+("0." + v)) || 0;
+    if (k === "o") return { kind: "opaco", was: "cristal", charge: 0, recharge: p };
+    if (k === "O") return { kind: "opaco", was: "lapidado", charge: 0, recharge: p };
+    const kind = k === "l" ? "lapidado" : "cristal";
+    return { kind, was: kind, charge: p, recharge: 0 };
+  }
+
+  /* ---------- a tela do Núcleo, em pixels de interface ---------- */
+  const PIX = {
+    moon: ["..#######", ".##......", "##.......", "#........", "#........", "#........", "##.......", ".##......", "..#######"],
+    sun: ["....#....", ".#..#..#.", "..###.#..", "..#####..", "#.#####.#", "..#####..", "..#.###..", ".#..#..#.", "....#...."],
+    redstone: ["................", "................", "................", "....#...........", "...###..#.......", "..#+###.##..#...", "...###.#+##.##..", "....#..###.#+#..", "......##+##.##..", ".....###.#.##...", "....#+###....#..", "...###.##...##..", "....#.......#...", "................", "................", "................"],
+  };
+  const pixSvg = (rows, colors) => {
+    const h = rows.length, w = rows[0].length;
+    let r = "";
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== ".") r += `<rect x="${x}" y="${y}" width="1" height="1"${colors[ch] ? ` fill="${colors[ch]}"` : ""}/>` }));
+    return `<svg viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${r}</svg>`;
+  };
+  const ICON = { moon: pixSvg(PIX.moon, {}), sun: pixSvg(PIX.sun, {}), redstone: pixSvg(PIX.redstone, { "#": "#D5453A", "+": "#FF7A6C" }) };
+
+  const guis = [];
+  function makeGui(host, model, opts = {}) {
+    const el = document.createElement("div");
+    el.className = "mc"; el.dataset.mc = model.theme;
+    el.innerHTML = `
+      <div class="panel"></div>
+      <div class="a head" style="--x:10;--y:9;--w:332;--h:11">
+        <span class="title">Núcleo de Ressonância</span>
+        <span class="pill"><i></i><span class="tn"></span></span>
+        <span class="sp"></span>
+        <button class="theme" data-tip="Tema: claro|Clique: escuro" type="button"></button>
+      </div>
+      <div class="a scope" style="--x:10;--y:28;--w:172;--h:50"><canvas class="c-scope" width="688" height="200"></canvas></div>
+      <div class="a" style="--x:10;--y:80;--w:172;--h:22"><canvas class="c-tune" width="688" height="88"></canvas></div>
+      <div class="a lamp" style="--x:10;--y:106;--w:172;--h:8"><i></i><span>EM SINTONIA</span></div>
+      <div class="a dialrow" style="--x:10;--y:120;--w:172;--h:14;display:flex;gap:calc(2*var(--u))">
+        <button class="btn sq" data-d="-1" data-tip="−1 MHz" type="button">«</button><button class="btn sq" data-d="-0.05" data-tip="−0,05 MHz" type="button">‹</button>
+        <div class="field inset freq" style="flex:1" data-tip="Dial|Roda do mouse: ±0,05 MHz"></div>
+        <button class="btn sq" data-d="0.05" data-tip="+0,05 MHz" type="button">›</button><button class="btn sq" data-d="1" data-tip="+1 MHz" type="button">»</button>
+      </div>
+      <div class="a" style="--x:10;--y:138;--w:172;--h:14;display:flex;gap:calc(4*var(--u))">
+        <button class="btn m-man" style="width:calc(64*var(--u))" data-tip="Manual|Você gira o dial. Chega a 100%" type="button">Manual</button>
+        <button class="btn m-auto" style="flex:1" type="button">Sintonizador</button>
+      </div>
+      <div class="a lbl cry-lbl" style="--x:190;--y:28;--w:152;--h:8"></div>
+      <div class="a slots cry" style="--x:190;--y:38;--w:152;--h:18"></div>
+      <div class="a" style="--x:190;--y:60;--w:152;--h:18;display:flex;gap:calc(4*var(--u));align-items:center">
+        <div class="slot rs" data-tip="Pó de Redstone|Recarrega um Opaco em 30 s"><span class="redstone">${ICON.redstone}</span><span class="cnt"></span></div>
+        <div class="lbl" style="line-height:1.25">Redstone<br>recarrega o Opaco</div>
+      </div>
+      <div class="a row" style="--x:190;--y:84;--w:152;--h:8"><span class="lbl">Eficiência</span><span class="eff-t"></span></div>
+      <div class="a meter" style="--x:190;--y:94;--w:152;--h:6" data-tip="Eficiência pela sintonia|A marca é o teto do Sintonizador"><i class="eff-b"></i><u class="ceil"></u></div>
+      <div class="a row" style="--x:190;--y:106;--w:152;--h:8"><span class="lbl">Geração</span><span class="gen"></span></div>
+      <div class="a row" style="--x:190;--y:120;--w:152;--h:8"><span class="lbl">Energia</span><span class="en"></span></div>
+      <div class="a meter" style="--x:190;--y:130;--w:152;--h:6"><i class="en-b" style="background:var(--wrn)"></i></div>
+      <div class="a lbl" style="--x:190;--y:140;--w:152;--h:8">buffer: 10 s da saída cheia</div>
+      <div class="a inv inv-main" style="--x:10;--y:158;--w:162;--h:54"></div>
+      <div class="a inv inv-bar" style="--x:10;--y:216;--w:162;--h:18"></div>
+      <div class="a lbl" style="--x:190;--y:158;--w:152;--h:8">Estrutura</div>
+      <div class="a stline" style="--x:190;--y:170;--w:152;--h:8"><span class="lbl">Sintonizador</span><b class="st-tuner"></b></div>
+      <div class="a stline" style="--x:190;--y:182;--w:152;--h:8"><span class="lbl">Portas de Energia</span><b class="st-pe"></b></div>
+      <div class="a stline" style="--x:190;--y:194;--w:152;--h:8"><span class="lbl">Portas de Cristais</span><b class="st-pc"></b></div>
+      <div class="a stline" style="--x:190;--y:206;--w:152;--h:8"><span class="lbl">Montagem</span><b class="st-lay"></b></div>
+      <div class="tip hide"></div>`;
+    host.appendChild(el);
+    const $ = s => el.querySelector(s);
+    const invMain = $(".inv-main"), invBar = $(".inv-bar");
+    for (let i = 0; i < 27; i++) invMain.appendChild(Object.assign(document.createElement("div"), { className: "slot" }));
+    for (let i = 0; i < 9; i++) invBar.appendChild(Object.assign(document.createElement("div"), { className: "slot" }));
+    // uns itens no inventário, para a tela não parecer vazia: um cristal e redstone no hotbar
+    const hot = invBar.children;
+    const hc = document.createElement("i"); hc.className = "spr"; hc.style.setProperty("--h", "calc(16 * var(--u))"); setSprite(hc, "cristal_lapidado"); hot[0].appendChild(hc);
+    hot[0].dataset.tip = "Cristal Lapidado|Rende 2×, dura 20 min|Shift + clique: põe no Núcleo";
+    const hr = document.createElement("span"); hr.className = "redstone"; hr.innerHTML = ICON.redstone; hot[1].appendChild(hr);
+    const hn = document.createElement("span"); hn.className = "cnt"; hn.textContent = "32"; hot[1].appendChild(hn);
+    hot[1].dataset.tip = "Pó de Redstone|Shift + clique: põe no Núcleo";
+
+    const scope = $(".c-scope"), tune = $(".c-tune"), sg = scope.getContext("2d"), tg = tune.getContext("2d");
+    const tok = n => getComputedStyle(el).getPropertyValue(n).trim();
+    const g = { el, model, phase: Math.random() * 10, visible: true, cur: {} };
+
+    function render() {
+      const m = model, t = TIERS[m.tier];
+      el.dataset.mc = m.theme;
+      el.style.setProperty("--tier", t.color);
+      $(".theme").innerHTML = m.theme === "light" ? ICON.moon : ICON.sun;
+      $(".theme").dataset.tip = m.theme === "light" ? "Tema: claro|Clique: escuro" : "Tema: escuro|Clique: claro";
+      $(".tn").textContent = t.name;
+      const dev = m.station - m.dial, tuned = eff(dev);
+      const e = m.auto ? Math.min(tuned, t.ceil) : tuned;
+      let gen = 0, max = 0;
+      for (const c of m.crystals) { max += t.fe * mult(c); if (c.kind !== "opaco") gen += t.fe * mult(c) * e }
+      const buf = buffer(t), energyFe = m.energy * buf;
+      Object.assign(g.cur, { dev, e, gen, max, sync: Math.abs(dev) <= PLAT });
+      $(".freq").textContent = mhz(m.dial) + " MHz";
+      $(".freq").classList.toggle("dim", m.auto);
+      $(".lamp").classList.toggle("on", Math.abs(dev) <= PLAT);
+      el.querySelectorAll("[data-d]").forEach(b => b.classList.toggle("dis", m.auto));
+      $(".m-man").classList.toggle("sel", !m.auto);
+      const ma = $(".m-auto");
+      ma.classList.toggle("sel", m.auto); ma.classList.toggle("dis", !m.tuner);
+      ma.dataset.tip = m.tuner ? `Sintonizador|Segue a estação sozinho|Teto do ${t.name}: ${Math.round(t.ceil * 100)}%` : "Sintonizador|!Coloque um Sintonizador na estrutura";
+      $(".cry-lbl").textContent = `Cristais · ${t.k} ${t.k === 1 ? "câmara" : "câmaras"}`;
+      const cry = $(".cry");
+      while (cry.children.length > t.k) cry.lastElementChild.remove();
+      while (cry.children.length < t.k) { const s = document.createElement("div"); s.className = "slot"; s.innerHTML = `<i class="spr" style="--h:calc(16 * var(--u))"></i><span class="bar"><i></i></span>`; cry.appendChild(s) }
+      [...cry.children].forEach((s, i) => {
+        const c = m.crystals[i], spr = s.firstElementChild, bar = s.querySelector(".bar");
+        s.classList.toggle("empty", !c); spr.style.display = c ? "" : "none"; bar.style.display = c ? "" : "none";
+        if (!c) { s.dataset.tip = "Câmara vazia|Aceita Cristal de Sinal ou Lapidado"; return }
+        setSprite(spr, sprOf(c));
+        const op = c.kind === "opaco";
+        bar.firstElementChild.style.width = `calc(${Math.round(13 * (op ? c.recharge : c.charge))} * var(--u))`;
+        bar.firstElementChild.style.background = op ? "var(--brs)" : "var(--acc)";
+        const nome = (c.was === "lapidado" ? "Cristal Lapidado" : "Cristal de Sinal") + (op ? " Opaco" : "");
+        s.dataset.tip = op ? `${nome}|Recarregando: ${Math.round(c.recharge * 100)}%|${m.redstone ? "com a redstone do Núcleo" : "!Sem redstone no Núcleo"}` : `${nome}|Carga: ${Math.round(c.charge * 100)}%|Rende ${mult(c)}× · gerando ${short(t.fe * mult(c) * e)} FE/t`;
+      });
+      $(".rs .cnt").textContent = m.redstone > 1 ? m.redstone : "";
+      $(".rs .redstone").style.display = m.redstone ? "" : "none";
+      $(".rs").classList.toggle("empty", !m.redstone);
+      $(".eff-t").textContent = Math.round(e * 100) + "%";
+      const eb = $(".eff-b"); eb.style.width = `calc(${(150 * e).toFixed(1)} * var(--u))`;
+      eb.style.background = e >= .95 ? "var(--okc)" : e >= .75 ? "var(--wrn)" : "var(--acc)";
+      $(".ceil").style.left = `calc(${(1 + 150 * t.ceil).toFixed(1)} * var(--u))`;
+      $(".gen").textContent = short(gen) + " FE/t";
+      $(".gen").dataset.tip = `${fmt(gen)} FE/t|de ${fmt(max)} FE/t com estes cristais a 100%`;
+      $(".en").textContent = `${short(energyFe)} de ${short(buf)} FE`;
+      $(".en").dataset.tip = `${fmt(energyFe)} de ${fmt(buf)} FE|${Math.round(m.energy * 100)}% · sai pela Porta de Energia`;
+      $(".en-b").style.width = `calc(${(150 * m.energy).toFixed(1)} * var(--u))`;
+      $(".st-tuner").textContent = m.tuner ? "sim" : "não";
+      $(".st-pe").textContent = m.ports.energy; $(".st-pc").textContent = m.ports.crystals; $(".st-lay").textContent = m.layout;
+      drawTune();
+    }
+
+    /* ponteiro de sintonia: zero no centro, escala de −2 a +2 MHz; 4 px de canvas por pixel de interface */
+    function drawTune() {
+      const W = tune.width, H = tune.height, U = 4, cx = W / 2, sx = (W / 2 - 16 * U) / 2, dev = g.cur.dev;
+      tg.clearRect(0, 0, W, H);
+      tg.fillStyle = tok("--ins"); tg.fillRect(0, 0, W, 14 * U);
+      tg.fillStyle = tok("--okc"); tg.globalAlpha = .22; tg.fillRect(cx - PLAT * sx, 0, 2 * PLAT * sx, 14 * U); tg.globalAlpha = 1;
+      tg.strokeStyle = tok("--mut"); tg.fillStyle = tok("--mut"); tg.lineWidth = U; tg.font = `600 ${8 * U}px "Pixelify Sans", monospace`; tg.textAlign = "center"; tg.textBaseline = "alphabetic";
+      for (let m2 = -2; m2 <= 2; m2 += .5) {
+        const x = Math.round(cx + m2 * sx), big = Number.isInteger(m2);
+        tg.fillRect(x - U / 2, (big ? 9 : 11) * U, U, (big ? 5 : 3) * U);
+        if (big) tg.fillText(m2 === 0 ? "0" : (m2 > 0 ? "+" : "−") + Math.abs(m2), x, 21.5 * U);
+      }
+      const alive = Math.abs(dev) < ZERO;
+      const shown = alive ? -dev : (dev > 0 ? -ZERO : ZERO) + Math.sin(performance.now() / 90) * .06;
+      const nx = Math.round(cx + clamp(shown, -ZERO, ZERO) * sx);
+      tg.fillStyle = alive ? tok("--acc") : tok("--dis");
+      tg.fillRect(nx - U, U, 2 * U, 12 * U);
+      if (!alive) { tg.fillStyle = tok("--mut"); tg.textAlign = "left"; tg.fillText("sem sinal: varra o dial", 4 * U, 9 * U) }
+    }
+    /* osciloscópio: limpo em sintonia, chiado longe dela, nada a 0% */
+    function drawScope() {
+      const W = scope.width, H = scope.height, U = 4, q = g.cur.e || 0, dev = g.cur.dev || 0;
+      sg.fillStyle = "#1B1920"; sg.fillRect(0, 0, W, H);
+      sg.fillStyle = "#2F2C35";
+      for (let x = 0; x <= W; x += W / 10) sg.fillRect(Math.round(x), 0, U / 2, H);
+      for (let y = 0; y <= H; y += H / 5) sg.fillRect(0, Math.round(y), W, U / 2);
+      const amp = H * .34 * q, noise = 1 - q;
+      sg.beginPath();
+      for (let x = 0; x <= W; x += 4) {
+        const t = x / W * Math.PI * 6 + g.phase;
+        const n = noise * (Math.sin(x * .23 + g.phase * 7) * .45 + Math.sin(x * .57 - g.phase * 13) * .3 + (Math.random() - .5) * .7);
+        const y = H / 2 - (Math.sin(t) * amp + n * H * .26);
+        x ? sg.lineTo(x, y) : sg.moveTo(x, y);
+      }
+      sg.strokeStyle = "#8EE8E1"; sg.lineWidth = U; sg.shadowColor = "#8EE8E1"; sg.shadowBlur = 12 * q; sg.stroke(); sg.shadowBlur = 0;
+      sg.fillStyle = "#8EE8E1"; sg.font = `600 ${8 * U}px "Pixelify Sans", monospace`; sg.textAlign = "left"; sg.textBaseline = "alphabetic";
+      sg.fillText(Math.abs(dev) <= PLAT ? "ESTAÇÃO" : Math.abs(dev) < ZERO ? "QUASE LÁ" : "CHIADO", 4 * U, 11 * U);
+    }
+
+    /* os cliques: dial, modo, tema; a dica no estilo do jogo */
+    const setDial = v => { model.dial = clamp(Math.round(v * 20) / 20, 88, 108); render() };
+    el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { if (!model.auto) setDial(model.dial + +b.dataset.d) });
+    $(".freq").addEventListener("wheel", e => { if (model.auto) return; e.preventDefault(); setDial(model.dial + (e.deltaY < 0 ? .05 : -.05)) }, { passive: false });
+    $(".m-man").onclick = () => { model.auto = false; render() };
+    $(".m-auto").onclick = () => { if (model.tuner) { model.auto = true; render() } };
+    $(".theme").onclick = () => { model.theme = model.theme === "light" ? "dark" : "light"; render() };
+    const tip = $(".tip");
+    function showTip(text, x, y) {
+      tip.innerHTML = text.split("|").map((l, i) => `<span class="${i ? (l[0] === "!" ? "ac" : "t2") : ""}">${l.replace(/^!/, "")}</span>`).join("");
+      tip.classList.remove("hide");
+      const u = parseFloat(getComputedStyle(el).getPropertyValue("--u")), r = el.getBoundingClientRect();
+      let tx = x + 10 * u, ty = y - 12 * u;
+      tip.style.left = "0"; tip.style.top = "0";
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      if (tx + tw > r.width - 4 * u) tx = x - tw - 6 * u;
+      if (ty + th > r.height - 4 * u) ty = r.height - th - 4 * u;
+      if (ty < 4 * u) ty = 4 * u;
+      tip.style.left = tx + "px"; tip.style.top = ty + "px";
+    }
+    el.addEventListener("mousemove", e => {
+      const t = e.target.closest("[data-tip]");
+      if (!t || !el.contains(t)) { if (!g.pinned) tip.classList.add("hide"); return }
+      const r = el.getBoundingClientRect();
+      showTip(t.dataset.tip, e.clientX - r.left, e.clientY - r.top);
+    });
+    el.addEventListener("mouseleave", () => { if (!g.pinned) tip.classList.add("hide"); else pin() });
+    function pin() {                                        // a dica fixa (a galeria mostra o botão desabilitado com a dica)
+      const b = $(".m-auto"), r = el.getBoundingClientRect(), br = b.getBoundingClientRect();
+      showTip(b.dataset.tip, br.left - r.left + br.width * .55, br.top - r.top + br.height * .3);
+    }
+    g.render = render; g.drawScope = drawScope; g.pin = pin;
+    // o tamanho: 1 pixel de interface = 2 px, ou menos quando não cabe
+    const fit = () => { const cs = getComputedStyle(host), w = host.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); const u = Math.min(opts.maxU || 2, Math.floor(w / 352 * 100) / 100); el.style.setProperty("--u", u + "px"); if (g.pinned) pin() };
+    new ResizeObserver(fit).observe(host); fit();
+    new IntersectionObserver(es => g.visible = es[0].isIntersecting).observe(el);
+    guis.push(g);
+    render();
+    return g;
+  }
+
+  /* ---------- os estados da tela ---------- */
+  const STATES = {
+    sintonia: { label: "Em sintonia", tier: 2, dev: 0, auto: false, tuner: true, theme: "light", crystals: ["c.62", "l.9", "c.3"], redstone: 14, energy: .35, ports: { energy: 2, crystals: 1 }, layout: "Vitrine" },
+    fora: { label: "Fora de sintonia", tier: 2, dev: 1.3, auto: false, tuner: true, theme: "dark", crystals: ["c.62", "l.9", "c.3"], redstone: 14, energy: .12, ports: { energy: 2, crystals: 1 }, layout: "Vitrine" },
+    zero: { label: "0%: sem sinal", tier: 2, dev: 3.6, auto: false, tuner: true, theme: "light", crystals: ["c.62", "l.9", "c.3"], redstone: 14, energy: .04, ports: { energy: 2, crystals: 1 }, layout: "Vitrine" },
+    teto: { label: "Sintonizador no teto", tier: 7, dev: 0, auto: true, tuner: true, theme: "dark", crystals: ["l.95", "l.8", "l.72", "l.61", "l.5", "l.33", "l.2", "l.1"], redstone: 64, energy: 1, ports: { energy: 3, crystals: 2 }, layout: "Faixa" },
+    semtuner: { label: "Sem Sintonizador", tier: 0, dev: .4, auto: false, tuner: false, theme: "light", crystals: ["c.5"], redstone: 0, energy: .5, ports: { energy: 1, crystals: 1 }, layout: "Vitrine", pin: true },
+    opaco: { label: "Opaco em recarga", tier: 3, dev: 0, auto: true, tuner: true, theme: "dark", crystals: ["c.4", "o.35", "l.7", "c.9"], redstone: 7, energy: .6, ports: { energy: 1, crystals: 1 }, layout: "Vitrine" },
+  };
+  function modelOf(name, over = {}) {
+    const s = { ...STATES[name], ...over };
+    const dial = s.auto ? 98.15 : 94;
+    return { tier: s.tier, theme: s.theme, auto: s.auto, tuner: s.tuner, dial, station: dial + s.dev, crystals: s.crystals.map(crystal), redstone: s.redstone, energy: s.energy, ports: s.ports, layout: s.layout, vel: 0, acc: 0 };
+  }
+  const NOTES = {
+    sintonia: "Em sintonia: senoide limpa, ESTAÇÃO, ponteiro no centro, lâmpada acesa, 100% no Manual.",
+    fora: "Fora de sintonia a 1,3 MHz: chiado misturado, QUASE LÁ, o ponteiro diz para que lado girar, 54%.",
+    zero: "A mais de 2 MHz: só chiado, ponteiro encostado e \"sem sinal\", 0%: o Ressonador não gera e não gasta cristal.",
+    teto: "Ultimate com 8 Lapidados no Sintonizador: o dial anda sozinho, a lâmpada acende e a barra para no teto de 98%: 16.8G FE/t dos 17.2G possíveis.",
+    semtuner: "Sem a peça na estrutura: o botão Sintonizador fica desabilitado com a dica. Passe o mouse nele.",
+    opaco: "Um Opaco na câmara 2, recarregando com a redstone do Núcleo (barra em latão); os outros seguem gerando.",
+  };
+
+  // a tela interativa
+  const stage = document.getElementById("gui-stage");
+  let main = makeGui(stage, modelOf("sintonia"));
+  let mainState = "sintonia", speed = 0;
+  const stBar = document.getElementById("gui-states");
+  stBar.innerHTML = Object.entries(STATES).map(([k, s]) => `<button data-st="${k}" aria-pressed="${k === "sintonia"}">${s.label}</button>`).join("");
+  const tierSel = document.getElementById("gui-tier");
+  tierSel.innerHTML = TIERS.map((t, i) => `<option value="${i}">${t.name}${t.atm ? " ¹" : ""}</option>`).join("");
+  function applyState(k) {
+    mainState = k;
+    const keepTheme = main.model.theme;
+    Object.assign(main.model, modelOf(k), { theme: STATES[k].theme || keepTheme });
+    main.pinned = !!STATES[k].pin;
+    stBar.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === k));
+    tierSel.value = main.model.tier;
+    document.getElementById("gui-note").textContent = NOTES[k];
+    main.render(); if (main.pinned) main.pin(); else main.el.querySelector(".tip").classList.add("hide");
+  }
+  stBar.onclick = e => { const b = e.target.closest("[data-st]"); if (b) applyState(b.dataset.st) };
+  tierSel.onchange = () => {
+    const m = main.model, t = TIERS[+tierSel.value]; m.tier = +tierSel.value;
+    while (m.crystals.length > t.k) m.crystals.pop();
+    while (m.crystals.length < t.k) m.crystals.push(crystal((m.crystals.length % 3 === 1 ? "l." : "c.") + (9 - m.crystals.length)));
+    main.render();
+  };
+  document.querySelectorAll("[data-speed]").forEach(b => b.onclick = () => { speed = +b.dataset.speed; document.querySelectorAll("[data-speed]").forEach(x => x.setAttribute("aria-pressed", x === b)) });
+  applyState("sintonia");
+
+  // a galeria: cada estado parado, no tema dele
+  const gal = document.getElementById("gallery");
+  for (const [k, s] of Object.entries(STATES)) {
+    const card = document.createElement("div"); card.className = "shot";
+    card.innerHTML = `<div class="host"></div><b>${s.label} · tema ${s.theme === "light" ? "claro" : "escuro"}</b><span>${NOTES[k]}</span>`;
+    gal.appendChild(card);
+    const g = makeGui(card.querySelector(".host"), modelOf(k), { maxU: 1.5 });
+    if (s.pin) { g.pinned = true; setTimeout(g.pin, 300) }
+  }
+
+  /* ---------- a tabela dos tiers ---------- */
+  document.getElementById("tier-rows").innerHTML = TIERS.map(t => {
+    const max = t.fe * t.k * 2;
+    return `<tr class="${t.atm ? "atm" : ""}"><td><i class="dot" style="background:${t.color}"></i>${t.name}</td><td>${t.k}</td><td>${fmt(t.fe)}</td><td>${short(max)} FE/t<small>${fmt(max)}</small></td><td>${Math.round(t.ceil * 100)}%</td><td>${short(max * t.ceil)} FE/t</td><td>${short(buffer(t))} FE</td></tr>`;
+  }).join("");
+
+  /* ---------- o gráfico do Sintonizador: 30 min, a estação deriva e o dial a segue ---------- */
+  (function tunerChart() {
+    const cv = document.getElementById("tuner-chart"), c = cv.getContext("2d"), W = cv.width, H = cv.height;
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) };
+    const STEPS = 90, st = [], dl = [], ef = [], CEIL = .9; let station = 97.3, vel = 0, dial = 91.3;
+    for (let i = 0; i <= STEPS; i++) {
+      vel = clamp(vel + gauss() * .03 + (i < 30 ? .012 : -.01), -VMAX, VMAX); station = clamp(station + vel / 3, 88.5, 107.5);
+      if (i >= 6) dial += clamp(station - dial, -.5, .5);
+      st.push(station); dl.push(dial); ef.push(Math.min(eff(station - dial), CEIL));
+    }
+    const pad = { l: 70, r: 20, t: 16, b: 34 }, topH = 200, gap = 26, botY = pad.t + topH + gap, botH = H - botY - pad.b;
+    const x = i => pad.l + i / STEPS * (W - pad.l - pad.r);
+    const yM = v => pad.t + (100 - v) / (100 - 90) * topH, yE = v => botY + (1 - v) * botH;
+    c.clearRect(0, 0, W, H);
+    c.font = `600 15px ${css("--mono")}`; c.fillStyle = css("--muted"); c.strokeStyle = css("--inset"); c.lineWidth = 1; c.textAlign = "right"; c.textBaseline = "middle";
+    for (let v = 90; v <= 100; v += 2) { c.beginPath(); c.moveTo(pad.l, yM(v)); c.lineTo(W - pad.r, yM(v)); c.stroke(); c.fillText(v + " MHz", pad.l - 8, yM(v)) }
+    for (let v = 0; v <= 1; v += .25) { c.beginPath(); c.moveTo(pad.l, yE(v)); c.lineTo(W - pad.r, yE(v)); c.stroke(); c.fillText(Math.round(v * 100) + "%", pad.l - 8, yE(v)) }
+    c.textAlign = "center"; c.textBaseline = "top";
+    for (let m = 0; m <= 30; m += 5) c.fillText(m + " min", x(m * 3), H - pad.b + 10);
+    const line = (arr, y, color, w, dash) => { c.beginPath(); c.setLineDash(dash || []); arr.forEach((v, i) => i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v))); c.strokeStyle = color; c.lineWidth = w; c.stroke(); c.setLineDash([]) };
+    c.fillStyle = css("--ok"); c.globalAlpha = .18; c.beginPath(); c.moveTo(x(0), yE(0)); ef.forEach((v, i) => c.lineTo(x(i), yE(v))); c.lineTo(x(STEPS), yE(0)); c.closePath(); c.fill(); c.globalAlpha = 1;
+    line(ef, yE, css("--ok"), 3);
+    c.beginPath(); c.moveTo(pad.l, yE(CEIL)); c.lineTo(W - pad.r, yE(CEIL)); c.strokeStyle = css("--accent"); c.lineWidth = 2; c.setLineDash([8, 6]); c.stroke(); c.setLineDash([]);
+    line(st, yM, css("--muted"), 2.5, [2, 5]);
+    // o dial anda em degraus: um passo por ponto da deriva
+    c.beginPath(); dl.forEach((v, i) => { if (!i) c.moveTo(x(i), yM(v)); else { c.lineTo(x(i), yM(dl[i - 1])); c.lineTo(x(i), yM(v)) } }); c.strokeStyle = css("--lens"); c.lineWidth = 3; c.stroke();
+    c.fillStyle = css("--muted"); c.textAlign = "left"; c.textBaseline = "alphabetic"; c.font = `600 14px ${css("--mono")}`;
+    c.fillText("Sintonizador ligado", x(6) + 6, yM(91.3) - 8);
+    c.fillStyle = css("--accent"); c.fillText("teto 90%", W - pad.r - 80, yE(CEIL) - 8);
+  })();
+
+  /* ---------- a câmara em 3D: o v7 só com o conceito B, com os estados e o tier ---------- */
+  const cam = { state: "sintonia", tier: 2, crystals: [], q: 0, hold: 0 };
+  const CAM_STATES = { montando: "Montando", sintonia: "Em sintonia", fora: "Fora de sintonia", zero: "0%", opaco: "Opaco e recarga" };
+  const camTarget = () => ({ montando: 1, sintonia: 1, fora: .55, zero: 0, opaco: 1 })[cam.state];
+  const camSync = () => cam.state !== "fora" && cam.state !== "zero";
+  function camCrystals() {
+    const k = TIERS[cam.tier].k;
+    cam.crystals = Array.from({ length: k }, (_, i) => crystal((i % 3 === 1 ? "l." : "c.") + (9 - i)));
+    if (cam.state === "opaco") { const i = k > 1 ? 1 : 0; cam.crystals[i] = crystal("o.0"); cam.crystals[i].was = k > 1 ? "lapidado" : "cristal" }
+  }
+  camCrystals();
+  const csBar = document.getElementById("cam-states");
+  csBar.innerHTML = Object.entries(CAM_STATES).map(([k, l]) => `<button data-cs="${k}" aria-pressed="${k === "sintonia"}">${l}</button>`).join("");
+  const camTier = document.getElementById("cam-tier");
+  camTier.innerHTML = TIERS.map((t, i) => `<option value="${i}">${t.name} · ${t.k} ${t.k === 1 ? "cristal" : "cristais"}</option>`).join("");
+  camTier.value = cam.tier;
+  let tick3d = () => {}, remount = () => {};
+  csBar.onclick = e => {
+    const b = e.target.closest("[data-cs]"); if (!b) return;
+    cam.state = b.dataset.cs; csBar.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    camCrystals(); if (cam.state === "montando") remount();
+  };
+  camTier.onchange = () => { cam.tier = +camTier.value; camCrystals() };
+
+  const host = document.getElementById("view3d");
+  if (!window.THREE) host.innerHTML = '<p class="fallback">A vista 3D não carregou (Three.js não respondeu). O resto da página funciona.</p>';
+  else tick3d = init3d();
+
+  function init3d() {
+    const cv = document.getElementById("c3d");
+    const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, 16 / 10, .1, 120);
+    const loader = new THREE.TextureLoader();
+    const strips = [], texCache = {};
+    function strip(name) {
+      if (texCache[name]) return texCache[name];
+      const a = ANIM[name]; if (!a) throw new Error("sprite sem textura: " + name);
+      const t = loader.load(a.src);
+      t.magFilter = t.minFilter = THREE.NearestFilter;
+      t.repeat.set(1, 1 / a.frames); t.offset.y = 1 - 1 / a.frames; t.userData = a;
+      strips.push(t); texCache[name] = t; return t;
+    }
+    const matCache = {};
+    function mat(name) {
+      if (matCache[name]) return matCache[name];
+      const glass = name.startsWith("vidro");
+      const m = new THREE.MeshLambertMaterial({ map: strip(name), transparent: glass, depthWrite: !glass, side: glass ? THREE.DoubleSide : THREE.FrontSide });
+      if (name.startsWith("nucleo_") && name.endsWith("_dentro")) m.emissive = new THREE.Color(0x222222);
+      matCache[name] = m; return m;
+    }
+    const hidden = new THREE.MeshBasicMaterial({ visible: false });
+    const NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+    const RIGHT = [[0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0], [-1, 0, 0]];
+    const UP = [[0, 1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1], [0, 1, 0], [0, 1, 0]];
+    const N = 2;
+    const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    const neg = a => a.map(v => -v);
+    const mag = v => Math.max(Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[2]));
+    const inShell = v => mag(v) === N, inCube = v => mag(v) <= N, key = v => v.join(",");
+    const span = (a, b) => { const r = []; for (let i = a; i <= b; i++) r.push(i); return r };
+    function build(name) {
+      const pieces = {}, glass = new Set();
+      pieces[key([N, 0, 0])] = "core"; pieces[key([-N, 0, 0])] = "energy";
+      pieces[key([0, 0, -N])] = "crys"; pieces[key([0, N, 0])] = "tuner";
+      if (name === "vitrine") { for (const x of span(-1, 1)) for (const y of span(-1, 1)) glass.add(key([x, y, N])) }
+      else { for (const i of span(-1, 1)) for (const k of [[N, 1, i], [-N, 1, i], [i, 1, N], [i, 1, -N]]) glass.add(key(k)) }
+      return { pieces, glass };
+    }
+    const LAYOUTS = { vitrine: build("vitrine"), faixa: build("faixa") };
+    let layoutName = "vitrine", layout = LAYOUTS.vitrine;
+    const isGlass = v => inCube(v) && layout.glass.has(key(v));
+    const partOf = v => layout.pieces[key(v)] || (isGlass(v) ? "glass" : null);
+    function faceName(p, i, formed, tierKey) {
+      const n = NORMALS[i], part = partOf(p), nb = add(p, n);
+      if (inShell(nb)) { if (isGlass(nb) && part !== "glass") return formed ? "forro" : "carcaca_solta"; return null }
+      const towardCenter = inCube(nb), outward = !inCube(nb);
+      if (part === "glass") {
+        if (!formed) return "vidro_solto";
+        if (!towardCenter && !outward) return null;
+        const t = isGlass(add(p, UP[i])), b = isGlass(add(p, neg(UP[i]))), r = isGlass(add(p, RIGHT[i])), l = isGlass(add(p, neg(RIGHT[i])));
+        return "vidro_" + ((t ? 1 : 0) | (r ? 2 : 0) | (b ? 4 : 0) | (l ? 8 : 0));
+      }
+      if (towardCenter) {
+        if (!formed) return "carcaca_solta";
+        if (part === "core") return "nucleo_" + tierKey + "_dentro";
+        if (part === "energy") return "porta_energia_dentro";
+        if (part === "crys") return "porta_cristais_dentro";
+        return "forro";
+      }
+      if (part && outward) {
+        if (part === "core") return "nucleo_" + tierKey + (formed ? "" : "_solto");
+        if (part === "energy") return "porta_energia" + (formed ? "" : "_solta");
+        if (part === "crys") return "porta_cristais" + (formed ? "" : "_solta");
+        if (part === "tuner") return "sintonizador" + (formed ? "" : "_solto");
+      }
+      if (!formed) return "carcaca_solta";
+      const edges = [];
+      if (!inCube(add(p, UP[i]))) edges.push("t");
+      if (!inCube(add(p, neg(UP[i])))) edges.push("b");
+      if (!inCube(add(p, neg(RIGHT[i])))) edges.push("l");
+      if (!inCube(add(p, RIGHT[i]))) edges.push("r");
+      if (!edges.length) return "carcaca_campo";
+      let k = "carcaca_" + edges.join("");
+      if (n[1] === 0 && edges.includes("b")) k += "_c";
+      return k;
+    }
+    const box = new THREE.BoxGeometry(1, 1, 1), shell = [];
+    for (let x = -N; x <= N; x++) for (let y = -N; y <= N; y++) for (let z = -N; z <= N; z++) {
+      if (mag([x, y, z]) < N) continue;
+      const m = new THREE.Mesh(box, NORMALS.map(() => hidden));
+      m.position.set(x, y, z); m.userData.p = [x, y, z]; m.userData.front = z === N;
+      scene.add(m); shell.push(m);
+    }
+    let formed = true, builtFor = "", formedAt = -10;
+    function dress() {
+      const k = TIERS[cam.tier].key, sig = k + (formed ? "+" : "-") + layoutName;
+      if (builtFor === sig) return; builtFor = sig;
+      for (const m of shell) {
+        m.material = NORMALS.map((_, i) => { const nm = faceName(m.userData.p, i, formed, k); return nm ? mat(nm) : hidden });
+        m.renderOrder = partOf(m.userData.p) === "glass" ? 3 : 0;
+      }
+      insideGroup.visible = formed;
+      document.getElementById("hud-state").textContent = formed ? "montado" : "solto";
+    }
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .14, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = -N - .51; scene.add(shadow);
+    scene.add(new THREE.AmbientLight(0xffffff, .62));
+    const sun = new THREE.DirectionalLight(0xfff4e0, .7); sun.position.set(6, 12, 5); scene.add(sun);
+
+    /* ===== a câmara 3×3×3: só montada ===== */
+    const insideGroup = new THREE.Group(); scene.add(insideGroup);
+    const W = N - .5;
+    const tierColor = () => new THREE.Color(TIERS[cam.tier].color);
+    const CORAL_HI = new THREE.Color(0xFFB39E), PORC = new THREE.Color(0xFFFBF3);
+    const additive = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
+    const fill = new THREE.PointLight(0xfff4e0, .5, 5, 1.0); fill.position.set(0, .8, 0); insideGroup.add(fill);
+    const warm = new THREE.PointLight(0xff8f6e, .8, 4, 1.4); insideGroup.add(warm);
+    const tierLight = new THREE.PointLight(0x1FA9A0, .8, 4, 1.6); tierLight.position.set(.9, 0, 0); insideGroup.add(tierLight);
+    const lensMat = additive(0x1FA9A0, .6);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(.3, 24), lensMat); lens.position.set(W - .01, 0, 0); lens.rotation.y = -Math.PI / 2; insideGroup.add(lens);
+    function radial(inner, mid, outer) {
+      const c = document.createElement("canvas"); c.width = c.height = 128;
+      const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, inner); gr.addColorStop(.3, mid); gr.addColorStop(1, outer);
+      g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    }
+    const haloTex = radial("rgba(255,240,234,1)", "rgba(255,160,130,.5)", "rgba(240,96,62,0)");
+    const sprite = (tex, scale) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 })); s.scale.set(scale, scale, 1); return s };
+    const flash = sprite(haloTex, 2.5); insideGroup.add(flash); let flashT = 2;
+    const crystalMat = () => new THREE.MeshStandardMaterial({ color: 0xF2917A, emissive: 0xF0603E, emissiveIntensity: .5, roughness: .32, metalness: .05, flatShading: true });
+    const brass = new THREE.MeshStandardMaterial({ color: 0xDDBC5C, metalness: .7, roughness: .3, emissive: 0x3a2a08 });
+    function brutoMesh(m) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, .15, 6), m);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(.04, .07, 6), m); tip.position.y = .11;
+      const foot = new THREE.Mesh(new THREE.ConeGeometry(.045, .04, 6), m); foot.rotation.x = Math.PI; foot.position.y = -.095;
+      const side = new THREE.Mesh(new THREE.CylinderGeometry(.022, .025, .08, 6), m); side.position.set(.045, -.03, 0); side.rotation.z = -.5;
+      const sideTip = new THREE.Mesh(new THREE.ConeGeometry(.022, .04, 6), m); sideTip.position.set(.072, .018, 0); sideTip.rotation.z = -.5;
+      g.add(body, tip, foot, side, sideTip); return g;
+    }
+    function lapidadoMesh(m) {
+      const g = new THREE.Group();
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(.075, 0), m); gem.scale.y = 1.35;
+      const band = new THREE.Mesh(new THREE.TorusGeometry(.054, .007, 4, 16), brass); band.rotation.x = Math.PI / 2;
+      g.add(gem, band); return g;
+    }
+    let built = null, cmeshes = [];
+    function buildCrystals() {
+      cmeshes.forEach(o => { insideGroup.remove(o.obj); insideGroup.remove(o.beam) });
+      cmeshes = cam.crystals.map(c => {
+        const m = crystalMat();
+        const obj = (c.was === "lapidado" ? lapidadoMesh : brutoMesh)(m);
+        obj.scale.setScalar(2.2);
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(.018, .018, 1), additive(0xFFB39E, 0));
+        insideGroup.add(obj, beam);
+        return { obj, mat: m, beam, seed: Math.random() * Math.PI * 2 };
+      });
+      built = cam.crystals;
+    }
+    /* o conceito B: a figura de Lissajous e a placa de Chladni */
+    const lisGroup = new THREE.Group(); insideGroup.add(lisGroup);
+    const PTS = 260, lisPos = new Float32Array(PTS * 3);
+    const lisGeo = new THREE.BufferGeometry(); lisGeo.setAttribute("position", new THREE.BufferAttribute(lisPos, 3));
+    const lisLines = [0, .012, -.012].map(off => { const l = new THREE.Line(lisGeo, new THREE.LineBasicMaterial({ color: 0xFFB39E, transparent: true, opacity: .8, blending: THREE.AdditiveBlending, depthWrite: false })); l.position.y = off; lisGroup.add(l); return l });
+    const head = sprite(haloTex, .55); lisGroup.add(head);
+    const headCore = new THREE.Mesh(new THREE.IcosahedronGeometry(.05, 0), new THREE.MeshBasicMaterial({ color: 0xFFFBF3 })); lisGroup.add(headCore);
+    const CH = 72, chCv = document.createElement("canvas"); chCv.width = chCv.height = CH;
+    const chCtx = chCv.getContext("2d"), chImg = chCtx.createImageData(CH, CH), chTex = new THREE.CanvasTexture(chCv);
+    chTex.magFilter = THREE.NearestFilter;
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(2 * W - .1, 2 * W - .1), additive(0xffffff, 1)); plate.material.map = chTex;
+    plate.rotation.x = -Math.PI / 2; plate.position.y = -W + .02; lisGroup.add(plate);
+    const noiseField = Float32Array.from({ length: CH * CH }, () => Math.random());
+    function drawChladni(qs, on, time) {
+      const a = 3, b = 2, c2 = 4, d2 = 1, drift = (1 - qs) * .6;
+      const d = chImg.data; let k = 0;
+      for (let j = 0; j < CH; j++) for (let i = 0; i < CH; i++) {
+        const x = (i + .5) / CH * 2 - 1, y = (j + .5) / CH * 2 - 1;
+        const p1 = Math.cos(a * Math.PI * x) * Math.cos(b * Math.PI * y) - Math.cos(b * Math.PI * x) * Math.cos(a * Math.PI * y);
+        const p2 = Math.cos(c2 * Math.PI * (x + drift * Math.sin(time * .7))) * Math.cos(d2 * Math.PI * y) - Math.cos(d2 * Math.PI * x) * Math.cos(c2 * Math.PI * (y - drift * Math.cos(time * .5)));
+        const mix = qs * p1 + (1 - qs) * (p2 * .6 + (noiseField[k / 4] - .5) * 1.4);
+        const v = Math.max(0, 1 - Math.abs(mix) * (2.2 + 3 * qs));
+        const glow = v * v * on;
+        d[k++] = 255 * (.3 + .7 * glow) * glow; d[k++] = 230 * (.45 + .55 * glow) * glow; d[k++] = 200 * (.55 + .45 * glow) * glow; d[k++] = 255;
+      }
+      chCtx.putImageData(chImg, 0, 0); chTex.needsUpdate = true;
+    }
+    let lisU = 0;
+    function lissajous(u, qs, t) {
+      const dr = (1 - qs);
+      const w1 = 3 + .61 * dr * Math.sin(t * .37), w2 = 2 + .43 * dr * Math.cos(t * .29), w3 = 1 + .37 * dr * Math.sin(t * .23);
+      return [.78 * Math.sin(w1 * u + Math.PI / 2), .55 * Math.sin(w2 * u), .78 * Math.sin(w3 * u)];
+    }
+    /* faíscas e redstone: partículas do cliente no jogo, aqui cubinhos */
+    const dotGeo = new THREE.BoxGeometry(.05, .05, .05);
+    const pool = (n, color) => Array.from({ length: n }, () => { const m = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color })); m.visible = false; insideGroup.add(m); return { m, t: 0, to: null } });
+    const sparks = pool(8, 0xFFD042), reds = pool(4, 0xD5453A);
+    let sparkClock = 0, redClock = 0;
+    const CRYS_IN = new THREE.Vector3(0, 0, -W);
+
+    /* câmera em órbita, arrastando */
+    const FAR = 14, NEAR = 7.4;
+    let theta = .72, phi = 1.05, radius = FAR, spin = true, dragging = false, lx = 0, ly = 0;
+    cv.addEventListener("pointerdown", e => { dragging = true; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId) });
+    cv.addEventListener("pointerup", () => dragging = false);
+    cv.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      theta -= (e.clientX - lx) * .008; phi = Math.min(1.5, Math.max(.2, phi - (e.clientY - ly) * .008));
+      lx = e.clientX; ly = e.clientY; if (reduce) draw(0);
+    });
+    cv.addEventListener("wheel", e => { e.preventDefault(); radiusGoal = null; radius = Math.min(26, Math.max(3.5, radius * (e.deltaY > 0 ? 1.08 : .93))); if (reduce) draw(0) }, { passive: false });
+    const bCut = document.getElementById("b-cut"), bSpin = document.getElementById("b-spin"), bForm = document.getElementById("b-form"), bLayout = document.getElementById("b-layout");
+    let radiusGoal = radius, phiGoal = phi, thetaGoal = null, spinBefore = true;
+    bCut.onclick = () => {
+      const on = bCut.getAttribute("aria-pressed") !== "true";
+      bCut.setAttribute("aria-pressed", on);
+      shell.forEach(m => { if (m.userData.front) m.visible = !on });
+      if (on) { spinBefore = spin; spin = false; thetaGoal = -.42; radiusGoal = NEAR; phiGoal = 1.18 }
+      else { spin = spinBefore; thetaGoal = null; radiusGoal = FAR; phiGoal = 1.05 }
+      bSpin.setAttribute("aria-pressed", spin);
+      if (reduce) { radius = radiusGoal; phi = phiGoal; if (thetaGoal !== null) theta = thetaGoal; draw(0) }
+    };
+    bSpin.onclick = () => { spin = !spin; bSpin.setAttribute("aria-pressed", spin) };
+    const setFormed = f => { formed = f; bForm.setAttribute("aria-pressed", formed); bForm.textContent = formed ? "Montado" : "Solto"; if (formed) formedAt = time; dress(); if (reduce) draw(0) };
+    bForm.onclick = () => setFormed(!formed);
+    remount = () => { setFormed(false); setTimeout(() => setFormed(true), 700) };     // a sequência de acender, de novo
+    bLayout.onclick = () => {
+      layoutName = layoutName === "vitrine" ? "faixa" : "vitrine"; layout = LAYOUTS[layoutName];
+      bLayout.textContent = layoutName === "vitrine" ? "Montagem: Vitrine" : "Montagem: Faixa";
+      dress(); if (reduce) draw(0);
+    };
+    function resize() { const w = host.clientWidth; renderer.setSize(w, w * 10 / 16, false); camera.aspect = 16 / 10; camera.updateProjectionMatrix() }
+    new ResizeObserver(resize).observe(host); resize();
+    let visible = true;
+    new IntersectionObserver(es => visible = es[0].isIntersecting).observe(host);
+
+    let time = 0, lastTier = -1, qs = 0, wasSync = false;
+    const tmp = new THREE.Vector3();
+    function aimBeam(beam, from, to, opacity) {
+      beam.visible = opacity > .01; if (!beam.visible) return;
+      tmp.copy(to).sub(from); const len = tmp.length();
+      beam.position.copy(from).addScaledVector(tmp, .5); beam.scale.z = len; beam.lookAt(to); beam.material.opacity = opacity;
+    }
+    function draw(dt) {
+      time += dt;
+      if (built !== cam.crystals) buildCrystals();
+      if (lastTier !== cam.tier) { lastTier = cam.tier; lensMat.color.set(TIERS[cam.tier].color); tierLight.color.set(TIERS[cam.tier].color) }
+      dress();
+      for (const t of strips) { const a = t.userData; if (a.frames > 1) t.offset.y = 1 - (Math.floor(time * 20 / a.frametime) % a.frames + 1) / a.frames }
+      renderer.setClearColor(css("--sheet"));
+
+      // o Opaco em recarga: a redstone chega, ele volta à cor e à altura; depois gasta de novo (ciclo da demonstração)
+      if (cam.state === "opaco") for (const c of cam.crystals) {
+        if (c.kind === "opaco") { c.recharge += dt / 6; if (c.recharge >= 1) { c.kind = c.was; c.charge = 1; c.recharge = 0; cam.hold = 0 } }
+        else if (c.charge === 1 && cam.crystals.indexOf(c) === (cam.crystals.length > 1 ? 1 : 0)) { cam.hold += dt; if (cam.hold > 4) { c.kind = "opaco"; c.charge = 0; c.recharge = 0 } }
+      }
+
+      const q = formed ? camTarget() : 0;
+      qs = approach(qs, q, dt, 1.6);
+      const sync = formed && camSync();
+      if (sync && !wasSync) flashT = 0;
+      wasSync = sync;
+      flashT += dt;
+      const tf = time - formedAt, on = d => smooth((tf - d) / .9);
+      const breath = .5 + .5 * Math.sin(time * 2 * Math.PI / 2.4);
+
+      lensMat.opacity = on(0) * (.3 + .4 * qs + .12 * breath);
+      tierLight.intensity = on(0) * (.3 + .7 * qs);
+      warm.intensity = on(.3) * (.2 + 1.4 * qs);
+      fill.intensity = on(.3) * .5;
+      flash.material.opacity = Math.max(0, 1 - flashT / .9) * .9; const fs = 1 + flashT * 2.2; flash.scale.set(fs, fs, 1);
+      const en = mat("porta_energia"); en.emissive.setRGB(.35 * qs, .22 * qs, 0);
+
+      lisU += dt * (.45 + .55 * qs) * 2 * Math.PI / 3.0;
+      for (let i = 0; i < PTS; i++) {
+        const u = lisU - (1 - i / (PTS - 1)) * 2 * Math.PI;
+        const p = lissajous(u, qs, time - (1 - i / (PTS - 1)) * 3);
+        lisPos[i * 3] = p[0]; lisPos[i * 3 + 1] = p[1]; lisPos[i * 3 + 2] = p[2];
+      }
+      lisGeo.attributes.position.needsUpdate = true;
+      const hp = lissajous(lisU, qs, time), headPos = new THREE.Vector3(hp[0], hp[1], hp[2]);
+      head.position.copy(headPos); headCore.position.copy(headPos);
+      head.material.opacity = on(.9) * (.35 + .55 * qs); headCore.material.color.copy(PORC).lerp(CORAL_HI, 1 - qs);
+      headCore.visible = qs > .03;
+      for (const l of lisLines) { l.material.opacity = on(.9) * (.12 + .7 * qs) * Math.min(1, qs * 4 + .05); l.material.color.copy(CORAL_HI).lerp(tierColor(), .35 * qs) }
+      drawChladni(qs, on(.3), time);
+
+      const k = cam.crystals.length, R = .95;
+      let active = 0;
+      for (let i = 0; i < cmeshes.length; i++) {
+        const o = cmeshes[i], c = cam.crystals[i], op = c.kind === "opaco";
+        const ph = o.seed * (1 - qs);
+        const bob = Math.sin(time * 2 * Math.PI / 2.4 + ph) * .12 * qs;
+        const a = i / k * Math.PI * 2 + time * .08 + Math.PI / 4;
+        const rise = op ? -.35 * (1 - smooth(c.recharge)) : 0;            // o Opaco fica caído e volta à altura com a recarga
+        o.obj.position.set(Math.cos(a) * R, bob + rise - .15, Math.sin(a) * R);
+        o.obj.rotation.y += dt * (op ? .1 : .4 + 1.2 * qs);
+        o.obj.rotation.z = op ? .5 * (1 - smooth(c.recharge)) : Math.sin(time * 3 + o.seed) * .25 * (1 - qs);
+        o.obj.scale.setScalar(2.2 * on(.6));
+        const pulse = .5 + .5 * Math.sin(time * 2 * Math.PI / 1.6 + (qs > .9 ? 0 : o.seed));
+        if (op) { o.mat.color.set(0xB5ADA2).lerp(new THREE.Color(0xF2917A), c.recharge || 0); o.mat.emissiveIntensity = (c.recharge || 0) * .4 }
+        else { active++; o.mat.color.set(0xB9AFA6).lerp(new THREE.Color(0xF2917A), .25 + .75 * qs); o.mat.emissiveIntensity = .9 * qs * (.7 + .3 * pulse) }
+        aimBeam(o.beam, o.obj.position, headPos, op ? 0 : on(1.2) * Math.max(0, qs - .5) * 2 * (.5 + .5 * pulse) * .7);
+      }
+
+      // faíscas: um fio do centro à grelha da Porta de Energia, pela geração; redstone: da boca ao Opaco em recarga
+      sparkClock += dt * 5 * qs * (formed ? 1 : 0);
+      while (sparkClock > 1) { sparkClock--; const p = sparks.find(p => !p.m.visible); if (!p) break; p.t = 0; p.m.visible = true; p.off = new THREE.Vector3(0, (Math.random() - .5) * .08, (Math.random() - .5) * .08) }
+      for (const p of sparks) { if (!p.m.visible) continue; p.t += dt * .8; if (p.t >= 1) { p.m.visible = false; continue } p.m.position.set(-.3 - p.t * (W - .35), p.off.y, p.off.z) }
+      const opacos = cam.crystals.map((c, i) => c.kind === "opaco" ? i : -1).filter(i => i >= 0);
+      redClock += dt * 2 * opacos.length * (formed ? 1 : 0);
+      while (redClock > 1 && opacos.length) { redClock--; const p = reds.find(p => !p.m.visible); if (!p) break; p.t = 0; p.m.visible = true; p.to = cmeshes[opacos[Math.floor(Math.random() * opacos.length)]].obj }
+      for (const p of reds) { if (!p.m.visible) continue; p.t += dt * .6; if (p.t >= 1 || !p.to) { p.m.visible = false; continue } p.m.position.copy(CRYS_IN).lerp(p.to.position, smooth(p.t)) }
+
+      const alive = sparks.filter(p => p.m.visible).length + reds.filter(p => p.m.visible).length;
+      document.getElementById("hud-sig").textContent = !formed ? "—" : cam.state === "zero" ? "sem sinal, 0%" : cam.state === "fora" ? "fora da estação, 55%" : "em sintonia";
+      document.getElementById("hud-cry").textContent = `${k} · ${active} gerando${opacos.length ? ` · ${opacos.length} Opaco` : ""}`;
+      document.getElementById("hud-quads").textContent = formed ? `~${520 + 21 + 2 + 2 * (qs > .5 ? active : 0) + 12 * k + 1 + (flashT < .9 ? 1 : 0)}` : "0";
+      document.getElementById("hud-part").textContent = formed ? `${alive} (máx. 12)` : "0";
+      if (spin && !dragging && !reduce) theta += dt * .18;
+      if (radiusGoal !== null) {
+        radius += (radiusGoal - radius) * Math.min(1, dt * 3); phi += (phiGoal - phi) * Math.min(1, dt * 3);
+        if (thetaGoal !== null) theta += (thetaGoal - theta) * Math.min(1, dt * 3);
+        if (Math.abs(radiusGoal - radius) < .01) radiusGoal = null;
+      }
+      camera.position.set(radius * Math.sin(phi) * Math.sin(theta), radius * Math.cos(phi), radius * Math.sin(phi) * Math.cos(theta));
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    }
+    draw(0);
+    return dt => { if (visible) draw(dt) };
+  }
+
+  /* ---------- o relógio da tela interativa: a deriva, o passo do Sintonizador e o desgaste ---------- */
+  function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) }
+  function step(dtMin) {
+    const m = main.model, t = TIERS[m.tier];
+    m.acc += dtMin;
+    while (m.acc >= 1 / 3) {                                 // um passo da deriva a cada 20 s de jogo
+      m.acc -= 1 / 3;
+      m.vel = clamp(m.vel + gauss() * .03, -VMAX, VMAX);
+      m.station = clamp(m.station + m.vel / 3, 88.5, 107.5);
+      if (m.auto) m.dial = Math.round((m.dial + clamp(m.station - m.dial, -.5, .5)) * 20) / 20;
+      const e = main.cur.e || 0;
+      for (const c of m.crystals) {
+        if (c.kind === "opaco") { if (m.redstone > 0) { c.recharge += (1 / 3) / .5; if (c.recharge >= 1) { c.kind = c.was; c.charge = 1; c.recharge = 0; m.redstone-- } } }
+        else if (e > 0 && m.energy < 1) { c.charge -= (1 / 3) / lifeMin(c) * e; if (c.charge <= 0) { c.kind = "opaco"; c.charge = 0; c.recharge = 0 } }
+      }
+      const gen = main.cur.gen || 0, max = main.cur.max || 1;   // o roteador preso na Porta tira quase a saída cheia: a barra respira
+      m.energy = clamp(m.energy + (gen - .97 * max) * 400 / buffer(t), 0, 1);
+    }
+  }
+  let last = performance.now(), frame = 0;
+  function loop(now) {
+    const dt = Math.min(.1, (now - last) / 1000); last = now;
+    for (const g of guis) g.phase += dt * 6;
+    if (speed) step(dt * speed / 60);
+    if (++frame % 6 === 0 || speed) main.render();
+    for (const g of guis) if (g.visible) { if (g !== main && frame % 6 === 0) g.render(); g.drawScope() }
+    tick3d(dt);
+    requestAnimationFrame(loop);
+  }
+  for (const g of guis) g.drawScope();
+  tick3d(0);
+  if (!reduce) requestAnimationFrame(loop);
+  else { speed = 0; document.querySelector('[data-speed="0"]').click() }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const g of guis) g.render(); tick3d(0) });
+  document.fonts && document.fonts.ready.then(() => { for (const g of guis) g.render() });
+})();
+</script>

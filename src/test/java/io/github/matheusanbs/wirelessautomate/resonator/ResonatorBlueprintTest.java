@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint.Layout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
@@ -140,5 +141,19 @@ class ResonatorBlueprintTest {
             assertEquals(Part.GLASS, expected[4][3][c]);
             assertEquals(Part.CASING, expected[c][2][4]);
         }
+    }
+
+    @Test
+    void reconheceAMontagemPelasPecas() {
+        for (Face face : Face.values()) {
+            assertEquals(Layout.VITRINE, ResonatorBlueprint.layoutOf(ResonatorBlueprint.expected(face, Layout.VITRINE)));
+            assertEquals(Layout.FAIXA, ResonatorBlueprint.layoutOf(ResonatorBlueprint.expected(face, Layout.FAIXA)));
+        }
+        Part[][][] custom = ResonatorBlueprint.expected(Face.EAST, Layout.VITRINE);
+        custom[2][3][0] = Part.GLASS;
+        assertNull(ResonatorBlueprint.layoutOf(custom));
+        Part[][][] none = ResonatorBlueprint.expected(Face.EAST, Layout.VITRINE);
+        for (int x = 1; x < 4; x++) for (int y = 1; y < 4; y++) none[x][y][4] = Part.CASING;
+        assertNull(ResonatorBlueprint.layoutOf(none));
     }
 }

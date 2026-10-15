@@ -38,4 +38,25 @@ class TuningTest {
         assertEquals(88.5, Tuning.initialStation(0.0), 1e-9);
         assertEquals(107.5, Tuning.initialStation(1.0), 1e-9);
     }
+
+    @Test
+    void sintonizadorAndaAteMeioMhzPorPasso() {
+        assertEquals(90.5, Tuning.autoStep(90.0, 98.0), 1e-9);
+        assertEquals(97.5, Tuning.autoStep(98.0, 97.0), 1e-9);
+        assertEquals(97.4, Tuning.autoStep(97.0, 97.4), 1e-9);
+        assertEquals(97.4, Tuning.autoStep(97.4, 97.4), 1e-9);
+        assertEquals(97.45, Tuning.autoStep(97.0, 97.4612), 1e-9);
+        assertEquals(108.0, Tuning.autoStep(107.8, 108.3), 1e-9);
+    }
+
+    @Test
+    void tetoPorTierEEficienciaCapada() {
+        assertEquals(0.85, Tuning.ceiling(0), 1e-9);
+        assertEquals(0.90, Tuning.ceiling(2), 1e-9);
+        assertEquals(0.98, Tuning.ceiling(7), 1e-9);
+        assertEquals(0.98, Tuning.ceiling(12), 1e-9);
+        assertEquals(1.0, Tuning.capped(1.0, false, 2), 1e-9);
+        assertEquals(0.90, Tuning.capped(1.0, true, 2), 1e-9);
+        assertEquals(0.72, Tuning.capped(0.72, true, 2), 1e-9);
+    }
 }

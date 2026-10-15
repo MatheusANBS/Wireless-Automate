@@ -47,6 +47,25 @@ public final class Tuning {
         return STATION_MIN + clamp(unit01, 0, 1) * (STATION_MAX - STATION_MIN);
     }
 
+    public static final double AUTO_STEP_MHZ = 0.5;
+    /** O teto do Sintonizador por tier (ordinal do RouterTier): Básico 85% até Ultimate 98%. */
+    private static final double[] CEILINGS = {0.85, 0.88, 0.90, 0.92, 0.94, 0.95, 0.96, 0.98};
+
+    /** Um passo do Sintonizador: o dial anda até a estação, no máximo {@link #AUTO_STEP_MHZ}, no passo do dial. */
+    public static double autoStep(double dial, double station) {
+        double delta = clamp(station - dial, -AUTO_STEP_MHZ, AUTO_STEP_MHZ);
+        return clampDial(dial + delta);
+    }
+
+    public static double ceiling(int tierOrdinal) {
+        return CEILINGS[Math.max(0, Math.min(CEILINGS.length - 1, tierOrdinal))];
+    }
+
+    /** No modo automático a eficiência para no teto do tier; no manual passa inteira. */
+    public static double capped(double efficiency, boolean auto, int tierOrdinal) {
+        return auto ? Math.min(efficiency, ceiling(tierOrdinal)) : efficiency;
+    }
+
     private static double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }

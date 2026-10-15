@@ -2,6 +2,9 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
+import java.util.HashSet;
+import java.util.Set;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O desenho que a projeção sugere em volta de um Núcleo solto: o Núcleo no centro da face para onde ele está
@@ -45,6 +48,75 @@ public final class ResonatorBlueprint {
             band(parts);
         }
         return parts;
+    }
+
+    /**
+     * Reconhece o layout pelas peças de uma caixa 5×5×5 em coordenadas locais {@code [x][y][z]}: Vitrine se o vidro é
+     * exatamente o miolo 3×3 de uma face, Faixa se todo vidro está na linha de cima das laterais e o resto dela são
+     * peças; senão {@code null} (montagem própria).
+     */
+    public static @Nullable Layout layoutOf(Part[][][] local) {
+        Set<Integer> glass = new HashSet<>();
+        for (int x = 0; x < SIZE; x++) {
+            for (int y = 0; y < SIZE; y++) {
+                for (int z = 0; z < SIZE; z++) {
+                    if (local[x][y][z] == Part.GLASS) {
+                        glass.add(key(x, y, z));
+                    }
+                }
+            }
+        }
+        if (glass.isEmpty()) {
+            return null;
+        }
+        for (Face face : Face.values()) {
+            if (glass.equals(windowKeys(face))) {
+                return Layout.VITRINE;
+            }
+        }
+        return isBand(local, glass) ? Layout.FAIXA : null;
+    }
+
+    /** Todo vidro está na linha de cima e cada posição dela que não é vidro é uma peça. */
+    private static boolean isBand(Part[][][] local, Set<Integer> glass) {
+        int y = LAST - 1;
+        int glassOnBand = 0;
+        for (int c = 1; c < LAST; c++) {
+            int[][] cells = {{c, 0}, {c, LAST}, {0, c}, {LAST, c}};
+            for (int[] cell : cells) {
+                Part part = local[cell[0]][y][cell[1]];
+                if (part == Part.GLASS) {
+                    glassOnBand++;
+                } else if (!isPiece(part)) {
+                    return false;
+                }
+            }
+        }
+        return glassOnBand == glass.size();
+    }
+
+    private static boolean isPiece(Part part) {
+        return part == Part.CORE || part == Part.ENERGY_PORT || part == Part.CRYSTAL_PORT || part == Part.TUNER;
+    }
+
+    private static Set<Integer> windowKeys(Face face) {
+        Part[][][] parts = new Part[SIZE][SIZE][SIZE];
+        window(parts, face);
+        Set<Integer> keys = new HashSet<>();
+        for (int x = 0; x < SIZE; x++) {
+            for (int y = 0; y < SIZE; y++) {
+                for (int z = 0; z < SIZE; z++) {
+                    if (parts[x][y][z] == Part.GLASS) {
+                        keys.add(key(x, y, z));
+                    }
+                }
+            }
+        }
+        return keys;
+    }
+
+    private static int key(int x, int y, int z) {
+        return (x * SIZE + y) * SIZE + z;
     }
 
     /** O canto mínimo da caixa no mundo, com o Núcleo em (cx, cy, cz) no centro da face {@code coreFace}. */

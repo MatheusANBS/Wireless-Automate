@@ -1,17 +1,31 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -77,6 +91,59 @@ public final class ResonatorCrystalGameTests {
         helper.assertValueEqual(ModItems.SIGNAL_CRYSTAL.get().yield(), 1, "rendimento do Cristal de Sinal");
         helper.assertValueEqual(ModItems.CUT_SIGNAL_CRYSTAL.get().yield(), 2, "rendimento do Lapidado");
         helper.assertTrue(ModItems.CUT_SIGNAL_CRYSTAL.get().isCut(), "o Lapidado é lapidado");
+        helper.succeed();
+    }
+
+    private static List<ItemStack> drops(GameTestHelper helper, BlockState state, ItemStack tool) {
+        ServerLevel level = helper.getLevel();
+        return Block.getDrops(state, level, helper.absolutePos(new BlockPos(1, 1, 1)), null, null, tool);
+    }
+
+    @GameTest(template = "empty")
+    public static void minerioDaDeUmATresCristais(GameTestHelper helper) {
+        for (var ore : List.of(ModBlocks.SIGNAL_QUARTZ_ORE, ModBlocks.DEEPSLATE_SIGNAL_QUARTZ_ORE)) {
+            for (int i = 0; i < 30; i++) {
+                List<ItemStack> saida = drops(helper, ore.get().defaultBlockState(), new ItemStack(Items.IRON_PICKAXE));
+                helper.assertValueEqual(saida.size(), 1, "uma pilha por quebra");
+                ItemStack pilha = saida.get(0);
+                helper.assertTrue(pilha.is(ModItems.SIGNAL_CRYSTAL.get()), "o minério dá Cristal de Sinal");
+                helper.assertTrue(pilha.getCount() >= 1 && pilha.getCount() <= 3, "de 1 a 3 cristais: " + pilha.getCount());
+            }
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void toqueDeSedaDaOMinerio(GameTestHelper helper) {
+        ItemStack picareta = new ItemStack(Items.IRON_PICKAXE);
+        picareta.enchant(helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(Enchantments.SILK_TOUCH), 1);
+        List<ItemStack> saida = drops(helper, ModBlocks.SIGNAL_QUARTZ_ORE.get().defaultBlockState(), picareta);
+        helper.assertValueEqual(saida.size(), 1, "uma pilha");
+        helper.assertTrue(saida.get(0).is(ModItems.SIGNAL_QUARTZ_ORE.get()), "Toque de Seda dá o minério");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void minerioPedePicaretaDeFerro(GameTestHelper helper) {
+        BlockState ore = ModBlocks.SIGNAL_QUARTZ_ORE.get().defaultBlockState();
+        helper.assertTrue(ore.requiresCorrectToolForDrops(), "precisa de ferramenta");
+        helper.assertFalse(new ItemStack(Items.STONE_PICKAXE).isCorrectToolForDrops(ore), "pedra não serve");
+        helper.assertTrue(new ItemStack(Items.IRON_PICKAXE).isCorrectToolForDrops(ore), "ferro serve");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void minerioEntraNosBiomasDoOverworld(GameTestHelper helper) {
+        var access = helper.getLevel().registryAccess();
+        ResourceKey<PlacedFeature> chave = ResourceKey.create(Registries.PLACED_FEATURE, WirelessAutomate.id("signal_quartz_ore"));
+        helper.assertTrue(access.registryOrThrow(Registries.PLACED_FEATURE).containsKey(chave), "placed feature registrada");
+        var planicie = access.registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS).value();
+        List<HolderSet<PlacedFeature>> etapas = planicie.getGenerationSettings().features();
+        int minerios = GenerationStep.Decoration.UNDERGROUND_ORES.ordinal();
+        boolean presente = etapas.size() > minerios
+                && etapas.get(minerios).stream().anyMatch((Holder<PlacedFeature> h) -> h.is(chave));
+        helper.assertTrue(presente, "o biome modifier põe o minério nas Planícies, na etapa dos minérios");
         helper.succeed();
     }
 }

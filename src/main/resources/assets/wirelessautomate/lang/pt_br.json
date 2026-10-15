@@ -13,6 +13,8 @@
   "block.wirelessautomate.storage_chemical_tank.needs_mod": "Requer o Mekanism",
   "block.wirelessautomate.storage_source_tank": "Tanque de Source Wireless",
   "block.wirelessautomate.storage_source_tank.needs_mod": "Requer o Ars Nouveau",
+  "block.wirelessautomate.signal_quartz_ore": "Minério de Quartzo de Sinal",
+  "block.wirelessautomate.deepslate_signal_quartz_ore": "Minério de Quartzo de Sinal de Ardósia",
   "item.wirelessautomate.configurator": "Configurador",
   "item.wirelessautomate.network_tablet": "Tablet de Rede",
   "item.wirelessautomate.linker": "Vinculador",

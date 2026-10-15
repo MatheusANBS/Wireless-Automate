@@ -1,0 +1,340 @@
+{
+  "variants": {
+    "connections=0,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=0,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_0"
+    },
+    "connections=0,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_0"
+    },
+    "connections=0,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_0"
+    },
+    "connections=0,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_0"
+    },
+    "connections=0,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_0"
+    },
+    "connections=0,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_0"
+    },
+    "connections=1,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=1,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_1"
+    },
+    "connections=1,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_1"
+    },
+    "connections=1,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_1"
+    },
+    "connections=1,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_1"
+    },
+    "connections=1,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_1"
+    },
+    "connections=1,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_1"
+    },
+    "connections=2,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=2,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_2"
+    },
+    "connections=2,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_2"
+    },
+    "connections=2,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_2"
+    },
+    "connections=2,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_2"
+    },
+    "connections=2,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_2"
+    },
+    "connections=2,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_2"
+    },
+    "connections=3,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=3,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_3"
+    },
+    "connections=3,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_3"
+    },
+    "connections=3,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_3"
+    },
+    "connections=3,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_3"
+    },
+    "connections=3,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_3"
+    },
+    "connections=3,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_3"
+    },
+    "connections=4,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=4,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_4"
+    },
+    "connections=4,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_4"
+    },
+    "connections=4,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_4"
+    },
+    "connections=4,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_4"
+    },
+    "connections=4,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_4"
+    },
+    "connections=4,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_4"
+    },
+    "connections=5,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=5,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_5"
+    },
+    "connections=5,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_5"
+    },
+    "connections=5,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_5"
+    },
+    "connections=5,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_5"
+    },
+    "connections=5,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_5"
+    },
+    "connections=5,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_5"
+    },
+    "connections=6,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=6,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_6"
+    },
+    "connections=6,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_6"
+    },
+    "connections=6,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_6"
+    },
+    "connections=6,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_6"
+    },
+    "connections=6,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_6"
+    },
+    "connections=6,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_6"
+    },
+    "connections=7,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=7,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_7"
+    },
+    "connections=7,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_7"
+    },
+    "connections=7,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_7"
+    },
+    "connections=7,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_7"
+    },
+    "connections=7,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_7"
+    },
+    "connections=7,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_7"
+    },
+    "connections=8,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=8,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_8"
+    },
+    "connections=8,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_8"
+    },
+    "connections=8,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_8"
+    },
+    "connections=8,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_8"
+    },
+    "connections=8,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_8"
+    },
+    "connections=8,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_8"
+    },
+    "connections=9,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=9,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_9"
+    },
+    "connections=9,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_9"
+    },
+    "connections=9,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_9"
+    },
+    "connections=9,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_9"
+    },
+    "connections=9,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_9"
+    },
+    "connections=9,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_9"
+    },
+    "connections=10,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=10,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_10"
+    },
+    "connections=10,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_10"
+    },
+    "connections=10,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_10"
+    },
+    "connections=10,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_10"
+    },
+    "connections=10,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_10"
+    },
+    "connections=10,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_10"
+    },
+    "connections=11,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=11,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_11"
+    },
+    "connections=11,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_11"
+    },
+    "connections=11,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_11"
+    },
+    "connections=11,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_11"
+    },
+    "connections=11,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_11"
+    },
+    "connections=11,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_11"
+    },
+    "connections=12,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=12,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_12"
+    },
+    "connections=12,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_12"
+    },
+    "connections=12,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_12"
+    },
+    "connections=12,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_12"
+    },
+    "connections=12,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_12"
+    },
+    "connections=12,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_12"
+    },
+    "connections=13,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=13,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_13"
+    },
+    "connections=13,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_13"
+    },
+    "connections=13,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_13"
+    },
+    "connections=13,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_13"
+    },
+    "connections=13,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_13"
+    },
+    "connections=13,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_13"
+    },
+    "connections=14,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=14,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_14"
+    },
+    "connections=14,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_14"
+    },
+    "connections=14,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_14"
+    },
+    "connections=14,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_14"
+    },
+    "connections=14,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_14"
+    },
+    "connections=14,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_14"
+    },
+    "connections=15,face=loose": {
+      "model": "wirelessautomate:block/resonator_glass_loose"
+    },
+    "connections=15,face=down": {
+      "model": "wirelessautomate:block/resonator_glass_down_15"
+    },
+    "connections=15,face=up": {
+      "model": "wirelessautomate:block/resonator_glass_up_15"
+    },
+    "connections=15,face=north": {
+      "model": "wirelessautomate:block/resonator_glass_north_15"
+    },
+    "connections=15,face=south": {
+      "model": "wirelessautomate:block/resonator_glass_south_15"
+    },
+    "connections=15,face=west": {
+      "model": "wirelessautomate:block/resonator_glass_west_15"
+    },
+    "connections=15,face=east": {
+      "model": "wirelessautomate:block/resonator_glass_east_15"
+    }
+  }
+}

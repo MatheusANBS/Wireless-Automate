@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -40,8 +41,8 @@ public final class ClientSetup {
     }
 
     /**
-     * Propriedade {@code wirelessautomate:tier} dos itens do roteador e dos armazenamentos (a posição no
-     * {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
+     * Propriedade {@code wirelessautomate:tier} dos itens do roteador, dos armazenamentos e do Núcleo de Ressonância (a
+     * posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      * Os cristais ganham {@code wirelessautomate:dull} (1 quando Opacos), que troca o modelo.
      */
     @SubscribeEvent
@@ -53,6 +54,8 @@ public final class ClientSetup {
                 ItemProperties.register(ModItems.STORAGE.get(kind).get(), WirelessAutomate.id("tier"),
                         (stack, level, entity, seed) -> StorageBlockItem.tierOf(stack).ordinal());
             }
+            ItemProperties.register(ModItems.RESONANCE_CORE.get(), WirelessAutomate.id("tier"),
+                    (stack, level, entity, seed) -> ResonanceCoreItem.tierOf(stack).ordinal());
             for (var crystal : List.of(ModItems.SIGNAL_CRYSTAL, ModItems.CUT_SIGNAL_CRYSTAL)) {
                 ItemProperties.register(crystal.get(), WirelessAutomate.id("dull"),
                         (stack, level, entity, seed) -> SignalCrystalItem.isDull(stack) ? 1F : 0F);

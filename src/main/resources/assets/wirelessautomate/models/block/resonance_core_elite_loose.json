@@ -1,0 +1,87 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "ambientocclusion": true,
+  "textures": {
+    "resonance_core_elite_dentro": "wirelessautomate:block/resonance_core_elite_dentro",
+    "resonance_core_elite_solto": "wirelessautomate:block/resonance_core_elite_solto",
+    "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
+    "particle": "wirelessautomate:block/resonator_casing_solta"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_solta",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_solta",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonance_core_elite_solto",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonance_core_elite_dentro",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_solta",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_solta",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}

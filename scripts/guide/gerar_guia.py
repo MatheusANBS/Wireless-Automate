@@ -691,7 +691,7 @@ limite de fluido. Source só com o Ars Nouveau.
 
 ''' + card_table('pt') + '''
 
-Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de quem **envia**.
+Cada passo multiplica a vazão por 8; só a energia do Unobtainium sobe 64 vezes sobre o Vibranium. Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Como usar
 
@@ -758,7 +758,7 @@ limit. Source only with Ars Nouveau.
 
 ''' + card_table('en') + '''
 
-Each step multiplies throughput by 8. Range and dimensions follow the **sender's** tier.
+Each step multiplies throughput by 8; only Unobtainium energy jumps 64 times over Vibranium. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 

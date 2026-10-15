@@ -60,7 +60,7 @@ limite de fluido. Source só com o Ars Nouveau.
 
 ¹ Só com o mod Allthemodium. Sem ele, o Cartão Ultimate vem depois do Cartão Esmeralda (16.384 itens/s → sem limite).
 
-Cada passo multiplica a vazão por 8. Alcance e dimensões contam pelo tier de quem **envia**.
+Cada passo multiplica a vazão por 8; só a energia do Unobtainium sobe 64 vezes sobre o Vibranium. Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Como usar
 

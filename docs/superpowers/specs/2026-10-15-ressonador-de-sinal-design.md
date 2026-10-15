@@ -96,9 +96,29 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 3. **Tela, Sintonizador e câmara**: a tela do Núcleo, o modo automático, o comparador e o BER da câmara.
 4. **Tablet e acabamento**: sintonia à distância pelo Tablet, guia nos dois idiomas, JEI (estrutura e receitas), vitrine do CurseForge.
 
+## Etapa 2: decisões de implementação (15/10/2026)
+
+- **Portas:** pelo menos uma Porta de Energia e uma Porta de Cristais; pode haver mais de cada (decisão do dono). O Sintonizador continua 0 ou 1; o Núcleo, exatamente 1.
+- **Buffer de energia do Núcleo:** 10 s da geração máxima do tier (máximo com lapidados × 200 ticks): Básico 25.600 FE, Elite 4.915.200 FE (decisão do dono). Com o buffer cheio, o Núcleo não gera nem gasta cristal.
+- **Receitas** (bancada, editáveis pelo editor de receitas; decisão do dono): Carcaça ×4 = 4 Terracota Branca nos cantos, 4 Lingotes de Ferro nos lados, 1 Cristal de Sinal no centro; Vidro ×4 = 4 Vidros em cruz em volta de 1 Cristal de Sinal; Núcleo (Básico) = 7 Carcaças, 1 Cristal Lapidado no centro e 1 Diamante embaixo no meio; Porta de Energia = Carcaça + Bloco de Redstone; Porta de Cristais = Carcaça + Funil; Sintonizador = Carcaça + Relógio + Comparador (as três sem forma).
+- **Ids:** `resonator_casing`, `resonator_glass`, `resonance_core`, `resonator_energy_port`, `resonator_crystal_port`, `resonator_tuner`. Nomes: Carcaça de Porcelana / Porcelain Casing; Vidro de Ressonância / Resonance Glass; Núcleo de Ressonância / Resonance Core; Porta de Energia / Resonator Energy Port; Porta de Cristais / Resonator Crystal Port; Sintonizador / Resonator Tuner.
+- **Interior:** as 27 posições de dentro precisam estar vazias (ar).
+- **Câmaras por tier:** tier + 1 (Básico 1 … Ultimate 8), fixo, sem config.
+- **Config do servidor, seção `resonator`:** `crystalLifeTicks` (12.000), `cutCrystalLifeTicks` (24.000), `rechargeTicks` (600) e, por tier, `fePerCrystal` (64, 512, 4.096, 32.768, 262.144, 2.097.152, 16.777.216, 134.217.728).
+- **Lote:** um gerenciador central (`ResonatorManager`, chamado no tick do servidor, como o `SourceTankLevels`) visita cada Núcleo montado e carregado a cada 20 ticks, espalhados pela posição para não caírem todos no mesmo tick. A deriva dá um passo a cada 20 lotes (400 ticks).
+- **Desgaste:** só cristal que está gerando gasta (eficiência acima de 0 e espaço no buffer).
+- **Recarga:** um Opaco por vez; com redstone no Núcleo, a recarga leva `rechargeTicks` e consome 1 pó no fim.
+- **Porta de Cristais (itens):** aceita Cristal de Sinal e Lapidado (um por câmara vazia) e pó de redstone (até 64 no Núcleo). Só entrega Opacos, e só quando o Núcleo está sem redstone (com redstone, o Opaco fica para recarregar). A redstone não sai.
+- **Porta de Energia:** só tira; expõe `BulkEnergy` (em `long`, o que o roteador usa) e `IEnergyStorage`. Quando a energia volta a ter algo, o Núcleo avisa os vizinhos das Portas para o roteador acordar.
+- **Portas sem block entity:** a capability acha o Núcleo por um índice do servidor (porta → Núcleo), preenchido ao montar e no `onLoad` do Núcleo.
+- **Sem tela nesta etapa:** clique com a mão vazia no Núcleo mostra na action bar o estado (montado: tier, cristais, eficiência e FE/t; solto: o que falta e onde). Clique com cristal ou redstone põe no Núcleo; Shift + clique com a mão vazia tira o último cristal. O Cartão de Upgrade sobe o tier do Núcleo como no roteador. O dial e a consulta vêm do comando `/wa resonator <pos> info` e `/wa resonator <pos> dial <MHz>` (operador).
+- **Quebrar o Núcleo** derruba os cristais e a redstone; a energia se perde. O Núcleo volta como item com o tier (como o roteador).
+- **Fica para a etapa 3:** modo automático do Sintonizador, comparador, controle por redstone, tela e câmara (BER); na etapa 2 o Sintonizador só conta na validação.
+- **Convenção das faces (texturas conectadas):** para cada face, as direções "direita" e "cima" da textura no mundo são as do modelo do vanilla sem rotação: Norte (direita = Oeste, cima = +Y), Sul (Leste, +Y), Oeste (Sul, +Y), Leste (Norte, +Y), Cima (Leste, Norte), Baixo (Leste, Sul). Os bits de conexão do vidro são 1 = cima, 2 = direita, 4 = baixo, 8 = esquerda (bit ligado = há vidro do mesmo lado da estrutura daquele lado). O Java calcula os bits e o script gera as texturas pela mesma tabela.
+
 ## Em aberto
 
-- Mais de uma Porta de cada tipo na mesma estrutura (o mínimo é uma).
+- Nada.
 
 ## Fica de fora
 

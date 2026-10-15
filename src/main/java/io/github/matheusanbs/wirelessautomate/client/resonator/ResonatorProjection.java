@@ -62,6 +62,11 @@ public final class ResonatorProjection {
     private static Layout lastLayout = Layout.VITRINE;
     private static int ticks;
     private static int hold;
+    /**
+     * O que a action bar mostra durante o {@link #hold}: reposto a cada tick, porque a linha do problema que o
+     * servidor manda no mesmo clique chega um tick depois e tomaria o lugar da dica.
+     */
+    private static @Nullable Component holdMessage;
 
     private ResonatorProjection() {
     }
@@ -78,8 +83,7 @@ public final class ResonatorProjection {
             return;
         }
         active = build(core, level.dimension(), faceOf(level.getBlockState(core)), lastLayout);
-        hold = HOLD_TICKS;
-        minecraft.gui.setOverlayMessage(Component.translatable(ProjectionText.HINT), false);
+        hold(minecraft, Component.translatable(ProjectionText.HINT));
         refresh(minecraft);
     }
 
@@ -107,6 +111,9 @@ public final class ResonatorProjection {
         }
         if (hold > 0) {
             hold--;
+            if (holdMessage != null) {
+                Minecraft.getInstance().gui.setOverlayMessage(holdMessage, false);
+            }
         }
         if (++ticks % REFRESH_TICKS == 0) {
             refresh(Minecraft.getInstance());
@@ -125,10 +132,16 @@ public final class ResonatorProjection {
         }
         lastLayout = active.layout().other();
         active = build(active.core(), active.dimension(), active.coreFace(), lastLayout);
-        hold = HOLD_TICKS;
-        minecraft.gui.setOverlayMessage(ProjectionText.layout(lastLayout), false);
+        hold(minecraft, ProjectionText.layout(lastLayout));
         refresh(minecraft);
         event.setCanceled(true);
+    }
+
+    /** Põe {@code message} na action bar e a segura lá por {@link #HOLD_TICKS} antes da contagem voltar. */
+    private static void hold(Minecraft minecraft, Component message) {
+        hold = HOLD_TICKS;
+        holdMessage = message;
+        minecraft.gui.setOverlayMessage(message, false);
     }
 
     /** Relê o mundo; desliga a projeção se ela não vale mais. */

@@ -12,12 +12,16 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -28,13 +32,15 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A projeção do Ressonador no e2e: uma Vitrine pela metade (o Núcleo virado para o leste, as duas camadas de baixo
- * das carcaças, a janela sem dois vidros e uma terra numa aresta), o clique de mão vazia no Núcleo, a contagem e a
+ * das carcaças, a janela sem dois vidros e uma terra numa aresta), o clique de mão vazia no Núcleo, a dica que fica
+ * na action bar mesmo com a linha do problema que o servidor manda no clique, a contagem e a
  * captura dos fantasmas; depois a estrutura completa, que monta e apaga a projeção, e a segunda captura.
  */
 final class E2eResonatorSteps {
     private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, ResonatorBlueprint.Layout.VITRINE);
     /** A terra fica na aresta vertical entre as faces leste e sul, de frente para a câmera. */
     private static final int[] DIRT = {4, 1, 4};
+    private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
     /** Os dois vidros da janela que ficam faltando. */
     private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
 
@@ -73,6 +79,8 @@ final class E2eResonatorSteps {
         list.add(new Step("Ressonador: clique no Núcleo liga a projeção", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
                 () -> ResonatorProjection.isOn() && ResonatorProjection.result() != null,
                 () -> "projeção " + ResonatorProjection.isOn()));
+        list.add(new Step("Ressonador: a dica fica na action bar", STEP_TIMEOUT_MS, () -> {
+        }, () -> stepTicks >= 10 && HINT.equals(overlayKey()), () -> "action bar com " + overlayKey()));
         list.add(new Step("Ressonador: contagem da projeção", STEP_TIMEOUT_MS, () -> {
         }, () -> {
             ProjectionDiff.Result result = ResonatorProjection.result();
@@ -117,6 +125,25 @@ final class E2eResonatorSteps {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * A chave do texto na action bar agora, ou o texto cru se ele não é traduzível. O campo do {@link Gui} é privado
+     * e só serve a este teste (o jogo de dev roda com os nomes da Mojang).
+     */
+    private static String overlayKey() {
+        try {
+            Field field = Gui.class.getDeclaredField("overlayMessageString");
+            field.setAccessible(true);
+            Component message = (Component) field.get(Minecraft.getInstance().gui);
+            if (message == null) {
+                return "nada";
+            }
+            return message.getContents() instanceof TranslatableContents contents ? contents.getKey()
+                    : message.getString();
+        } catch (ReflectiveOperationException e) {
+            return "erro: " + e;
         }
     }
 

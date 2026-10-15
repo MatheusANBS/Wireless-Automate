@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
@@ -76,8 +77,8 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Cristal de Sinal ou Lapidado: vai para a primeira câmara vazia. Pó de redstone: entra o que cabe. O Cartão de
-     * Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
+     * Cristal de Sinal ou Lapidado: vai para a primeira câmara vazia. Pó de redstone: entra o que cabe. Sem lugar, a
+     * action bar avisa. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -92,7 +93,12 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof ResonanceCoreBlockEntity core) {
             int used = crystal ? stack.getCount() - core.insertCrystal(stack).getCount()
                     : core.addRedstone(stack.getCount());
-            if (!player.hasInfiniteMaterials()) {
+            if (used == 0) {
+                player.displayClientMessage(crystal
+                        ? Component.translatable("block.wirelessautomate.resonance_core.chambers_full")
+                        : Component.translatable("block.wirelessautomate.resonance_core.redstone_full",
+                                ResonanceCoreBlockEntity.MAX_REDSTONE), true);
+            } else if (!player.hasInfiniteMaterials()) {
                 stack.shrink(used);
             }
         }
@@ -101,8 +107,9 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
 
     /**
      * Mão vazia. Shift tira o último cristal para a mão. Sem Shift, o servidor manda a linha do status (montado) ou
-     * do problema (solto) na action bar; solto, o cliente também liga ou desliga a projeção, que escreve a contagem
-     * dela por cima da linha do problema.
+     * do problema (solto) na action bar; solto, o cliente também liga ou desliga a projeção. Ao ligar, a projeção
+     * segura a dica na action bar por uns 2 s (a linha do problema, que chega um tick depois, não fica) e só então
+     * escreve a contagem; ao desligar, fica a linha do problema, com a posição do bloco que impede montar.
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,

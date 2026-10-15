@@ -76,6 +76,12 @@ import org.jetbrains.annotations.Nullable;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class TabletGameTests {
+    /**
+     * Os testes com nós em rede pública alheia: o Tablet mostra esses nós a todo jogador, e eles entrariam nas
+     * contagens dos testes da Lista que rodam em paralelo.
+     */
+    private static final String PUBLIC_NODES_BATCH = "wirelessautomate_public_nodes";
+
     private static final BlockPos A = new BlockPos(0, 1, 0);
     private static final BlockPos B = new BlockPos(2, 1, 2);
 
@@ -203,7 +209,7 @@ public final class TabletGameTests {
 
     // ------------------------------------------------------------------ snapshot
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", batch = PUBLIC_NODES_BATCH)
     public static void tabletShowsOnlyWhatThePlayerCanSee(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
         NetworkSavedData data = data(helper);
@@ -238,19 +244,22 @@ public final class TabletGameTests {
             helper.assertFalse(TabletPayloads.handleQuery(player, new TabletQueryPayload(71, Query.DEFAULT)),
                     "consulta com outro containerId");
 
-            // rede alheia pública aparece (para escolher), mas os nós dela não
-            data.update(foreign.withPublic(true));
+            // quem colocou vê o nó mesmo fora das redes dele
+            NodeIndex.placedBy(theirs, player.getUUID());
             TabletPayloads.handleQuery(player, new TabletQueryPayload(70, Query.DEFAULT));
+            menu.pollSnapshot();
+            helper.assertTrue(listed(menu.snapshot(), key(theirs)), "nó colocado pelo jogador fora da lista");
+            NodeIndex.placedBy(theirs, UUID.randomUUID());
+
+            // rede alheia pública: aparece, sem gerenciar, e os nós dela entram na lista e na contagem
+            data.update(foreign.withPublic(true));
+            menu.setQuery(Query.DEFAULT);
             menu.pollSnapshot();
             helper.assertTrue(menu.snapshot().network(foreign.id()).map(n -> n.isPublic() && !n.manageable())
                     .orElse(false), "rede pública alheia");
-            helper.assertFalse(listed(menu.snapshot(), key(theirs)), "nó de rede pública alheia na lista");
-
-            // quem colocou vê o nó mesmo fora das redes dele
-            NodeIndex.placedBy(theirs, player.getUUID());
-            menu.setQuery(Query.DEFAULT);
-            menu.pollSnapshot();
-            helper.assertTrue(listed(menu.snapshot(), key(theirs)), "nó colocado pelo jogador fora da lista");
+            helper.assertTrue(listed(menu.snapshot(), key(theirs)), "nó de rede pública alheia fora da lista");
+            helper.assertTrue(menu.snapshot().network(foreign.id()).map(n -> n.nodes() >= 1).orElse(false),
+                    "nós da rede pública alheia fora da contagem");
 
             // sem o Tablet o menu não vale mais
             player.getInventory().setItem(0, ItemStack.EMPTY);
@@ -258,6 +267,7 @@ public final class TabletGameTests {
             helper.succeed();
         } finally {
             close(player);
+            data.update(foreign);
         }
     }
 
@@ -655,7 +665,7 @@ public final class TabletGameTests {
 
     // ------------------------------------------------------------------ mover nós
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", batch = PUBLIC_NODES_BATCH)
     public static void moveNodesByTabOrAll(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
         NetworkSavedData data = data(helper);
@@ -714,6 +724,7 @@ public final class TabletGameTests {
             helper.succeed();
         } finally {
             close(player);
+            data.update(foreign);
         }
     }
 
@@ -722,7 +733,7 @@ public final class TabletGameTests {
      * rede de outro dono fica, privada ou pública (pública deixa usar, não gerenciar); faces sem rede,
      * em rede apagada ou do próprio jogador vão. O operador move todas.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", batch = PUBLIC_NODES_BATCH)
     public static void moveNodesKeepsOthersNetworks(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
         NetworkSavedData data = data(helper);
@@ -767,6 +778,7 @@ public final class TabletGameTests {
             helper.succeed();
         } finally {
             close(operator);
+            data.update(foreignPublic.withPublic(false));
         }
     }
 

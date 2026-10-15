@@ -28,8 +28,11 @@ public final class Config {
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
     /** Versão do balanceamento já aplicada a este arquivo (ver {@link #migrateBalance()}). */
     public static final ModConfigSpec.IntValue BALANCE_VERSION;
-    /** 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026). */
-    public static final int CURRENT_BALANCE = 1;
+    /**
+     * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
+     * por cristal do Ressonador (15/10/2026).
+     */
+    public static final int CURRENT_BALANCE = 2;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -170,8 +173,8 @@ public final class Config {
 
         builder.push("migration");
         BALANCE_VERSION = builder
-                .comment("Versão do balanceamento já aplicada (não mexa). Abaixo da atual, os valores de vazão, alcance e",
-                        "capacidade que ainda estão no padrão antigo passam para o novo na próxima carga; os que você mudou ficam.")
+                .comment("Versão do balanceamento já aplicada (não mexa). Abaixo da atual, os valores de vazão, alcance,",
+                        "capacidade e geração que ainda estão no padrão antigo passam para o novo na próxima carga; os que você mudou ficam.")
                 .defineInRange("balanceVersion", 0, 0, CURRENT_BALANCE);
         builder.pop();
 
@@ -193,15 +196,51 @@ public final class Config {
             StorageKind.CHEMICAL_TANK, new long[] {1_000_000L, 64_000_000L, 4_000_000_000L},
             StorageKind.SOURCE_TANK, new long[] {160_000L, 2_560_000L, 40_960_000L});
 
+    /** A energia do roteador Unobtainium no balanceamento 1 (FE/t). */
+    private static final long OLD_UNOBTAINIUM_ENERGY = 262_144_000L;
+    /** O FE por cristal do Ressonador antes do balanceamento 2, pela posição do tier. */
+    private static final long[] OLD_FE_PER_CRYSTAL = {
+        64, 512, 4_096, 32_768, 262_144, 2_097_152, 16_777_216L, 134_217_728L
+    };
+
     /**
-     * Na primeira carga depois da 1.2, troca os valores que ainda estão no padrão antigo pelo novo (senão,
-     * num mundo que já existia, o Elite ficaria acima da Esmeralda); o que o dono do servidor mudou fica.
-     * Roda uma vez por arquivo, marcada em {@code migration.balanceVersion}. Devolve quantos valores mudaram.
+     * Na primeira carga depois de um balanceamento novo, troca os valores que ainda estão no padrão antigo pelo
+     * novo (senão, num mundo que já existia, o Elite ficaria acima da Esmeralda, e o roteador Unobtainium não daria
+     * conta do Ressonador); o que o dono do servidor mudou fica. Cada passo roda uma vez por arquivo, marcado em
+     * {@code migration.balanceVersion}. Devolve quantos valores mudaram.
      */
     public static int migrateBalance() {
-        if (BALANCE_VERSION.get() >= CURRENT_BALANCE) {
+        int version = BALANCE_VERSION.get();
+        if (version >= CURRENT_BALANCE) {
             return 0;
         }
+        int changed = version < 1 ? migrateBalance1() : 0;
+        changed += migrateBalance2();
+        BALANCE_VERSION.set(CURRENT_BALANCE);
+        SPEC.save();
+        return changed;
+    }
+
+    private static int migrateBalance2() {
+        int changed = 0;
+        ModConfigSpec.LongValue energy = TIERS.get(RouterTier.UNOBTAINIUM).rates().get(ResourceType.ENERGY.rateKey());
+        if (energy.get() == OLD_UNOBTAINIUM_ENERGY) {
+            energy.set(ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()));
+            changed++;
+        }
+        for (RouterTier tier : RouterTier.values()) {
+            ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(tier);
+            long target = CoreMath.defaultFePerCrystal(tier.ordinal());
+            if (tier.ordinal() < OLD_FE_PER_CRYSTAL.length && fe.get() == OLD_FE_PER_CRYSTAL[tier.ordinal()]
+                    && fe.get() != target) {
+                fe.set(target);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
+    private static int migrateBalance1() {
         int changed = 0;
         for (int i = 0; i < OLD_TIERS.length; i++) {
             RouterTier tier = OLD_TIERS[i];
@@ -227,8 +266,6 @@ public final class Config {
                 }
             }
         }
-        BALANCE_VERSION.set(CURRENT_BALANCE);
-        SPEC.save();
         return changed;
     }
 

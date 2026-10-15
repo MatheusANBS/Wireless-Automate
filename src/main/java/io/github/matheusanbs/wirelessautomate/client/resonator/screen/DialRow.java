@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.resonator.Tuning;
 import java.util.List;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -26,7 +27,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O dial (« ‹ campo › ») e a linha do modo (Manual e Sintonizador). Os botões do dial e a roda sobre o campo só
- * valem no Manual; o Sintonizador só com a peça na estrutura. O valor mostrado é sempre o do servidor.
+ * valem no Manual; o Sintonizador só com a peça na estrutura. O valor mostrado é o do servidor, ou o último
+ * clique ainda não confirmado por ele ({@code PendingDial}).
  */
 final class DialRow {
     private static final String[] GLYPHS = {"«", "‹", "›", "»"};
@@ -37,12 +39,8 @@ final class DialRow {
     private final ResonatorScreenActions actions;
     private int left;
     private int top;
-    /**
-     * O último dial mandado e o dial do estado na hora: cliques seguidos antes do estado seguinte somam a partir do
-     * mandado (só a base do próximo clique; a tela mostra o do servidor).
-     */
-    private double sentDial = Double.NaN;
-    private double sentFrom = Double.NaN;
+    /** Os cliques ainda não confirmados pelo servidor: base do próximo e valor mostrado. */
+    private final PendingDial pending = new PendingDial();
 
     DialRow(ResonatorMenu menu, ResonatorScreenActions actions) {
         this.menu = menu;
@@ -65,7 +63,8 @@ final class DialRow {
         int fieldX = left + FIELD_X;
         GuiPaint.inset(g, fieldX, y, FIELD_W, BUTTON);
         if (state != null) {
-            centered(g, font, ResonatorText.mhz(state.dial()), fieldX, y + 3, FIELD_W,
+            double shown = state.auto() ? state.dial() : pending.base(state.dial(), Util.getMillis());
+            centered(g, font, ResonatorText.mhz(shown), fieldX, y + 3, FIELD_W,
                     state.auto() ? GuiPaint.MUTED : GuiPaint.FG);
         }
         int modeY = top + MODE.y();
@@ -154,10 +153,9 @@ final class DialRow {
     }
 
     private void turn(ResonatorStatePayload state, double delta) {
-        double base = state.dial() == sentFrom && !Double.isNaN(sentDial) ? sentDial : state.dial();
-        double next = Tuning.clampDial(base + delta);
-        sentFrom = state.dial();
-        sentDial = next;
+        long now = Util.getMillis();
+        double next = Tuning.clampDial(pending.base(state.dial(), now) + delta);
+        pending.sent(next, now);
         actions.setDial(next);
     }
 

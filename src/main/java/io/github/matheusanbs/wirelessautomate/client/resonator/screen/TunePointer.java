@@ -15,7 +15,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * O ponteiro de sintonia e a lâmpada embaixo dele. A faixa vai de −2 a +2 MHz com a estação no centro e o platô em
- * verde; o ponteiro mostra onde o dial está. Sem sinal, ele encosta do lado do último sinal visto (ou na direita),
+ * verde; o ponteiro mostra onde o dial está. Sem sinal, ele encosta do lado do último sinal visto (ou na esquerda,
+ * como a galeria do mockup),
  * tremendo um pouco, apagado e com o convite para varrer o dial.
  */
 final class TunePointer {
@@ -28,7 +29,7 @@ final class TunePointer {
     private int left;
     private int top;
     /** O sinal do último desvio com sinal: o lado em que o ponteiro encosta quando o sinal some. */
-    private int lastSide = 1;
+    private int lastSide = -1;
 
     TunePointer(ResonatorMenu menu) {
         this.menu = menu;

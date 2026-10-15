@@ -26,8 +26,6 @@ final class ScopeView {
      * valem por esse fator em cada coluna da tela.
      */
     private static final double CANVAS_PX = 4;
-    /** A borda de 1 px: o fundo escurecido. */
-    private static final int EDGE = GuiPaint.mix(GuiPaint.SCOPE_BG, 0xFF000000, 0.45f);
 
     private final ResonatorMenu menu;
     private int left;
@@ -56,7 +54,7 @@ final class ScopeView {
             int gy = y + Math.round(h * i / 5f);
             g.fill(x, gy, x + w, gy + 1, GuiPaint.SCOPE_GRID);
         }
-        GuiPaint.outline(g, x, y, w, h, EDGE);
+        GuiPaint.outline(g, x, y, w, h, GuiPaint.DARK_TEXT);
         ResonatorStatePayload state = menu.state();
         if (state == null) {
             GuiText.draw(g, font, ResonatorText.key("loading"), x + 4, y + 4, w - 8, GuiPaint.SCOPE_LINE);

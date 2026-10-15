@@ -114,6 +114,9 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 - **Sem tela nesta etapa:** clique com a mão vazia no Núcleo mostra na action bar o estado (montado: tier, cristais, eficiência e FE/t; solto: o que falta e onde). Clique com cristal ou redstone põe no Núcleo; Shift + clique com a mão vazia tira o último cristal. O Cartão de Upgrade sobe o tier do Núcleo como no roteador. O dial e a consulta vêm do comando `/wa resonator <pos> info` e `/wa resonator <pos> dial <MHz>` (operador).
 - **Quebrar o Núcleo** derruba os cristais e a redstone; a energia se perde. O Núcleo volta como item com o tier (como o roteador).
 - **Fica para a etapa 3:** modo automático do Sintonizador, comparador, controle por redstone, tela e câmara (BER); na etapa 2 o Sintonizador só conta na validação.
+- **Projeção (Carcaça e Vidro):** no miolo das faces da caixa, Carcaça e Vidro contam como certos um pelo outro, como a montagem aceita; na aresta, só o esperado.
+- **Frente ao colocar:** a peça com frente perto de um Núcleo, numa parede da caixa 5×5×5, nasce olhando para fora dela (numa aresta ou canto, a parede mais voltada para o jogador); nos outros casos, e no Núcleo, olha para o jogador. A busca é só ao colocar (raio 4, sem carregar chunk).
+- **Tirar cristal:** Shift + clique no Núcleo só tira o último cristal com as duas mãos vazias.
 - **Convenção das faces (texturas conectadas):** para cada face, as direções "direita" e "cima" da textura no mundo são as do modelo do vanilla sem rotação: Norte (direita = Oeste, cima = +Y), Sul (Leste, +Y), Oeste (Sul, +Y), Leste (Norte, +Y), Cima (Leste, Norte), Baixo (Leste, Sul). Os bits de conexão do vidro são 1 = cima, 2 = direita, 4 = baixo, 8 = esquerda (bit ligado = há vidro do mesmo lado da estrutura daquele lado). O Java calcula os bits e o script gera as texturas pela mesma tabela.
 
 ## Em aberto

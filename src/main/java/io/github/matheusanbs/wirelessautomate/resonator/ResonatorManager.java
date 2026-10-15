@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class ResonatorManager {
     /** Distância de Chebyshev máxima entre um bloco da casca e o Núcleo (a caixa tem 5 de lado). */
     private static final int REACH = ResonatorLayout.SIZE - 1;
+    static final int BATCH_TICKS = 20;
     private static final Set<ResonanceCoreBlockEntity> CORES = Collections.newSetFromMap(new IdentityHashMap<>());
 
     private ResonatorManager() {
@@ -56,8 +57,27 @@ public final class ResonatorManager {
         }
     }
 
-    /** Chamado a cada tick do servidor. */
+    /**
+     * Chamado a cada tick do servidor: cada Núcleo montado e carregado roda um lote de {@link #BATCH_TICKS} ticks
+     * uma vez a cada {@link #BATCH_TICKS}, num tick próprio pela posição, para os Núcleos não caírem todos no
+     * mesmo tick. O lote não entra nem sai do conjunto, então o laço anda nele direto.
+     */
     public static void tick(MinecraftServer server) {
+        if (CORES.isEmpty()) {
+            return;
+        }
+        for (ResonanceCoreBlockEntity core : CORES) {
+            if (core.isRemoved() || !core.formed() || !(core.getLevel() instanceof ServerLevel level)) {
+                continue;
+            }
+            BlockPos pos = core.getBlockPos();
+            if (!level.isLoaded(pos)) {
+                continue;
+            }
+            if ((level.getGameTime() + Math.floorMod(pos.hashCode(), BATCH_TICKS)) % BATCH_TICKS == 0) {
+                ResonatorBatch.run(level, core, BATCH_TICKS);
+            }
+        }
     }
 
     /** Parada do servidor: o próximo mundo começa sem Núcleos. */

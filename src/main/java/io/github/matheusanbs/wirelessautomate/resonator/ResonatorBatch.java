@@ -18,9 +18,14 @@ public final class ResonatorBatch {
     public static void run(ServerLevel level, ResonanceCoreBlockEntity core, int ticks) {
         long energyBefore = core.energy();
         int redstoneBefore = core.redstone();
-        int dullBefore = dullCount(core);
+        // Com o buffer cheio não há geração nem desgaste: pula as câmaras. Sem gerar, o Opaco novo e a energia
+        // de 0 para mais não acontecem, então só a redstone que baixou pela recarga pode acordar as Portas.
+        boolean full = energyBefore >= core.capacity();
+        int dullBefore = full ? 0 : dullCount(core);
         boolean changed = drift(level, core);
-        changed |= generate(core, ticks);
+        if (!full) {
+            changed |= generate(core, ticks);
+        }
         changed |= recharge(core, ticks);
         if (changed) {
             core.setChanged();
@@ -29,7 +34,7 @@ public final class ResonatorBatch {
         // Energia), redstone que baixou (quem põe redstone) e cristal que ficou Opaco (quem tira o Opaco). Câmara
         // vazia não vem do lote: quem esvazia avisa no Núcleo.
         boolean energy = energyBefore == 0 && core.energy() > 0;
-        boolean crystals = core.redstone() < redstoneBefore || dullCount(core) > dullBefore;
+        boolean crystals = core.redstone() < redstoneBefore || (!full && dullCount(core) > dullBefore);
         if (energy || crystals) {
             core.notifyPorts(energy, crystals);
         }

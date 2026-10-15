@@ -150,6 +150,37 @@ public final class ResonatorCoreGameTests {
         });
     }
 
+    /** Com o buffer cheio o lote não percorre as câmaras, mas a recarga do Opaco com redstone continua andando. */
+    @GameTest(template = "empty7", batch = "wirelessautomate_config")
+    public static void bufferCheioNaoParaARecarga(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            long before = Config.RECHARGE_TICKS.get();
+            try {
+                Config.RECHARGE_TICKS.set(40L);
+                tuned(core);
+                assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
+                for (int i = 0; i < 100 && core.energy() < core.capacity(); i++) {
+                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                }
+                helper.assertValueEqual(core.energy(), core.capacity(), "buffer cheio");
+                core.takeLastCrystal();
+                assertInserted(helper, core, crystal(false, 0));
+                helper.assertValueEqual(core.addRedstone(2), 2, "redstone que entrou");
+                ResonatorBatch.run(helper.getLevel(), core, 20);
+                helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "ainda Opaco no meio da recarga");
+                ResonatorBatch.run(helper.getLevel(), core, 20);
+                helper.assertTrue(SignalCrystalItem.isFull(core.crystals().get(0)), "o cristal fica cheio");
+                helper.assertValueEqual(core.redstone(), 1, "sobra de redstone");
+                helper.assertValueEqual(core.energy(), core.capacity(), "o buffer continua cheio");
+                ResonatorBatch.run(helper.getLevel(), core, 20);
+                helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL,
+                        "o cristal cheio não gasta com o buffer cheio");
+            } finally {
+                Config.RECHARGE_TICKS.set(before);
+            }
+        });
+    }
+
     @GameTest(template = "empty7")
     public static void semRedstoneOOpacoFica(GameTestHelper helper) {
         formed(helper, RouterTier.BASIC, core -> {

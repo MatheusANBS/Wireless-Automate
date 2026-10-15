@@ -56,9 +56,19 @@ public final class ResonatorFormation {
         }
     }
 
-    /** Confere a estrutura em volta do Núcleo em {@code core}, sem gravar nada. */
+    /**
+     * Confere a estrutura em volta do Núcleo em {@code core}, sem gravar nada; a caixa da frente do Núcleo (a da
+     * montagem anterior e a da projeção) é a primeira tentada.
+     */
     static ResonatorLayout.Result check(ServerLevel level, BlockPos core) {
-        return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), probe(level, core));
+        BlockState state = level.getBlockState(core);
+        if (!(state.getBlock() instanceof ResonanceCoreBlock)) {
+            return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), probe(level, core));
+        }
+        // As faces do ResonatorLayout seguem a ordem do Direction.
+        ResonatorLayout.Face front =
+                ResonatorLayout.Face.values()[state.getValue(ResonatorPartBlock.FACING).get3DDataValue()];
+        return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), front, probe(level, core));
     }
 
     /**

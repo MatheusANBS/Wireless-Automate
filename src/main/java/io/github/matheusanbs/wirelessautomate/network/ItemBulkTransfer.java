@@ -132,9 +132,9 @@ final class ItemBulkTransfer {
     /**
      * Entrega até {@code max} de um tipo do Baú de origem, na ordem da passada. Para outro Baú do mod
      * é uma transferência só, de qualquer tamanho. Para um inventário comum, uma entrega simulada leva
-     * tudo o que o destino aceita: cada slot recebe numa chamada até o que ele aceita
-     * ({@link ItemInsertPlan#insert}: uma pilha, ou o limite do slot se ele passa de
-     * {@link Item#ABSOLUTE_MAX_STACK_SIZE}, como num barril com upgrade de pilha). Só passa de uma
+     * tudo o que o destino aceita: cada slot recebe até o que ele aceita ({@link ItemInsertPlan#insert}:
+     * uma pilha, ou o limite do slot se ele passa de {@link Item#ABSOLUTE_MAX_STACK_SIZE}, como num
+     * barril com upgrade de pilha, depois que ele mostra que guarda o item). Só passa de uma
      * entrega se o pedaço chegou ao teto de um {@code int}; cada uma depois da primeira conta como
      * tentativa ({@link ItemTransfer#burstSteps}, até {@code allowance}). Devolve quanto entregou.
      */
@@ -185,8 +185,8 @@ final class ItemBulkTransfer {
             boolean sourceEmpty = false;
             while (remaining > 0) {
                 // Uma entrega pode levar mais que uma pilha: o plano limita cada slot ao que ele aceita
-                // numa chamada (ItemInsertPlan#insert), então um inventário comum recebe uma pilha por slot, e
-                // um slot de pilha grande (upgrade de pilha, gaveta) recebe tudo o que cabe de uma vez.
+                // (ItemInsertPlan#insert), então um inventário comum recebe uma pilha por slot, e um slot
+                // de pilha grande (upgrade de pilha, gaveta) recebe tudo o que cabe em duas chamadas.
                 int chunk = (int) Math.min(remaining, Integer.MAX_VALUE);
                 if (!first) {
                     if (ItemTransfer.burstSteps >= allowance) {

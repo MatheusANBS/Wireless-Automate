@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "wirelessautomate:block/deepslate_signal_quartz_ore"
+  }
+}

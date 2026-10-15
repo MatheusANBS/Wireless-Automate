@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "wirelessautomate:block/signal_quartz_ore"
+    }
+  }
+}

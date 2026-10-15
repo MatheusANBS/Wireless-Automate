@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  * A projeção da estrutura do Ressonador em volta de um Núcleo solto, só no cliente: o cliente já tem os blocos em
  * volta, então compara sozinho (a cada 10 ticks) o desenho do {@link ResonatorBlueprint} com o mundo e escreve o que
  * falta na action bar. Uma projeção por vez; desliga sozinha ao montar, sem o Núcleo, longe ou em outra dimensão.
- * Shift + roda, perto do Núcleo, troca o layout. O desenho fica no {@link ProjectionRenderer}.
+ * Shift + roda com a mão vazia, perto do Núcleo, troca o layout. O desenho fica no {@link ProjectionRenderer}.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class ResonatorProjection {
@@ -120,13 +120,16 @@ public final class ResonatorProjection {
         }
     }
 
-    /** Shift + roda com a projeção ligada e o jogador perto do Núcleo: troca Vitrine e Faixa. */
+    /**
+     * Shift + roda com a projeção ligada, a mão principal vazia (o gesto que a ligou) e o jogador perto do Núcleo:
+     * troca Vitrine e Faixa. Com item na mão a roda fica para ele (o Vinculador e o Configurador usam Shift + roda).
+     */
     @SubscribeEvent
     static void onScroll(InputEvent.MouseScrollingEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (active == null || player == null || minecraft.screen != null || event.getScrollDeltaY() == 0
-                || !minecraft.options.keyShift.isDown()
+                || !minecraft.options.keyShift.isDown() || !player.getMainHandItem().isEmpty()
                 || player.distanceToSqr(Vec3.atCenterOf(active.core())) > SCROLL_DISTANCE_SQR) {
             return;
         }

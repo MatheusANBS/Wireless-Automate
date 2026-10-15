@@ -32,7 +32,7 @@ public final class ResonatorPorts {
         return !core.equals(old);
     }
 
-    /** Tira a Porta só se ela ainda for deste Núcleo: com uma parede dividida, outro Núcleo pode tê-la registrado depois. */
+    /** Tira a Porta só se ela ainda for deste Núcleo: outro Núcleo pode tê-la registrado depois. */
     public static void unregister(ResourceKey<Level> dimension, BlockPos port, BlockPos core) {
         Map<BlockPos, BlockPos> ports = PORTS.get(dimension);
         if (ports != null) {

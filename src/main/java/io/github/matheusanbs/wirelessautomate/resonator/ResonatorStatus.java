@@ -51,7 +51,7 @@ public final class ResonatorStatus {
         if (last != null || !(core.getLevel() instanceof ServerLevel level)) {
             return last;
         }
-        return ResonatorFormation.check(level, core.getBlockPos()) instanceof ResonatorLayout.Broken broken
+        return ResonatorFormation.evaluate(level, core.getBlockPos()) instanceof ResonatorLayout.Broken broken
                 ? broken : null;
     }
 }

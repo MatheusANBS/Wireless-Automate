@@ -52,6 +52,7 @@
   "block.wirelessautomate.resonance_core.problem.missing_energy_port": "Missing a Resonator Energy Port",
   "block.wirelessautomate.resonance_core.problem.missing_crystal_port": "Missing a Resonator Crystal Port",
   "block.wirelessautomate.resonance_core.problem.too_many_tuners": "Only one Tuner per Resonator (another at %s)",
+  "block.wirelessautomate.resonance_core.problem.shared_wall": "Wall already used by another Resonator (core at %s)",
   "item.wirelessautomate.configurator": "Configurator",
   "item.wirelessautomate.network_tablet": "Network Tablet",
   "item.wirelessautomate.linker": "Linker",

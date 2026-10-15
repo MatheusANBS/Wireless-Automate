@@ -50,6 +50,21 @@ public final class ResonatorManager {
     }
 
     /**
+     * O Núcleo em {@code owner} soltou blocos: os Núcleos que não montavam por uma parede dele revalidam no tick
+     * seguinte. Só a soltura avisa (montar não), então dois Ressonadores nunca se revalidam um ao outro sem fim.
+     */
+    static void wakeBlockedBy(ServerLevel level, BlockPos owner) {
+        for (ResonanceCoreBlockEntity core : CORES) {
+            ResonatorLayout.Broken problem = core.lastProblem();
+            if (core.getLevel() == level && !core.isRemoved() && problem != null
+                    && problem.problem() == ResonatorLayout.Problem.SHARED_WALL && problem.x() == owner.getX()
+                    && problem.y() == owner.getY() && problem.z() == owner.getZ()) {
+                level.scheduleTick(core.getBlockPos(), core.getBlockState().getBlock(), 1);
+            }
+        }
+    }
+
+    /**
      * O gancho do {@code onPlace} e do {@code onRemove} dos blocos do Ressonador. Só o estado mudando no mesmo
      * bloco (a própria montagem regravando a casca) não conta, senão cada regravação pediria outra revalidação.
      */

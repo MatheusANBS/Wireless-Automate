@@ -45,7 +45,7 @@ Feitos: Editor de receitas (`recipe/edit/`, `client/recipe/RecipeEditorScreen`, 
 ## Próximo passo
 
 0c. **Ressonador, etapa 3: tela, Sintonizador automático, comparador, redstone e a câmara** (ramo `ressonador`; as etapas 1 e 2 estão prontas). **Não publicar versão com o Ressonador antes da etapa 3** se a dica ou o guia prometerem a tela: hoje o estado só aparece na action bar e o dial só pelo comando. Antes do merge, rode o e2e completo (ele é obrigatório no fechamento de etapa). Pendências e ideias:
-    - **Decisão do dono:** parede compartilhada entre dois Ressonadores, proibir ou aceitar? Hoje o efeito é só visual (a Carcaça aparece conectada aos dois).
+    - **Decidido (dono):** parede compartilhada entre dois Ressonadores é proibida: o segundo não monta (`SHARED_WALL`, com a posição do Núcleo dono) e monta quando o primeiro desmonta.
     - **Ideia anotada a pedido do dono, para depois:** filtro por área no e2e (`WA_E2E_ONLY=area1,area2` no `E2eScript`, com o `result.txt` dizendo quais áreas rodaram). O e2e completo continua obrigatório no fechamento de etapa e antes do merge.
 
 0b. **2.0.1 publicada (15/10):** a correção do Tablet com redes públicas; tag `v2.0.1` e release no GitHub com o jar. Falta o dono subir no CurseForge (`build/libs/wirelessautomate-2.0.1.jar` e `changelog-2.0.1.md`).

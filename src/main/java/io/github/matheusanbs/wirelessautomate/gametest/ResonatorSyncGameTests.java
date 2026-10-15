@@ -1,12 +1,16 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.ORIGIN;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.assertFormed;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.assertInserted;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.build;
+import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.core;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.crystal;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.formed;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layout;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
@@ -68,6 +72,12 @@ public final class ResonatorSyncGameTests {
             view.save(tag);
             helper.assertTrue(view.equals(ChamberView.load(tag)), "a view não voltou igual do NBT");
             helper.assertTrue(ChamberView.load(new CompoundTag()).equals(ChamberView.EMPTY), "sem câmaras não é EMPTY");
+            view.chambers()[0] = 9;
+            view.origin()[0] = 9;
+            ChamberView.EMPTY.origin()[0] = 9;
+            helper.assertTrue(view.equals(ChamberView.load(tag)), "a view mudou pelo array devolvido");
+            helper.assertTrue(ChamberView.EMPTY.origin()[0] == 0, "o EMPTY mudou pelo array devolvido");
+            helper.assertTrue(ChamberView.EMPTY.rechargeTicks() > 0, "o EMPTY tem recarga de 0 ticks");
         });
     }
 
@@ -126,6 +136,50 @@ public final class ResonatorSyncGameTests {
             helper.assertTrue(core.syncCount() == dull + 1, "a recarga começou e não mandou");
             helper.assertTrue(core.addRedstone(2) == 2, "a redstone não entrou de novo");
             helper.assertTrue(core.syncCount() == dull + 1, "a mesma recarga mandou de novo");
+        });
+    }
+
+    /**
+     * O progresso da recarga só anda no lote: entre lotes, com a recarga em curso, um dial que não muda faixa nem
+     * lâmpada não manda nada e o início da recarga fica o mesmo. A espera passa por pelo menos um lote do gerenciador.
+     */
+    @GameTest(template = "empty7")
+    public static void recargaEstavelEntreLotes(GameTestHelper helper) {
+        BlockPos corePos = build(helper, ORIGIN, Layout.VITRINE, RouterTier.EMERALD);
+        int[] count = new int[1];
+        long[] start = new long[1];
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
+            ResonanceCoreBlockEntity core = core(helper, corePos);
+            core.setStationForTest(98.0);
+            core.setDial(98.0);
+            assertInserted(helper, core, crystal(false, 0));
+            core.addRedstone(3);
+            count[0] = core.syncCount();
+            start[0] = tagView(helper, core).rechargeStart();
+            helper.assertTrue(start[0] >= 0, "a recarga não começou");
+        }).thenIdle(25).thenExecute(() -> {
+            ResonanceCoreBlockEntity core = core(helper, corePos);
+            core.setDial(98.05);
+            helper.assertTrue(core.syncCount() == count[0], "a recarga em curso mandou o update tag sem mudança");
+            long now = tagView(helper, core).rechargeStart();
+            helper.assertTrue(now == start[0], "o início da recarga andou: " + start[0] + " → " + now);
+        }).thenSucceed();
+    }
+
+    /** O clarão só na transição entre duas views recebidas; a primeira, já sintonizada, não marca. */
+    @GameTest(template = "empty7")
+    public static void claraoSoNaTransicao(GameTestHelper helper) {
+        formed(helper, RouterTier.EMERALD, core -> {
+            var registries = helper.getLevel().registryAccess();
+            core.setStationForTest(98.0);
+            core.setDial(98.0);
+            core.handleUpdateTag(core.getUpdateTag(registries), registries);
+            helper.assertTrue(core.clientView().tuned() && core.tunedAt() == -1, "a chegada já sintonizada marcou");
+            core.setDial(96.0);
+            core.handleUpdateTag(core.getUpdateTag(registries), registries);
+            core.setDial(98.0);
+            core.handleUpdateTag(core.getUpdateTag(registries), registries);
+            helper.assertTrue(core.tunedAt() == helper.getLevel().getGameTime(), "a lâmpada acendeu e não marcou");
         });
     }
 

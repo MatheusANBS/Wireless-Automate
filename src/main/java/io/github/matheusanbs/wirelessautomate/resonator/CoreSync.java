@@ -15,6 +15,9 @@ final class CoreSync {
     private int syncCount;
     private ChamberView clientView = ChamberView.EMPTY;
     private long tunedAt = -1;
+    private boolean received;
+    private long rechargeStart = -1;
+    private int rechargeSeen;
 
     /** Monta a view e manda o update tag só se ela mudou desde a última mandada; devolve se mandou. */
     boolean sendIfChanged(ResonanceCoreBlockEntity core) {
@@ -33,6 +36,20 @@ final class CoreSync {
         return true;
     }
 
+    /**
+     * O início da recarga: guardado quando ela começa e mantido enquanto dura, para a view ficar a mesma entre os
+     * lotes. Recomeça quando a recarga para ou quando o progresso volta (um Opaco cheio, o próximo começando).
+     */
+    long rechargeStart(boolean active, int progress, long gameTime) {
+        if (!active) {
+            rechargeStart = -1;
+        } else if (rechargeStart < 0 || progress < rechargeSeen) {
+            rechargeStart = gameTime - progress;
+        }
+        rechargeSeen = progress;
+        return rechargeStart;
+    }
+
     /** O update tag: só a view atual. */
     static CompoundTag tag(ResonanceCoreBlockEntity core) {
         CompoundTag tag = new CompoundTag();
@@ -43,16 +60,17 @@ final class CoreSync {
 
     /**
      * Guarda a view recebida; um tag sem câmaras (o completo do disco) não troca a que já há. A lâmpada que acende
-     * marca o tempo, para o clarão.
+     * entre duas views recebidas marca o tempo, para o clarão; a primeira view (a chegada do chunk) não marca.
      */
     void receive(CompoundTag tag, @Nullable Level level) {
         if (!tag.contains("chambers")) {
             return;
         }
         ChamberView view = ChamberView.load(tag);
-        if (view.tuned() && !clientView.tuned() && level != null) {
+        if (received && view.tuned() && !clientView.tuned() && level != null) {
             tunedAt = level.getGameTime();
         }
+        received = true;
         clientView = view;
     }
 

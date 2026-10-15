@@ -60,7 +60,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
      * ser gravado (a sequência de acender fica no passado).
      */
     private long formedAt = -1;
-    private final CoreSync sync = new CoreSync();
+    /** A câmara no cliente; a {@link ChamberView} lê dela o início fixado da recarga. */
+    final CoreSync sync = new CoreSync();
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RESONANCE_CORE.get(), pos, state);

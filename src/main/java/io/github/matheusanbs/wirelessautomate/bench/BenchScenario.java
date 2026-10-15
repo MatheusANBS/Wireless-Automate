@@ -6,7 +6,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Cenários do benchmark (docs/especificacao.md, "Plano de benchmark", e docs/benchmark.md).
- * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino.
+ * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino. Nos do
+ * Ressonador ({@link #resonator()}), {@code n} é o número de Ressonadores.
  *
  * <p>Os cenários de muitos nós usam o Elite (2.048 itens/s por face).
  *
@@ -45,7 +46,13 @@ public enum BenchScenario {
     PAIRS("pairs", 500, RouterTier.ELITE, 60, 20,
             "Pares: como Muitos nós, mas cada origem numa rede só com o destino vizinho (muitas redes pequenas)"),
     INFINITE("inf", 2, RouterTier.ULTIMATE, 60, 0,
-            "Fonte e ralo infinitos: pares de máquinas de teste (pilha enorme para ralo), tier Ultimate, sem gargalo de inventário");
+            "Fonte e ralo infinitos: pares de máquinas de teste (pilha enorme para ralo), tier Ultimate, sem gargalo de inventário"),
+    RESONATOR_GEN("resonator-gen", 100, RouterTier.ULTIMATE, 100, 0,
+            "Ressonadores gerando: Ultimate montados e sintonizados, 8 Lapidados, cada um com um roteador na Porta de Energia para uma Bateria"),
+    RESONATOR_IDLE("resonator-idle", 500, RouterTier.ULTIMATE, 300, 0,
+            "Ressonadores ociosos: os mesmos, sem roteador; o buffer enche em 10 s e para (o custo de existir)"),
+    RESONATOR_EVENT("resonator-event", 50, RouterTier.ULTIMATE, 100, 0,
+            "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois");
 
     public final String id;
     public final int defaultNodes;
@@ -68,6 +75,11 @@ public enum BenchScenario {
         return this == RAW || this == BIG || this == BIG_FULL || this == TYPES || this == STOCK;
     }
 
+    /** Mede o Ressonador de Sinal ({@link BenchResonators}); a cena não tem máquinas de itens. */
+    public boolean resonator() {
+        return this == RESONATOR_GEN || this == RESONATOR_IDLE || this == RESONATOR_EVENT;
+    }
+
     /**
      * Tem equivalente direto no Logistics Network (docs/benchmark-logistics-network.md). Os outros dependem de
      * algo só nosso (filtros e estoque, remontagem por mudança de face, Tablet, tier Allthemodium).
@@ -75,7 +87,7 @@ public enum BenchScenario {
     public boolean comparable() {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
-            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET -> false;
+            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, RESONATOR_GEN, RESONATOR_IDLE, RESONATOR_EVENT -> false;
         };
     }
 

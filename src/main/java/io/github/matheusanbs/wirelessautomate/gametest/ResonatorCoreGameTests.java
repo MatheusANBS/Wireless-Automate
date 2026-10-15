@@ -8,14 +8,16 @@ import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layo
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.resonator.CasingPosition;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
-import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -321,24 +323,52 @@ public final class ResonatorCoreGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_PICKAXE));
         BlockPos pos = helper.absolutePos(relative);
         helper.assertTrue(player.gameMode.destroyBlock(pos), "não quebrou o Núcleo");
-        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(2));
-        int crystals = 0;
-        int redstone = 0;
-        boolean coreDropped = false;
-        for (ItemEntity drop : drops) {
-            ItemStack stack = drop.getItem();
-            if (stack.getItem() instanceof SignalCrystalItem) {
-                crystals += stack.getCount();
-            } else if (stack.is(Items.REDSTONE)) {
-                redstone += stack.getCount();
-            } else if (stack.is(ModItems.RESONANCE_CORE.get())) {
-                coreDropped = ResonanceCoreItem.tierOf(stack) == RouterTier.ADVANCED;
-            }
-        }
-        helper.assertValueEqual(crystals, 2, "cristais no chão");
-        helper.assertValueEqual(redstone, 5, "redstone no chão");
-        helper.assertTrue(coreDropped, "o Núcleo Avançado não caiu");
+        int[] counts = dropped(helper, pos);
+        helper.assertValueEqual(counts[0], 2, "cristais no chão");
+        helper.assertValueEqual(counts[1], 5, "redstone no chão");
+        helper.assertTrue(counts[2] == RouterTier.ADVANCED.ordinal(), "o Núcleo Avançado não caiu");
         helper.succeed();
+    }
+
+    @GameTest(template = "empty7")
+    public static void quebrarNucleoMontadoDerrubaEDesmonta(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
+            helper.assertValueEqual(core.addRedstone(3), 3, "redstone que entrou");
+            ServerPlayer player = survivor(helper);
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_PICKAXE));
+            BlockPos pos = core.getBlockPos();
+            helper.assertTrue(player.gameMode.destroyBlock(pos), "não quebrou o Núcleo");
+            int[] counts = dropped(helper, pos);
+            helper.assertValueEqual(counts[0], 1, "cristais no chão");
+            helper.assertValueEqual(counts[1], 3, "redstone no chão");
+            helper.assertTrue(core.isRemoved(), "o block entity ficou");
+            BlockState casing = helper.getBlockState(ORIGIN);
+            helper.assertTrue(casing.getValue(ResonatorCasingBlock.POSITION) == CasingPosition.LOOSE,
+                    "a carcaça continua montada: " + casing);
+            BlockState port = helper.getBlockState(ORIGIN.offset(2, 2, 0));
+            helper.assertTrue(!port.getValue(ResonatorPartBlock.FORMED), "a Porta continua montada: " + port);
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void criativoNaoGastaCristalNemRedstone(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            player.setGameMode(GameType.CREATIVE);
+            ItemStack crystals = crystal(false, CrystalCharge.FULL).copyWithCount(3);
+            player.setItemInHand(InteractionHand.MAIN_HAND, crystals);
+            core.getBlockState().useItemOn(crystals, helper.getLevel(), player, InteractionHand.MAIN_HAND,
+                    hit(core.getBlockPos()));
+            helper.assertTrue(core.crystals().get(0).is(ModItems.SIGNAL_CRYSTAL.get()), "o cristal não entrou");
+            helper.assertValueEqual(crystals.getCount(), 3, "cristais na mão do criativo");
+            ItemStack redstone = new ItemStack(Items.REDSTONE, 10);
+            player.setItemInHand(InteractionHand.MAIN_HAND, redstone);
+            core.getBlockState().useItemOn(redstone, helper.getLevel(), player, InteractionHand.MAIN_HAND,
+                    hit(core.getBlockPos()));
+            helper.assertValueEqual(core.redstone(), 10, "redstone no Núcleo");
+            helper.assertValueEqual(redstone.getCount(), 10, "redstone na mão do criativo");
+        });
     }
 
     @GameTest(template = "empty")
@@ -353,6 +383,22 @@ public final class ResonatorCoreGameTests {
         double dial = ResonatorTestSupport.core(helper, relative).dial();
         helper.assertTrue(Math.abs(dial - 97.40) < 1e-9, "dial: " + dial);
         helper.succeed();
+    }
+
+    /** Os itens no chão em volta de {@code absolute}: cristais, redstone e o ordinal do tier do Núcleo (-1 sem ele). */
+    private static int[] dropped(GameTestHelper helper, BlockPos absolute) {
+        int[] counts = {0, 0, -1};
+        for (ItemEntity drop : helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2))) {
+            ItemStack stack = drop.getItem();
+            if (stack.getItem() instanceof SignalCrystalItem) {
+                counts[0] += stack.getCount();
+            } else if (stack.is(Items.REDSTONE)) {
+                counts[1] += stack.getCount();
+            } else if (stack.is(ModItems.RESONANCE_CORE.get())) {
+                counts[2] = ResonanceCoreItem.tierOf(stack).ordinal();
+            }
+        }
+        return counts;
     }
 
     private static ServerPlayer survivor(GameTestHelper helper) {

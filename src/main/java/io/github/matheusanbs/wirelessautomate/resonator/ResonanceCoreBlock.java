@@ -181,7 +181,11 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
                 ResonatorFormation.disassemble(server, core);
             }
             ResonatorManager.remove(core);
-            Containers.dropContents(server, pos, core.crystals());
+            for (ItemStack stack : core.crystals()) {
+                if (!stack.isEmpty()) {
+                    Containers.dropItemStack(server, pos.getX(), pos.getY(), pos.getZ(), stack);
+                }
+            }
             if (core.redstone() > 0) {
                 Block.popResource(server, pos, new ItemStack(Items.REDSTONE, core.redstone()));
             }

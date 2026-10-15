@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -197,6 +198,7 @@ public final class ResonatorFormation {
             }
         }
         updatePorts(level, core, ports);
+        structure(level, core, formed);
         core.setFormed(true, members);
         if (released) {
             ResonatorManager.wakeBlockedBy(level, at);
@@ -204,6 +206,34 @@ public final class ResonatorFormation {
         if (!wasFormed) {
             announce(level, core);
         }
+    }
+
+    /**
+     * Passa ao Núcleo o que a casca tem: o Sintonizador, as Portas e a montagem reconhecida. Vem antes do
+     * {@code setFormed}, para o Núcleo saber se a estrutura estava desmontada.
+     */
+    private static void structure(ServerLevel level, ResonanceCoreBlockEntity core, ResonatorLayout.Formed formed) {
+        int size = ResonatorLayout.SIZE;
+        Part[][][] local = new Part[size][size][size];
+        for (Part[][] plane : local) {
+            for (Part[] row : plane) {
+                Arrays.fill(row, Part.AIR);
+            }
+        }
+        boolean tuner = false;
+        int energyPorts = 0;
+        int crystalPorts = 0;
+        for (ResonatorLayout.Member member : formed.members()) {
+            local[member.x() - formed.minX()][member.y() - formed.minY()][member.z() - formed.minZ()] = member.part();
+            switch (member.part()) {
+                case TUNER -> tuner = true;
+                case ENERGY_PORT -> energyPorts++;
+                case CRYSTAL_PORT -> crystalPorts++;
+                default -> {
+                }
+            }
+        }
+        core.setStructure(tuner, energyPorts, crystalPorts, ResonatorBlueprint.layoutOf(local), level.getGameTime());
     }
 
     /** O estado montado do bloco para o membro; a projeção desenha os fantasmas já assim. */

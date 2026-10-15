@@ -18,8 +18,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 
 /**
- * {@code /wa resonator <pos>}: {@code info} mostra a sintonia, a geração, o buffer, os cristais e a redstone de um
- * Núcleo de Ressonância; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para operadores.
+ * {@code /wa resonator <pos>}: {@code info} mostra a sintonia, a geração, o buffer, os cristais, a redstone e o modo
+ * de um Núcleo de Ressonância; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para operadores.
  */
 public final class ResonatorCommand {
     private static final String KEY = "command.wirelessautomate.resonator.";
@@ -57,12 +57,15 @@ public final class ResonatorCommand {
                 TierCoreItem.grouped(core.energy()), TierCoreItem.grouped(core.capacity()));
         Component contents = Component.translatable(KEY + "info.contents", ResonatorStatus.crystals(core), core.chambers(),
                 core.redstone(), ResonanceCoreBlockEntity.MAX_REDSTONE);
+        Component mode = Component.translatable(KEY + "info.mode", ResonatorStatus.mode(core),
+                Component.translatable(KEY + (core.hasTuner() ? "yes" : "no")));
         source.sendSuccess(() -> Component.translatable(KEY + "info.header",
                 Component.translatable(core.tier().translationKey()), core.getBlockPos().toShortString(),
                 Component.translatable(core.formed() ? KEY + "formed" : KEY + "loose")), false);
         source.sendSuccess(() -> tuning, false);
         source.sendSuccess(() -> output, false);
         source.sendSuccess(() -> contents, false);
+        source.sendSuccess(() -> mode, false);
         return 1;
     }
 

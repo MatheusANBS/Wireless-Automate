@@ -3,16 +3,27 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Monta um Ressonador de Sinal inteiro (os 98 blocos) num GameTest do template {@code empty7}. */
 final class ResonatorTestSupport {
+    /** O canto da caixa nos testes que montam um Ressonador só no {@code empty7}. */
+    static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
+
     /** Onde ficam as peças; a origem é o canto de menor coordenada da caixa 5×5×5, relativa ao teste. */
     enum Layout {
         /** Janela 3×3 ao sul, Núcleo no centro da face leste, Energia na oeste, Cristais na norte e Sintonizador em cima. */
@@ -61,5 +72,42 @@ final class ResonatorTestSupport {
 
     static ResonanceCoreBlockEntity core(GameTestHelper helper, BlockPos corePos) {
         return helper.getBlockEntity(corePos) instanceof ResonanceCoreBlockEntity core ? core : null;
+    }
+
+    /** Monta a Vitrine no tier a partir de {@link #ORIGIN}, espera montar e roda {@code body} num só tick. */
+    static void formed(GameTestHelper helper, RouterTier tier, Consumer<ResonanceCoreBlockEntity> body) {
+        formed(helper, Layout.VITRINE, tier, body);
+    }
+
+    /** Monta {@code layout} no tier a partir de {@link #ORIGIN}, espera montar e roda {@code body} num só tick. */
+    static void formed(GameTestHelper helper, Layout layout, RouterTier tier, Consumer<ResonanceCoreBlockEntity> body) {
+        BlockPos corePos = build(helper, ORIGIN, layout, tier);
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
+                .thenExecute(() -> body.accept(core(helper, corePos))).thenSucceed();
+    }
+
+    static void assertFormed(GameTestHelper helper, BlockPos corePos, boolean formed) {
+        ResonanceCoreBlockEntity core = core(helper, corePos);
+        helper.assertTrue(core != null && core.formed() == formed, formed ? "não montou" : "não desmontou");
+    }
+
+    static ServerPlayer survivor(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.SURVIVAL);
+        return player;
+    }
+
+    static BlockHitResult hit(BlockPos absolute) {
+        return new BlockHitResult(Vec3.atCenterOf(absolute), Direction.EAST, absolute, false);
+    }
+
+    static ItemStack crystal(boolean cut, int charge) {
+        ItemStack stack = new ItemStack(cut ? ModItems.CUT_SIGNAL_CRYSTAL.get() : ModItems.SIGNAL_CRYSTAL.get());
+        SignalCrystalItem.setCharge(stack, charge);
+        return stack;
+    }
+
+    static void assertInserted(GameTestHelper helper, ResonanceCoreBlockEntity core, ItemStack stack) {
+        helper.assertTrue(core.insertCrystal(stack).isEmpty(), "o cristal não entrou");
     }
 }

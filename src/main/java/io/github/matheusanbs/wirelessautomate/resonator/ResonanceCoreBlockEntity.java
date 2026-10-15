@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -45,6 +46,15 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private long energy;
     /** Lotes desde o último passo da deriva. */
     private int batches;
+    /** Modo automático: o Sintonizador anda o dial até a estação, com a eficiência no teto do tier. */
+    private boolean auto;
+    /** O que a última montagem achou na casca; a ligação do Sintonizador fica fixa até a próxima. */
+    private boolean hasTuner;
+    private int energyPorts;
+    private int crystalPorts;
+    private ResonatorBlueprint.@Nullable Layout layout;
+    /** O tempo de jogo da última montagem, ou -1 se nunca montou. */
+    private long formedAt = -1;
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RESONANCE_CORE.get(), pos, state);
@@ -81,9 +91,76 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** A eficiência da sintonia agora, pelo desvio entre a estação e o dial. */
+    /** A eficiência da sintonia agora, pelo desvio entre a estação e o dial, no teto do tier no modo automático. */
     public double efficiency() {
+        return Tuning.capped(rawEfficiency(), auto, tier().ordinal());
+    }
+
+    /** A eficiência pelo desvio, sem o teto do Sintonizador. */
+    public double rawEfficiency() {
         return Tuning.efficiency(station - dial);
+    }
+
+    public boolean auto() {
+        return auto;
+    }
+
+    /** Liga ou desliga o modo automático e devolve se valeu: sem Sintonizador na estrutura, ligar é recusado. */
+    public boolean setAuto(boolean auto) {
+        if (auto && !hasTuner) {
+            return false;
+        }
+        if (this.auto != auto) {
+            this.auto = auto;
+            setChanged();
+        }
+        return true;
+    }
+
+    public boolean hasTuner() {
+        return hasTuner;
+    }
+
+    public int energyPorts() {
+        return energyPorts;
+    }
+
+    public int crystalPorts() {
+        return crystalPorts;
+    }
+
+    /** A montagem reconhecida (Vitrine ou Faixa), ou {@code null} se é própria ou nunca montou. */
+    public ResonatorBlueprint.@Nullable Layout layout() {
+        return layout;
+    }
+
+    public long formedAt() {
+        return formedAt;
+    }
+
+    /**
+     * Guarda o que a montagem achou na casca; sem Sintonizador o modo volta a Manual com o dial onde parou. O tempo
+     * só muda quando a estrutura estava desmontada: a revalidação de uma estrutura de pé não reacende a câmara.
+     */
+    void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, ResonatorBlueprint.@Nullable Layout layout,
+            long gameTime) {
+        boolean changed = this.hasTuner != hasTuner || this.energyPorts != energyPorts
+                || this.crystalPorts != crystalPorts || this.layout != layout;
+        this.hasTuner = hasTuner;
+        this.energyPorts = energyPorts;
+        this.crystalPorts = crystalPorts;
+        this.layout = layout;
+        if (!hasTuner && auto) {
+            auto = false;
+            changed = true;
+        }
+        if (!formed) {
+            formedAt = gameTime;
+            changed = true;
+        }
+        if (changed) {
+            setChanged();
+        }
     }
 
     /** Só para os GameTests: põe a estação num valor conhecido, parada. */
@@ -98,9 +175,29 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return CoreMath.chambers(tier().ordinal());
     }
 
-    /** As {@link #MAX_CHAMBERS} câmaras; só as {@link #chambers()} primeiras valem. */
-    public NonNullList<ItemStack> crystals() {
-        return crystals;
+    /**
+     * As {@link #MAX_CHAMBERS} câmaras, só leitura; só as {@link #chambers()} primeiras valem. As pilhas são as do
+     * Núcleo: o lote grava a carga nelas.
+     */
+    public List<ItemStack> crystals() {
+        return Collections.unmodifiableList(crystals);
+    }
+
+    /**
+     * Põe {@code stack} (vazio ou uma unidade de cristal) na câmara {@code chamber}, de qualquer tier; o resto é
+     * ignorado. O slot do menu entra por aqui.
+     */
+    public void setCrystalAt(int chamber, ItemStack stack) {
+        if (chamber < 0 || chamber >= MAX_CHAMBERS
+                || !stack.isEmpty() && (stack.getCount() != 1 || !(stack.getItem() instanceof SignalCrystalItem))) {
+            return;
+        }
+        boolean emptied = stack.isEmpty() && !crystals.get(chamber).isEmpty();
+        crystals.set(chamber, stack);
+        setChanged();
+        if (emptied) {
+            notifyPorts(false, true);
+        }
     }
 
     /** Põe um cristal na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
@@ -172,10 +269,15 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return added;
     }
 
-    /** Só para os GameTests: põe a redstone num valor conhecido. */
-    public void setRedstoneForTest(int count) {
+    /** Põe a redstone em {@code count}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
+    public void setRedstone(int count) {
         redstone = Math.max(0, Math.min(MAX_REDSTONE, count));
         setChanged();
+    }
+
+    /** Só para os GameTests: põe a redstone num valor conhecido. */
+    public void setRedstoneForTest(int count) {
+        setRedstone(count);
     }
 
     public long energy() {
@@ -374,6 +476,22 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         tag.putInt("recharge", recharge);
         tag.putLong("energy", energy);
         tag.putInt("batches", batches);
+        tag.putBoolean("auto", auto);
+        tag.putBoolean("has_tuner", hasTuner);
+        tag.putInt("energy_ports", energyPorts);
+        tag.putInt("crystal_ports", crystalPorts);
+        tag.putByte("layout", layoutByte(layout));
+        tag.putLong("formed_at", formedAt);
+    }
+
+    /** 0 montagem própria (ou nenhuma), 1 Vitrine, 2 Faixa. */
+    private static byte layoutByte(ResonatorBlueprint.@Nullable Layout layout) {
+        return layout == null ? 0 : (byte) (layout.ordinal() + 1);
+    }
+
+    private static ResonatorBlueprint.@Nullable Layout layoutOf(byte value) {
+        ResonatorBlueprint.Layout[] all = ResonatorBlueprint.Layout.values();
+        return value >= 1 && value <= all.length ? all[value - 1] : null;
     }
 
     @Override
@@ -404,5 +522,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         recharge = Math.max(0, tag.getInt("recharge"));
         energy = Math.max(0, tag.getLong("energy"));
         batches = Math.max(0, tag.getInt("batches"));
+        hasTuner = tag.getBoolean("has_tuner");
+        auto = tag.getBoolean("auto") && hasTuner;
+        energyPorts = Math.max(0, tag.getInt("energy_ports"));
+        crystalPorts = Math.max(0, tag.getInt("crystal_ports"));
+        layout = layoutOf(tag.getByte("layout"));
+        formedAt = tag.contains("formed_at") ? tag.getLong("formed_at") : -1;
     }
 }

@@ -1,0 +1,47 @@
+{
+  "parent": "wirelessautomate:block/resonance_core_basic_loose",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/resonance_core_advanced_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/resonance_core_elite_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/resonance_core_emerald_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 4
+      },
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 5
+      },
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 6
+      },
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 7
+      },
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose"
+    }
+  ]
+}

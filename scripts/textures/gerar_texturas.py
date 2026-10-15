@@ -992,7 +992,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                 x = margem
                 y += 16 * k + 30
             out.alpha_composite(tile(sp.quadro(0), k), (x, y))
-            rot = nome.removeprefix("block/")
+            rot = nome.removeprefix("block/").removeprefix("resonator_").removeprefix("resonance_")
             if len(rot) > 14:
                 rot = rot[:13] + "…"
             d.text((x, y + 16 * k + 2), rot, fill=tinta2, font=_fonte(9))

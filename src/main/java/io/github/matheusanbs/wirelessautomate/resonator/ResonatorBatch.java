@@ -1,8 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Um lote do Núcleo de Ressonância: deriva da estação, geração pela sintonia, desgaste dos cristais e recarga do
@@ -16,12 +18,54 @@ public final class ResonatorBatch {
     }
 
     public static void run(ServerLevel level, ResonanceCoreBlockEntity core, int ticks) {
+        long energyBefore = core.energy();
+        int redstoneBefore = core.redstone();
+        int emptyBefore = count(core, false);
+        int dullBefore = count(core, true);
         boolean changed = drift(level, core);
         changed |= generate(core, ticks);
         changed |= recharge(core, ticks);
         if (changed) {
             core.setChanged();
         }
+        boolean energy = energyBefore == 0 && core.energy() > 0;
+        boolean crystals = core.redstone() < redstoneBefore || count(core, false) > emptyBefore
+                || count(core, true) > dullBefore;
+        if (energy || crystals) {
+            notifyPorts(level, core, energy, crystals);
+        }
+    }
+
+    /**
+     * Avisa as Portas só nas transições que podem acordar quem dorme nelas: energia de 0 para mais (o roteador
+     * que tira da Porta de Energia), redstone que baixou, câmara que esvaziou ou cristal que ficou Opaco (o que
+     * põe redstone ou cristal, ou tira o Opaco, pela Porta de Cristais). O {@code setChanged} do Núcleo avisa só
+     * os vizinhos dele; os das Portas ficam sabendo por aqui.
+     */
+    private static void notifyPorts(ServerLevel level, ResonanceCoreBlockEntity core, boolean energy, boolean crystals) {
+        for (BlockPos port : core.ports()) {
+            if (!level.isLoaded(port)) {
+                continue;
+            }
+            BlockState state = level.getBlockState(port);
+            if (state.getBlock() instanceof ResonatorPartBlock part
+                    && (energy && part.kind() == ResonatorPartBlock.Kind.ENERGY_PORT
+                            || crystals && part.kind() == ResonatorPartBlock.Kind.CRYSTAL_PORT)) {
+                level.updateNeighbourForOutputSignal(port, state.getBlock());
+            }
+        }
+    }
+
+    /** Quantas câmaras do tier estão vazias ({@code dull} falso) ou com um Opaco ({@code dull} verdadeiro). */
+    private static int count(ResonanceCoreBlockEntity core, boolean dull) {
+        int total = 0;
+        for (int i = 0; i < core.chambers(); i++) {
+            ItemStack stack = core.crystals().get(i);
+            if (dull ? SignalCrystalItem.isDull(stack) : stack.isEmpty()) {
+                total++;
+            }
+        }
+        return total;
     }
 
     /**

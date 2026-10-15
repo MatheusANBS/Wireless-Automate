@@ -60,13 +60,14 @@ public final class ResonatorManager {
     /**
      * Chamado a cada tick do servidor: cada Núcleo montado e carregado roda um lote de {@link #BATCH_TICKS} ticks
      * uma vez a cada {@link #BATCH_TICKS}, num tick próprio pela posição, para os Núcleos não caírem todos no
-     * mesmo tick. O lote não entra nem sai do conjunto, então o laço anda nele direto.
+     * mesmo tick. O laço anda numa cópia: o aviso do lote às Portas acorda vizinhos de outros mods, que podem
+     * mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto no meio do laço.
      */
     public static void tick(MinecraftServer server) {
         if (CORES.isEmpty()) {
             return;
         }
-        for (ResonanceCoreBlockEntity core : CORES) {
+        for (ResonanceCoreBlockEntity core : CORES.toArray(new ResonanceCoreBlockEntity[0])) {
             if (core.isRemoved() || !core.formed() || !(core.getLevel() instanceof ServerLevel level)) {
                 continue;
             }

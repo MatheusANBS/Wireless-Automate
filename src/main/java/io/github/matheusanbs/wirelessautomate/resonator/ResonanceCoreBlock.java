@@ -53,10 +53,10 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    /** Nasce solto, de frente para a face clicada; o tier vem do item pelo componente do estado. */
+    /** Nasce solto, de frente para o jogador; o tier vem do item pelo componente do estado. */
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(ResonatorPartBlock.FACING, context.getClickedFace());
+        return defaultBlockState().setValue(ResonatorPartBlock.FACING, ResonatorPartBlock.towardPlayer(context));
     }
 
     @Override

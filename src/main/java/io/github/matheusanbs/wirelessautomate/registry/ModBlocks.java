@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -78,21 +79,32 @@ public final class ModBlocks {
                 .sound(SoundType.STONE).requiresCorrectToolForDrops();
     }
 
+    /**
+     * As peças do Ressonador: pedra, e o pistão não as empurra (a peça chegaria ao destino com o estado montado,
+     * fora de qualquer estrutura).
+     */
+    private static BlockBehaviour.Properties resonatorPart() {
+        return stone().pushReaction(PushReaction.BLOCK);
+    }
+
     /** O Ressonador de Sinal: a carcaça, o vidro, o Núcleo (com tier) e as três peças das faces. */
     public static final DeferredBlock<ResonatorCasingBlock> RESONATOR_CASING = BLOCKS.registerBlock("resonator_casing",
-            ResonatorCasingBlock::new, stone());
+            ResonatorCasingBlock::new, resonatorPart());
     public static final DeferredBlock<ResonatorGlassBlock> RESONATOR_GLASS = BLOCKS.registerBlock("resonator_glass",
             ResonatorGlassBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.GLASS)
-                    .noOcclusion().isValidSpawn(ModBlocks::never).isRedstoneConductor(ModBlocks::never)
-                    .isSuffocating(ModBlocks::never).isViewBlocking(ModBlocks::never));
+                    .pushReaction(PushReaction.BLOCK).noOcclusion().isValidSpawn(ModBlocks::never)
+                    .isRedstoneConductor(ModBlocks::never).isSuffocating(ModBlocks::never)
+                    .isViewBlocking(ModBlocks::never));
     public static final DeferredBlock<ResonanceCoreBlock> RESONANCE_CORE = BLOCKS.registerBlock("resonance_core",
-            ResonanceCoreBlock::new, stone());
+            ResonanceCoreBlock::new, resonatorPart());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_ENERGY_PORT = BLOCKS.registerBlock(
-            "resonator_energy_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.ENERGY_PORT, props), stone());
+            "resonator_energy_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.ENERGY_PORT, props),
+            resonatorPart());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_CRYSTAL_PORT = BLOCKS.registerBlock(
-            "resonator_crystal_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.CRYSTAL_PORT, props), stone());
+            "resonator_crystal_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.CRYSTAL_PORT, props),
+            resonatorPart());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_TUNER = BLOCKS.registerBlock("resonator_tuner",
-            props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.TUNER, props), stone());
+            props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.TUNER, props), resonatorPart());
 
     private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
         return false;

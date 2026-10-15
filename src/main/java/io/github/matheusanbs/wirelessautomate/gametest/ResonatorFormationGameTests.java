@@ -32,6 +32,8 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -146,6 +148,25 @@ public final class ResonatorFormationGameTests {
             ResonatorPorts.unregister(dimension, port, second);
         }
         helper.succeed();
+    }
+
+    /** Um pistão ligado contra a casca montada não a empurra: a Carcaça fica no lugar, montada. */
+    @GameTest(template = "empty7")
+    public static void pistaoNaoEmpurraACarcaca(GameTestHelper helper) {
+        BlockPos origin = new BlockPos(1, 1, 1);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos edge = origin.offset(2, 0, 0);
+        BlockPos piston = edge.north();
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
+            helper.setBlock(piston, Blocks.PISTON.defaultBlockState().setValue(PistonBaseBlock.FACING, Direction.SOUTH));
+            helper.setBlock(piston.west(), Blocks.REDSTONE_BLOCK);
+        }).thenIdle(10).thenExecute(() -> {
+            assertCasing(helper, edge, CasingPosition.CNN);
+            helper.assertTrue(helper.getBlockState(edge.south(4)).is(ModBlocks.RESONATOR_CASING.get()),
+                    "a fila de Carcaças andou");
+            helper.assertTrue(helper.getBlockState(edge.south(5)).isAir(), "uma Carcaça saiu da caixa");
+            assertFormed(helper, core, true);
+        }).thenSucceed();
     }
 
     @GameTest(template = "empty7")

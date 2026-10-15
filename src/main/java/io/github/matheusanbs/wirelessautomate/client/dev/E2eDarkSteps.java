@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
@@ -126,7 +127,7 @@ final class E2eDarkSteps {
     }
 
     /** Põe o item na mão do jogador, no servidor, e espera o cliente ver. */
-    private static Step handStep(String name, UUID playerId, ItemStack stack) {
+    static Step handStep(String name, UUID playerId, ItemStack stack) {
         return new Step(name, STEP_TIMEOUT_MS, () -> onServer(server -> {
             server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND, stack.copy());
             return null;
@@ -144,7 +145,7 @@ final class E2eDarkSteps {
     }
 
     /** Clique de mouse no botão do tema da tela aberta; termina com o tema e a config no valor esperado. */
-    private static Step themeClick(String name, GuiTheme expected) {
+    static Step themeClick(String name, GuiTheme expected) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             Screen screen = Minecraft.getInstance().screen;
             int[] at = themeButton(screen);
@@ -181,7 +182,7 @@ final class E2eDarkSteps {
         });
     }
 
-    /** A posição do botão do tema na tela aberta (cada uma das sete a calcula). */
+    /** A posição do botão do tema na tela aberta (cada uma das oito a calcula). */
     private static int[] themeButton(@Nullable Screen screen) throws StepFailure {
         if (screen instanceof RouterScreen s) {
             return new int[] {s.themeX(), s.themeY()};
@@ -196,6 +197,8 @@ final class E2eDarkSteps {
         } else if (screen instanceof StorageScalarScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof RecipeEditorScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof ResonatorScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         }
         throw new StepFailure("sem botão do tema na tela " + describe(screen));

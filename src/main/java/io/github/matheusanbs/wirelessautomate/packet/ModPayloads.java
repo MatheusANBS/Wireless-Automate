@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
@@ -31,6 +32,7 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -63,7 +65,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "16";
+    public static final String VERSION = "17";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -120,6 +122,11 @@ public final class ModPayloads {
                 (payload, context) -> RecipeEditorActionPayload.handle(serverPlayer(context), payload));
         registrar.playToClient(PanelNoticePayload.TYPE, PanelNoticePayload.STREAM_CODEC,
                 (payload, context) -> PanelNotices.show(payload));
+        registrar.playToClient(ResonatorStatePayload.TYPE, ResonatorStatePayload.STREAM_CODEC, ResonatorMenu::onState);
+        registrar.playToServer(ResonatorDialPayload.TYPE, ResonatorDialPayload.STREAM_CODEC,
+                (payload, context) -> handleResonatorDial(serverPlayer(context), payload));
+        registrar.playToServer(ResonatorModePayload.TYPE, ResonatorModePayload.STREAM_CODEC,
+                (payload, context) -> handleResonatorMode(serverPlayer(context), payload));
         // Tablet de rede (packet/TabletPayloads).
         TabletPayloads.register(registrar);
     }
@@ -320,6 +327,32 @@ public final class ModPayloads {
         host.editedRouter().setName(payload.name());
         host.editApplied();
         return true;
+    }
+
+    /** Muda o dial do Núcleo da tela aberta; recusado no modo automático (o Sintonizador é quem anda o dial). */
+    public static boolean handleResonatorDial(@Nullable ServerPlayer player, ResonatorDialPayload payload) {
+        ResonanceCoreBlockEntity core = resonatorCore(player, payload.containerId());
+        if (core == null || core.auto() || !Double.isFinite(payload.mhz())) {
+            return false;
+        }
+        core.setDial(payload.mhz());
+        return true;
+    }
+
+    /** Liga ou desliga o modo automático do Núcleo da tela aberta; ligar sem Sintonizador é recusado. */
+    public static boolean handleResonatorMode(@Nullable ServerPlayer player, ResonatorModePayload payload) {
+        ResonanceCoreBlockEntity core = resonatorCore(player, payload.containerId());
+        return core != null && core.setAuto(payload.auto());
+    }
+
+    /** O Núcleo do {@link ResonatorMenu} aberto com esse {@code containerId}, se ainda vale e está montado. */
+    private static @Nullable ResonanceCoreBlockEntity resonatorCore(@Nullable ServerPlayer player, int containerId) {
+        if (player == null || !(player.containerMenu instanceof ResonatorMenu menu)
+                || menu.containerId != containerId || !menu.stillValid(player)) {
+            return null;
+        }
+        ResonanceCoreBlockEntity core = menu.core();
+        return core != null && core.formed() ? core : null;
     }
 
     /**

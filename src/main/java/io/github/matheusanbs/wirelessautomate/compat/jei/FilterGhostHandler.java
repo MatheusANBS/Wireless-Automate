@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.compat.jei;
 
-import io.github.matheusanbs.wirelessautomate.client.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;

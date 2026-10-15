@@ -9,7 +9,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
 /**
- * Componente do item de um Baú quebrado cheio: só a referência ao conteúdo, guardado no servidor
+ * Componente do item de um armazenamento quebrado cheio (Baú, Tanque, Bateria...): só a referência ao conteúdo, guardado no servidor
  * ({@link StorageSavedData}), e um resumo para o tooltip. Assim o item não carrega milhões de tipos
  * nem estoura o limite de pacote.
  */

@@ -1,53 +1,33 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
-import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.command.WaCommand;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.RoleFilter;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
-import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
-import io.github.matheusanbs.wirelessautomate.network.NodeProbe;
-import io.github.matheusanbs.wirelessautomate.network.RateLimiter;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.network.TickBudget;
-import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
+import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -68,15 +48,28 @@ import org.jetbrains.annotations.Nullable;
  * consulta da tela (no máximo {@link #FORCED_PER_SECOND} por segundo por jogador, o resto espera) e,
  * no máximo a cada {@link #REBUILD_TICKS} ticks, quando um dado salvo do índice de nós ou as redes
  * mudaram (chunks que carregam ou descarregam só aparecem na amostra seguinte). Uma montagem
- * percorre o índice uma vez (O(nós visíveis)), mas só sonda o motor para os nós da página. O
- * cabeçalho (estatísticas, redes, grupos) e a página de nós vão em pacotes separados, cada um só se
- * ficou diferente do último enviado.
+ * ({@link TabletSnapshotBuilder}) percorre o índice uma vez (O(nós visíveis)) e sonda o motor uma vez por
+ * amostra para saber quais nós têm destino cheio (as contagens dos filtros rápidos). O cabeçalho
+ * (estatísticas, redes, grupos, facetas) e a página de nós vão em pacotes separados, cada um só se ficou
+ * diferente do último enviado.
+ *
+ * <p>Nó escolhido (servidor): o painel do Tablet mostra e edita um nó ({@link #chooseNode}). O menu é o
+ * {@link RouterEditHost} desse nó, então os pacotes de face de sempre editam o roteador à distância
+ * enquanto ele é visível, está carregado (sem carregar chunk) e ao alcance ({@link #inReach}). O
+ * {@link TabletPanelPayload} (o {@link RouterSnapshot} do nó e o acesso) só sai com um nó escolhido: ao
+ * escolher, quando a versão do roteador ou das redes muda, ao trocar o alvo, depois de uma edição e a cada
+ * {@link #SAMPLE_TICKS} ticks (alcance e vazão), e só se ficou diferente do último enviado
+ * ({@link TabletChosenNode}).
  *
  * <p>Quem vê o quê: as redes do jogador e as públicas (todas para operador nível 2); os grupos do
- * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma aba numa rede dele
+ * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma face numa rede dele
  * (todos para operador).
+ *
+ * <p>As partes do servidor: a consulta ({@link TabletQuery}), a montagem ({@link TabletSnapshotBuilder}),
+ * as regras de um nó ({@link TabletNodes}), o nó escolhido ({@link TabletChosenNode}), o perfil
+ * ({@link TabletProfile}), as ações ({@link TabletMenuActions}) e o estado por jogador ({@link TabletPlayers}).
  */
-public class TabletMenu extends AbstractContainerMenu {
+public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
     public static final int SAMPLE_TICKS = 20;
     /** Intervalo mínimo entre remontagens provocadas por mudanças no mundo. */
@@ -84,14 +77,17 @@ public class TabletMenu extends AbstractContainerMenu {
     /**
      * Remontagens pedidas pela tela (consulta, ação) por segundo e por jogador; guarda até um
      * segundo delas. Além disso, o pedido espera e é atendido assim que houver ficha ou na amostra.
+     * As fichas sobrevivem a fechar e abrir o Tablet ({@link TabletPlayers}).
      */
     public static final int FORCED_PER_SECOND = 10;
-    private static final Pattern SEARCH_SPLIT = Pattern.compile("[\\s,]+");
-    /** Fichas de remontagem forçada por jogador; sobrevivem a fechar e abrir o Tablet. Só no servidor. */
-    private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
+    /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
+    public static final int BULK_PER_SECOND = 4;
+
+    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele. */
+    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target) {
+    }
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
-    private static final ResourceType[] TRANSFER_TYPES = ResourceType.values();
 
     /** Ações da tela sobre redes e grupos ({@code TabletActionPayload}). */
     public enum Action {
@@ -104,7 +100,7 @@ public class TabletMenu extends AbstractContainerMenu {
         /** Alvo: rede; valor: 1 pública, 0 privada. */
         NETWORK_PUBLIC,
         NETWORK_REMOVE,
-        /** Alvo: rede, que vira a rede ativa do jogador (Vinculador e roteadores colocados). */
+        /** Alvo: rede, que vira a rede ativa do jogador (a que o Vinculador usa). */
         NETWORK_USE,
         /** Texto: nome. */
         GROUP_CREATE,
@@ -119,54 +115,120 @@ public class TabletMenu extends AbstractContainerMenu {
 
     private TabletSnapshot snapshot;
     private int version;
+    /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
+    private @Nullable TabletPanelPayload panel;
+    private int panelVersion;
+    /** Cliente: a aba e o nó escolhido que o servidor restaurou ao abrir. */
+    private int restoredTab;
+    private @Nullable NodeKey restoredNode;
 
-    // Só no servidor.
+    // Só no servidor (as partes são nulas no cliente).
     private final @Nullable ServerPlayer viewer;
-    private Query query = Query.DEFAULT;
-    private String[] searchWords = new String[0];
+    private final TabletQuery query = new TabletQuery();
+    private final @Nullable TabletSnapshotBuilder builder;
+    private final @Nullable TabletChosenNode node;
+    private final @Nullable TabletProfile profile;
+    private final @Nullable TabletMenuActions actions;
+    private int tab;
     private boolean forced;
     private @Nullable TabletSnapshot sent;
     /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
     private boolean headerChanged;
     private boolean pageChanged;
-    private long sampleTick;
-    private long buildTick;
-    /** {@link NodeIndex#dataVersion()} e versão das redes lidas na última montagem. */
-    private int builtIndexVersion;
-    private int builtDataVersion;
-    /** Nós cheios na última sondagem de todos (só com o filtro de problemas) e quando ela foi. */
-    private final Set<NodeKey> fullNodes = new HashSet<>();
-    private long fullTick = Long.MIN_VALUE;
-    private @Nullable Map<UUID, String> searchNames;
-    private int searchNamesVersion;
-    /** Totais movidos por nó na última amostra, por {@link ResourceType#ordinal()}. */
-    private final Map<NodeKey, long[]> lastMoved = new HashMap<>();
-    /** Nós que moveram algo na última amostra. */
-    private final Set<NodeKey> activeNodes = new HashSet<>();
-    /** Vazão por rede na última amostra: itens/s, mB/s e FE/t. */
-    private final Map<UUID, long[]> networkRates = new HashMap<>();
-    private Component notice = Component.empty();
-    private int noticeId;
 
     /** Servidor. */
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = viewer;
-        this.sampleTick = viewer.server.getTickCount();
-        this.snapshot = build(true);
+        this.builder = new TabletSnapshotBuilder(viewer, query);
+        this.node = new TabletChosenNode(viewer, containerId);
+        this.profile = new TabletProfile(viewer, containerId, query, builder);
+        this.actions = new TabletMenuActions(this, viewer);
+        restore(TabletPlayers.saved(viewer.getUUID()));
+        this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
     }
 
     /** Cliente: o snapshot inicial vem no buffer de abertura. */
     public TabletMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, inventory, TabletSnapshot.STREAM_CODEC.decode(buf));
+        this(containerId, inventory, TabletSnapshot.STREAM_CODEC.decode(buf), buf.readVarInt(),
+                NODE_CODEC.decode(buf).orElse(null));
     }
 
     /** Cliente (e a captura de tela de desenvolvimento): só o snapshot. */
     public TabletMenu(int containerId, Inventory inventory, TabletSnapshot snapshot) {
+        this(containerId, inventory, snapshot, 0, null);
+    }
+
+    private TabletMenu(int containerId, Inventory inventory, TabletSnapshot snapshot, int restoredTab,
+            @Nullable NodeKey restoredNode) {
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = null;
+        this.builder = null;
+        this.node = null;
+        this.profile = null;
+        this.actions = null;
         this.snapshot = snapshot;
+        this.restoredTab = restoredTab;
+        this.restoredNode = restoredNode;
+    }
+
+    private static final StreamCodec<RegistryFriendlyByteBuf, Optional<NodeKey>> NODE_CODEC =
+            ByteBufCodecs.optional(NodeKey.STREAM_CODEC.<RegistryFriendlyByteBuf>cast());
+
+    /**
+     * Põe o estado de antes: a consulta, a aba e, se o nó ainda existe e o jogador o vê, o nó escolhido e o
+     * alvo dele. Só no servidor, antes da primeira montagem.
+     */
+    private void restore(@Nullable State saved) {
+        if (saved == null || viewer == null) {
+            return;
+        }
+        setQuery(saved.query());
+        tab = saved.tab();
+        if (saved.chosen() != null && chooseNode(saved.chosen())) {
+            node.restoreTarget(saved.target());
+        }
+    }
+
+    /** Esquece o estado de todos os jogadores (o servidor parou). */
+    public static void resetStates() {
+        TabletPlayers.reset();
+    }
+
+    /** O estado guardado do jogador, ou {@code null}. */
+    public static @Nullable State savedState(UUID player) {
+        return TabletPlayers.saved(player);
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        if (viewer != null && !viewer.hasDisconnected()) {
+            TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef()));
+        }
+    }
+
+    /** Quantas abas a tela tem ({@code TabletScreen.Tab}); o servidor só guarda uma posição dentro delas. */
+    public static final int TAB_COUNT = 5;
+
+    /** Servidor: a aba que a tela mostra. Devolve se o valor era de uma aba que existe. */
+    public boolean setTab(int tab) {
+        if (tab < 0 || tab >= TAB_COUNT) {
+            return false;
+        }
+        this.tab = tab;
+        return true;
+    }
+
+    /** Esquece o estado de um jogador (saiu do servidor). */
+    public static void forget(UUID player) {
+        TabletPlayers.forget(player);
+    }
+
+    @Override
+    public FilterOrigin filterOrigin() {
+        return FilterOrigin.TABLET;
     }
 
     /** Abre o Tablet para o jogador; o snapshot inicial vai no buffer de abertura. */
@@ -176,7 +238,14 @@ public class TabletMenu extends AbstractContainerMenu {
             created[0] = new TabletMenu(containerId, inventory, player);
             return created[0];
         }, Component.translatable("item.wirelessautomate.network_tablet")),
-                buf -> TabletSnapshot.STREAM_CODEC.encode(buf, created[0].snapshot));
+                buf -> created[0].writeOpenData(buf));
+    }
+
+    /** O que vai no buffer de abertura: o snapshot, a aba restaurada e o nó escolhido restaurado. */
+    public void writeOpenData(RegistryFriendlyByteBuf buf) {
+        TabletSnapshot.STREAM_CODEC.encode(buf, snapshot);
+        buf.writeVarInt(tab);
+        NODE_CODEC.encode(buf, Optional.ofNullable(chosenNode()));
     }
 
     /** O jogador tem um Tablet no inventário (mochila, barra, armadura ou mão secundária). */
@@ -188,6 +257,28 @@ public class TabletMenu extends AbstractContainerMenu {
             }
         }
         return false;
+    }
+
+    /**
+     * O Tablet que guarda o perfil: o da mão principal, o da mão secundária ou o primeiro do inventário (o
+     * mesmo critério de {@link #hasTablet}); {@link ItemStack#EMPTY} sem nenhum.
+     */
+    public static ItemStack tabletStack(Player player) {
+        ItemStack main = player.getMainHandItem();
+        if (main.is(ModItems.NETWORK_TABLET.get())) {
+            return main;
+        }
+        ItemStack off = player.getOffhandItem();
+        if (off.is(ModItems.NETWORK_TABLET.get())) {
+            return off;
+        }
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (inventory.getItem(i).is(ModItems.NETWORK_TABLET.get())) {
+                return inventory.getItem(i);
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     /**
@@ -203,6 +294,33 @@ public class TabletMenu extends AbstractContainerMenu {
         int range = tier.range().get();
         return range <= 0 || player.position().distanceToSqr(Vec3.atCenterOf(router.getBlockPos()))
                 <= (double) range * range;
+    }
+
+    /** O jogador vê o roteador pelo Tablet (a regra de {@link TabletNodes#visible}); fora do índice, não. */
+    public static boolean canSee(ServerPlayer player, RouterBlockEntity router) {
+        Level level = router.getLevel();
+        if (level == null) {
+            return false;
+        }
+        MinecraftServer server = player.server;
+        NodeIndex.Entry entry = NodeIndex.get(server).entry(NodeKey.of(level, router.getBlockPos()));
+        return entry != null && TabletNodes.visible(entry, NetworkSavedData.get(server), player.hasPermissions(2),
+                player.getUUID());
+    }
+
+    /** Servidor: a aba que a tela mostra. */
+    public int tab() {
+        return tab;
+    }
+
+    /** Cliente: a aba que o servidor restaurou ao abrir. */
+    public int restoredTab() {
+        return restoredTab;
+    }
+
+    /** Cliente: o nó escolhido que o servidor restaurou ao abrir, ou {@code null}. */
+    public @Nullable NodeKey restoredNode() {
+        return restoredNode;
     }
 
     public TabletSnapshot snapshot() {
@@ -229,6 +347,22 @@ public class TabletMenu extends AbstractContainerMenu {
         applySnapshot(snapshot.withPage(page));
     }
 
+    /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
+    public void applyPanel(TabletPanelPayload panel) {
+        this.panel = panel;
+        panelVersion++;
+    }
+
+    /** Cliente: o último painel recebido, ou {@code null} sem nó escolhido. */
+    public @Nullable TabletPanelPayload panel() {
+        return panel;
+    }
+
+    /** Muda a cada painel recebido. */
+    public int panelVersion() {
+        return panelVersion;
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
@@ -246,15 +380,18 @@ public class TabletMenu extends AbstractContainerMenu {
     public void broadcastChanges() {
         super.broadcastChanges();
         TabletSnapshot changed = pollSnapshot();
-        if (changed == null || viewer == null || viewer.connection == null) {
-            return;
+        if (changed != null && viewer != null && viewer.connection != null) {
+            // O cabeçalho antes da página: os nós apontam para as redes dele.
+            if (headerChanged) {
+                send(new TabletHeaderPayload(containerId, changed));
+            }
+            if (pageChanged) {
+                send(new TabletPagePayload(containerId, changed.page()));
+            }
         }
-        // O cabeçalho antes da página: os nós apontam para as redes dele.
-        if (headerChanged) {
-            send(new TabletHeaderPayload(containerId, changed));
-        }
-        if (pageChanged) {
-            send(new TabletPagePayload(containerId, changed.page()));
+        TabletPanelPayload panelNow = pollPanel();
+        if (panelNow != null) {
+            send(panelNow);
         }
     }
 
@@ -276,20 +413,19 @@ public class TabletMenu extends AbstractContainerMenu {
         }
         MinecraftServer server = viewer.server;
         long now = server.getTickCount();
-        boolean sample = now - sampleTick >= SAMPLE_TICKS;
+        boolean sample = builder.sampleDue(now);
         // Só dados salvos do índice: um chunk que carrega ou descarrega espera a próxima amostra.
-        boolean worldChanged = NodeIndex.get(server).dataVersion() != builtIndexVersion
-                || NetworkSavedData.get(server).version() != builtDataVersion;
-        boolean rebuild = sample || (worldChanged && now - buildTick >= REBUILD_TICKS);
+        boolean worldChanged = builder.worldChanged(server);
+        boolean rebuild = sample || (worldChanged && builder.rebuildAllowed(now));
         if (!rebuild && forced) {
             // Pedido da tela: no máximo FORCED_PER_SECOND por segundo por jogador; o resto espera.
-            rebuild = takeForced(viewer.getUUID(), now);
+            rebuild = TabletPlayers.takeForced(viewer.getUUID(), now);
         }
         if (!rebuild) {
             return null;
         }
         forced = false;
-        TabletSnapshot built = build(sample);
+        TabletSnapshot built = builder.build(sample, actions.notice(), actions.noticeId());
         snapshot = built;
         headerChanged = sent == null || !built.sameHeader(sent);
         pageChanged = sent == null || !built.page().equals(sent.page());
@@ -300,430 +436,124 @@ public class TabletMenu extends AbstractContainerMenu {
         return built;
     }
 
-    /** Gasta uma remontagem forçada do jogador, se houver. */
-    private static boolean takeForced(UUID player, long now) {
-        RateLimiter limiter = FORCED_LIMITS.computeIfAbsent(player, id -> new RateLimiter(FORCED_PER_SECOND));
-        if (limiter.available(now) < 1) {
-            return false;
-        }
-        limiter.consume(1);
-        return true;
+    /** Uma ação ou consulta da tela pede uma remontagem (dentro das fichas de {@link #FORCED_PER_SECOND}). */
+    void requestRebuild() {
+        forced = true;
+    }
+
+    // ------------------------------------------------------------------ nó escolhido (servidor)
+
+    @Override
+    public int containerId() {
+        return containerId;
+    }
+
+    /** O nó escolhido, se há, é visível e está carregado (sem carregar chunk); senão {@code null}. */
+    @Override
+    public @Nullable RouterBlockEntity editedRouter() {
+        return node == null ? null : node.editedRouter();
+    }
+
+    /** Nó escolhido, visível, carregado e ao alcance, e o jogador ainda com o Tablet. */
+    @Override
+    public boolean canEdit(ServerPlayer player) {
+        RouterBlockEntity router = editedRouter();
+        return router != null && stillValid(player) && inReach(player, router);
     }
 
     /**
-     * O que a tela mostra agora; com {@code sample}, mede vazão e atividade desde a amostra anterior.
-     *
-     * <p>Percorre o índice uma vez para contar, filtrar e medir a vazão (esta só na amostra), mas só
-     * sonda o motor ({@link NodeProbe}) para os nós da página. Os cheios de cada rede vêm das
-     * estatísticas do gerenciador; com o filtro de problemas, os nós cheios vêm de uma sondagem de
-     * todos que vale por uma amostra.
+     * Escolhe o nó do painel ({@code null}: nenhum). Recusa um nó que não está no índice ou que o jogador
+     * não vê. O alvo de edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
      */
-    private TabletSnapshot build(boolean sample) {
-        MinecraftServer server = viewer.server;
-        long now = server.getTickCount();
-        buildTick = now;
-        NetworkSavedData data = NetworkSavedData.get(server);
-        NodeIndex index = NodeIndex.get(server);
-        builtIndexVersion = index.dataVersion();
-        builtDataVersion = data.version();
-        boolean operator = viewer.hasPermissions(2);
-        UUID me = viewer.getUUID();
-        long elapsed = Math.max(1, now - sampleTick);
-        if (sample) {
-            sampleTick = now;
-            activeNodes.clear();
-        }
-        boolean problems = query.role() == RoleFilter.PROBLEM;
-        boolean probeAll = problems && (sample || fullTick == Long.MIN_VALUE || now - fullTick >= SAMPLE_TICKS);
-        if (probeAll) {
-            fullNodes.clear();
-            fullTick = now;
-        }
-
-        Map<UUID, Totals> totals = new LinkedHashMap<>();
-        for (WaNetwork network : data.networks()) {
-            if (operator || network.owner().equals(me) || network.isPublic()) {
-                totals.put(network.id(), new Totals());
-            }
-        }
-
-        BlockPos center = viewer.blockPosition();
-        ResourceKey<Level> here = viewer.level().dimension();
-        Map<UUID, String> networkNames = searchWords.length == 0 ? Map.of() : searchNames(data);
-        Map<ResourceKey<Level>, String> dimensionNames = new HashMap<>();
-        List<Match> matches = new ArrayList<>();
-        Set<NodeKey> seen = sample ? new HashSet<>() : null;
-        int total = 0;
-        for (NodeIndex.Entry entry : index.entries()) {
-            if (!visible(entry, data, operator, me)) {
-                continue;
-            }
-            total++;
-            NodeKey key = entry.key();
-            RouterBlockEntity router = entry.router();
-            boolean loaded = router != null;
-            boolean moved = false;
-            if (loaded) {
-                if (sample) {
-                    seen.add(key);
-                    moved = sampleMoved(entry, router, totals, elapsed);
-                    if (moved) {
-                        activeNodes.add(key);
-                    }
-                } else {
-                    moved = activeNodes.contains(key);
-                }
-                if (probeAll && fullDestinations(router, now) > 0) {
-                    fullNodes.add(key);
-                }
-            }
-            countMembership(entry, totals, loaded);
-            if (!matchesRole(entry, loaded, moved, problems, data) || !matchesType(entry, query.type())
-                    || !matchesSearch(entry, networkNames)) {
-                continue;
-            }
-            matches.add(new Match(entry, loaded, moved, distance(key, here, center),
-                    dimensionNames.computeIfAbsent(key.dimension(), k -> k.location().toString())));
-        }
-        if (sample) {
-            lastMoved.keySet().retainAll(seen);
-            networkRates.clear();
-            totals.forEach((id, t) -> networkRates.put(id, t.rates(elapsed)));
-        }
-
-        matches.sort(Comparator.comparingLong(Match::distance)
-                .thenComparing(Match::dimension)
-                .thenComparing(m -> m.entry.name()));
-        int pages = Math.max(1, (matches.size() + TabletSnapshot.PAGE_SIZE - 1) / TabletSnapshot.PAGE_SIZE);
-        if (query.page() >= pages) {
-            query = new Query(query.search(), query.role(), query.type(), pages - 1);
-        }
-        int from = query.page() * TabletSnapshot.PAGE_SIZE;
-        List<NodeView> nodes = new ArrayList<>();
-        for (int i = from; i < Math.min(matches.size(), from + TabletSnapshot.PAGE_SIZE); i++) {
-            Match match = matches.get(i);
-            NodeIndex.Entry entry = match.entry;
-            // Só os nós da página são sondados agora.
-            RouterBlockEntity router = entry.router();
-            int full = router == null ? 0 : fullDestinations(router, now);
-            // só as redes que existem, só dos tipos carregados (os outros vão vazios); uma face numa
-            // rede apagada vira o aviso (sem varrer nada)
-            List<List<UUID>> networks = new ArrayList<>();
-            boolean removed = false;
-            for (ResourceType type : ResourceType.values()) {
-                List<UUID> existing = new ArrayList<>();
-                for (UUID id : LoadedTypes.contains(type) ? entry.networks(type) : List.<UUID>of()) {
-                    if (data.network(id) != null) {
-                        existing.add(id);
-                    } else {
-                        removed = true;
-                    }
-                }
-                networks.add(List.copyOf(existing));
-            }
-            nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), status(entry, match.loaded, full, match.moved, data), removed));
-        }
-
-        Map<UUID, NetworkStats> stats = new HashMap<>();
-        for (NetworkStats s : NetworkManager.get().stats(server)) {
-            stats.put(s.id(), s);
-        }
-        Map<UUID, String> names = new HashMap<>();
-        List<NetworkView> networks = new ArrayList<>();
-        totals.forEach((id, t) -> {
-            WaNetwork network = data.network(id);
-            NetworkStats s = stats.get(id);
-            long[] rates = networkRates.getOrDefault(id, new long[ResourceType.values().length]);
-            List<TabletSnapshot.TypeStats> types = new ArrayList<>(rates.length);
-            for (ResourceType type : ResourceType.values()) {
-                NetworkStats.TypeCount count = s == null ? null : s.byType().get(type.ordinal());
-                types.add(count == null ? new TabletSnapshot.TypeStats(rates[type.ordinal()], 0, 0, 0)
-                        : new TabletSnapshot.TypeStats(rates[type.ordinal()], count.sources(), count.destinations(),
-                                count.sleeping()));
-            }
-            networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
-                    network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
-                    t.nodes, t.unloaded, s == null ? 0 : s.destinationsFull(), s == null ? 0 : s.destinationsSleeping(),
-                    s == null ? 0 : Math.round(s.averageNanos()), s == null ? 0 : s.opsLastSecond(),
-                    List.copyOf(types)));
-        });
-        List<GroupView> groups = new ArrayList<>();
-        for (WaGroup group : data.groups()) {
-            if (operator || group.owner().equals(me)) {
-                groups.add(new GroupView(group.id(), group.name(), ownerName(server, group.owner(), names),
-                        group.canManage(viewer), group.paused(), group.networks()));
-            }
-        }
-
-        TickBudget budget = NetworkManager.get().budget();
-        return new TabletSnapshot(operator, here.location(), center,
-                Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
-                Math.round(budget.averageUsedNanos()), budget.limitNanos(), query, total, matches.size(),
-                List.copyOf(networks), List.copyOf(groups), List.copyOf(nodes), notice, noticeId);
+    public boolean chooseNode(@Nullable NodeKey key) {
+        return viewer != null && node.choose(key);
     }
 
-    /** Destinos cheios do nó, nos tipos que o Tablet mostra. */
-    private static int fullDestinations(RouterBlockEntity router, long now) {
-        int full = 0;
-        for (ResourceType type : TRANSFER_TYPES) {
-            full += NodeProbe.fullDestinations(router, type, now);
-        }
-        return full;
+    /** O nó escolhido, ou {@code null}. Só no servidor. */
+    public @Nullable NodeKey chosenNode() {
+        return node == null ? null : node.chosen();
     }
 
-    /** O jogador vê o nó: operador, quem o colocou, ou alguma face numa rede dele. */
-    private static boolean visible(NodeIndex.Entry entry, NetworkSavedData data, boolean operator, UUID me) {
-        if (operator || me.equals(entry.placedBy())) {
-            return true;
+    @Override
+    public EditTargetRef targetRef() {
+        return node == null ? EditTargetRef.ATTACHED : node.targetRef();
+    }
+
+    /** Confere o alvo no roteador: uma máquina que mudou de índice segue pela posição; um alvo que sumiu volta à presa. */
+    @Override
+    public EditTarget validTarget() {
+        return node == null ? EditTargetRef.ATTACHED.target() : node.validTarget();
+    }
+
+    @Override
+    public @Nullable EditTarget actionTarget() {
+        return node == null ? EditTargetRef.ATTACHED.target() : node.actionTarget();
+    }
+
+    @Override
+    public boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
+        return node != null && node.selectTarget(target, pos, block);
+    }
+
+    /** Uma edição pelos pacotes de face: o painel mostra o resultado na próxima oportunidade. */
+    @Override
+    public void editApplied() {
+        if (node != null) {
+            node.editApplied();
         }
-        for (ResourceType type : LoadedTypes.LIST) {
-            for (UUID id : entry.networks(type)) {
-                WaNetwork network = data.network(id);
-                if (network != null && network.owner().equals(me)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**
-     * Soma a vazão do nó às redes das faces de cada tipo; devolve se ele moveu algo desde a amostra
-     * anterior. O roteador só conta o movido por tipo ({@link RouterBlockEntity#moved}), não por rede:
-     * com as faces de um tipo em duas redes, o total do tipo vai para cada uma delas (a vazão de uma
-     * rede conta o nó inteiro). A vazão exata por rede pediria contar o movido por porta no motor.
+     * O painel novo do nó escolhido, se é hora (pedido, versão do roteador ou das redes mudou, ou passaram
+     * {@link #SAMPLE_TICKS} ticks) e ele ficou diferente do último enviado; senão {@code null}. Marca como
+     * enviado. Nó carregado: o snapshot de agora, com acesso de edição ao alcance e de leitura fora dele;
+     * descarregado: o último lido (vazio se nunca houve). Um nó que sumiu ou deixou de ser visível larga
+     * a escolha e manda um painel sem nó. Só no servidor; público para os GameTests.
      */
-    private boolean sampleMoved(NodeIndex.Entry entry, RouterBlockEntity router, Map<UUID, Totals> totals, long elapsed) {
-        long[] last = lastMoved.get(entry.key());
-        if (last == null) {
-            last = new long[ResourceType.values().length];
-            for (ResourceType type : ResourceType.values()) {
-                last[type.ordinal()] = router.moved(type);
-            }
-            lastMoved.put(entry.key(), last);
-            return false;
-        }
-        boolean moved = false;
-        for (int t = 0; t < TRANSFER_TYPES.length; t++) {
-            ResourceType type = TRANSFER_TYPES[t];
-            long now = router.moved(type);
-            long delta = Math.max(0, now - last[type.ordinal()]);
-            if (delta > 0) {
-                moved = true;
-                for (UUID id : entry.networks(type)) {
-                    Totals network = totals.get(id);
-                    if (network != null) {
-                        network.moved[t] = RateMath.add(network.moved[t], delta);
-                    }
-                }
-            }
-        }
-        for (ResourceType type : ResourceType.values()) {
-            last[type.ordinal()] = router.moved(type);
-        }
-        return moved;
+    public @Nullable TabletPanelPayload pollPanel() {
+        return viewer == null ? null : node.poll();
+    }
+
+    // ------------------------------------------------------------------ perfil (servidor)
+
+    /** Servidor: o último colar ainda pode ser desfeito. */
+    public boolean canUndo() {
+        return profile != null && profile.canUndo();
+    }
+
+    /** Servidor: o texto do último aviso de colar ou desfazer mandado ao jogador, ou {@code null}. */
+    public @Nullable Component lastNotice() {
+        return profile == null ? null : profile.lastNotice();
     }
 
     /**
-     * Conta o nó uma vez em cada rede em que alguma face dele está. Uma rede em vários tipos conta uma
-     * vez: o {@code counted} guarda as já contadas deste nó (vazio e sem custo para quem não tem rede).
+     * Uma ação do perfil, validada: o menu aberto e o Tablet no inventário, e para cada nó, na ordem, que o
+     * jogador o vê, que está carregado (sem carregar chunk) e ao alcance; a regra das redes é a do
+     * {@link PresetApplier}. Colar deixa a origem do perfil de fora. Devolve quantos nós a ação atingiu (1 para
+     * copiar e esquecer), ou -1 se recusou.
      */
-    private static void countMembership(NodeIndex.Entry entry, Map<UUID, Totals> totals, boolean loaded) {
-        Set<Totals> counted = null;
-        for (ResourceType type : LoadedTypes.LIST) {
-            for (UUID id : entry.networks(type)) {
-                Totals network = totals.get(id);
-                if (network == null) {
-                    continue;
-                }
-                if (counted == null) {
-                    counted = new HashSet<>();
-                }
-                if (counted.add(network)) {
-                    network.nodes++;
-                    if (!loaded) {
-                        network.unloaded++;
-                    }
-                }
-            }
+    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
+            List<NodeKey> keys) {
+        if (viewer == null || keys.size() > TabletProfilePayload.MAX_KEYS || !stillValid(viewer)) {
+            return -1;
         }
-    }
-
-    static NodeStatus status(NodeIndex.Entry entry, boolean loaded, int full, boolean moved, NetworkSavedData data) {
-        if (!loaded) {
-            return NodeStatus.UNLOADED;
+        int result = profile.run(action, key, machine, keys);
+        if (result >= 0) {
+            forced = true;
         }
-        boolean anyNetwork = false;
-        boolean anyRunning = false;
-        for (ResourceType type : LoadedTypes.LIST) {
-            for (UUID id : entry.networks(type)) {
-                if (data.network(id) != null) {
-                    anyNetwork = true;
-                    anyRunning |= !data.isPaused(id);
-                }
-            }
-        }
-        if (!anyNetwork) {
-            return NodeStatus.NO_NETWORK;
-        }
-        if (!anyRunning) {
-            return NodeStatus.PAUSED;
-        }
-        if (full > 0) {
-            return NodeStatus.FULL;
-        }
-        return moved ? NodeStatus.ACTIVE : NodeStatus.IDLE;
-    }
-
-    /** Papel da consulta. Problemas usa o estado do nó, com os cheios da última sondagem de todos. */
-    private boolean matchesRole(NodeIndex.Entry entry, boolean loaded, boolean moved, boolean problems,
-            NetworkSavedData data) {
-        return switch (query.role()) {
-            case ALL -> true;
-            case EXTRACT -> hasRole(entry, NodeIndex.EXTRACT);
-            case INSERT -> hasRole(entry, NodeIndex.INSERT);
-            case STORAGE -> hasRole(entry, NodeIndex.STORAGE);
-            case PROBLEM -> {
-                NodeStatus status = status(entry, loaded, fullNodes.contains(entry.key()) ? 1 : 0, moved, data);
-                yield status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK || status == NodeStatus.FULL;
-            }
-        };
-    }
-
-    /** Sem tipo escolhido passa tudo; com tipo, só nós com algum papel (extrai, insere, armazém) nele. */
-    private static boolean matchesType(NodeIndex.Entry entry, Optional<ResourceType> type) {
-        if (type.isEmpty()) {
-            return true;
-        }
-        int mask = NodeIndex.role(type.get(), NodeIndex.EXTRACT) | NodeIndex.role(type.get(), NodeIndex.INSERT)
-                | NodeIndex.role(type.get(), NodeIndex.STORAGE);
-        return (entry.roles() & mask) != 0;
-    }
-
-    /**
-     * Cada palavra da busca precisa aparecer no nome, na máquina, nas coordenadas
-     * ({@link NodeIndex.Entry#searchText()}) ou no nome de uma rede do nó.
-     */
-    private boolean matchesSearch(NodeIndex.Entry entry, Map<UUID, String> networkNames) {
-        if (searchWords.length == 0) {
-            return true;
-        }
-        String text = entry.searchText();
-        for (String word : searchWords) {
-            if (!text.contains(word) && !inNetworkName(entry, word, networkNames)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean inNetworkName(NodeIndex.Entry entry, String word, Map<UUID, String> networkNames) {
-        for (ResourceType type : LoadedTypes.LIST) {
-            for (UUID id : entry.networks(type)) {
-                String name = networkNames.get(id);
-                if (name != null && name.contains(word)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /** Nomes das redes em minúsculas, refeitos só quando as redes mudam. */
-    private Map<UUID, String> searchNames(NetworkSavedData data) {
-        if (searchNames == null || searchNamesVersion != data.version()) {
-            Map<UUID, String> names = new HashMap<>();
-            for (WaNetwork network : data.networks()) {
-                names.put(network.id(), network.name().toLowerCase(Locale.ROOT));
-            }
-            searchNames = names;
-            searchNamesVersion = data.version();
-        }
-        return searchNames;
-    }
-
-    /** Palavras da busca: em minúsculas, separadas por espaços ou vírgulas, sem vazias. */
-    static String[] searchWords(String search) {
-        return Arrays.stream(SEARCH_SPLIT.split(search.strip().toLowerCase(Locale.ROOT)))
-                .filter(word -> !word.isEmpty())
-                .toArray(String[]::new);
-    }
-
-    private static boolean hasRole(NodeIndex.Entry entry, int role) {
-        for (ResourceType type : ResourceType.values()) {
-            if ((entry.roles() & NodeIndex.role(type, role)) != 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Distância ao quadrado no mesmo mundo; outra dimensão vai para o fim. */
-    private static long distance(NodeKey key, ResourceKey<Level> here, BlockPos center) {
-        if (!key.dimension().equals(here)) {
-            return Long.MAX_VALUE;
-        }
-        return (long) key.pos().distSqr(center);
-    }
-
-    private static String ownerName(MinecraftServer server, UUID owner, Map<UUID, String> cache) {
-        return cache.computeIfAbsent(owner, id -> {
-            ServerPlayer online = server.getPlayerList().getPlayer(id);
-            if (online != null) {
-                return online.getGameProfile().getName();
-            }
-            if (server.getProfileCache() != null) {
-                var profile = server.getProfileCache().get(id);
-                if (profile.isPresent()) {
-                    return profile.get().getName();
-                }
-            }
-            return id.toString().substring(0, 8);
-        });
-    }
-
-    /** Um nó que passou na consulta; {@code dimension} é o nome da dimensão, para desempatar. */
-    private record Match(NodeIndex.Entry entry, boolean loaded, boolean moved, long distance, String dimension) {
-    }
-
-    /** Somas de uma rede numa montagem. */
-    private static final class Totals {
-        int nodes;
-        int unloaded;
-        /** Movido desde a amostra anterior, na ordem de {@link #TRANSFER_TYPES}. */
-        final long[] moved = new long[TRANSFER_TYPES.length];
-
-        /** Por tipo, na unidade do registro: por segundo, ou por tick para a energia. */
-        long[] rates(long elapsed) {
-            ResourceType[] types = ResourceType.values();
-            long[] rates = new long[types.length];
-            for (int t = 0; t < types.length; t++) {
-                rates[t] = RateMath.rate(moved[t], elapsed, types[t].ratePerTick());
-            }
-            return rates;
-        }
+        return result;
     }
 
     // ------------------------------------------------------------------ ações (servidor)
 
-    private void notice(String key, Object... args) {
-        notice = Component.translatable("gui.wirelessautomate.tablet.notice." + key, args);
-        noticeId++;
-        forced = true;
-    }
-
-    /** A tela mudou busca, papel ou página. */
+    /** A tela mudou a busca, as etiquetas, os filtros ou o tipo. */
     public void setQuery(Query query) {
-        if (!query.search().equals(this.query.search())) {
-            searchWords = searchWords(query.search());
-        }
-        this.query = query;
+        this.query.set(query);
         forced = true;
     }
 
     public Query query() {
-        return query;
+        return query.query();
     }
 
     /**
@@ -736,49 +566,7 @@ public class TabletMenu extends AbstractContainerMenu {
      * apagada vão. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
-        if (viewer == null || keys.isEmpty() || keys.size() > MAX_MOVE
-                || type.filter(t -> !LoadedTypes.contains(t)).isPresent()) {
-            return -1;
-        }
-        MinecraftServer server = viewer.server;
-        NetworkSavedData data = NetworkSavedData.get(server);
-        WaNetwork target = network.map(data::network).orElse(null);
-        if (network.isPresent() && (target == null || !target.canUse(viewer))) {
-            notice("move.refused");
-            return -1;
-        }
-        NodeIndex index = NodeIndex.get(server);
-        boolean operator = viewer.hasPermissions(2);
-        int moved = 0;
-        int unloaded = 0;
-        int kept = 0;
-        java.util.function.Predicate<UUID> canLeave = from -> {
-            WaNetwork current = data.network(from);
-            return current == null || current.canManage(viewer);
-        };
-        for (NodeKey key : new HashSet<>(keys)) {
-            NodeIndex.Entry entry = index.entry(key);
-            if (entry == null || !visible(entry, data, operator, viewer.getUUID())) {
-                continue;
-            }
-            RouterBlockEntity router = loadedRouter(server, index, entry);
-            if (router == null) {
-                unloaded++;
-                continue;
-            }
-            UUID id = target == null ? null : target.id();
-            kept += router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id, canLeave);
-            moved++;
-        }
-        Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
-                : target.displayName();
-        String suffix = kept > 0 ? ".kept" : "";
-        if (unloaded > 0) {
-            notice("moved.unloaded" + suffix, moved, name, unloaded, kept);
-        } else {
-            notice("moved" + suffix, moved, name, kept);
-        }
-        return moved;
+        return viewer == null ? -1 : actions.moveNodes(keys, type, network);
     }
 
     /**
@@ -786,46 +574,7 @@ public class TabletMenu extends AbstractContainerMenu {
      * Devolve se abriu.
      */
     public boolean openNode(NodeKey key) {
-        if (viewer == null) {
-            return false;
-        }
-        MinecraftServer server = viewer.server;
-        NodeIndex index = NodeIndex.get(server);
-        NodeIndex.Entry entry = index.entry(key);
-        if (entry == null || !visible(entry, NetworkSavedData.get(server), viewer.hasPermissions(2), viewer.getUUID())) {
-            return false;
-        }
-        RouterBlockEntity router = loadedRouter(server, index, entry);
-        if (router == null) {
-            notice("open.unloaded");
-            return false;
-        }
-        if (!inReach(viewer, router)) {
-            notice("open.range");
-            return false;
-        }
-        RemoteRouterMenu.open(viewer, router);
-        return true;
-    }
-
-    /**
-     * O roteador carregado da entrada. Se o chunk está carregado e não há roteador ali (região
-     * apagada, bloco trocado sem {@code onRemove}), a entrada velha sai do índice.
-     */
-    private static @Nullable RouterBlockEntity loadedRouter(MinecraftServer server, NodeIndex index, NodeIndex.Entry entry) {
-        RouterBlockEntity router = entry.router();
-        if (router != null) {
-            return router;
-        }
-        ServerLevel level = server.getLevel(entry.key().dimension());
-        if (level != null && level.isLoaded(entry.key().pos())) {
-            if (level.getBlockEntity(entry.key().pos()) instanceof RouterBlockEntity found) {
-                NodeIndex.track(found);
-                return found;
-            }
-            index.remove(entry.key());
-        }
-        return null;
+        return viewer != null && actions.openNode(key);
     }
 
     /** Uma ação sobre redes ou grupos, validada. Devolve se foi aplicada. */
@@ -833,127 +582,8 @@ public class TabletMenu extends AbstractContainerMenu {
         if (viewer == null) {
             return false;
         }
-        NetworkSavedData data = NetworkSavedData.get(viewer.server);
-        UUID me = viewer.getUUID();
-        boolean done = switch (action) {
-            case NETWORK_CREATE -> {
-                String name = cleanName(text);
-                if (name == null || data.byName(me, name) != null) {
-                    yield refuse("name");
-                }
-                data.create(me, name);
-                notice("network.created", name);
-                yield true;
-            }
-            case NETWORK_RENAME -> {
-                WaNetwork network = managedNetwork(data, target);
-                String name = cleanName(text);
-                if (network == null || name == null) {
-                    yield refuse(network == null ? "permission" : "name");
-                }
-                WaNetwork same = data.byName(network.owner(), name);
-                if (same != null && !same.id().equals(network.id())) {
-                    yield refuse("name");
-                }
-                yield data.update(network.withName(name));
-            }
-            case NETWORK_COLOR -> {
-                WaNetwork network = managedNetwork(data, target);
-                yield network == null ? refuse("permission") : data.update(network.withColor(value));
-            }
-            case NETWORK_PUBLIC -> {
-                WaNetwork network = managedNetwork(data, target);
-                if (network == null || (value != 0 && value != 1)) {
-                    yield refuse("permission");
-                }
-                yield data.update(network.withPublic(value == 1));
-            }
-            case NETWORK_REMOVE -> {
-                WaNetwork network = managedNetwork(data, target);
-                if (network == null) {
-                    yield refuse("permission");
-                }
-                data.remove(network.id());
-                notice("network.removed", network.name());
-                yield true;
-            }
-            case NETWORK_USE -> {
-                WaNetwork network = target.map(data::network).orElse(null);
-                if (network == null || !network.canUse(viewer)) {
-                    yield refuse("permission");
-                }
-                data.setActiveNetwork(me, network.id());
-                notice("network.active", network.displayName());
-                yield true;
-            }
-            case GROUP_CREATE -> {
-                String name = cleanName(text);
-                if (name == null) {
-                    yield refuse("name");
-                }
-                data.createGroup(me, name);
-                notice("group.created", name);
-                yield true;
-            }
-            case GROUP_RENAME -> {
-                WaGroup group = managedGroup(data, target);
-                String name = cleanName(text);
-                if (group == null || name == null) {
-                    yield refuse(group == null ? "permission" : "name");
-                }
-                yield data.updateGroup(group.withName(name));
-            }
-            case GROUP_REMOVE -> {
-                WaGroup group = managedGroup(data, target);
-                if (group == null) {
-                    yield refuse("permission");
-                }
-                data.removeGroup(group.id());
-                notice("group.removed", group.name());
-                yield true;
-            }
-            case GROUP_ADD_NETWORK, GROUP_REMOVE_NETWORK -> {
-                WaGroup group = managedGroup(data, target);
-                // Só redes que o jogador gerencia: pausar o grupo não pode parar a rede de outro.
-                WaNetwork network = managedNetwork(data, other);
-                if (group == null || network == null) {
-                    yield refuse("permission");
-                }
-                yield data.updateGroup(action == Action.GROUP_ADD_NETWORK
-                        ? group.withNetwork(network.id()) : group.withoutNetwork(network.id()));
-            }
-            case GROUP_PAUSE -> {
-                WaGroup group = managedGroup(data, target);
-                if (group == null || (value != 0 && value != 1)) {
-                    yield refuse("permission");
-                }
-                boolean changed = data.updateGroup(group.withPaused(value == 1));
-                notice(value == 1 ? "group.paused" : "group.resumed", group.name());
-                yield changed;
-            }
-        };
+        boolean done = actions.apply(action, target, other, text, value);
         forced = true;
         return done;
-    }
-
-    private boolean refuse(String reason) {
-        notice("refused." + reason);
-        return false;
-    }
-
-    private @Nullable WaNetwork managedNetwork(NetworkSavedData data, Optional<UUID> id) {
-        WaNetwork network = id.map(data::network).orElse(null);
-        return network != null && network.canManage(viewer) ? network : null;
-    }
-
-    private @Nullable WaGroup managedGroup(NetworkSavedData data, Optional<UUID> id) {
-        WaGroup group = id.map(data::group).orElse(null);
-        return group != null && group.canManage(viewer) ? group : null;
-    }
-
-    /** Nome sem caracteres inválidos e sem espaços nas pontas, de 1 a {@link WaCommand#MAX_NAME_LENGTH}; senão {@code null}. */
-    public static @Nullable String cleanName(String text) {
-        String name = StringUtil.filterText(text).strip();
-        return name.isEmpty() || name.length() > WaCommand.MAX_NAME_LENGTH ? null : name;
     }
 }

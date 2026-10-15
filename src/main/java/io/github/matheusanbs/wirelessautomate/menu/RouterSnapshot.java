@@ -162,7 +162,7 @@ public record RouterSnapshot(
     /**
      * Configuração de uma face da máquina para um tipo.
      *
-     * @param slots      o que a face acessa: slots (itens), tanques (fluidos) ou 1 (energia);
+     * @param slots      o que a face acessa: slots (itens), tanques (fluidos e químicos) ou 1 (energia e Source);
      *                   {@code -1} se a máquina não tem essa capability nessa face
      * @param filterSize entradas do filtro (0 = passa tudo)
      * @param blacklist  o filtro é lista negra

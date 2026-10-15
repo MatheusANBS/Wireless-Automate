@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * selecionados na tela, seguidos do inventário do jogador. A seleção é da tela: ela avisa o
  * servidor ({@code SelectFacePayload} → {@link #select}) e os slots de cartão passam a mostrar os
  * daquela face, por um {@link Container} que lê e grava direto no roteador. A sincronização vanilla
- * de slots leva o resultado ao cliente. Energia e químicos não têm cartões: os slots ficam inativos.
+ * de slots leva o resultado ao cliente. Só itens e fluidos têm cartões: nos outros tipos os slots ficam inativos.
  * Depois do inventário vem o slot do Upgrade de chunk loading ({@link #UPGRADE_SLOT}), que lê e grava
  * direto no roteador; o dono do upgrade é o jogador da tela. Em seguida, o slot do Upgrade de Alcance
  * ({@link #RANGE_SLOT}), à esquerda do outro no cabeçalho, que só aceita o upgrade se o raio do tier
@@ -64,7 +64,7 @@ import org.jetbrains.annotations.Nullable;
  * com a {@link RangeView} presente o snapshot é recapturado a cada {@link #SAMPLE_TICKS} ticks e só vai se
  * ficou diferente.
  */
-public class RouterMenu extends AbstractContainerMenu {
+public class RouterMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Faixa da prioridade aceita da tela; valores fora dela são limitados. */
     public static final int MIN_PRIORITY = -999;
     public static final int MAX_PRIORITY = 999;
@@ -198,24 +198,24 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Põe os slots no layout da tela (só no cliente, depois de redimensionar): cartões e inventário a
-     * partir de {@code rightX}, inventário com o topo em {@code inventoryY}, upgrade de chunk loading em
-     * {@code upgradeX} e o de alcance em {@code rangeX}. A posição do {@link Slot} é final: cada slot é
-     * trocado por um igual, no mesmo índice.
+     * Põe os slots no layout da tela (só no cliente, depois de redimensionar): os cartões a partir de
+     * ({@code cardX}, {@code cardY}), o inventário a partir de ({@code inventoryX}, {@code inventoryY}),
+     * o upgrade de chunk loading em {@code upgradeX} e o de alcance em {@code rangeX}. A posição do
+     * {@link Slot} é final: cada slot é trocado por um igual, no mesmo índice.
      */
-    public void placeSlots(int rightX, int upgradeX, int rangeX, int inventoryY) {
+    public void placeSlots(int cardX, int cardY, int inventoryX, int inventoryY, int upgradeX, int rangeX) {
         for (int i = 0; i < slots.size(); i++) {
             Slot old = slots.get(i);
             Slot moved;
             if (old instanceof CardSlot) {
-                moved = new CardSlot(old.container, old.getContainerSlot(), rightX + old.getContainerSlot() * 18, CARD_Y);
+                moved = new CardSlot(old.container, old.getContainerSlot(), cardX + old.getContainerSlot() * 18, cardY);
             } else if (old instanceof UpgradeSlot) {
                 moved = new UpgradeSlot(old.container, upgradeX, UPGRADE_Y);
             } else if (old instanceof RangeSlot) {
                 moved = new RangeSlot(old.container, rangeX, UPGRADE_Y);
             } else {
                 int c = old.getContainerSlot();
-                int sx = rightX + (c % 9) * 18;
+                int sx = inventoryX + (c % 9) * 18;
                 int sy = c < 9 ? inventoryY + 58 : inventoryY + (c / 9 - 1) * 18;
                 if (old.x == sx && old.y == sy) {
                     continue;
@@ -249,6 +249,21 @@ public class RouterMenu extends AbstractContainerMenu {
                         (containerId, inventory, p) -> new RouterMenu(containerId, inventory, router, snapshot, fresh),
                         title),
                 buf -> RouterSnapshot.STREAM_CODEC.encode(buf, snapshot));
+    }
+
+    @Override
+    public int containerId() {
+        return containerId;
+    }
+
+    @Override
+    public @Nullable RouterBlockEntity editedRouter() {
+        return router;
+    }
+
+    @Override
+    public boolean canEdit(ServerPlayer player) {
+        return stillValid(player);
     }
 
     /** O roteador; só existe no servidor. */
@@ -321,6 +336,7 @@ public class RouterMenu extends AbstractContainerMenu {
     }
 
     /** A referência ao alvo (servidor), para o filtro de face lembrar dele e a volta reabrir nele. */
+    @Override
     public EditTargetRef targetRef() {
         return targetRef;
     }
@@ -330,6 +346,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * que mudou de índice segue pela posição; um alvo que sumiu (ou sem o upgrade) volta para a presa.
      * Só no servidor.
      */
+    @Override
     public EditTarget validTarget() {
         if (router == null) {
             return target();
@@ -368,6 +385,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * deixou de existir e voltou para a presa: a ação é ignorada, porque a tela pensava editar outra
      * coisa. Só no servidor.
      */
+    @Override
     public @Nullable EditTarget actionTarget() {
         boolean wasRemote = !targetRef.target().attached();
         EditTarget target = validTarget();
@@ -379,6 +397,7 @@ public class RouterMenu extends AbstractContainerMenu {
      * ({@code pos}) ou o bloco do grupo ({@code block}). Um alvo remoto exige o Upgrade de Alcance
      * valendo. Só no servidor; devolve se trocou.
      */
+    @Override
     public boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
         if (router == null) {
             return false;

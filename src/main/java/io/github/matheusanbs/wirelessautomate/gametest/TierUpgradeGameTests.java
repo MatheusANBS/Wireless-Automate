@@ -630,7 +630,7 @@ public final class TierUpgradeGameTests {
 
     /**
      * Os textos do cartão com origem (recusa na action bar e tooltip) trazem o nome do tier e, no inglês, sem o
-     * artigo "a" na frente do nome (seis das sete origens começam com vogal).
+     * artigo "a" na frente do nome (cinco das sete origens começam com vogal).
      */
     @GameTest(template = "empty")
     public static void cardTexts(GameTestHelper helper) {

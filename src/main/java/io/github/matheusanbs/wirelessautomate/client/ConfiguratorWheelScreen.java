@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Hit;
 import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Ring;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
@@ -40,7 +41,7 @@ import org.lwjgl.glfw.GLFW;
  * Roda radial do Configurador (segurar a tecla {@link ConfiguratorWheelKeys#WHEEL}): o anel de dentro
  * escolhe o modo de colar, o de fora o tipo colado (Todos e os tipos carregados). Soltar a tecla
  * escolhe a fatia sob o mouse e fecha; clique esquerdo escolhe sem fechar; Esc fecha. Não pausa o jogo
- * nem escurece a tela inteira: só um disco translúcido atrás da roda. Visual do mockup aprovado: fatias
+ * nem escurece a tela inteira: só um disco translúcido atrás da roda. Fatias
  * na cor do painel com contorno de tinta, a atual de cada anel com contorno de destaque mais grosso,
  * a sob o mouse cresce 6 % e clareia; o centro mostra o nome e a descrição dela.
  */
@@ -149,7 +150,6 @@ public final class ConfiguratorWheelScreen extends Screen {
         return layout;
     }
 
-    /** A fatia do modo {@code mode}. */
     public Hit hitOf(PasteMode mode) {
         return new Hit(Ring.INNER, mode.ordinal());
     }
@@ -388,8 +388,13 @@ public final class ConfiguratorWheelScreen extends Screen {
         int border = current ? CURRENT_BORDER : BORDER;
         int segments = Math.max(12, (int) Math.ceil((a1 - a0) / (Math.PI / 48)));
         sector(buffer, matrix, r1, r2, a0, a1, side, current ? GuiPaint.ACCENT : GuiPaint.FG, segments);
-        sector(buffer, matrix, r1 + border, r2 - border, a0, a1, side + border, hot ? HOT_FILL : GuiPaint.PANEL,
+        sector(buffer, matrix, r1 + border, r2 - border, a0, a1, side + border, hot ? hotFill() : GuiPaint.PANEL,
                 segments);
+    }
+
+    /** Fundo da fatia sob o mouse: o tom salmão no claro; no escuro, o painel tingido com o destaque (o nome é claro). */
+    private static int hotFill() {
+        return GuiThemes.current() == GuiTheme.DARK ? GuiPaint.mix(GuiPaint.PANEL, GuiPaint.ACCENT, 0.3f) : HOT_FILL;
     }
 
     /**
@@ -562,7 +567,9 @@ public final class ConfiguratorWheelScreen extends Screen {
         y += GuiText.wrapCentered(g, font, title, 0, y, width, TITLE_LINES,
                 hot != null ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         if (desc != null) {
-            GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES, GuiPaint.TOOLTIP_MUTED);
+            // no escuro o miolo aceso é claro: a descrição vira o tom apagado escuro, que lê sobre ele
+            GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES,
+                    GuiThemes.current() == GuiTheme.DARK ? GuiPaint.DISABLED : GuiPaint.TOOLTIP_MUTED);
         }
     }
 

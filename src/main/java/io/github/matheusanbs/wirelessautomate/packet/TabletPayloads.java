@@ -21,10 +21,18 @@ public final class TabletPayloads {
                 TabletPayloads::onHeader);
         registrar.playToClient(TabletPagePayload.TYPE, TabletPagePayload.STREAM_CODEC,
                 TabletPayloads::onPage);
+        registrar.playToClient(TabletPanelPayload.TYPE, TabletPanelPayload.STREAM_CODEC,
+                TabletPayloads::onPanel);
+        registrar.playToServer(TabletSelectNodePayload.TYPE, TabletSelectNodePayload.STREAM_CODEC,
+                (payload, context) -> handleSelectNode(serverPlayer(context), payload));
+        registrar.playToServer(TabletTabPayload.TYPE, TabletTabPayload.STREAM_CODEC,
+                (payload, context) -> handleTab(serverPlayer(context), payload));
         registrar.playToServer(TabletQueryPayload.TYPE, TabletQueryPayload.STREAM_CODEC,
                 (payload, context) -> handleQuery(serverPlayer(context), payload));
         registrar.playToServer(TabletMoveNodesPayload.TYPE, TabletMoveNodesPayload.STREAM_CODEC,
                 (payload, context) -> handleMoveNodes(serverPlayer(context), payload));
+        registrar.playToServer(TabletProfilePayload.TYPE, TabletProfilePayload.STREAM_CODEC,
+                (payload, context) -> handleProfile(serverPlayer(context), payload));
         registrar.playToServer(TabletOpenNodePayload.TYPE, TabletOpenNodePayload.STREAM_CODEC,
                 (payload, context) -> handleOpenNode(serverPlayer(context), payload));
         registrar.playToServer(TabletActionPayload.TYPE, TabletActionPayload.STREAM_CODEC,
@@ -51,6 +59,13 @@ public final class TabletPayloads {
         }
     }
 
+    private static void onPanel(TabletPanelPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
+            menu.applyPanel(payload);
+        }
+    }
+
     /** O Tablet aberto com esse id, se ainda vale. */
     private static @Nullable TabletMenu menu(@Nullable ServerPlayer player, int containerId) {
         return player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == containerId
@@ -68,10 +83,32 @@ public final class TabletPayloads {
         return true;
     }
 
+    /** A aba do Tablet aberto, guardada para reabrir na mesma. */
+    public static boolean handleTab(@Nullable ServerPlayer player, TabletTabPayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu != null && menu.setTab(payload.tab());
+    }
+
     /** Devolve quantos nós mudaram de rede, ou -1 se recusou. */
     public static int handleMoveNodes(@Nullable ServerPlayer player, TabletMoveNodesPayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
         return menu == null ? -1 : menu.moveNodes(payload.nodes(), payload.resource(), payload.network());
+    }
+
+    /** Escolhe (ou, vazio, larga) o nó do painel; recusa um nó que o jogador não vê. */
+    public static boolean handleSelectNode(@Nullable ServerPlayer player, TabletSelectNodePayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu != null && menu.chooseNode(payload.node().orElse(null));
+    }
+
+    /**
+     * O perfil do Tablet: copiar, esquecer, colar e desfazer. Devolve quantos nós a ação atingiu (1 para
+     * copiar e esquecer), ou -1 se recusou.
+     */
+    public static int handleProfile(@Nullable ServerPlayer player, TabletProfilePayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null),
+                payload.machine().orElse(null), payload.keys());
     }
 
     public static boolean handleOpenNode(@Nullable ServerPlayer player, TabletOpenNodePayload payload) {

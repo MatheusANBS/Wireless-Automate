@@ -5,7 +5,7 @@ Contrato (o `gerar_texturas.py` importa este módulo):
 - `sprites()`: `block/<nome>` -> `Sprite` (texturas dos blocos; as animadas vêm de `animacao`, o vidro é
   `translucido=True`). Quem chama grava com `salvar`.
 - `modelos()`: grava `models/block/*.json`, `blockstates/*.json` e os modelos de item dos blocos, todos
-  gerados daqui (o `router_basic.json` deixou de ser um molde à mão).
+  gerados daqui.
 - `previas(sprites)`: prévias isométricas (nome, imagem) desenhadas a partir dos próprios elementos dos
   modelos, para a folha de sprites.
 

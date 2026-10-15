@@ -14,7 +14,7 @@ import net.minecraft.core.Direction;
  * {@code facing=up} sem giro, em que {@link #TOP} é para onde apontam os LEDs (sul): primeiro o
  * {@code spin} as gira em torno de Y no sentido horário visto de cima ({@link Direction#getClockWise()}),
  * {@code spin} vezes; depois aplica a mesma rotação do blockstate (a do para-raios: {@code up} sem
- * rotação, {@code down} x=180, laterais x=90 + y). Com {@code spin=0} o resultado é o de antes do giro.
+ * rotação, {@code down} x=180, laterais x=90 + y). Com {@code spin=0} só vale a rotação do blockstate.
  */
 public enum RelativeSide {
     /** A face onde o roteador está preso (igual ao {@code facing}). */

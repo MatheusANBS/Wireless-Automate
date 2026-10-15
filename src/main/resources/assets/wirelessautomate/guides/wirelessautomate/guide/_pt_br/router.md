@@ -58,23 +58,28 @@ o roteador.
 | Passo | Como |
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
-| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões Frente, Trás, Esquerda, Direita, Cima e Baixo (lados da máquina, abaixo). |
-| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
-| **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar) ou no **cubo desdobrado** do painel: as duas escolhas andam juntas, e a face sob o mouse se acende nos dois. |
+| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). Escolher um modo numa face sem rede, com uma [rede](networks.md) ativa, põe a face nela; o aviso na base do painel traz o botão **Desfazer**. |
+| **4. Ajustes (opcional)** | Prioridade e redstone ficam sempre à vista no painel. **Editar** abre o [filtro](filters.md) da face. |
 | **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
 
-## Lados da máquina
+## O painel e o cubo
 
-Os botões das faces falam dos lados da **máquina**, vistos de frente para ela: Frente, Trás,
-Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a frente (por exemplo
-**Frente: Sul**). Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
+O painel à direita é o mesmo que o [Tablet de Rede](network-tablet.md) mostra para um nó. No alto,
+o **cubo desdobrado** mostra as seis faces da máquina de uma vez: cada uma com a cor do modo e uma
+bolinha na cor da rede. Uma face sem modo tem a borda tracejada, e uma com modo e sem rede ganha um
+contorno coral e o convite **Escolha a rede desta face**. O olho marca a face onde o roteador está
+preso.
+
+Os nomes são os lados da **máquina**, vistos de frente para ela: Frente, Trás, Esquerda, Direita,
+Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
 **Frente = Norte**.
 
-| Na tela | O que mostra |
+| No painel | O que mostra |
 | --- | --- |
-| **Ponto em cima do botão** | A cor da rede daquela face (sem ponto: sem rede). |
+| **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 
@@ -91,7 +96,7 @@ Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a fr
 
 | Ajuste | Valores | Efeito |
 | --- | --- | --- |
-| **Prioridade** | −999 a 999 (padrão 0) | Destinos com prioridade maior recebem primeiro; empates se revezam. |
+| **Prioridade** | −999 a 999 (padrão 0) | Destinos com prioridade maior recebem primeiro; empates se revezam. Os botões − e + mudam de 1 em 1; com Shift, de 10 em 10. |
 | **Redstone: Ignorar** | Padrão | A face funciona sempre. |
 | **Redstone: Com sinal** | | A face só funciona com sinal de redstone no roteador. |
 | **Redstone: Sem sinal** | | A face só funciona sem sinal. |

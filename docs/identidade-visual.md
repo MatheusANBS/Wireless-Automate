@@ -148,4 +148,34 @@ Telas **claras**: porcelana com tinta de grafite, como um manual de instrumento.
 - **Barras** (orçamento, carga): trilho `porcelana.2`, preenchimento na cor do estado, sem brilho.
 - A alça de redimensionar e as bordas acesas usam coral.
 
+### Tema escuro
+
+O botão do cabeçalho (lua no claro, sol no escuro) troca todas as telas para o tema escuro, com a mesma hierarquia e as mesmas formas: só as cores mudam. O claro continua sendo o padrão e o desenho de referência; o escuro mantém o coral de ação e acende os tons de apoio. Paletas (ARGB; os tokens são os do `GuiPaint`, as cores do claro são as da seção acima):
+
+| Token do `GuiPaint` | Claro (hoje) | Escuro |
+| --- | --- | --- |
+| `PANEL` | `0xFFF2EBDD` | `0xFF26232B` |
+| `BEVEL_LIGHT` (botão, papel, linha escolhida) | `0xFFFFFBF3` | `0xFF312D37` |
+| `INSET` (áreas afundadas, slots) | `0xFFDDD3BF` | `0xFF1C1A20` |
+| `BEVEL_DARK` (linhas e sombra) | `0xFFBDB19A` | `0xFF4A4550` |
+| `ROW_HOVER` | `0xFFF8F3E8` | `0xFF3A3640` |
+| `FG`, `BUTTON_BORDER`, `SELECTED` | `0xFF2A2730` | `0xFFECE5D6` |
+| `MUTED` | `0xFF7A7366` | `0xFFA79F90` |
+| `DISABLED` | `0xFFB5AC9D` | `0xFF625C66` |
+| `TAB_IDLE` | `0xFF5A5660` | `0xFF9A9284` |
+| `ACCENT`, `BUTTON_HOVER_BORDER` | `0xFFF0603E` | `0xFFF26A48` |
+| `ACCENT_DEEP` | `0xFFC2442A` | `0xFFC2442A` |
+| `OK` | `0xFF2F9D5C` | `0xFF3DB56E` |
+| `WARN` | `0xFFD88A1A` | `0xFFE39A2E` |
+| `DANGER` | `0xFFD5453A` | `0xFFE55A4E` |
+| `PAUSED` | `0xFF6B6FD0` | `0xFF8A8EE8` |
+| `BRASS` | `0xFFB48E2E` | `0xFFD2AE4E` |
+| `RULE_TEXT` (novo; texto das regras no filtro) | `0xFF5A36B0` | `0xFFB79AF5` |
+
+Derivados, nos dois temas: `VIEW_PAPER = BEVEL_LIGHT`, `VIEW_GRID = INSET`, `VIEW_GRID_STRONG = BEVEL_DARK`, `LINE = BEVEL_DARK`, `ROW_SELECTED = BEVEL_LIGHT`, `BUTTON = BEVEL_LIGHT`, `SELECTED_TEXT = BEVEL_LIGHT`.
+
+Iguais nos dois temas: `TOOLTIP_MUTED` (`0xFFBDB19A`, as dicas são escuras), `DARK_TEXT` (`0xFF0F0E12`, texto sobre cor), `RING` (`0xFF1B1920`).
+
+Contraste mínimo (WCAG, contra `PANEL`), conferido por JUnit nos dois temas: `FG` ≥ 7 (também contra `BEVEL_LIGHT` e `INSET`); `MUTED` ≥ 3,5; `TAB_IDLE` e `RULE_TEXT` ≥ 4,5; `ACCENT`, `OK`, `WARN` e `DANGER` ≥ 2,2; e a ordem `FG` > `MUTED` > `DISABLED` > 1,5.
+
 Só o visual muda: posições, tamanhos, widgets, payloads e lógica ficam como estão.

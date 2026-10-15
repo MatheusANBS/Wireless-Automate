@@ -13,9 +13,9 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 /**
- * O bloco do Tanque de Source: o {@link StorageBlock} com o nível da coluna ({@link #FILL}, de 0 a 10)
- * a forma da jarra vinda do {@link StorageBlock} ({@link StorageShapes}, igual nos 11 níveis). O nível só muda quando o conteúdo muda de nível (ver
- * {@link StorageSourceTankBlockEntity#refreshFill}).
+ * O bloco do Tanque de Source: o {@link StorageBlock} com o nível da coluna ({@link #FILL}, de 0 a 10).
+ * A forma da jarra vem do {@link StorageBlock} ({@link StorageShapes}, igual nos 11 níveis). O nível só
+ * muda quando o conteúdo muda de nível (ver {@link StorageSourceTankBlockEntity#refreshFill}).
  */
 public class StorageSourceTankBlock extends StorageBlock {
     public static final MapCodec<StorageSourceTankBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(

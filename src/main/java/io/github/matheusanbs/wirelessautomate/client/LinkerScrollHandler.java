@@ -16,9 +16,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Shift + roda do mouse com o Vinculador na mão principal troca as abas que ele vincula pelos
- * atalhos (Todos, Itens, Fluidos, Energia e, com o Mekanism, Químicos; uma combinação marcada na tela
- * vai para Todos); com o Configurador, o tipo que ele cola (os mesmos atalhos). Só no jogo, sem tela aberta; o evento é cancelado para a roda não trocar o slot da
- * hotbar. Como na hotbar, rolar para baixo vai para o próximo. O servidor troca o tipo e mostra o
+ * atalhos (Todos e um por tipo carregado: Itens, Fluidos, Energia e, com os mods, Químicos e Source;
+ * uma combinação marcada na tela vai para Todos); com o Configurador, o tipo que ele cola (os mesmos
+ * atalhos). Só no jogo, sem tela aberta; o evento é cancelado para a roda não trocar o slot da hotbar. Como na hotbar, rolar para baixo vai para o próximo. O servidor troca o tipo e mostra o
  * novo na action bar.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)

@@ -100,6 +100,23 @@ public final class RouterPreset {
         router.batchChanges(() -> apply(router, only));
     }
 
+    /**
+     * Deixa as faces do roteador exatamente como neste preset: cada face volta ao padrão se o preset
+     * não a tem e leva a rede do preset, inclusive nenhuma (o {@link #applyTo} não tira rede). Serve ao
+     * desfazer, com um preset tirado do próprio roteador por {@link #copyOf}.
+     */
+    public void restoreTo(RouterBlockEntity router) {
+        router.batchChanges(() -> {
+            for (ResourceType type : TYPES) {
+                for (RelativeSide side : SIDES) {
+                    FaceConfig config = faces[type.ordinal()][side.ordinal()];
+                    router.setFace(type, side, config != null ? config : DEFAULT);
+                    router.setFaceNetwork(type, side, config != null ? config.network() : null);
+                }
+            }
+        });
+    }
+
     private void apply(RouterBlockEntity router, @Nullable ResourceType only) {
         for (ResourceType type : TYPES) {
             if (only != null && type != only) {

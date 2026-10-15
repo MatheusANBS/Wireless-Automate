@@ -1,6 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
+import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
+import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
+import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;

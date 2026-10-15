@@ -1,0 +1,164 @@
+package io.github.matheusanbs.wirelessautomate.client.router;
+
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
+import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Kind;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * A linha Editando do painel do nó, com o Upgrade de Alcance: a pílula do alvo de edição (a máquina
+ * presa, um grupo ou uma máquina), os botões Voltar a igual às outras e Desvincular de uma máquina, a
+ * dica do alvo, as linhas da lista que abre na pílula e o pedido de troca de alvo.
+ */
+final class TargetLine {
+    /** Uma linha da lista da linha Editando. */
+    record TargetRow(EditTarget target, Component label, @Nullable Component right, int rightColor,
+            boolean indent) {
+    }
+
+    private final PanelModel model;
+    private final PanelLayout layout;
+
+    TargetLine(PanelModel model, PanelLayout layout) {
+        this.model = model;
+        this.layout = layout;
+    }
+
+    private static Component tr(String key, Object... args) {
+        return PanelModel.tr(key, args);
+    }
+
+    private static Component panelTr(String key, Object... args) {
+        return PanelModel.panelTr(key, args);
+    }
+
+    // ------------------------------------------------------------------ desenho
+
+    /** A pílula do alvo e os botões da máquina; {@code open} é a lista do alvo aberta. */
+    void render(GuiGraphics g, Font font, int mx, int my, boolean open) {
+        GuiText.draw(g, font, panelTr("target"), layout.bodyX, layout.targetY + 2, layout.bodyW, GuiPaint.MUTED);
+        Hot pill = layout.hot(Kind.TARGET);
+        if (pill != null) {
+            RangeView.MachineView machine = model.targetMachine();
+            int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
+            PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
+                    pill.contains(mx, my) || open, model.readOnly() == null, border);
+        }
+        Hot revert = layout.hot(Kind.REVERT);
+        if (revert != null) {
+            clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my));
+        }
+        Hot unlink = layout.hot(Kind.UNLINK);
+        if (unlink != null) {
+            clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my));
+        }
+    }
+
+    /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
+    private void clippedButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered) {
+        boolean active = model.readOnly() == null;
+        int border = hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET, border);
+        int room = b.w() - 2 * PanelLayout.TARGET_PAD;
+        int textW = Math.min(font.width(text), room);
+        GuiText.draw(g, font, text, b.x() + PanelLayout.TARGET_PAD + (room - textW + 1) / 2, b.y() + (b.h() - 8) / 2,
+                room, active ? GuiPaint.FG : GuiPaint.DISABLED);
+    }
+
+    /** Dica da pílula: o alvo, quantas máquinas seguem o perfil e o que a lista faz. */
+    Component tooltip() {
+        RangeView.MachineView machine = model.targetMachine();
+        Component scope;
+        if (machine != null) {
+            Component state = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
+            scope = tr("range.scope.machine", RangeList.machineName(model.range(), model.snapshot().target().id()),
+                    state);
+        } else {
+            RangeView.GroupView group = model.targetGroup();
+            scope = group == null ? panelTr("target.attached")
+                    : tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(), group.count());
+        }
+        return scope.copy().append("\n").append(panelTr("target.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+    }
+
+    // ------------------------------------------------------------------ a lista do alvo
+
+    List<TargetRow> rows() {
+        List<TargetRow> rows = new ArrayList<>();
+        rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, panelTr("target.attached"), null, 0, false));
+        RangeView view = model.range();
+        for (RangeView.GroupView group : view.groups()) {
+            rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", RangeList.groupName(group)),
+                    Component.literal(Integer.toString(group.count())), GuiPaint.MUTED, false));
+            for (int i = 0; i < view.machines().size(); i++) {
+                RangeView.MachineView machine = view.machines().get(i);
+                if (machine.group() == group.id()) {
+                    rows.add(new TargetRow(EditTarget.machine(i), RangeList.machineName(view, i),
+                            machine.exception() ? panelTr("target.exception") : null, GuiPaint.WARN, true));
+                }
+            }
+        }
+        return rows;
+    }
+
+    @Nullable TargetRow currentRow() {
+        for (TargetRow row : rows()) {
+            if (row.target().equals(model.snapshot().target())) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    /** Largura pedida pela lista: a da pílula, ou a da linha mais comprida. */
+    int listWidth(Font font, int anchorW) {
+        int width = anchorW;
+        for (TargetRow row : rows()) {
+            int right = row.right() == null ? 0 : font.width(row.right()) + 6;
+            width = Math.max(width, font.width(row.label()) + right + (row.indent() ? 18 : 10));
+        }
+        return width;
+    }
+
+    void renderRow(GuiGraphics g, Font font, int x, int ry, int w, int index, boolean hovered) {
+        TargetRow row = rows().get(index);
+        if (hovered) {
+            g.fill(x + 1, ry, x + w - 1, ry + DropdownList.ROW, GuiPaint.ROW_SELECTED);
+        }
+        if (row.target().equals(model.snapshot().target())) {
+            g.fill(x + 1, ry, x + 2, ry + DropdownList.ROW, GuiPaint.ACCENT);
+        }
+        int textX = x + (row.indent() ? 14 : 6);
+        int rightW = 0;
+        if (row.right() != null) {
+            rightW = Math.min(font.width(row.right()), w / 2);
+            GuiText.draw(g, font, row.right(), x + w - 5 - rightW, ry + 2, rightW, row.rightColor());
+        }
+        GuiText.draw(g, font, row.label(), textX, ry + 2, x + w - 5 - rightW - (rightW > 0 ? 4 : 0) - textX, GuiPaint.FG);
+    }
+
+    /** O pedido ao servidor para editar {@code target}, ou {@code null} se o grupo ou a máquina sumiu. */
+    @Nullable CustomPacketPayload select(int containerId, EditTarget target) {
+        return switch (target.kind()) {
+            case ATTACHED -> SelectTargetPayload.attached(containerId);
+            case GROUP -> {
+                RangeView.GroupView group = model.range().group(target.id());
+                yield group == null ? null : SelectTargetPayload.group(containerId, group.id(), group.block());
+            }
+            case MACHINE -> {
+                RangeView.MachineView machine = model.range().machine(target.id());
+                yield machine == null ? null : SelectTargetPayload.machine(containerId, target.id(), machine.pos());
+            }
+        };
+    }
+}

@@ -6,7 +6,7 @@
     "resonance_core_elite_dentro": "wirelessautomate:block/resonance_core_elite_dentro",
     "resonance_core_elite_solto": "wirelessautomate:block/resonance_core_elite_solto",
     "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
-    "particle": "wirelessautomate:block/resonator_casing_solta"
+    "particle": "wirelessautomate:block/resonance_core_elite_solto"
   },
   "elements": [
     {

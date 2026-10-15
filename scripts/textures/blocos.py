@@ -1195,9 +1195,11 @@ def modelo_source_tank(t: str, fill: int) -> Modelo:
 
 # --- Ressonador: cubos inteiros escolhidos pelo blockstate ------------------------
 
-# As rotações do blockstate das peças e do Núcleo, pelo `facing` (o modelo olha para o norte).
+# As rotações do blockstate das peças e do Núcleo, pelo `facing` (o modelo olha para o norte). Em cima e
+# embaixo, o `y: 180` deixa a cima da textura no norte (topo) e no sul (chão), o quadro da tabela das faces:
+# o ponteiro do Sintonizador e as marcas do Núcleo de pé, como na prancha.
 ROTACOES_PECA = {"north": {}, "south": {"y": 180}, "east": {"y": 90}, "west": {"y": 270},
-                 "up": {"x": 270}, "down": {"x": 90}}
+                 "up": {"x": 270, "y": 180}, "down": {"x": 90, "y": 180}}
 LETRAS_POSICAO = "ncp"
 
 
@@ -1209,9 +1211,10 @@ def posicoes_carcaca() -> list[str]:
 def textura_carcaca(letras: str, face: str) -> str:
     """A textura de uma face de carcaça montada: só nas faces que apontam para fora da estrutura há moldura,
     nas bordas da textura em que o vizinho (pela tabela das faces) cai fora da caixa; as laterais com a borda
-    de baixo levam a listra coral. As outras faces ficam escondidas e levam o campo."""
+    de baixo levam a listra coral. As outras faces levam o forro da câmara (campo fora, forro dentro: as que
+    olham para a câmara aparecem pela janela; as que encostam em outra carcaça ficam escondidas)."""
     if not _fora(letras, _normal(face)):
-        return "resonator_casing_campo"
+        return "resonator_forro"
     bordas = {lado for lado, direcao in _direcoes_face(face).items() if _fora(letras, direcao)}
     chave = res_chave(bordas)
     if not chave:
@@ -1263,12 +1266,20 @@ def modelo_vidro_solto() -> Modelo:
 
 def modelo_peca(nome: str, frente: str, dentro: str, montado: bool) -> Modelo:
     """Uma peça ou o Núcleo olhando para o norte: a frente no norte, a vista de dentro no sul e, nas outras
-    quatro, o campo (montado) ou a carcaça solta."""
-    lado = "resonator_casing_campo" if montado else "resonator_casing_solta"
+    quatro, o forro (montado: como as faces da carcaça que não apontam para fora) ou a carcaça solta."""
+    lado = "resonator_forro" if montado else "resonator_casing_solta"
     faces: dict[str, tuple[str, list[float] | None]] = {f: (lado, None) for f in FACES6}
     faces["north"] = (frente, None)
     faces["south"] = (dentro, None)
-    return _cubo(nome + ("" if montado else "_loose"), faces, lado)
+    return _cubo(nome + ("" if montado else "_loose"), faces, frente)
+
+
+def girado_180(m: Modelo) -> Modelo:
+    """Só para a prévia da folha: o cubo girado 180° em y (norte ↔ sul, leste ↔ oeste), para a câmera da
+    prévia, que vê o sul, mostrar a frente da peça."""
+    troca = {"north": "south", "south": "north", "east": "west", "west": "east", "up": "up", "down": "down"}
+    faces = {troca[f]: (dados["texture"][1:], dados["uv"]) for f, dados in m.elementos[0]["faces"].items()}
+    return _cubo(m.nome, faces, m.particula, m.translucido)
 
 
 def construir_modelos_ressonador() -> dict[str, Modelo]:
@@ -1742,12 +1753,14 @@ def previas(spr: dict[str, Sprite], s: int = 8) -> list[tuple[str, Image.Image]]
     nomes += [f"storage_source_tank_{t}_6" for t in TIERS]
     nomes += [f"storage_source_tank_basic_{fill}" for fill in (0, 3, 10)]
     # O Ressonador: a câmera vê as faces de cima, leste e sul, então o canto `ppp`, a aresta `pcp` e o centro
-    # `cpc` mostram a moldura; as peças montadas mostram a vista de dentro (sul).
+    # `cpc` mostram a moldura; as peças e os Núcleos entram girados 180°, com a frente no sul.
     nomes += ["resonator_casing_loose", "resonator_casing_ppp", "resonator_casing_pcp", "resonator_casing_cpc",
               "resonator_glass_loose", "resonator_glass_south_0", "resonator_glass_up_15"]
-    nomes += [f"{nome}_loose" for nome in PECAS] + list(PECAS)
-    nomes += ["resonance_core_basic_loose"] + [f"resonance_core_{t}" for t in TIERS]
-    return [(nome, render(ms[nome], tex, s)) for nome in nomes]
+    pecas = [f"{nome}_loose" for nome in PECAS] + list(PECAS)
+    pecas += ["resonance_core_basic_loose"] + [f"resonance_core_{t}" for t in TIERS]
+    for nome in pecas:
+        ms[nome] = girado_180(ms[nome])
+    return [(nome, render(ms[nome], tex, s)) for nome in nomes + pecas]
 
 
 def previa_arquivo(spr: dict[str, Sprite] | None = None, destino: Path | None = None) -> Path:

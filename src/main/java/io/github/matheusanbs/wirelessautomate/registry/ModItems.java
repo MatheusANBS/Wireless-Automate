@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
@@ -49,6 +50,12 @@ public final class ModItems {
 
     public static final DeferredItem<RangeUpgradeItem> RANGE_UPGRADE = ITEMS.registerItem(
             "range_upgrade", RangeUpgradeItem::new, new Item.Properties().stacksTo(1));
+
+    /** Cristais do Ressonador de Sinal: o de Sinal (rende 1x) e o Lapidado (rende 2x e dura o dobro). */
+    public static final DeferredItem<SignalCrystalItem> SIGNAL_CRYSTAL = ITEMS.registerItem("signal_crystal",
+            props -> new SignalCrystalItem(false, props), new Item.Properties());
+    public static final DeferredItem<SignalCrystalItem> CUT_SIGNAL_CRYSTAL = ITEMS.registerItem("cut_signal_crystal",
+            props -> new SignalCrystalItem(true, props), new Item.Properties());
 
     /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);

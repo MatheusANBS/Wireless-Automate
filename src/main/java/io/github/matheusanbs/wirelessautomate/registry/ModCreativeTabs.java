@@ -53,6 +53,8 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.FILTER_CARD.get());
                         output.accept(ModItems.CHUNK_LOADER_UPGRADE.get());
                         output.accept(ModItems.RANGE_UPGRADE.get());
+                        output.accept(ModItems.SIGNAL_CRYSTAL.get());
+                        output.accept(ModItems.CUT_SIGNAL_CRYSTAL.get());
                         GuideBook.create().ifPresent(output::accept);
                     })
                     .build());

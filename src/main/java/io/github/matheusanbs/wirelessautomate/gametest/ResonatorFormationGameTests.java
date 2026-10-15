@@ -312,8 +312,12 @@ public final class ResonatorFormationGameTests {
 
     @GameTest(template = "empty", batch = "wirelessautomate_config")
     public static void configDoRessonadorTemOsPadroes(GameTestHelper helper) {
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.BASIC), 64L, "FE por cristal, Básico");
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), 134_217_728L, "FE por cristal, Ultimate");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.BASIC), 128L, "FE por cristal, Básico");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), 1_073_741_824L,
+                "FE por cristal, Ultimate");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.UNOBTAINIUM), 134_217_728L,
+                "FE por cristal, Unobtainium");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ELITE), 8_192L, "FE por cristal, Elite");
         helper.assertValueEqual(Config.crystalLifeTicks(false), 12_000L, "vida do Cristal de Sinal");
         helper.assertValueEqual(Config.crystalLifeTicks(true), 24_000L, "vida do Lapidado");
         helper.assertValueEqual(Config.rechargeTicks(), 600L, "recarga");

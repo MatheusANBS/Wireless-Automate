@@ -8,13 +8,18 @@ public final class CoreMath {
     private CoreMath() {
     }
 
-    /** FE por cristal padrão no tier de posição {@code tierOrdinal}: 64, e ×8 a cada degrau. */
+    /**
+     * FE por cristal padrão, pela posição do tier: os três primeiros acima da paridade com os geradores do mesmo
+     * ponto do pack, os do meio ×8 por degrau e os dois últimos acima de tudo o mais do pack; o roteador do mesmo
+     * tier dá conta da geração cheia em cada um.
+     */
+    private static final long[] DEFAULT_FE_PER_CRYSTAL = {
+        128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728L, 1_073_741_824L
+    };
+
+    /** FE por cristal padrão no tier de posição {@code tierOrdinal}; um tier além da tabela repete o último. */
     public static long defaultFePerCrystal(int tierOrdinal) {
-        long value = 64;
-        for (int i = 0; i < tierOrdinal; i++) {
-            value = mulSat(value, 8);
-        }
-        return value;
+        return DEFAULT_FE_PER_CRYSTAL[Math.max(0, Math.min(tierOrdinal, DEFAULT_FE_PER_CRYSTAL.length - 1))];
     }
 
     /** Câmaras de cristal: Básico 1 … Ultimate 8. */

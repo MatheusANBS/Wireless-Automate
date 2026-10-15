@@ -13,6 +13,8 @@
   "block.wirelessautomate.storage_chemical_tank.needs_mod": "Requires Mekanism",
   "block.wirelessautomate.storage_source_tank": "Wireless Source Tank",
   "block.wirelessautomate.storage_source_tank.needs_mod": "Requires Ars Nouveau",
+  "block.wirelessautomate.signal_quartz_ore": "Signal Quartz Ore",
+  "block.wirelessautomate.deepslate_signal_quartz_ore": "Deepslate Signal Quartz Ore",
   "item.wirelessautomate.configurator": "Configurator",
   "item.wirelessautomate.network_tablet": "Network Tablet",
   "item.wirelessautomate.linker": "Linker",

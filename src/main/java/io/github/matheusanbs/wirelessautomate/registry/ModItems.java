@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
 import java.util.Map;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -50,6 +51,10 @@ public final class ModItems {
 
     public static final DeferredItem<RangeUpgradeItem> RANGE_UPGRADE = ITEMS.registerItem(
             "range_upgrade", RangeUpgradeItem::new, new Item.Properties().stacksTo(1));
+
+    public static final DeferredItem<BlockItem> SIGNAL_QUARTZ_ORE = ITEMS.registerSimpleBlockItem(ModBlocks.SIGNAL_QUARTZ_ORE);
+    public static final DeferredItem<BlockItem> DEEPSLATE_SIGNAL_QUARTZ_ORE =
+            ITEMS.registerSimpleBlockItem(ModBlocks.DEEPSLATE_SIGNAL_QUARTZ_ORE);
 
     /** Cristais do Ressonador de Sinal: o de Sinal (rende 1x) e o Lapidado (rende 2x e dura o dobro). */
     public static final DeferredItem<SignalCrystalItem> SIGNAL_CRYSTAL = ITEMS.registerItem("signal_crystal",

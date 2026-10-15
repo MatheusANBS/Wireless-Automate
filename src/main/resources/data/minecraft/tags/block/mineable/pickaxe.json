@@ -5,6 +5,8 @@
     "wirelessautomate:storage_tank",
     "wirelessautomate:storage_battery",
     "wirelessautomate:storage_chemical_tank",
-    "wirelessautomate:storage_source_tank"
+    "wirelessautomate:storage_source_tank",
+    "wirelessautomate:signal_quartz_ore",
+    "wirelessautomate:deepslate_signal_quartz_ore"
   ]
 }

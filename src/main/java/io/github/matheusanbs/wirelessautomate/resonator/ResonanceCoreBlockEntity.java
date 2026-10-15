@@ -291,7 +291,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         lastProblem = problem;
     }
 
+    /** Só marca o chunk quando algo muda: a revalidação da carga, com a estrutura intacta, não grava à toa. */
     void setFormed(boolean formed, List<BlockPos> members) {
+        if (this.formed == formed && this.members.equals(members)) {
+            return;
+        }
         this.formed = formed;
         this.members = List.copyOf(members);
         setChanged();

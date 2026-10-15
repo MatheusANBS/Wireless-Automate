@@ -1,11 +1,20 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
@@ -103,6 +112,7 @@ final class E2eResonatorSteps {
                 + ResonatorProjection.isOn()));
         list.add(DevEndToEnd.wait("Ressonador montado", 10));
         list.add(capture("ressonador-montado"));
+        screenSteps(list, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             clear(player.serverLevel(), origin[0]);
@@ -113,6 +123,78 @@ final class E2eResonatorSteps {
         }), () -> Minecraft.getInstance().level.getBlockState(core(origin[0])).isAir()
                 && Minecraft.getInstance().player.position().distanceTo(back[0]) < 0.5,
                 () -> "jogador em " + Minecraft.getInstance().player.position()));
+    }
+
+    /**
+     * A tela do Núcleo montado (Elite, três câmaras): dois cristais e um Opaco, redstone, o dial pelo botão e o
+     * Sintonizador, fotografada no claro, no escuro e em pt_br.
+     */
+    private static void screenSteps(List<Step> list, BlockPos[] origin) {
+        list.add(new Step("Ressonador: cristais e redstone no Núcleo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]));
+            core.setStationForTest(98.0);
+            core.setDial(98.0);
+            core.insertCrystal(new ItemStack(ModItems.SIGNAL_CRYSTAL.get()));
+            ItemStack half = new ItemStack(ModItems.CUT_SIGNAL_CRYSTAL.get());
+            SignalCrystalItem.setCharge(half, CrystalCharge.FULL / 2);
+            core.insertCrystal(half);
+            ItemStack dull = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
+            SignalCrystalItem.setCharge(dull, 0);
+            core.insertCrystal(dull);
+            core.addRedstone(14);
+            return null;
+        }), () -> {
+            var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0]))).clientView();
+            return view.chambers().length == 3 && view.chambers()[0] != 0 && view.chambers()[2] != 0;
+        }, () -> "câmaras no cliente"));
+        list.add(new Step("Ressonador: abrir a tela", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
+                () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().received(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Ressonador: +0,05 pelo botão", STEP_TIMEOUT_MS, () -> {
+            ResonatorScreen screen = (ResonatorScreen) Minecraft.getInstance().screen;
+            int[] at = screen.dialPlusCenter();
+            click(screen, at[0], at[1]);
+        }, () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().state() != null
+                && Math.abs(screen.getMenu().state().dial() - 98.05) < 1e-6,
+                () -> "estado " + ((ResonatorScreen) Minecraft.getInstance().screen).getMenu().state()));
+        list.add(new Step("Ressonador: ligar o Sintonizador", STEP_TIMEOUT_MS, () -> {
+            ResonatorScreen screen = (ResonatorScreen) Minecraft.getInstance().screen;
+            int[] at = screen.modeAutoCenter();
+            click(screen, at[0], at[1]);
+        }, () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().state() != null
+                && screen.getMenu().state().auto(),
+                () -> "estado " + ((ResonatorScreen) Minecraft.getInstance().screen).getMenu().state()));
+        list.add(new Step("captura ressonador-tela", STEP_TIMEOUT_MS, () -> {
+            ResonatorScreen screen = (ResonatorScreen) Minecraft.getInstance().screen;
+            int[] at = screen.coreSlotCenter(2);
+            moveMouse(at[0], at[1]);
+        }, () -> {
+            if (stepTicks < 8) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "ressonador-tela");
+            return true;
+        }, () -> "ressonador-tela.png"));
+        list.add(clipCheck("ressonador-tela"));
+        list.add(E2eDarkSteps.themeClick("Ressonador: tema escuro", GuiTheme.DARK));
+        list.add(new Step("captura ressonador-tela-escuro", STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+            if (stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "ressonador-tela-escuro");
+            return true;
+        }, () -> "ressonador-tela-escuro.png"));
+        list.add(clipCheck("ressonador-tela-escuro"));
+        list.add(E2eDarkSteps.themeClick("Ressonador: tema claro", GuiTheme.LIGHT));
+        list.add(close("Ressonador: fechar a tela"));
+        list.add(language("pt_br"));
+        list.add(new Step("Ressonador: abrir em pt_br", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
+                () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().received(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(capture("ressonador-tela-pt"));
+        list.add(clipCheck("ressonador-tela-pt"));
+        list.add(close("Ressonador: fechar em pt_br"));
+        list.add(language("en_us"));
     }
 
     /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */
@@ -182,7 +264,8 @@ final class E2eResonatorSteps {
         return switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get().defaultBlockState();
             case GLASS -> ModBlocks.RESONATOR_GLASS.get().defaultBlockState();
-            case CORE -> ModBlocks.RESONANCE_CORE.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out);
+            case CORE -> ModBlocks.RESONANCE_CORE.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out)
+                    .setValue(RouterBlock.TIER, RouterTier.ELITE);
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out);
             case CRYSTAL_PORT -> ModBlocks.RESONATOR_CRYSTAL_PORT.get().defaultBlockState()
                     .setValue(ResonatorPartBlock.FACING, out);

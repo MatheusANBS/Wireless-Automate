@@ -97,13 +97,37 @@ public final class ResonatorLayout {
 
     /** Tenta cada caixa em que o Núcleo fica numa posição de face; a primeira sem erro monta, senão vale a de menos erros. */
     public static Result check(int cx, int cy, int cz, Probe probe) {
+        return search(cx, cy, cz, probe, null, null);
+    }
+
+    /**
+     * Como {@link #check(int, int, int, Probe)}, mas tenta primeiro a caixa com o Núcleo no centro da face
+     * {@code front} (a frente dele, a do {@link ResonatorBlueprint#origin}): numa estrutura montada e intacta a
+     * resposta sai nessa caixa, com uma leitura de 125 posições. Sem erro nela, monta; senão a busca segue como
+     * sempre, com a mesma regra de escolha (a caixa já lida não é lida de novo).
+     */
+    public static Result check(int cx, int cy, int cz, Face front, Probe probe) {
+        int[] origin = ResonatorBlueprint.origin(cx, cy, cz, front);
+        Box first = evaluate(cx, cy, cz, origin[0], origin[1], origin[2], probe, Integer.MAX_VALUE);
+        if (first.errors() == 0) {
+            return first.formed();
+        }
+        return search(cx, cy, cz, probe, origin, first);
+    }
+
+    /** A busca por todas as caixas; a de origem {@code known}, já lida, entra com o resultado {@code knownBox}. */
+    private static Result search(int cx, int cy, int cz, Probe probe, int[] known, Box knownBox) {
         Broken best = null;
         int bestErrors = Integer.MAX_VALUE;
         for (Face face : Face.values()) {
             for (int a = 1; a < LAST; a++) {
                 for (int b = 1; b < LAST; b++) {
                     int[] local = localCore(face, a, b);
-                    Box box = evaluate(cx, cy, cz, cx - local[0], cy - local[1], cz - local[2], probe, bestErrors);
+                    int ox = cx - local[0];
+                    int oy = cy - local[1];
+                    int oz = cz - local[2];
+                    Box box = known != null && known[0] == ox && known[1] == oy && known[2] == oz ? knownBox
+                            : evaluate(cx, cy, cz, ox, oy, oz, probe, bestErrors);
                     if (box == null) {
                         continue;
                     }

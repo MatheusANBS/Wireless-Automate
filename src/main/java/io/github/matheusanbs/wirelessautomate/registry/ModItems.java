@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -61,6 +62,17 @@ public final class ModItems {
             props -> new SignalCrystalItem(false, props), new Item.Properties());
     public static final DeferredItem<SignalCrystalItem> CUT_SIGNAL_CRYSTAL = ITEMS.registerItem("cut_signal_crystal",
             props -> new SignalCrystalItem(true, props), new Item.Properties());
+
+    /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */
+    public static final DeferredItem<BlockItem> RESONATOR_CASING = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CASING);
+    public static final DeferredItem<BlockItem> RESONATOR_GLASS = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_GLASS);
+    public static final DeferredItem<ResonanceCoreItem> RESONANCE_CORE = ITEMS.register("resonance_core",
+            () -> new ResonanceCoreItem(ModBlocks.RESONANCE_CORE.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> RESONATOR_ENERGY_PORT =
+            ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_ENERGY_PORT);
+    public static final DeferredItem<BlockItem> RESONATOR_CRYSTAL_PORT =
+            ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CRYSTAL_PORT);
+    public static final DeferredItem<BlockItem> RESONATOR_TUNER = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_TUNER);
 
     /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);

@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -32,6 +33,12 @@ public final class Config {
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
+
+    public static final ModConfigSpec.LongValue CRYSTAL_LIFE_TICKS;
+    public static final ModConfigSpec.LongValue CUT_CRYSTAL_LIFE_TICKS;
+    public static final ModConfigSpec.LongValue RECHARGE_TICKS;
+    /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
+    public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
     /** Comentário de cada chave de vazão (a ordem no arquivo vem do enum {@link ResourceType}, não deste mapa). */
     private static final Map<String, String> RATE_COMMENTS = Map.of(
@@ -136,6 +143,25 @@ public final class Config {
         }
         builder.pop();
 
+        builder.push("resonator");
+        CRYSTAL_LIFE_TICKS = builder
+                .comment("Ticks de geração de um Cristal de Sinal cheio, no Núcleo de Ressonância, até ficar Opaco.")
+                .defineInRange("crystalLifeTicks", 12_000L, 1L, Long.MAX_VALUE);
+        CUT_CRYSTAL_LIFE_TICKS = builder
+                .comment("Ticks de geração de um Cristal Lapidado cheio, até ficar Opaco.")
+                .defineInRange("cutCrystalLifeTicks", 24_000L, 1L, Long.MAX_VALUE);
+        RECHARGE_TICKS = builder
+                .comment("Ticks que o Núcleo leva para recarregar um cristal Opaco (gasta redstone).")
+                .defineInRange("rechargeTicks", 600L, 1L, Long.MAX_VALUE);
+        for (RouterTier tier : RouterTier.values()) {
+            builder.push(tier.getSerializedName());
+            RESONATOR_FE_PER_CRYSTAL.put(tier, builder
+                    .comment("FE por tick de um cristal de rendimento 1 (o Lapidado rende 2) a 100% de sintonia.")
+                    .defineInRange("fePerCrystal", CoreMath.defaultFePerCrystal(tier.ordinal()), 0L, Long.MAX_VALUE));
+            builder.pop();
+        }
+        builder.pop();
+
         builder.push("guide");
         GIVE_GUIDE_ON_FIRST_JOIN = builder
                 .comment("Entrega o livro-guia (precisa do GuideME) a cada jogador no primeiro login.")
@@ -204,6 +230,21 @@ public final class Config {
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
+    }
+
+    /** FE por tick de um cristal de rendimento 1 no tier do Núcleo de Ressonância. */
+    public static long resonatorFePerCrystal(RouterTier tier) {
+        return read(RESONATOR_FE_PER_CRYSTAL.get(tier));
+    }
+
+    /** Ticks de geração de um cristal cheio, até ficar Opaco (o Lapidado, {@code cut}, dura o dobro por padrão). */
+    public static long crystalLifeTicks(boolean cut) {
+        return read(cut ? CUT_CRYSTAL_LIFE_TICKS : CRYSTAL_LIFE_TICKS);
+    }
+
+    /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */
+    public static long rechargeTicks() {
+        return read(RECHARGE_TICKS);
     }
 
     /** Capacidade do armazenamento no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */

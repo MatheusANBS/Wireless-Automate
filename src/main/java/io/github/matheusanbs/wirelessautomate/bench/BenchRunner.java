@@ -198,6 +198,14 @@ public final class BenchRunner {
         for (BenchRun run : finished) {
             table.append(BenchRun.summaryLine(run.job, run.reps)).append('\n');
         }
+        if (finished.stream().anyMatch(run -> !run.resonatorReps.isEmpty())) {
+            table.append("\n### Ressonador de Sinal\n\n").append(BenchResonatorStats.SUMMARY_HEADER).append('\n');
+            for (BenchRun run : finished) {
+                if (!run.resonatorReps.isEmpty()) {
+                    table.append(BenchResonatorStats.summaryLine(run.job, run.reps, run.resonatorReps)).append('\n');
+                }
+            }
+        }
         emit(table.toString());
         finished.clear();
         if (auto) {
@@ -243,6 +251,11 @@ public final class BenchRunner {
             if (BenchCapabilities.enabled()) {
                 all.add(new BenchRun.Job(BenchScenario.MIXED, 60, 1, BenchStorage.VANILLA, BenchTransport.LN, true));
             }
+        }
+        // O Ressonador também: o lote, a varredura e a revalidação (o evento) começam interpretados.
+        if (jobs.stream().anyMatch(job -> job.scenario().resonator())) {
+            all.add(new BenchRun.Job(BenchScenario.RESONATOR_GEN, 100, 1, BenchStorage.VANILLA, BenchTransport.WA, true));
+            all.add(new BenchRun.Job(BenchScenario.RESONATOR_EVENT, 50, 1, BenchStorage.VANILLA, BenchTransport.WA, true));
         }
         all.addAll(jobs);
         emptyTicksLeft = EMPTY_TICKS;

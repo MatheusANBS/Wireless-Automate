@@ -94,6 +94,8 @@ final class BenchRun {
     private final int warmupTicks;
     private final Consumer<String> out;
     final List<Rep> reps = new ArrayList<>();
+    /** As repetições dos cenários do Ressonador ({@link BenchScenario#resonator()}); vazia nos outros. */
+    final List<BenchResonatorStats.Rep> resonatorReps = new ArrayList<>();
 
     private BenchScene scene;
     private int rep;
@@ -107,6 +109,7 @@ final class BenchRun {
     private final Samples afterTouch = new Samples();
     /** Sincronização do Tablet aberto em cada tick medido ({@link BenchScenario#TABLET}), fora do laço do mod. */
     private final Samples tablet = new Samples();
+    private final BenchResonatorStats resonator = new BenchResonatorStats();
     private long tabletNanos;
     private long limitNanos;
     private long attachModNanos;
@@ -158,6 +161,7 @@ final class BenchRun {
         mod.clear();
         afterTouch.clear();
         tablet.clear();
+        resonator.clear();
         tabletNanos = 0;
         settled = 0;
         enter(Phase.SETTLE);
@@ -205,19 +209,25 @@ final class BenchRun {
             case ATTACHED -> {
                 // O tick logo depois de pôr a rede: a primeira montagem das rotas.
                 attachModNanos = modNanos;
+                if (job.scenario().resonator()) {
+                    resonator.warmup(tickNanos);
+                }
                 if (job.scenario() == BenchScenario.TABLET) {
                     scene.openTablet();
                 }
                 enter(Phase.WARMUP);
-                scene.toggleClocks();
+                scene.step();
                 maybeRecycle();
             }
             case WARMUP -> {
+                if (job.scenario().resonator()) {
+                    resonator.warmup(tickNanos);
+                }
                 if (phaseTick >= warmupTicks) {
                     beginMeasure();
                     enter(Phase.MEASURE);
                 }
-                scene.toggleClocks();
+                scene.step();
                 maybeRecycle();
             }
             case MEASURE -> {
@@ -233,6 +243,10 @@ final class BenchRun {
                         opsSeconds++;
                     }
                 }
+                if (job.scenario().resonator()) {
+                    resonator.measure(phaseTick, tickNanos);
+                    resonatorEvent();
+                }
                 if (job.scenario() == BenchScenario.REBUILD) {
                     if (phaseTick % 20 == 11) {
                         afterTouch.add(modNanos);
@@ -245,7 +259,7 @@ final class BenchRun {
                     scene.teardown();
                     enter(Phase.PAUSE);
                 } else {
-                    scene.toggleClocks();
+                    scene.step();
                     maybeRecycle();
                 }
             }
@@ -260,6 +274,21 @@ final class BenchRun {
                     }
                 }
             }
+        }
+    }
+
+    /** O evento do Ressonador: os cantos saem no meio da medição e voltam {@link BenchResonatorStats#RESTORE_AFTER} ticks depois. */
+    private void resonatorEvent() {
+        BenchResonators resonators = scene.resonators();
+        if (job.scenario() != BenchScenario.RESONATOR_EVENT || resonators == null) {
+            return;
+        }
+        int breakAt = measureTicks / 2;
+        if (phaseTick == breakAt) {
+            resonators.breakCorners();
+            resonator.broke(phaseTick);
+        } else if (phaseTick == breakAt + BenchResonatorStats.RESTORE_AFTER) {
+            resonators.restoreCorners();
         }
     }
 
@@ -355,6 +384,12 @@ final class BenchRun {
                 neutralMoved, neutralSources);
         reps.add(result);
         out.accept(repLine(job, result));
+        BenchResonators resonators = scene.resonators();
+        if (resonators != null) {
+            BenchResonatorStats.Rep resonatorRep = resonator.finish(rep + 1, resonators);
+            resonatorReps.add(resonatorRep);
+            out.accept(BenchResonatorStats.repLine(resonatorRep));
+        }
         if (ModList.get().isLoaded("spark")) {
             server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "spark tps");
         }

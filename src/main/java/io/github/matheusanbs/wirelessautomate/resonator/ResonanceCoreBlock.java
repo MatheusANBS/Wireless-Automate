@@ -5,8 +5,11 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -56,5 +59,33 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
         return ResonanceCoreItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
+    }
+
+    /** Revalida a estrutura: agendado pelo {@code onLoad} do Núcleo e pelas mudanças nos blocos do Ressonador. */
+    @Override
+    protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (level.getBlockEntity(pos) instanceof ResonanceCoreBlockEntity core) {
+            ResonatorFormation.revalidate(level, core);
+        }
+    }
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        ResonatorManager.blockChanged(level, pos, oldState, state);
+    }
+
+    /** Quebrar o Núcleo desmonta na hora: o block entity, que sabe quais são os membros, vai embora junto. */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level instanceof ServerLevel server
+                && server.getBlockEntity(pos) instanceof ResonanceCoreBlockEntity core) {
+            if (core.formed()) {
+                ResonatorFormation.disassemble(server, core);
+            }
+            ResonatorManager.remove(core);
+        }
+        ResonatorManager.blockChanged(level, pos, state, newState);
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

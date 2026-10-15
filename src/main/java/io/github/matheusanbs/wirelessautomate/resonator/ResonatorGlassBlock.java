@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
 import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,5 +30,17 @@ public class ResonatorGlassBlock extends TransparentBlock {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACE, CONNECTIONS);
+    }
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        ResonatorManager.blockChanged(level, pos, oldState, state);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        ResonatorManager.blockChanged(level, pos, state, newState);
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

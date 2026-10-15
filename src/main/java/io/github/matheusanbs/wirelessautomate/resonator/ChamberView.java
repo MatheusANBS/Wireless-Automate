@@ -14,17 +14,39 @@ import net.minecraft.world.item.ItemStack;
  * @param chambers uma posição por câmara do tier: {@code 0} vazia, {@code 1} Cristal de Sinal, {@code 2} Lapidado,
  *     {@code 3} Cristal Opaco, {@code 4} Lapidado Opaco
  * @param rechargeStart o tempo de jogo em que a recarga em curso começou, ou -1 sem recarga
+ * @param rechargeTicks a duração da recarga, pelo menos 1
  * @param formedAt o {@link ResonanceCoreBlockEntity#formedAt()}: -1 nunca montou, 0 já montado de antes
  * @param origin o canto mínimo da caixa (x, y, z)
  */
 public record ChamberView(byte[] chambers, int band, boolean tuned, long rechargeStart, int rechargeTicks,
         long formedAt, int[] origin) {
-    public static final ChamberView EMPTY = new ChamberView(new byte[0], 0, false, -1, 0, -1, new int[3]);
+    /** A duração padrão da recarga, para quem dividir por ela nunca ver 0. */
+    private static final int DEFAULT_RECHARGE_TICKS = (int) Math.min(Config.RECHARGE_TICKS.getDefault(),
+            Integer.MAX_VALUE);
+    public static final ChamberView EMPTY = new ChamberView(new byte[0], 0, false, -1, DEFAULT_RECHARGE_TICKS, -1,
+            new int[3]);
 
     private static final byte EMPTY_CHAMBER = 0;
     private static final byte SIGNAL = 1;
     private static final byte CUT = 2;
     private static final byte DULL_OFFSET = 2;
+
+    /** Os arrays são copiados na entrada e na saída: uma view nunca muda depois de criada. */
+    public ChamberView {
+        chambers = chambers.clone();
+        origin = origin.clone();
+        rechargeTicks = Math.max(1, rechargeTicks);
+    }
+
+    @Override
+    public byte[] chambers() {
+        return chambers.clone();
+    }
+
+    @Override
+    public int[] origin() {
+        return origin.clone();
+    }
 
     public static ChamberView of(ResonanceCoreBlockEntity core, long gameTime) {
         int count = core.chambers();
@@ -40,7 +62,9 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
                 chambers[i] = EMPTY_CHAMBER;
             }
         }
-        long rechargeStart = anyDull && core.redstone() > 0 ? gameTime - core.rechargeProgress() : -1;
+        // Fixado quando a recarga começa: o progresso só anda no lote, o tempo a cada tick.
+        long rechargeStart = core.sync.rechargeStart(anyDull && core.redstone() > 0, core.rechargeProgress(),
+                gameTime);
         return new ChamberView(chambers, TuneSignal.band(core.efficiency()),
                 TuneSignal.tuned(core.station(), core.dial()), rechargeStart,
                 (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(),

@@ -17,6 +17,7 @@ compartilhado e só o que leva a lente ou a etiqueta existe por tier.
 from __future__ import annotations
 
 import math
+import random
 import sys
 from pathlib import Path
 
@@ -370,6 +371,48 @@ def tex_source_tank(tier: str) -> Image.Image:
     return img
 
 
+# ---------------------------------------------------------------------------
+# Minério de Quartzo de Sinal (pedra e ardósia): cristais de Sinal que cintilam um a um
+# ---------------------------------------------------------------------------
+
+PEDRA = ["#7F7F7F", "#747474", "#8A8A8A", "#6E6E6E", "#7A7A7A"]
+ARDOSIA = ["#4D4D53", "#43434A", "#58585E", "#3C3C42", "#505056"]
+MINERIO_CRISTAIS = [["..A.", ".Aab", ".abc", "bbcd"], [".A.", "Aab", "bcd"], ["A..", "ab.", "bc."], [".A.", "Aab", "bcd"]]
+MINERIO_POS = [(2, 3), (9, 8), (11, 2), (4, 11)]
+SINAL_MINERIO = {"A": "#FFF0EA", "a": "#FFC9B8", "b": "#F2917A", "c": "#C9604B", "d": "#8A3A2C"}
+MINERIOS = ("signal_quartz_ore", "deepslate_signal_quartz_ore")
+
+
+def tex_minerio(tons: list[str], semente: int) -> Sprite:
+    """Fundo de pedra sorteado pela semente com quatro aglomerados de cristal; cada um cintila no seu momento (12 × 4 ticks)."""
+    rnd = random.Random(semente)
+    fundo = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            fundo.putpixel((x, y), cor(rnd.choice(tons)))
+    s = {ch: cor(hexa) for ch, hexa in SINAL_MINERIO.items()}
+    branco = cor("porcelana.4")
+
+    def put(img: Image.Image, x: int, y: int, c: Cor) -> None:
+        if 0 <= x < 16 and 0 <= y < 16:
+            img.putpixel((x, y), c)
+
+    q = []
+    for k in range(12):
+        img = fundo.copy()
+        for i, ((gx, gy), forma) in enumerate(zip(MINERIO_POS, MINERIO_CRISTAIS)):
+            for dy, linha in enumerate(forma):
+                for dx, ch in enumerate(linha):
+                    if ch != ".":
+                        put(img, gx + dx, gy + dy, s[ch])
+            put(img, gx + len(forma[0]) - 1, gy + len(forma), cor("grafite.2"))
+            if k == i * 3:
+                put(img, gx + forma[0].find("A"), gy, branco)
+                put(img, gx + forma[0].find("A"), gy - 1, cor("#FFC9B8"))
+        q.append(img)
+    return animacao(q, 4)
+
+
 def sprites() -> dict[str, Sprite]:
     s: dict[str, Sprite] = {
         "block/porcelana": parado(tex_porcelana()),
@@ -393,6 +436,8 @@ def sprites() -> dict[str, Sprite]:
         s[f"block/storage_battery_{t}"] = parado(tex_battery(t))
         s[f"block/storage_chemical_tank_{t}"] = parado(tex_chemical(t), translucido=True)
         s[f"block/storage_source_tank_{t}"] = parado(tex_source_tank(t))
+    s["block/signal_quartz_ore"] = tex_minerio(PEDRA, 3)
+    s["block/deepslate_signal_quartz_ore"] = tex_minerio(ARDOSIA, 7)
     return s
 
 
@@ -1028,6 +1073,12 @@ def modelos(texturas: set[str] | None = None) -> None:
     grava_json(MODELOS / "models/item/storage_source_tank.json", {
         "parent": f"{NS}:block/storage_source_tank_basic_6",
         "overrides": _sobreposicoes(f"{NS}:block/storage_source_tank", "_6")})
+    for nome in MINERIOS:
+        grava_json(pasta / f"{nome}.json", {"parent": "minecraft:block/cube_all",
+                                            "textures": {"all": f"{NS}:block/{nome}"}})
+        gerados.add(nome)
+        grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": {"": {"model": f"{NS}:block/{nome}"}}})
+        grava_json(MODELOS / f"models/item/{nome}.json", {"parent": f"{NS}:block/{nome}"})
     # Tudo em models/block é gerado: apaga o que deixou de existir.
     for antigo in pasta.glob("*.json"):
         if antigo.stem not in gerados:

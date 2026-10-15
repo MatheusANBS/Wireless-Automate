@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.GlassFace;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorGlassBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -166,6 +168,20 @@ public final class ResonatorFormationGameTests {
                     "a fila de Carcaças andou");
             helper.assertTrue(helper.getBlockState(edge.south(5)).isAir(), "uma Carcaça saiu da caixa");
             assertFormed(helper, core, true);
+        }).thenSucceed();
+    }
+
+    /** Revalidar a estrutura intacta (como na carga do chunk) não marca o chunk para gravar. */
+    @GameTest(template = "empty7")
+    public static void revalidarIntactoNaoSujaOChunk(GameTestHelper helper) {
+        BlockPos origin = new BlockPos(1, 1, 1);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
+            LevelChunk chunk = helper.getLevel().getChunkAt(helper.absolutePos(core));
+            chunk.setUnsaved(false);
+            ResonatorFormation.revalidate(helper.getLevel(), ResonatorTestSupport.core(helper, core));
+            assertFormed(helper, core, true);
+            helper.assertFalse(chunk.isUnsaved(), "a revalidação sem mudança marcou o chunk");
         }).thenSucceed();
     }
 

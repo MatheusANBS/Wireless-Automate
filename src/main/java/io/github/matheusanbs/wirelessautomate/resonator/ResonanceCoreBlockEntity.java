@@ -95,6 +95,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide) {
             ResonatorManager.add(this);
             // A estrutura pode ter mudado com o chunk descarregado: confere no tick seguinte, fora da carga do chunk.
+            // O tick agendado só roda com os chunks vizinhos carregados, então as posições a até 4 blocos estão
+            // todas lá e nenhuma vira OTHER por estar descarregada (o que desmontaria à toa).
             level.scheduleTick(worldPosition, getBlockState().getBlock(), 1);
         }
     }
@@ -116,7 +118,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide) {
             ResonatorManager.remove(this);
             for (BlockPos port : ports) {
-                ResonatorPorts.unregister(level.dimension(), port);
+                ResonatorPorts.unregister(level.dimension(), port, worldPosition);
             }
             ports = List.of();
         }

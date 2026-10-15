@@ -133,10 +133,21 @@ public final class ResonatorFormation {
                     .setValue(ResonatorGlassBlock.CONNECTIONS, member.glassBits());
         }
         if (block instanceof ResonatorPartBlock || block instanceof ResonanceCoreBlock) {
-            return state.setValue(ResonatorPartBlock.FACING, Direction.values()[member.face().ordinal()])
+            return state.setValue(ResonatorPartBlock.FACING, outward(member.face()))
                     .setValue(ResonatorPartBlock.FORMED, true);
         }
         return state;
+    }
+
+    private static Direction outward(ResonatorLayout.Face face) {
+        return switch (face) {
+            case DOWN -> Direction.DOWN;
+            case UP -> Direction.UP;
+            case NORTH -> Direction.NORTH;
+            case SOUTH -> Direction.SOUTH;
+            case WEST -> Direction.WEST;
+            case EAST -> Direction.EAST;
+        };
     }
 
     /** Volta o bloco em {@code pos} ao estado solto, se ainda for do Ressonador e estiver carregado. */
@@ -164,7 +175,7 @@ public final class ResonatorFormation {
         Set<BlockPos> next = new HashSet<>(ports);
         for (BlockPos old : core.ports()) {
             if (!next.contains(old)) {
-                ResonatorPorts.unregister(level.dimension(), old);
+                ResonatorPorts.unregister(level.dimension(), old, core.getBlockPos());
                 level.invalidateCapabilities(old);
             }
         }

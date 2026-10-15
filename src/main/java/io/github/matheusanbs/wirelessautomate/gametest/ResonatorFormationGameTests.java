@@ -103,8 +103,49 @@ public final class ResonatorFormationGameTests {
                     assertPart(helper, origin.offset(2, 4, 2), Direction.UP, false);
                     assertPart(helper, core, Direction.EAST, false);
                     helper.assertTrue(ResonatorPorts.core(helper.getLevel(), helper.absolutePos(energy)) == null,
-                            "a Porta de Energia sai do índice");
+                            "a Porta de Energia não acha mais o Núcleo");
+                    helper.assertTrue(ResonatorPorts.registered(helper.getLevel().dimension(), helper.absolutePos(energy))
+                            == null, "a Porta de Energia sai do índice");
                 }).thenSucceed();
+    }
+
+    @GameTest(template = "empty7")
+    public static void quebrarONucleoDesmonta(GameTestHelper helper) {
+        BlockPos origin = new BlockPos(1, 1, 1);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos energy = origin.offset(0, 2, 2);
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
+            helper.getLevel().destroyBlock(helper.absolutePos(core), false);
+            assertCasing(helper, origin.offset(2, 0, 0), CasingPosition.LOOSE);
+            assertCasing(helper, origin.offset(1, 4, 1), CasingPosition.LOOSE);
+            BlockState glass = helper.getBlockState(origin.offset(2, 2, 4));
+            helper.assertTrue(glass.getValue(ResonatorGlassBlock.FACE) == GlassFace.LOOSE, "vidro solto");
+            assertPart(helper, energy, Direction.WEST, false);
+            assertPart(helper, origin.offset(2, 2, 0), Direction.NORTH, false);
+            assertPart(helper, origin.offset(2, 4, 2), Direction.UP, false);
+            helper.assertTrue(ResonatorPorts.registered(helper.getLevel().dimension(), helper.absolutePos(energy)) == null,
+                    "a Porta de Energia sai do índice");
+        }).thenSucceed();
+    }
+
+    /** Parede dividida: o Núcleo que soltou a Porta não tira o registro que outro Núcleo fez depois. */
+    @GameTest(template = "empty")
+    public static void unregisterNaoTiraAPortaDeOutroNucleo(GameTestHelper helper) {
+        var dimension = helper.getLevel().dimension();
+        BlockPos port = helper.absolutePos(new BlockPos(1, 1, 1));
+        BlockPos first = helper.absolutePos(new BlockPos(0, 1, 1));
+        BlockPos second = helper.absolutePos(new BlockPos(2, 1, 1));
+        try {
+            ResonatorPorts.register(dimension, port, first);
+            ResonatorPorts.register(dimension, port, second);
+            ResonatorPorts.unregister(dimension, port, first);
+            helper.assertTrue(second.equals(ResonatorPorts.registered(dimension, port)), "a Porta continua do segundo Núcleo");
+            ResonatorPorts.unregister(dimension, port, second);
+            helper.assertTrue(ResonatorPorts.registered(dimension, port) == null, "o dono tira a Porta");
+        } finally {
+            ResonatorPorts.unregister(dimension, port, second);
+        }
+        helper.succeed();
     }
 
     @GameTest(template = "empty7")
@@ -112,12 +153,17 @@ public final class ResonatorFormationGameTests {
         BlockPos origin = new BlockPos(1, 1, 1);
         BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
         BlockPos edge = origin.offset(2, 0, 0);
-        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true))
-                .thenExecute(() -> helper.getLevel().destroyBlock(helper.absolutePos(edge), false))
-                .thenWaitUntil(() -> assertFormed(helper, core, false))
+        double[] station = new double[1];
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
+            station[0] = ResonatorTestSupport.core(helper, core).station();
+            helper.getLevel().destroyBlock(helper.absolutePos(edge), false);
+        }).thenWaitUntil(() -> assertFormed(helper, core, false))
                 .thenExecute(() -> helper.setBlock(edge, ModBlocks.RESONATOR_CASING.get()))
-                .thenWaitUntil(() -> assertFormed(helper, core, true))
-                .thenExecute(() -> assertCasing(helper, edge, CasingPosition.CNN)).thenSucceed();
+                .thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
+                    assertCasing(helper, edge, CasingPosition.CNN);
+                    helper.assertValueEqual(ResonatorTestSupport.core(helper, core).station(), station[0],
+                            "remontar mantém a estação");
+                }).thenSucceed();
     }
 
     @GameTest(template = "empty7")

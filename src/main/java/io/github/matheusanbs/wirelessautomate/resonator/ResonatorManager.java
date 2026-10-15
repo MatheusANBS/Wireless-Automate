@@ -32,7 +32,9 @@ public final class ResonatorManager {
     /**
      * Um bloco do Ressonador entrou ou saiu em {@code pos}: os Núcleos carregados que podem usá-lo revalidam no
      * tick seguinte, pelo tick agendado do bloco do Núcleo. Agendar junta as mudanças do mesmo tick (uma explosão
-     * revalida uma vez) e não grava estados dentro do {@code setBlock} que avisou.
+     * revalida uma vez) e não grava estados dentro do {@code setBlock} que avisou. E o tick agendado só roda com os
+     * chunks vizinhos do Núcleo carregados: as posições a até 4 blocos estão todas lá, sem desmontagem falsa por
+     * uma posição descarregada.
      */
     public static void structureChanged(ServerLevel level, BlockPos pos) {
         for (ResonanceCoreBlockEntity core : CORES) {

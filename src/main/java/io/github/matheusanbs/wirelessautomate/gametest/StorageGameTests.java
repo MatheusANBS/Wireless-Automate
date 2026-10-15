@@ -332,6 +332,36 @@ public final class StorageGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Baú → lixeira que diz não ter limite e não mostra o que recebe (a do Trash Cans): nenhuma
+     * chamada passa de uma pilha, porque ela guarda a pilha recebida e, acima de 99, o servidor caía
+     * ao salvá-la.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void chestSendsStacksToAVoidSink(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-bau-lixeira");
+        BlockPos machine = helper.absolutePos(B);
+        TestMachines.reset(machine);
+        storageChest(helper, A, RouterTier.ULTIMATE).storage().insert(new ItemStack(Items.COBBLESTONE), 5_000L, false);
+        helper.setBlock(B, TestMachines.VOID_SINK);
+        RouterBlockEntity source = router(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.voidSink(machine).total(), 5_000L, "na lixeira"))
+                .thenExecute(() -> {
+                    int largest = TestMachines.voidSink(machine).largestCall();
+                    helper.assertTrue(largest <= 64, "chamada com " + largest + " itens");
+                    helper.assertTrue(storage(helper, A).isEmpty(), "origem não esvaziou");
+                })
+                .thenSucceed();
+    }
+
     /** Baú vanilla → Baú: tudo entra, por tipo, sem varrer slots do destino. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void vanillaChestFillsAChest(GameTestHelper helper) {

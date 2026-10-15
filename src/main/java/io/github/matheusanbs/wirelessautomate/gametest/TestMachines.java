@@ -48,6 +48,8 @@ public final class TestMachines {
     public static final Block FURNACE = Blocks.MOSS_BLOCK;
     /** Destino que aceita tudo na simulação e nada de verdade ({@link LyingSink}). */
     public static final Block LYING_SINK = Blocks.HONEYCOMB_BLOCK;
+    /** Lixeira que diz não ter limite e guarda a pilha recebida como veio, como a do Trash Cans ({@link VoidSink}). */
+    public static final Block VOID_SINK = Blocks.BONE_BLOCK;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
@@ -56,6 +58,7 @@ public final class TestMachines {
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, TypedSlot> TYPED = new ConcurrentHashMap<>();
     private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, VoidSink> VOID_SINKS = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -76,6 +79,7 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> typedSlot(pos), TYPED_SLOT);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> furnace(pos), FURNACE);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> LyingSink.INSTANCE, LYING_SINK);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> voidSink(pos), VOID_SINK);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -103,6 +107,10 @@ public final class TestMachines {
         return FURNACES.computeIfAbsent(pos.immutable(), key -> new Furnace());
     }
 
+    static VoidSink voidSink(BlockPos pos) {
+        return VOID_SINKS.computeIfAbsent(pos.immutable(), key -> new VoidSink());
+    }
+
     /** Esquece o estado da posição (o mundo dos testes é reaproveitado entre lotes). */
     static void reset(BlockPos pos) {
         BIG_SLOTS.remove(pos.immutable());
@@ -111,6 +119,7 @@ public final class TestMachines {
         NAIVE.remove(pos.immutable());
         TYPED.remove(pos.immutable());
         FURNACES.remove(pos.immutable());
+        VOID_SINKS.remove(pos.immutable());
     }
 
     /**
@@ -197,6 +206,58 @@ public final class TestMachines {
         @Override
         public int getSlotLimit(int slot) {
             return 64;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
+    }
+
+    /**
+     * Some com tudo o que recebe, com limite {@code Integer.MAX_VALUE} e o slot sempre vazio. Anota
+     * a maior pilha recebida numa chamada: a lixeira do Trash Cans guarda essa pilha e, acima de 99,
+     * derruba o servidor ao salvá-la.
+     */
+    static final class VoidSink implements IItemHandler {
+        private int largestCall;
+        private long total;
+
+        int largestCall() {
+            return largestCall;
+        }
+
+        long total() {
+            return total;
+        }
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (!simulate && !stack.isEmpty()) {
+                largestCall = Math.max(largestCall, stack.getCount());
+                total += stack.getCount();
+            }
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return Integer.MAX_VALUE;
         }
 
         @Override

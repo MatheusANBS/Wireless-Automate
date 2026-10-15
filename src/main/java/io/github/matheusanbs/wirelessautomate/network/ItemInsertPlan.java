@@ -253,13 +253,18 @@ final class ItemInsertPlan {
      * {@link IItemHandler#insertItem} sem passar, numa chamada, do que o slot aceita: até o tamanho
      * máximo do item ({@code itemMax}), ou até o limite do slot se ele passa de
      * {@link Item#ABSOLUTE_MAX_STACK_SIZE} (99, o limite comum do vanilla e do {@code ItemStackHandler}).
-     * Um slot que declara mais que isso (upgrade de pilha, gaveta) recebe a pilha grande de uma vez;
-     * os outros nunca veem uma pilha acima do tamanho do item, mesmo que não a limitem. Devolve a sobra.
+     * Um slot que declara mais que isso (upgrade de pilha, gaveta) recebe a pilha grande de uma vez
+     * na simulação; de verdade, só depois de mostrar que guarda o item ({@link #insertInStacks}). Os
+     * outros slots nunca veem uma pilha acima do tamanho do item, mesmo que não a limitem. Devolve a
+     * sobra.
      */
     static ItemStack insert(IItemHandler target, int slot, ItemStack stack, int itemMax, boolean simulate) {
         int count = stack.getCount();
         if (count > itemMax) {
             int limit = target.getSlotLimit(slot);
+            if (limit > Item.ABSOLUTE_MAX_STACK_SIZE && !simulate) {
+                return insertInStacks(target, slot, stack, itemMax, limit);
+            }
             int cap = limit > Item.ABSOLUTE_MAX_STACK_SIZE ? Math.max(itemMax, limit) : itemMax;
             if (count > cap) {
                 ItemStack rest = target.insertItem(slot, stack.copyWithCount(cap), simulate);
@@ -267,6 +272,32 @@ final class ItemInsertPlan {
             }
         }
         return target.insertItem(slot, stack, simulate);
+    }
+
+    /**
+     * Insere de verdade num slot de limite grande, até o limite dele. O slot que mostra o item recebe
+     * o resto numa chamada só; o que continua vazio depois de receber (a lixeira do Trash Cans, que
+     * diz aceitar {@code Integer.MAX_VALUE} e guarda a pilha como veio) recebe uma pilha do tamanho
+     * do item por chamada: com a pilha grande, o codec do {@link ItemStack}, que não passa de 99,
+     * derrubava o servidor quando ela salvava. Para quando o slot recusa algo. Devolve a sobra.
+     */
+    private static ItemStack insertInStacks(IItemHandler target, int slot, ItemStack stack, int itemMax, int limit) {
+        int count = stack.getCount();
+        int offered = Math.min(count, Math.max(itemMax, limit));
+        int left = offered;
+        int refused = 0;
+        while (left > 0) {
+            boolean keeps = ItemStack.isSameItemSameComponents(target.getStackInSlot(slot), stack);
+            int chunk = keeps ? left : Math.min(left, itemMax);
+            ItemStack rest = target.insertItem(slot, stack.copyWithCount(chunk), false);
+            left -= chunk;
+            if (!rest.isEmpty()) {
+                refused = rest.getCount();
+                break;
+            }
+        }
+        int back = count - offered + left + refused;
+        return back == 0 ? ItemStack.EMPTY : stack.copyWithCount(back);
     }
 
     /**

@@ -24,8 +24,6 @@ import org.jetbrains.annotations.Nullable;
  * recarga em latão sobre o Opaco e o rótulo da redstone. Os itens e a barra de carga dos cristais são do vanilla.
  */
 final class CrystalSlots {
-    /** O fundo da barra de item do vanilla, igual ao da carga dos cristais. */
-    private static final int ITEM_BAR_BG = 0xFF000000;
     private static final int BAR_W = 13;
 
     private final ResonatorMenu menu;
@@ -79,7 +77,7 @@ final class CrystalSlots {
                 : Math.min(BAR_W, Math.round((float) BAR_W * state.recharge() / state.rechargeTicks()));
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        g.fill(x, y, x + BAR_W, y + 2, ITEM_BAR_BG);
+        g.fill(x, y, x + BAR_W, y + 2, GuiPaint.RING);
         g.fill(x, y, x + filled, y + 1, GuiPaint.BRASS);
         g.pose().popPose();
     }

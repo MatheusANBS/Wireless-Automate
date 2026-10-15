@@ -18,6 +18,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 - **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
 - **Priority, round-robin and redstone control** for every face and resource type.
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
+- **Light and dark theme:** every screen has both; switch with the moon/sun button in the header.
 
 ![Configure every face](https://media.forgecdn.net/attachments/2046/306/feature-2-router-png.png)
 
@@ -123,7 +124,7 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2046/311/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: search and filter by role, a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Click a node to open its screen remotely.
+Every router of every network, from anywhere: one search box for machine, network and name, quick filters and the list grouped by machine, with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Copy a node's profile and paste it on one machine, a whole group or the marked ones, with undo. Also a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Double-click a node to open its full screen remotely.
 
 ### Built-in guide book
 

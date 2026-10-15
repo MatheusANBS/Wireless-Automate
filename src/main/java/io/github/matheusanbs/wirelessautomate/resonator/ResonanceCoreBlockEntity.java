@@ -53,7 +53,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private int energyPorts;
     private int crystalPorts;
     private ResonatorBlueprint.@Nullable Layout layout;
-    /** O tempo de jogo da última montagem, ou -1 se nunca montou. */
+    /**
+     * O tempo de jogo da última montagem, ou -1 se nunca montou; 0 num Núcleo que já estava montado antes de o tempo
+     * ser gravado (a sequência de acender fica no passado).
+     */
     private long formedAt = -1;
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
@@ -140,7 +143,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     /**
      * Guarda o que a montagem achou na casca; sem Sintonizador o modo volta a Manual com o dial onde parou. O tempo
-     * só muda quando a estrutura estava desmontada: a revalidação de uma estrutura de pé não reacende a câmara.
+     * só muda quando a estrutura estava desmontada: a revalidação de uma estrutura de pé não reacende a câmara. Um
+     * Núcleo salvo montado sem o tempo ganha 0, para a carga do chunk não acender a câmara em sequência.
      */
     void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, ResonatorBlueprint.@Nullable Layout layout,
             long gameTime) {
@@ -156,6 +160,9 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         if (!formed) {
             formedAt = gameTime;
+            changed = true;
+        } else if (formedAt < 0) {
+            formedAt = 0;
             changed = true;
         }
         if (changed) {

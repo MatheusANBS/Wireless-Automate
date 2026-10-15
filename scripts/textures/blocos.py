@@ -791,6 +791,56 @@ PECAS = {
 }
 
 
+def _rampa_chladni(glow: float) -> tuple[int, int, int]:
+    return (round(255 * (0.3 + 0.7 * glow)), round(230 * (0.45 + 0.55 * glow)), round(200 * (0.55 + 0.45 * glow)))
+
+
+def res_chladni() -> Sprite:
+    """A placa de Chladni 32 px: a figura (3, 2), com as linhas nodais escuras, pulsando em 16 quadros."""
+    quadros = []
+    for k in range(16):
+        img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+        pulso = 0.85 + 0.15 * math.sin(2 * math.pi * k / 16)
+        for j in range(32):
+            y = (j + 0.5) / 32 * 2 - 1
+            for i in range(32):
+                x = (i + 0.5) / 32 * 2 - 1
+                p = math.cos(3 * math.pi * x) * math.cos(2 * math.pi * y) - math.cos(2 * math.pi * x) * math.cos(3 * math.pi * y)
+                v = max(0.0, 1 - abs(p) * 5)
+                glow = v * v * pulso
+                img.putpixel((i, j), (*_rampa_chladni(glow), round(255 * glow)))
+        quadros.append(img)
+    return animacao(quadros, 3, lado=32, translucido=True)
+
+
+def res_chladni_noise() -> Sprite:
+    """O ruído da placa fora de sintonia: 8 quadros de pontos aleatórios."""
+    quadros = []
+    for k in range(8):
+        rng = random.Random(7 + k)
+        img = nova()
+        for j in range(16):
+            for i in range(16):
+                glow = max(0.0, rng.random() - 0.55) / 0.45
+                img.putpixel((i, j), (*_rampa_chladni(glow), round(255 * glow * 0.8)))
+        quadros.append(img)
+    return animacao(quadros, 2, translucido=True)
+
+
+def res_halo() -> Sprite:
+    """O halo radial do sinal, do claro no centro ao coral na borda."""
+    img = nova()
+    centro, borda = (0xFF, 0xF0, 0xEA), (0xF2, 0x91, 0x7A)
+    for j in range(16):
+        for i in range(16):
+            d = math.hypot(i - 7.5, j - 7.5) / 8
+            a = max(0.0, 1 - d) ** 2
+            t = min(1.0, d)
+            rgb = tuple(round(c + (b - c) * t) for c, b in zip(centro, borda))
+            img.putpixel((i, j), (*rgb, round(255 * a)))
+    return parado(img, translucido=True)
+
+
 def sprites_ressonador() -> dict[str, Sprite]:
     s: dict[str, Sprite] = {
         "block/resonator_casing_solta": parado(res_carcaca_solta()),
@@ -805,6 +855,9 @@ def sprites_ressonador() -> dict[str, Sprite]:
         "block/resonator_crystal_port_dentro": parado(res_porta_dentro("cristais")),
         "block/resonator_tuner": res_sintonizador(True),
         "block/resonator_tuner_solto": res_sintonizador(False),
+        "block/resonator_chladni": res_chladni(),
+        "block/resonator_chladni_noise": res_chladni_noise(),
+        "block/resonator_halo": res_halo(),
     }
     for bordas in BORDAS_CARCACA:
         s[f"block/resonator_casing_{bordas}"] = parado(res_trilhos(res_campo(), set(bordas)))

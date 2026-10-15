@@ -198,18 +198,19 @@ class Sprite:
 
     @property
     def quadros(self) -> int:
-        return self.imagem.height // 16
+        return self.imagem.height // self.imagem.width
 
     def quadro(self, n: int = 0) -> Image.Image:
-        return self.imagem.crop((0, 16 * n, 16, 16 * n + 16))
+        lado = self.imagem.width
+        return self.imagem.crop((0, lado * n, lado, lado * n + lado))
 
 
-def animacao(quadros: list[Image.Image], frametime: int, **kw) -> Sprite:
-    """Empilha os quadros (todos 16×16) num só sprite animado."""
-    assert quadros and all(q.size == (16, 16) for q in quadros), "quadro fora de 16×16"
-    tira = Image.new("RGBA", (16, 16 * len(quadros)), (0, 0, 0, 0))
+def animacao(quadros: list[Image.Image], frametime: int, lado: int = 16, **kw) -> Sprite:
+    """Empilha os quadros (todos lado×lado, 16 por padrão) num só sprite animado."""
+    assert quadros and all(q.size == (lado, lado) for q in quadros), f"quadro fora de {lado}×{lado}"
+    tira = Image.new("RGBA", (lado, lado * len(quadros)), (0, 0, 0, 0))
     for n, q in enumerate(quadros):
-        tira.paste(q, (0, 16 * n))
+        tira.paste(q, (0, lado * n))
     return Sprite(tira, frametime, **kw)
 
 
@@ -217,13 +218,18 @@ def parado(img: Image.Image, **kw) -> Sprite:
     return Sprite(img, None, **kw)
 
 
+# Os únicos sprites que não têm 16 px de largura.
+LARGURAS_ESPECIAIS = {"block/resonator_chladni": 32}
+
+
 def validar(nome: str, sprite: Sprite) -> None:
     img = sprite.imagem
-    assert img.width == 16 and img.height % 16 == 0 and img.height >= 16, f"{nome}: {img.size}"
+    lado = LARGURAS_ESPECIAIS.get(nome, 16)
+    assert img.width == lado and img.height % lado == 0 and img.height >= lado, f"{nome}: {img.size}"
     if sprite.frametime is None:
-        assert img.height == 16, f"{nome}: tira de {sprite.quadros} quadros sem frametime"
+        assert img.height == lado, f"{nome}: tira de {sprite.quadros} quadros sem frametime"
     else:
-        assert img.height > 16, f"{nome}: animado com um quadro só"
+        assert img.height > lado, f"{nome}: animado com um quadro só"
     if not sprite.translucido:
         alfas = set(img.getchannel("A").tobytes())
         assert alfas <= {0, 255}, f"{nome}: alfa parcial {sorted(alfas)[:6]}"

@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -91,6 +92,47 @@ public final class RouterGameTests {
      * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
      * que o dono mudou fica. Tudo síncrono, restaurado no finally.
      */
+    /**
+     * Config de antes do Ressonador (balanceamento 1): a energia do roteador Unobtainium e o FE por cristal no
+     * padrão antigo passam para o novo uma vez; o que o dono mudou e o que já era do balanceamento 1 ficam.
+     */
+    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    public static void configMigratesUnobtainiumEnergy(GameTestHelper helper) {
+        var unobtainium = Config.TIERS.get(RouterTier.UNOBTAINIUM).rates().get("energyPerTick");
+        var vibranium = Config.TIERS.get(RouterTier.VIBRANIUM).rates().get("energyPerTick");
+        var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
+        var basicCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.BASIC);
+        var ultimateCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.ULTIMATE);
+        var eliteCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.ELITE);
+        try {
+            unobtainium.set(262_144_000L);
+            vibranium.set(1_234L);
+            elite.set(131_072L);
+            basicCrystal.set(64L);
+            ultimateCrystal.set(134_217_728L);
+            eliteCrystal.set(5_000L);
+            Config.BALANCE_VERSION.set(1);
+            helper.assertValueEqual(Config.migrateBalance(), 3, "valores migrados");
+            helper.assertValueEqual(unobtainium.get(), 2_097_152_000L, "energia do Unobtainium");
+            helper.assertValueEqual(basicCrystal.get(), 128L, "FE por cristal, Básico");
+            helper.assertValueEqual(ultimateCrystal.get(), 1_073_741_824L, "FE por cristal, Ultimate");
+            helper.assertValueEqual(eliteCrystal.get(), 5_000L, "FE por cristal do dono");
+            helper.assertValueEqual(vibranium.get(), 1_234L, "energia do Vibranium do dono");
+            helper.assertValueEqual(elite.get(), 131_072L, "o balanceamento 1 rodou de novo");
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            unobtainium.set(ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()));
+            vibranium.set(ResourceType.ENERGY.defaultRate(RouterTier.VIBRANIUM.ordinal()));
+            elite.set(ResourceType.ITEM.defaultRate(RouterTier.ELITE.ordinal()));
+            basicCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.BASIC.ordinal()));
+            ultimateCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.ULTIMATE.ordinal()));
+            eliteCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.ELITE.ordinal()));
+            Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
+            Config.SPEC.save();
+        }
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void configMigratesOldDefaults(GameTestHelper helper) {
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");

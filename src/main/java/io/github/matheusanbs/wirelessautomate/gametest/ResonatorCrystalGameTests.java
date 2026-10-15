@@ -3,15 +3,21 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import com.google.gson.JsonElement;
+import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
+import io.github.matheusanbs.wirelessautomate.resonator.CutCrystalRecipe;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
+import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.gametest.framework.GameTest;
@@ -23,6 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -191,6 +198,48 @@ public final class ResonatorCrystalGameTests {
                 "um Opaco recusa a receita");
         helper.assertTrue(receita(helper, cruz(cristal(cheio), cristal(999_999), cristal(cheio), cristal(cheio))).isEmpty(),
                 "um cristal já usado recusa a receita");
+        helper.succeed();
+    }
+
+    private static void assertMesmaReceita(GameTestHelper helper, CutCrystalRecipe original, CutCrystalRecipe volta,
+            String via) {
+        var acesso = helper.getLevel().registryAccess();
+        helper.assertTrue(volta.category() == original.category(), via + ": categoria");
+        helper.assertValueEqual(volta.getWidth(), original.getWidth(), via + ": largura");
+        helper.assertValueEqual(volta.getHeight(), original.getHeight(), via + ": altura");
+        for (int i = 0; i < original.getIngredients().size(); i++) {
+            Ingredient a = original.getIngredients().get(i);
+            Ingredient b = volta.getIngredients().get(i);
+            helper.assertTrue(ItemStack.listMatches(List.of(a.getItems()), List.of(b.getItems())),
+                    via + ": ingrediente " + i);
+        }
+        ItemStack a = original.getResultItem(acesso);
+        ItemStack b = volta.getResultItem(acesso);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(a, b), via + ": resultado");
+        helper.assertValueEqual(b.getCount(), a.getCount(), via + ": contagem");
+        helper.assertTrue(!volta.matches(cruz(cristal(CrystalCharge.FULL), cristal(CrystalCharge.FULL),
+                cristal(CrystalCharge.FULL), cristal(0)), helper.getLevel()), via + ": recusa o Opaco");
+        helper.assertTrue(volta.matches(cruz(cristal(CrystalCharge.FULL), cristal(CrystalCharge.FULL),
+                cristal(CrystalCharge.FULL), cristal(CrystalCharge.FULL)), helper.getLevel()),
+                via + ": aceita quatro cheios");
+    }
+
+    /** O stream codec leva a receita ao cliente e o codec de mapa a reescreve em JSON: as duas voltas valem igual. */
+    @GameTest(template = "empty")
+    public static void receitaDoLapidadoVoltaPelosCodecs(GameTestHelper helper) {
+        var acesso = helper.getLevel().registryAccess();
+        var holder = helper.getLevel().getRecipeManager().byKey(WirelessAutomate.id("cut_signal_crystal"));
+        helper.assertTrue(holder.isPresent() && holder.get().value() instanceof CutCrystalRecipe,
+                "a receita carregada é a do tipo próprio");
+        CutCrystalRecipe original = (CutCrystalRecipe) holder.get().value();
+
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), acesso);
+        CutCrystalRecipe.STREAM_CODEC.encode(buf, original);
+        assertMesmaReceita(helper, original, CutCrystalRecipe.STREAM_CODEC.decode(buf), "stream");
+
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, acesso);
+        JsonElement json = CutCrystalRecipe.MAP_CODEC.codec().encodeStart(ops, original).getOrThrow();
+        assertMesmaReceita(helper, original, CutCrystalRecipe.MAP_CODEC.codec().parse(ops, json).getOrThrow(), "json");
         helper.succeed();
     }
 }

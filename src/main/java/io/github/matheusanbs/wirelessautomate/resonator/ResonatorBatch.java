@@ -57,22 +57,27 @@ public final class ResonatorBatch {
         return false;
     }
 
-    /** O desgaste só vem com a geração: buffer cheio ou eficiência 0 não gastam os cristais. */
+    /**
+     * O desgaste só vem com a geração, na proporção do que foi gerado: buffer cheio ou eficiência 0 não gastam os
+     * cristais, e com espaço para só parte do lote cada cristal gasta a mesma parte dos ticks (arredondada para cima).
+     */
     private static boolean generate(ResonanceCoreBlockEntity core, int ticks) {
         if (!core.formed()) {
             return false;
         }
         long room = core.capacity() - core.energy();
-        long generated = Math.min(CoreMath.mulSat(core.generationPerTick(), ticks), room);
+        long full = CoreMath.mulSat(core.generationPerTick(), ticks);
+        long generated = Math.min(full, room);
         if (generated <= 0) {
             return false;
         }
         core.addEnergy(generated);
+        long spent = generated == full ? ticks : (long) Math.ceil((double) ticks * generated / full);
         for (int i = 0; i < core.chambers(); i++) {
             ItemStack stack = core.crystals().get(i);
             if (stack.getItem() instanceof SignalCrystalItem item && !SignalCrystalItem.isDull(stack)) {
                 long life = Config.crystalLifeTicks(item.isCut());
-                SignalCrystalItem.setCharge(stack, CrystalCharge.drain(SignalCrystalItem.charge(stack), ticks, life));
+                SignalCrystalItem.setCharge(stack, CrystalCharge.drain(SignalCrystalItem.charge(stack), spent, life));
             }
         }
         return true;

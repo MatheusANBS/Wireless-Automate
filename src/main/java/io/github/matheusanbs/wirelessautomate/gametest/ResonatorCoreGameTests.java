@@ -182,6 +182,28 @@ public final class ResonatorCoreGameTests {
         });
     }
 
+    /**
+     * Com espaço para só um décimo do lote, o cristal gasta um décimo dos ticks (2 de 20): o desgaste acompanha o
+     * que foi gerado, não o lote inteiro.
+     */
+    @GameTest(template = "empty7")
+    public static void bufferQuaseCheioGastaSoOProporcional(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            tuned(core);
+            assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
+            for (int i = 0; i < 100 && core.energy() < core.capacity(); i++) {
+                ResonatorBatch.run(helper.getLevel(), core, 20);
+            }
+            long batch = core.generationPerTick() * 20;
+            core.extractEnergy(batch / 10, false);
+            int before = SignalCrystalItem.charge(core.crystals().get(0));
+            ResonatorBatch.run(helper.getLevel(), core, 20);
+            helper.assertValueEqual(core.energy(), core.capacity(), "o buffer encheu de novo");
+            helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)),
+                    CrystalCharge.drain(before, 2, Config.crystalLifeTicks(true)), "gasto de 2 ticks");
+        });
+    }
+
     @GameTest(template = "empty7")
     public static void extrairEnergia(GameTestHelper helper) {
         formed(helper, RouterTier.BASIC, core -> {

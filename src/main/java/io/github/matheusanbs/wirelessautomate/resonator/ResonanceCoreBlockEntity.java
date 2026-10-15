@@ -140,6 +140,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         ItemStack stack = crystals.get(chamber);
         crystals.set(chamber, ItemStack.EMPTY);
         setChanged();
+        notifyPorts(false, true);
         return stack;
     }
 
@@ -150,6 +151,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             if (!stack.isEmpty()) {
                 crystals.set(i, ItemStack.EMPTY);
                 setChanged();
+                notifyPorts(false, true);
                 return stack;
             }
         }
@@ -253,6 +255,28 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         station = initial;
         velocity = 0;
         setChanged();
+    }
+
+    /**
+     * Avisa os vizinhos das Portas do tipo dado, para acordar quem dorme nelas: o {@code setChanged} do Núcleo
+     * só avisa os vizinhos dele. Só nas transições (energia que aparece, câmara que esvazia, redstone que baixa,
+     * Opaco novo), nunca a cada lote.
+     */
+    void notifyPorts(boolean energyPorts, boolean crystalPorts) {
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        for (BlockPos port : ports) {
+            if (!level.isLoaded(port)) {
+                continue;
+            }
+            BlockState state = level.getBlockState(port);
+            if (state.getBlock() instanceof ResonatorPartBlock part
+                    && (energyPorts && part.kind() == ResonatorPartBlock.Kind.ENERGY_PORT
+                            || crystalPorts && part.kind() == ResonatorPartBlock.Kind.CRYSTAL_PORT)) {
+                level.updateNeighbourForOutputSignal(port, state.getBlock());
+            }
+        }
     }
 
     List<BlockPos> ports() {

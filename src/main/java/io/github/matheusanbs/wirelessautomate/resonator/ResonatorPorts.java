@@ -24,11 +24,18 @@ public final class ResonatorPorts {
         return !core.equals(old);
     }
 
-    public static void unregister(ResourceKey<Level> dimension, BlockPos port) {
+    /** Tira a Porta só se ela ainda for deste Núcleo: com uma parede dividida, outro Núcleo pode tê-la registrado depois. */
+    public static void unregister(ResourceKey<Level> dimension, BlockPos port, BlockPos core) {
         Map<BlockPos, BlockPos> ports = PORTS.get(dimension);
         if (ports != null) {
-            ports.remove(port);
+            ports.remove(port, core);
         }
+    }
+
+    /** O Núcleo registrado para a Porta, carregado ou não, ou {@code null}; só leitura do índice. */
+    public static @Nullable BlockPos registered(ResourceKey<Level> dimension, BlockPos port) {
+        Map<BlockPos, BlockPos> ports = PORTS.get(dimension);
+        return ports == null ? null : ports.get(port);
     }
 
     /** O Núcleo montado e carregado desta Porta, ou {@code null}. */

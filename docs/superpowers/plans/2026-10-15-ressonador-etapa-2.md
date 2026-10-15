@@ -687,6 +687,22 @@ Mockup aprovado pelo dono: `docs/preview/ressonador-projecao.html`. Tudo no **cl
 
 ---
 
+### Task 6b: A frente das peças ao colocar (pedido do dono) · feita
+
+**Problema:** o Núcleo e as peças com frente (Porta de Energia, Porta de Cristais e Sintonizador) nasciam de frente para a face clicada, então em cima de um bloco olhavam para o céu durante a construção.
+
+**Regra (aprovada pelo dono):**
+1. Peça numa parede (casca) da caixa 5×5×5 de um Núcleo perto: a frente vira para fora dessa parede. Numa aresta ou num canto vale a parede cuja direção para fora aponta mais para o jogador (maior produto escalar com o vetor do centro do bloco até o olho; empate pela ordem do `Direction`). A caixa sai do Núcleo pela `ResonatorBlueprint.origin`. Com mais de um Núcleo, o mais próximo. Vale com o Núcleo montado ou solto.
+2. Nos outros casos (miolo, fora de qualquer caixa e o próprio Núcleo): a frente vira para o jogador, `getNearestLookingDirection().getOpposite()`.
+
+A busca é só ao colocar (cubo de raio 4, com `level.isLoaded` antes de ler; nada por tick). Sem payload novo.
+
+**Arquivos:** `resonator/PlacementFacing.java` (pura, JUnit em `PlacementFacingTest`), `ResonatorPartBlock.getStateForPlacement` (regra 1, senão 2), `ResonanceCoreBlock.getStateForPlacement` (regra 2) e `gametest/ResonatorPlacementGameTests.java` (7 testes, template `empty7`).
+
+**Testes:** JUnit: miolo da face, aresta pelos dois lados, canto, interior e fora da caixa dão `null`, e as seis faces do Núcleo dão as caixas certas. GameTests: `portaNaParedeOlhaParaFora`, `sintonizadorNaArestaOlhaParaOJogador`, `semNucleoOlhaParaOJogador`, `nucleoOlhaParaOJogador`, `montarContinuaVirandoParaFora` e o caminho real do item na mão. Commit: `"Ressonador: as peças nascem de frente para fora da parede ou para o jogador"`.
+
+---
+
 ### Task 7: As Portas
 
 **Files:**

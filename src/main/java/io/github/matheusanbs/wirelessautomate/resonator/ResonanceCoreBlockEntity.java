@@ -62,6 +62,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private long formedAt = -1;
     /** A câmara no cliente; a {@link ChamberView} lê dela o início fixado da recarga. */
     final CoreSync sync = new CoreSync();
+    private final CoreInventory inventory = new CoreInventory(this);
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RESONANCE_CORE.get(), pos, state);
@@ -187,6 +188,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     public int chambers() {
         return CoreMath.chambers(tier().ordinal());
+    }
+
+    /** As câmaras do tier e a redstone como {@link net.minecraft.world.Container}, para o menu. */
+    public CoreInventory inventory() {
+        return inventory;
     }
 
     /**
@@ -357,7 +363,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         energy += Math.max(0, Math.min(amount, capacity() - energy));
     }
 
-    int rechargeProgress() {
+    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco ou sem redstone). */
+    public int rechargeProgress() {
         return recharge;
     }
 

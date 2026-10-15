@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -38,6 +39,10 @@ public final class ModMenus {
     /** Editor de receitas do /wa recipes. */
     public static final Supplier<MenuType<RecipeEditorMenu>> RECIPE_EDITOR =
             MENU_TYPES.register("recipe_editor", () -> IMenuTypeExtension.create(RecipeEditorMenu::new));
+
+    /** Tela do Núcleo de Ressonância (posição, tier e câmaras no buffer de abertura). */
+    public static final Supplier<MenuType<ResonatorMenu>> RESONATOR =
+            MENU_TYPES.register("resonator", () -> IMenuTypeExtension.create(ResonatorMenu::new));
 
     private ModMenus() {
     }

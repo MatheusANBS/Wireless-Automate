@@ -4,11 +4,13 @@ import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
@@ -106,10 +108,11 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Mão vazia. Shift tira o último cristal para a mão. Sem Shift, o servidor manda a linha do status (montado) ou
-     * do problema (solto) na action bar; solto, o cliente também liga ou desliga a projeção. Ao ligar, a projeção
-     * segura a dica na action bar por uns 2 s (a linha do problema, que chega um tick depois, não fica) e só então
-     * escreve a contagem; ao desligar, fica a linha do problema, com a posição do bloco que impede montar.
+     * Mão vazia. Shift tira o último cristal para a mão. Sem Shift, montado, o servidor abre a tela do Núcleo
+     * ({@link ResonatorMenu#open}); solto, manda a linha do problema na action bar e o cliente liga ou desliga a
+     * projeção. Ao ligar, a projeção segura a dica na action bar por uns 2 s (a linha do problema, que chega um tick
+     * depois, não fica) e só então escreve a contagem; ao desligar, fica a linha do problema, com a posição do bloco
+     * que impede montar.
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
@@ -128,6 +131,8 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
                 if (!taken.isEmpty()) {
                     player.setItemInHand(InteractionHand.MAIN_HAND, taken);
                 }
+            } else if (state.getValue(ResonatorPartBlock.FORMED) && player instanceof ServerPlayer serverPlayer) {
+                ResonatorMenu.open(serverPlayer, core);
             } else {
                 player.displayClientMessage(ResonatorStatus.line(core), true);
             }

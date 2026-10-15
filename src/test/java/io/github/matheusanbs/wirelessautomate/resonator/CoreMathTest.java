@@ -13,12 +13,28 @@ class CoreMathTest {
     }
 
     @Test
+    void fePorCristalPadraoDaTabela() {
+        long[] expected = {128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728L, 1_073_741_824L};
+        for (int tier = 0; tier < expected.length; tier++) {
+            assertEquals(expected[tier], CoreMath.defaultFePerCrystal(tier), "tier " + tier);
+        }
+    }
+
+    @Test
     void maximoEBufferDaSpec() {
-        assertEquals(128, CoreMath.maxOutput(1, 64));
-        assertEquals(24_576, CoreMath.maxOutput(3, 4_096));
-        assertEquals(2_147_483_648L, CoreMath.maxOutput(8, 134_217_728L));
-        assertEquals(25_600, CoreMath.buffer(1, 64));
-        assertEquals(4_915_200, CoreMath.buffer(3, 4_096));
+        assertEquals(256, CoreMath.maxOutput(1, 128));
+        assertEquals(49_152, CoreMath.maxOutput(3, 8_192));
+        assertEquals(1_879_048_192L, CoreMath.maxOutput(7, 134_217_728L));
+        assertEquals(17_179_869_184L, CoreMath.maxOutput(8, 1_073_741_824L));
+        assertEquals(51_200, CoreMath.buffer(1, 128));
+        assertEquals(9_830_400, CoreMath.buffer(3, 8_192));
+        assertEquals(3_435_973_836_800L, CoreMath.buffer(8, 1_073_741_824L));
+    }
+
+    @Test
+    void geracaoDoUltimateCabeNoLong() {
+        assertEquals(17_179_869_184L, CoreMath.perTick(1_073_741_824L, 16, 1.0));
+        assertEquals(17_179_869_184L * 20, CoreMath.mulSat(CoreMath.perTick(1_073_741_824L, 16, 1.0), 20));
     }
 
     @Test

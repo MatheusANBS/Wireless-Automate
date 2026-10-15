@@ -66,16 +66,16 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 
 | Tier | Cristais | FE/t por cristal | Máx. (lapidados, 100%) | Teto do Sintonizador |
 | --- | --- | --- | --- | --- |
-| Básico | 1 | 64 | 128 | 85% |
-| Avançado | 2 | 512 | 2.048 | 88% |
-| Elite | 3 | 4.096 | 24.576 | 90% |
+| Básico | 1 | 128 | 256 | 85% |
+| Avançado | 2 | 1.024 | 4.096 | 88% |
+| Elite | 3 | 8.192 | 49.152 | 90% |
 | Esmeralda | 4 | 32.768 | 262.144 | 92% |
 | Allthemodium¹ | 5 | 262.144 | 2.621.440 | 94% |
 | Vibranium¹ | 6 | 2.097.152 | 25.165.824 | 95% |
-| Unobtainium¹ | 7 | 16.777.216 | 234.881.024 | 96% |
-| Ultimate | 8 | 134.217.728 | 2.147.483.648 | 98% |
+| Unobtainium¹ | 7 | 134.217.728 | 1.879.048.192 | 96% |
+| Ultimate | 8 | 1.073.741.824 | 17.179.869.184 | 98% |
 
-¹ Só com o Allthemodium. Números na config do servidor; em cada tier, um roteador do mesmo tier dá conta da geração cheia.
+¹ Só com o Allthemodium. Números na config do servidor; em cada tier, um roteador do mesmo tier dá conta da geração cheia (o do Unobtainium passa a 2.097.152.000 FE/t para isso; o do Ultimate não tem limite). Balanceamento de 15/10/2026 (decisão do dono): os três primeiros dobraram (passam o Wind Generator, o Powah Hardened e o Niotic), e o Unobtainium e o Ultimate subiram ×8 para o topo passar com folga o Dyson Cube Project do ATM10 (~1 G FE/t). A Porta de Energia como `IEnergyStorage` corta em 2^31 − 1 FE por chamada; a saída cheia do Ultimate sai pelo roteador do mod (`BulkEnergy`, em `long`).
 
 - O Núcleo é o único bloco com tick e calcula em lote, a cada 20 ticks. Porta de Energia expõe FE (só tira); Porta de Cristais aceita cristais e redstone e devolve os trocados. Comparador pela eficiência; controle por redstone.
 
@@ -99,12 +99,12 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 ## Etapa 2: decisões de implementação (15/10/2026)
 
 - **Portas:** pelo menos uma Porta de Energia e uma Porta de Cristais; pode haver mais de cada (decisão do dono). O Sintonizador continua 0 ou 1; o Núcleo, exatamente 1.
-- **Buffer de energia do Núcleo:** 10 s da geração máxima do tier (máximo com lapidados × 200 ticks): Básico 25.600 FE, Elite 4.915.200 FE (decisão do dono). Com o buffer cheio, o Núcleo não gera nem gasta cristal.
+- **Buffer de energia do Núcleo:** 10 s da geração máxima do tier (máximo com lapidados × 200 ticks): Básico 51.200 FE, Elite 9.830.400 FE, Ultimate 3.435.973.836.800 FE (decisão do dono). Com o buffer cheio, o Núcleo não gera nem gasta cristal.
 - **Receitas** (bancada, editáveis pelo editor de receitas; decisão do dono): Carcaça ×4 = 4 Terracota Branca nos cantos, 4 Lingotes de Ferro nos lados, 1 Cristal de Sinal no centro; Vidro ×4 = 4 Vidros em cruz em volta de 1 Cristal de Sinal; Núcleo (Básico) = 7 Carcaças, 1 Cristal Lapidado no centro e 1 Diamante embaixo no meio; Porta de Energia = Carcaça + Bloco de Redstone; Porta de Cristais = Carcaça + Funil; Sintonizador = Carcaça + Relógio + Comparador (as três sem forma).
 - **Ids:** `resonator_casing`, `resonator_glass`, `resonance_core`, `resonator_energy_port`, `resonator_crystal_port`, `resonator_tuner`. Nomes: Carcaça de Porcelana / Porcelain Casing; Vidro de Ressonância / Resonance Glass; Núcleo de Ressonância / Resonance Core; Porta de Energia / Resonator Energy Port; Porta de Cristais / Resonator Crystal Port; Sintonizador / Resonator Tuner.
 - **Interior:** as 27 posições de dentro precisam estar vazias (ar).
 - **Câmaras por tier:** tier + 1 (Básico 1 … Ultimate 8), fixo, sem config.
-- **Config do servidor, seção `resonator`:** `crystalLifeTicks` (12.000), `cutCrystalLifeTicks` (24.000), `rechargeTicks` (600) e, por tier, `fePerCrystal` (64, 512, 4.096, 32.768, 262.144, 2.097.152, 16.777.216, 134.217.728).
+- **Config do servidor, seção `resonator`:** `crystalLifeTicks` (12.000), `cutCrystalLifeTicks` (24.000), `rechargeTicks` (600) e, por tier, `fePerCrystal` (128, 1.024, 8.192, 32.768, 262.144, 2.097.152, 134.217.728, 1.073.741.824).
 - **Lote:** um gerenciador central (`ResonatorManager`, chamado no tick do servidor, como o `SourceTankLevels`) visita cada Núcleo montado e carregado a cada 20 ticks, espalhados pela posição para não caírem todos no mesmo tick. A deriva dá um passo a cada 20 lotes (400 ticks).
 - **Desgaste:** só cristal que está gerando gasta (eficiência acima de 0 e espaço no buffer).
 - **Recarga:** um Opaco por vez; com redstone no Núcleo, a recarga leva `rechargeTicks` e consome 1 pó no fim.

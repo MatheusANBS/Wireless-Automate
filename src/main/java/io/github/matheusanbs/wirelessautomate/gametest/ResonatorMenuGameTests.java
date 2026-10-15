@@ -5,16 +5,15 @@ import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSuppo
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.hit;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.survivor;
 
-
 import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layout;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorDialPayload;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorModePayload;
+import io.github.matheusanbs.wirelessautomate.packet.ResonatorPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -74,52 +73,9 @@ public final class ResonatorMenuGameTests {
         player.containerMenu = player.inventoryMenu;
     }
 
-    /**
-     * Jogador falso que abre telas sem o pacote de abertura da NeoForge (a conexão falsa não negocia canais) e
-     * guarda os dados extras da abertura, como o de {@code FilterMenuGameTests}.
-     */
-    private static final class MockPlayer extends ServerPlayer {
-        private static int nextContainerId = 500;
-        @Nullable RegistryFriendlyByteBuf openData;
-
-        MockPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
-            super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
-        }
-
-        @Override
-        public boolean isSpectator() {
-            return false;
-        }
-
-        @Override
-        public OptionalInt openMenu(@Nullable MenuProvider provider,
-                @Nullable Consumer<RegistryFriendlyByteBuf> extraDataWriter) {
-            if (provider == null) {
-                return OptionalInt.empty();
-            }
-            int containerId = nextContainerId++;
-            AbstractContainerMenu menu = provider.createMenu(containerId, getInventory(), this);
-            if (menu == null) {
-                return OptionalInt.empty();
-            }
-            openData = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess());
-            if (extraDataWriter != null) {
-                extraDataWriter.accept(openData);
-            }
-            containerMenu = menu;
-            return OptionalInt.of(containerId);
-        }
-    }
-
-    private static MockPlayer mockNear(GameTestHelper helper, ResonanceCoreBlockEntity core) {
-        CommonListenerCookie cookie = CommonListenerCookie.createInitial(
-                new GameProfile(UUID.randomUUID(), "test-mock-player"), false);
-        MockPlayer player = new MockPlayer(helper, cookie);
-        Connection connection = new Connection(PacketFlow.SERVERBOUND);
-        new EmbeddedChannel(connection);
-        helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
-        TestPlayers.removedAtEnd(helper, player);
-        player.setGameMode(GameType.SURVIVAL);
+    /** Um jogador que abre telas sem o pacote da NeoForge, ao lado do Núcleo. */
+    private static TestPlayers.MenuPlayer openerNear(GameTestHelper helper, ResonanceCoreBlockEntity core) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
         player.moveTo(Vec3.atBottomCenterOf(core.getBlockPos().east()));
         return player;
     }
@@ -127,7 +83,7 @@ public final class ResonatorMenuGameTests {
     @GameTest(template = "empty7")
     public static void cliqueNoMontadoAbreOMenu(GameTestHelper helper) {
         formed(helper, RouterTier.ELITE, core -> {
-            MockPlayer player = mockNear(helper, core);
+            TestPlayers.MenuPlayer player = openerNear(helper, core);
             try {
                 core.getBlockState().useWithoutItem(helper.getLevel(), player, hit(core.getBlockPos()));
                 helper.assertTrue(player.containerMenu instanceof ResonatorMenu menu
@@ -292,20 +248,20 @@ public final class ResonatorMenuGameTests {
             ServerPlayer player = near(helper, core);
             openMenu(player, core);
             try {
-                helper.assertTrue(ModPayloads.handleResonatorDial(player, new ResonatorDialPayload(CONTAINER_ID, 97.42)),
+                helper.assertTrue(ResonatorPayloads.handleDial(player, new ResonatorDialPayload(CONTAINER_ID, 97.42)),
                         "o dial válido foi recusado");
                 helper.assertValueEqual(core.dial(), 97.40, "dial no passo");
-                helper.assertTrue(!ModPayloads.handleResonatorDial(player,
+                helper.assertTrue(!ResonatorPayloads.handleDial(player,
                         new ResonatorDialPayload(CONTAINER_ID + 1, 96.0)), "aceitou outro containerId");
-                helper.assertTrue(!ModPayloads.handleResonatorDial(player,
+                helper.assertTrue(!ResonatorPayloads.handleDial(player,
                         new ResonatorDialPayload(CONTAINER_ID, Double.NaN)), "aceitou NaN");
                 helper.assertTrue(core.setAuto(true), "o automático foi recusado com Sintonizador");
-                helper.assertTrue(!ModPayloads.handleResonatorDial(player, new ResonatorDialPayload(CONTAINER_ID, 96.0)),
+                helper.assertTrue(!ResonatorPayloads.handleDial(player, new ResonatorDialPayload(CONTAINER_ID, 96.0)),
                         "aceitou o dial no automático");
                 helper.assertValueEqual(core.dial(), 97.40, "o dial mudou no automático");
                 core.setAuto(false);
                 player.teleportTo(player.getX() + 20, player.getY(), player.getZ());
-                helper.assertTrue(!ModPayloads.handleResonatorDial(player, new ResonatorDialPayload(CONTAINER_ID, 96.0)),
+                helper.assertTrue(!ResonatorPayloads.handleDial(player, new ResonatorDialPayload(CONTAINER_ID, 96.0)),
                         "aceitou o dial a 20 blocos");
                 helper.assertValueEqual(core.dial(), 97.40, "o dial mudou de longe");
             } finally {
@@ -320,7 +276,7 @@ public final class ResonatorMenuGameTests {
             ServerPlayer player = near(helper, core);
             openMenu(player, core);
             try {
-                helper.assertTrue(ModPayloads.handleResonatorMode(player, new ResonatorModePayload(CONTAINER_ID, true)),
+                helper.assertTrue(ResonatorPayloads.handleMode(player, new ResonatorModePayload(CONTAINER_ID, true)),
                         "o automático foi recusado com Sintonizador");
                 helper.assertTrue(core.auto(), "o Núcleo não ficou no automático");
             } finally {
@@ -335,7 +291,7 @@ public final class ResonatorMenuGameTests {
             ServerPlayer player = near(helper, core);
             openMenu(player, core);
             try {
-                helper.assertTrue(!ModPayloads.handleResonatorMode(player, new ResonatorModePayload(CONTAINER_ID, true)),
+                helper.assertTrue(!ResonatorPayloads.handleMode(player, new ResonatorModePayload(CONTAINER_ID, true)),
                         "o automático foi aceito sem Sintonizador");
                 helper.assertTrue(!core.auto(), "o Núcleo ficou no automático sem Sintonizador");
             } finally {

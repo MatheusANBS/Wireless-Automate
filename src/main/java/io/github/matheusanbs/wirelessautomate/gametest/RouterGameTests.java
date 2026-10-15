@@ -89,10 +89,6 @@ public final class RouterGameTests {
     }
 
     /**
-     * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
-     * que o dono mudou fica. Tudo síncrono, restaurado no finally.
-     */
-    /**
      * Config de antes do Ressonador (balanceamento 1): a energia do roteador Unobtainium e o FE por cristal no
      * padrão antigo passam para o novo uma vez; o que o dono mudou e o que já era do balanceamento 1 ficam.
      */
@@ -133,6 +129,10 @@ public final class RouterGameTests {
         helper.succeed();
     }
 
+    /**
+     * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
+     * que o dono mudou fica. Tudo síncrono, restaurado no finally.
+     */
     @GameTest(template = "empty")
     public static void configMigratesOldDefaults(GameTestHelper helper) {
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");

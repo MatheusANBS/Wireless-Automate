@@ -149,6 +149,7 @@ public final class FilterMenuGameTests {
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        TestPlayers.removedAtEnd(helper, player);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }

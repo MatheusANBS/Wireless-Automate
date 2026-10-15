@@ -411,7 +411,7 @@ public final class ResonatorCoreGameTests {
     @GameTest(template = "empty7")
     public static void criativoNaoGastaCristalNemRedstone(GameTestHelper helper) {
         formed(helper, RouterTier.BASIC, core -> {
-            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ServerPlayer player = TestPlayers.inLevel(helper);
             player.setGameMode(GameType.CREATIVE);
             ItemStack crystals = crystal(false, CrystalCharge.FULL).copyWithCount(3);
             player.setItemInHand(InteractionHand.MAIN_HAND, crystals);

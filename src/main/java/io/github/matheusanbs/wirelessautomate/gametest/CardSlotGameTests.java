@@ -95,9 +95,8 @@ public final class CardSlotGameTests {
         helper.assertValueEqual(count(helper, pos, item), expected, item + " em " + pos.toShortString());
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }

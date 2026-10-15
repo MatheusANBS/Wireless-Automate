@@ -75,9 +75,8 @@ public final class TabletProfileGameTests {
     private static final BlockPos M4 = new BlockPos(2, 0, 2);
     private static final ResourceLocation CHEST = BuiltInRegistries.BLOCK.getKey(Blocks.CHEST);
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerWithTablet(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(M1).above(3)));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         return player;

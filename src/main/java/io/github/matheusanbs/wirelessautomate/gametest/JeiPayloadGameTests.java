@@ -50,8 +50,7 @@ public final class JeiPayloadGameTests {
     }
 
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }

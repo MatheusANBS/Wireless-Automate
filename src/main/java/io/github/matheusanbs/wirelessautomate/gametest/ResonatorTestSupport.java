@@ -98,7 +98,7 @@ final class ResonatorTestSupport {
     }
 
     static ServerPlayer survivor(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.setGameMode(GameType.SURVIVAL);
         return player;
     }

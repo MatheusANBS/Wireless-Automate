@@ -113,9 +113,8 @@ public final class TabletGameTests {
     }
 
     /** Jogador falso com um Tablet no inventário, perto de {@code pos}. */
-    @SuppressWarnings("removal")
     private static ServerPlayer playerWithTablet(GameTestHelper helper, BlockPos pos) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above(2)));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         return player;
@@ -1176,6 +1175,7 @@ public final class TabletGameTests {
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        TestPlayers.removedAtEnd(helper, player);
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         WaNetwork network = data(helper).create(player.getUUID(), "teste-abrir");
         RouterBlockEntity router = chestWithRouter(helper, A, network.id());

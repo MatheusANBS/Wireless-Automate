@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import java.util.function.Supplier;
 import net.minecraft.core.GlobalPos;
@@ -30,6 +31,11 @@ public final class ModDataComponents {
     /** Configuração copiada pelo Configurador. */
     public static final Supplier<DataComponentType<RouterPreset>> PRESET = DATA_COMPONENTS.registerComponentType(
             "preset", builder -> builder.persistent(RouterPreset.CODEC).networkSynchronized(RouterPreset.STREAM_CODEC));
+
+    /** De onde veio o perfil guardado no Tablet (nome do nó, máquina e posição), junto do {@link #PRESET}. */
+    public static final Supplier<DataComponentType<ProfileSource>> PROFILE_SOURCE =
+            DATA_COMPONENTS.registerComponentType("profile_source", builder -> builder
+                    .persistent(ProfileSource.CODEC).networkSynchronized(ProfileSource.STREAM_CODEC));
 
     /** Referência ao conteúdo de um Baú quebrado cheio, mais o resumo do tooltip. */
     public static final Supplier<DataComponentType<StorageContents>> STORAGE_CONTENTS =

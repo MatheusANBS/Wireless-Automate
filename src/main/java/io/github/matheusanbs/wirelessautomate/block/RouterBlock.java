@@ -101,7 +101,7 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * O roteador nasce sem rede em todas as abas: o jogador configura o primeiro (tela do roteador ou
+     * O roteador nasce sem rede em nenhuma face: o jogador configura o primeiro (tela do roteador ou
      * Vinculador) e replica com o Configurador. Se o item trouxe dados do block entity com alguma
      * rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
      */
@@ -248,10 +248,6 @@ public class RouterBlock extends BaseEntityBlock {
         return new RouterBlockEntity(pos, state);
     }
 
-    /**
-     * Sobe o roteador em {@code pos} para {@code target}, se for exatamente o tier seguinte.
-     * O block entity é mantido, então a configuração não se perde.
-     */
     /**
      * Nome de uma máquina para mostrar ao jogador: o do item dela, como no inventário. O nome do
      * bloco pode ser um texto com argumentos que só o item preenche (os barris do Sophisticated

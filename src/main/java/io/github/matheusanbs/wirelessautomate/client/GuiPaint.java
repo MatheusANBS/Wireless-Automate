@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -23,65 +24,132 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * ({@code docs/identidade-visual.md}, seção "A interface"): painel claro de porcelana com tinta de
  * grafite, uma só cor de ação (coral), a cor do tier no Olho do cabeçalho e numa listra, e as cores
  * dos recursos nos ícones, abas e números. Tudo com {@link GuiGraphics#fill}, sem textura de fundo.
- * As cores são as de {@code scripts/textures/identidade.py}.
+ * As cores vêm do tema ({@link GuiPalette}, claro ou escuro); o claro é o de sempre, o de
+ * {@code scripts/textures/identidade.py}.
  */
 public final class GuiPaint {
     // -- porcelana (tons 4 → 0 de identidade.py: luz → sombra)
     /** Fundo do painel: {@code porcelana.3}. */
-    public static final int PANEL = 0xFFF2EBDD;
+    public static int PANEL;
     /** Luz: {@code porcelana.4}; fundo dos botões, do papel milimetrado e das linhas escolhidas. */
-    public static final int BEVEL_LIGHT = 0xFFFFFBF3;
+    public static int BEVEL_LIGHT;
     /** Sombra: {@code porcelana.1}; a sombra do painel, a linha de sombra das áreas afundadas e os filetes. */
-    public static final int BEVEL_DARK = 0xFFBDB19A;
+    public static int BEVEL_DARK;
     /** Áreas afundadas (listas, slots): {@code porcelana.2}. */
-    public static final int INSET = 0xFFDDD3BF;
+    public static int INSET;
     /** Papel milimetrado do visor 3D e dos mapas: o fundo ({@code porcelana.4}). */
-    public static final int VIEW_PAPER = BEVEL_LIGHT;
+    public static int VIEW_PAPER;
     /** Papel milimetrado: as linhas ({@code porcelana.2}). */
-    public static final int VIEW_GRID = INSET;
+    public static int VIEW_GRID;
     /** Papel milimetrado: a linha mais forte, a cada quatro ({@code porcelana.1}). */
-    public static final int VIEW_GRID_STRONG = BEVEL_DARK;
+    public static int VIEW_GRID_STRONG;
     /** Filetes e separadores: {@code porcelana.1}. */
-    public static final int LINE = BEVEL_DARK;
+    public static int LINE;
     /** Linha de lista escolhida ({@code porcelana.4}) e sob o mouse (entre {@code porcelana.3} e {@code .4}). */
-    public static final int ROW_SELECTED = BEVEL_LIGHT;
-    public static final int ROW_HOVER = 0xFFF8F3E8;
+    public static int ROW_SELECTED;
+    public static int ROW_HOVER;
 
     // -- grafite (a tinta)
     /** Fundo dos botões: {@code porcelana.4}. */
-    public static final int BUTTON = BEVEL_LIGHT;
+    public static int BUTTON;
     /** Borda dos botões: {@code grafite.2}. */
-    public static final int BUTTON_BORDER = 0xFF2A2730;
+    public static int BUTTON_BORDER;
     /** Borda dos botões com o mouse em cima: coral. */
-    public static final int BUTTON_HOVER_BORDER = 0xFFF0603E;
+    public static int BUTTON_HOVER_BORDER;
     /** Botão ou aba escolhida: fundo {@code grafite.2}, texto {@code porcelana.4}. */
-    public static final int SELECTED = BUTTON_BORDER;
-    public static final int SELECTED_TEXT = BEVEL_LIGHT;
+    public static int SELECTED;
+    public static int SELECTED_TEXT;
     /** Texto comum: {@code #2A2730}, sem sombra. */
-    public static final int FG = 0xFF2A2730;
+    public static int FG;
     /** Texto secundário. */
-    public static final int MUTED = 0xFF7A7366;
+    public static int MUTED;
     /** Texto desativado. */
-    public static final int DISABLED = 0xFFB5AC9D;
+    public static int DISABLED;
     /** Texto secundário dentro das dicas do jogo, que têm fundo escuro: porcelana apagada. */
-    public static final int TOOLTIP_MUTED = 0xFFBDB19A;
+    public static int TOOLTIP_MUTED;
+    /** Destaque dentro das dicas do jogo (fundo escuro nos dois temas): coral claro. */
+    public static int TOOLTIP_ACCENT;
     /** Abas inativas: só o texto, em {@code grafite.4}. */
-    public static final int TAB_IDLE = 0xFF5A5660;
+    public static int TAB_IDLE;
     /** Texto sobre uma cor clara (tier, recurso, modo): {@code grafite.0}. */
-    public static final int DARK_TEXT = 0xFF0F0E12;
+    public static int DARK_TEXT;
     /** Anel do Olho e contornos finos de ícones: {@code grafite.1}. */
-    public static final int RING = 0xFF1B1920;
+    public static int RING;
 
     // -- coral (a cor de ação) e os estados
-    public static final int ACCENT = 0xFFF0603E;
+    public static int ACCENT;
     /** Botão principal: {@code coral.1} de fundo, mais escuro para o texto de porcelana ler bem. */
-    public static final int ACCENT_DEEP = 0xFFC2442A;
-    public static final int OK = 0xFF2F9D5C;
-    public static final int WARN = 0xFFD88A1A;
-    public static final int DANGER = 0xFFD5453A;
-    public static final int PAUSED = 0xFF6B6FD0;
+    public static int ACCENT_DEEP;
+    public static int OK;
+    public static int WARN;
+    public static int DANGER;
+    public static int PAUSED;
     /** Latão: o destaque dos mods ({@code @}) nas listas de filtro. */
-    public static final int BRASS = 0xFFB48E2E;
+    public static int BRASS;
+
+    /** Texto das regras na lista do filtro (roxo da regra, legível no painel). */
+    public static int RULE_TEXT;
+
+    static {
+        apply(GuiPalette.LIGHT);
+    }
+
+    /**
+     * Passa as telas para a paleta dada ({@link GuiThemes} chama na carga da config e no botão do
+     * tema). As telas leem os tokens a cada quadro, então a troca vale na hora.
+     */
+    public static void apply(GuiPalette p) {
+        PANEL = p.panel();
+        BEVEL_LIGHT = p.bevelLight();
+        BEVEL_DARK = p.bevelDark();
+        INSET = p.inset();
+        VIEW_PAPER = BEVEL_LIGHT;
+        VIEW_GRID = INSET;
+        VIEW_GRID_STRONG = BEVEL_DARK;
+        LINE = BEVEL_DARK;
+        ROW_SELECTED = BEVEL_LIGHT;
+        ROW_HOVER = p.rowHover();
+        BUTTON = BEVEL_LIGHT;
+        BUTTON_BORDER = p.fg();
+        BUTTON_HOVER_BORDER = p.accent();
+        SELECTED = BUTTON_BORDER;
+        SELECTED_TEXT = BEVEL_LIGHT;
+        FG = p.fg();
+        MUTED = p.muted();
+        DISABLED = p.disabled();
+        TOOLTIP_MUTED = p.tooltipMuted();
+        TOOLTIP_ACCENT = p.tooltipAccent();
+        TAB_IDLE = p.tabIdle();
+        DARK_TEXT = p.darkText();
+        RING = p.ring();
+        ACCENT = p.accent();
+        ACCENT_DEEP = p.accentDeep();
+        OK = p.ok();
+        WARN = p.warn();
+        DANGER = p.danger();
+        PAUSED = p.paused();
+        BRASS = p.brass();
+        RULE_TEXT = p.ruleText();
+    }
+
+    /** A cor com outra transparência ({@code alpha} de 0 a 255): os véus seguem o tema. */
+    public static int alpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | alpha << 24;
+    }
+
+    /**
+     * Tinta de um campo de texto: o EditBox guarda a cor no próprio widget, então a tela reaplica
+     * isto quando o tema muda ({@link GuiThemes#version()}), não só no init.
+     */
+    public static void ink(EditBox box) {
+        box.setTextColor(FG);
+    }
+
+    /** A tinta do campo, com a dica (o texto de cor apagada de quando ele está vazio). */
+    public static void ink(EditBox box, Component hint) {
+        ink(box);
+        box.setHint(hint.copy().withColor(DISABLED));
+    }
 
     private static final ResourceLocation PORT_NONE = WirelessAutomate.id("textures/gui/port_none.png");
     private static final ResourceLocation PORT_EXTRACT = WirelessAutomate.id("textures/gui/port_extract.png");

@@ -40,6 +40,8 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 Depois de configurar o primeiro roteador de uma linha, use o [Configurador](configurator.md) para
 copiar a configuração (e as redes) para os outros.
 
+As telas do mod têm um botão com uma lua no canto de cima, à direita: ele troca todas para o modo escuro (e o sol volta ao claro).
+
 ## Receitas
 
 <RecipeFor id="wirelessautomate:router" />

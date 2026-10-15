@@ -101,7 +101,7 @@ public final class WakeGameTests {
     }
 
     /**
-     * #1: A e E (vazias) entregam em B. Com E dormindo fundo, A recebe itens e entrega em B: o aviso
+     * A e E (vazias) entregam em B. Com E dormindo fundo, A recebe itens e entrega em B: o aviso
      * de B (a nossa inserção) não pode acordar E, que continua vazia.
      */
     @GameTest(template = "empty", timeoutTicks = 400)
@@ -121,7 +121,7 @@ public final class WakeGameTests {
     }
 
     /**
-     * #1, motivo do sono: B está cheio; A tem itens e espera destino, E está vazia. Abrir espaço em B
+     * Motivo do sono: B está cheio; A tem itens e espera destino, E está vazia. Abrir espaço em B
      * por fora acorda A na hora (e A entrega), mas não E. O destino D é um baú que recusa diamantes
      * pelo filtro: recusa de filtro não faz dormir, então D fica acordado e E dorme por estar vazia, e
      * não por todos os destinos dormirem.
@@ -161,7 +161,7 @@ public final class WakeGameTests {
     }
 
     /**
-     * Bônus do #2: um destino sem máquina (pedra, sem inventário) dorme sem contar como cheio; pôr um
+     * Um destino sem máquina (pedra, sem inventário) dorme sem contar como cheio; pôr um
      * baú no lugar invalida a capability, o listener acorda o destino e a origem que esperava, e a
      * entrega sai logo, sem esperar o teto do sono.
      */
@@ -204,7 +204,7 @@ public final class WakeGameTests {
     }
 
     /**
-     * #4: uma remontagem sem destino novo (uma origem nova entrou na rede) não acorda a origem que
+     * Uma remontagem sem destino novo (uma origem nova entrou na rede) não acorda a origem que
      * dorme nem zera o backoff dela.
      */
     @GameTest(template = "empty", timeoutTicks = 400)
@@ -227,7 +227,7 @@ public final class WakeGameTests {
                 .thenSucceed();
     }
 
-    /** #3: trocar o sinal de redstone num roteador sem face com modo de redstone não suja a rede. */
+    /** Trocar o sinal de redstone num roteador sem face com modo de redstone não suja a rede. */
     @GameTest(template = "empty")
     public static void redstoneWithoutRedstoneModeDoesNotDirtyNetwork(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-redstone-sem-modo");
@@ -251,7 +251,7 @@ public final class WakeGameTests {
                 .thenSucceed();
     }
 
-    /** #3 e remontagem por tipo: com uma face de itens por redstone, o sinal suja só os itens. */
+    /** Remontagem por tipo: com uma face de itens por redstone, o sinal suja só os itens. */
     @GameTest(template = "empty")
     public static void redstoneModeDirtiesOnlyItsType(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-redstone-com-modo");
@@ -294,7 +294,7 @@ public final class WakeGameTests {
     }
 
     /**
-     * #5: a fornalha acender troca só o estado do bloco, não o bloco: não conta como máquina trocada
+     * A fornalha acender troca só o estado do bloco, não o bloco: não conta como máquina trocada
      * (a versão da tela não muda). Trocar a fornalha por um alto-forno conta.
      */
     @GameTest(template = "empty")

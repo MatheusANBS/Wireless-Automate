@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Base dos block entities de armazenamento do mod (Baú, Tanque, Bateria, Tanque Químico). Não faz
+ * Base dos block entities de armazenamento do mod (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source). Não faz
  * tick: só guarda o conteúdo e, a cada mudança, chama {@link #setChanged()}, que salva o chunk e
  * avisa os vizinhos; é esse aviso que acorda os roteadores presos nele.
  *

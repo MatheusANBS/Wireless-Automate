@@ -22,7 +22,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 /**
  * Máquinas de teste dos GameTests que o vanilla não tem: um slot com pilha enorme (como uma gaveta
  * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita e um
- * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism).
+ * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism), uma
+ * máquina com entrada e saída na mesma face e um destino que mente na simulação.
  * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
  * {@code -Dwirelessautomate.gameTests=true} (a run {@code gameTestServer} liga).
  */
@@ -43,6 +44,12 @@ public final class TestMachines {
     public static final Block BACK_SLOT = Blocks.CARVED_PUMPKIN;
     /** Uma entrada que só aceita diamante e o consome na hora, como a Salvaging Table ({@link TypedSlot}). */
     public static final Block TYPED_SLOT = Blocks.HAY_BLOCK;
+    /** Máquina com slot de entrada e de saída, como um forno do Mekanism ({@link Furnace}). */
+    public static final Block FURNACE = Blocks.MOSS_BLOCK;
+    /** Destino que aceita tudo na simulação e nada de verdade ({@link LyingSink}). */
+    public static final Block LYING_SINK = Blocks.HONEYCOMB_BLOCK;
+    /** Lixeira que diz não ter limite e guarda a pilha recebida como veio, como a do Trash Cans ({@link VoidSink}). */
+    public static final Block VOID_SINK = Blocks.BONE_BLOCK;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
@@ -50,6 +57,8 @@ public final class TestMachines {
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, TypedSlot> TYPED = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, VoidSink> VOID_SINKS = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -68,6 +77,9 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) ->
                 side == state.getValue(HorizontalDirectionalBlock.FACING).getOpposite() ? bigSlot(pos) : null, BACK_SLOT);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> typedSlot(pos), TYPED_SLOT);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> furnace(pos), FURNACE);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> LyingSink.INSTANCE, LYING_SINK);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> voidSink(pos), VOID_SINK);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -91,6 +103,14 @@ public final class TestMachines {
         return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
     }
 
+    static Furnace furnace(BlockPos pos) {
+        return FURNACES.computeIfAbsent(pos.immutable(), key -> new Furnace());
+    }
+
+    static VoidSink voidSink(BlockPos pos) {
+        return VOID_SINKS.computeIfAbsent(pos.immutable(), key -> new VoidSink());
+    }
+
     /** Esquece o estado da posição (o mundo dos testes é reaproveitado entre lotes). */
     static void reset(BlockPos pos) {
         BIG_SLOTS.remove(pos.immutable());
@@ -98,6 +118,152 @@ public final class TestMachines {
         LIVE_TANKS.remove(pos.immutable());
         NAIVE.remove(pos.immutable());
         TYPED.remove(pos.immutable());
+        FURNACES.remove(pos.immutable());
+        VOID_SINKS.remove(pos.immutable());
+    }
+
+    /**
+     * Dois slots na mesma face: o 0 é a entrada (aceita inserção, não deixa tirar) e o 1 a saída
+     * (deixa tirar, não aceita inserção), como os do Mekanism numa face com entrada e saída.
+     */
+    static final class Furnace implements IItemHandler {
+        final ItemStack[] slots = {ItemStack.EMPTY, ItemStack.EMPTY};
+
+        @Override
+        public int getSlots() {
+            return 2;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return slots[slot];
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            ItemStack inSlot = slots[slot];
+            if (slot != 0 || stack.isEmpty() || !inSlot.isEmpty() && !ItemStack.isSameItemSameComponents(inSlot, stack)) {
+                return stack;
+            }
+            int accepted = Math.min(stack.getCount(), stack.getMaxStackSize() - inSlot.getCount());
+            if (accepted <= 0) {
+                return stack;
+            }
+            if (!simulate) {
+                slots[0] = stack.copyWithCount(inSlot.getCount() + accepted);
+            }
+            return stack.copyWithCount(stack.getCount() - accepted);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            ItemStack inSlot = slots[slot];
+            if (slot != 1 || inSlot.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            int taken = Math.min(amount, inSlot.getCount());
+            if (!simulate) {
+                slots[1] = inSlot.copyWithCount(inSlot.getCount() - taken);
+            }
+            return inSlot.copyWithCount(taken);
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 64;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return slot == 0;
+        }
+    }
+
+    /** Um slot vazio que aceita tudo na simulação e recusa na inserção real (destino que mente). */
+    static final class LyingSink implements IItemHandler {
+        static final LyingSink INSTANCE = new LyingSink();
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return simulate ? ItemStack.EMPTY : stack;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 64;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
+    }
+
+    /**
+     * Some com tudo o que recebe, com limite {@code Integer.MAX_VALUE} e o slot sempre vazio. Anota
+     * a maior pilha recebida numa chamada: a lixeira do Trash Cans guarda essa pilha e, acima de 99,
+     * derruba o servidor ao salvá-la.
+     */
+    static final class VoidSink implements IItemHandler {
+        private int largestCall;
+        private long total;
+
+        int largestCall() {
+            return largestCall;
+        }
+
+        long total() {
+            return total;
+        }
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (!simulate && !stack.isEmpty()) {
+                largestCall = Math.max(largestCall, stack.getCount());
+                total += stack.getCount();
+            }
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
     }
 
     static final class BigSlot implements IItemHandler {

@@ -10,7 +10,7 @@ Regras do GuideME que valem a pena lembrar:
 - anotações de cena (BlockAnnotation, LineAnnotation...) com o texto em linha própria; numa linha
   só, elas não aparecem;
 - o comando de teste é /guidemec wirelessautomate:guide open wirelessautomate:<página>.md;
-- os números da tabela de tiers são os padrões de RouterTier (mantenha em dia).
+- os números das tabelas são os padrões do ResourceType, do StorageKind e do RouterTier (mantenha em dia).
 """
 import os
 
@@ -397,6 +397,8 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 Depois de configurar o primeiro roteador de uma linha, use o [Configurador](configurator.md) para
 copiar a configuração (e as redes) para os outros.
 
+As telas do mod têm um botão com uma lua no canto de cima, à direita: ele troca todas para o modo escuro (e o sol volta ao claro).
+
 ## Receitas
 
 <RecipeFor id="wirelessautomate:router" />
@@ -431,6 +433,8 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 
 Once the first router of a line is set up, use the [Configurator](configurator.md) to copy its
 configuration (and networks) to the others.
+
+Every screen of the mod has a moon button in the top-right corner: it switches all of them to dark mode (the sun switches back).
 
 ## Recipes
 
@@ -491,23 +495,28 @@ o roteador.
 | Passo | Como |
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
-| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar), ou use os botões Frente, Trás, Esquerda, Direita, Cima e Baixo (lados da máquina, abaixo). |
-| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). |
-| **4. Ajustes (opcional)** | Em **Mais**: prioridade e redstone. Em **Editar**: o [filtro](filters.md) da face. |
+| **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar) ou no **cubo desdobrado** do painel: as duas escolhas andam juntas, e a face sob o mouse se acende nos dois. |
+| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). Escolher um modo numa face sem rede, com uma [rede](networks.md) ativa, põe a face nela; o aviso na base do painel traz o botão **Desfazer**. |
+| **4. Ajustes (opcional)** | Prioridade e redstone ficam sempre à vista no painel. **Editar** abre o [filtro](filters.md) da face. |
 | **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
 
-## Lados da máquina
+## O painel e o cubo
 
-Os botões das faces falam dos lados da **máquina**, vistos de frente para ela: Frente, Trás,
-Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a frente (por exemplo
-**Frente: Sul**). Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
+O painel à direita é o mesmo que o [Tablet de Rede](network-tablet.md) mostra para um nó. No alto,
+o **cubo desdobrado** mostra as seis faces da máquina de uma vez: cada uma com a cor do modo e uma
+bolinha na cor da rede. Uma face sem modo tem a borda tracejada, e uma com modo e sem rede ganha um
+contorno coral e o convite **Escolha a rede desta face**. O olho marca a face onde o roteador está
+preso.
+
+Os nomes são os lados da **máquina**, vistos de frente para ela: Frente, Trás, Esquerda, Direita,
+Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
 **Frente = Norte**.
 
-| Na tela | O que mostra |
+| No painel | O que mostra |
 | --- | --- |
-| **Ponto em cima do botão** | A cor da rede daquela face (sem ponto: sem rede). |
+| **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 
@@ -524,7 +533,7 @@ Esquerda, Direita, Cima e Baixo. Embaixo dos botões, a tela diz onde está a fr
 
 | Ajuste | Valores | Efeito |
 | --- | --- | --- |
-| **Prioridade** | −999 a 999 (padrão 0) | Destinos com prioridade maior recebem primeiro; empates se revezam. |
+| **Prioridade** | −999 a 999 (padrão 0) | Destinos com prioridade maior recebem primeiro; empates se revezam. Os botões − e + mudam de 1 em 1; com Shift, de 10 em 10. |
 | **Redstone: Ignorar** | Padrão | A face funciona sempre. |
 | **Redstone: Com sinal** | | A face só funciona com sinal de redstone no roteador. |
 | **Redstone: Sem sinal** | | A face só funciona sem sinal. |
@@ -586,22 +595,27 @@ behind it drops the router.
 | Step | How |
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
-| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate), or use the Front, Back, Left, Right, Top and Bottom buttons (machine sides, below). |
-| **3. Pick the mode** | Extract, Insert, Storage or None (table below). |
-| **4. Settings (optional)** | Under **More**: priority and redstone. Under **Edit**: the face's [filter](filters.md). |
+| **2. Pick the face** | Click the machine face on the 3D model (drag to rotate) or on the panel's **unfolded cube**: both choices move together, and the face under the mouse lights up in both. |
+| **3. Pick the mode** | Extract, Insert, Storage or None (table below). Picking a mode on a face with no network, while you have an active [network](networks.md), puts the face on it; the notice at the bottom of the panel has an **Undo** button. |
+| **4. Settings (optional)** | Priority and redstone are always in view on the panel. **Edit** opens the face's [filter](filters.md). |
 | **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
 
-## Machine sides
+## The panel and the cube
 
-The face buttons name the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and
-Bottom. Below the buttons, the screen tells where the front is (for example **Front: South**). A
-machine without a front, or facing up or down, like a barrel: **Front = North**.
+The panel on the right is the same one the [Network Tablet](network-tablet.md) shows for a node. At
+the top, the **unfolded cube** shows the machine's six faces at once: each in its mode's color with
+a dot in its network's color. A face with no mode has a dashed border, and one with a mode but no
+network gets a coral outline and the prompt **Pick this face's network**. The eye marks the face the
+router is attached to.
 
-| On the screen | What it shows |
+The names are the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and Bottom.
+A machine without a front, or facing up or down, like a barrel: **Front = North**.
+
+| On the panel | What it shows |
 | --- | --- |
-| **Dot above a button** | The color of that face's network (no dot: no network). |
+| **Dot on a face** | The color of that face's network (no dot: no network). |
 | **Network row** | The selected face's network; click to change it. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 
@@ -618,7 +632,7 @@ machine without a front, or facing up or down, like a barrel: **Front = North**.
 
 | Setting | Values | Effect |
 | --- | --- | --- |
-| **Priority** | −999 to 999 (default 0) | Higher-priority destinations receive first; ties take turns. |
+| **Priority** | −999 to 999 (default 0) | Higher-priority destinations receive first; ties take turns. The − and + buttons step by 1; hold Shift to step by 10. |
 | **Redstone: Ignore** | Default | The face always works. |
 | **Redstone: With signal** | | The face only works with a redstone signal on the router. |
 | **Redstone: No signal** | | The face only works without a signal. |
@@ -1386,7 +1400,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, com busca e filtro por papel (extrai, insere...). **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. Clique num nó para abrir a tela dele à distância. |
+| **Lista** | Todos os nós, agrupados pela máquina, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
 | **Estatísticas** | Quanto cada rede move por tipo, destinos cheios e roteadores em chunks descarregados. |
 | **Redes** | Criar redes, cor, membros e privacidade. |
@@ -1395,6 +1409,42 @@ Uma visão de todas as suas redes, de qualquer lugar.
 A aba Estatísticas tem um cartão por tipo. Clique num cartão para ver na Lista só os roteadores daquele tipo; o chip "Só …" na Lista tira o filtro.
 
 Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra o aviso **faces sem rede: rede removida**: escolha outra rede para elas.
+
+## Buscar na Lista
+
+Escreva na caixa de busca: as sugestões se dividem em **Máquinas**, **Redes** e **Nomes**. Escolher uma máquina ou uma rede vira uma **etiqueta** (por exemplo "Máquina: Fornalha ✕"); o ✕ a tira. Você pode juntar várias etiquetas e um texto.
+
+Ao lado da busca ficam os **filtros rápidos**, cada um com a contagem: **Com problema**, **Sem rede** e **Descarregados**. Um filtro com zero nós some. Embaixo, "N de M nós" e **Limpar** voltam à lista inteira.
+
+Cada máquina é um grupo que você recolhe e abre pelo cabeçalho. A linha de cada nó mostra o estado em palavras (**descarregada**, **sem rede**, **destino cheio**, **pausada** ou a rede e a vazão) e seis quadradinhos, um por lado da máquina, na cor do modo da aba escolhida.
+
+| Tecla | O que faz |
+| --- | --- |
+| **Digitar** | Procura. |
+| **↑ ↓** | Anda pelas sugestões abertas ou pelos nós. |
+| **Enter** | Aceita a sugestão, procura, ou abre a tela completa do nó escolhido. |
+| **← →** | Recolhe e abre o grupo do nó escolhido (com a busca vazia). |
+| **Esc** | Fecha as sugestões; de novo, limpa a busca. |
+| **Backspace** | Com a busca vazia, tira a última etiqueta. |
+| **Duplo clique num nó** | Abre a tela completa do roteador. |
+
+## O painel do nó
+
+Clique num nó da lista: o painel à direita é o mesmo da [tela do roteador](router.md), com o cubo desdobrado das faces, modo, rede, filtro, prioridade e redstone, e cada mudança vale na hora. Pelo Tablet você edita um nó **dentro do alcance do tier do Tablet**; com o nó descarregado, ou fora do alcance, o painel mostra o último estado só para leitura e diz o motivo.
+
+**Editar** o filtro abre a tela de filtro mesmo à distância (em outra dimensão também, se o tier permitir), e **Voltar** leva você de volta ao Tablet, no mesmo nó e na mesma busca. O Tablet lembra a aba e o nó ao reabrir.
+
+## Copiar e colar um perfil
+
+Com um nó escolhido, **Copiar perfil** guarda a configuração das faces dele no Tablet (a faixa **Perfil de …** mostra a origem; **esquecer ✕** a larga). Depois:
+
+| Para | Como |
+| --- | --- |
+| **Um nó** | Escolha-o e clique em **Colar perfil**. |
+| **Todo um grupo** | No cabeçalho do grupo, **Colar nas N** (a origem fica de fora). |
+| **Vários nós** | Em **Selecionar**, marque os nós e clique em **Colar nos N marcados**. |
+
+Os nós já iguais ao perfil dizem "igual ao perfil"; os outros mostram "N diferentes do perfil" e o primeiro ajuste que falta. O aviso depois de colar traz **Desfazer**. Atalhos: **Ctrl+C** copia o perfil do nó escolhido, **Ctrl+V** cola e **Ctrl+Z** desfaz. As redes valem pela regra de sempre: só entram as que você pode usar.
 
 ## Receita
 
@@ -1418,7 +1468,7 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, with search and a role filter (extracts, inserts...). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. Click a node to open its screen remotely. |
+| **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
 | **Map** | Top-down view colored by status. Click a point to open the node. |
 | **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
 | **Networks** | Create networks, color, members and privacy. |
@@ -1427,6 +1477,42 @@ An overview of all your networks, from anywhere.
 The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
 
 If a network is deleted, the faces that were on it are left without a network and the node shows the warning **faces without network: network removed**: pick another network for them.
+
+## Searching the List
+
+Type in the search box: suggestions are split into **Machines**, **Networks** and **Names**. Picking a machine or a network turns it into a **label** (for example "Machine: Furnace ✕"); the ✕ removes it. You can combine several labels and some text.
+
+Next to the search sit the **quick filters**, each with its count: **With problems**, **No network** and **Unloaded**. A filter with zero nodes disappears. At the bottom, "N of M nodes" and **Clear** bring back the whole list.
+
+Each machine is a group you collapse and open from its header. Each node's row states its condition in words (**unloaded**, **no network**, **destination full**, **paused**, or the network and rate) and six small squares, one per machine side, in the color of the selected tab's mode.
+
+| Key | What it does |
+| --- | --- |
+| **Type** | Searches. |
+| **↑ ↓** | Moves through the open suggestions or the nodes. |
+| **Enter** | Accepts the suggestion, searches, or opens the chosen node's full screen. |
+| **← →** | Collapses and opens the chosen node's group (with an empty search). |
+| **Esc** | Closes the suggestions; again, clears the search. |
+| **Backspace** | With an empty search, removes the last label. |
+| **Double-click a node** | Opens the router's full screen. |
+
+## The node panel
+
+Click a node in the list: the panel on the right is the same as the [router screen](router.md), with the unfolded face cube, mode, network, filter, priority and redstone, and every change takes effect at once. From the Tablet you edit a node **within the Tablet tier's range**; with the node unloaded, or out of range, the panel shows its last state read-only and says why.
+
+**Edit** on the filter opens the filter screen even from a distance (across dimensions too, if the tier allows it), and **Back** returns you to the Tablet, on the same node and the same search. The Tablet remembers its tab and node when you reopen it.
+
+## Copying and pasting a profile
+
+With a node chosen, **Copy profile** saves its face settings in the Tablet (the **Profile of …** strip shows the source; **forget ✕** drops it). Then:
+
+| To | How |
+| --- | --- |
+| **One node** | Choose it and click **Paste profile**. |
+| **A whole group** | On the group's header, **Paste on N** (the source is left out). |
+| **Several nodes** | In **Select**, check the nodes and click **Paste on N marked**. |
+
+Nodes already equal to the profile say "same as the profile"; the others show "N different from the profile" and the first setting that is missing. The notice after pasting has an **Undo** button. Shortcuts: **Ctrl+C** copies the chosen node's profile, **Ctrl+V** pastes and **Ctrl+Z** undoes. Networks follow the usual rule: only the ones you can use are applied.
 
 ## Recipe
 

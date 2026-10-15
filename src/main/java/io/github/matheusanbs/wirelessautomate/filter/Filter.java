@@ -32,7 +32,7 @@ public final class Filter {
     public static final Filter EMPTY = new Filter(ListMode.WHITELIST, false, List.of());
 
     private final ListMode listMode;
-    /** Itens: exigir componentes iguais (senão picareta encantada = picareta). */
+    /** Itens e fluidos: exigir componentes iguais (senão picareta encantada = picareta). */
     private final boolean matchComponents;
     private final List<FilterEntry> entries;
 

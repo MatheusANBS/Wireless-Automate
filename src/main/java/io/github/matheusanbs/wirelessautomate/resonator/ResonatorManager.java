@@ -103,6 +103,12 @@ public final class ResonatorManager {
      * mods, que podem mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto. A lista só nasce num tick com lote.
      */
     public static void tick(MinecraftServer server) {
+        long started = System.nanoTime();
+        runDue(server);
+        ResonatorProfile.tickEnded(System.nanoTime() - started);
+    }
+
+    private static void runDue(MinecraftServer server) {
         if (CORES.isEmpty()) {
             return;
         }
@@ -128,6 +134,20 @@ public final class ResonatorManager {
                 ResonatorBatch.run(level, core, BATCH_TICKS);
             }
         }
+    }
+
+    static int coreCount() {
+        return CORES.size();
+    }
+
+    static int formedCount() {
+        int formed = 0;
+        for (ResonanceCoreBlockEntity core : CORES) {
+            if (!core.isRemoved() && core.formed()) {
+                formed++;
+            }
+        }
+        return formed;
     }
 
     /** Parada do servidor: o próximo mundo começa sem Núcleos. */

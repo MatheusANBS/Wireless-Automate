@@ -116,6 +116,14 @@ public final class RecipeEditorGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void cutCrystalFicaForaDaLista(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        helper.assertTrue(entry(server, id("cut_signal_crystal")).isEmpty(),
+                "cut_signal_crystal (tipo próprio) não é editável");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void saveWritesValidRecipe(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ResourceLocation id = id("storage_tank");

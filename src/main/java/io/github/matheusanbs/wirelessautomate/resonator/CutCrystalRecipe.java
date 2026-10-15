@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +19,7 @@ import net.minecraft.world.level.Level;
  * cheio. Por ser tipo próprio, fica fora do editor de receitas, como os anéis dos Cartões de Upgrade.
  */
 public class CutCrystalRecipe extends ShapedRecipe {
+    // O ShapedRecipe não expõe o padrão nem o resultado, e os codecs precisam deles.
     private final ShapedRecipePattern grade;
     private final ItemStack resultado;
 
@@ -41,11 +41,6 @@ public class CutCrystalRecipe extends ShapedRecipe {
             }
         }
         return true;
-    }
-
-    @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
-        return resultado.copy();
     }
 
     @Override

@@ -2,25 +2,48 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layout;
+import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Etapa 2 do Ressonador de Sinal: o lote do Núcleo, com a geração pela sintonia, o desgaste dos cristais e a
  * recarga com redstone. Cada teste roda o lote à mão dentro de um só {@code thenExecute}, para o lote do
- * gerenciador não cair no meio da conta.
+ * gerenciador não cair no meio da conta. Também o clique no Núcleo, o Cartão de Upgrade, o drop ao quebrar e o
+ * {@code /wa resonator}.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -196,6 +219,156 @@ public final class ResonatorCoreGameTests {
                     helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL,
                             "desmontado não gasta");
                 }).thenSucceed();
+    }
+
+    @GameTest(template = "empty7")
+    public static void cliqueComCristalPoeNoNucleo(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = survivor(helper);
+            ItemStack hand = crystal(false, CrystalCharge.FULL).copyWithCount(3);
+            player.setItemInHand(InteractionHand.MAIN_HAND, hand);
+            core.getBlockState().useItemOn(hand, helper.getLevel(), player, InteractionHand.MAIN_HAND,
+                    hit(core.getBlockPos()));
+            helper.assertTrue(core.crystals().get(0).is(ModItems.SIGNAL_CRYSTAL.get()), "o cristal não entrou");
+            helper.assertValueEqual(player.getMainHandItem().getCount(), 2, "cristais na mão");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void cliqueComRedstonePoeNoNucleo(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = survivor(helper);
+            ItemStack hand = new ItemStack(Items.REDSTONE, 70);
+            player.setItemInHand(InteractionHand.MAIN_HAND, hand);
+            core.getBlockState().useItemOn(hand, helper.getLevel(), player, InteractionHand.MAIN_HAND,
+                    hit(core.getBlockPos()));
+            helper.assertValueEqual(core.redstone(), ResonanceCoreBlockEntity.MAX_REDSTONE, "redstone no Núcleo");
+            helper.assertValueEqual(player.getMainHandItem().getCount(), 6, "sobra na mão");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void shiftCliqueTiraOUltimoCristal(GameTestHelper helper) {
+        formed(helper, RouterTier.ADVANCED, core -> {
+            assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
+            assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
+            ServerPlayer player = survivor(helper);
+            player.setShiftKeyDown(true);
+            core.getBlockState().useWithoutItem(helper.getLevel(), player, hit(core.getBlockPos()));
+            helper.assertTrue(player.getMainHandItem().is(ModItems.CUT_SIGNAL_CRYSTAL.get()),
+                    "o último cristal não veio para a mão: " + player.getMainHandItem());
+            helper.assertTrue(core.crystals().get(1).isEmpty(), "a última câmara não esvaziou");
+            helper.assertTrue(core.crystals().get(0).is(ModItems.SIGNAL_CRYSTAL.get()), "a primeira câmara mudou");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void statusMostraOProblema(GameTestHelper helper) {
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        helper.setBlock(ORIGIN.offset(2, 2, 0), ModBlocks.RESONATOR_CASING.get());
+        helper.startSequence().thenWaitUntil(() -> {
+            ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
+            helper.assertTrue(core != null && core.lastProblem() != null, "ainda não revalidou");
+        }).thenExecute(() -> {
+            Component line = ResonatorStatus.line(ResonatorTestSupport.core(helper, corePos));
+            helper.assertTrue(line.getContents() instanceof TranslatableContents contents && contents.getKey()
+                    .equals("block.wirelessautomate.resonance_core.problem.missing_crystal_port"),
+                    "linha do status: " + line);
+        }).thenSucceed();
+    }
+
+    @GameTest(template = "empty7")
+    public static void cartaoSobeOTierEAumentaAsCamaras(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = survivor(helper);
+            ItemStack card = TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC);
+            BlockPos pos = core.getBlockPos();
+            InteractionResult result = useCard(player, card, pos);
+            helper.assertTrue(result.consumesAction(), "o cartão não subiu o Núcleo: " + result);
+            BlockState state = helper.getLevel().getBlockState(pos);
+            helper.assertTrue(state.getValue(RouterBlock.TIER) == RouterTier.ADVANCED, "tier: " + state);
+            helper.assertTrue(helper.getLevel().getBlockEntity(pos) == core, "o block entity mudou");
+            helper.assertTrue(core.formed(), "a estrutura desmontou");
+            helper.assertValueEqual(core.chambers(), 2, "câmaras do Avançado");
+            helper.assertValueEqual(core.capacity(),
+                    CoreMath.buffer(2, Config.resonatorFePerCrystal(RouterTier.ADVANCED)), "capacidade do Avançado");
+            helper.assertTrue(card.isEmpty(), "o cartão não foi gasto");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void cartaoErradoRecusa(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = survivor(helper);
+            ItemStack card = TierCoreItem.card(RouterTier.ELITE, RouterTier.ADVANCED);
+            InteractionResult result = useCard(player, card, core.getBlockPos());
+            helper.assertTrue(result == InteractionResult.FAIL, "resultado: " + result);
+            helper.assertTrue(core.tier() == RouterTier.BASIC, "o tier mudou");
+            helper.assertValueEqual(card.getCount(), 1, "o cartão recusado foi gasto");
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void quebrarNucleoDerrubaOsCristais(GameTestHelper helper) {
+        BlockPos relative = new BlockPos(1, 1, 1);
+        helper.setBlock(relative, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, relative);
+        assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
+        assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
+        helper.assertValueEqual(core.addRedstone(5), 5, "redstone que entrou");
+        ServerPlayer player = survivor(helper);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_PICKAXE));
+        BlockPos pos = helper.absolutePos(relative);
+        helper.assertTrue(player.gameMode.destroyBlock(pos), "não quebrou o Núcleo");
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(2));
+        int crystals = 0;
+        int redstone = 0;
+        boolean coreDropped = false;
+        for (ItemEntity drop : drops) {
+            ItemStack stack = drop.getItem();
+            if (stack.getItem() instanceof SignalCrystalItem) {
+                crystals += stack.getCount();
+            } else if (stack.is(Items.REDSTONE)) {
+                redstone += stack.getCount();
+            } else if (stack.is(ModItems.RESONANCE_CORE.get())) {
+                coreDropped = ResonanceCoreItem.tierOf(stack) == RouterTier.ADVANCED;
+            }
+        }
+        helper.assertValueEqual(crystals, 2, "cristais no chão");
+        helper.assertValueEqual(redstone, 5, "redstone no chão");
+        helper.assertTrue(coreDropped, "o Núcleo Avançado não caiu");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void comandoDialMudaODial(GameTestHelper helper) {
+        BlockPos relative = new BlockPos(1, 1, 1);
+        helper.setBlock(relative, ModBlocks.RESONANCE_CORE.get());
+        BlockPos pos = helper.absolutePos(relative);
+        CommandSourceStack source = helper.getLevel().getServer().createCommandSourceStack().withPermission(2)
+                .withLevel(helper.getLevel()).withSuppressedOutput();
+        helper.getLevel().getServer().getCommands().performPrefixedCommand(source,
+                "wa resonator " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " dial 97.42");
+        double dial = ResonatorTestSupport.core(helper, relative).dial();
+        helper.assertTrue(Math.abs(dial - 97.40) < 1e-9, "dial: " + dial);
+        helper.succeed();
+    }
+
+    private static ServerPlayer survivor(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.SURVIVAL);
+        return player;
+    }
+
+    private static BlockHitResult hit(BlockPos absolute) {
+        return new BlockHitResult(Vec3.atCenterOf(absolute), Direction.EAST, absolute, false);
+    }
+
+    /** Jogador com {@code card} na mão usa o cartão no Núcleo em {@code absolute}. */
+    private static InteractionResult useCard(ServerPlayer player, ItemStack card, BlockPos absolute) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, card);
+        return card.getItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit(absolute)));
     }
 
     /** Monta a Vitrine no tier, espera montar e roda {@code body} num só tick. */

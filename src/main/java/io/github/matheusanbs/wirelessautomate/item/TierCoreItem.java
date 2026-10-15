@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.List;
@@ -31,8 +32,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Cartão de Upgrade de tier: um item por tier de destino ({@code tier_core_<destino>}), com o tier de origem no
  * componente {@code upgrade_from} ({@link ModDataComponents#UPGRADE_FROM}). Shift + clique (vale também sem o
- * Shift) num roteador ou armazenamento colocado o leva ao tier do cartão no lugar, sem perder a configuração nem o
- * conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}).
+ * Shift) num roteador, armazenamento ou Núcleo de Ressonância colocado o leva ao tier do cartão no lugar, sem perder
+ * a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}, só roteador e
+ * armazenamento).
  *
  * <p>Um cartão com origem k ("k → destino") só vale num bloco exatamente do tier k; num bloco de outro tier, o
  * cartão fica na mão e a action bar avisa. O cartão sem origem é o cartão antigo, de antes desta regra: sobe de
@@ -78,8 +80,10 @@ public class TierCoreItem extends Item {
         }
         Level level = context.getLevel();
         BlockState state = level.getBlockState(context.getClickedPos());
-        boolean router = state.getBlock() instanceof RouterBlock;
-        if (!router && !(state.getBlock() instanceof StorageBlock)) {
+        Target target = state.getBlock() instanceof RouterBlock ? Target.ROUTER
+                : state.getBlock() instanceof StorageBlock ? Target.STORAGE
+                : state.getBlock() instanceof ResonanceCoreBlock ? Target.CORE : null;
+        if (target == null) {
             return InteractionResult.PASS;
         }
         ItemStack stack = context.getItemInHand();
@@ -92,14 +96,16 @@ public class TierCoreItem extends Item {
             }
             if (!level.isClientSide && player != null) {
                 player.displayClientMessage(Component.translatable(
-                        KEY + (router ? "refused.router" : "refused.storage"), tierName(origin))
+                        KEY + "refused." + target.key, tierName(origin))
                         .withStyle(ChatFormatting.RED), true);
             }
             return InteractionResult.FAIL;
         }
-        boolean upgraded = router
-                ? RouterBlock.tryUpgrade(level, context.getClickedPos(), tier, origin)
-                : StorageBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
+        boolean upgraded = switch (target) {
+            case ROUTER -> RouterBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
+            case STORAGE -> StorageBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
+            case CORE -> ResonanceCoreBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
+        };
         if (!upgraded) {
             return InteractionResult.PASS;
         }
@@ -111,9 +117,10 @@ public class TierCoreItem extends Item {
         if (!level.isClientSide && player != null) {
             Component from = tierName(blockTier).withStyle(ChatFormatting.GREEN);
             Component to = tierName(tier).withStyle(ChatFormatting.GREEN);
-            player.displayClientMessage(router
+            player.displayClientMessage(target == Target.ROUTER
                     ? Component.translatable(KEY + "upgraded.router", from, to)
-                    : Component.translatable(KEY + "upgraded.storage", state.getBlock().getName(), from, to), true);
+                    : Component.translatable(KEY + "upgraded." + target.key, state.getBlock().getName(), from, to),
+                    true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -161,6 +168,19 @@ public class TierCoreItem extends Item {
     }
 
     private static final String KEY = "item.wirelessautomate.tier_core.";
+
+    /** O bloco que o cartão sobe no clique; {@code key} completa as chaves {@code refused.*} e {@code upgraded.*}. */
+    private enum Target {
+        ROUTER("router"),
+        STORAGE("storage"),
+        CORE("core");
+
+        final String key;
+
+        Target(String key) {
+            this.key = key;
+        }
+    }
 
     private enum Stat {
         ITEMS(ResourceType.ITEM),

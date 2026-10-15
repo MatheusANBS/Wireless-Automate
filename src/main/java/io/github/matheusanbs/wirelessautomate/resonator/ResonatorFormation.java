@@ -33,7 +33,7 @@ public final class ResonatorFormation {
         if (core.isRemoved() || level.getBlockEntity(at) != core) {
             return;
         }
-        ResonatorLayout.Result result = ResonatorLayout.check(at.getX(), at.getY(), at.getZ(), probe(level, at));
+        ResonatorLayout.Result result = check(level, at);
         if (result instanceof ResonatorLayout.Formed formed) {
             core.setLastProblem(null);
             form(level, core, formed);
@@ -43,6 +43,11 @@ public final class ResonatorFormation {
                 disassemble(level, core);
             }
         }
+    }
+
+    /** Confere a estrutura em volta do Núcleo em {@code core}, sem gravar nada. */
+    static ResonatorLayout.Result check(ServerLevel level, BlockPos core) {
+        return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), probe(level, core));
     }
 
     /** Desmonta: cada membro ainda presente volta a solto e as Portas saem do índice. */

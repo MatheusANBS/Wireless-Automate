@@ -33,7 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * primeiro na hora). A estação nunca sai do servidor.
  *
  * <p>As câmaras ficam fixas na abertura: se o tier muda com a tela aberta (Cartão de Upgrade de outro jogador), o
- * {@link #stillValid} fecha a tela, porque o slot da redstone do {@code CoreInventory} muda de índice.
+ * {@link #stillValid} deixa de valer, porque o slot da redstone do {@code CoreInventory} muda de índice. Com o jogador
+ * ainda ao alcance e o Núcleo montado, o {@link #broadcastChanges} reabre a tela com as câmaras novas; senão o vanilla
+ * a fecha.
  */
 public class ResonatorMenu extends AbstractContainerMenu {
     public static final int CHAMBER_X = 191;
@@ -259,6 +261,10 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
     @Override
     public void broadcastChanges() {
+        if (viewer != null && core != null && core.chambers() != chambers) {
+            reopen(viewer, core);
+            return;
+        }
         super.broadcastChanges();
         if (viewer == null) {
             return;
@@ -266,6 +272,18 @@ public class ResonatorMenu extends AbstractContainerMenu {
         ResonatorStatePayload payload = pollState(viewer.server.getTickCount());
         if (payload != null && viewer.connection != null && viewer.connection.hasChannel(payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
+        }
+    }
+
+    /**
+     * O tier mudou com a tela aberta: abre outra com as câmaras novas, se o jogador ainda alcança o Núcleo montado e
+     * esta ainda é a tela dele. Abrir fecha esta antes (o item no cursor volta ao inventário, pelo {@code removed} do
+     * vanilla), e o tick do jogador confere em seguida o {@link #stillValid} da nova. Fora disso, nada: o tick fecha
+     * esta pelo {@link #stillValid}.
+     */
+    private void reopen(ServerPlayer player, ResonanceCoreBlockEntity core) {
+        if (player.containerMenu == this && !core.isRemoved() && core.formed() && container.stillValid(player)) {
+            open(player, core);
         }
     }
 

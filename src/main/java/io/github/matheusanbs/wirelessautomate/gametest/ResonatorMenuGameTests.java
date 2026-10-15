@@ -5,7 +5,6 @@ import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSuppo
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.hit;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.survivor;
 
-import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -18,31 +17,21 @@ import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import java.util.OptionalInt;
-import java.util.UUID;
-import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.CommonListenerCookie;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Etapa 3 do Ressonador de Sinal: o menu do Núcleo (o clique que abre, os slots das câmaras e da redstone, o Shift
@@ -73,9 +62,9 @@ public final class ResonatorMenuGameTests {
         player.containerMenu = player.inventoryMenu;
     }
 
-    /** Um jogador que abre telas sem o pacote da NeoForge, ao lado do Núcleo. */
+    /** Um jogador em sobrevivência que abre telas sem o pacote da NeoForge, ao lado do Núcleo. */
     private static TestPlayers.MenuPlayer openerNear(GameTestHelper helper, ResonanceCoreBlockEntity core) {
-        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        TestPlayers.MenuPlayer player = TestPlayers.survivalMenuOpener(helper);
         player.moveTo(Vec3.atBottomCenterOf(core.getBlockPos().east()));
         return player;
     }
@@ -95,6 +84,56 @@ public final class ResonatorMenuGameTests {
                 helper.assertValueEqual(client.chambers(), 3, "câmaras no cliente");
                 helper.assertValueEqual(client.slots.size(), 3 + 1 + 36, "slots no cliente");
                 helper.assertTrue(client.stillValid(player), "o menu do cliente não vale");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void tierQueMudaReabreATela(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            TestPlayers.MenuPlayer player = openerNear(helper, core);
+            try {
+                core.insertCrystal(crystal(false, CrystalCharge.FULL));
+                core.getBlockState().useWithoutItem(helper.getLevel(), player, hit(core.getBlockPos()));
+                helper.assertTrue(player.containerMenu instanceof ResonatorMenu, "o clique não abriu o menu");
+                ResonatorMenu before = (ResonatorMenu) player.containerMenu;
+                before.setCarried(new ItemStack(Items.REDSTONE, 5));
+                helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
+                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                before.broadcastChanges();
+                helper.assertTrue(player.containerMenu instanceof ResonatorMenu after && after != before
+                        && after.chambers() == 2 && after.slots.size() == 2 + 1 + 36 && after.stillValid(player),
+                        "a tela não reabriu com as câmaras novas: " + player.containerMenu);
+                ResonatorMenu after = (ResonatorMenu) player.containerMenu;
+                helper.assertTrue(after.getSlot(0).hasItem() && !after.getSlot(1).hasItem(), "câmaras na tela nova");
+                helper.assertTrue(before.getCarried().isEmpty() && after.getCarried().isEmpty(), "o cursor ficou cheio");
+                helper.assertValueEqual(player.getInventory().countItem(Items.REDSTONE), 5, "redstone do cursor");
+                helper.assertValueEqual(core.crystals().stream().filter(stack -> !stack.isEmpty()).count(), 1L,
+                        "cristais no Núcleo");
+                after.broadcastChanges();
+                helper.assertTrue(player.containerMenu == after, "reabriu de novo sem o tier mudar");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void tierQueMudaLongeFechaSemReabrir(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            TestPlayers.MenuPlayer player = openerNear(helper, core);
+            try {
+                core.getBlockState().useWithoutItem(helper.getLevel(), player, hit(core.getBlockPos()));
+                helper.assertTrue(player.containerMenu instanceof ResonatorMenu, "o clique não abriu o menu");
+                ResonatorMenu before = (ResonatorMenu) player.containerMenu;
+                player.moveTo(Vec3.atBottomCenterOf(core.getBlockPos().east(20)));
+                helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
+                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                before.broadcastChanges();
+                helper.assertTrue(player.containerMenu == before && !before.stillValid(player),
+                        "longe do Núcleo a tela reabriu ou continuou valendo");
             } finally {
                 close(player);
             }

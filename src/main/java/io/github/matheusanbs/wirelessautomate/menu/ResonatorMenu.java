@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreInventory;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
@@ -21,7 +22,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
@@ -154,11 +154,11 @@ public class ResonatorMenu extends AbstractContainerMenu {
      * mandado. Público para os GameTests.
      */
     public @Nullable ResonatorStatePayload pollState(long now) {
-        if (core == null) {
+        if (core == null || sent != null && now - lastSent < StorageListMenu.SYNC_INTERVAL) {
             return null;
         }
         ResonatorStatePayload current = capture(core);
-        if (sent != null && (current.equals(sent) || now - lastSent < StorageListMenu.SYNC_INTERVAL)) {
+        if (current.equals(sent)) {
             return null;
         }
         sent = current;
@@ -190,7 +190,9 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
     /**
      * Shift + clique: de um slot do Núcleo para o inventário (barra primeiro); do inventário, cristal para as
-     * câmaras livres e redstone para o slot dela; o resto troca entre mochila e barra.
+     * câmaras livres e redstone para o slot dela; o resto troca entre mochila e barra. Os slots do Núcleo dão uma
+     * cópia (o {@code CoreInventory} não deixa sair pilha dele): a sobra volta pelo {@code setByPlayer}, e a redstone
+     * entra pelo {@code safeInsert}, nunca pela soma no lugar do {@code moveItemStackTo}.
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -206,20 +208,27 @@ public class ResonatorMenu extends AbstractContainerMenu {
         int start = inventoryStart();
         int hotbar = start + 27;
         int end = hotbar + 9;
-        boolean toCore = false;
         if (index < start) {
             if (!moveItemStackTo(stack, start, end, true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (stack.getItem() instanceof SignalCrystalItem && moveItemStackTo(stack, 0, chambers, false)) {
-            toCore = true;
-        } else if (stack.is(Items.REDSTONE) && moveItemStackTo(stack, chambers, chambers + 1, false)) {
-            toCore = true;
-        } else if (index < hotbar) {
-            if (!moveItemStackTo(stack, hotbar, end, false)) {
-                return ItemStack.EMPTY;
+            slot.setByPlayer(stack.isEmpty() ? ItemStack.EMPTY : stack);
+            slot.onTake(player, original.copyWithCount(original.getCount() - stack.getCount()));
+            return original;
+        }
+        if (stack.getItem() instanceof SignalCrystalItem && fillChambers(stack)
+                || CoreInventory.isPlainRedstone(stack) && slots.get(chambers).safeInsert(stack).getCount()
+                        < original.getCount()) {
+            // O que sobrou com o Núcleo cheio fica onde está: o vanilla repete o Shift + clique enquanto devolvemos
+            // algo, e a repetição levaria a sobra para a barra.
+            if (stack.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
             }
-        } else if (!moveItemStackTo(stack, start, hotbar, false)) {
+            return ItemStack.EMPTY;
+        }
+        if (index < hotbar ? !moveItemStackTo(stack, hotbar, end, false) : !moveItemStackTo(stack, start, hotbar, false)) {
             return ItemStack.EMPTY;
         }
         if (stack.isEmpty()) {
@@ -231,9 +240,16 @@ public class ResonatorMenu extends AbstractContainerMenu {
             return ItemStack.EMPTY;
         }
         slot.onTake(player, stack);
-        // O que sobrou de cristal com as câmaras cheias fica onde está: o vanilla repete o Shift + clique enquanto
-        // devolvemos algo, e a repetição levaria a sobra para a barra.
-        return toCore ? ItemStack.EMPTY : original;
+        return original;
+    }
+
+    /** Um cristal em cada câmara livre: o {@code moveItemStackTo} para no primeiro slot vazio que preenche. */
+    private boolean fillChambers(ItemStack stack) {
+        boolean moved = false;
+        while (!stack.isEmpty() && moveItemStackTo(stack, 0, chambers, false)) {
+            moved = true;
+        }
+        return moved;
     }
 
     @Override
@@ -277,7 +293,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
         }
     }
 
-    /** A redstone da recarga: só pó de redstone, até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. */
+    /** A redstone da recarga: só pó de redstone comum (sem componentes), até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. */
     private static final class RedstoneSlot extends Slot {
         RedstoneSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
@@ -285,7 +301,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.is(Items.REDSTONE);
+            return CoreInventory.isPlainRedstone(stack);
         }
 
         @Override

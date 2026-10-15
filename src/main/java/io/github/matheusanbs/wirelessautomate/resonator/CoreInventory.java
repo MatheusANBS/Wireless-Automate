@@ -1,32 +1,41 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
+import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 
 /**
  * O Núcleo visto como {@link Container} pelo menu: as câmaras do tier e, por último, o slot da redstone. Tudo passa
  * pelos mutadores do Núcleo ({@code setCrystalAt}, {@code setRedstone}), que gravam e mandam a câmara aos clientes.
  *
- * <p>A redstone é um inteiro no Núcleo, então o slot dela mostra sempre a mesma pilha, ajustada à contagem: o vanilla
- * muda essa pilha no lugar ({@code grow} ao juntar redstone, {@code shrink} no Shift + clique) e só depois chama
- * {@link #setChanged()}, que leva ao Núcleo a diferença em relação ao último valor mostrado. Pela diferença, e não
- * pelo valor, a redstone gasta pelo lote no meio do caminho não volta. As câmaras dão uma cópia, para nenhuma mudança
- * no lugar escapar do {@code setCrystalAt}.
+ * <p>{@link #getItem} devolve sempre uma pilha nova: nenhuma pilha do Núcleo sai daqui, e uma mudança feita no lugar
+ * na pilha devolvida não vale nada (o slot da redstone do menu leva a inserção ao {@link #setItem}). O
+ * {@link #setItem} não tem como recusar: o que não cabe (mais de um cristal numa câmara, item que não é cristal, redstone
+ * com componentes ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}) cai no mundo à frente do Núcleo, em vez
+ * de sumir.
  */
 public final class CoreInventory implements Container {
     private final ResonanceCoreBlockEntity core;
-    private final ItemStack redstoneView = new ItemStack(Items.REDSTONE);
-    /** A contagem da {@link #redstoneView} quando ela saiu pela última vez. */
-    private int shownRedstone = -1;
 
     public CoreInventory(ResonanceCoreBlockEntity core) {
         this.core = core;
     }
 
+    /** Só a redstone comum: os componentes de uma redstone renomeada não cabem no inteiro do Núcleo. */
+    public static boolean isPlainRedstone(ItemStack stack) {
+        return stack.is(Items.REDSTONE) && stack.getComponentsPatch().isEmpty();
+    }
+
     private boolean isRedstone(int slot) {
         return slot == core.chambers();
+    }
+
+    private boolean inRange(int slot) {
+        return slot >= 0 && slot <= core.chambers();
     }
 
     @Override
@@ -49,30 +58,21 @@ public final class CoreInventory implements Container {
 
     @Override
     public ItemStack getItem(int slot) {
-        if (slot < 0 || slot > core.chambers()) {
+        if (!inRange(slot)) {
             return ItemStack.EMPTY;
         }
         if (isRedstone(slot)) {
-            pushRedstone();
-            int count = core.redstone();
-            if (count <= 0) {
-                shownRedstone = -1;
-                return ItemStack.EMPTY;
-            }
-            redstoneView.setCount(count);
-            shownRedstone = count;
-            return redstoneView;
+            return core.redstone() > 0 ? new ItemStack(Items.REDSTONE, core.redstone()) : ItemStack.EMPTY;
         }
         return core.crystals().get(slot).copy();
     }
 
     @Override
     public ItemStack removeItem(int slot, int count) {
-        if (count <= 0 || slot < 0 || slot > core.chambers()) {
+        if (count <= 0 || !inRange(slot)) {
             return ItemStack.EMPTY;
         }
         if (isRedstone(slot)) {
-            pushRedstone();
             int taken = Math.min(count, core.redstone());
             if (taken <= 0) {
                 return ItemStack.EMPTY;
@@ -85,11 +85,10 @@ public final class CoreInventory implements Container {
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        if (slot < 0 || slot > core.chambers()) {
+        if (!inRange(slot)) {
             return ItemStack.EMPTY;
         }
         if (isRedstone(slot)) {
-            pushRedstone();
             int taken = core.redstone();
             if (taken <= 0) {
                 return ItemStack.EMPTY;
@@ -106,25 +105,41 @@ public final class CoreInventory implements Container {
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot < 0 || slot > core.chambers()) {
+        if (!inRange(slot)) {
+            drop(stack);
             return;
         }
         if (isRedstone(slot)) {
-            shownRedstone = -1;
-            core.setRedstone(stack.is(Items.REDSTONE) ? stack.getCount() : 0);
+            if (stack.isEmpty()) {
+                core.setRedstone(0);
+            } else if (!isPlainRedstone(stack)) {
+                drop(stack);
+            } else {
+                int kept = Math.min(stack.getCount(), ResonanceCoreBlockEntity.MAX_REDSTONE);
+                core.setRedstone(kept);
+                drop(stack.copyWithCount(stack.getCount() - kept));
+            }
+            return;
+        }
+        if (stack.isEmpty()) {
+            core.setCrystalAt(slot, ItemStack.EMPTY);
+        } else if (stack.getItem() instanceof SignalCrystalItem) {
+            core.setCrystalAt(slot, stack.copyWithCount(1));
+            drop(stack.copyWithCount(stack.getCount() - 1));
         } else {
-            core.setCrystalAt(slot, stack);
+            drop(stack);
         }
     }
 
+    /** O limite das câmaras; o slot da redstone do menu tem o dele. */
     @Override
     public int getMaxStackSize() {
-        return ResonanceCoreBlockEntity.MAX_REDSTONE;
+        return 1;
     }
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        return isRedstone(slot) ? stack.is(Items.REDSTONE) : stack.getItem() instanceof SignalCrystalItem;
+        return isRedstone(slot) ? isPlainRedstone(stack) : stack.getItem() instanceof SignalCrystalItem;
     }
 
     @Override
@@ -134,28 +149,24 @@ public final class CoreInventory implements Container {
 
     @Override
     public void setChanged() {
-        pushRedstone();
         core.setChanged();
     }
 
     @Override
     public void clearContent() {
-        shownRedstone = -1;
         for (int i = 0; i < core.chambers(); i++) {
             core.setCrystalAt(i, ItemStack.EMPTY);
         }
         core.setRedstone(0);
     }
 
-    /** Leva ao Núcleo o que o vanilla mudou no lugar na pilha da redstone desde que ela saiu. */
-    private void pushRedstone() {
-        if (shownRedstone < 0) {
+    /** Joga no mundo, à frente do Núcleo (para fora da casca), o que um {@code setItem} não pôde guardar. */
+    private void drop(ItemStack stack) {
+        Level level = core.getLevel();
+        if (stack.isEmpty() || level == null || level.isClientSide) {
             return;
         }
-        int delta = redstoneView.getCount() - shownRedstone;
-        shownRedstone = redstoneView.getCount();
-        if (delta != 0) {
-            core.setRedstone(core.redstone() + delta);
-        }
+        BlockPos front = core.getBlockPos().relative(core.getBlockState().getValue(ResonatorPartBlock.FACING));
+        Containers.dropItemStack(level, front.getX() + 0.5, front.getY() + 0.5, front.getZ() + 0.5, stack.copy());
     }
 }

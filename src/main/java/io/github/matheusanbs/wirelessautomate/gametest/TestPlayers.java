@@ -1,15 +1,27 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.authlib.GameProfile;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestListener;
 import net.minecraft.gametest.framework.GameTestRunner;
+import net.minecraft.network.Connection;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Jogadores de teste no mundo, sempre por aqui: o {@code makeMockServerPlayerInLevel} põe o jogador
@@ -30,6 +42,63 @@ final class TestPlayers {
     @SuppressWarnings("removal")
     static ServerPlayer inLevel(GameTestHelper helper) {
         return removedAtEnd(helper, helper.makeMockServerPlayerInLevel());
+    }
+
+    /** Um {@link MenuPlayer} criativo no mundo do teste, tirado da lista quando o teste termina. */
+    static MenuPlayer menuOpener(GameTestHelper helper) {
+        CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), MOCK_NAME),
+                false);
+        MenuPlayer player = new MenuPlayer(helper, cookie);
+        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        new EmbeddedChannel(connection);
+        helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        return removedAtEnd(helper, player);
+    }
+
+    /**
+     * Jogador falso como o do {@link GameTestHelper#makeMockServerPlayerInLevel()}, mas que abre telas sem mandar o
+     * pacote de abertura da NeoForge (a conexão falsa não negocia canais, e o pacote derrubaria o servidor) e guarda
+     * os dados extras da abertura, para o teste lê-los como o cliente leria.
+     */
+    static final class MenuPlayer extends ServerPlayer {
+        private static int nextContainerId = 100;
+        @Nullable RegistryFriendlyByteBuf openData;
+
+        private MenuPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
+            super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
+        }
+
+        @Override
+        public boolean isSpectator() {
+            return false;
+        }
+
+        @Override
+        public boolean isCreative() {
+            return true;
+        }
+
+        @Override
+        public OptionalInt openMenu(@Nullable MenuProvider provider,
+                @Nullable Consumer<RegistryFriendlyByteBuf> extraDataWriter) {
+            if (provider == null) {
+                return OptionalInt.empty();
+            }
+            if (containerMenu != inventoryMenu) {
+                doCloseContainer();
+            }
+            int containerId = nextContainerId++;
+            AbstractContainerMenu menu = provider.createMenu(containerId, getInventory(), this);
+            if (menu == null) {
+                return OptionalInt.empty();
+            }
+            openData = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess());
+            if (extraDataWriter != null) {
+                extraDataWriter.accept(openData);
+            }
+            containerMenu = menu;
+            return OptionalInt.of(containerId);
+        }
     }
 
     /** Tira da lista, quando o teste termina, um jogador que o teste pôs lá por conta própria. */

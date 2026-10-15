@@ -138,7 +138,7 @@ public final class ResonatorPorts {
             if (slot == core.chambers()) {
                 return core.redstone() > 0 ? new ItemStack(Items.REDSTONE, core.redstone()) : ItemStack.EMPTY;
             }
-            return core.crystals().get(slot);
+            return core.crystals().get(slot).copy();
         }
 
         @Override

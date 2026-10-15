@@ -27,6 +27,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -47,6 +49,8 @@ public final class ResonatorPortGameTests {
     private static final BlockPos CRYSTAL_PORT = ORIGIN.offset(2, 2, 0);
     /** A Porta de Energia do layout {@link Layout#ENERGY_ON_TOP}. */
     private static final BlockPos TOP_ENERGY = ORIGIN.offset(2, 4, 2);
+    /** Um sono bem maior que o teto do backoff ({@code NetworkManager.MAX_SLEEP_TICKS}, 100 ticks). */
+    private static final int LONG_SLEEP = 1_000;
 
     private ResonatorPortGameTests() {
     }
@@ -84,9 +88,12 @@ public final class ResonatorPortGameTests {
         BlockPos loose = new BlockPos(0, 1, 0);
         helper.setBlock(loose, ModBlocks.RESONATOR_ENERGY_PORT.get().defaultBlockState()
                 .setValue(ResonatorPartBlock.FACING, Direction.NORTH));
-        helper.assertTrue(energy(helper, loose) == null, "Porta solta com capability");
-        helper.assertTrue(helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CRYSTAL_PORT),
-                Direction.NORTH) == null, "posição sem Porta com capability");
+        BlockPos looseCrystals = new BlockPos(6, 1, 0);
+        helper.setBlock(looseCrystals, ModBlocks.RESONATOR_CRYSTAL_PORT.get().defaultBlockState()
+                .setValue(ResonatorPartBlock.FACING, Direction.NORTH));
+        helper.assertTrue(energy(helper, loose) == null, "Porta de Energia solta com capability");
+        helper.assertTrue(helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(looseCrystals),
+                Direction.NORTH) == null, "Porta de Cristais solta com capability");
         BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenExecute(() -> {
@@ -160,41 +167,132 @@ public final class ResonatorPortGameTests {
         });
     }
 
-    /** O caminho real: lote do gerenciador → aviso → roteador → capability da Porta → Bateria do mod. */
+    /**
+     * O aviso da Porta de Energia: o roteador dela dorme num sono bem maior que o teto do backoff, o lote dá a
+     * primeira energia ao Núcleo e o aviso acorda o roteador na hora (pelo {@code onNeighborChange}, com ele em cima
+     * da Porta); a Bateria do outro roteador recebe energia em poucos ticks.
+     */
     @GameTest(template = "empty7", timeoutTicks = 200)
     public static void roteadorTiraEnergiaDaPorta(GameTestHelper helper) {
-        UUID network = NetworkSavedData.get(helper.getLevel().getServer())
-                .create(UUID.randomUUID(), "teste-porta-de-energia").id();
+        UUID network = network(helper, "teste-porta-de-energia");
         BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ENERGY_ON_TOP, RouterTier.BASIC);
         BlockPos batteryPos = new BlockPos(0, 1, 0);
         helper.setBlock(batteryPos, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                 .setValue(RouterBlock.TIER, RouterTier.BASIC));
-        RouterBlockEntity source = router(helper, TOP_ENERGY, network, PortMode.EXTRACT);
-        RouterBlockEntity target = router(helper, batteryPos, network, PortMode.INSERT);
+        RouterBlockEntity source = router(helper, TOP_ENERGY, Direction.UP, ResourceType.ENERGY, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, batteryPos, Direction.UP, ResourceType.ENERGY, network, PortMode.INSERT);
+        long[] woke = new long[1];
         helper.startSequence()
                 .thenWaitUntil(() -> assertFormed(helper, corePos, true))
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
-                        && NetworkManager.get().contains(target), "roteadores não registrados"))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "destino não registrado"))
+                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ENERGY, Direction.UP))
                 .thenExecute(() -> {
                     ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
                     tuned(core);
                     helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
                             "o cristal não entrou");
+                    assertSleeps(helper, source, ResourceType.ENERGY, Direction.UP);
+                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    helper.assertTrue(core.energy() > 0, "o lote não gerou");
+                    assertAwake(helper, source, ResourceType.ENERGY, Direction.UP, "o aviso não acordou o roteador da Porta");
+                    woke[0] = helper.getTick();
                 })
                 .thenWaitUntil(() -> {
                     StorageBatteryBlockEntity battery = helper.getBlockEntity(batteryPos);
                     helper.assertTrue(battery.store().stored() > 0, "a Bateria ainda sem energia");
                 })
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - woke[0] <= 20,
+                        "a energia levou " + (helper.getTick() - woke[0]) + " ticks: veio pelo backoff"))
                 .thenSucceed();
     }
 
-    private static RouterBlockEntity router(GameTestHelper helper, BlockPos machine, UUID network, PortMode mode) {
-        BlockPos routerPos = machine.above();
+    /**
+     * O aviso da Porta de Cristais no lote: um cristal que fica Opaco com o Núcleo sem redstone acorda na hora o
+     * roteador que tira dela, e o Opaco chega ao baú em poucos ticks.
+     */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void opacoNovoAcordaQuemTiraDaPortaDeCristais(GameTestHelper helper) {
+        UUID network = network(helper, "teste-porta-de-cristais-opaco");
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos chestPos = new BlockPos(0, 1, 0);
+        helper.setBlock(chestPos, Blocks.CHEST);
+        RouterBlockEntity source = router(helper, CRYSTAL_PORT, Direction.NORTH, ResourceType.ITEM, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, chestPos, Direction.UP, ResourceType.ITEM, network, PortMode.INSERT);
+        long[] woke = new long[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> assertFormed(helper, corePos, true))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "destino não registrado"))
+                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ITEM, Direction.NORTH))
+                .thenExecute(() -> {
+                    ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
+                    tuned(core);
+                    helper.assertTrue(core.insertCrystal(crystal(false, 1)).isEmpty(), "o cristal não entrou");
+                    assertSleeps(helper, source, ResourceType.ITEM, Direction.NORTH);
+                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "o cristal não ficou Opaco");
+                    assertAwake(helper, source, ResourceType.ITEM, Direction.NORTH, "o Opaco novo não acordou o roteador");
+                    woke[0] = helper.getTick();
+                })
+                .thenWaitUntil(() -> {
+                    ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+                    helper.assertTrue(SignalCrystalItem.isDull(chest.getItem(0)), "o Opaco ainda não chegou ao baú");
+                })
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - woke[0] <= 20,
+                        "o Opaco levou " + (helper.getTick() - woke[0]) + " ticks: veio pelo backoff"))
+                .thenSucceed();
+    }
+
+    /** Esvaziar uma câmara (pela mão ou por outra Porta) acorda na hora quem põe cristais pela Porta de Cristais. */
+    @GameTest(template = "empty7")
+    public static void camaraVaziaAcordaQuemPoeNaPortaDeCristais(GameTestHelper helper) {
+        UUID network = network(helper, "teste-porta-de-cristais-camara");
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos chestPos = new BlockPos(0, 1, 0);
+        helper.setBlock(chestPos, Blocks.CHEST);
+        RouterBlockEntity feeder = router(helper, chestPos, Direction.UP, ResourceType.ITEM, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, CRYSTAL_PORT, Direction.NORTH, ResourceType.ITEM, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> assertFormed(helper, corePos, true))
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(feeder), "origem não registrada"))
+                .thenWaitUntil(() -> assertSleeps(helper, target, ResourceType.ITEM, Direction.NORTH))
+                .thenExecute(() -> {
+                    ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
+                    helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
+                            "o cristal não entrou");
+                    assertSleeps(helper, target, ResourceType.ITEM, Direction.NORTH);
+                    helper.assertTrue(!core.takeLastCrystal().isEmpty(), "não tirou o cristal");
+                    assertAwake(helper, target, ResourceType.ITEM, Direction.NORTH, "a câmara vazia não acordou a Porta");
+                })
+                .thenSucceed();
+    }
+
+    private static UUID network(GameTestHelper helper, String name) {
+        return NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), name).id();
+    }
+
+    /** Põe a porta do roteador num sono bem maior que o teto do backoff; falha se a porta ainda não existe. */
+    private static void assertSleeps(GameTestHelper helper, RouterBlockEntity router, ResourceType type, Direction face) {
+        long now = helper.getLevel().getServer().getTickCount();
+        helper.assertTrue(NetworkManager.get().sleepForTests(router, null, type, face, now, LONG_SLEEP),
+                "a porta do roteador ainda não existe");
+        helper.assertTrue(!NetworkManager.get().sourceAwake(router, null, type, face, now), "a porta não dormiu");
+    }
+
+    private static void assertAwake(GameTestHelper helper, RouterBlockEntity router, ResourceType type, Direction face,
+            String message) {
+        long now = helper.getLevel().getServer().getTickCount();
+        helper.assertTrue(NetworkManager.get().sourceAwake(router, null, type, face, now), message);
+    }
+
+    /** Roteador preso à face {@code face} de {@code machine}, de frente para fora dela, com essa face no modo dado. */
+    private static RouterBlockEntity router(GameTestHelper helper, BlockPos machine, Direction face, ResourceType type,
+            UUID network, PortMode mode) {
+        BlockPos routerPos = machine.relative(face);
         helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState()
-                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.BASIC));
+                .setValue(RouterBlock.FACING, face).setValue(RouterBlock.TIER, RouterTier.BASIC));
         RouterBlockEntity router = helper.getBlockEntity(routerPos);
-        router.setNetworkId(ResourceType.ENERGY, network);
-        router.setMode(ResourceType.ENERGY, Direction.UP, mode);
+        router.setNetworkId(type, network);
+        router.setMode(type, face, mode);
         return router;
     }
 

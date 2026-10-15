@@ -1,7 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -60,22 +62,32 @@ public final class ResonatorManager {
     /**
      * Chamado a cada tick do servidor: cada Núcleo montado e carregado roda um lote de {@link #BATCH_TICKS} ticks
      * uma vez a cada {@link #BATCH_TICKS}, num tick próprio pela posição, para os Núcleos não caírem todos no
-     * mesmo tick. O laço anda numa cópia: o aviso do lote às Portas acorda vizinhos de outros mods, que podem
-     * mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto no meio do laço.
+     * mesmo tick. Os lotes rodam fora do laço do conjunto: o aviso do lote às Portas acorda vizinhos de outros
+     * mods, que podem mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto. A lista só nasce num tick com lote.
      */
     public static void tick(MinecraftServer server) {
         if (CORES.isEmpty()) {
             return;
         }
-        for (ResonanceCoreBlockEntity core : CORES.toArray(new ResonanceCoreBlockEntity[0])) {
+        List<ResonanceCoreBlockEntity> due = null;
+        for (ResonanceCoreBlockEntity core : CORES) {
             if (core.isRemoved() || !core.formed() || !(core.getLevel() instanceof ServerLevel level)) {
                 continue;
             }
             BlockPos pos = core.getBlockPos();
-            if (!level.isLoaded(pos)) {
-                continue;
+            if (level.isLoaded(pos)
+                    && (level.getGameTime() + Math.floorMod(pos.hashCode(), BATCH_TICKS)) % BATCH_TICKS == 0) {
+                if (due == null) {
+                    due = new ArrayList<>();
+                }
+                due.add(core);
             }
-            if ((level.getGameTime() + Math.floorMod(pos.hashCode(), BATCH_TICKS)) % BATCH_TICKS == 0) {
+        }
+        if (due == null) {
+            return;
+        }
+        for (ResonanceCoreBlockEntity core : due) {
+            if (!core.isRemoved() && core.formed() && core.getLevel() instanceof ServerLevel level) {
                 ResonatorBatch.run(level, core, BATCH_TICKS);
             }
         }

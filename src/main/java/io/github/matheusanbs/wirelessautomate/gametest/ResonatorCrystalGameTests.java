@@ -5,7 +5,9 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -20,6 +22,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
@@ -144,6 +150,47 @@ public final class ResonatorCrystalGameTests {
         boolean presente = etapas.size() > minerios
                 && etapas.get(minerios).stream().anyMatch((Holder<PlacedFeature> h) -> h.is(chave));
         helper.assertTrue(presente, "o biome modifier põe o minério nas Planícies, na etapa dos minérios");
+        helper.succeed();
+    }
+
+    /** A cruz: cristais em cima, à esquerda, à direita e embaixo; o fragmento de ametista no meio. */
+    private static CraftingInput cruz(ItemStack... cristais) {
+        List<ItemStack> grade = new ArrayList<>(List.of(ItemStack.EMPTY, cristais[0], ItemStack.EMPTY,
+                cristais[1], new ItemStack(Items.AMETHYST_SHARD), cristais[2],
+                ItemStack.EMPTY, cristais[3], ItemStack.EMPTY));
+        return CraftingInput.of(3, 3, grade);
+    }
+
+    private static ItemStack cristal(int carga) {
+        ItemStack stack = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
+        SignalCrystalItem.setCharge(stack, carga);
+        return stack;
+    }
+
+    private static Optional<RecipeHolder<CraftingRecipe>> receita(GameTestHelper helper, CraftingInput input) {
+        return helper.getLevel().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel());
+    }
+
+    @GameTest(template = "empty")
+    public static void quatroCristaisCheiosViramUmLapidado(GameTestHelper helper) {
+        int cheio = CrystalCharge.FULL;
+        CraftingInput input = cruz(cristal(cheio), cristal(cheio), cristal(cheio), cristal(cheio));
+        var achada = receita(helper, input);
+        helper.assertTrue(achada.isPresent(), "a receita do Lapidado existe");
+        ItemStack saida = achada.get().value().assemble(input, helper.getLevel().registryAccess());
+        helper.assertTrue(saida.is(ModItems.CUT_SIGNAL_CRYSTAL.get()), "sai um Cristal Lapidado");
+        helper.assertValueEqual(saida.getCount(), 1, "um só");
+        helper.assertTrue(SignalCrystalItem.isFull(saida), "sai cheio");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void cristalGastoOuOpacoNaoViraLapidado(GameTestHelper helper) {
+        int cheio = CrystalCharge.FULL;
+        helper.assertTrue(receita(helper, cruz(cristal(cheio), cristal(cheio), cristal(cheio), cristal(0))).isEmpty(),
+                "um Opaco recusa a receita");
+        helper.assertTrue(receita(helper, cruz(cristal(cheio), cristal(999_999), cristal(cheio), cristal(cheio))).isEmpty(),
+                "um cristal já usado recusa a receita");
         helper.succeed();
     }
 }

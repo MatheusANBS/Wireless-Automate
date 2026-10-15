@@ -18,7 +18,10 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -405,6 +408,47 @@ public final class ResonatorCoreGameTests {
         double dial = ResonatorTestSupport.core(helper, relative).dial();
         helper.assertTrue(Math.abs(dial - 97.40) < 1e-9, "dial: " + dial);
         helper.succeed();
+    }
+
+    /** O {@code /wa profile} traz a linha do Ressonador, com o Núcleo montado do teste contado. */
+    @GameTest(template = "empty7")
+    public static void perfilMostraORessonador(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            List<Component> lines = new ArrayList<>();
+            CommandSource sink = new CommandSource() {
+                @Override
+                public void sendSystemMessage(Component message) {
+                    lines.add(message);
+                }
+
+                @Override
+                public boolean acceptsSuccess() {
+                    return true;
+                }
+
+                @Override
+                public boolean acceptsFailure() {
+                    return true;
+                }
+
+                @Override
+                public boolean shouldInformAdmins() {
+                    return false;
+                }
+            };
+            CommandSourceStack source = helper.getLevel().getServer().createCommandSourceStack().withSource(sink)
+                    .withPermission(2).withLevel(helper.getLevel());
+            helper.getLevel().getServer().getCommands().performPrefixedCommand(source, "wa profile");
+            TranslatableContents line = null;
+            for (Component component : lines) {
+                if (component.getContents() instanceof TranslatableContents contents
+                        && contents.getKey().equals("command.wirelessautomate.profile.resonator")) {
+                    line = contents;
+                }
+            }
+            helper.assertTrue(line != null, "sem a linha do Ressonador: " + lines);
+            helper.assertTrue(((Integer) line.getArgs()[1]) >= 1, "o Núcleo montado não contou: " + line);
+        });
     }
 
     /** Os itens no chão em volta de {@code absolute}: cristais, redstone e o ordinal do tier do Núcleo (-1 sem ele). */

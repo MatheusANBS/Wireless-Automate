@@ -29,7 +29,17 @@ public final class ResonatorFormation {
     private ResonatorFormation() {
     }
 
+    /** Confere a estrutura e monta ou desmonta; o tempo entra no {@link ResonatorProfile}. */
     public static void revalidate(ServerLevel level, ResonanceCoreBlockEntity core) {
+        long started = System.nanoTime();
+        try {
+            apply(level, core);
+        } finally {
+            ResonatorProfile.revalidated(System.nanoTime() - started);
+        }
+    }
+
+    private static void apply(ServerLevel level, ResonanceCoreBlockEntity core) {
         BlockPos at = core.getBlockPos();
         if (core.isRemoved() || level.getBlockEntity(at) != core) {
             return;

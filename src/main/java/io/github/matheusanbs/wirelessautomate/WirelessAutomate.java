@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import net.minecraft.resources.ResourceLocation;
@@ -92,6 +93,7 @@ public final class WirelessAutomate {
         ResonatorManager.reset();
         ResonatorPorts.reset();
         ResonatorMembers.reset();
+        ResonatorProfile.reset();
         RecipeEditor.reset();
         TabletMenu.resetStates();
     }

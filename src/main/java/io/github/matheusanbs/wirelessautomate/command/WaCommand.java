@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -128,8 +129,9 @@ public final class WaCommand {
     }
 
     /**
-     * Total de nós e orçamento, depois uma linha por rede. Os nós de uma rede são os que têm algum
-     * tipo nela (ver {@link NetworkStats#nodes()}), então a soma das linhas pode passar do total.
+     * Total de nós e orçamento, uma linha por rede e a do Ressonador (o gerenciador e as revalidações, fora do
+     * orçamento do transporte). Os nós de uma rede são os que têm algum tipo nela (ver
+     * {@link NetworkStats#nodes()}), então a soma das linhas pode passar do total.
      */
     private static int profile(CommandSourceStack source) {
         NetworkManager manager = NetworkManager.get();
@@ -162,6 +164,14 @@ public final class WaCommand {
         if (shown == 0) {
             source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.no_networks"), false);
         }
+        ResonatorProfile.Snapshot resonators = ResonatorProfile.snapshot();
+        source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.resonator",
+                resonators.cores(),
+                resonators.formed(),
+                ms(resonators.averageBatchNanos()),
+                ms(resonators.lastBatchNanos()),
+                ms(resonators.averageRevalidationNanos()),
+                ms(resonators.lastRevalidationNanos())), false);
         return manager.nodeCount();
     }
 

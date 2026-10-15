@@ -13,6 +13,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -58,6 +60,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
      * ser gravado (a sequência de acender fica no passado).
      */
     private long formedAt = -1;
+    private final CoreSync sync = new CoreSync();
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RESONANCE_CORE.get(), pos, state);
@@ -92,6 +95,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     public void setDial(double mhz) {
         dial = Tuning.clampDial(mhz);
         setChanged();
+        syncIfChanged();
     }
 
     /** A eficiência da sintonia agora, pelo desvio entre a estação e o dial, no teto do tier no modo automático. */
@@ -116,6 +120,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         if (this.auto != auto) {
             this.auto = auto;
             setChanged();
+            syncIfChanged();
         }
         return true;
     }
@@ -167,6 +172,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         if (changed) {
             setChanged();
+            syncIfChanged();
         }
     }
 
@@ -205,6 +211,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         if (emptied) {
             notifyPorts(false, true);
         }
+        syncIfChanged();
     }
 
     /** Põe um cristal na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
@@ -216,6 +223,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             if (crystals.get(i).isEmpty()) {
                 crystals.set(i, stack.copyWithCount(1));
                 setChanged();
+                syncIfChanged();
                 return stack.copyWithCount(stack.getCount() - 1);
             }
         }
@@ -233,6 +241,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         crystals.set(chamber, stack.copyWithCount(1));
         setChanged();
+        syncIfChanged();
         return true;
     }
 
@@ -245,6 +254,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         crystals.set(chamber, ItemStack.EMPTY);
         setChanged();
         notifyPorts(false, true);
+        syncIfChanged();
         return stack;
     }
 
@@ -256,6 +266,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
                 crystals.set(i, ItemStack.EMPTY);
                 setChanged();
                 notifyPorts(false, true);
+                syncIfChanged();
                 return stack;
             }
         }
@@ -272,6 +283,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         if (added > 0) {
             redstone += added;
             setChanged();
+            syncIfChanged();
         }
         return added;
     }
@@ -280,6 +292,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     public void setRedstone(int count) {
         redstone = Math.max(0, Math.min(MAX_REDSTONE, count));
         setChanged();
+        syncIfChanged();
     }
 
     /** Só para os GameTests: põe a redstone num valor conhecido. */
@@ -364,6 +377,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         station = initial;
         velocity = 0;
         setChanged();
+        syncIfChanged();
     }
 
     /**
@@ -408,6 +422,51 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         this.formed = formed;
         this.members = List.copyOf(members);
         setChanged();
+        syncIfChanged();
+    }
+
+    /**
+     * Manda a câmara aos clientes só se a {@link ChamberView} mudou desde a última vez (cristais, redstone, faixa da
+     * eficiência, lâmpada, montagem); devolve se mandou. Só no servidor.
+     */
+    public boolean syncIfChanged() {
+        return sync.sendIfChanged(this);
+    }
+
+    /** Quantas vezes o servidor mandou a câmara (para os GameTests). */
+    public int syncCount() {
+        return sync.syncCount();
+    }
+
+    /** A câmara recebida no cliente ({@link ChamberView#EMPTY} antes da primeira). */
+    public ChamberView clientView() {
+        return sync.clientView();
+    }
+
+    /** No cliente, o tempo de jogo em que a lâmpada acendeu pela última vez, ou -1 antes da primeira sintonia vista. */
+    public long tunedAt() {
+        return sync.tunedAt();
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return CoreSync.tag(this);
+    }
+
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        sync.receive(tag, level);
+    }
+
+    /** O pacote leva só a view: não pode passar pelo {@code loadWithComponents}, que zeraria o resto. */
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
     }
 
     @Override

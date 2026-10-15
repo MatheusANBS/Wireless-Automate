@@ -38,6 +38,8 @@ public final class ResonatorBatch {
         if (energy || crystals) {
             core.notifyPorts(energy, crystals);
         }
+        // A carga que baixa não muda a câmara: só cristal Opaco, recarga, faixa ou lâmpada mandam o update tag.
+        core.syncIfChanged();
     }
 
     private static int dullCount(ResonanceCoreBlockEntity core) {

@@ -13,6 +13,11 @@ import net.minecraft.world.item.TooltipFlag;
  * com carga 0 o cristal fica Opaco: o mesmo item, com nome e textura de Opaco, que o Núcleo recarrega.
  */
 public class SignalCrystalItem extends Item {
+    /** A largura cheia da barra de durabilidade do vanilla. */
+    private static final float BAR_WIDTH = 13f;
+    /** O coral da carga. */
+    private static final int BAR_COLOR = 0xF0603E;
+
     private final boolean cut;
 
     public SignalCrystalItem(boolean cut, Properties properties) {
@@ -49,6 +54,23 @@ public class SignalCrystalItem extends Item {
 
     public static boolean isFull(ItemStack stack) {
         return stack.getItem() instanceof SignalCrystalItem && charge(stack) == CrystalCharge.FULL;
+    }
+
+    /** A barra só no cristal gasto e com carga: o cheio não tem, e o Opaco só mostra a recarga dentro do Núcleo. */
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        int carga = charge(stack);
+        return carga > 0 && carga < CrystalCharge.FULL;
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return Math.round(BAR_WIDTH * charge(stack) / CrystalCharge.FULL);
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return BAR_COLOR;
     }
 
     @Override

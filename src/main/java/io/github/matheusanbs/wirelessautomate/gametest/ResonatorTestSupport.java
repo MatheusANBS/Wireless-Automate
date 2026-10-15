@@ -7,10 +7,16 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
@@ -105,6 +111,46 @@ final class ResonatorTestSupport {
         ItemStack stack = new ItemStack(cut ? ModItems.CUT_SIGNAL_CRYSTAL.get() : ModItems.SIGNAL_CRYSTAL.get());
         SignalCrystalItem.setCharge(stack, charge);
         return stack;
+    }
+
+    /** Roda {@code command} como operador e devolve as linhas que ele mandou. */
+    static List<Component> commandLines(GameTestHelper helper, String command) {
+        List<Component> lines = new ArrayList<>();
+        CommandSource sink = new CommandSource() {
+            @Override
+            public void sendSystemMessage(Component message) {
+                lines.add(message);
+            }
+
+            @Override
+            public boolean acceptsSuccess() {
+                return true;
+            }
+
+            @Override
+            public boolean acceptsFailure() {
+                return true;
+            }
+
+            @Override
+            public boolean shouldInformAdmins() {
+                return false;
+            }
+        };
+        CommandSourceStack source = helper.getLevel().getServer().createCommandSourceStack().withSource(sink)
+                .withPermission(2).withLevel(helper.getLevel());
+        helper.getLevel().getServer().getCommands().performPrefixedCommand(source, command);
+        return lines;
+    }
+
+    /** A linha traduzível de chave {@code key} entre {@code lines}, ou {@code null}. */
+    static TranslatableContents line(List<Component> lines, String key) {
+        for (Component component : lines) {
+            if (component.getContents() instanceof TranslatableContents contents && contents.getKey().equals(key)) {
+                return contents;
+            }
+        }
+        return null;
     }
 
     static void assertInserted(GameTestHelper helper, ResonanceCoreBlockEntity core, ItemStack stack) {

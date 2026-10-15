@@ -577,7 +577,7 @@ public final class FilterMenuGameTests {
     }
 
     /** Com um tier que cruza dimensão, o filtro do Tablet e o da tela à distância valem com o jogador em outra dimensão; o NEAR não. */
-    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    @GameTest(template = "empty", batch = "wirelessautomate_config_dimension_filter")
     public static void filterFromTheTabletValidAcrossDimensions(GameTestHelper helper) {
         MockPlayer player = playerNear(helper, chestWithRouter(helper));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));

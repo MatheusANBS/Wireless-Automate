@@ -727,7 +727,7 @@ public final class TabletProfileGameTests {
     }
 
     /** Copiar com o jogador em outra dimensão (tier com crossDimension) grava a máquina do nó, não a do mundo do jogador. */
-    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    @GameTest(template = "empty", batch = "wirelessautomate_config_dimension_profile")
     public static void copyAcrossDimensionsRecordsTheNodeMachine(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper);
         helper.setBlock(M1, Blocks.CHEST);

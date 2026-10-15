@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.ConfigReloadListener;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
@@ -25,6 +26,13 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class RouterGameTests {
+    /**
+     * A recarga do arquivo da config vem pelo relógio, não pelos ticks: o servidor de teste roda milhares
+     * de ticks por segundo quando está à toa. O teste espera até {@link #RELOAD_WAIT_NANOS}; o limite em
+     * ticks só cobre esse prazo com folga.
+     */
+    private static final int RELOAD_TIMEOUT = 1_000_000;
+    private static final long RELOAD_WAIT_NANOS = 10_000_000_000L;
     private static final BlockPos MACHINE = new BlockPos(1, 1, 1);
     private static final BlockPos ROUTER = MACHINE.above();
 
@@ -92,7 +100,7 @@ public final class RouterGameTests {
      * Config de antes do Ressonador (balanceamento 1): a energia do roteador Unobtainium e o FE por cristal no
      * padrão antigo passam para o novo uma vez; o que o dono mudou e o que já era do balanceamento 1 ficam.
      */
-    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_unobtainium")
     public static void configMigratesUnobtainiumEnergy(GameTestHelper helper) {
         var unobtainium = Config.TIERS.get(RouterTier.UNOBTAINIUM).rates().get("energyPerTick");
         var vibranium = Config.TIERS.get(RouterTier.VIBRANIUM).rates().get("energyPerTick");
@@ -126,14 +134,14 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
             Config.SPEC.save();
         }
-        helper.succeed();
+        succeedAfterReload(helper);
     }
 
     /**
      * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
      * que o dono mudou fica. Tudo síncrono, restaurado no finally.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_old")
     public static void configMigratesOldDefaults(GameTestHelper helper) {
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
         var advanced = Config.TIERS.get(RouterTier.ADVANCED).rates().get("itemsPerSecond");
@@ -161,7 +169,24 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
             Config.SPEC.save();
         }
-        helper.succeed();
+        succeedAfterReload(helper);
+    }
+
+    /**
+     * Gravar a config faz o FML recarregá-la pela thread que observa o arquivo, um tempo depois, e a
+     * recarga remonta as redes e acorda as portas dos roteadores com alcance. Cada teste que grava fica
+     * no seu lote e só termina com a recarga dele, para ela não cair no meio dos testes de sono de outro
+     * lote. Chamado depois da última gravação.
+     */
+    private static void succeedAfterReload(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        long deadline = System.nanoTime() + RELOAD_WAIT_NANOS;
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore
+                        || System.nanoTime() > deadline, "esperando a recarga da config gravada"))
+                .thenExecute(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore,
+                        "a recarga da config gravada não chegou em 10 s"))
+                .thenSucceed();
     }
 
     @GameTest(template = "empty")

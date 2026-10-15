@@ -63,9 +63,8 @@ public final class RouterMenuGameTests {
         return helper.getBlockEntity(pos);
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }

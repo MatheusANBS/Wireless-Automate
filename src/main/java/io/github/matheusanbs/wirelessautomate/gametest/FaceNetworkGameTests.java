@@ -632,7 +632,6 @@ public final class FaceNetworkGameTests {
      * "Sem rede" pela tela numa face cuja rede foi apagada: o snapshot mostra a face vazia, mas ela
      * guarda o UUID; o payload vazio limpa a face e o índice (o aviso do Tablet) deixa de citar a rede.
      */
-    @SuppressWarnings("removal")
     @GameTest(template = "empty")
     public static void noNetworkClearsRemovedNetwork(GameTestHelper helper) {
         RouterBlockEntity router = router(helper);
@@ -643,7 +642,7 @@ public final class FaceNetworkGameTests {
                 .thenWaitUntil(() -> loaded(helper, router))
                 .thenExecute(() -> {
                     helper.assertTrue(NetworkSavedData.get(helper.getLevel().getServer()).remove(gone), "rede não removida");
-                    ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                    ServerPlayer player = TestPlayers.inLevel(helper);
                     player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
                     RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
                             RouterSnapshot.capture(router, player));
@@ -743,13 +742,12 @@ public final class FaceNetworkGameTests {
      * Liga o Upgrade de Alcance, vincula as duas fornalhas e abre a tela do roteador para um jogador
      * falso perto dele ({@code out[0]}).
      */
-    @SuppressWarnings("removal")
     private static RouterMenu openRangeMenu(GameTestHelper helper, RouterBlockEntity router, ServerPlayer[] out) {
         router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
         helper.assertTrue(router.rangeActive(), "o upgrade de alcance não vale no Avançado");
         helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_A)), "não vinculou a fornalha A");
         helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_B)), "não vinculou a fornalha B");
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router, RouterSnapshot.capture(router, player));
         player.containerMenu = menu;

@@ -61,9 +61,8 @@ public final class TabletPanelGameTests {
     private static final BlockPos A = new BlockPos(0, 1, 0);
     private static final BlockPos FURNACE = new BlockPos(2, 1, 0);
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerWithTablet(GameTestHelper helper, BlockPos pos) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above(2)));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         return player;

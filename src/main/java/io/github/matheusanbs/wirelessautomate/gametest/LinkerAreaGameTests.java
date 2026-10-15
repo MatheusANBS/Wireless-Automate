@@ -73,9 +73,8 @@ public final class LinkerAreaGameTests {
         return router;
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer player(GameTestHelper helper, ItemStack linker) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
         player.setItemInHand(InteractionHand.MAIN_HAND, linker);
         return player;

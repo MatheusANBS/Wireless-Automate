@@ -22,6 +22,7 @@
   "block.wirelessautomate.resonator_crystal_port": "Resonator Crystal Port",
   "block.wirelessautomate.resonator_tuner": "Resonator Tuner",
   "block.wirelessautomate.resonance_core.tooltip": "%s · %s crystal chambers",
+  "block.wirelessautomate.resonance_core.formed": "Resonator formed",
   "item.wirelessautomate.configurator": "Configurator",
   "item.wirelessautomate.network_tablet": "Network Tablet",
   "item.wirelessautomate.linker": "Linker",

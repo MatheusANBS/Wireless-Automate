@@ -1,0 +1,65 @@
+package io.github.matheusanbs.wirelessautomate.resonator;
+
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+
+/**
+ * Os Núcleos de Ressonância carregados no servidor, para o lote e para as mudanças de bloco da estrutura.
+ * Só a thread do servidor mexe no conjunto.
+ */
+public final class ResonatorManager {
+    /** Distância de Chebyshev máxima entre um bloco da casca e o Núcleo (a caixa tem 5 de lado). */
+    private static final int REACH = ResonatorLayout.SIZE - 1;
+    private static final Set<ResonanceCoreBlockEntity> CORES = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    private ResonatorManager() {
+    }
+
+    static void add(ResonanceCoreBlockEntity core) {
+        CORES.add(core);
+    }
+
+    static void remove(ResonanceCoreBlockEntity core) {
+        CORES.remove(core);
+    }
+
+    /**
+     * Um bloco do Ressonador entrou ou saiu em {@code pos}: os Núcleos carregados que podem usá-lo revalidam no
+     * tick seguinte, pelo tick agendado do bloco do Núcleo. Agendar junta as mudanças do mesmo tick (uma explosão
+     * revalida uma vez) e não grava estados dentro do {@code setBlock} que avisou.
+     */
+    public static void structureChanged(ServerLevel level, BlockPos pos) {
+        for (ResonanceCoreBlockEntity core : CORES) {
+            BlockPos at = core.getBlockPos();
+            if (core.getLevel() == level && !core.isRemoved() && Math.abs(at.getX() - pos.getX()) <= REACH
+                    && Math.abs(at.getY() - pos.getY()) <= REACH && Math.abs(at.getZ() - pos.getZ()) <= REACH) {
+                level.scheduleTick(at, core.getBlockState().getBlock(), 1);
+            }
+        }
+    }
+
+    /**
+     * O gancho do {@code onPlace} e do {@code onRemove} dos blocos do Ressonador. Só o estado mudando no mesmo
+     * bloco (a própria montagem regravando a casca) não conta, senão cada regravação pediria outra revalidação.
+     */
+    static void blockChanged(Level level, BlockPos pos, BlockState before, BlockState after) {
+        if (!before.is(after.getBlock()) && level instanceof ServerLevel server) {
+            structureChanged(server, pos);
+        }
+    }
+
+    /** Chamado a cada tick do servidor. */
+    public static void tick(MinecraftServer server) {
+    }
+
+    /** Parada do servidor: o próximo mundo começa sem Núcleos. */
+    public static void reset() {
+        CORES.clear();
+    }
+}

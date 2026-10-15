@@ -17,7 +17,6 @@ compartilhado e só o que leva a lente ou a etiqueta existe por tier.
 from __future__ import annotations
 
 import math
-import random
 import sys
 from pathlib import Path
 
@@ -372,45 +371,56 @@ def tex_source_tank(tier: str) -> Image.Image:
 
 
 # ---------------------------------------------------------------------------
-# Minério de Quartzo de Sinal (pedra e ardósia): cristais de Sinal que cintilam um a um
+# Minério de Quartzo de Sinal (pedra e ardósia). A textura é só a camada do minério (fundo
+# transparente): o modelo desenha a pedra ou a ardósia do vanilla embaixo, como a lateral do bloco de
+# grama, então o minério acompanha qualquer pacote de recursos. Aglomerados achatados na horizontal,
+# luz em cima à esquerda e sem contorno, no jeito dos minérios do Mekanism; cada um cintila na sua vez.
 # ---------------------------------------------------------------------------
 
-PEDRA = ["#7F7F7F", "#747474", "#8A8A8A", "#6E6E6E", "#7A7A7A"]
-ARDOSIA = ["#4D4D53", "#43434A", "#58585E", "#3C3C42", "#505056"]
-MINERIO_CRISTAIS = [["..A.", ".Aab", ".abc", "bbcd"], [".A.", "Aab", "bcd"], ["A..", "ab.", "bc."], [".A.", "Aab", "bcd"]]
-MINERIO_POS = [(2, 3), (9, 8), (11, 2), (4, 11)]
-SINAL_MINERIO = {"A": "#FFF0EA", "a": "#FFC9B8", "b": "#F2917A", "c": "#C9604B", "d": "#8A3A2C"}
-MINERIOS = ("signal_quartz_ore", "deepslate_signal_quartz_ore")
+# A paleta do Cristal de Sinal (a mesma dos itens), da luz (H) à sombra (D).
+SINAL_MINERIO = {"H": "#FFF0EA", "A": "#FFC9B8", "B": "#F2917A", "C": "#C9604B", "D": "#8A3A2C"}
+# Quatro aglomerados em grade 2 × 2, cada um com a sua forma, e pontos soltos entre eles.
+MINERIO_AGLOMERADOS = [
+    ((1, 2), ["..HA..", ".HAAB.", "HABBBC", ".BCCD."]),
+    ((9, 3), [".HAB.", "HABBC", ".CCD."]),
+    ((2, 10), [".HAB..", "HABBC.", ".BCCD."]),
+    ((9, 9), [".HA...", "HAABB.", ".BBCCD", "..CD.."]),
+]
+MINERIO_PONTOS = [(13, 1), (7, 7), (14, 14), (0, 7)]
+MINERIOS = {"signal_quartz_ore": ("minecraft:block/stone", SINAL_MINERIO),
+            "deepslate_signal_quartz_ore": ("minecraft:block/deepslate", SINAL_MINERIO)}
 
 
-def tex_minerio(tons: list[str], semente: int) -> Sprite:
-    """Fundo de pedra sorteado pela semente com quatro aglomerados de cristal; cada um cintila no seu momento (12 × 4 ticks)."""
-    rnd = random.Random(semente)
-    fundo = Image.new("RGBA", (16, 16))
-    for y in range(16):
-        for x in range(16):
-            fundo.putpixel((x, y), cor(rnd.choice(tons)))
-    s = {ch: cor(hexa) for ch, hexa in SINAL_MINERIO.items()}
-    branco = cor("porcelana.4")
-
-    def put(img: Image.Image, x: int, y: int, c: Cor) -> None:
-        if 0 <= x < 16 and 0 <= y < 16:
-            img.putpixel((x, y), c)
-
+def tex_minerio(paleta: dict[str, str]) -> Sprite:
+    """Camada do minério: quatro aglomerados e quatro pontos soltos; um aglomerado cintila a cada
+    dois quadros e os pontos piscam juntos no fim (12 × 4 ticks = 2,4 s)."""
+    tons = {ch: cor(hexa) for ch, hexa in paleta.items()}
     q = []
     for k in range(12):
-        img = fundo.copy()
-        for i, ((gx, gy), forma) in enumerate(zip(MINERIO_POS, MINERIO_CRISTAIS)):
+        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        for i, ((gx, gy), forma) in enumerate(MINERIO_AGLOMERADOS):
             for dy, linha in enumerate(forma):
                 for dx, ch in enumerate(linha):
-                    if ch != ".":
-                        put(img, gx + dx, gy + dy, s[ch])
-            put(img, gx + len(forma[0]) - 1, gy + len(forma), cor("grafite.2"))
-            if k == i * 3:
-                put(img, gx + forma[0].find("A"), gy, branco)
-                put(img, gx + forma[0].find("A"), gy - 1, cor("#FFC9B8"))
+                    if ch == ".":
+                        continue
+                    c = tons[ch]
+                    if k // 2 == i and ch in "HA":
+                        c = mistura(c, cor("porcelana.4"), 0.7 if ch == "H" else 0.35)
+                    img.putpixel((gx + dx, gy + dy), c)
+        for x, y in MINERIO_PONTOS:
+            img.putpixel((x, y), tons["H"] if k >= 10 else tons["B"])
         q.append(img)
     return animacao(q, 4)
+
+
+def modelo_minerio(base: str, camada: str) -> dict:
+    """Dois cubos inteiros: a pedra do vanilla e, por cima, a camada do minério recortada."""
+    lados = ("north", "south", "east", "west", "up", "down")
+    return {"parent": "minecraft:block/block", "render_type": "minecraft:cutout",
+            "textures": {"particle": base, "base": base, "camada": camada},
+            "elements": [{"from": [0, 0, 0], "to": [16, 16, 16],
+                          "faces": {lado: {"texture": tex, "cullface": lado} for lado in lados}}
+                         for tex in ("#base", "#camada")]}
 
 
 def sprites() -> dict[str, Sprite]:
@@ -436,8 +446,8 @@ def sprites() -> dict[str, Sprite]:
         s[f"block/storage_battery_{t}"] = parado(tex_battery(t))
         s[f"block/storage_chemical_tank_{t}"] = parado(tex_chemical(t), translucido=True)
         s[f"block/storage_source_tank_{t}"] = parado(tex_source_tank(t))
-    s["block/signal_quartz_ore"] = tex_minerio(PEDRA, 3)
-    s["block/deepslate_signal_quartz_ore"] = tex_minerio(ARDOSIA, 7)
+    for nome, (_, paleta) in MINERIOS.items():
+        s[f"block/{nome}"] = tex_minerio(paleta)
     return s
 
 
@@ -1073,9 +1083,8 @@ def modelos(texturas: set[str] | None = None) -> None:
     grava_json(MODELOS / "models/item/storage_source_tank.json", {
         "parent": f"{NS}:block/storage_source_tank_basic_6",
         "overrides": _sobreposicoes(f"{NS}:block/storage_source_tank", "_6")})
-    for nome in MINERIOS:
-        grava_json(pasta / f"{nome}.json", {"parent": "minecraft:block/cube_all",
-                                            "textures": {"all": f"{NS}:block/{nome}"}})
+    for nome, (base, _) in MINERIOS.items():
+        grava_json(pasta / f"{nome}.json", modelo_minerio(base, f"{NS}:block/{nome}"))
         gerados.add(nome)
         grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": {"": {"model": f"{NS}:block/{nome}"}}})
         grava_json(MODELOS / f"models/item/{nome}.json", {"parent": f"{NS}:block/{nome}"})

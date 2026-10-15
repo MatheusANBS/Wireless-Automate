@@ -49,6 +49,9 @@ Base `B/` = `src/main/java/io/github/matheusanbs/wirelessautomate/`, `R/` = `src
 | `B/resonator/ResonatorCapabilities.java` (novo) | `RegisterCapabilitiesEvent` das Portas |
 | `B/resonator/ResonatorStatus.java` (novo) | O texto da action bar (montado ou o que falta) |
 | `B/command/ResonatorCommand.java` (novo) | `/wa resonator <pos> info` e `dial <MHz>` |
+| `B/resonator/ResonatorBlueprint.java`, `ProjectionDiff.java` (novos) | Puro: o desenho esperado (Vitrine ou Faixa) em volta do Núcleo e a comparação com o mundo |
+| `B/client/resonator/ResonatorProjection.java`, `ProjectionRenderer.java` (novos) | A projeção no cliente: estado, comparação a cada 10 ticks, action bar, roda do mouse e o desenho dos fantasmas |
+| `B/client/dev/E2eResonatorSteps.java` (novo) | As capturas da projeção no e2e |
 | `B/Config.java`, `B/WirelessAutomate.java`, `B/registry/*`, `B/item/TierCoreItem.java`, `B/command/WaCommand.java` (mudar) | Config, tick e parada, registros, cartão, comando |
 | `R/data/wirelessautomate/structure/empty7.nbt` (novo) | Template 7×7×7 vazio dos GameTests |
 | `R/data/...` (novos) | Loot, tags, receitas |
@@ -513,7 +516,7 @@ git commit -m "Ressonador: lógica pura da estrutura, da sintonia e das contas d
 ### Task 2: Config, blocos, itens, dados e o template dos testes
 
 **Files:**
-- Create: `B/resonator/CasingPosition.java`, `GlassFace.java`, `ResonatorCasingBlock.java`, `ResonatorGlassBlock.java`, `ResonatorPartBlock.java`, `ResonanceCoreBlock.java`, `ResonanceCoreItem.java`, `ResonanceCoreBlockEntity.java` (só o esqueleto: construtor, tier e NBT vazio; o resto vem nas Tasks 4 a 6)
+- Create: `B/resonator/CasingPosition.java`, `GlassFace.java`, `ResonatorCasingBlock.java`, `ResonatorGlassBlock.java`, `ResonatorPartBlock.java`, `ResonanceCoreBlock.java`, `ResonanceCoreItem.java`, `ResonanceCoreBlockEntity.java` (só o esqueleto: construtor, tier e NBT vazio; o resto vem nas Tasks 4, 6, 7 e 8)
 - Modify: `B/Config.java`, `B/registry/ModBlocks.java`, `ModItems.java`, `ModBlockEntities.java`, `ModCreativeTabs.java`
 - Create: `R/data/wirelessautomate/structure/empty7.nbt`, `R/data/wirelessautomate/loot_table/blocks/{resonator_casing,resonator_glass,resonance_core,resonator_energy_port,resonator_crystal_port,resonator_tuner}.json`, `R/data/wirelessautomate/recipe/{resonator_casing,resonator_glass,resonance_core,resonator_energy_port,resonator_crystal_port,resonator_tuner}.json`
 - Modify: `R/data/minecraft/tags/block/mineable/pickaxe.json`, `lang/en_us.json`, `lang/pt_br.json`
@@ -598,7 +601,7 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 - Produces:
   - `ResonanceCoreBlockEntity#formed() → boolean`, `#members() → List<BlockPos>` (as 98 posições da casca, salvas no NBT como `long`), `#tier() → RouterTier` (do blockstate), `#lastProblem() → ResonatorLayout.Broken` (ou `null`, não salvo).
   - `ResonatorFormation.revalidate(ServerLevel level, ResonanceCoreBlockEntity core)`: lê as 125 posições (com `level.isLoaded` antes de cada leitura; posição descarregada vale `OTHER`), chama `ResonatorLayout.check` e: se montou e não estava, grava os estados (`setBlock` com flag `Block.UPDATE_CLIENTS`), registra as Portas no índice, `level.invalidateCapabilities` em cada Porta, sorteia a estação se ainda não tem, toca `SoundEvents.BEACON_ACTIVATE` no Núcleo e manda "Ressonador montado" (`block.wirelessautomate.resonance_core.formed`) na action bar dos jogadores a até 16 blocos; se montou e já estava, regrava só os estados que mudaram (por exemplo, um vidro novo na face); se não montou e estava, desmonta (volta cada membro ainda presente para o estado solto, tira as Portas do índice, invalida as capabilities); guarda o `Broken` em `lastProblem`.
-  - `ResonatorManager.add(ResonanceCoreBlockEntity)`, `remove(...)`, `structureChanged(ServerLevel level, BlockPos pos)` (revalida os Núcleos carregados a até 4 blocos de distância de Chebyshev de `pos`), `reset()` (parada do servidor), `tick(MinecraftServer)` (nesta tarefa vazio; a Task 5 enche).
+  - `ResonatorManager.add(ResonanceCoreBlockEntity)`, `remove(...)`, `structureChanged(ServerLevel level, BlockPos pos)` (revalida os Núcleos carregados a até 4 blocos de distância de Chebyshev de `pos`), `reset()` (parada do servidor), `tick(MinecraftServer)` (nesta tarefa vazio; a Task 6 enche).
   - `ResonatorPorts.register(ResourceKey<Level>, BlockPos port, BlockPos core)`, `unregister(...)`, `core(Level, BlockPos port) → ResonanceCoreBlockEntity` (ou `null`: porta fora do índice, Núcleo descarregado ou não montado), `reset()`.
 - Ganchos: o `onPlace` e o `onRemove` de todos os blocos do Ressonador chamam `ResonatorManager.structureChanged`, **menos** quando só o estado muda no mesmo bloco (`oldState.is(newState.getBlock())`), para a regravação de estados não disparar uma revalidação. Blocos que não são do Ressonador no interior: o Núcleo revalida no `onLoad` (no tick seguinte, como o `SourceTankLevels`, por `level.scheduleTick`) e quando um bloco do Ressonador muda; um bloco posto no interior sem mexer na casca só é notado na próxima revalidação (é preciso abrir a casca para chegar lá).
 - O `onLoad` do Núcleo (servidor): `ResonatorManager.add`, agenda a revalidação; o `setRemoved`/`onChunkUnloaded`: `ResonatorManager.remove` e tira as Portas do índice (sem desmontar os estados). Quebrar o Núcleo desmonta.
@@ -619,7 +622,42 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 
 ---
 
-### Task 5: O lote do Núcleo (geração, deriva, desgaste e recarga)
+### Task 5: A projeção da estrutura no mundo
+
+Mockup aprovado pelo dono: `docs/preview/ressonador-projecao.html`. Tudo no **cliente**: o cliente já tem os blocos em volta carregados, então compara a estrutura sozinho (como o Patchouli e o Modonomicon); nenhum payload novo, `ModPayloads.VERSION` continua `"16"`.
+
+**Files:**
+- Create: `B/resonator/ResonatorBlueprint.java` (puro), `B/resonator/ProjectionDiff.java` (puro)
+- Create: `src/test/java/io/github/matheusanbs/wirelessautomate/resonator/ResonatorBlueprintTest.java`, `ProjectionDiffTest.java`
+- Create: `B/client/resonator/ResonatorProjection.java` (estado da projeção, comparação a cada 10 ticks do cliente, action bar, roda do mouse), `B/client/resonator/ProjectionRenderer.java` (desenho)
+- Modify: `B/resonator/ResonanceCoreBlock.java` (o clique no cliente), `B/client/ClientSetup.java` (liga o gancho), `lang/en_us.json`, `lang/pt_br.json`
+- Modify: `B/client/dev/E2eScript.java` e crie `B/client/dev/E2eResonatorSteps.java` (uma captura da projeção)
+
+**Interfaces:**
+- Consumes: `ResonatorLayout` (Task 1: `Part`, `Face`, `Probe`, `check`, `Formed.members()`), os blocos e estados (Task 2), a montagem (Task 4: o `FORMED` do Núcleo).
+- Produces:
+  - `ResonatorBlueprint.Layout` (`VITRINE`, `FAIXA`); `ResonatorBlueprint.expected(ResonatorLayout.Face coreFace, Layout layout) → ResonatorLayout.Part[][][]` (5×5×5 local, índices `[x][y][z]`, com o Núcleo no centro da face `coreFace`); `ResonatorBlueprint.origin(int cx, int cy, int cz, Face coreFace) → int[]` (o canto mínimo da caixa no mundo).
+    - Peças, para `coreFace` horizontal: Núcleo no centro da `coreFace`; Porta de Energia no centro da face oposta; Porta de Cristais no centro da face à esquerda de quem olha a `coreFace` de fora (de LESTE: a face NORTE; gira com a face: a face que fica no sentido anti-horário de `coreFace` visto de cima); Sintonizador no centro da face de cima; o vidro na face no sentido horário (de LESTE: a SUL). Para `coreFace` UP ou DOWN: Porta de Energia na oposta, Porta de Cristais na NORTE, Sintonizador na LESTE, o vidro na SUL. Com `coreFace` LESTE isso é exatamente a Vitrine do `ResonatorLayoutTest`.
+    - `VITRINE`: a janela 3×3 de vidro no miolo da face do vidro. `FAIXA`: 3 vidros na linha de cima do miolo de cada uma das 4 faces laterais (x ou z na borda), só onde não há peça, e sem a janela.
+    - Tudo o mais na casca é `CASING`; o interior, `AIR`.
+  - `ProjectionDiff.State` (`OK`, `MISSING`, `WRONG`); `ProjectionDiff.Result(State[][][] states, Map<ResonatorLayout.Part, Integer> missing, int wrong)`; `ProjectionDiff.compare(Part[][][] expected, int ox, int oy, int oz, ResonatorLayout.Probe actual) → Result`: `OK` se o que há é o esperado; `MISSING` se a posição está vazia (`AIR`) e devia ter peça; `WRONG` se há outra coisa (inclusive qualquer coisa no interior, que devia ser `AIR`). `missing` conta por `Part` só os `MISSING`; o Núcleo nunca falta (é a âncora).
+  - `ResonanceCoreBlock.projectionHook` (`public static volatile Consumer<BlockPos>`, nulo no servidor dedicado): no `useWithoutItem`, no cliente, sem Shift e com `FORMED = false`, chama o gancho com a posição do Núcleo. O `ClientSetup` liga o gancho a `ResonatorProjection::toggle`. Nada do pacote `client/` é importado pelo código comum.
+  - `ResonatorProjection` (cliente): uma projeção por vez. `toggle(BlockPos core)`: liga para esse Núcleo (ou desliga se já era ele). A cada 10 ticks do cliente (`ClientTickEvent.Post`) recalcula o `ProjectionDiff` lendo o `ClientLevel` (bloco do Ressonador → a `Part` dele; ar → `AIR`; qualquer outro → `OTHER`); escreve na action bar (`Minecraft.getInstance().gui.setOverlayMessage(..., false)`) "Faltam 42 Carcaças · 9 Vidros · 1 Porta de Cristais · 1 bloco errado" (só os tipos que faltam, na ordem Carcaça, Vidro, Porta de Energia, Porta de Cristais, Sintonizador; "bloco errado"/"blocos errados" no fim), com plural certo nos dois idiomas. Desliga sozinha: quando o Núcleo fica `FORMED` (escreve "Ressonador montado" em verde e toca `SoundEvents.EXPERIENCE_ORB_PICKUP` no cliente), quando o Núcleo some, quando o jogador fica a mais de 64 blocos ou muda de dimensão. Shift + roda do mouse com a projeção ligada e o jogador a até 8 blocos do Núcleo troca `VITRINE` ↔ `FAIXA` (cancele o evento de rolagem só nesse caso).
+  - `ProjectionRenderer` (cliente, `RenderLevelStageEvent`, fase `AFTER_TRANSLUCENT_BLOCKS`, como o `client/AreaRenderer`): para cada `MISSING`, o modelo do bloco esperado **já no estado montado** (as posições, faces e bits vêm do `ResonatorLayout.check` rodado sobre o próprio `expected`: monte uma vez por troca de layout) desenhado translúcido com alfa entre 0,3 e 0,4, respirando num ciclo de 2,4 s; para cada `WRONG` na casca, o contorno coral `0xF0603E` (`LevelRenderer.renderLineBox`, um pouco inflado) e o fantasma do certo dentro; para `WRONG` no interior, um cubo coral pequeno (escala 0,3) no centro da posição. Nada a desenhar com a projeção desligada (retorne logo).
+- Textos novos nos dois idiomas: os nomes no plural das peças para a contagem, "bloco errado"/"blocos errados", "Ressonador montado", e a dica de que Shift + roda troca o layout (mostrada uma vez ao ligar).
+
+- [ ] **Step 1: JUnit que falham**
+  - `ResonatorBlueprintTest`: para cada `coreFace` horizontal e cada `Layout`, `ResonatorLayout.check` sobre o `expected` (a `Probe` lê o array na origem dada por `origin`) devolve `Formed` com o Núcleo na `coreFace`; contagens da Vitrine: 85 `CASING`, 9 `GLASS`, 1 de cada peça; da Faixa: 82 `CASING`, 12 `GLASS`; com `coreFace` = `EAST` e `VITRINE`, o `expected` é igual, posição a posição, à Vitrine do `ResonatorLayoutTest` (origem (10, 20, 30), Núcleo em (14, 22, 32)); `UP` e `DOWN` também montam.
+  - `ProjectionDiffTest`: com o mundo vazio (só o Núcleo), tudo `MISSING` menos o Núcleo, `missing` = 85 `CASING`, 9 `GLASS`, 1 de cada Porta e o Sintonizador, `wrong` = 0; com a Vitrine completa, tudo `OK`; terra numa aresta: aquela posição `WRONG` e `wrong` = 1; terra no interior: `WRONG`; um Vidro onde devia haver Carcaça: `WRONG`.
+- [ ] **Step 2:** rode `./gradlew test --tests '*resonator*'` e veja falhar.
+- [ ] **Step 3:** implemente as duas classes puras e rode até passar.
+- [ ] **Step 4:** implemente o cliente (`ResonatorProjection`, `ProjectionRenderer`, o gancho no `ResonanceCoreBlock` e no `ClientSetup`, os textos). Confira que o `runGameTestServer` (servidor dedicado) continua carregando: é ele que pega classe de cliente vazando para o código comum.
+- [ ] **Step 5:** e2e: no `E2eResonatorSteps`, monte no mundo de teste do e2e uma Vitrine incompleta (o Núcleo, metade das carcaças, a janela sem dois vidros e uma terra numa aresta), olhe para o Núcleo, simule o clique sem Shift (como os outros passos de clique do e2e) e salve a captura `ressonador-projecao.png`; depois complete a estrutura e salve `ressonador-montado.png`. Rode `WA_E2E="$PWD/run/e2e" ./gradlew runClient` (compile antes; se o build falhar, conserte, nunca espere o `result.txt`), confira que o `run/e2e/result.txt` diz `OK` e **abra as duas capturas** (a ferramenta Read mostra imagens): os fantasmas translúcidos onde faltam blocos, o contorno coral na terra, a action bar com a contagem, e na segunda a estrutura montada sem fantasmas. Descreva no relatório o que viu.
+- [ ] **Step 6:** verificação completa (`./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium`), varredura, `medir.py` (tela/cliente até 500 linhas por classe) e commit (`"Ressonador: projeção da estrutura no mundo a partir do Núcleo"`).
+
+---
+
+### Task 6: O lote do Núcleo (geração, deriva, desgaste e recarga)
 
 **Files:**
 - Create: `B/resonator/ResonatorBatch.java`
@@ -649,7 +687,7 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 
 ---
 
-### Task 6: As Portas
+### Task 7: As Portas
 
 **Files:**
 - Modify: `B/resonator/ResonatorPorts.java`
@@ -658,7 +696,7 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 - Create: `B/gametest/ResonatorPortGameTests.java`
 
 **Interfaces:**
-- Consumes: o Núcleo (Tasks 4 e 5), `BulkEnergy` (existente), o roteador e as redes (existentes, ver `gametest/StorageGameTests` para os helpers de roteador e rede).
+- Consumes: o Núcleo (Tasks 4 e 6), `BulkEnergy` (existente), o roteador e as redes (existentes, ver `gametest/StorageGameTests` para os helpers de roteador e rede).
 - Produces:
   - `ResonatorPorts.CoreEnergy implements BulkEnergy` (`insert` devolve 0; `extract` tira do Núcleo) e `ResonatorPorts.CoreEnergyHandler implements IEnergyStorage` (`receiveEnergy` 0, `canReceive` false; `extractEnergy` e os getters limitados a `int`, como o `EnergyStoreHandler`).
   - `ResonatorPorts.CoreItems implements IItemHandler`: slots = as câmaras do tier + 1 (o último é a redstone). `insertItem` numa câmara: só `SignalCrystalItem`, uma unidade por câmara vazia; no slot da redstone: só `Items.REDSTONE`, até 64. `extractItem`: só de câmara com Opaco **e** com o Núcleo sem redstone; a redstone nunca sai. `getSlotLimit`: 1 nas câmaras, 64 na redstone. `isItemValid` segue as mesmas regras.
@@ -675,7 +713,7 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 
 ---
 
-### Task 7: Interação no Núcleo, Cartão de Upgrade e comando
+### Task 8: Interação no Núcleo, Cartão de Upgrade e comando
 
 **Files:**
 - Create: `B/resonator/ResonatorStatus.java`, `B/command/ResonatorCommand.java`
@@ -683,9 +721,9 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 - Modify: `B/gametest/ResonatorCoreGameTests.java`
 
 **Interfaces:**
-- Consumes: tudo das Tasks 4 a 6.
+- Consumes: tudo das Tasks 4 a 7.
 - Produces:
-  - `ResonanceCoreBlock.useItemOn`: com Cristal de Sinal ou Lapidado, `insertCrystal` (consome 1 se entrou, fora do criativo); com pó de redstone, `addRedstone` (consome o que entrou); com `TierCoreItem`, `SKIP_DEFAULT_BLOCK_INTERACTION` (o cartão age pelo `useOn`, como no roteador). `useWithoutItem`: Shift tira o último cristal para a mão (`takeLastCrystal`); sem Shift, manda o `ResonatorStatus.line(core)` na action bar.
+  - `ResonanceCoreBlock.useItemOn`: com Cristal de Sinal ou Lapidado, `insertCrystal` (consome 1 se entrou, fora do criativo); com pó de redstone, `addRedstone` (consome o que entrou); com `TierCoreItem`, `SKIP_DEFAULT_BLOCK_INTERACTION` (o cartão age pelo `useOn`, como no roteador). `useWithoutItem`: Shift tira o último cristal para a mão (`takeLastCrystal`); sem Shift, com a estrutura montada, manda o `ResonatorStatus.line(core)` na action bar (no servidor); solta, o clique continua ligando e desligando a projeção da Task 5 (no cliente) e o servidor manda a linha do problema (`ResonatorStatus.line`) só se a projeção não estiver disponível (não há como saber no servidor: mande sempre a linha do problema; a projeção escreve por cima dela na action bar do cliente no quadro seguinte).
   - `ResonatorStatus.line(ResonanceCoreBlockEntity) → Component`: montado: `"%tier · %cristais/%camaras crystals · %efic% · %fe FE/t"` (chave `block.wirelessautomate.resonance_core.status`); solto: a chave do problema (`block.wirelessautomate.resonance_core.problem.<problem em minúsculas>`) com a posição (`x y z`) quando houver.
   - `ResonanceCoreBlock.tryUpgrade(Level, BlockPos, RouterTier target, @Nullable RouterTier origin) → boolean` (como o do `StorageBlock`: confere `acceptsCard`, troca só o `TIER` do blockstate, mantém o block entity; depois do `setBlock`, chame `ResonatorFormation.revalidate` para a capacidade e as câmaras novas valerem). No `TierCoreItem.useOn`, o Núcleo entra como o terceiro caso, com as chaves `item.wirelessautomate.tier_core.refused.core` e `upgraded.core` (`"%s → %s"` com o nome do bloco, como `upgraded.storage`).
   - `/wa resonator <pos> info` (permissão 2): estação, dial, desvio, eficiência, FE/t, energia/capacidade, cristais, redstone; `/wa resonator <pos> dial <mhz>` (`DoubleArgumentType.doubleArg(88, 108)`): `setDial`; erros `command.wirelessautomate.resonator.not_core`. Registrado no `WaCommand` como os outros nós (`ResonatorCommand.node()`).
@@ -704,7 +742,7 @@ Regras (leve as funções do `docs/preview/ressonador-proto.py` para o `blocos.p
 
 ---
 
-### Task 8: Documentação
+### Task 9: Documentação
 
 **Files:**
 - Modify: `CLAUDE.md`, `docs/progresso.md`, `docs/especificacao.md`

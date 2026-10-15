@@ -106,7 +106,7 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 - **Câmaras por tier:** tier + 1 (Básico 1 … Ultimate 8), fixo, sem config.
 - **Config do servidor, seção `resonator`:** `crystalLifeTicks` (12.000), `cutCrystalLifeTicks` (24.000), `rechargeTicks` (600) e, por tier, `fePerCrystal` (128, 1.024, 8.192, 32.768, 262.144, 2.097.152, 134.217.728, 1.073.741.824).
 - **Lote:** um gerenciador central (`ResonatorManager`, chamado no tick do servidor, como o `SourceTankLevels`) visita cada Núcleo montado e carregado a cada 20 ticks, espalhados pela posição para não caírem todos no mesmo tick. A deriva dá um passo a cada 20 lotes (400 ticks).
-- **Desgaste:** só cristal que está gerando gasta (eficiência acima de 0 e espaço no buffer).
+- **Desgaste:** só cristal que está gerando gasta (eficiência acima de 0 e espaço no buffer), na proporção do que gerou: com espaço para só parte do lote, cada cristal gasta `⌈ticks × gerado ÷ (por tick × ticks)⌉` ticks (decisão do dono, 15/10/2026); com o buffer cheio, nada.
 - **Recarga:** um Opaco por vez; com redstone no Núcleo, a recarga leva `rechargeTicks` e consome 1 pó no fim.
 - **Porta de Cristais (itens):** aceita Cristal de Sinal e Lapidado (um por câmara vazia) e pó de redstone (até 64 no Núcleo). Só entrega Opacos, e só quando o Núcleo está sem redstone (com redstone, o Opaco fica para recarregar). A redstone não sai.
 - **Porta de Energia:** só tira; expõe `BulkEnergy` (em `long`, o que o roteador usa) e `IEnergyStorage`. Quando a energia volta a ter algo, o Núcleo avisa os vizinhos das Portas para o roteador acordar.

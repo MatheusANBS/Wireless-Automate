@@ -35,7 +35,7 @@ Wireless transport of items, fluids, energy, chemicals and Source for **NeoForge
 | Emerald | 16,384 | 1,024,000 | 512,000 | 51,200 | Across dimensions | 16 blocks, 32 machines |
 | Allthemodium¹ | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Across dimensions | 24 blocks, 48 machines |
 | Vibranium¹ | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Across dimensions | 32 blocks, 64 machines |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 262,144,000 | 26,214,400 | Across dimensions | 48 blocks, 96 machines |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 2,097,152,000 | 26,214,400 | Across dimensions | 48 blocks, 96 machines |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Across dimensions | 64 blocks, 128 machines |
 
 ¹ Only with the Allthemodium mod; without it, Emerald goes straight to Ultimate.

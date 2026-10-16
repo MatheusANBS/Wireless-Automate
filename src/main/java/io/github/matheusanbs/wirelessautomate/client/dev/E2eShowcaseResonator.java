@@ -2,10 +2,12 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eShowcaseWorld.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.close;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
@@ -15,6 +17,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -22,17 +26,18 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * O GIF "chiado → sintonia" da vitrine do CurseForge: uma Vitrine Esmeralda no jardim, a leste do caminho, com a
- * janela para o sul, e a câmera parada olhando por ela. Com o tempo congelado ({@code tickRateManager}), cada quadro
- * põe o dial do roteiro, avança um tick e salva {@code gif/ressonador-NNN.png}; o
- * {@code scripts/curseforge/gerar_gif.py} monta o GIF.
+ * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Vitrine
+ * Esmeralda no jardim, a leste do caminho, com a janela para o sul, e a câmera parada olhando por ela. Com o tempo
+ * congelado ({@code tickRateManager}), cada quadro põe o dial do roteiro, avança um tick e salva
+ * {@code gif/ressonador-NNN.png}; o {@code scripts/curseforge/gerar_gif.py} monta o GIF.
  *
  * <p>Roteiro (120 quadros, 20 fps): 25 quadros com o dial a {@value #START_MHZ} MHz da estação (chiado), 45 com o
  * desvio caindo pela curva {@code 1 - u²} (parte devagar e chega à lâmpada perto do fim da varredura, o clarão por
  * volta de 3,4 s) e o resto na estação. A estação é lida no servidor e fica presa nela a cada quadro: com o tempo
  * congelado o relógio do overworld não anda e o lote do Núcleo pode rodar várias vezes no mesmo tick, derivando.
  *
- * <p>Roda no fim da vitrine inteira ou sozinho, com {@code WA_SHOWCASE_ONLY=ressonador} (só a casa e os quadros).
+ * <p>Roda no fim da vitrine inteira ou sozinho, com {@code WA_SHOWCASE_ONLY=ressonador} (só a casa, os quadros e as
+ * duas fotos paradas).
  */
 final class E2eShowcaseResonator {
     private static final int FRAMES = 120;
@@ -98,6 +103,40 @@ final class E2eShowcaseResonator {
             server.tickRateManager().setFrozen(false);
             return null;
         }), () -> Minecraft.getInstance().level.tickRateManager().runsNormally(), () -> "cliente descongelado"));
+        stills(list);
+    }
+
+    /**
+     * As fotos paradas, já em sintonia: a Vitrine inteira vista do sudeste ({@code s19-ressonador}, a janela e o
+     * Núcleo à vista) e a tela do Núcleo aberta de perto ({@code s20-ressonador-tela}).
+     */
+    private static void stills(List<Step> list) {
+        list.add(E2eShowcase.showLook("Ressonador: câmera no jardim", BOX[0] + 5, 3.3, BOX[2] + 10.5, BOX[0] + 2,
+                2.2, BOX[2] + 2.5, false));
+        list.add(DevEndToEnd.wait("Ressonador: em sintonia", 40));
+        list.add(capture("s19-ressonador"));
+        list.add(E2eShowcase.showLook("Ressonador: câmera no Núcleo", BOX[0] + 7, 1.4, BOX[2] + 2, BOX[0] + 4,
+                2.5, BOX[2] + 2, true));
+        list.add(new Step("Ressonador: abrir a tela do Núcleo", STEP_TIMEOUT_MS, () -> {
+            // o clique abre a tela só com a mão vazia
+            Minecraft.getInstance().player.getInventory().setItem(
+                    Minecraft.getInstance().player.getInventory().selected, ItemStack.EMPTY);
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            onServer(server -> {
+                server.getPlayerList().getPlayer(playerId).setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                return null;
+            });
+        }, () -> {
+            if (stepTicks == 3) {
+                E2eUi.useOn(core());
+            }
+            return stepTicks > 3 && Minecraft.getInstance().screen instanceof ResonatorScreen screen
+                    && screen.getMenu().received() && screen.getMenu().state() != null;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Ressonador: mouse fora", STEP_TIMEOUT_MS, () -> E2eUi.moveMouse(0, 0),
+                () -> stepTicks >= 10, () -> "esperando"));
+        list.add(capture("s20-ressonador-tela"));
+        list.add(close("Ressonador: fechar a tela do Núcleo"));
     }
 
     /** O desvio do dial no quadro {@code frame}, em MHz acima da estação. */

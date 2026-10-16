@@ -52,7 +52,7 @@ import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
  * fotografam a casa montada pelo {@link E2eShowcaseWorld}.
  */
 final class E2eShowcase {
-    /** Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só os quadros do GIF do Ressonador. */
+    /** Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos). */
     private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
 
     private E2eShowcase() {

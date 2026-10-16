@@ -233,7 +233,7 @@ TIER_HALL_MEIA_LARGURA = 37
 VAZOES = [
     ("Items/s", [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0]),
     ("Fluids (mB/s)", [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0]),
-    ("Energy (FE/t)", [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 262_144_000, 0]),
+    ("Energy (FE/t)", [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000, 0]),
     ("Source/s", [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0]),
 ]
 ALCANCE = ["64 blocks", "512 blocks", "Dimension"] + ["All dims"] * 5
@@ -338,6 +338,9 @@ DESTAQUES = [
     ("feature-12-source-tank", "Wireless Source Tank",
      "A slim jar that shows its level. Sourcelinks fill it, Ars machines draw from it.",
      VITRINE / "s12-tanques.png", (200, 170, 1080, 720), (VITRINE / "s12b-tanque-tela.png", (398, 260, 882, 540), 430)),
+    ("feature-21-resonator", "Signal Resonator",
+     "A 5x5x5 crystal generator. Tune the dial to the station and watch the chamber lock in.",
+     VITRINE / "s19-ressonador.png", (120, 60, 1160, 740), (VITRINE / "s20-ressonador-tela.png", (285, 155, 997, 648), 470)),
     ("feature-14-toolkit", "The toolkit",
      "Linker, Configurator, Tablet, Filter Card, Upgrade Cards and the guide book.",
      VITRINE / "s14-vitrine.png", (100, 120, 1180, 660)),

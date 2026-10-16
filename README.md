@@ -35,7 +35,7 @@ Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoFor
 | Esmeralda | 16.384 | 1.024.000 | 512.000 | 51.200 | Entre dimensões | 16 blocos, 32 máquinas |
 | Allthemodium¹ | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Entre dimensões | 24 blocos, 48 máquinas |
 | Vibranium¹ | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Entre dimensões | 32 blocos, 64 máquinas |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 262.144.000 | 26.214.400 | Entre dimensões | 48 blocos, 96 máquinas |
+| Unobtainium¹ | 8.388.608 | 524.288.000 | 2.097.152.000 | 26.214.400 | Entre dimensões | 48 blocos, 96 máquinas |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões | 64 blocos, 128 máquinas |
 
 ¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.

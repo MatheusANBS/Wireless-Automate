@@ -260,6 +260,7 @@ final class RangeList {
             case LOADED -> GuiPaint.OK;
             case UNLOADED -> GuiPaint.WARN;
             case MISSING -> GuiPaint.DANGER;
+            case REPLACED -> GuiPaint.BRASS;
             case OUT_OF_RANGE, OVER_LIMIT -> GuiPaint.MUTED;
         };
     }

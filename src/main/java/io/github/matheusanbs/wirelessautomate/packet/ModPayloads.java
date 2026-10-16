@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -29,7 +30,9 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +66,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "17";
+    public static final String VERSION = "18";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -93,6 +96,8 @@ public final class ModPayloads {
                 (payload, context) -> handleRevertMachine(serverPlayer(context), payload));
         registrar.playToServer(UnlinkMachinePayload.TYPE, UnlinkMachinePayload.STREAM_CODEC,
                 (payload, context) -> handleUnlinkMachine(serverPlayer(context), payload));
+        registrar.playToServer(UpdateMachinePayload.TYPE, UpdateMachinePayload.STREAM_CODEC,
+                (payload, context) -> handleUpdateMachine(serverPlayer(context), payload));
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
@@ -271,6 +276,66 @@ public final class ModPayloads {
         host.validTarget();
         host.editApplied();
         return unlinked;
+    }
+
+    /**
+     * Atualizar: passa para o grupo do bloco novo a máquina trocada do índice (conferida pela posição) ou as
+     * trocadas do grupo (conferido pelo bloco). Depois, uma máquina escolhida continua; um grupo escolhido que
+     * saiu dá lugar ao grupo de destino da primeira máquina atualizada, e um que só trocou de bloco continua,
+     * reescolhido com o bloco novo.
+     */
+    public static boolean handleUpdateMachine(@Nullable ServerPlayer player, UpdateMachinePayload payload) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null) {
+            return false;
+        }
+        RouterBlockEntity router = host.editedRouter();
+        List<Integer> indices = updateIndices(router, payload);
+        EditTargetRef before = host.targetRef();
+        RemoteMachines.Regroup result = indices.isEmpty() ? RemoteMachines.Regroup.EMPTY : router.updateReplaced(indices);
+        if (result.isEmpty()) {
+            return false;
+        }
+        MachineGroup chosen = before.target().kind() == EditTarget.Kind.GROUP
+                ? router.remoteMachines().group(before.target().id())
+                : null;
+        if (before.target().kind() == EditTarget.Kind.GROUP && chosen == null) {
+            int destination = result.destinations().values().iterator().next();
+            MachineGroup group = router.remoteMachines().group(destination);
+            host.selectTarget(EditTarget.group(destination), null, group == null ? null : group.block());
+        } else if (chosen != null && !chosen.block().equals(before.block())) {
+            host.selectTarget(before.target(), null, chosen.block());
+        } else {
+            host.validTarget();
+        }
+        host.editApplied();
+        return true;
+    }
+
+    /**
+     * Os índices que o Atualizar pede: a máquina, se ainda está na posição; ou todas as do grupo, se ele
+     * ainda é do bloco visto (o roteador ignora as que não estão trocadas).
+     */
+    private static List<Integer> updateIndices(RouterBlockEntity router, UpdateMachinePayload payload) {
+        if (payload.kind() == EditTarget.Kind.MACHINE) {
+            return payload.pos().isPresent() && sameMachine(router, payload.id(), payload.pos().get())
+                    ? List.of(payload.id())
+                    : List.of();
+        }
+        MachineGroup group = payload.kind() == EditTarget.Kind.GROUP && router.rangeActive()
+                ? router.remoteMachines().group(payload.id())
+                : null;
+        if (group == null || payload.block().isEmpty() || !group.block().equals(payload.block().get())) {
+            return List.of();
+        }
+        List<Integer> indices = new ArrayList<>();
+        List<RemoteMachine> machines = router.remoteMachines().machines();
+        for (int i = 0; i < machines.size(); i++) {
+            if (machines.get(i).group() == group.id()) {
+                indices.add(i);
+            }
+        }
+        return indices;
     }
 
     /** Com o Upgrade de Alcance valendo (como o {@code SelectTarget}), a máquina do índice está em {@code pos}. */

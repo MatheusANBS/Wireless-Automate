@@ -3,9 +3,11 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -36,12 +38,20 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         LOADED,
         /** Ativa, mas o chunk está descarregado: volta a mover quando ele carregar. */
         UNLOADED,
-        /** O bloco não é mais o do grupo ou perdeu toda capability de um tipo carregado. */
+        /**
+         * No lugar há outro bloco que não o do grupo, sem a capability de nenhum tipo carregado, ou o do
+         * grupo sem o block entity.
+         */
         MISSING,
         /** Fora do raio do tier. */
         OUT_OF_RANGE,
         /** Dentro do raio, mas além do limite de máquinas do tier. */
-        OVER_LIMIT
+        OVER_LIMIT,
+        /**
+         * Ativa e com o chunk carregado, mas no lugar há outro bloco (não ar) com a capability de algum
+         * tipo carregado: o Atualizar a passa para o grupo do bloco novo.
+         */
+        REPLACED
     }
 
     /**
@@ -64,8 +74,10 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
      * @param group     id do grupo
      * @param distance  distância de Chebyshev ao roteador
      * @param exception tem exceção (não segue o perfil)
+     * @param replacedBy id do bloco que está no lugar, só em {@link MachineState#REPLACED}; senão {@code null}
      */
-    public record MachineView(BlockPos pos, int group, int distance, boolean exception, MachineState state) {
+    public record MachineView(BlockPos pos, int group, int distance, boolean exception, MachineState state,
+            @Nullable ResourceLocation replacedBy) {
     }
 
     /** Há upgrade valendo (a tela mostra a lista). */
@@ -122,6 +134,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             buf.writeVarInt(machine.distance);
             buf.writeBoolean(machine.exception);
             buf.writeEnum(machine.state);
+            buf.writeOptional(Optional.ofNullable(machine.replacedBy), FriendlyByteBuf::writeResourceLocation);
         }
     }
 
@@ -143,7 +156,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         List<MachineView> machines = new ArrayList<>(machineCount);
         for (int i = 0; i < machineCount; i++) {
             machines.add(new MachineView(buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
-                    buf.readEnum(MachineState.class)));
+                    buf.readEnum(MachineState.class), buf.readOptional(FriendlyByteBuf::readResourceLocation).orElse(null)));
         }
         return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face);
     }

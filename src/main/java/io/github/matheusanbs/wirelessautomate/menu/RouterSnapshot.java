@@ -6,19 +6,18 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
+import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
@@ -30,6 +29,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -294,7 +294,7 @@ public record RouterSnapshot(
                     // A face da tela é canônica; a da máquina vem da frente dela.
                     Direction absolute = Direction.values()[RemoteSide.fromCanonical(face.ordinal())
                             .toAbsolute(viewed.front())];
-                    slots = remoteSlots(level, viewed.pos(), type, absolute);
+                    slots = RemoteCapabilities.slots(level, viewed.pos(), type, absolute);
                 } else {
                     slots = -1;
                 }
@@ -339,8 +339,14 @@ public record RouterSnapshot(
             BlockPos pos = remote.pos();
             int distance = RangeRules.chebyshev(center.getX(), center.getY(), center.getZ(), pos.getX(), pos.getY(),
                     pos.getZ());
-            machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(),
-                    state(level, remotes, remote, reach[i])));
+            RangeView.MachineState state = state(level, remotes, remote, reach[i]);
+            // Só quando o bloco já não bate: a consulta de capability da trocada não roda nas outras.
+            ResourceLocation replacedBy = state == RangeView.MachineState.MISSING ? router.replacedBy(remote) : null;
+            if (replacedBy != null) {
+                state = RangeView.MachineState.REPLACED;
+            }
+            machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(), state,
+                    replacedBy));
         }
         List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
         for (MachineGroup group : remotes.groups()) {
@@ -415,39 +421,6 @@ public record RouterSnapshot(
                     yield RangeView.MachineState.MISSING;
                 }
                 yield RangeView.MachineState.LOADED;
-            }
-        };
-    }
-
-    /**
-     * Como {@link #slots(MachineCaches, ResourceType, Direction)}, para a máquina remota que a tela mostra,
-     * por consulta direta ({@code level.getCapability}), sem criar {@code BlockCapabilityCache} nem
-     * listener: a tela pede as 6 faces de todos os tipos, e caches dessas faces ficariam vivos (e avisando
-     * o motor) mesmo nas que nenhuma porta usa. Só com o chunk carregado (quem chama conferiu) e só nos
-     * tipos carregados.
-     */
-    private static int remoteSlots(Level level, BlockPos pos, ResourceType type, Direction face) {
-        if (!LoadedTypes.contains(type)) {
-            return -1;
-        }
-        return switch (type) {
-            case ITEM -> {
-                IItemHandler items = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, face);
-                yield items == null ? -1 : items.getSlots();
-            }
-            case FLUID -> {
-                IFluidHandler fluids = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, face);
-                yield fluids == null ? -1 : fluids.getTanks();
-            }
-            case ENERGY -> level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, face) == null ? -1 : 1;
-            case CHEMICAL -> {
-                BlockCapability<?, @Nullable Direction> capability = Chemicals.capability();
-                Object chemicals = capability == null ? null : level.getCapability(capability, pos, face);
-                yield chemicals == null ? -1 : Chemicals.tanks(chemicals);
-            }
-            case SOURCE -> {
-                BlockCapability<?, @Nullable Direction> capability = Sources.capability();
-                yield capability == null || level.getCapability(capability, pos, face) == null ? -1 : 1;
             }
         };
     }

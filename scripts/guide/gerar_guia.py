@@ -298,6 +298,8 @@ recursos entre si, sem canos.
 | ''' + item('storage_battery') + ''' [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
 | ''' + item('storage_chemical_tank') + ''' [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 | ''' + item('storage_source_tank') + ''' [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
+| ''' + item('signal_crystal') + ''' [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
+| ''' + item('resonance_core') + ''' [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
@@ -353,6 +355,8 @@ resources with the others, with no pipes.
 | ''' + item('storage_battery') + ''' [Wireless Battery](wireless-battery.md) | Energy without an `int`'s cap. |
 | ''' + item('storage_chemical_tank') + ''' [Wireless Chemical Tank](wireless-chemical-tank.md) | The tank for Mekanism chemicals. |
 | ''' + item('storage_source_tank') + ''' [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
+| ''' + item('signal_crystal') + ''' [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
+| ''' + item('resonance_core') + ''' [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
@@ -2218,9 +2222,399 @@ A Wireless Tank with Source gems and iron (only with Ars Nouveau).
 
 
 # =====================================================================================
+# Quartzo de Sinal e Ressonador de Sinal
+# =====================================================================================
+def _scene_blocks():
+    with open(os.path.join(ROOT, 'scripts/guide/resonator_scene.txt'), encoding='utf-8') as fh:
+        return '\n'.join('  ' + line.strip() for line in fh if line.strip())
+
+
+SCENE_RESONATOR = '''<GameScene zoom="3" interactive={true}>
+''' + _scene_blocks() + '''
+  <BlockAnnotation x="2" y="2" z="4" color="#f0603e">
+    {CORE}
+  </BlockAnnotation>
+  <BlockAnnotation x="2" y="2" z="0" color="#45d6cc">
+    {ENERGY}
+  </BlockAnnotation>
+  <BlockAnnotation x="4" y="2" z="2" color="#e2b347">
+    {CRYSTALS}
+  </BlockAnnotation>
+  <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
+    {TUNER}
+  </BlockAnnotation>
+  <IsometricCamera yaw="{YAW}" pitch="30" />
+</GameScene>'''
+
+# Tiers do Ressonador na ordem do RouterTier: câmaras (tier + 1), FE/t por Cristal de Sinal (padrões do CoreMath) e
+# teto do Sintonizador em % (constantes do Tuning.ceiling). O Cristal Lapidado rende o dobro.
+RESONATOR_FE = [128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728, 1_073_741_824]
+RESONATOR_CEILING = [85, 88, 90, 92, 94, 95, 96, 98]
+
+
+def resonator_table(lang):
+    head = {'pt': '| Tier do Núcleo | Câmaras | FE/t por Cristal de Sinal | Teto do Sintonizador |',
+            'en': '| Core tier | Chambers | FE/t per Signal Crystal | Tuner ceiling |'}[lang]
+    rows = [head, '| --- | --- | --- | --- |']
+    for i in range(len(TIERS)):
+        rows.append(f'| **{tier_name(lang, i)}** | {i + 1} | {num(lang, RESONATOR_FE[i])} | {RESONATOR_CEILING[i]}% |')
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
+
+
+RESONATOR_ANNOTATIONS = {
+    'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais',
+               ENERGY='Porta de Energia: o roteador tira a energia daqui',
+               CRYSTALS='Porta de Cristais: entram cristais e redstone, saem Opacos', TUNER='Sintonizador (opcional)',
+               YAW='35'),
+    'en': dict(CORE='Resonance Core: the screen and the crystals',
+               ENERGY='Resonator Energy Port: a router pulls the energy here',
+               CRYSTALS='Resonator Crystal Port: crystals and redstone in, Dull ones out',
+               TUNER='Resonator Tuner (optional)', YAW='35'),
+}
+
+page('signal-quartz.md', front('Quartzo de Sinal e cristais', 'wirelessautomate:signal_crystal', 18, item_ids=[
+    'wirelessautomate:signal_quartz_ore', 'wirelessautomate:deepslate_signal_quartz_ore',
+    'wirelessautomate:signal_crystal', 'wirelessautomate:cut_signal_crystal']) + '''
+# Quartzo de Sinal e cristais
+
+<Row gap="8">
+  ''' + item('signal_quartz_ore') + '''
+  ''' + item('deepslate_signal_quartz_ore') + '''
+  ''' + item('signal_crystal') + '''
+  ''' + item('cut_signal_crystal') + '''
+</Row>
+
+Os cristais de quartzo são o combustível do [Ressonador de Sinal](signal-resonator.md), o gerador de energia do mod.
+
+## O minério
+
+O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia (a versão de ardósia
+é mais dura). Fica em veios pequenos, mais comum perto de **y = −16**. Quebre com **picareta de ferro** ou melhor:
+
+| Ferramenta | O que cai |
+| --- | --- |
+| Picareta de ferro ou melhor | 1 a 3 **Cristais de Sinal** e um pouco de experiência. **Fortuna** aumenta a quantidade. |
+| Toque de Seda | O próprio minério. |
+
+## Os cristais
+
+| Cristal | Rende | Dura gerando |
+| --- | --- | --- |
+| ''' + item('signal_crystal') + ''' **Cristal de Sinal** | 1× | 10 minutos |
+| ''' + item('cut_signal_crystal') + ''' **Cristal Lapidado** | 2× | 20 minutos |
+
+O Cristal de Sinal só vem do minério. O **Cristal Lapidado** sai da bancada com quatro Cristais de Sinal em
+cruz em volta de um Fragmento de Ametista, e só aceita cristais **cheios**: cristais gastos não valem.
+
+<RecipeFor id="wirelessautomate:cut_signal_crystal" />
+
+O Cristal de Sinal também entra nas receitas da Carcaça de Porcelana e do Vidro de Ressonância, e o Lapidado
+na do Núcleo de Ressonância.
+
+## Carga e cristal Opaco
+
+A **barra do item** mostra quanto falta para o cristal acabar: ela só aparece depois que o cristal começa a
+gastar. Dentro do Núcleo, a carga cai enquanto ele gera energia.
+
+Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco não gera nada, mas dá para
+**recarregar**:
+
+1. Deixe o Opaco numa câmara do Núcleo.
+2. Ponha **Pó de Redstone** no Núcleo (clique com a redstone na mão, pela tela ou pela Porta de Cristais).
+3. O Núcleo recarrega **um Opaco por vez**: leva 30 segundos e gasta 1 pó de redstone, e o cristal volta cheio.
+
+A Porta de Cristais só devolve os Opacos quando o Núcleo está sem redstone; com redstone, o Opaco fica
+lá dentro esperando a vez de recarregar.
+
+Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).
+''', front('Signal Quartz and crystals', 'wirelessautomate:signal_crystal', 18, item_ids=[
+    'wirelessautomate:signal_quartz_ore', 'wirelessautomate:deepslate_signal_quartz_ore',
+    'wirelessautomate:signal_crystal', 'wirelessautomate:cut_signal_crystal']) + '''
+# Signal Quartz and crystals
+
+<Row gap="8">
+  ''' + item('signal_quartz_ore') + '''
+  ''' + item('deepslate_signal_quartz_ore') + '''
+  ''' + item('signal_crystal') + '''
+  ''' + item('cut_signal_crystal') + '''
+</Row>
+
+Quartz crystals are the fuel of the [Signal Resonator](signal-resonator.md), the mod's power generator.
+
+## The ore
+
+**Signal Quartz Ore** generates in the Overworld, in stone and in deepslate (the deepslate version is
+harder to mine). It sits in small veins, most common near **y = −16**. Mine it with an **iron pickaxe** or better:
+
+| Tool | Drop |
+| --- | --- |
+| Iron pickaxe or better | 1 to 3 **Signal Crystals** and a bit of experience. **Fortune** raises the amount. |
+| Silk Touch | The ore itself. |
+
+## The crystals
+
+| Crystal | Yields | Lasts while generating |
+| --- | --- | --- |
+| ''' + item('signal_crystal') + ''' **Signal Crystal** | 1× | 10 minutes |
+| ''' + item('cut_signal_crystal') + ''' **Cut Crystal** | 2× | 20 minutes |
+
+The Signal Crystal only comes from the ore. The **Cut Crystal** is crafted from four Signal Crystals in a
+cross around an Amethyst Shard, and only accepts **full** crystals: spent ones don't count.
+
+<RecipeFor id="wirelessautomate:cut_signal_crystal" />
+
+The Signal Crystal is also in the recipes for the Porcelain Casing and the Resonance Glass, and the Cut Crystal
+in the one for the Resonance Core.
+
+## Charge and Dull crystals
+
+The item's **durability bar** shows how much is left before the crystal runs out: it only appears once the
+crystal starts to wear. Inside the Core, the charge drops while it generates power.
+
+With no charge left, the crystal turns **Dull**: it's the same item, just dimmed. A Dull crystal generates
+nothing, but you can **recharge** it:
+
+1. Leave the Dull crystal in a Core chamber.
+2. Put **Redstone Dust** in the Core (click with redstone in hand, through the screen or through the Crystal Port).
+3. The Core recharges **one Dull crystal at a time**: it takes 30 seconds and uses 1 redstone dust, and the crystal comes back full.
+
+The Crystal Port only hands the Dull crystals back when the Core has no redstone; with redstone in it, the Dull
+crystal stays inside, waiting its turn to recharge.
+
+See how to build the generator in [Signal Resonator](signal-resonator.md).
+''')
+
+page('signal-resonator.md', front('Ressonador de Sinal', 'wirelessautomate:resonance_core', 19, item_ids=[
+    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
+    'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
+    'wirelessautomate:resonator_tuner']) + '''
+# Ressonador de Sinal
+
+<ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
+
+Um gerador de energia de vários blocos: cristais de quartzo vibram dentro de uma caixa, e você
+**sintoniza** o Núcleo na frequência certa para tirar o máximo de FE. Os cristais vêm do
+[Quartzo de Sinal](signal-quartz.md).
+
+<br clear="all" />
+
+''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['pt']) + '''
+
+A cena mostra a montagem **Vitrine**, com a janela de vidro numa face e o Núcleo em outra. Gire a cena com o mouse.
+
+## Montar
+
+1. Coloque o **Núcleo de Ressonância** e clique nele com a mão vazia: a estrutura aparece **projetada** no mundo
+   (as peças que faltam e o que está errado). Clique de novo para desligar. **Shift + roda do mouse** troca entre
+   as montagens **Vitrine** e **Faixa**.
+2. A estrutura é uma caixa **5×5×5 oca**: **Carcaça de Porcelana** nas arestas e nos cantos; **Vidro de
+   Ressonância**, as portas e o Sintonizador nas posições do miolo das faces. O interior 3×3×3 fica vazio.
+3. Precisa de **um Núcleo**, **pelo menos uma Porta de Energia** e **pelo menos uma Porta de Cristais**; o
+   **Sintonizador** é opcional (no máximo um). O Núcleo e as portas ficam no miolo das faces, nunca nas arestas.
+4. Duas montagens de exemplo valem: a **Vitrine** (janela de Vidro 3×3 na frente) e a **Faixa** (três vidros na
+   linha de cima de cada lateral). Outros arranjos também montam: o Vidro pode ficar em qualquer posição do
+   miolo das faces.
+5. Uma **parede não pode ser dividida** com outro Ressonador: cada um tem a sua caixa.
+
+Ao completar, a estrutura se acende com um pulso e a barra de ação diz **Ressonador montado**. Se não monta, clique
+no Núcleo solto: a barra de ação diz o que impede e o bloco errado fica contornado em coral.
+
+| Bloco | Papel |
+| --- | --- |
+| ''' + item('resonator_casing') + ''' **Carcaça de Porcelana** | A casca da caixa. |
+| ''' + item('resonator_glass') + ''' **Vidro de Ressonância** | A janela para ver a câmara. |
+| ''' + item('resonance_core') + ''' **Núcleo de Ressonância** | O cérebro: tela, cristais e a energia gerada. |
+| ''' + item('resonator_energy_port') + ''' **Porta de Energia** | Só tira energia: prenda um roteador nela. |
+| ''' + item('resonator_crystal_port') + ''' **Porta de Cristais** | Aceita cristais e redstone e devolve os Opacos. |
+| ''' + item('resonator_tuner') + ''' **Sintonizador** | Opcional: sintoniza sozinho. |
+
+## Cristais e redstone
+
+Cada Núcleo tem câmaras para os cristais (1 no Básico, até 8 no Ultimate). Ponha um **Cristal de Sinal** ou
+**Lapidado** de um destes jeitos:
+
+| Como | O que fazer |
+| --- | --- |
+| **Pelo clique** | Clique no Núcleo com o cristal na mão: ele vai para a primeira câmara vazia. Com redstone na mão, o pó entra no Núcleo. |
+| **Pela tela** | Abra a tela do Núcleo e use os slots de cristais e o de redstone. |
+| **Pela Porta de Cristais** | Um roteador (ou outro transporte de itens) põe os cristais e a redstone na porta e tira os Opacos dela. |
+
+Para tirar o último cristal, clique no Núcleo com **Shift e as duas mãos vazias**. A **redstone** só serve
+para recarregar os Opacos, como na página do [Quartzo de Sinal](signal-quartz.md).
+
+## Sintonizar
+
+Clique no Núcleo montado, com a mão vazia, para abrir a tela. O Ressonador tem uma **estação**, uma
+frequência escondida, e o **dial** precisa estar em cima dela:
+
+- Gire o dial com os botões (**±1 MHz** e **±0,05 MHz**) ou com a **roda do mouse** (±0,05 MHz).
+- O ponteiro mostra se está perto; quando acende a lâmpada **EM SINTONIA**, a geração está a 100%.
+- Se o ponteiro diz **sem sinal: varra o dial**, o dial está longe: varra-o até o ponteiro aparecer.
+- Quanto mais longe da estação, menos energia. Muito longe, a geração vai a **zero**.
+
+A estação **escorrega devagar com o tempo**, e a sintonia se perde aos poucos: volte de vez em quando e acerte o dial
+de novo. A estação nunca aparece como número: você a acha pela lâmpada.
+
+## Sintonizador
+
+Com um **Sintonizador** na estrutura, o botão **Sintonizador** da tela liga o **modo automático**: o dial segue a
+estação sozinho, sem você voltar. Em troca, a eficiência fica limitada por um **teto** que depende do tier do Núcleo
+(da tabela mais abaixo). No modo automático o dial não responde aos botões: volte para **Manual** para girá-lo.
+
+## A câmara
+
+Pelo vidro dá para ler a sintonia, sem abrir a tela:
+
+- **Em sintonia**: a figura de luz no ar **fecha**, os cristais sobem e descem **juntos**, cada um com um feixe até a
+  luz, e a placa do chão fica nítida.
+- **Fora de sintonia**: a figura vira um **rabisco**, cada cristal vai no seu tempo e o chão chia. Com a geração em zero,
+  a figura some.
+- A lente do Núcleo acende na parede dele, faíscas correm até a Porta de Energia e um fio de redstone chega ao cristal
+  Opaco que está recarregando.
+
+## Energia
+
+A energia sai pela **Porta de Energia**: prenda um [Roteador](router.md) nela e ponha a face em **Extrai**
+na aba **Energia**. O Núcleo guarda uma reserva pequena (uns 10 segundos de geração cheia); com ela cheia, ele
+**para de gerar e não gasta cristal**. O Núcleo só trabalha com o chunk carregado: para ele rodar longe de você,
+use o [Upgrade de Chunk Loading](chunk-loading.md) no roteador preso à Porta.
+
+## Tiers
+
+O Núcleo sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador (Shift + clique com o
+cartão no Núcleo), sem desmontar: o conteúdo continua e as câmaras novas aparecem. Cada tier tem mais câmaras e
+mais FE por cristal. O Lapidado rende o dobro do que a tabela mostra para o Cristal de Sinal.
+
+''' + resonator_table('pt') + '''
+
+Valores padrão: o servidor pode mudar o FE por cristal. O JEI mostra os do seu pack no Núcleo.
+
+## Receitas
+
+<RecipeFor id="wirelessautomate:resonator_casing" />
+<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonance_core" />
+<RecipeFor id="wirelessautomate:resonator_energy_port" />
+<RecipeFor id="wirelessautomate:resonator_crystal_port" />
+<RecipeFor id="wirelessautomate:resonator_tuner" />
+''', front('Signal Resonator', 'wirelessautomate:resonance_core', 19, item_ids=[
+    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
+    'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
+    'wirelessautomate:resonator_tuner']) + '''
+# Signal Resonator
+
+<ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
+
+A multiblock power generator: quartz crystals vibrate inside a box, and you **tune** the Core to the right
+frequency to pull the most FE out of them. The crystals come from
+[Signal Quartz](signal-quartz.md).
+
+<br clear="all" />
+
+''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['en']) + '''
+
+The scene shows the **Showcase** build, with the glass window on one face and the Core on another. Rotate the scene with the mouse.
+
+## Building it
+
+1. Place the **Resonance Core** and click it with an empty hand: the structure shows up **projected** in the world
+   (the missing parts and what is wrong). Click again to turn it off. **Shift + mouse wheel** switches between the
+   **Showcase** and **Band** builds.
+2. The structure is a **hollow 5×5×5 box**: **Porcelain Casing** on the edges and corners; **Resonance Glass**, the
+   ports and the Tuner on the face positions in between. The 3×3×3 inside stays empty.
+3. It needs **one Core**, **at least one Energy Port** and **at least one Crystal Port**; the **Tuner** is optional
+   (at most one). The Core and the ports go on face positions, never on the edges.
+4. Two example builds work: the **Showcase** (a 3×3 Glass window in front) and the **Band** (three glass blocks on
+   the top row of each side). Other layouts also build: the Glass can go on any face position.
+5. A **wall can't be shared** with another Resonator: each one has its own box.
+
+When it completes, the structure lights up with a pulse and the action bar says **Resonator formed**. If it
+doesn't build, click the loose Core: the action bar says what's in the way and the wrong block is outlined in coral.
+
+| Block | Role |
+| --- | --- |
+| ''' + item('resonator_casing') + ''' **Porcelain Casing** | The shell of the box. |
+| ''' + item('resonator_glass') + ''' **Resonance Glass** | The window onto the chamber. |
+| ''' + item('resonance_core') + ''' **Resonance Core** | The brain: screen, crystals and the generated power. |
+| ''' + item('resonator_energy_port') + ''' **Resonator Energy Port** | Only pulls energy out: attach a router to it. |
+| ''' + item('resonator_crystal_port') + ''' **Resonator Crystal Port** | Accepts crystals and redstone and hands Dull ones back. |
+| ''' + item('resonator_tuner') + ''' **Resonator Tuner** | Optional: tunes by itself. |
+
+## Crystals and redstone
+
+Each Core has chambers for crystals (1 on Basic, up to 8 on Ultimate). Put a **Signal Crystal** or a
+**Cut Crystal** in one of these ways:
+
+| How | What to do |
+| --- | --- |
+| **By clicking** | Click the Core with the crystal in hand: it goes to the first empty chamber. With redstone in hand, the dust goes into the Core. |
+| **Through the screen** | Open the Core's screen and use the crystal slots and the redstone slot. |
+| **Through the Crystal Port** | A router (or another item transport) puts crystals and redstone into the port and takes the Dull ones out. |
+
+To take the last crystal out, click the Core with **Shift and both hands empty**. The **redstone** is only for
+recharging Dull crystals, as on the [Signal Quartz](signal-quartz.md) page.
+
+## Tuning
+
+Click the formed Core with an empty hand to open its screen. The Resonator has a **station**, a hidden
+frequency, and the **dial** has to sit right on it:
+
+- Turn the dial with the buttons (**±1 MHz** and **±0.05 MHz**) or with the **mouse wheel** (±0.05 MHz).
+- The pointer shows how close you are; when the **IN TUNE** lamp lights up, generation is at 100%.
+- If the pointer says **no signal: sweep the dial**, the dial is far off: sweep it until the pointer shows up.
+- The farther from the station, the less power. Far enough, generation drops to **zero**.
+
+The station **drifts slowly over time**, and the tuning is lost little by little: come back now and then and set
+the dial again. The station never shows up as a number: you find it by the lamp.
+
+## Tuner
+
+With a **Tuner** in the structure, the screen's **Tuner** button turns on **automatic mode**: the dial follows the
+station by itself, with no need to come back. In exchange, efficiency is capped by a **ceiling** that depends on the
+Core's tier (in the table below). In automatic mode the dial ignores the buttons: switch back to **Manual** to turn it.
+
+## The chamber
+
+Through the glass you can read the tuning without opening the screen:
+
+- **In tune**: the figure of light in the air **closes**, the crystals rise and fall **together**, each with a beam to
+  the light, and the plate on the floor gets sharp.
+- **Out of tune**: the figure turns into a **scribble**, each crystal moves on its own and the floor hisses. With
+  generation at zero, the figure disappears.
+- The Core's lens lights up on its wall, sparks run to the Energy Port and a thread of redstone reaches the Dull
+  crystal that is recharging.
+
+## Power
+
+Power leaves through the **Energy Port**: attach a [Router](router.md) to it and set the face to **Extract** on the
+**Energy** tab. The Core keeps a small reserve (about 10 seconds of full generation); when it's full, the Core
+**stops generating and doesn't wear the crystals**. The Core only works while its chunk is loaded: to run it while
+you're away, use the [Chunk Loading Upgrade](chunk-loading.md) on the router attached to the Port.
+
+## Tiers
+
+The Core goes up in tier with the same [Upgrade Cards](upgrade-cards.md) as the router (Shift + click the Core with
+the card), without taking it apart: the contents stay and the new chambers show up. Each tier has more chambers and
+more FE per crystal. The Cut Crystal yields twice what the table shows for the Signal Crystal.
+
+''' + resonator_table('en') + '''
+
+Default values: the server can change the FE per crystal. JEI shows your pack's values on the Core.
+
+## Recipes
+
+<RecipeFor id="wirelessautomate:resonator_casing" />
+<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonance_core" />
+<RecipeFor id="wirelessautomate:resonator_energy_port" />
+<RecipeFor id="wirelessautomate:resonator_crystal_port" />
+<RecipeFor id="wirelessautomate:resonator_tuner" />
+''')
+
+# =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 18) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 20) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -2241,7 +2635,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
 cada rede está movendo e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 18) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 20) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -2281,9 +2675,16 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:configurator" />
 <RecipeFor id="wirelessautomate:network_tablet" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
+<RecipeFor id="wirelessautomate:cut_signal_crystal" />
+<RecipeFor id="wirelessautomate:resonator_casing" />
+<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonance_core" />
+<RecipeFor id="wirelessautomate:resonator_energy_port" />
+<RecipeFor id="wirelessautomate:resonator_crystal_port" />
+<RecipeFor id="wirelessautomate:resonator_tuner" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 19) + '''
+page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 21) + '''
 # Editor de receitas
 
 Troque os ingredientes e o resultado das receitas de bancada do mod sem sair do jogo e sem mexer em
@@ -2336,7 +2737,7 @@ Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são reca
 | **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
 | **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
 | **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
-''', front('Recipe editor', 'minecraft:writable_book', 19) + '''
+''', front('Recipe editor', 'minecraft:writable_book', 21) + '''
 # Recipe editor
 
 Change the ingredients and the result of the mod's crafting-table recipes without leaving the game
@@ -2391,7 +2792,7 @@ If you close the screen with saved changes that haven't been applied, they are r
 | **Undo everything** | Delete the `data` folder inside `config/wirelessautomate/recipes/` and reload (`/reload`). |
 ''')
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 20) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 22) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
@@ -2403,7 +2804,7 @@ Todas com itens vanilla, na bancada.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 20) + '''
+''', front('All recipes', 'minecraft:crafting_table', 22) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.

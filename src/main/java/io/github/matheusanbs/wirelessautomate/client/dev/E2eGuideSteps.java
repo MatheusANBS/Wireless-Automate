@@ -25,7 +25,7 @@ final class E2eGuideSteps {
     private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
             "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source",
-            "wireless-source-tank", "troubleshooting", "recipe-editor", "recipes");
+            "wireless-source-tank", "troubleshooting", "recipe-editor", "recipes", "signal-quartz", "signal-resonator");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}

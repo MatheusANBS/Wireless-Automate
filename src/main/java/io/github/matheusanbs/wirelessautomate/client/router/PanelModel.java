@@ -31,6 +31,7 @@ final class PanelModel {
     private Direction face;
     private EditTarget shownTarget;
     private @Nullable Component readOnly;
+    private boolean targetFromList;
 
     PanelModel(RouterSnapshot snapshot, Direction face) {
         this.snapshot = snapshot;
@@ -85,6 +86,15 @@ final class PanelModel {
 
     void setReadOnly(@Nullable Component reason) {
         this.readOnly = reason;
+    }
+
+    /** O alvo se escolhe na lista das máquinas, à vista ao lado: a linha Editando só mostra o alvo, sem lista. */
+    boolean targetFromList() {
+        return targetFromList;
+    }
+
+    void setTargetFromList(boolean fromList) {
+        this.targetFromList = fromList;
     }
 
     // ------------------------------------------------------------------ leituras

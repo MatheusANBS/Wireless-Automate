@@ -1002,6 +1002,7 @@
   "gui.wirelessautomate.panel.target.exception": "tem exceção",
   "gui.wirelessautomate.panel.target.revert": "Voltar a igual às outras",
   "gui.wirelessautomate.panel.target.tooltip": "Escolha o que editar: a máquina presa, todas de um tipo ou uma só",
+  "gui.wirelessautomate.panel.target.tooltip.list": "Escolha o que editar na lista das máquinas",
   "gui.wirelessautomate.panel.filter.none": "Sem filtro",
   "gui.wirelessautomate.panel.priority": "Prior.",
   "gui.wirelessautomate.panel.redstone.hint": "Clique para escolher quando a face funciona",

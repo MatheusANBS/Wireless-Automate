@@ -162,6 +162,17 @@ public final class NodePanel {
         return layout.tabMode;
     }
 
+    /**
+     * A tela do roteador mostra a lista das máquinas ao lado: a pílula Editando vira só o nome do alvo, porque
+     * a lista faz a mesma escolha. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
+     */
+    public void targetFromList(boolean fromList) {
+        if (fromList && !model.targetFromList() && lists.popup() == Popup.TARGET) {
+            lists.close();
+        }
+        model.setTargetFromList(fromList);
+    }
+
     /** Alguma lista (rede, redstone ou alvo) está aberta. */
     public boolean popupOpen() {
         return lists.open();
@@ -317,7 +328,7 @@ public final class NodePanel {
                 }
             }
             case TARGET -> {
-                if (edit) {
+                if (edit && !model.targetFromList()) {
                     lists.open(Popup.TARGET, lists.targetScroll());
                 }
             }

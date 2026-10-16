@@ -196,6 +196,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Posições, visibilidade e narração que dependem do snapshot ou do estado da tela. */
     private void refresh() {
         panel.setSnapshot(snapshot());
+        panel.targetFromList(column.listShown());
         header.refresh(leftPos);
         column.refresh(leftPos, topPos);
         syncSelection();

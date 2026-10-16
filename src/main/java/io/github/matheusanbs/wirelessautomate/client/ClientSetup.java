@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
@@ -19,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
@@ -34,6 +36,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 /** Registros só do cliente. As classes de tela nunca são carregadas no servidor dedicado. */
@@ -87,5 +90,11 @@ public final class ClientSetup {
                 -> new RecipeEditorScreen(menu, inventory, title));
         event.register(ModMenus.RESONATOR.get(),
                 (ResonatorMenu menu, Inventory inventory, Component title) -> new ResonatorScreen(menu, inventory, title));
+    }
+
+    /** A câmara animada do Núcleo montado. */
+    @SubscribeEvent
+    static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
     }
 }

@@ -84,11 +84,9 @@ final class RouterRange {
     }
 
     /** Ver {@link RouterBlockEntity#replacedBy}. */
-    @Nullable ResourceLocation replacedBy(RemoteMachine machine) {
+    @Nullable ResourceLocation replacedBy(RemoteMachine machine, RangeRules.Reach reach) {
         Level level = router.getLevel();
-        int index = remotes.index(machine.pos());
-        if (level == null || index < 0 || !router.rangeActive()
-                || router.machineReach()[index] != RangeRules.Reach.ACTIVE
+        if (level == null || reach != RangeRules.Reach.ACTIVE || !router.rangeActive()
                 || !level.isLoaded(machine.pos())) {
             return null;
         }
@@ -109,10 +107,11 @@ final class RouterRange {
         if (level == null || level.isClientSide) {
             return RemoteMachines.Regroup.EMPTY;
         }
+        RangeRules.Reach[] reach = router.machineReach();
         Map<Integer, ResourceLocation> moves = new LinkedHashMap<>();
         for (int index : indices) {
             RemoteMachine machine = remotes.machine(index);
-            ResourceLocation block = machine == null ? null : replacedBy(machine);
+            ResourceLocation block = machine == null ? null : replacedBy(machine, reach[index]);
             if (block != null) {
                 moves.put(index, block);
             }

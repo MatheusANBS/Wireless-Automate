@@ -616,9 +616,9 @@ public class RouterBlockEntity extends BlockEntity {
         return range.revertToProfile(index);
     }
 
-    /** O id do bloco no lugar da máquina trocada (ativa, carregada, outro bloco com capability), ou {@code null}. */
-    public @Nullable ResourceLocation replacedBy(RemoteMachine machine) {
-        return range.replacedBy(machine);
+    /** O bloco no lugar da trocada ({@code reach} do {@link #machineReach}; carregada, outro bloco com capability). */
+    public @Nullable ResourceLocation replacedBy(RemoteMachine machine, RangeRules.Reach reach) {
+        return range.replacedBy(machine, reach);
     }
 
     /** Atualizar: as trocadas de {@code indices} vão para o grupo do bloco novo ({@link RemoteMachines#regroup}). */

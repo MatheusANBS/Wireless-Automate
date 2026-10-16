@@ -266,8 +266,12 @@ final class PanelModel {
     /** O que a face acessa: "27 slots", "1 tanque", "energia" ou "sem acesso". */
     Component access(FaceView view) {
         if (!view.available() && remote() && !remoteLoaded()) {
+            // num grupo sem máquina carregada, a trocada diz mais que o chunk
             RangeView.MachineView machine = targetMachine();
-            RangeView.MachineState state = machine == null ? null : machine.state();
+            RangeView.GroupView group = targetGroup();
+            RangeView.MachineState state = machine != null ? machine.state()
+                    : group != null && RangeRowButtons.replaced(range(), group.id()) > 0
+                            ? RangeView.MachineState.REPLACED : null;
             return state == RangeView.MachineState.MISSING ? tr("range.access.missing")
                     : state == RangeView.MachineState.REPLACED ? tr("range.access.replaced") : tr("range.access.unloaded");
         }

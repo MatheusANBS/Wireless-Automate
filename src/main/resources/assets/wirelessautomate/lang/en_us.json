@@ -794,6 +794,7 @@
   "gui.wirelessautomate.router.range.scope.group": "Profile: %s · for %s of %s",
   "gui.wirelessautomate.router.range.scope.machine": "%s · %s",
   "gui.wirelessautomate.router.range.revert": "Back to profile",
+  "gui.wirelessautomate.router.range.revert.short": "Revert",
   "gui.wirelessautomate.router.range.revert.tooltip": "Undoes the exception: the machine follows the group's profile again",
   "gui.wirelessautomate.router.range.unlink": "Unlink",
   "gui.wirelessautomate.router.range.unlink.tooltip": "Removes this machine from the router",

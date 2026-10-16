@@ -794,6 +794,7 @@
   "gui.wirelessautomate.router.range.scope.group": "Perfil: %s · vale para %s de %s",
   "gui.wirelessautomate.router.range.scope.machine": "%s · %s",
   "gui.wirelessautomate.router.range.revert": "Voltar ao perfil",
+  "gui.wirelessautomate.router.range.revert.short": "Voltar",
   "gui.wirelessautomate.router.range.revert.tooltip": "Desfaz a exceção: a máquina volta a seguir o perfil do grupo",
   "gui.wirelessautomate.router.range.unlink": "Desvincular",
   "gui.wirelessautomate.router.range.unlink.tooltip": "Tira esta máquina do roteador",

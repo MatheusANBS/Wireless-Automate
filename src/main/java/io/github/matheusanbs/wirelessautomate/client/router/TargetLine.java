@@ -16,9 +16,10 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A linha Editando do painel do nó, com o Upgrade de Alcance: a pílula do alvo de edição (a máquina
- * presa, um grupo ou uma máquina), os botões Voltar a igual às outras e Desvincular de uma máquina, a
- * dica do alvo, as linhas da lista que abre na pílula e o pedido de troca de alvo.
+ * A linha Editando do painel do nó, com o Upgrade de Alcance e sem a lista das máquinas à vista: a pílula
+ * do alvo de edição (a máquina presa, um grupo ou uma máquina), os botões Voltar a igual às outras,
+ * Atualizar (máquina trocada) e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da
+ * lista que abre na pílula e o pedido de troca de alvo.
  */
 final class TargetLine {
     /** Uma linha da lista da linha Editando. */
@@ -51,34 +52,42 @@ final class TargetLine {
         if (pill != null) {
             RangeView.MachineView machine = model.targetMachine();
             int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
-            Component name = model.targetName(model.snapshot().target());
-            if (model.targetFromList()) {
-                GuiText.draw(g, font, name, pill.x() + 4, pill.y() + (pill.h() - 8) / 2, pill.w() - 4,
-                        machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.FG);
-            } else {
-                PanelPainter.dropButton(g, font, pill, name, pill.contains(mx, my) || open,
-                        model.readOnly() == null, border);
-            }
+            PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
+                    pill.contains(mx, my) || open, model.readOnly() == null, border);
         }
         Hot revert = layout.hot(Kind.REVERT);
         if (revert != null) {
-            clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my));
+            clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my), GuiPaint.BUTTON_BORDER);
+        }
+        Hot update = layout.hot(Kind.UPDATE);
+        if (update != null) {
+            clippedButton(g, font, update, tr("range.update"), update.contains(mx, my), GuiPaint.OK);
         }
         Hot unlink = layout.hot(Kind.UNLINK);
-        if (unlink != null) {
-            clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my));
+        if (unlink != null && model.unlinkArmed()) {
+            GuiPaint.box(g, unlink.x(), unlink.y(), unlink.w(), unlink.h(), GuiPaint.DANGER, GuiPaint.DANGER);
+            centered(g, font, unlink, tr("range.unlink.armed"), GuiPaint.SELECTED_TEXT);
+        } else if (unlink != null) {
+            clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
     }
 
-    /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
-    private void clippedButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered) {
+    /**
+     * Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica);
+     * {@code border} é a borda sem o mouse em cima.
+     */
+    private void clippedButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered, int border) {
         boolean active = model.readOnly() == null;
-        int border = hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET, border);
+        int edge = hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : active ? border : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET, edge);
+        centered(g, font, b, text, active ? GuiPaint.FG : GuiPaint.DISABLED);
+    }
+
+    private static void centered(GuiGraphics g, Font font, Hot b, Component text, int color) {
         int room = b.w() - 2 * PanelLayout.TARGET_PAD;
         int textW = Math.min(font.width(text), room);
         GuiText.draw(g, font, text, b.x() + PanelLayout.TARGET_PAD + (room - textW + 1) / 2, b.y() + (b.h() - 8) / 2,
-                room, active ? GuiPaint.FG : GuiPaint.DISABLED);
+                room, color);
     }
 
     /** Dica da pílula: o alvo, quantas máquinas seguem o perfil e o que a lista faz. */
@@ -94,8 +103,7 @@ final class TargetLine {
             scope = group == null ? panelTr("target.attached")
                     : tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(), group.count());
         }
-        Component how = panelTr(model.targetFromList() ? "target.tooltip.list" : "target.tooltip");
-        return scope.copy().append("\n").append(how.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return scope.copy().append("\n").append(panelTr("target.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     // ------------------------------------------------------------------ a lista do alvo

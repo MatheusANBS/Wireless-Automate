@@ -44,7 +44,8 @@ import org.jetbrains.annotations.Nullable;
  * face a tela avisa o servidor ({@link SelectFacePayload}), que troca o que os slots mostram.
  *
  * <p>Com o Upgrade de Alcance valendo ({@link RangeView#present()}), um botão "Máquinas · 3/8" acima do
- * visor alterna o visor com a lista das máquinas ({@link RangeList}), e o painel ganha a linha Editando.
+ * visor alterna o visor com a lista das máquinas ({@link RangeList}); sem a lista à vista, o painel ganha a
+ * linha Editando.
  * Escolher um grupo ou uma máquina troca o alvo de edição: as faces passam ao quadro canônico (Norte =
  * Frente) e o visor mostra o bloco do alvo sem o roteador.
  *
@@ -502,6 +503,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Centro da linha do alvo {@code target} na lista (aberta), ou {@code null} se fora da vista (gancho do e2e). */
     public int @Nullable [] rangeRowCenter(EditTarget target) {
         return column.rangeRowCenter(target);
+    }
+
+    /** Centro do botão {@code action} na linha do alvo na lista, ou {@code null} se ele não está lá (gancho do e2e). */
+    public int @Nullable [] rangeButtonCenter(RangeRowButtons.Action action) {
+        return column.rangeButtonCenter(action);
     }
 
     /** Ponto da seta de um grupo na lista, que abre e fecha sem escolher (gancho do e2e). */

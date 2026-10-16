@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
+import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.List;
@@ -163,8 +164,8 @@ public final class NodePanel {
     }
 
     /**
-     * A tela do roteador mostra a lista das máquinas ao lado: a pílula Editando vira só o nome do alvo, porque
-     * a lista faz a mesma escolha. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
+     * A tela do roteador mostra a lista das máquinas ao lado: a linha Editando some, porque a lista marca o
+     * alvo e tem os botões da máquina. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
      */
     public void targetFromList(boolean fromList) {
         if (fromList && !model.targetFromList() && lists.popup() == Popup.TARGET) {
@@ -338,8 +339,14 @@ public final class NodePanel {
                             machine.pos()));
                 }
             }
-            case UNLINK -> {
+            case UPDATE -> {
                 if (edit && machine != null) {
+                    actions.send(UpdateMachinePayload.machine(actions.containerId(), model.snapshot().target().id(),
+                            machine.pos()));
+                }
+            }
+            case UNLINK -> {
+                if (edit && machine != null && model.unlinkArm().click(System.currentTimeMillis())) {
                     actions.send(new UnlinkMachinePayload(actions.containerId(), model.snapshot().target().id(),
                             machine.pos()));
                 }
@@ -397,6 +404,11 @@ public final class NodePanel {
         boolean covered = lists.open();
         int mx = covered ? -1 : mouseX;
         int my = covered ? -1 : mouseY;
+        // o Desvincular armado desarma quando o mouse sai dele
+        Hot unlink = layout.hot(Kind.UNLINK);
+        if (unlink == null || !unlink.contains(mx, my)) {
+            model.unlinkArm().disarm();
+        }
         painter.renderTabs(g, font, mx, my);
         cube.render(g, font, mx, my, pointed);
         painter.renderBody(g, font, mx, my, lists.popup(), actions.cardCount());
@@ -496,6 +508,10 @@ public final class NodePanel {
 
     public int @Nullable [] revertCenter() {
         return center(Kind.REVERT);
+    }
+
+    public int @Nullable [] updateCenter() {
+        return center(Kind.UPDATE);
     }
 
     public int @Nullable [] unlinkCenter() {

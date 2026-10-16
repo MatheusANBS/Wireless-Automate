@@ -7,6 +7,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.X0;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
+import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
@@ -40,7 +41,7 @@ final class NameFields {
     private EditBox newBox;
     private EditBox renameBox;
     private Rename renaming = Rename.NONE;
-    private long removeArmedUntil;
+    private final ArmedClick removeArm = new ArmedClick();
 
     /**
      * @param network a rede escolhida na aba Redes (a que o nome renomeia)
@@ -123,15 +124,15 @@ final class NameFields {
     void reset() {
         renaming = Rename.NONE;
         newOpen = false;
-        removeArmedUntil = 0;
+        removeArm.disarm();
     }
 
     boolean removeArmed() {
-        return System.currentTimeMillis() < removeArmedUntil;
+        return removeArm.armed(System.currentTimeMillis());
     }
 
     void disarm() {
-        removeArmedUntil = 0;
+        removeArm.disarm();
     }
 
     /** Remover pede dois cliques: o primeiro arma por 3 s. */
@@ -139,12 +140,9 @@ final class NameFields {
         if (id == null) {
             return;
         }
-        if (!removeArmed()) {
-            removeArmedUntil = System.currentTimeMillis() + 3000;
-            return;
+        if (removeArm.click(System.currentTimeMillis())) {
+            actions.remove(action, id);
         }
-        removeArmedUntil = 0;
-        actions.remove(action, id);
     }
 
     void create(Action action) {

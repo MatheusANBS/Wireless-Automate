@@ -7,7 +7,10 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
+import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
+import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Optional;
@@ -21,6 +24,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -29,7 +33,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A coluna do visor da tela do roteador: o visor 3D da máquina ({@link MachineView3D}) e, com o Upgrade de
  * Alcance, o botão "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}), ao lado do visor ou no
- * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição.
+ * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
+ * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular.
  */
 final class MachineColumn {
     /**
@@ -157,34 +162,52 @@ final class MachineColumn {
 
     // ------------------------------------------------------------------ ações
 
+    /** O pedido ao servidor; numa captura sem servidor, nada sai. */
+    private void send(@Nullable CustomPacketPayload payload) {
+        if (!preview && payload != null) {
+            PacketDistributor.sendToServer(payload);
+        }
+    }
+
     /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */
     private void selectTarget(RangeList.Row row) {
-        if (preview) {
+        int id = containerId.getAsInt();
+        RangeView.GroupView group = range().group(row.group());
+        RangeView.MachineView machine = range().machine(row.machine());
+        send(switch (row.kind()) {
+            case ATTACHED -> SelectTargetPayload.attached(id);
+            case GROUP -> group == null ? null : SelectTargetPayload.group(id, group.id(), group.block());
+            case MACHINE -> machine == null ? null : SelectTargetPayload.machine(id, row.machine(), machine.pos());
+        });
+    }
+
+    /** Um botão da linha escolhida: o servidor confere o que a tela viu e age; o snapshot seguinte mostra. */
+    private void rowAction(RangeList.Row row, RangeRowButtons.Action action) {
+        int id = containerId.getAsInt();
+        if (row.kind() == RangeList.Kind.GROUP) {
+            RangeView.GroupView group = range().group(row.group());
+            if (group != null && action == RangeRowButtons.Action.UPDATE) {
+                send(UpdateMachinePayload.group(id, group.id(), group.block()));
+            }
             return;
         }
-        int id = containerId.getAsInt();
-        switch (row.kind()) {
-            case ATTACHED -> PacketDistributor.sendToServer(SelectTargetPayload.attached(id));
-            case GROUP -> {
-                RangeView.GroupView group = range().group(row.group());
-                if (group != null) {
-                    PacketDistributor.sendToServer(SelectTargetPayload.group(id, group.id(), group.block()));
-                }
-            }
-            case MACHINE -> {
-                RangeView.MachineView machine = range().machine(row.machine());
-                if (machine != null) {
-                    PacketDistributor.sendToServer(SelectTargetPayload.machine(id, row.machine(), machine.pos()));
-                }
-            }
+        RangeView.MachineView machine = range().machine(row.machine());
+        if (row.kind() != RangeList.Kind.MACHINE || machine == null) {
+            return;
         }
+        send(switch (action) {
+            case UPDATE -> UpdateMachinePayload.machine(id, row.machine(), machine.pos());
+            case REVERT -> new RevertMachinePayload(id, row.machine(), machine.pos());
+            case UNLINK -> new UnlinkMachinePayload(id, row.machine(), machine.pos());
+        });
     }
 
     // ------------------------------------------------------------------ entrada
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (listShown() && button == 0
-                && rangeList.click(range(), snapshot.get().target(), mouseX, mouseY, this::selectTarget)) {
+                && rangeList.click(range(), snapshot.get().target(), mouseX, mouseY, this::selectTarget,
+                        this::rowAction)) {
             return true;
         }
         return viewShown() && machineView.mouseClicked(mouseX, mouseY, button);
@@ -232,7 +255,8 @@ final class MachineColumn {
         RangeList.Row row = listShown() ? rangeList.rowAt(range(), mouseX, mouseY) : null;
         if (row != null) {
             machineTip = true;
-            set.accept(rangeList.tooltip(range(), row, attachedName()));
+            Component button = rangeList.buttonTooltip(range(), snapshot.get().target(), mouseX, mouseY);
+            set.accept(button != null ? button : rangeList.tooltip(range(), row, attachedName()));
         }
         return machineTip;
     }
@@ -302,11 +326,16 @@ final class MachineColumn {
         } else if (remote() && !remoteLoaded()) {
             RangeView.MachineView machine = s.target().kind() == EditTarget.Kind.MACHINE
                     ? range().machine(s.target().id()) : null;
-            Component label = machine != null && machine.state() == RangeView.MachineState.MISSING
-                    ? tr("range.access.missing") : tr("range.access.unloaded");
+            RangeView.MachineState state = machine == null ? RangeView.MachineState.UNLOADED : machine.state();
+            Component label = switch (state) {
+                case MISSING -> tr("range.access.missing");
+                case REPLACED -> tr("range.access.replaced");
+                default -> tr("range.access.unloaded");
+            };
             g.fill(vx + 1, vy + viewH - 13, vx + 7 + Math.min(font.width(label), viewW - 10), vy + viewH - 1,
                     GuiPaint.alpha(GuiPaint.INSET, 0xD8));
-            GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10, GuiPaint.WARN);
+            GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10,
+                    state == RangeView.MachineState.REPLACED ? GuiPaint.BRASS : GuiPaint.WARN);
         }
     }
 
@@ -339,6 +368,10 @@ final class MachineColumn {
 
     int @Nullable [] rangeRowCenter(EditTarget target) {
         return listShown() ? rangeList.rowCenter(range(), target) : null;
+    }
+
+    int @Nullable [] rangeButtonCenter(RangeRowButtons.Action action) {
+        return listShown() ? rangeList.buttonCenter(range(), snapshot.get().target(), action) : null;
     }
 
     int @Nullable [] rangeArrowPoint(int group) {

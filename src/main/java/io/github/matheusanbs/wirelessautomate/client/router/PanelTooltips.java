@@ -53,9 +53,15 @@ final class PanelTooltips {
                     : disabled;
             case TARGET -> readOnly != null ? readOnly : targetLine.tooltip();
             case REVERT -> readOnly != null ? readOnly : tr("range.revert.tooltip");
-            case UNLINK -> readOnly != null ? readOnly : tr("range.unlink.tooltip");
+            case UPDATE -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UPDATE);
+            case UNLINK -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UNLINK);
             case UNDO -> null;
         };
+    }
+
+    /** A dica de um botão da máquina, a mesma da lista das máquinas. */
+    private Component machineTooltip(RangeRowButtons.Action action) {
+        return RangeRowButtons.tooltip(model.range(), model.snapshot().target(), action, model.unlinkArmed());
     }
 
     /** Dica de uma face: o lado (e, na presa, o absoluto), o modo e o acesso, a rede e o roteador preso. */

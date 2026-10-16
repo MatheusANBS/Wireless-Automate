@@ -10,6 +10,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.router.RangeRowButtons;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -260,17 +261,17 @@ final class E2eRangeSteps {
                 () -> {
                     RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
                     return machine != null && machine.exception()
-                            && panel().revertCenter() != null
+                            && routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT) != null
                             && onServer(server -> serverException(server, rangeFurnace));
                 }, () -> "alcance " + rangeView()));
         list.add(rangeClipCheck(label + "exceção"));
         list.add(capture("range-3-excecao" + suffix));
         list.add(new Step(label + "Voltar ao perfil", STEP_TIMEOUT_MS,
-                () -> clickPanel(panel().revertCenter(), "Voltar a igual às outras"),
+                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT), "o ↺ da fornalha"),
                 () -> {
                     RangeView.MachineView machine = rangeView().machine(rangeMachine(rangeFurnace));
                     return machine != null && !machine.exception()
-                            && panel().revertCenter() == null
+                            && routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT) == null
                             && !onServer(server -> serverException(server, rangeFurnace));
                 }, () -> "alcance " + rangeView()));
     }
@@ -292,8 +293,14 @@ final class E2eRangeSteps {
                 () -> clickRow(EditTarget.machine(rangeMachine(rangeChestB))),
                 () -> rangeTargetIs(EditTarget.machine(rangeMachine(rangeChestB))),
                 () -> "alvo " + routerScreen().getMenu().snapshot().target()));
-        list.add(new Step(label + "Desvincular", STEP_TIMEOUT_MS,
-                () -> clickPanel(panel().unlinkCenter(), "Desvincular"),
+        // o ✕ da linha pede dois cliques: o primeiro só arma
+        list.add(new Step(label + "Desvincular: o primeiro clique arma", STEP_TIMEOUT_MS,
+                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UNLINK), "o ✕ do segundo baú"),
+                () -> stepTicks >= 4 && rangeView().machines().size() == 3
+                        && onServer(server -> router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
+                () -> "alcance " + rangeView()));
+        list.add(new Step(label + "Desvincular: o segundo confirma", STEP_TIMEOUT_MS,
+                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UNLINK), "Desvincular?"),
                 () -> rangeView().machines().size() == 2 && routerScreen().getMenu().snapshot().target().attached()
                         && onServer(server -> !router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
                 () -> "alcance " + rangeView()));

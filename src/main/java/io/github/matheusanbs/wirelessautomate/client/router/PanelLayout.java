@@ -42,8 +42,8 @@ final class PanelLayout {
     static final int NOTICE_H = 13;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS, PRIO_PLUS,
-        REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS,
+        PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -216,17 +216,21 @@ final class PanelLayout {
         arrangeControls(font, model, x, y, w);
     }
 
-    /** A linha Editando e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. */
+    /**
+     * A linha Editando e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a
+     * lista das máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
+     */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
-        if (model.rangeShown()) {
+        if (model.rangeShown() && !model.targetFromList()) {
             targetY = y;
             int labelW = font.width(PanelModel.panelTr("target")) + 5;
             hots.add(new Hot(Kind.TARGET, x + labelW, y, w - labelW, ROW_H, 0));
             y += ROW_H + GAP;
             RangeView.MachineView machine = model.targetMachine();
             if (machine != null) {
-                arrangeTargetButtons(font, x, y, w, machine.exception());
+                arrangeTargetButtons(font, x, y, w, machine.exception(),
+                        machine.state() == RangeView.MachineState.REPLACED);
                 y += ROW_H + GAP;
             }
         }
@@ -301,28 +305,53 @@ final class PanelLayout {
     }
 
     /**
-     * Voltar a igual às outras (só na exceção) e Desvincular, lado a lado: o texto da especificação, ou o
-     * curto se os dois não couberem; se nem assim, o Desvincular fica com até metade.
+     * Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o texto
+     * da especificação, ou o curto se não couberem; se nem assim, cada um fica com até uma parte igual e o
+     * Voltar com o resto. O Desvincular tem a largura do texto armado, para não mudar de tamanho ao armar.
      */
-    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception) {
-        Component unlink = PanelModel.tr("range.unlink");
-        int unlinkW = font.width(unlink) + 2 * TARGET_PAD;
-        int bx = x;
+    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
+        int unlinkW = Math.max(font.width(PanelModel.tr("range.unlink")),
+                font.width(PanelModel.tr("range.unlink.armed"))) + 2 * TARGET_PAD;
+        int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
+        int count = 1 + (replaced ? 1 : 0) + (exception ? 1 : 0);
+        int revertW = 0;
         if (exception) {
             revertLabel = PanelModel.panelTr("target.revert");
-            int revertW = font.width(revertLabel) + 2 * TARGET_PAD;
-            if (revertW + GAP + unlinkW > w) {
+            revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+            if (total(revertW, updateW, unlinkW) > w) {
                 revertLabel = PanelModel.tr("range.revert");
                 revertW = font.width(revertLabel) + 2 * TARGET_PAD;
             }
-            if (revertW + GAP + unlinkW > w) {
-                unlinkW = Math.min(unlinkW, (w - GAP) / 2);
-                revertW = w - GAP - unlinkW;
-            }
-            hots.add(new Hot(Kind.REVERT, bx, y, revertW, ROW_H, 0));
-            bx += revertW + GAP;
         }
-        hots.add(new Hot(Kind.UNLINK, bx, y, Math.min(unlinkW, w), ROW_H, 0));
+        if (total(revertW, updateW, unlinkW) > w) {
+            int share = (w - (count - 1) * GAP) / count;
+            unlinkW = Math.min(unlinkW, share);
+            updateW = Math.min(updateW, share);
+            if (exception) {
+                revertW = w - total(0, updateW, unlinkW) - GAP;
+            }
+        }
+        int bx = x;
+        for (Kind kind : new Kind[] {Kind.REVERT, Kind.UPDATE, Kind.UNLINK}) {
+            int bw = kind == Kind.REVERT ? revertW : kind == Kind.UPDATE ? updateW : unlinkW;
+            if (bw > 0) {
+                hots.add(new Hot(kind, bx, y, Math.min(bw, x + w - bx), ROW_H, 0));
+                bx += bw + GAP;
+            }
+        }
+    }
+
+    /** Largura dos botões da linha da máquina, com o espaço entre eles; largura 0 é o botão que não aparece. */
+    private static int total(int... widths) {
+        int sum = 0;
+        int shown = 0;
+        for (int width : widths) {
+            if (width > 0) {
+                sum += width;
+                shown++;
+            }
+        }
+        return sum + Math.max(0, shown - 1) * GAP;
     }
 
     // ------------------------------------------------------------------ consultas

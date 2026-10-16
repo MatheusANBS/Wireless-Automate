@@ -102,6 +102,7 @@ public final class RouterGameTests {
      */
     @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_unobtainium")
     public static void configMigratesUnobtainiumEnergy(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
         var unobtainium = Config.TIERS.get(RouterTier.UNOBTAINIUM).rates().get("energyPerTick");
         var vibranium = Config.TIERS.get(RouterTier.VIBRANIUM).rates().get("energyPerTick");
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
@@ -134,7 +135,7 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
             Config.SPEC.save();
         }
-        succeedAfterReload(helper);
+        succeedAfterReload(helper, reloadsBefore);
     }
 
     /**
@@ -143,6 +144,7 @@ public final class RouterGameTests {
      */
     @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_old")
     public static void configMigratesOldDefaults(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
         var advanced = Config.TIERS.get(RouterTier.ADVANCED).rates().get("itemsPerSecond");
         var basicRange = Config.TIERS.get(RouterTier.BASIC).range();
@@ -169,17 +171,17 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
             Config.SPEC.save();
         }
-        succeedAfterReload(helper);
+        succeedAfterReload(helper, reloadsBefore);
     }
 
     /**
      * Gravar a config faz o FML recarregá-la pela thread que observa o arquivo, um tempo depois, e a
      * recarga remonta as redes e acorda as portas dos roteadores com alcance. Cada teste que grava fica
      * no seu lote e só termina com a recarga dele, para ela não cair no meio dos testes de sono de outro
-     * lote. Chamado depois da última gravação.
+     * lote. {@code reloadsBefore} é o contador lido antes da primeira gravação: lido depois, uma recarga rápida
+     * já contada faria o teste esperar outra que não vem.
      */
-    private static void succeedAfterReload(GameTestHelper helper) {
-        int reloadsBefore = ConfigReloadListener.fileReloads();
+    private static void succeedAfterReload(GameTestHelper helper, int reloadsBefore) {
         long deadline = System.nanoTime() + RELOAD_WAIT_NANOS;
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore

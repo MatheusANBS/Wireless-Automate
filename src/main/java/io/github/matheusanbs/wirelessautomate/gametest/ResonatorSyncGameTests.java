@@ -159,13 +159,15 @@ public final class ResonatorSyncGameTests {
 
     /**
      * O progresso da recarga só anda no lote: entre lotes, com a recarga em curso, um dial que não muda faixa nem
-     * lâmpada não manda nada e o início da recarga fica o mesmo. A espera passa por pelo menos um lote do gerenciador.
+     * lâmpada não manda nada e o início da recarga fica o mesmo, enquanto o progresso anda. A espera passa por pelo
+     * menos um lote do gerenciador.
      */
     @GameTest(template = "empty7")
     public static void recargaEstavelEntreLotes(GameTestHelper helper) {
         BlockPos corePos = build(helper, ORIGIN, Layout.VITRINE, RouterTier.EMERALD);
         int[] count = new int[1];
         long[] start = new long[1];
+        int[] progress = new int[1];
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
             ResonanceCoreBlockEntity core = core(helper, corePos);
             core.setStationForTest(98.0);
@@ -174,6 +176,7 @@ public final class ResonatorSyncGameTests {
             core.addRedstone(3);
             count[0] = core.syncCount();
             start[0] = tagView(helper, core).rechargeStart();
+            progress[0] = core.rechargeProgress();
             helper.assertTrue(start[0] >= 0, "a recarga não começou");
         }).thenIdle(25).thenExecute(() -> {
             ResonanceCoreBlockEntity core = core(helper, corePos);
@@ -181,7 +184,45 @@ public final class ResonatorSyncGameTests {
             helper.assertTrue(core.syncCount() == count[0], "a recarga em curso mandou o update tag sem mudança");
             long now = tagView(helper, core).rechargeStart();
             helper.assertTrue(now == start[0], "o início da recarga andou: " + start[0] + " → " + now);
+            helper.assertTrue(core.rechargeProgress() > progress[0],
+                    "a recarga não andou entre os lotes: " + progress[0] + " → " + core.rechargeProgress());
         }).thenSucceed();
+    }
+
+    /**
+     * O update tag pedido várias vezes, em ticks diferentes (como quando o chunk vai a jogadores novos), não muda o
+     * início guardado da recarga nem manda nada: só o lote e as mudanças do Núcleo o atualizam.
+     */
+    @GameTest(template = "empty7")
+    public static void updateTagRepetidoNaoMudaARecarga(GameTestHelper helper) {
+        BlockPos corePos = build(helper, ORIGIN, Layout.VITRINE, RouterTier.EMERALD);
+        int[] count = new int[1];
+        long[] start = new long[1];
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
+            ResonanceCoreBlockEntity core = core(helper, corePos);
+            assertInserted(helper, core, crystal(false, 0));
+            core.addRedstone(3);
+            count[0] = core.syncCount();
+            start[0] = core.syncedRechargeStart();
+            helper.assertTrue(start[0] >= 0, "a recarga não começou");
+            for (int i = 0; i < 5; i++) {
+                assertTagKeepsRecharge(helper, core, count[0], start[0]);
+            }
+        }).thenIdle(3).thenExecute(() -> {
+            ResonanceCoreBlockEntity core = core(helper, corePos);
+            for (int i = 0; i < 5; i++) {
+                assertTagKeepsRecharge(helper, core, count[0], start[0]);
+            }
+        }).thenSucceed();
+    }
+
+    private static void assertTagKeepsRecharge(GameTestHelper helper, ResonanceCoreBlockEntity core, int count,
+            long start) {
+        long sent = tagView(helper, core).rechargeStart();
+        helper.assertTrue(sent == start, "o update tag levou outro início: " + start + " → " + sent);
+        helper.assertTrue(core.syncedRechargeStart() == start,
+                "o update tag mudou o início guardado: " + start + " → " + core.syncedRechargeStart());
+        helper.assertTrue(core.syncCount() == count, "o update tag mandou a câmara");
     }
 
     /** O clarão só na transição entre duas views recebidas; a primeira, já sintonizada, não marca. */

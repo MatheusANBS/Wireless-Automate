@@ -48,27 +48,40 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         return origin.clone();
     }
 
-    public static ChamberView of(ResonanceCoreBlockEntity core, long gameTime) {
+    /**
+     * A view do Núcleo agora, sem mudar nada nele: o início da recarga vem pronto, fixado pelo {@link CoreSync} (o
+     * progresso só anda no lote, o tempo a cada tick).
+     */
+    public static ChamberView of(ResonanceCoreBlockEntity core, long rechargeStart) {
         int count = core.chambers();
         byte[] chambers = new byte[count];
-        boolean anyDull = false;
         for (int i = 0; i < count; i++) {
             ItemStack stack = core.crystals().get(i);
             if (stack.getItem() instanceof SignalCrystalItem item) {
                 boolean dull = SignalCrystalItem.isDull(stack);
-                anyDull |= dull;
                 chambers[i] = (byte) ((item.isCut() ? CUT : SIGNAL) + (dull ? DULL_OFFSET : 0));
             } else {
                 chambers[i] = EMPTY_CHAMBER;
             }
         }
-        // Fixado quando a recarga começa: o progresso só anda no lote, o tempo a cada tick.
-        long rechargeStart = core.sync.rechargeStart(anyDull && core.redstone() > 0, core.rechargeProgress(),
-                gameTime);
         return new ChamberView(chambers, TuneSignal.band(core.efficiency()),
                 TuneSignal.tuned(core.station(), core.dial()), rechargeStart,
                 (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(),
                 origin(core.members(), core.getBlockPos()));
+    }
+
+    /** Se há recarga em curso: um Opaco numa câmara do tier e redstone no Núcleo. */
+    static boolean recharging(ResonanceCoreBlockEntity core) {
+        if (core.redstone() <= 0) {
+            return false;
+        }
+        for (int i = 0; i < core.chambers(); i++) {
+            ItemStack stack = core.crystals().get(i);
+            if (stack.getItem() instanceof SignalCrystalItem && SignalCrystalItem.isDull(stack)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int[] origin(List<BlockPos> members, BlockPos core) {

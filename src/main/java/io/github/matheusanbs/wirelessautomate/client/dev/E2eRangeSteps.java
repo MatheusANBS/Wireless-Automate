@@ -413,8 +413,11 @@ final class E2eRangeSteps {
     }
 
     /** Nenhum texto cortado na tela do roteador de alcance (mouse fora dela, alguns quadros depois). */
+    /** Prazo curto: um texto cortado tem que falhar, e não esperar o aviso do painel (5 s) sumir. */
+    private static final int CLIP_CHECK_MS = 1500;
+
     static Step rangeClipCheck(String name) {
-        return new Step(name + ": nenhum texto cortado", STEP_TIMEOUT_MS, () -> moveMouse(0, 0),
+        return new Step(name + ": nenhum texto cortado", CLIP_CHECK_MS, () -> moveMouse(0, 0),
                 () -> stepTicks >= 4 && GuiText.clipCount() == 0,
                 () -> GuiText.clipCount() + " texto(s) cortado(s): " + clippedTexts());
     }

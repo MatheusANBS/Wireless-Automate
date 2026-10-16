@@ -60,8 +60,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
      * ser gravado (a sequência de acender fica no passado).
      */
     private long formedAt = -1;
-    /** A câmara no cliente; a {@link ChamberView} lê dela o início fixado da recarga. */
-    final CoreSync sync = new CoreSync();
+    /** A câmara no cliente e, no servidor, a última view mandada com o início fixado da recarga. */
+    private final CoreSync sync = new CoreSync();
     private final CoreInventory inventory = new CoreInventory(this);
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
@@ -441,6 +441,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return sync.sendIfChanged(this);
     }
 
+    /** O início da recarga guardado na última câmara montada no servidor, ou -1 (para os GameTests). */
+    public long syncedRechargeStart() {
+        return sync.rechargeStart();
+    }
+
     /** Quantas vezes o servidor mandou a câmara (para os GameTests). */
     public int syncCount() {
         return sync.syncCount();
@@ -458,7 +463,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return CoreSync.tag(this);
+        return sync.tag(this);
     }
 
     @Override

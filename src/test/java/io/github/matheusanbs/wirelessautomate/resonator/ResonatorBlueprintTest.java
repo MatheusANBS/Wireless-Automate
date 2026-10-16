@@ -156,4 +156,33 @@ class ResonatorBlueprintTest {
         for (int x = 1; x < 4; x++) for (int y = 1; y < 4; y++) none[x][y][4] = Part.CASING;
         assertNull(ResonatorBlueprint.layoutOf(none));
     }
+
+    /** Quase Faixa: cada caminho em que a linha de cima deixa de ser a faixa dá montagem própria. */
+    @Test
+    void quaseFaixaNaoEFaixa() {
+        Part[][][] offLine = ResonatorBlueprint.expected(Face.EAST, Layout.FAIXA);
+        offLine[2][3][0] = Part.CASING;
+        offLine[1][2][0] = Part.GLASS;
+        assertNull(ResonatorBlueprint.layoutOf(offLine), "vidro fora da linha da faixa");
+
+        Part[][][] casing = ResonatorBlueprint.expected(Face.EAST, Layout.FAIXA);
+        casing[0][3][2] = Part.CASING;
+        assertNull(ResonatorBlueprint.layoutOf(casing), "Carcaça no lugar de um vidro da faixa");
+
+        Part[][][] extra = ResonatorBlueprint.expected(Face.EAST, Layout.FAIXA);
+        extra[0][3][0] = Part.GLASS;
+        assertNull(ResonatorBlueprint.layoutOf(extra), "vidro a mais no canto da linha");
+
+        Part[][][] below = ResonatorBlueprint.expected(Face.EAST, Layout.FAIXA);
+        below[4][1][2] = Part.GLASS;
+        assertNull(ResonatorBlueprint.layoutOf(below), "vidro a mais abaixo da faixa");
+    }
+
+    /** Uma peça na linha da faixa, no lugar de um vidro, ainda é Faixa: a linha aceita vidro ou peça. */
+    @Test
+    void pecaNaLinhaDaFaixaContinuaFaixa() {
+        Part[][][] piece = ResonatorBlueprint.expected(Face.EAST, Layout.FAIXA);
+        piece[0][3][2] = Part.ENERGY_PORT;
+        assertEquals(Layout.FAIXA, ResonatorBlueprint.layoutOf(piece));
+    }
 }

@@ -25,7 +25,9 @@ final class CoreSync {
         if (level == null || level.isClientSide) {
             return false;
         }
-        ChamberView view = ChamberView.of(core, level.getGameTime());
+        rechargeStart = resolveRechargeStart(core, level.getGameTime());
+        rechargeSeen = core.rechargeProgress();
+        ChamberView view = ChamberView.of(core, rechargeStart);
         if (view.equals(sentView)) {
             return false;
         }
@@ -37,24 +39,31 @@ final class CoreSync {
     }
 
     /**
-     * O início da recarga: guardado quando ela começa e mantido enquanto dura, para a view ficar a mesma entre os
-     * lotes. Recomeça quando a recarga para ou quando o progresso volta (um Opaco cheio, o próximo começando).
+     * O início da recarga, sem guardar: o já fixado enquanto ela dura, para a view ficar a mesma entre os lotes. Só
+     * o {@link #sendIfChanged} guarda o resultado. Recomeça quando a recarga para ou quando o progresso volta (um
+     * Opaco cheio, o próximo começando).
      */
-    long rechargeStart(boolean active, int progress, long gameTime) {
-        if (!active) {
-            rechargeStart = -1;
-        } else if (rechargeStart < 0 || progress < rechargeSeen) {
-            rechargeStart = gameTime - progress;
+    private long resolveRechargeStart(ResonanceCoreBlockEntity core, long gameTime) {
+        if (!ChamberView.recharging(core)) {
+            return -1;
         }
-        rechargeSeen = progress;
+        int progress = core.rechargeProgress();
+        if (rechargeStart < 0 || progress < rechargeSeen) {
+            return gameTime - progress;
+        }
         return rechargeStart;
     }
 
-    /** O update tag: só a view atual. */
-    static CompoundTag tag(ResonanceCoreBlockEntity core) {
+    /** O início da recarga guardado no último {@link #sendIfChanged} (para os GameTests). */
+    long rechargeStart() {
+        return rechargeStart;
+    }
+
+    /** O update tag: só a view atual. Pedir de novo não muda nada, nem o início guardado da recarga. */
+    CompoundTag tag(ResonanceCoreBlockEntity core) {
         CompoundTag tag = new CompoundTag();
         Level level = core.getLevel();
-        ChamberView.of(core, level == null ? 0 : level.getGameTime()).save(tag);
+        ChamberView.of(core, resolveRechargeStart(core, level == null ? 0 : level.getGameTime())).save(tag);
         return tag;
     }
 

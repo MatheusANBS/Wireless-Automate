@@ -33,10 +33,13 @@ Pedido do dono (16/10/2026): a tela do roteador com o Upgrade de Alcance está p
 | Linha da máquina | trocada | replaced |
 | Grupo | 1 trocada / %s trocadas | 1 replaced / %s replaced |
 | Botão | Atualizar | Update |
-| Dica, máquina | No lugar há: %s. Atualizar passa a máquina para o grupo dela, com a mesma configuração | %s is in its place. Update moves the machine to its group, with the same settings |
+| Dica, máquina | No lugar há: %s. Atualizar passa a máquina para o grupo desse bloco; a exceção dela continua | %s is in its place. Update moves the machine to that block's group; its exception stays |
 | Dica, grupo | Atualiza as máquinas trocadas deste grupo (%s) | Updates the replaced machines in this group (%s) |
 | Desvincular armado | Desvincular? | Unlink? |
 | Dica do Desvincular | Clique de novo para tirar esta máquina do roteador | Click again to take this machine off the router |
+| Estado sumida | A máquina sumiu: o bloco foi quebrado ou não tem mais o que mover | The machine is gone: the block was broken or has nothing left to move |
+| Visor e acesso da face (`range.access.replaced`) | máquina trocada | machine replaced |
+| Voltar curto, na linha Editando com três botões (`range.revert.short`) | Voltar | Revert |
 
 ## Fora
 

@@ -13,10 +13,13 @@ import org.jetbrains.annotations.Nullable;
  * O alvo de edição da tela do roteador ({@link EditTarget}) com o que o identifica de verdade: a
  * posição da máquina ({@link EditTarget.Kind#MACHINE}) ou o id do bloco do grupo
  * ({@link EditTarget.Kind#GROUP}). O índice de uma máquina muda quando outra é desvinculada, e o id
- * de um grupo pode ser reaproveitado depois de recarregar o mundo; por isso o menu e o filtro de face
- * guardam esta referência e a conferem ({@link #refresh}) antes de cada ação. O bloco só confere o que a
- * tela mandou ({@link #resolve}): com o mundo aberto os ids de grupo não se repetem, e um grupo que trocou
- * de bloco (o Atualizar) continua o mesmo. Só no servidor.
+ * de um grupo pode ser reaproveitado; por isso o menu e o filtro de face guardam esta referência e a
+ * conferem ({@link #refresh}) antes de cada ação. O bloco só confere o que a tela mandou ({@link #resolve});
+ * o {@link #refresh} segue o grupo pelo id, para um grupo que trocou de bloco (o Atualizar) continuar o
+ * mesmo. Limitação: o próximo id não é gravado, e sim refeito ({@code max + 1}) quando o block entity
+ * carrega (também quando o chunk do roteador recarrega). Depois que um grupo sai e o roteador recarrega,
+ * o id dele pode voltar num grupo novo, e um alvo lembrado (o do Tablet) reabre nesse grupo. Só no
+ * servidor.
  */
 public record EditTargetRef(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
     public static final EditTargetRef ATTACHED = new EditTargetRef(EditTarget.ATTACHED_TARGET, null, null);

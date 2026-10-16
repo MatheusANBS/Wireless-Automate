@@ -5,8 +5,10 @@ import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.*
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -34,6 +36,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -301,6 +304,57 @@ public final class RangeReplaceGameTests {
                         blastAt(helper, FURNACE_B, Direction.SOUTH);
                         helper.assertTrue(ModPayloads.handleUpdateMachine(player,
                                 UpdateMachinePayload.group(menu.containerId, furnaces, id(Blocks.FURNACE))), "não atualizou o grupo");
+                        helper.assertTrue(router.remoteMachines().group(furnaces) == null, "o grupo vazio ficou");
+                        helper.assertValueEqual(menu.target(), EditTarget.group(blasts), "alvo depois do grupo sair");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Atualizar pelo roteador aberto à distância ({@link RemoteRouterMenu}, outro {@code RouterEditHost}):
+     * a máquina atualizada continua escolhida e o grupo que sai passa o alvo para o grupo de destino.
+     */
+    @GameTest(template = "empty")
+    public static void updateFromRemoteRouterMenu(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    blastAt(helper, BLAST, Direction.NORTH);
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    link(helper, router, BLAST);
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    try {
+                        player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+                        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+                        NodeIndex.placedBy(router, player.getUUID());
+                        RemoteRouterMenu menu = new RemoteRouterMenu(CONTAINER_ID, player.getInventory(), router,
+                                RouterSnapshot.capture(router, player));
+                        player.containerMenu = menu;
+                        helper.assertTrue(menu.canEdit(player), "o roteador à distância não edita");
+
+                        BlockPos a = helper.absolutePos(FURNACE_A);
+                        int indexA = router.remoteMachines().index(a);
+                        int furnaces = groupOf(router, a);
+                        int blasts = groupOf(router, helper.absolutePos(BLAST));
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.machine(CONTAINER_ID, indexA, a)), "não escolheu a máquina");
+                        blastAt(helper, FURNACE_A, Direction.EAST);
+                        helper.assertTrue(ModPayloads.handleUpdateMachine(player,
+                                UpdateMachinePayload.machine(CONTAINER_ID, indexA, a)), "não atualizou a máquina");
+                        helper.assertValueEqual(menu.target(), EditTarget.machine(indexA), "alvo da máquina");
+                        helper.assertValueEqual(groupOf(router, a), blasts, "A no grupo dos altos-fornos");
+
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.group(CONTAINER_ID, furnaces, id(Blocks.FURNACE))), "não escolheu o grupo");
+                        blastAt(helper, FURNACE_B, Direction.SOUTH);
+                        helper.assertTrue(ModPayloads.handleUpdateMachine(player,
+                                UpdateMachinePayload.group(CONTAINER_ID, furnaces, id(Blocks.FURNACE))), "não atualizou o grupo");
                         helper.assertTrue(router.remoteMachines().group(furnaces) == null, "o grupo vazio ficou");
                         helper.assertValueEqual(menu.target(), EditTarget.group(blasts), "alvo depois do grupo sair");
                     } finally {

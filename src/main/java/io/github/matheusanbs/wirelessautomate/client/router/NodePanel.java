@@ -399,16 +399,17 @@ public final class NodePanel {
      * cubo como a face sob o mouse.
      */
     public void render(GuiGraphics g, int mouseX, int mouseY, @Nullable Direction pointed) {
-        arrange();
-        Font font = font();
         boolean covered = lists.open();
         int mx = covered ? -1 : mouseX;
         int my = covered ? -1 : mouseY;
-        // o Desvincular armado desarma quando o mouse sai dele
+        // o Desvincular armado desarma quando o mouse sai dele (pelas áreas do quadro anterior), antes de
+        // arrumar este quadro, para o botão não sair na largura do armado sem estar armado
         Hot unlink = layout.hot(Kind.UNLINK);
         if (unlink == null || !unlink.contains(mx, my)) {
             model.unlinkArm().disarm();
         }
+        arrange();
+        Font font = font();
         painter.renderTabs(g, font, mx, my);
         cube.render(g, font, mx, my, pointed);
         painter.renderBody(g, font, mx, my, lists.popup(), actions.cardCount());

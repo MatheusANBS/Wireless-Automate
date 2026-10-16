@@ -136,6 +136,8 @@ dependencies {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+    // Para regerar a cena do guia (ResonatorGuideSceneTest) com -Dwa.regen=true.
+    systemProperty 'wa.regen', System.getProperty('wa.regen', 'false')
 }
 
 // --- Benchmark (docs/benchmark.md) ---

@@ -1,0 +1,396 @@
+<title>Ressonador · etapa 4</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Mockup da etapa 4 do Ressonador de Sinal: JEI, guia em duas páginas e o GIF da vitrine.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;700&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Caderno de bancada, como os mockups das etapas 2 e 3: coluna de leitura e pranchas mais largas para o JEI e o GIF. */
+:root {
+  --bg: #F2EBDD; --sheet: #FFFBF3; --inset: #DDD3BF; --rule: #BDB19A;
+  --ink: #2A2730; --muted: #7A7366; --accent: #F0603E; --accent-deep: #C2442A;
+  --ok: #2F9D5C; --brass: #B48E2E; --lens: #1FA9A0;
+  --jei: #C6C6C6; --jei-hi: #FFFFFF; --jei-lo: #555555; --jei-slot: #8B8B8B; --jei-ink: #3F3F3F;
+  --cham: #141217; --cham-line: #8EE8E1;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --pixel: "Pixelify Sans", "Silkscreen", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1C1A20; --sheet: #26232B; --inset: #312D37; --rule: #4A4550;
+  --ink: #ECE5D6; --muted: #A79F90; --accent: #F26A48; --accent-deep: #FF8A6B;
+  --ok: #3DB56E; --brass: #D2AE4E; --lens: #3CC4BA; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1C1A20; --sheet: #26232B; --inset: #312D37; --rule: #4A4550;
+  --ink: #ECE5D6; --muted: #A79F90; --accent: #F26A48; --accent-deep: #FF8A6B;
+  --ok: #3DB56E; --brass: #D2AE4E; --lens: #3CC4BA; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px }
+.wrap { max-width: 1040px; margin: 0 auto }
+.read { max-width: 70ch }
+h1, h2, h3 { font-family: var(--display); font-stretch: 85%; text-wrap: balance; line-height: 1.1; margin: 0 }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -.01em }
+h2 { font-size: 1.7rem; font-weight: 750 }
+h3 { font-size: 1.12rem; font-weight: 700 }
+p { margin: 0 }
+.eyebrow { font: 600 .78rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-deep) }
+section { padding-block: 52px 0; display: grid; gap: 18px }
+section > *, .wrap > * { min-width: 0; max-width: 100% }
+.mono { font-family: var(--mono); font-size: .88em }
+.muted { color: var(--muted) }
+.note { font-size: .86rem; color: var(--muted) }
+header.hero { padding-block: 44px 4px; display: grid; gap: 14px }
+header.hero .lede { font-size: 1.18rem; max-width: 60ch }
+.scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start }
+.card ul { margin: 0; padding-left: 1.1em; display: grid; gap: 5px }
+.card.out { border-style: dashed; background: transparent }
+.card.out h3 { color: var(--muted) }
+.dec { display: grid; gap: 10px; counter-reset: d }
+.dec li { list-style: none; background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 14px; display: grid; gap: 4px; counter-increment: d }
+.dec li b::before { content: "D" counter(d) " · "; font-family: var(--mono); color: var(--accent-deep); font-size: .85em }
+.dec { margin: 0; padding: 0 }
+.dec b { font-weight: 600 }
+button { font: 600 .9rem var(--body); color: var(--ink); background: var(--inset); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 12px; cursor: pointer }
+button:hover { border-color: var(--accent) }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+/* ===== JEI: 1 pixel de interface = --u, o painel cinza do JEI ===== */
+.jeistage { background: #2b2d33; border-radius: 10px; padding: 18px 12px; display: grid; gap: 22px; justify-items: center; overflow: hidden }
+.jei { --u: min(2px, calc((100vw - 80px) / 196)); position: relative; width: calc(196 * var(--u)); background: var(--jei); color: var(--jei-ink);
+  box-shadow: 0 0 0 var(--u) #000, inset calc(2 * var(--u)) calc(2 * var(--u)) 0 var(--jei-hi), inset calc(-2 * var(--u)) calc(-2 * var(--u)) 0 var(--jei-lo);
+  font: calc(8 * var(--u))/1.15 var(--pixel); padding: calc(6 * var(--u)); display: grid; gap: calc(5 * var(--u)) }
+.jei .bar { display: flex; align-items: center; gap: calc(4 * var(--u)) }
+.jei .bar .t { flex: 1; text-align: center }
+.jei .arrowbtn { width: calc(12 * var(--u)); height: calc(12 * var(--u)); background: #A0A0A0; box-shadow: inset var(--u) var(--u) 0 #fff, inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #555; display: grid; place-items: center; font-size: calc(7 * var(--u)) }
+.jei .tabs { position: absolute; left: calc(-24 * var(--u)); top: calc(22 * var(--u)); display: grid; gap: calc(2 * var(--u)) }
+.jei .tab { width: calc(24 * var(--u)); height: calc(22 * var(--u)); background: var(--jei); box-shadow: inset var(--u) var(--u) 0 #fff, 0 0 0 var(--u) #000; display: grid; place-items: center }
+.jei .tab img { width: calc(16 * var(--u)) }
+.jei .inner { background: #B4B4B4; box-shadow: inset var(--u) var(--u) 0 #373737, inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #fff; padding: calc(4 * var(--u)); display: grid; gap: calc(4 * var(--u)) }
+.jei .row { display: flex; align-items: center; gap: calc(3 * var(--u)); flex-wrap: wrap }
+.jei .slot { width: calc(18 * var(--u)); height: calc(18 * var(--u)); background: var(--jei-slot); box-shadow: inset var(--u) var(--u) 0 #373737, inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #fff; position: relative; display: grid; place-items: center; flex: none }
+.jei .slot img { width: calc(16 * var(--u)); height: calc(16 * var(--u)); image-rendering: pixelated }
+.jei .slot .n { position: absolute; right: calc(1 * var(--u)); bottom: 0; color: #fff; text-shadow: var(--u) var(--u) 0 #3f3f3f; font-size: calc(8 * var(--u)) }
+.jei .slot.opt::after { content: ""; position: absolute; inset: 0; outline: var(--u) dashed #6a6a6a; outline-offset: calc(-2 * var(--u)) }
+.jei .bt { font: inherit; color: var(--jei-ink); height: calc(12 * var(--u)); padding: 0 calc(4 * var(--u)); border: 0; border-radius: 0; background: #A0A0A0; box-shadow: inset var(--u) var(--u) 0 #fff, inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #555 }
+.jei .bt[aria-pressed="true"] { background: #6E6E6E; color: #fff; box-shadow: inset var(--u) var(--u) 0 #444, inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #aaa }
+.jei .bt:focus-visible { outline: var(--u) solid var(--accent) }
+.jei .view { display: grid; grid-template-columns: 1fr calc(42 * var(--u)); gap: calc(4 * var(--u)) }
+.jei canvas { width: 100%; aspect-ratio: 1 / 1; display: block; background: #9c9c9c; image-rendering: pixelated; cursor: grab; touch-action: none; max-width: 100% }
+.jei .list { display: grid; grid-template-columns: repeat(2, calc(18 * var(--u))); gap: calc(2 * var(--u)); align-content: start }
+.jei .small { font-size: calc(7 * var(--u)); color: #555 }
+.jei .arrow { width: calc(24 * var(--u)); text-align: center; display: grid; gap: var(--u) }
+.jei .arrow i { display: block; height: calc(6 * var(--u)); background: linear-gradient(90deg, #8b8b8b 70%, transparent 70%), conic-gradient(from 45deg at 100% 50%, transparent 0 0); clip-path: polygon(0 30%, 70% 30%, 70% 0, 100% 50%, 70% 100%, 70% 70%, 0 70%) ; background: #8B8B8B }
+.jei .info { display: grid; gap: calc(3 * var(--u)) }
+.jei table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums }
+.jei td { padding: 0 calc(2 * var(--u)); text-align: right; white-space: nowrap }
+.jei td:first-child { text-align: left }
+.cap { font-size: .85rem; color: #c9c3b8; max-width: 60ch; text-align: center }
+
+/* ===== Guia: páginas do GuideME (fundo escuro do livro, texto claro) ===== */
+.guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px }
+.gpage { background: #1E2129; color: #E6E3DC; border-radius: 10px; padding: 18px 18px 20px; display: grid; gap: 10px; align-content: start; border: 1px solid #333846; font-size: .95rem }
+.gpage .crumb { font: 600 .72rem var(--mono); color: #8E96A8; letter-spacing: .06em }
+.gpage h3 { font-family: var(--body); font-stretch: 100%; font-size: 1.3rem; color: #fff }
+.gpage h4 { margin: 6px 0 0; font: 700 .95rem var(--body); color: #FFC9B8 }
+.gpage a { color: #8EE8E1; text-decoration: none; border-bottom: 1px dotted #8EE8E1 }
+.gpage .scene { background: repeating-linear-gradient(45deg, #262a34 0 8px, #2a2f3a 8px 16px); border: 1px solid #3a4050; border-radius: 6px; padding: 16px; text-align: center; color: #8E96A8; font: 600 .78rem var(--mono) }
+.gpage ul, .gpage ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px }
+.gpage .recipes { display: flex; gap: 6px; flex-wrap: wrap }
+.gpage .recipes span { font: 600 .72rem var(--mono); background: #2a2f3a; border: 1px solid #3a4050; border-radius: 4px; padding: 2px 6px; color: #C9CED9 }
+
+/* ===== GIF ===== */
+.gif { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start }
+@media (max-width: 760px) { .gif { grid-template-columns: 1fr } }
+.frame { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; display: grid; gap: 8px }
+.frame canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 4px; max-width: 100% }
+.tl { position: relative; height: 26px; border-radius: 4px; overflow: hidden; display: flex; font: 600 .68rem var(--mono); color: #FFFBF3 }
+.tl span { display: grid; place-items: center; white-space: nowrap; overflow: hidden }
+.tl .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink) }
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .92rem }
+.specs dt { color: var(--muted); font: 600 .78rem var(--mono); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px }
+.specs dd { margin: 0 }
+@media (prefers-reduced-motion: reduce) { .frame canvas { animation: none } }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <p class="eyebrow">Ressonador de Sinal · etapa 4 · mockup para aprovar</p>
+  <h1>Acabamento: JEI, guia e o GIF</h1>
+  <p class="lede">A etapa fecha o Ressonador para publicar: o JEI mostra a estrutura e a recarga, o guia ensina a montar e sintonizar, e a vitrine grava um GIF da câmara entrando em sintonia.</p>
+</header>
+
+<section>
+  <div class="scope">
+    <div class="card"><h3>Entra</h3><ul>
+      <li>JEI: categoria da estrutura em 3D, categoria da recarga e a tabela por tier no Núcleo.</li>
+      <li>Guia: duas páginas, nos dois idiomas, com cena 3D da Vitrine.</li>
+      <li>Vitrine: o GIF "chiado → sintonia" para o CurseForge.</li>
+    </ul></div>
+    <div class="card out"><h3>Sai (decisão sua)</h3><ul>
+      <li>Tablet: o Ressonador é só presencial. Nada de sintonia à distância.</li>
+      <li>Mineradores do ATM10 (Laser Drill, Occultism): retirado da lista.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="jei">
+  <p class="eyebrow">1 · JEI</p>
+  <h2>Três vistas no JEI</h2>
+  <p class="read">Apertar <span class="mono">U</span> sobre o Núcleo, a Carcaça, o Vidro ou qualquer peça abre a estrutura; <span class="mono">R</span> num cristal mostra a receita do Lapidado (já aparece hoje, porque ela é uma receita de bancada) e a recarga. O Núcleo aparece um por tier, como o roteador.</p>
+  <div class="jeistage">
+    <div class="jei" aria-label="Categoria Estrutura do Ressonador">
+      <div class="tabs"><div class="tab"><img id="tabcore" alt="Núcleo"></div><div class="tab"><img id="tabcasing" alt="Carcaça"></div></div>
+      <div class="bar"><span class="arrowbtn">‹</span><span class="t">Estrutura do Ressonador</span><span class="arrowbtn">›</span></div>
+      <div class="bar"><span class="arrowbtn">‹</span><span class="t" id="jlayname">Vitrine · 1/2</span><span class="arrowbtn">›</span></div>
+      <div class="inner">
+        <div class="view">
+          <canvas id="iso" width="300" height="300" aria-label="Estrutura 5 por 5 por 5 em 3D"></canvas>
+          <div class="list" id="blist"></div>
+        </div>
+        <div class="row">
+          <button class="bt" id="lay-v" aria-pressed="true">Vitrine</button>
+          <button class="bt" id="lay-f" aria-pressed="false">Faixa</button>
+          <span style="flex:1"></span>
+          <button class="bt" id="rot">⟲ girar</button>
+        </div>
+        <div class="row" id="layers"><span class="small">Camada</span></div>
+        <div class="small" id="hover">Arraste para girar · passe o mouse num bloco para ver o nome</div>
+      </div>
+    </div>
+    <p class="cap">Estrutura: as duas montagens de exemplo são duas receitas da categoria. A lista à direita tem os blocos e as quantidades (o Sintonizador com borda tracejada: é opcional). Camada mostra só até aquela altura, para ver o interior vazio.</p>
+
+    <div class="jei" aria-label="Categoria Recarga no Núcleo">
+      <div class="tabs"><div class="tab"><img id="tabcore2" alt="Núcleo"></div></div>
+      <div class="bar"><span class="arrowbtn">‹</span><span class="t">Recarga no Núcleo</span><span class="arrowbtn">›</span></div>
+      <div class="inner">
+        <div class="row" style="justify-content:center">
+          <div class="slot"><img data-s="dull" alt="Cristal de Sinal Opaco"></div>
+          <span>+</span>
+          <div class="slot"><img id="redstone" alt="Pó de Redstone"><span class="n">1</span></div>
+          <div class="arrow"><i></i><span class="small">30 s</span></div>
+          <div class="slot"><img data-s="crystal" alt="Cristal de Sinal"></div>
+        </div>
+        <div class="small" style="text-align:center">Um Opaco por vez, dentro de uma câmara do Núcleo montado</div>
+      </div>
+    </div>
+    <p class="cap">Recarga: uma receita para o Cristal de Sinal e outra para o Lapidado. O tempo vem da config do servidor (<span class="mono">rechargeTicks</span>).</p>
+
+    <div class="jei" aria-label="Informações do Núcleo">
+      <div class="bar"><span class="arrowbtn">‹</span><span class="t">Informações</span><span class="arrowbtn">›</span></div>
+      <div class="inner info">
+        <div class="row"><div class="slot"><img data-s="core" alt="Núcleo de Ressonância"></div><span>Núcleo de Ressonância</span></div>
+        <div>Gera FE com cristais na câmara, se o dial estiver na estação. Sobe de tier com os Cartões de Upgrade do roteador.</div>
+        <table>
+          <tr class="small"><td>Tier</td><td>Câm.</td><td>FE/t cristal</td><td>Teto</td></tr>
+          <tr><td>Básico</td><td>1</td><td>128</td><td>85%</td></tr>
+          <tr><td>Avançado</td><td>2</td><td>1.024</td><td>88%</td></tr>
+          <tr><td>Elite</td><td>3</td><td>8.192</td><td>90%</td></tr>
+          <tr><td>Esmeralda</td><td>4</td><td>32.768</td><td>92%</td></tr>
+          <tr><td>Ultimate</td><td>8</td><td>1.073.741.824</td><td>98%</td></tr>
+        </table>
+        <div class="small">Lapidado rende 2×. Teto = limite do Sintonizador.</div>
+      </div>
+    </div>
+    <p class="cap">Informações: a página de texto do JEI no Núcleo, com os números lidos da config (os tiers do Allthemodium só aparecem com o mod).</p>
+  </div>
+
+  <ol class="dec">
+    <li><b>Estrutura em 3D girável</b> <span>Desenhada na própria categoria com os modelos dos blocos (o estado montado, com as texturas conectadas), arrastar gira e a roda dá zoom. Sem biblioteca externa.</span></li>
+    <li><b>Vitrine e Faixa</b> <span>As duas montagens de exemplo, as mesmas da projeção no mundo. O texto embaixo lembra que a estrutura aceita outros arranjos (vidro em qualquer miolo de face, mais Portas).</span></li>
+    <li><b>Recarga como categoria própria</b> <span>Opaco + 1 redstone → cheio, para quem procura "como recarregar" pelo JEI.</span></li>
+    <li><b>Tabela por tier como Informações</b> <span>Página de texto do JEI no Núcleo, com os números da config do servidor.</span></li>
+  </ol>
+</section>
+
+<section id="guia">
+  <p class="eyebrow">2 · Guia (GuideME)</p>
+  <h2>Duas páginas, ligadas entre si</h2>
+  <p class="read">Só "como operar", nos dois idiomas, geradas pelo <span class="mono">gerar_guia.py</span>. Entram no índice numa seção nova "Energia". O e2e abre e captura as duas, como as outras.</p>
+  <div class="guide">
+    <article class="gpage">
+      <p class="crumb">ÍNDICE › ENERGIA › QUARTZO DE SINAL</p>
+      <h3>Quartzo de Sinal e cristais</h3>
+      <p>O minério de Quartzo de Sinal aparece no Overworld, mais comum perto de y = −16, em pedra e ardósia. Quebre com picareta de ferro ou melhor: dá de 1 a 3 Cristais de Sinal (Fortuna ajuda).</p>
+      <h4>Os cristais</h4>
+      <ul>
+        <li><b>Cristal de Sinal</b>: gera 10 minutos dentro do <a>Ressonador</a>.</li>
+        <li><b>Cristal Lapidado</b>: rende o dobro e dura o dobro. Só sai de cristais cheios.</li>
+        <li>A barra do item mostra a carga. Sem carga, o cristal fica <b>Opaco</b>.</li>
+      </ul>
+      <h4>Recarregar</h4>
+      <p>Deixe o Opaco na câmara e ponha redstone no Núcleo: um Opaco por vez, 30 segundos e 1 pó cada.</p>
+      <div class="recipes"><span>receita: Lapidado</span><span>min&eacute;rio: pedra e ardósia</span></div>
+    </article>
+    <article class="gpage">
+      <p class="crumb">ÍNDICE › ENERGIA › RESSONADOR</p>
+      <h3>Ressonador de Sinal</h3>
+      <div class="scene">Cena 3D girável: a Vitrine montada, com o Núcleo, as Portas e o Sintonizador marcados</div>
+      <h4>Montar</h4>
+      <ol>
+        <li>Coloque o Núcleo e clique nele com a mão vazia: a estrutura aparece projetada no mundo (Shift + roda troca Vitrine e Faixa).</li>
+        <li>Uma caixa 5×5×5 oca: Carcaça nas arestas; Vidro, Portas e Sintonizador no miolo das faces.</li>
+        <li>Pelo menos uma Porta de Energia e uma Porta de Cristais. Paredes não podem ser divididas com outro Ressonador.</li>
+      </ol>
+      <h4>Sintonizar</h4>
+      <p>Clique no Núcleo montado para abrir a tela. Gire o dial até a lâmpada <b>EM SINTONIA</b> acender. A estação escorrega com o tempo: volte de vez em quando, ou ponha um <b>Sintonizador</b> e escolha o modo automático (um pouco abaixo de 100%).</p>
+      <h4>Câmara</h4>
+      <p>Pelo vidro dá para ler a sintonia: a figura de luz fecha e os cristais sobem juntos quando está certo; fora, vira rabisco.</p>
+      <h4>Energia e tiers</h4>
+      <p>Tire FE pela Porta de Energia com um <a>Roteador</a>. Os <a>Cartões de Upgrade</a> sobem o Núcleo de tier: mais câmaras e mais FE por cristal (tabela).</p>
+      <div class="recipes"><span>receitas: 6 blocos</span><span>tabela por tier</span></div>
+    </article>
+  </div>
+</section>
+
+<section id="gif">
+  <p class="eyebrow">3 · Vitrine</p>
+  <h2>O GIF: do chiado à sintonia</h2>
+  <div class="gif">
+    <div class="frame">
+      <canvas id="gifc" width="640" height="360" aria-label="Prévia animada do GIF"></canvas>
+      <div class="tl" id="tl">
+        <span style="flex:25;background:#7A7366">chiado</span>
+        <span style="flex:45;background:#B48E2E">dial varrendo</span>
+        <span style="flex:8;background:#F0603E">clarão</span>
+        <span style="flex:42;background:#2F9D5C">em sintonia</span>
+        <i class="head" id="tlhead"></i>
+      </div>
+      <p class="note">Prévia esquemática do ritmo, não da imagem: o GIF real é o jogo, visto pela janela da Vitrine.</p>
+    </div>
+    <dl class="specs">
+      <dt>Cena</dt><dd>Vitrine Esmeralda na casa de quartzo da vitrine, câmera parada pela janela, um pouco acima do centro.</dd>
+      <dt>Duração</dt><dd>6 s em loop: 120 quadros, 1 por tick (20 fps). O fim emenda no começo pelo corte do chiado.</dd>
+      <dt>Roteiro</dt><dd>1,25 s de chiado; o dial anda até a estação em 2,25 s (o servidor muda o dial a cada tick); clarão; 2,1 s em sintonia.</dd>
+      <dt>Tamanho</dt><dd>640 × 360, paleta de 256 cores por quadro. Meta abaixo de 6 MB.</dd>
+      <dt>Como</dt><dd>Passo novo da vitrine (<span class="mono">WA_SHOWCASE</span>): congela o tempo (<span class="mono">/tick freeze</span>), avança um tick por quadro e captura cada um; o <span class="mono">gerar_gif.py</span> monta com o PIL.</dd>
+      <dt>Risco</dt><dd>As texturas animadas (a placa de Chladni) correm pelo relógio do cliente. Se pularem quadros com o tempo congelado, o plano B é capturar em tempo real a 20 fps.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Depois do ok</p>
+  <h2>O que vem</h2>
+  <p class="read">Spec atualizada (o Tablet sai da etapa 4), plano em tarefas e um subagente por tarefa. Fecha com as quatro runs de GameTest e o e2e completo, já que o guia é a condição para publicar uma versão com o Ressonador.</p>
+</section>
+</div>
+
+<script>
+const SPR = {"casing": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVR4nGP89PrufwYKABOvgBhRCnGpY6SbC0AAWS2MzQhzAUjg84dXDKQCJhiDHM0oBpALmIaBAbwkRCNWAz6TGfpwAxgoBEQbgMurRBuAy6tYDSAlYAHdPxhI3+KchQAAAABJRU5ErkJggg==", "glass": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR4nGOUllT4z0ABYAERJbMXPafIABBwMNIJYSABdM9YsObg7EmSTAwUAiZcEupign1kG6AuJth389X7IrIMUCdBM1YDbpKgGasBpAImuhqgLiYYQ7YB6mKCMTdfvV9CtgE3sWgmyQBcgBGUG0GZ6fSpM2QZAM9MoIxBikb71LznID0AU1QpyxNEBYoAAAAASUVORK5CYII=", "core": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuklEQVR4nGP89PrufwYiAK+AGMPnD68wxFlAhKaeMwM54PqlvRADQMDe1gFDwTSue2A665sShtzBwwcQLoCBJ0+fMCADPwY2mAwDLsCCTfDuvTtYFSsrqRA24O69Owzzlq5guH37DsOt26gGrV26AMMQJmw2YdN8/doVrK5iwiZISLOMtAx+A4ixmSgDruPQjBxbTKRqJhgLykoq4NAmOxoZcCjEBQgGIiEAdwEsbZMKGJGzM64siw8AAPRvRjCNHneVAAAAAElFTkSuQmCC", "eport": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAoUlEQVR4nGP89PrufwYSAK+AGMPnD6/gfCYGEgGyZhBggTE09ZxJMuj6pb2oBoDAocU2DLWzUIQwQHPaHwa72CNwPguyJEjzhYsXMDRdPdUMprXNahl8s1HlmPBah6YZG2CiRDNeA65CNaOz0aOUCZcBIFvx2QyLUiaae0GbgCuYKNGMYUBz2h+4RlyaN0/VQeEzwjITuUkZbgC5gOTciA4AXUxBdccBi7MAAAAASUVORK5CYII=", "cport": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA0ElEQVR4nGP89PrufwYKAAs2QU09Z6yKr1/aS9gATT1nBmUlFawGgOTQDWFE9oJPQDqY3qT6C6sBfrfZwPSWDTMxXaAJtRmkWX7dFawGbDaTYKj5LoXiEiZ8mmM1ZVAM8D31gqGF8xlYLSycmBjwgMXXn+CTJmzAh93LwBiba/AaEItFMS7XsGAThCkWcI3C50DcLkAGuJyOkQ40oTEBCmVQaOOLxrv37sCjkRFbQgIZgg2ANIMAckJCMQDZJdgAss04DYAZgg1gy0xYDSAFAAClgGQUEYzxrgAAAABJRU5ErkJggg==", "crystal": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA5UlEQVR4nGNgIALw8wn9J0YdTs3/P7z6T5Qh/GiKYJr/n9zx/9PEKqyGMCEr/vDoBl7n7gqyxJBnQtbMcPMcw+PmDJL8zESsTSQZAANgV1FiABjcPMeADpBdx8RABkAObCZ4AGJRhEszcmAz4XMqVjEGBobPJw4xXD9/kUwv3EQ1lAVE/Dh9gOH3tQtgAZDJB289ZNBcOAFFIVwcajuIjTBAUJzhA68Iw6tDe+ESMCeigxkrN4Hp1ivPGD5+esfICOKAAuPs5qUMd48dZbi4eQNeH4A0ggBIM4gGEzBDiAkCmEYYAAAuqoFtqa+RsgAAAABJRU5ErkJggg==", "cut": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyUlEQVR4nGNgoCXg5xP6D8Jka/7/4RUY4zOECZfmD49uMDB8/8jAcPMcw+PmDLAYUQbwI2t+dBcujssQJpyasYBdQZYYhjDh1IxkOz5DWFBkuTkZfnzeDmFLQahnN3czMGhD2CLaggzXL11iYFiH0MKCYsC5owwcDOJw7ucThxhEGeTg/OvnLzKIMsgyMDA8wfTCx0/vGAVco7A6G6YZBNzWHQerxTAAnyG4NGONxo9ohuDTjBfw8wn9P5ng/b/LSoey5Ey2ZroBALuibQhjYsV7AAAAAElFTkSuQmCC", "dull": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA4ElEQVR4nGNgIALw8wn9J0YdTs1fPrz6T5Qh/GiKYJpvXjrxf+vaRVgNYUJW/PTRDbzOrS3PwpBnQtb89NE9hmXzJ5DkZyZibSLJABgAuYoiA0AA5C10gOw6JgYyAHJgM8ECEJsiXJqRA5sJn1NBYlfnz8QQv3P7FsP1G7ewe+Hnkf0ofO3EdBRD0C1iAREH9+6AC9wTkWa4dOUaihi7jSPYRpC4poYanA03AOYcEIBJIIshg5VrNoDpjVsPMHz89I6REcQBBYa/twNWDegApBEEQJpBNJiAGUKMATCNMAAA4EWC0acZ/4cAAAAASUVORK5CYII=", "cutdull": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyElEQVR4nGNgoCXg5xP6D8Jka/7y4RUY4zOECZfmp49ugNlPH91jWDZ/AliMKAP40TTDAC5DmIjRDAO15VkYhjARqxmXISzIksyft4NpOUGE2LObuxk0+CFsDXMGhuuXLqEYyILMefReHUXyzu1bDAwMbnD+9RsgvgIDA8M0TC98/PSO0czGCy5xdf5MFMMgmhkYmjungdViGIBuiHZiOsPPI/vxasYajR+RDGG3cYQbgk0zXsDPJ/S/p7Xmf1xkEGXJmWzNdAMAUItvpPT0YzAAAAAASUVORK5CYII=", "tuner": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABL0lEQVR4nGP89PrufwYGBgZeATGGzx9eMZAKWGAMZM2aes5g+tBiG4brly4xpHd/AvOvX9qLYQAjzAUwjTNL+Rg09fTAfCX76WD63sFMsEEgcbvYI6gGfXp99z8IS0sq/N/Sp/f/7p6Y//9/fwZjLXUDOBuEQXIgNSC1MH0sMINgNoNs1daxZZgh+4vh6pWTcItAYlevHGZgYMhkOLQYyQ+foLbDbIbZeshFC8V2ZDlkVzChBwrEFuwAJgcLI7gL7iL5GxmDbAFhbHIgV8BdcP3SJbg/CQGYGrgrPqGFATEYpBbmMiaYycS4Al0OnPg+QeMTZCp6TGCLAVhagOljwJeQ0A3DlpAwkjIs/cMSFQiAkjLMm6B8AUvKoAyIYgCyQSAAS52g9A8xgEBmIgcAADX5lJzp3eOhAAAAAElFTkSuQmCC"};
+document.querySelectorAll("img[data-s]").forEach(i => i.src = SPR[i.dataset.s]);
+for (const id of ["tabcore", "tabcore2"]) document.getElementById(id).src = SPR.core;
+document.getElementById("tabcasing").src = SPR.casing;
+document.getElementById("redstone").src = (() => { const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d");
+  const px = [[6,5],[7,5],[8,6],[5,7],[6,7],[7,7],[9,7],[10,8],[4,8],[6,9],[8,9],[9,9],[7,10],[5,10],[9,11],[6,11],[8,8],[7,8]];
+  px.forEach(([x,y],k) => { g.fillStyle = k % 3 ? "#C61B08" : "#FF3A1C"; g.fillRect(x, y, 1, 1); }); return c.toDataURL(); })();
+
+/* ---------- Estrutura 5×5×5 ---------- */
+const NAMES = { casing: "Carcaça de Porcelana", glass: "Vidro de Ressonância", core: "Núcleo de Ressonância", eport: "Porta de Energia", cport: "Porta de Cristais", tuner: "Sintonizador" };
+function build(layout) {
+  const P = [];
+  for (let x = 0; x < 5; x++) { P[x] = []; for (let y = 0; y < 5; y++) { P[x][y] = []; for (let z = 0; z < 5; z++) {
+    const shell = x === 0 || x === 4 || y === 0 || y === 4 || z === 0 || z === 4; P[x][y][z] = shell ? "casing" : null; } } }
+  P[2][2][4] = "core"; P[2][2][0] = "eport"; P[4][2][2] = "cport"; P[2][4][2] = "tuner";
+  if (layout === "v") { for (let a = 1; a <= 3; a++) for (let b = 1; b <= 3; b++) P[0][a][b] = "glass"; }
+  else { for (let c = 1; c <= 3; c++) for (const [x, z] of [[c, 0], [c, 4], [0, c], [4, c]]) if (!P[x][3][z] || P[x][3][z] === "casing") P[x][3][z] = "glass"; }
+  return P;
+}
+const imgs = {}; for (const k of Object.keys(NAMES)) { imgs[k] = new Image(); imgs[k].src = SPR[k]; }
+let layout = "v", rot = 0, layer = 5, drag = null, hoverPick = null;
+const iso = document.getElementById("iso"), g = iso.getContext("2d");
+function rotXZ(x, z, r) { for (let i = 0; i < r; i++) [x, z] = [4 - z, x]; return [x, z]; }
+const S = 22, OX = 150, OY = 92;
+function scr(x, y, z) { return [OX + (x - z) * S, OY + (x + z) * S / 2 - y * S]; }
+function face(tex, p0, pu, pv, shade, alpha) {
+  g.save(); g.globalAlpha = alpha;
+  g.setTransform((pu[0] - p0[0]) / 16, (pu[1] - p0[1]) / 16, (pv[0] - p0[0]) / 16, (pv[1] - p0[1]) / 16, p0[0], p0[1]);
+  g.beginPath(); g.rect(0, 0, 16, 16); g.clip(); g.drawImage(tex, 0, 0, 16, 16);
+  if (shade) { g.fillStyle = `rgba(0,0,0,${shade})`; g.fillRect(0, 0, 16, 16); }
+  g.restore();
+}
+const picks = [];
+function draw() {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 300, 300); g.imageSmoothingEnabled = false; picks.length = 0;
+  const P = build(layout), cells = [];
+  for (let x = 0; x < 5; x++) for (let y = 0; y < Math.min(5, layer); y++) for (let z = 0; z < 5; z++) {
+    if (!P[x][y][z]) continue; const [rx, rz] = rotXZ(x, z, rot); cells.push([rx, y, rz, P[x][y][z]]); }
+  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
+  for (const [x, y, z, k] of cells) {
+    const t = imgs[k], al = k === "glass" ? .6 : 1;
+    face(t, scr(x, y + 1, z), scr(x + 1, y + 1, z), scr(x, y + 1, z + 1), 0, al);
+    face(t, scr(x + 1, y + 1, z + 1), scr(x + 1, y + 1, z), scr(x + 1, y, z + 1), .22, al);
+    face(t, scr(x, y + 1, z + 1), scr(x + 1, y + 1, z + 1), scr(x, y, z + 1), .38, al);
+    if (hoverPick && hoverPick.x === x && hoverPick.y === y && hoverPick.z === z) {
+      const pts = [scr(x, y + 1, z), scr(x + 1, y + 1, z), scr(x + 1, y + 1, z + 1), scr(x, y + 1, z + 1)];
+      g.strokeStyle = "#F0603E"; g.lineWidth = 2; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.stroke();
+    }
+    picks.push({ x, y, z, k, c: scr(x + .5, y + 1, z + .5) });
+  }
+  const counts = {}; for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) for (let z = 0; z < 5; z++) { const k = P[x][y][z]; if (k) counts[k] = (counts[k] || 0) + 1; }
+  const L = document.getElementById("blist"); L.innerHTML = "";
+  for (const k of ["casing", "glass", "core", "eport", "cport", "tuner"]) {
+    const d = document.createElement("div"); d.className = "slot" + (k === "tuner" ? " opt" : ""); d.title = NAMES[k] + (k === "tuner" ? " (opcional)" : "");
+    d.innerHTML = `<img src="${SPR[k]}" alt="${NAMES[k]}"><span class="n">${counts[k]}</span>`; L.appendChild(d);
+  }
+  document.getElementById("jlayname").textContent = (layout === "v" ? "Vitrine" : "Faixa") + (layout === "v" ? " · 1/2" : " · 2/2");
+}
+const LY = document.getElementById("layers");
+for (const n of [1, 2, 3, 4, 5]) { const b = document.createElement("button"); b.className = "bt"; b.textContent = n === 5 ? "Tudo" : n;
+  b.setAttribute("aria-pressed", n === 5); b.onclick = () => { layer = n; LY.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); draw(); }; LY.appendChild(b); }
+document.getElementById("lay-v").onclick = e => { layout = "v"; e.target.setAttribute("aria-pressed", true); document.getElementById("lay-f").setAttribute("aria-pressed", false); draw(); };
+document.getElementById("lay-f").onclick = e => { layout = "f"; e.target.setAttribute("aria-pressed", true); document.getElementById("lay-v").setAttribute("aria-pressed", false); draw(); };
+document.getElementById("rot").onclick = () => { rot = (rot + 1) % 4; draw(); };
+iso.addEventListener("pointerdown", e => { drag = e.clientX; iso.setPointerCapture(e.pointerId); });
+iso.addEventListener("pointerup", () => drag = null);
+iso.addEventListener("pointermove", e => {
+  const r = iso.getBoundingClientRect(), mx = (e.clientX - r.left) * 300 / r.width, my = (e.clientY - r.top) * 300 / r.height;
+  if (drag !== null && Math.abs(e.clientX - drag) > 40) { rot = (rot + (e.clientX > drag ? 3 : 1)) % 4; drag = e.clientX; }
+  let best = null, bd = 200; for (const p of picks) { const d = (p.c[0] - mx) ** 2 + (p.c[1] - my) ** 2; if (d < bd) { bd = d; best = p; } }
+  hoverPick = best; document.getElementById("hover").textContent = best ? NAMES[best.k] + (best.k === "tuner" ? " · opcional" : "") : "Arraste para girar · passe o mouse num bloco para ver o nome";
+  draw();
+});
+iso.addEventListener("pointerleave", () => { hoverPick = null; draw(); });
+Promise.all(Object.values(imgs).map(i => i.decode().catch(() => {}))).then(draw);
+
+/* ---------- Prévia do GIF ---------- */
+const gc = document.getElementById("gifc"), gg = gc.getContext("2d"), head = document.getElementById("tlhead");
+const crys = [0, 1, 2, 3].map(i => ({ a: i * Math.PI / 2, ph: Math.random() * 6 }));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function q(t) { if (t < 1.25) return 0; if (t < 3.5) { const u = (t - 1.25) / 2.25; return Math.min(1, u * u * (3 - 2 * u)); } return 1; }
+function frame(ms) {
+  const T = 6, t = reduce ? 5 : (ms / 1000) % T, k = q(t), W = 640, H = 360;
+  gg.fillStyle = "#141217"; gg.fillRect(0, 0, W, H);
+  // janela 3×3 da Vitrine
+  gg.strokeStyle = "#DDD3BF"; gg.lineWidth = 10; gg.strokeRect(150, 20, 340, 320);
+  gg.lineWidth = 3; gg.strokeStyle = "rgba(221,211,191,.35)"; for (const v of [263, 376]) { gg.beginPath(); gg.moveTo(v, 20); gg.lineTo(v, 340); gg.stroke(); gg.beginPath(); gg.moveTo(150, v - 130 + 20); gg.lineTo(490, v - 130 + 20); gg.stroke(); }
+  // placa de Chladni
+  gg.save(); gg.translate(320, 300); gg.scale(1, .28); gg.globalAlpha = .25 + .55 * k;
+  gg.strokeStyle = k > .5 ? "#8EE8E1" : "#5c5866"; gg.lineWidth = 3;
+  for (let r = 30; r < 150; r += 30) { gg.beginPath(); for (let a = 0; a <= 6.3; a += .05) { const rr = r + (1 - k) * 12 * Math.sin(a * 7 + t * 9 + r); gg.lineTo(rr * Math.cos(a), rr * Math.sin(a)); } gg.stroke(); }
+  gg.restore();
+  // Lissajous
+  const sl = (1 - k) * 0.35, cx = 320, cy = 160;
+  gg.beginPath(); gg.lineWidth = 2.2; gg.strokeStyle = `rgba(142,232,225,${.25 + .7 * k})`;
+  for (let i = 0; i <= 260; i++) { const s = i / 260 * Math.PI * 2;
+    const x = Math.sin(3 * s + t * (1 + sl * 4) + sl * Math.sin(s * 11 + t * 7) * 3), y = Math.sin(2 * s + t * .3 * (1 - k) + sl * Math.cos(s * 13 - t * 5) * 3);
+    gg.lineTo(cx + x * 120, cy + y * 85); }
+  gg.stroke();
+  // cristais e feixes
+  for (const c of crys) { const bob = k > .5 ? Math.sin(t * 4) : Math.sin(t * (3 + c.ph) + c.ph);
+    const x = cx + Math.cos(c.a + .4) * 150, y = 262 - bob * 10;
+    if (k > .5) { gg.strokeStyle = `rgba(255,201,184,${(k - .5) * 1.4})`; gg.lineWidth = 1; gg.beginPath(); gg.moveTo(x, y); gg.lineTo(cx + Math.sin(3 * t) * 120, cy + Math.sin(2 * t) * 85); gg.stroke(); }
+    gg.fillStyle = "#F2917A"; gg.beginPath(); gg.moveTo(x, y - 16); gg.lineTo(x + 7, y); gg.lineTo(x, y + 10); gg.lineTo(x - 7, y); gg.closePath(); gg.fill(); }
+  // clarão
+  if (t > 3.5 && t < 3.95) { const u = (t - 3.5) / .45; gg.fillStyle = `rgba(255,240,234,${.55 * (1 - u)})`; gg.beginPath(); gg.arc(cx, cy, 40 + 160 * u, 0, 7); gg.fill(); }
+  gg.fillStyle = "#DDD3BF"; gg.font = "600 13px JetBrains Mono, monospace";
+  gg.fillText(t < 1.25 ? "CHIADO" : t < 3.5 ? "SINTONIZANDO…" : "EM SINTONIA", 162, 44);
+  head.style.left = (t / T * 100) + "%";
+  if (!reduce) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>

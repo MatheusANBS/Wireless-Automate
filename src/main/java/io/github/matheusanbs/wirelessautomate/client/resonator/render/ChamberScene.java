@@ -126,6 +126,11 @@ final class ChamberScene {
         crystalInner = List.copyOf(crystal);
     }
 
+    /** As faíscas da câmara, para o desenho. */
+    ChamberParticles.Spark[] sparks() {
+        return particles.sparks();
+    }
+
     ChamberView view() {
         return view;
     }

@@ -11,57 +11,133 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
- * As partículas da câmara, uma vez por tick e só com o jogador perto: faíscas do centro até a Porta de Energia mais
+ * Os viajantes da câmara, uma vez por tick e só com o jogador perto: faíscas do centro até a Porta de Energia mais
  * próxima, mais frequentes com a geração, e grãos de redstone da Porta de Cristais até o Opaco em recarga. Cada
- * viajante anda por um {@code smoothstep} entre os dois pontos e solta, onde está, uma partícula parada do vanilla.
- * As duas são de pó, opacas: o NeoForge desenha as partículas translúcidas (como a {@code ELECTRIC_SPARK}) depois
- * do terreno translúcido, e o Vidro do Ressonador, que grava profundidade, as esconderia.
+ * viajante anda por um {@code smoothstep} entre os dois pontos. As faíscas não são partículas: o
+ * {@link ChamberSparks} as desenha no passe do renderer, com o tempo do tick anterior e o de agora interpolados,
+ * porque as partículas translúcidas do vanilla saem depois do terreno translúcido e o Vidro, que grava
+ * profundidade, as esconderia. Os grãos soltam, onde estão, uma partícula de pó parada do vanilla.
  */
 final class ChamberParticles {
     private static final double NEAR = 32 * 32;
+    static final int SPARK_TICKS = 25;
     private static final int MAX_SPARKS = 8;
     private static final int MAX_REDSTONE = 4;
-    private static final int SPARK_TICKS = 25;
     private static final int REDSTONE_TICKS = 33;
     private static final double JITTER = 0.04;
-    private static final DustParticleOptions SPARK = new DustParticleOptions(new Vector3f(1.0f, 0.82f, 0.26f), 0.5f);
     private static final DustParticleOptions REDSTONE = new DustParticleOptions(new Vector3f(0.84f, 0.27f, 0.23f),
             0.6f);
 
-    /** Um viajante: de {@code from} até {@code to} (ou até o Opaco da câmara {@code chamber}), com o tempo {@code t}. */
-    private static final class Traveler {
+    /**
+     * Uma faísca, relativa ao centro da câmara: de {@code from} até {@code to}, com o tempo do tick anterior e o de
+     * agora, a semente da cintilação e os dois lados do caminho (para o zigue-zague do rastro).
+     */
+    static final class Spark {
+        final double[] from = new double[3];
+        final double[] to = new double[3];
+        final float[] side = new float[3];
+        final float[] up = new float[3];
+        double t;
+        double previousT;
+        int seed;
+        boolean alive;
+
+        /** O ponto do caminho no tempo {@code at} (de 0 a 1), em {@code out}. */
+        void point(double at, float[] out) {
+            double s = ChamberCrystals.smoothstep(at);
+            for (int k = 0; k < 3; k++) {
+                out[k] = (float) (from[k] + (to[k] - from[k]) * s);
+            }
+        }
+
+        /** O tempo interpolado pela fração do tick. */
+        double at(float partialTick) {
+            return previousT + (t - previousT) * partialTick;
+        }
+
+        private void start(Vec3 start, Vec3 end, int seed) {
+            from[0] = start.x;
+            from[1] = start.y;
+            from[2] = start.z;
+            to[0] = end.x;
+            to[1] = end.y;
+            to[2] = end.z;
+            float dx = (float) (end.x - start.x);
+            float dy = (float) (end.y - start.y);
+            float dz = (float) (end.z - start.z);
+            // O lado horizontal: d × (0, 1, 0); num caminho vertical, o eixo x. O outro: lado × d.
+            float flat = (float) Math.sqrt(dx * dx + dz * dz);
+            side[0] = flat < 1e-6f ? 1 : -dz / flat;
+            side[1] = 0;
+            side[2] = flat < 1e-6f ? 0 : dx / flat;
+            float length = Math.max(1e-6f, (float) Math.sqrt(dx * dx + dy * dy + dz * dz));
+            up[0] = side[2] * dy / length;
+            up[1] = (side[0] * dz - side[2] * dx) / length;
+            up[2] = -side[0] * dy / length;
+            this.seed = seed;
+            t = 0;
+            previousT = 0;
+            alive = true;
+        }
+    }
+
+    /** Um grão de redstone: da Porta de Cristais {@code from} até o Opaco da câmara {@code chamber}. */
+    private static final class Grain {
         private Vec3 from;
-        private Vec3 to;
         private int chamber = -1;
         private double t;
         private boolean alive;
     }
 
-    private final Traveler[] sparks = travelers(MAX_SPARKS);
-    private final Traveler[] redstone = travelers(MAX_REDSTONE);
+    private final Spark[] sparks = new Spark[MAX_SPARKS];
+    private final Grain[] redstone = new Grain[MAX_REDSTONE];
     private final double[] crystalAt = new double[3];
     private double sparkClock;
     private double redClock;
+    private int born;
+
+    ChamberParticles() {
+        for (int i = 0; i < MAX_SPARKS; i++) {
+            sparks[i] = new Spark();
+        }
+        for (int i = 0; i < MAX_REDSTONE; i++) {
+            redstone[i] = new Grain();
+        }
+    }
+
+    /** As faíscas, vivas ou não; o desenho só lê. */
+    Spark[] sparks() {
+        return sparks;
+    }
 
     void tick(ChamberScene scene, ChamberView view, ClientLevel level, long gameTime) {
         Player player = Minecraft.getInstance().player;
         Vec3 center = scene.worldCenter();
         if (player == null || player.distanceToSqr(center) >= NEAR) {
+            for (Spark spark : sparks) {
+                spark.alive = false;
+            }
             return;
         }
         RandomSource random = level.getRandom();
         byte[] chambers = scene.chambers();
         int band = view.band();
+        for (Spark spark : sparks) {
+            if (spark.alive) {
+                spark.previousT = spark.t;
+                spark.t += 1.0 / SPARK_TICKS;
+                spark.alive = spark.t < 1;
+            }
+        }
         sparkClock += (band == 0 ? 0 : 2 + 3.0 * band / 7) / 20;
         if (sparkClock > 1) {
             sparkClock -= 1;
             Vec3 port = nearest(scene.energyInner(), center);
-            Traveler spark = free(sparks);
+            Spark spark = freeSpark();
             if (port != null && spark != null) {
-                spark.from = center.add(0, (random.nextDouble() * 2 - 1) * JITTER, (random.nextDouble() * 2 - 1) * JITTER);
-                spark.to = port;
-                spark.t = 0;
-                spark.alive = true;
+                Vec3 start = new Vec3(0, (random.nextDouble() * 2 - 1) * JITTER,
+                        (random.nextDouble() * 2 - 1) * JITTER);
+                spark.start(start, port.subtract(center), born++ * 7919 + 13);
             }
         }
         int target = ChamberCrystals.recharging(chambers, view);
@@ -69,7 +145,7 @@ final class ChamberParticles {
         if (redClock > 1) {
             redClock -= 1;
             Vec3 port = nearest(scene.crystalInner(), center);
-            Traveler grain = free(redstone);
+            Grain grain = freeGrain();
             if (port != null && grain != null) {
                 grain.from = port;
                 grain.chamber = target;
@@ -77,40 +153,30 @@ final class ChamberParticles {
                 grain.alive = true;
             }
         }
-        for (Traveler spark : sparks) {
-            if (advance(spark, SPARK_TICKS)) {
-                Vec3 at = lerp(spark.from, spark.to, spark.t);
-                level.addParticle(SPARK, at.x, at.y, at.z, 0, 0, 0);
-            }
-        }
-        for (Traveler grain : redstone) {
+        for (Grain grain : redstone) {
             if (grain.alive && grain.chamber >= chambers.length) {
                 grain.alive = false;
             }
-            if (advance(grain, REDSTONE_TICKS)) {
+            if (advance(grain)) {
                 double[] crystal = ChamberCrystals.crystalPos(grain.chamber, chambers, scene.q(), gameTime, view,
                         crystalAt);
-                Vec3 at = lerp(grain.from, center.add(crystal[0], crystal[1], crystal[2]), grain.t);
+                Vec3 to = center.add(crystal[0], crystal[1], crystal[2]);
+                Vec3 at = grain.from.add(to.subtract(grain.from).scale(ChamberCrystals.smoothstep(grain.t)));
                 level.addParticle(REDSTONE, at.x, at.y, at.z, 0, 0, 0);
             }
         }
     }
 
-    /** Anda um tick; devolve se o viajante ainda está vivo. */
-    private static boolean advance(Traveler traveler, int ticks) {
-        if (!traveler.alive) {
+    /** Anda um tick; devolve se o grão ainda está vivo. */
+    private static boolean advance(Grain grain) {
+        if (!grain.alive) {
             return false;
         }
-        traveler.t += 1.0 / ticks;
-        if (traveler.t >= 1) {
-            traveler.alive = false;
+        grain.t += 1.0 / REDSTONE_TICKS;
+        if (grain.t >= 1) {
+            grain.alive = false;
         }
-        return traveler.alive;
-    }
-
-    private static Vec3 lerp(Vec3 from, Vec3 to, double t) {
-        double s = ChamberCrystals.smoothstep(t);
-        return from.add(to.subtract(from).scale(s));
+        return grain.alive;
     }
 
     private static Vec3 nearest(List<Vec3> points, Vec3 center) {
@@ -126,20 +192,21 @@ final class ChamberParticles {
         return best;
     }
 
-    private static Traveler free(Traveler[] pool) {
-        for (Traveler traveler : pool) {
-            if (!traveler.alive) {
-                return traveler;
+    private Spark freeSpark() {
+        for (Spark spark : sparks) {
+            if (!spark.alive) {
+                return spark;
             }
         }
         return null;
     }
 
-    private static Traveler[] travelers(int count) {
-        Traveler[] pool = new Traveler[count];
-        for (int i = 0; i < count; i++) {
-            pool[i] = new Traveler();
+    private Grain freeGrain() {
+        for (Grain grain : redstone) {
+            if (!grain.alive) {
+                return grain;
+            }
         }
-        return pool;
+        return null;
     }
 }

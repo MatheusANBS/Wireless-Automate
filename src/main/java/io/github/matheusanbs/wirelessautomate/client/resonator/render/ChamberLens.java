@@ -83,6 +83,12 @@ final class ChamberLens {
     /** O halo virado para a câmera, de lado {@code size} blocos, centrado em {@code (x, y, z)}. */
     static void halo(PoseStack.Pose pose, VertexConsumer out, double x, double y, double z, double size,
             float alpha) {
+        halo(pose, out, x, y, z, size, 0xFFFFFF, alpha);
+    }
+
+    /** O halo tingido por {@code color} (RGB, que multiplica a textura). */
+    static void halo(PoseStack.Pose pose, VertexConsumer out, double x, double y, double z, double size, int color,
+            float alpha) {
         if (alpha <= 0) {
             return;
         }
@@ -90,6 +96,9 @@ final class ChamberLens {
         Quaternionf rotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
         float half = (float) (size / 2);
         float strength = Math.min(1, alpha);
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
         Vector3f corner = CORNER;
         for (int i = 0; i < 4; i++) {
             // Os cantos de HALO_CORNERS em ordem: (U1, V1), (U1, V0), (U0, V0), (U0, V1).
@@ -97,7 +106,7 @@ final class ChamberLens {
             float v = i == 1 || i == 2 ? sprite.getV0() : sprite.getV1();
             corner.set(HALO_CORNERS[i][0] * half, HALO_CORNERS[i][1] * half, 0).rotate(rotation);
             out.addVertex(pose, (float) x + corner.x, (float) y + corner.y, (float) z + corner.z)
-                    .setColor(1f, 1f, 1f, strength).setUv(u, v)
+                    .setColor(r, g, b, Math.round(255 * strength)).setUv(u, v)
                     .setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT)
                     .setNormal(pose, 0, 1, 0);
         }

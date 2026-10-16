@@ -7,6 +7,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
@@ -227,28 +228,15 @@ final class ListPainter {
         GuiText.draw(g, font, text, b.x() + 4, b.y() + (b.h() - 8) / 2, b.w() - 7, active ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
-    /** O aviso de colar sem painel aberto: embaixo da coluna do painel, com o Desfazer. */
+    /** O aviso de colar sem painel aberto: embaixo da coluna do painel, crescendo para cima, com o Desfazer. */
     void renderOwnNotice(GuiGraphics g, Font font, int mouseX, int mouseY) {
         PanelNoticePayload notice = PanelNotices.current();
-        int panelX = layout.panelX;
-        int panelW = layout.panelW;
-        if (notice == null || panelW <= 0) {
+        if (notice == null || layout.panelW <= 0) {
             return;
         }
-        int y = layout.ownNoticeY();
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 350);
-        g.fill(panelX, y, panelX + panelW, y + 13, GuiPaint.FG);
         Hot undo = layout.hot(Kind.UNDO, 0);
-        int room = panelW - 8 - (undo != null ? undo.w() + 2 : 0);
-        GuiText.draw(g, font, notice.message(), panelX + 4, y + 3, room, GuiPaint.PANEL);
-        if (undo != null) {
-            Component label = Component.translatable("gui.wirelessautomate.panel.notice.undo");
-            boolean over = undo.contains(mouseX, mouseY);
-            GuiPaint.text(g, font, label, undo.x() + 4, y + 3, over ? GuiPaint.ACCENT : GuiPaint.PANEL);
-            g.fill(undo.x() + 4, y + 11, undo.x() + 3 + font.width(label), y + 12, GuiPaint.ACCENT);
-        }
-        g.pose().popPose();
+        NoticeBand.render(g, font, notice, layout.panelX, layout.ownNoticeY(), layout.panelW,
+                undo != null ? undo.x() : -1, undo != null && undo.contains(mouseX, mouseY));
     }
 
     /** Contorno tracejado de 1 px (a faixa do perfil). */

@@ -1,0 +1,102 @@
+<title>Aviso do painel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: cabeçalho curto, três painéis lado a lado (hoje, uma linha, duas linhas), depois as regras. Cores do GuiPalette claro; escuro no tema escuro. */
+:root {
+  --page: #E9E2D3; --ink: #2A2730; --ink-2: #6B6458; --rule: #CFC5B1;
+  --gui-bg: #F2EBDD; --gui-btn: #FFFBF3; --gui-border: #BDB19A; --gui-fg: #2A2730; --gui-muted: #7A7366;
+  --accent: #F0603E; --net: #6B6FD0; --panel: #F2EBDD; --notice: #2A2730;
+  --f-gui: "Pixelify Sans", "Courier New", monospace; --f-body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-border: #4A4550; --gui-fg: #ECE5D6; --gui-muted: #A79F90;
+  --accent: #F26A48; --net: #8A8EE8; --panel: #26232B; --notice: #ECE5D6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-border: #4A4550; --gui-fg: #ECE5D6; --gui-muted: #A79F90;
+  --accent: #F26A48; --net: #8A8EE8; --panel: #26232B; --notice: #ECE5D6; color-scheme: dark }
+body { background: var(--page); color: var(--ink); font-family: var(--f-body); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+main { max-width: 1000px; margin: 0 auto; display: grid; gap: 28px; }
+h1 { font-family: var(--f-gui); font-weight: 600; font-size: 1.9rem; margin: 0; }
+h2 { font-family: var(--f-gui); font-weight: 600; font-size: 1.2rem; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink-2); margin-top: 6px; }
+.trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px; }
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+figcaption { font-size: .9rem; color: var(--ink-2); }
+figcaption b { color: var(--ink); font-family: var(--f-gui); font-size: 1.02rem; font-weight: 600; }
+.gui { --u: 1.8px; width: calc(150 * var(--u)); max-width: 100%; background: var(--gui-bg); border: 2px solid var(--gui-border);
+  font-family: var(--f-gui); font-size: calc(8.6 * var(--u)); color: var(--gui-fg); padding: calc(5 * var(--u));
+  display: grid; gap: calc(4 * var(--u)); position: relative; line-height: 1.15; }
+.row { display: flex; gap: calc(3 * var(--u)); align-items: center; }
+.muted { color: var(--gui-muted); }
+.btn { background: var(--gui-btn); border: 1px solid var(--gui-border); padding: 0 calc(3 * var(--u)); white-space: nowrap; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(3 * var(--u)); }
+.modes span { background: var(--gui-btn); border: 1px solid var(--gui-border); height: calc(11 * var(--u)); }
+.modes .on { border-color: var(--accent); }
+.net { flex: 1; border: 1px solid var(--net); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); white-space: nowrap; overflow: hidden; }
+.spacer { height: calc(26 * var(--u)); }
+.notice { position: absolute; left: calc(5 * var(--u)); right: calc(5 * var(--u)); bottom: calc(5 * var(--u));
+  background: var(--notice); color: var(--panel); padding: calc(2 * var(--u)) calc(4 * var(--u));
+  display: flex; gap: calc(4 * var(--u)); align-items: flex-start; }
+.notice .msg { flex: 1; min-width: 0; }
+.notice .msg.cut { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notice .undo { border-bottom: 2px solid var(--accent); white-space: nowrap; }
+ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; max-width: 76ch; }
+.decide { border-top: 1px solid var(--rule); padding-top: 18px; display: grid; gap: 10px; }
+</style>
+<main>
+  <header>
+    <h1>Aviso do painel sem corte</h1>
+    <p class="lede">Na largura mínima do roteador, o aviso de uma face que entrou na rede aparece abreviado por 5 s. A proposta deixa a faixa crescer para cima, uma linha por vez, até caber o texto inteiro.</p>
+  </header>
+
+  <section class="trio">
+    <figure>
+      <figcaption><b>Hoje</b> · abreviado</figcaption>
+      <div class="gui">
+        <div>Frente · 1 slot</div>
+        <div class="modes"><span></span><span class="on"></span><span></span><span></span></div>
+        <div class="row"><span class="muted">Rede</span><span class="net">● E2E Principal</span></div>
+        <div class="row"><span class="muted">Filtro</span><span style="flex:1">Passa tudo</span><span class="btn">Editar</span></div>
+        <div class="spacer"></div>
+        <div class="notice"><span class="msg cut">Frente entrou em E2E Princ…</span><span class="undo">Desfazer</span></div>
+      </div>
+    </figure>
+    <figure>
+      <figcaption><b>Proposta</b> · cabe numa linha, fica igual</figcaption>
+      <div class="gui">
+        <div>Frente · 1 slot</div>
+        <div class="modes"><span></span><span class="on"></span><span></span><span></span></div>
+        <div class="row"><span class="muted">Rede</span><span class="net">● Rede A</span></div>
+        <div class="row"><span class="muted">Filtro</span><span style="flex:1">Passa tudo</span><span class="btn">Editar</span></div>
+        <div class="spacer"></div>
+        <div class="notice"><span class="msg">Frente entrou em Rede A</span><span class="undo">Desfazer</span></div>
+      </div>
+    </figure>
+    <figure>
+      <figcaption><b>Proposta</b> · não cabe, a faixa sobe uma linha</figcaption>
+      <div class="gui">
+        <div>Frente · 1 slot</div>
+        <div class="modes"><span></span><span class="on"></span><span></span><span></span></div>
+        <div class="row"><span class="muted">Rede</span><span class="net">● E2E Principal</span></div>
+        <div class="row"><span class="muted">Filtro</span><span style="flex:1">Passa tudo</span><span class="btn">Editar</span></div>
+        <div class="spacer"></div>
+        <div class="notice"><span class="msg">Frente entrou em E2E Principal</span><span class="undo">Desfazer</span></div>
+      </div>
+    </figure>
+  </section>
+
+  <section class="decide">
+    <h2>As regras</h2>
+    <ol>
+      <li><b>A faixa cresce para cima, até três linhas.</b> Ela já fica por cima do painel, então não empurra nada. O Desfazer fica na primeira linha, à direita.</li>
+      <li><b>Até três linhas cabem os avisos mais longos</b>, como "Perfil colado em 12 nós · 3 ficaram de fora (descarregados ou fora do alcance)". Se ainda assim não couber, a última linha é abreviada, com o texto inteiro na dica.</li>
+      <li><b>Vale nos dois lugares:</b> no painel do roteador e no aviso do Tablet sem painel.</li>
+      <li><b>O e2e deixa de esperar o aviso sumir.</b> A conferência de texto cortado passa a valer com o aviso na tela.</li>
+    </ol>
+  </section>
+</main>

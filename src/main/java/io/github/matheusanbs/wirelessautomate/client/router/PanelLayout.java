@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.TabLayout;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
@@ -39,7 +40,6 @@ final class PanelLayout {
     static final int PRIO_VALUE_W = 22;
     private static final int EDIT_PAD = 5;
     static final int TARGET_PAD = 3;
-    static final int NOTICE_H = 13;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
 
     enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS,
@@ -67,6 +67,8 @@ final class PanelLayout {
     int bodyX;
     int bodyY;
     int bodyW;
+    /** Altura da faixa do aviso no quadro atual: cresce com as linhas do texto ({@link NoticeBand}). */
+    private int noticeH = NoticeBand.LINE_H;
     int bodyH;
 
     // o que arrange() calcula a cada quadro
@@ -131,6 +133,9 @@ final class PanelLayout {
     /** Posições e áreas de clique do quadro atual, pelo snapshot, pela aba e pelo espaço. */
     void arrange(Font font, PanelModel model) {
         hots.clear();
+        PanelNoticePayload notice = PanelNotices.current();
+        noticeH = notice == null ? NoticeBand.LINE_H
+                : NoticeBand.height(font, notice, bodyW, notice.undo() != PanelNoticePayload.Undo.NONE);
         arrangeTabs(font, model);
         arrangeNet();
         arrangeBody(font, model);
@@ -307,9 +312,8 @@ final class PanelLayout {
 
         PanelNoticePayload notice = PanelNotices.current();
         if (notice != null && notice.undo() != PanelNoticePayload.Undo.NONE) {
-            Component undo = PanelModel.panelTr("notice.undo");
-            int undoW = font.width(undo) + 8;
-            hots.add(new Hot(Kind.UNDO, x + w - undoW, noticeY(), undoW, NOTICE_H, 0));
+            int undoW = NoticeBand.undoWidth(font);
+            hots.add(new Hot(Kind.UNDO, x + w - undoW, noticeY(), undoW, NoticeBand.LINE_H, 0));
         }
     }
 
@@ -368,7 +372,7 @@ final class PanelLayout {
 
     /** Topo da faixa do aviso, na base do corpo. */
     int noticeY() {
-        return bodyY + bodyH - NOTICE_H;
+        return bodyY + bodyH - noticeH;
     }
 
     @Nullable Hot hot(Kind kind) {
@@ -413,6 +417,6 @@ final class PanelLayout {
     /** O ponto está na faixa do aviso do painel (que fica por cima do que estiver embaixo dela). */
     boolean inNotice(double mx, double my) {
         return bodyW > 0 && PanelNotices.current() != null && mx >= bodyX && mx < bodyX + bodyW
-                && my >= noticeY() && my < noticeY() + NOTICE_H;
+                && my >= noticeY() && my < noticeY() + noticeH;
     }
 }

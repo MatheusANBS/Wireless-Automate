@@ -273,18 +273,26 @@ public final class ResonatorFormation {
             return;
         }
         BlockState state = level.getBlockState(pos);
-        BlockState next = state;
-        Block block = state.getBlock();
-        if (block instanceof ResonatorCasingBlock) {
-            next = state.setValue(ResonatorCasingBlock.POSITION, CasingPosition.LOOSE);
-        } else if (block instanceof ResonatorGlassBlock) {
-            next = state.setValue(ResonatorGlassBlock.FACE, GlassFace.LOOSE).setValue(ResonatorGlassBlock.CONNECTIONS, 0);
-        } else if (block instanceof ResonatorPartBlock || block instanceof ResonanceCoreBlock) {
-            next = state.setValue(ResonatorPartBlock.FORMED, false);
-        }
+        BlockState next = looseState(state);
         if (next != state) {
             level.setBlock(pos, next, Block.UPDATE_CLIENTS);
         }
+    }
+
+    /**
+     * O estado solto de uma peça, o mesmo da desmontagem: Carcaça e Vidro sem conexões, as peças com
+     * {@code formed} falso e a frente mantida. Outro bloco volta igual. O JEI usa no corte por camada.
+     */
+    public static BlockState looseState(BlockState state) {
+        Block block = state.getBlock();
+        if (block instanceof ResonatorCasingBlock) {
+            return state.setValue(ResonatorCasingBlock.POSITION, CasingPosition.LOOSE);
+        } else if (block instanceof ResonatorGlassBlock) {
+            return state.setValue(ResonatorGlassBlock.FACE, GlassFace.LOOSE).setValue(ResonatorGlassBlock.CONNECTIONS, 0);
+        } else if (block instanceof ResonatorPartBlock || block instanceof ResonanceCoreBlock) {
+            return state.setValue(ResonatorPartBlock.FORMED, false);
+        }
+        return state;
     }
 
     /** Põe no índice as Portas novas e tira as que saíram; a capability de cada uma que mudou é invalidada. */

@@ -27,8 +27,9 @@ import org.lwjgl.opengl.GL11;
 
 /**
  * A vista 3D da Estrutura do Ressonador no JEI: os membros da montagem de exemplo nos estados montados, com os
- * modelos do jogo. Arrastar gira (yaw e pitch), a roda dá zoom e a camada mostra só até aquela altura. A lista dos
- * estados é montada uma vez, no primeiro desenho; por quadro só a matriz e a ordem dos Vidros mudam.
+ * modelos do jogo. Arrastar gira (yaw e pitch), a roda dá zoom e a camada mostra só até aquela altura, com os blocos
+ * soltos: as faces escondidas do modelo montado são o forro escuro, e o corte não se leria. As duas listas de estados
+ * são montadas uma vez, no primeiro desenho; por quadro só a matriz e a ordem dos Vidros mudam.
  */
 final class StructureView {
     /** Camadas da caixa; a camada {@code LAYERS + 1} é o Tudo (e a {@code LAYERS} também mostra a caixa inteira). */
@@ -49,6 +50,8 @@ final class StructureView {
 
     private final ResonatorBill bill;
     private BlockState[] states;
+    /** Os mesmos membros soltos, para o corte por camada. */
+    private BlockState[] looseStates;
     private int[] xs;
     private int[] ys;
     private int[] zs;
@@ -119,9 +122,10 @@ final class StructureView {
 
         BlockRenderDispatcher blocks = Minecraft.getInstance().getBlockRenderer();
         MultiBufferSource.BufferSource buffers = g.bufferSource();
+        BlockState[] shown = layer < LAYERS ? looseStates : states;
         for (int i = 0; i < states.length; i++) {
             if (ys[i] < layer && !isGlass[i]) {
-                render(blocks, pose, buffers, i);
+                render(blocks, pose, buffers, shown, i);
             }
         }
         buffers.endBatch();
@@ -129,7 +133,7 @@ final class StructureView {
         sortGlass(pose.last().pose());
         for (int i : glass) {
             if (ys[i] < layer) {
-                render(blocks, pose, buffers, i);
+                render(blocks, pose, buffers, shown, i);
                 buffers.endBatch();
             }
         }
@@ -140,10 +144,11 @@ final class StructureView {
         g.disableScissor();
     }
 
-    private void render(BlockRenderDispatcher blocks, PoseStack pose, MultiBufferSource buffers, int i) {
+    private void render(BlockRenderDispatcher blocks, PoseStack pose, MultiBufferSource buffers,
+            BlockState[] shown, int i) {
         pose.pushPose();
         pose.translate(xs[i], ys[i], zs[i]);
-        blocks.renderSingleBlock(states[i], pose, buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+        blocks.renderSingleBlock(shown[i], pose, buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                 ModelData.EMPTY, null);
         pose.popPose();
     }
@@ -166,11 +171,12 @@ final class StructureView {
         }
     }
 
-    /** Os estados montados de cada membro, pela mesma regra da montagem no mundo; o Núcleo Esmeralda. */
+    /** Os estados montados e soltos de cada membro, pelas mesmas regras do mundo; o Núcleo Esmeralda. */
     private void build() {
         List<Member> members = bill.members();
         int size = members.size();
         states = new BlockState[size];
+        looseStates = new BlockState[size];
         xs = new int[size];
         ys = new int[size];
         zs = new int[size];
@@ -178,6 +184,7 @@ final class StructureView {
         for (int i = 0; i < size; i++) {
             Member member = members.get(i);
             states[i] = ResonatorFormation.formedState(loose(member.part()), member);
+            looseStates[i] = ResonatorFormation.looseState(states[i]);
             xs[i] = member.x();
             ys[i] = member.y();
             zs[i] = member.z();

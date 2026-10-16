@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
+import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.List;
@@ -160,6 +161,17 @@ public final class NodePanel {
 
     public TabLayout.Mode tabMode() {
         return layout.tabMode;
+    }
+
+    /**
+     * A tela do roteador mostra a lista das máquinas ao lado: a linha Editando some, porque a lista marca o
+     * alvo e tem os botões da máquina. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
+     */
+    public void targetFromList(boolean fromList) {
+        if (fromList && !model.targetFromList() && lists.popup() == Popup.TARGET) {
+            lists.close();
+        }
+        model.setTargetFromList(fromList);
     }
 
     /** Alguma lista (rede, redstone ou alvo) está aberta. */
@@ -327,8 +339,14 @@ public final class NodePanel {
                             machine.pos()));
                 }
             }
-            case UNLINK -> {
+            case UPDATE -> {
                 if (edit && machine != null) {
+                    actions.send(UpdateMachinePayload.machine(actions.containerId(), model.snapshot().target().id(),
+                            machine.pos()));
+                }
+            }
+            case UNLINK -> {
+                if (edit && machine != null && model.unlinkArm().click(System.currentTimeMillis())) {
                     actions.send(new UnlinkMachinePayload(actions.containerId(), model.snapshot().target().id(),
                             machine.pos()));
                 }
@@ -381,11 +399,17 @@ public final class NodePanel {
      * cubo como a face sob o mouse.
      */
     public void render(GuiGraphics g, int mouseX, int mouseY, @Nullable Direction pointed) {
-        arrange();
-        Font font = font();
         boolean covered = lists.open();
         int mx = covered ? -1 : mouseX;
         int my = covered ? -1 : mouseY;
+        // o Desvincular armado desarma quando o mouse sai dele (pelas áreas do quadro anterior), antes de
+        // arrumar este quadro, para o botão não sair na largura do armado sem estar armado
+        Hot unlink = layout.hot(Kind.UNLINK);
+        if (unlink == null || !unlink.contains(mx, my)) {
+            model.unlinkArm().disarm();
+        }
+        arrange();
+        Font font = font();
         painter.renderTabs(g, font, mx, my);
         cube.render(g, font, mx, my, pointed);
         painter.renderBody(g, font, mx, my, lists.popup(), actions.cardCount());
@@ -485,6 +509,15 @@ public final class NodePanel {
 
     public int @Nullable [] revertCenter() {
         return center(Kind.REVERT);
+    }
+
+    public int @Nullable [] updateCenter() {
+        return center(Kind.UPDATE);
+    }
+
+    /** O Desvincular da linha Editando está armado, esperando o segundo clique (gancho do e2e). */
+    public boolean unlinkArmed() {
+        return model.unlinkArmed();
     }
 
     public int @Nullable [] unlinkCenter() {

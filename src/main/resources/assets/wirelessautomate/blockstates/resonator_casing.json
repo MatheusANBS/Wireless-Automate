@@ -1,0 +1,85 @@
+{
+  "variants": {
+    "position=loose": {
+      "model": "wirelessautomate:block/resonator_casing_loose"
+    },
+    "position=nnn": {
+      "model": "wirelessautomate:block/resonator_casing_nnn"
+    },
+    "position=nnc": {
+      "model": "wirelessautomate:block/resonator_casing_nnc"
+    },
+    "position=nnp": {
+      "model": "wirelessautomate:block/resonator_casing_nnp"
+    },
+    "position=ncn": {
+      "model": "wirelessautomate:block/resonator_casing_ncn"
+    },
+    "position=ncc": {
+      "model": "wirelessautomate:block/resonator_casing_ncc"
+    },
+    "position=ncp": {
+      "model": "wirelessautomate:block/resonator_casing_ncp"
+    },
+    "position=npn": {
+      "model": "wirelessautomate:block/resonator_casing_npn"
+    },
+    "position=npc": {
+      "model": "wirelessautomate:block/resonator_casing_npc"
+    },
+    "position=npp": {
+      "model": "wirelessautomate:block/resonator_casing_npp"
+    },
+    "position=cnn": {
+      "model": "wirelessautomate:block/resonator_casing_cnn"
+    },
+    "position=cnc": {
+      "model": "wirelessautomate:block/resonator_casing_cnc"
+    },
+    "position=cnp": {
+      "model": "wirelessautomate:block/resonator_casing_cnp"
+    },
+    "position=ccn": {
+      "model": "wirelessautomate:block/resonator_casing_ccn"
+    },
+    "position=ccp": {
+      "model": "wirelessautomate:block/resonator_casing_ccp"
+    },
+    "position=cpn": {
+      "model": "wirelessautomate:block/resonator_casing_cpn"
+    },
+    "position=cpc": {
+      "model": "wirelessautomate:block/resonator_casing_cpc"
+    },
+    "position=cpp": {
+      "model": "wirelessautomate:block/resonator_casing_cpp"
+    },
+    "position=pnn": {
+      "model": "wirelessautomate:block/resonator_casing_pnn"
+    },
+    "position=pnc": {
+      "model": "wirelessautomate:block/resonator_casing_pnc"
+    },
+    "position=pnp": {
+      "model": "wirelessautomate:block/resonator_casing_pnp"
+    },
+    "position=pcn": {
+      "model": "wirelessautomate:block/resonator_casing_pcn"
+    },
+    "position=pcc": {
+      "model": "wirelessautomate:block/resonator_casing_pcc"
+    },
+    "position=pcp": {
+      "model": "wirelessautomate:block/resonator_casing_pcp"
+    },
+    "position=ppn": {
+      "model": "wirelessautomate:block/resonator_casing_ppn"
+    },
+    "position=ppc": {
+      "model": "wirelessautomate:block/resonator_casing_ppc"
+    },
+    "position=ppp": {
+      "model": "wirelessautomate:block/resonator_casing_ppp"
+    }
+  }
+}

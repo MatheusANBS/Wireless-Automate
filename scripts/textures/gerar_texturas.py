@@ -732,6 +732,102 @@ def prancha_icones(itens: dict[str, Sprite]) -> Image.Image:
 
 
 # ---------------------------------------------------------------------------
+# Cristais do Ressonador de Sinal (o Opaco é o cristal descarregado)
+# ---------------------------------------------------------------------------
+
+CRISTAL_SINAL = {"4": "#FFF0EA", "3": "#FFC9B8", "2": "#F2917A", "1": "#C9604B", "0": "#8A3A2C"}
+CRISTAL_OPACO = {"4": "#F4F0EA", "3": "#D9D2C8", "2": "#B5ADA2", "1": "#8C857C", "0": "#5E5952"}
+
+BRUTO = ["................", ".........A......", "........Aab.....", "...A....Aabc....", "..Aab...Aabc....",
+         "..Aabc..Aabc....", "..Aabc.AAabc....", "..Aabc.Aaabc....", "..Aabc.Aaabc.A..", ".AAabcAAaabcAab.",
+         ".AaabcAaaabcAbc.", ".AaabcAaaabcabc.", ".bbbcdbbbbcdbcd.", ".cccddcccccddd..", "..dddddddddd....", "................"]
+LAPIDADO = ["................", "................", ".......AA.......", "......AAab......", ".....AAaabb.....",
+            "....AAaaabbc....", "...AAaaaabbcc...", "...LLLLLllllm...", "...aaaabbbbcc...", "....aaabbbcc....",
+            ".....aabbcc.....", "......abcc......", ".......cd.......", "................", "................", "................"]
+
+
+def _leg_cristal(pal: dict[str, str]) -> dict[str, Cor]:
+    return {**legenda(G="grafite.1", L="latao.3", l="latao.2", m="latao.1"),
+            "A": cor(pal["4"]), "a": cor(pal["3"]), "b": cor(pal["2"]), "c": cor(pal["1"]), "d": cor(pal["0"])}
+
+
+def _cristal_base(grade: list[str], pal: dict[str, str]) -> Image.Image:
+    return contorno(pinta(grade, _leg_cristal(pal)), CONTORNO)
+
+
+def _interior_px(img: Image.Image) -> set[tuple[int, int]]:
+    return {(x, y) for y in range(16) for x in range(16)
+            if img.getpixel((x, y))[3] and img.getpixel((x, y)) != CONTORNO}
+
+
+def cristal() -> Sprite:
+    """Cristal de Sinal bruto: um brilho diagonal passa pelo corpo e um ponto cintila no topo (10 quadros × 4 ticks)."""
+    q = []
+    for k in range(10):
+        img = _cristal_base(BRUTO, CRISTAL_SINAL)
+        faixa = k * 3 - 6
+        for (x, y) in _interior_px(img):
+            d = (x - y) - faixa + 6
+            if 0 <= d <= 1:
+                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .7 if d == 0 else .4))
+        if k in (6, 7):
+            put(img, 9, 1, BRANCO)
+            if k == 6:
+                for dx, dy in ((1, 0), (-1, 0), (0, -1)):
+                    if img.getpixel((9 + dx, 1 + dy))[3] == 0:
+                        put(img, 9 + dx, 1 + dy, cor("#FFC9B8"))
+        q.append(img)
+    return animacao(q, 4)
+
+
+def lapidado() -> Sprite:
+    """Cristal Lapidado: o brilho corre pela cinta de latão, o miolo pulsa e uma onda sai da pedra (12 × 3 ticks)."""
+    q = []
+    for k in range(12):
+        img = _cristal_base(LAPIDADO, CRISTAL_SINAL)
+        x = 3 + k
+        if 3 <= x <= 12:
+            put(img, x, 7, BRANCO)
+        if 3 <= x - 1 <= 12:
+            put(img, x - 1, 7, cor("latao.3"))
+        t = (1 + math.cos(2 * math.pi * k / 12)) / 2
+        for (px, py) in ((6, 4), (5, 5), (6, 5), (7, 3), (4, 6), (5, 6)):
+            put(img, px, py, mistura(cor(CRISTAL_SINAL["3"]), BRANCO, .6 * t))
+        if k in (8, 9, 10):
+            r = {8: 1, 9: 2, 10: 2}[k]
+            c = cor("coral.3") if k < 10 else cor("#FFC9B8")
+            for yy in range(16):
+                for xx in range(16):
+                    if img.getpixel((xx, yy))[3]:
+                        continue
+                    d = abs(xx - 7.5) + abs(yy - 7)
+                    if 5 + r <= d < 6 + r:
+                        put(img, xx, yy, c)
+        q.append(img)
+    return animacao(q, 3)
+
+
+# Os pixels da brasa do Opaco, no pé de cada forma (todos dentro do contorno).
+BRASA_BRUTO = ((4, 11), (9, 11), (8, 10))
+BRASA_LAPIDADO = ((6, 9), (7, 10), (8, 11))
+
+
+def opaco(grade: list[str], brasa_px: tuple[tuple[int, int], ...]) -> Sprite:
+    """O cristal sem carga, na forma da grade dada: pedra cinza com uma brasa fraca que respira (8 × 6 ticks)."""
+    q = []
+    for k in range(8):
+        img = _cristal_base(grade, CRISTAL_OPACO)
+        dentro = _interior_px(img)
+        t = (1 + math.cos(2 * math.pi * k / 8)) / 2
+        brasa = mistura(cor(CRISTAL_OPACO["1"]), cor("#C9604B"), .55 * t)
+        for p in brasa_px:
+            assert p in dentro, f"brasa fora do cristal em {p}"
+            put(img, *p, brasa)
+        q.append(img)
+    return animacao(q, 6)
+
+
+# ---------------------------------------------------------------------------
 # Montagem, modelos e folha
 # ---------------------------------------------------------------------------
 
@@ -747,6 +843,10 @@ def gerar_itens() -> dict[str, Sprite]:
     sprites["item/chunk_loader_upgrade"] = lanterna()
     sprites["item/range_upgrade"] = rosa()
     sprites["item/guide"] = guia()
+    sprites["item/signal_crystal"] = cristal()
+    sprites["item/cut_signal_crystal"] = lapidado()
+    sprites["item/signal_crystal_dull"] = opaco(BRUTO, BRASA_BRUTO)
+    sprites["item/cut_signal_crystal_dull"] = opaco(LAPIDADO, BRASA_LAPIDADO)
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -756,6 +856,16 @@ def gerar_itens() -> dict[str, Sprite]:
 
 
 def modelos_itens() -> None:
+    for nome in ("signal_crystal", "cut_signal_crystal"):
+        grava_json(MODELOS / f"models/item/{nome}_dull.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/{nome}_dull"},
+        })
+        grava_json(MODELOS / f"models/item/{nome}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/{nome}"},
+            "overrides": [{"predicate": {"wirelessautomate:dull": 1}, "model": f"wirelessautomate:item/{nome}_dull"}],
+        })
     grava_json(MODELOS / "models/item/range_upgrade.json", {
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
@@ -830,13 +940,18 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
 
     titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
-                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide"]
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide",
+                                                "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
+                                                "cut_signal_crystal_dull"]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]
         d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)
         y += 18
         x = margem
         for n in range(sp.quadros):
+            if n and n % 8 == 0:
+                x = margem
+                y += celula + gap
             out.alpha_composite(tile(sp.quadro(n), escala), (x, y))
             x += celula + gap
         x = largura - margem - 16 - 8 - 32 - 8 - 48
@@ -877,7 +992,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                 x = margem
                 y += 16 * k + 30
             out.alpha_composite(tile(sp.quadro(0), k), (x, y))
-            rot = nome.removeprefix("block/")
+            rot = nome.removeprefix("block/").removeprefix("resonator_").removeprefix("resonance_")
             if len(rot) > 14:
                 rot = rot[:13] + "…"
             d.text((x, y + 16 * k + 2), rot, fill=tinta2, font=_fonte(9))

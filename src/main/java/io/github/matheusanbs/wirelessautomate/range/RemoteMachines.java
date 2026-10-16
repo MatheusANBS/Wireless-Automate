@@ -5,7 +5,11 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -76,6 +80,110 @@ public final class RemoteMachines {
         }
         machines.add(new RemoteMachine(pos, group.id(), null, front));
         return true;
+    }
+
+    /**
+     * O resultado de {@link #regroup}: os cartões dos grupos que esvaziaram (para soltar no mundo) e o grupo
+     * de destino de cada máquina movida, por índice, na ordem do lote.
+     */
+    public record Regroup(List<ItemStack> cards, Map<Integer, Integer> destinations) {
+        public static final Regroup EMPTY = new Regroup(List.of(), Map.of());
+
+        public boolean isEmpty() {
+            return destinations.isEmpty();
+        }
+    }
+
+    /**
+     * Passa cada máquina de {@code moves} (índice → id do bloco novo) para o grupo do bloco novo, na ordem:
+     * <ol>
+     * <li>um grupo com todas as máquinas no lote, todas para o mesmo bloco, sem grupo desse bloco, passa a
+     * ser do bloco novo (mesmo id, nome, perfil e cartões);</li>
+     * <li>as outras entram no primeiro grupo do bloco novo, ou num grupo novo criado uma vez por bloco, com
+     * uma cópia do perfil do grupo antigo, sem nome e sem cartões;</li>
+     * <li>os grupos que esvaziaram saem, e os cartões deles voltam no resultado.</li>
+     * </ol>
+     * A exceção de cada máquina continua. Índice inválido ou bloco igual ao do grupo é ignorado. Quem
+     * confere que a máquina está mesmo trocada é o roteador: só pelo {@code RouterBlockEntity.updateReplaced}
+     * (ver a classe).
+     */
+    public Regroup regroup(Map<Integer, ResourceLocation> moves) {
+        Map<Integer, ResourceLocation> pending = new LinkedHashMap<>();
+        for (Map.Entry<Integer, ResourceLocation> move : moves.entrySet()) {
+            RemoteMachine machine = machine(move.getKey());
+            if (machine != null && !groupOf(machine).block().equals(move.getValue())) {
+                pending.put(move.getKey(), move.getValue());
+            }
+        }
+        if (pending.isEmpty()) {
+            return Regroup.EMPTY;
+        }
+        Set<Integer> before = new HashSet<>();
+        for (RemoteMachine machine : machines) {
+            before.add(machine.group());
+        }
+        Map<Integer, Integer> destinations = new LinkedHashMap<>();
+        for (MachineGroup group : groups) {
+            ResourceLocation block = wholeGroupMove(group, pending);
+            if (block != null && firstGroupOf(block) == null) {
+                group.setBlock(block);
+                for (int i = 0; i < machines.size(); i++) {
+                    if (machines.get(i).group() == group.id()) {
+                        destinations.put(i, group.id());
+                    }
+                }
+            }
+        }
+        for (Map.Entry<Integer, ResourceLocation> move : pending.entrySet()) {
+            if (destinations.containsKey(move.getKey())) {
+                continue;
+            }
+            RemoteMachine machine = machines.get(move.getKey());
+            MachineGroup target = firstGroupOf(move.getValue());
+            if (target == null) {
+                target = new MachineGroup(nextGroupId++, move.getValue(), "", groupOf(machine).profile().copy());
+                groups.add(target);
+            }
+            machine.setGroup(target.id());
+            destinations.put(move.getKey(), target.id());
+        }
+        List<ItemStack> cards = new ArrayList<>();
+        for (MachineGroup group : List.copyOf(groups)) {
+            if (before.contains(group.id()) && !hasMachines(group.id())) {
+                groups.remove(group);
+                cards.addAll(group.removeAllCards());
+            }
+        }
+        Map<Integer, Integer> ordered = new LinkedHashMap<>();
+        for (Integer index : pending.keySet()) {
+            ordered.put(index, destinations.get(index));
+        }
+        return new Regroup(List.copyOf(cards), Collections.unmodifiableMap(ordered));
+    }
+
+    /** O bloco novo se todas as máquinas de {@code group} estão em {@code pending} e vão para ele; senão {@code null}. */
+    private @Nullable ResourceLocation wholeGroupMove(MachineGroup group, Map<Integer, ResourceLocation> pending) {
+        ResourceLocation block = null;
+        for (int i = 0; i < machines.size(); i++) {
+            if (machines.get(i).group() != group.id()) {
+                continue;
+            }
+            ResourceLocation to = pending.get(i);
+            if (to == null || (block != null && !block.equals(to))) {
+                return null;
+            }
+            block = to;
+        }
+        return block;
+    }
+
+    private boolean hasMachines(int groupId) {
+        for (RemoteMachine machine : machines) {
+            if (machine.group() == groupId) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private @Nullable MachineGroup firstGroupOf(ResourceLocation block) {

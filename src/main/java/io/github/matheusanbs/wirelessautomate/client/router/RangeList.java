@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -26,7 +27,8 @@ import org.jetbrains.annotations.Nullable;
  * máquina presa, os grupos (ícone, nome, {@code ×N} e as exceções), que abrem e fecham, e as máquinas
  * de cada grupo aberto ({@code #N · 12 blocos}) com a bolinha do estado e a marca de exceção. Clicar
  * numa linha escolhe o alvo de edição; a seta de um grupo (ou um clique no grupo já escolhido) abre e
- * fecha. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
+ * fecha. A linha escolhida ganha os botões do {@link RangeRowButtons}. Rola com a roda. Só cliente; todo
+ * texto passa por {@link GuiText}.
  */
 final class RangeList {
     static final int ATTACHED_H = 14;
@@ -54,6 +56,7 @@ final class RangeList {
     }
 
     private final Set<Integer> open = new HashSet<>();
+    private final RangeRowButtons buttons = new RangeRowButtons();
     private int scroll;
     private int x;
     private int y;
@@ -122,6 +125,22 @@ final class RangeList {
         return Math.max(0, contentHeight(rows) - innerHeight());
     }
 
+    /** Borda direita do texto das linhas: com rolagem, deixa o espaço da barra. */
+    private int rowRight(List<Row> rows) {
+        return x + width - 1 - (maxScroll(rows) > 0 ? 3 : 0);
+    }
+
+    /** Os botões da linha do alvo, onde ela está agora (o armado vai até o texto); nenhum sem a linha. */
+    private List<RangeRowButtons.Button> targetButtons(Font font, RangeView view, EditTarget target) {
+        for (Row row : rows(view)) {
+            if (row.target().equals(target)) {
+                int ry = y + 1 + row.top() - scroll;
+                return buttons.place(font, view, target, ry, row.height(), rowRight(rows(view)), x + 16);
+            }
+        }
+        return List.of();
+    }
+
     /**
      * Chamado a cada quadro: quando o alvo muda (pela lista ou pelo servidor), o grupo dele abre e a
      * linha dele entra na área visível. Os outros grupos ficam como o jogador deixou.
@@ -176,15 +195,25 @@ final class RangeList {
     }
 
     /**
-     * Clique na lista: a seta de um grupo, ou o grupo já escolhido, abre e fecha; qualquer outra linha
-     * escolhe o alvo ({@code select}). Devolve se o clique foi na lista.
+     * Clique na lista: um botão da linha escolhida devolve a ação ({@code act}) sem escolher nem abrir; a
+     * seta de um grupo, ou o grupo já escolhido, abre e fecha; qualquer outra linha escolhe o alvo
+     * ({@code select}). Devolve se o clique foi na lista.
      */
-    boolean click(RangeView view, EditTarget target, double mouseX, double mouseY, Consumer<Row> select) {
+    boolean click(Font font, RangeView view, EditTarget target, double mouseX, double mouseY, Consumer<Row> select,
+            BiConsumer<Row, RangeRowButtons.Action> act) {
         if (!contains(mouseX, mouseY)) {
             return false;
         }
         Row row = rowAt(view, mouseX, mouseY);
         if (row == null) {
+            return true;
+        }
+        RangeRowButtons.Button button = RangeRowButtons.at(targetButtons(font, view, target), mouseX, mouseY);
+        if (button != null) {
+            RangeRowButtons.Action action = buttons.press(button, target);
+            if (action != null) {
+                act.accept(row, action);
+            }
             return true;
         }
         if (row.kind() == Kind.GROUP && (mouseX < x + 1 + ARROW_ZONE || row.target().equals(target))) {
@@ -260,6 +289,7 @@ final class RangeList {
             case LOADED -> GuiPaint.OK;
             case UNLOADED -> GuiPaint.WARN;
             case MISSING -> GuiPaint.DANGER;
+            case REPLACED -> GuiPaint.BRASS;
             case OUT_OF_RANGE, OVER_LIMIT -> GuiPaint.MUTED;
         };
     }
@@ -290,13 +320,25 @@ final class RangeList {
                     yield Component.empty();
                 }
                 Component follows = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
-                yield machineName(view, row.machine()).copy()
+                Component text = machineName(view, row.machine()).copy()
                         .append("\n").append(tr("range.machine.detail", distance(machine), follows).copy()
                                 .withColor(GuiPaint.TOOLTIP_MUTED))
-                        .append("\n").append(stateText(machine.state()).copy().withColor(stateColor(machine.state())))
-                        .append("\n").append(tr("range.machine.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                        .append("\n").append(stateText(machine.state()).copy().withColor(stateColor(machine.state())));
+                if (machine.state() == MachineState.REPLACED) {
+                    text = text.copy().append("\n").append(RangeRowButtons.updateDetail(view, row.target()).copy()
+                            .withColor(GuiPaint.TOOLTIP_MUTED));
+                }
+                yield text.copy().append("\n").append(tr("range.machine.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
             }
         };
+    }
+
+    /** A dica do botão da linha escolhida sob o mouse, ou {@code null} se o mouse não está num botão. */
+    @Nullable Component buttonTooltip(Font font, RangeView view, EditTarget target, double mouseX, double mouseY) {
+        Row row = rowAt(view, mouseX, mouseY);
+        RangeRowButtons.Button button = row == null ? null
+                : RangeRowButtons.at(targetButtons(font, view, target), mouseX, mouseY);
+        return button == null ? null : buttons.tooltip(view, target, button.action());
     }
 
     // ------------------------------------------------------------------ desenho
@@ -309,11 +351,12 @@ final class RangeList {
         int max = maxScroll(rows);
         scroll = Math.max(0, Math.min(scroll, max));
         // com rolagem, uma barra fina à direita (o texto deixa o espaço dela)
-        int right = x + width - 1 - (max > 0 ? 3 : 0);
+        int right = rowRight(rows);
         Row hovered = rowAt(view, mouseX, mouseY);
         int top = y + 1;
         int bottom = y + 1 + innerHeight();
         g.enableScissor(x + 1, top, x + width - 1, bottom);
+        boolean targetShown = false;
         for (Row row : rows) {
             int ry = top + row.top() - scroll;
             if (ry + row.height() <= top || ry >= bottom) {
@@ -326,11 +369,21 @@ final class RangeList {
             } else if (row.equals(hovered)) {
                 g.fill(x + 1, ry, right, ry + row.height(), GuiPaint.ROW_HOVER);
             }
+            List<RangeRowButtons.Button> placed = selected ? targetButtons(font, view, target) : List.of();
+            int textRight = placed.isEmpty() ? right : placed.getLast().x() - 1;
             switch (row.kind()) {
                 case ATTACHED -> renderAttached(g, font, attachedIcon, ry, right);
-                case GROUP -> renderGroup(g, font, view, row, ry, right);
-                case MACHINE -> renderMachine(g, font, view, row, ry, right);
+                case GROUP -> renderGroup(g, font, view, row, ry, textRight);
+                case MACHINE -> renderMachine(g, font, view, row, ry, textRight, placed.isEmpty());
             }
+            if (selected) {
+                targetShown = true;
+                buttons.track(target, placed, mouseX, mouseY);
+                buttons.render(g, font, target, placed, mouseX, mouseY);
+            }
+        }
+        if (!targetShown) { // a linha do alvo saiu da vista pela rolagem: o "Desvincular?" desarma
+            buttons.track(target, List.of(), mouseX, mouseY);
         }
         if (view.machines().isEmpty()) {
             int hy = top + ATTACHED_H + 3 - scroll;
@@ -376,11 +429,21 @@ final class RangeList {
         int textW = right - textX - 2;
         GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2, textW,
                 GuiPaint.FG);
-        Component detail = group.exceptions() > 0 ? exceptions(group) : tr("range.group.profile");
-        GuiText.draw(g, font, detail, textX, ry + 11, textW, group.exceptions() > 0 ? GuiPaint.ACCENT : GuiPaint.MUTED);
+        int replaced = RangeRowButtons.replaced(view, group.id());
+        Component detail;
+        int color;
+        if (replaced > 0) {
+            detail = replaced == 1 ? tr("range.group.replaced.one") : tr("range.group.replaced", replaced);
+            color = GuiPaint.BRASS;
+        } else {
+            detail = group.exceptions() > 0 ? exceptions(group) : tr("range.group.profile");
+            color = group.exceptions() > 0 ? GuiPaint.ACCENT : GuiPaint.MUTED;
+        }
+        GuiText.draw(g, font, detail, textX, ry + 11, textW, color);
     }
 
-    private void renderMachine(GuiGraphics g, Font font, RangeView view, Row row, int ry, int right) {
+    /** Uma máquina; {@code badge} é a marca "exc." (na linha escolhida, o ↺ mostra a exceção). */
+    private void renderMachine(GuiGraphics g, Font font, RangeView view, Row row, int ry, int right, boolean badge) {
         MachineView machine = view.machine(row.machine());
         if (machine == null) {
             return;
@@ -388,14 +451,17 @@ final class RangeList {
         GuiPaint.dot(g, x + 8, ry + 3, stateColor(machine.state()));
         int textX = x + 16;
         int end = right - 2;
-        if (machine.exception()) {
-            Component badge = tr("range.exception.badge");
-            end -= font.width(badge) + 3;
-            GuiPaint.text(g, font, badge, end + 3, ry + 2, GuiPaint.ACCENT);
+        if (badge && machine.exception()) {
+            Component exc = tr("range.exception.badge");
+            end -= font.width(exc) + 3;
+            GuiPaint.text(g, font, exc, end + 3, ry + 2, GuiPaint.ACCENT);
         }
+        boolean replaced = machine.state() == MachineState.REPLACED;
         boolean counts = machine.state() != MachineState.OUT_OF_RANGE && machine.state() != MachineState.OVER_LIMIT;
-        Component text = tr("range.machine.row", number(view, row.machine()), distance(machine));
-        GuiText.draw(g, font, text, textX, ry + 2, end - textX, counts ? GuiPaint.FG : GuiPaint.MUTED);
+        Component text = tr("range.machine.row", number(view, row.machine()),
+                replaced ? tr("range.machine.replaced") : distance(machine));
+        GuiText.draw(g, font, text, textX, ry + 2, end - textX,
+                replaced ? GuiPaint.BRASS : counts ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento
@@ -412,6 +478,16 @@ final class RangeList {
             }
         }
         return null;
+    }
+
+    /** Centro do botão {@code act} da linha do alvo (gancho do e2e); {@code null} se ele não está lá. */
+    int @Nullable [] buttonCenter(Font font, RangeView view, EditTarget target, RangeRowButtons.Action act) {
+        return rowCenter(view, target) == null ? null : RangeRowButtons.center(targetButtons(font, view, target), act);
+    }
+
+    /** O ✕ do alvo está armado (gancho do e2e). */
+    boolean unlinkArmed(EditTarget target) {
+        return buttons.unlinkArmed(target);
     }
 
     /** Ponto da seta de um grupo (abre e fecha sem escolher; gancho do e2e). */

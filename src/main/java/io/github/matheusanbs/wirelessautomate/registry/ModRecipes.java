@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.recipe.FilterCardCopyRecipe;
 import io.github.matheusanbs.wirelessautomate.recipe.RouterUpgradeRecipe;
 import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
+import io.github.matheusanbs.wirelessautomate.resonator.CutCrystalRecipe;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -33,6 +34,10 @@ public final class ModRecipes {
      */
     public static final Supplier<RecipeSerializer<TierUpgradeRecipe>> TIER_UPGRADE =
             RECIPE_SERIALIZERS.register("tier_upgrade", TierUpgradeRecipe.Serializer::new);
+
+    /** {@code {"type": "wirelessautomate:cut_crystal"}}: o Cristal Lapidado, só com Cristais de Sinal cheios. */
+    public static final Supplier<RecipeSerializer<CutCrystalRecipe>> CUT_CRYSTAL =
+            RECIPE_SERIALIZERS.register("cut_crystal", CutCrystalRecipe.Serializer::new);
 
     private ModRecipes() {
     }

@@ -27,7 +27,7 @@ public final class MachineGroup {
             .filter(ResourceType::cards).toArray(ResourceType[]::new);
 
     private final int id;
-    private final ResourceLocation block;
+    private ResourceLocation block;
     /** Nome dado pelo jogador; vazio = a tela usa o nome do bloco. Nunca texto traduzido. */
     private String name;
     private final MachineConfig profile;
@@ -52,6 +52,11 @@ public final class MachineGroup {
     /** Id do registro do bloco das máquinas do grupo. */
     public ResourceLocation block() {
         return block;
+    }
+
+    /** Passa o grupo para outro bloco (o Atualizar de um grupo inteiro trocado). Só pelo {@link RemoteMachines#regroup}. */
+    void setBlock(ResourceLocation block) {
+        this.block = block;
     }
 
     /** Nome do grupo; vazio = usar o nome do bloco. */

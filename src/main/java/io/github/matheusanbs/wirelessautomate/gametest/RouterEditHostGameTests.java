@@ -103,14 +103,13 @@ public final class RouterEditHostGameTests {
         }
     }
 
-    @SuppressWarnings("removal")
     @GameTest(template = "empty")
     public static void facePayloadsWorkThroughAnyHost(GameTestHelper helper) {
         helper.setBlock(new BlockPos(1, 1, 1), Blocks.CHEST);
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
         RouterBlockEntity router = helper.getBlockEntity(pos);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         TestHost host = new TestHost(CONTAINER_ID, router);
         player.containerMenu = host;

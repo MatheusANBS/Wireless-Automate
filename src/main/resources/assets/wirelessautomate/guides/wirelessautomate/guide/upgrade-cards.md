@@ -55,12 +55,12 @@ limit. Source only with Ars Nouveau.
 | <ItemImage id="wirelessautomate:tier_core_emerald" /> **Emerald** | 2,048 → **16,384** | 128,000 → **1,024,000** | 64,000 → **512,000** | 6,400 → **51,200** | the whole dimension → **every dimension** |
 | <ItemImage id="wirelessautomate:tier_core_allthemodium" /> **Allthemodium¹** | 16,384 → **131,072** | 1,024,000 → **8,192,000** | 512,000 → **4,096,000** | 51,200 → **409,600** | every dimension |
 | <ItemImage id="wirelessautomate:tier_core_vibranium" /> **Vibranium¹** | 131,072 → **1,048,576** | 8,192,000 → **65,536,000** | 4,096,000 → **32,768,000** | 409,600 → **3,276,800** | every dimension |
-| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1,048,576 → **8,388,608** | 65,536,000 → **524,288,000** | 32,768,000 → **262,144,000** | 3,276,800 → **26,214,400** | every dimension |
-| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8,388,608 → **Unlimited** | 524,288,000 → **Unlimited** | 262,144,000 → **Unlimited** | 26,214,400 → **Unlimited** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1,048,576 → **8,388,608** | 65,536,000 → **524,288,000** | 32,768,000 → **2,097,152,000** | 3,276,800 → **26,214,400** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8,388,608 → **Unlimited** | 524,288,000 → **Unlimited** | 2,097,152,000 → **Unlimited** | 26,214,400 → **Unlimited** | every dimension |
 
 ¹ Only with the Allthemodium mod. Without it, the Ultimate Card comes after Emerald (16,384 items/s → unlimited).
 
-Each step multiplies throughput by 8. Range and dimensions follow the **sender's** tier.
+Each step multiplies throughput by 8; only Unobtainium energy jumps 64 times over Vibranium. Range and dimensions follow the **sender's** tier.
 
 ## How to use
 

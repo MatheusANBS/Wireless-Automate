@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wirelessautomate:resonance_core",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "wirelessautomate:resonance_core",
+              "properties": [
+                "tier"
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wirelessautomate:blocks/resonance_core"
+}

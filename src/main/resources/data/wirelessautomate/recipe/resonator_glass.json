@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " G ",
+    "GCG",
+    " G "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "C": {
+      "item": "wirelessautomate:signal_crystal"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:resonator_glass",
+    "count": 4
+  }
+}

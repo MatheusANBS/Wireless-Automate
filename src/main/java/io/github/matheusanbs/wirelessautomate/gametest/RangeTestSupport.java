@@ -57,9 +57,8 @@ final class RangeTestSupport {
         return helper.getBlockEntity(machine.above());
     }
 
-    @SuppressWarnings("removal")
     static RouterMenu openMenu(GameTestHelper helper, RouterBlockEntity router, ServerPlayer[] out) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router, RouterSnapshot.capture(router, player));
         player.containerMenu = menu;
@@ -168,9 +167,8 @@ final class RangeTestSupport {
         return linker;
     }
 
-    @SuppressWarnings("removal")
     static ServerPlayer linkerPlayer(GameTestHelper helper, ItemStack linker) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(helper.absoluteVec(new Vec3(1.5, 3, 1.5)));
         player.setItemInHand(InteractionHand.MAIN_HAND, linker);
         return player;

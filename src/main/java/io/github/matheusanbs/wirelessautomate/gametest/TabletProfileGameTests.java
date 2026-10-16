@@ -75,9 +75,8 @@ public final class TabletProfileGameTests {
     private static final BlockPos M4 = new BlockPos(2, 0, 2);
     private static final ResourceLocation CHEST = BuiltInRegistries.BLOCK.getKey(Blocks.CHEST);
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerWithTablet(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(M1).above(3)));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         return player;
@@ -727,7 +726,7 @@ public final class TabletProfileGameTests {
     }
 
     /** Copiar com o jogador em outra dimensão (tier com crossDimension) grava a máquina do nó, não a do mundo do jogador. */
-    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    @GameTest(template = "empty", batch = "wirelessautomate_config_dimension_profile")
     public static void copyAcrossDimensionsRecordsTheNodeMachine(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper);
         helper.setBlock(M1, Blocks.CHEST);

@@ -92,9 +92,8 @@ public final class ChunkLoaderGameTests {
         return new BlockPos(((origin.getX() >> 4) + 1) << 4, origin.getY() + 20, origin.getZ());
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }
@@ -217,8 +216,15 @@ public final class ChunkLoaderGameTests {
         ChunkPos machineChunk = new ChunkPos(machine);
         UUID owner = UUID.randomUUID();
         List<RouterBlockEntity> routers = new ArrayList<>();
+        // O chunk forçado é um conjunto, sem contagem: a grade do GameTest força os chunks de cada
+        // estrutura, e soltar um que já estava forçado tira o tick do teste dali. Um teste que ainda não
+        // começou nunca termina: o tempo limite só corre com os chunks dele em tick. Por isso o estado de
+        // antes é lido no mesmo passo que força, sem outro teste mexer nos chunks entre as duas coisas.
+        boolean[] wasForced = new boolean[2];
         helper.startSequence()
                 .thenExecute(() -> {
+                    wasForced[0] = level.getForcedChunks().contains(routerChunk.toLong());
+                    wasForced[1] = level.getForcedChunks().contains(machineChunk.toLong());
                     level.setChunkForced(routerChunk.x, routerChunk.z, true);
                     level.setChunkForced(machineChunk.x, machineChunk.z, true);
                     routers.add(chestWithRouterAt(level, machine, Direction.EAST));
@@ -243,8 +249,12 @@ public final class ChunkLoaderGameTests {
                     for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(routerPos).inflate(3))) {
                         item.discard();
                     }
-                    level.setChunkForced(routerChunk.x, routerChunk.z, false);
-                    level.setChunkForced(machineChunk.x, machineChunk.z, false);
+                    if (!wasForced[0]) {
+                        level.setChunkForced(routerChunk.x, routerChunk.z, false);
+                    }
+                    if (!wasForced[1]) {
+                        level.setChunkForced(machineChunk.x, machineChunk.z, false);
+                    }
                 })
                 .thenSucceed();
     }

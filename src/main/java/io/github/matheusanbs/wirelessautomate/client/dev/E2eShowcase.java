@@ -52,6 +52,9 @@ import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
  * fotografam a casa montada pelo {@link E2eShowcaseWorld}.
  */
 final class E2eShowcase {
+    /** Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos). */
+    private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
+
     private E2eShowcase() {
     }
 
@@ -64,21 +67,32 @@ final class E2eShowcase {
      */
     static List<Step> showcase() {
         List<Step> list = new ArrayList<>();
+        if ("ressonador".equals(ONLY)) {
+            list.add(mountWorld());
+            E2eShowcaseResonator.steps(list);
+            return list;
+        }
         showcaseHouseShots(list);
         showcaseToolShots(list);
         showcaseRouterShots(list);
         showcaseTierAndRangeShots(list);
         showcaseStorageShots(list);
         showcaseTabletShots(list);
+        // por último: o GIF congela o tempo enquanto grava
+        E2eShowcaseResonator.steps(list);
         return list;
+    }
+
+    private static Step mountWorld() {
+        return new Step("montar a vitrine", STEP_TIMEOUT_MS, E2eShowcaseWorld::showcaseWorld,
+                () -> onServer(server -> showRouters.stream().allMatch(p -> NetworkManager.get().contains(router(server, p))))
+                        && showRouters.stream().allMatch(E2eRouterSteps::clientSees),
+                () -> showRouters.size() + " roteadores");
     }
 
     /** Vitrine: monta o mundo, vincula o alcance e fotografa a casa e as fornalhas. */
     private static void showcaseHouseShots(List<Step> list) {
-        list.add(new Step("montar a vitrine", STEP_TIMEOUT_MS, E2eShowcaseWorld::showcaseWorld,
-                () -> onServer(server -> showRouters.stream().allMatch(p -> NetworkManager.get().contains(router(server, p))))
-                        && showRouters.stream().allMatch(E2eRouterSteps::clientSees),
-                () -> showRouters.size() + " roteadores"));
+        list.add(mountWorld());
         list.add(new Step("vincular as máquinas do alcance", STEP_TIMEOUT_MS, () -> onServer(server -> {
             showcaseRangeLink(server);
             return null;
@@ -378,7 +392,7 @@ final class E2eShowcase {
      * Teleporta o jogador para {@code base + (cx, cy, cz)} (o pé; x e z no centro do bloco) olhando
      * para {@code base + (tx, ty, tz)}; {@code gui} liga a interface.
      */
-    private static Step showLook(String name, double cx, double cy, double cz, double tx, double ty, double tz, boolean gui) {
+    static Step showLook(String name, double cx, double cy, double cz, double tx, double ty, double tz, boolean gui) {
         double[] cam = new double[3];
         float[] ang = new float[2];
         return new Step(name, STEP_TIMEOUT_MS, () -> {

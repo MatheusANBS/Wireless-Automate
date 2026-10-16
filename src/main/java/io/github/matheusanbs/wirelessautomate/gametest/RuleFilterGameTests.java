@@ -246,8 +246,7 @@ public final class RuleFilterGameTests {
         helper.setBlock(A.above(), io.github.matheusanbs.wirelessautomate.registry.ModBlocks.ROUTER.get()
                 .defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
         RouterBlockEntity router = helper.getBlockEntity(A.above());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         try {
             FilterMenu items = open(player, router, ResourceType.ITEM);

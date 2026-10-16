@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.TabLayout;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
@@ -209,24 +210,10 @@ final class PanelPainter {
                 active ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
-    /** O aviso do painel, embaixo dele: o texto e o Desfazer sublinhado de coral. */
+    /** O aviso do painel, embaixo dele: o texto, que cresce para cima, e o Desfazer sublinhado de coral. */
     void renderNotice(GuiGraphics g, Font font, PanelNoticePayload notice, int mouseX, int mouseY) {
-        int y = layout.noticeY();
-        int bodyX = layout.bodyX;
-        int bodyW = layout.bodyW;
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 350);
-        g.fill(bodyX, y, bodyX + bodyW, y + PanelLayout.NOTICE_H, GuiPaint.FG);
         Hot undo = layout.hot(Kind.UNDO);
-        int textRoom = bodyW - 8 - (undo != null ? undo.w() + 2 : 0);
-        GuiText.draw(g, font, notice.message(), bodyX + 4, y + 3, textRoom, GuiPaint.PANEL);
-        if (undo != null) {
-            Component label = panelTr("notice.undo");
-            int lx = undo.x() + 4;
-            boolean hovered = undo.contains(mouseX, mouseY);
-            GuiPaint.text(g, font, label, lx, y + 3, hovered ? GuiPaint.ACCENT : GuiPaint.PANEL);
-            g.fill(lx, y + 11, lx + font.width(label) - 1, y + 12, GuiPaint.ACCENT);
-        }
-        g.pose().popPose();
+        NoticeBand.render(g, font, notice, layout.bodyX, layout.noticeY(), layout.bodyW, undo != null ? undo.x() : -1,
+                undo != null && undo.contains(mouseX, mouseY));
     }
 }

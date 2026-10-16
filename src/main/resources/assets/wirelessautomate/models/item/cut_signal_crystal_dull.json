@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wirelessautomate:item/cut_signal_crystal_dull"
+  }
+}

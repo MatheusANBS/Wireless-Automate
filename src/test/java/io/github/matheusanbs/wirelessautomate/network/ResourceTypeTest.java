@@ -51,7 +51,7 @@ class ResourceTypeTest {
         assertEquals(8_388_608L, ResourceType.ITEM.defaultRate(6));
         assertEquals(16_000L, ResourceType.FLUID.defaultRate(1));
         assertEquals(64_000L, ResourceType.ENERGY.defaultRate(2));
-        assertEquals(262_144_000L, ResourceType.ENERGY.defaultRate(6));
+        assertEquals(2_097_152_000L, ResourceType.ENERGY.defaultRate(6));
         assertEquals(0L, ResourceType.ENERGY.defaultRate(7));
         assertEquals(ResourceType.FLUID.defaultRate(1), ResourceType.CHEMICAL.defaultRate(1));
         assertEquals(100L, ResourceType.SOURCE.defaultRate(0));
@@ -64,7 +64,9 @@ class ResourceTypeTest {
     void eachTierMultipliesByEight() {
         for (ResourceType type : ResourceType.values()) {
             for (int tier = 1; tier < 7; tier++) {
-                assertEquals(type.defaultRate(tier - 1) * 8, type.defaultRate(tier), type + " no tier " + tier);
+                // A energia do Unobtainium sobe ×64, para dar conta do Ressonador do tier.
+                long step = type == ResourceType.ENERGY && tier == 6 ? 64 : 8;
+                assertEquals(type.defaultRate(tier - 1) * step, type.defaultRate(tier), type + " no tier " + tier);
             }
         }
     }

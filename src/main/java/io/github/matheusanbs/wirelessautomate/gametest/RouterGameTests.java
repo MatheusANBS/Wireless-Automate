@@ -5,9 +5,11 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.network.ConfigReloadListener;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,6 +26,13 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class RouterGameTests {
+    /**
+     * A recarga do arquivo da config vem pelo relógio, não pelos ticks: o servidor de teste roda milhares
+     * de ticks por segundo quando está à toa. O teste espera até {@link #RELOAD_WAIT_NANOS}; o limite em
+     * ticks só cobre esse prazo com folga.
+     */
+    private static final int RELOAD_TIMEOUT = 1_000_000;
+    private static final long RELOAD_WAIT_NANOS = 10_000_000_000L;
     private static final BlockPos MACHINE = new BlockPos(1, 1, 1);
     private static final BlockPos ROUTER = MACHINE.above();
 
@@ -88,11 +97,54 @@ public final class RouterGameTests {
     }
 
     /**
+     * Config de antes do Ressonador (balanceamento 1): a energia do roteador Unobtainium e o FE por cristal no
+     * padrão antigo passam para o novo uma vez; o que o dono mudou e o que já era do balanceamento 1 ficam.
+     */
+    @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_unobtainium")
+    public static void configMigratesUnobtainiumEnergy(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        var unobtainium = Config.TIERS.get(RouterTier.UNOBTAINIUM).rates().get("energyPerTick");
+        var vibranium = Config.TIERS.get(RouterTier.VIBRANIUM).rates().get("energyPerTick");
+        var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
+        var basicCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.BASIC);
+        var ultimateCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.ULTIMATE);
+        var eliteCrystal = Config.RESONATOR_FE_PER_CRYSTAL.get(RouterTier.ELITE);
+        try {
+            unobtainium.set(262_144_000L);
+            vibranium.set(1_234L);
+            elite.set(131_072L);
+            basicCrystal.set(64L);
+            ultimateCrystal.set(134_217_728L);
+            eliteCrystal.set(5_000L);
+            Config.BALANCE_VERSION.set(1);
+            helper.assertValueEqual(Config.migrateBalance(), 3, "valores migrados");
+            helper.assertValueEqual(unobtainium.get(), 2_097_152_000L, "energia do Unobtainium");
+            helper.assertValueEqual(basicCrystal.get(), 128L, "FE por cristal, Básico");
+            helper.assertValueEqual(ultimateCrystal.get(), 1_073_741_824L, "FE por cristal, Ultimate");
+            helper.assertValueEqual(eliteCrystal.get(), 5_000L, "FE por cristal do dono");
+            helper.assertValueEqual(vibranium.get(), 1_234L, "energia do Vibranium do dono");
+            helper.assertValueEqual(elite.get(), 131_072L, "o balanceamento 1 rodou de novo");
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            unobtainium.set(ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()));
+            vibranium.set(ResourceType.ENERGY.defaultRate(RouterTier.VIBRANIUM.ordinal()));
+            elite.set(ResourceType.ITEM.defaultRate(RouterTier.ELITE.ordinal()));
+            basicCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.BASIC.ordinal()));
+            ultimateCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.ULTIMATE.ordinal()));
+            eliteCrystal.set(CoreMath.defaultFePerCrystal(RouterTier.ELITE.ordinal()));
+            Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
+            Config.SPEC.save();
+        }
+        succeedAfterReload(helper, reloadsBefore);
+    }
+
+    /**
      * Config de um mundo de antes da Esmeralda: os valores no padrão antigo passam para o novo uma vez, e o
      * que o dono mudou fica. Tudo síncrono, restaurado no finally.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = RELOAD_TIMEOUT, batch = "wirelessautomate_config_migrate_old")
     public static void configMigratesOldDefaults(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
         var elite = Config.TIERS.get(RouterTier.ELITE).rates().get("itemsPerSecond");
         var advanced = Config.TIERS.get(RouterTier.ADVANCED).rates().get("itemsPerSecond");
         var basicRange = Config.TIERS.get(RouterTier.BASIC).range();
@@ -119,7 +171,24 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
             Config.SPEC.save();
         }
-        helper.succeed();
+        succeedAfterReload(helper, reloadsBefore);
+    }
+
+    /**
+     * Gravar a config faz o FML recarregá-la pela thread que observa o arquivo, um tempo depois, e a
+     * recarga remonta as redes e acorda as portas dos roteadores com alcance. Cada teste que grava fica
+     * no seu lote e só termina com a recarga dele, para ela não cair no meio dos testes de sono de outro
+     * lote. {@code reloadsBefore} é o contador lido antes da primeira gravação: lido depois, uma recarga rápida
+     * já contada faria o teste esperar outra que não vem.
+     */
+    private static void succeedAfterReload(GameTestHelper helper, int reloadsBefore) {
+        long deadline = System.nanoTime() + RELOAD_WAIT_NANOS;
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore
+                        || System.nanoTime() > deadline, "esperando a recarga da config gravada"))
+                .thenExecute(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore,
+                        "a recarga da config gravada não chegou em 10 s"))
+                .thenSucceed();
     }
 
     @GameTest(template = "empty")

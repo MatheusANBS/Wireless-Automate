@@ -247,8 +247,7 @@ public final class TypeNetworkGameTests {
         UUID before = newNetwork(helper, "teste-vinculador-antes");
         RouterBlockEntity router = place(helper, new BlockPos(1, 1, 1), Blocks.CHEST.defaultBlockState(),
                 before, before);
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork active = data.create(player.getUUID(), "Base " + player.getUUID());
         data.setActiveNetwork(player.getUUID(), active.id());
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
@@ -281,8 +280,7 @@ public final class TypeNetworkGameTests {
      */
     @GameTest(template = "empty")
     public static void cycleLinkerTypePayloadCycles(GameTestHelper helper) {
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         try {
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
@@ -333,8 +331,7 @@ public final class TypeNetworkGameTests {
     @GameTest(template = "empty")
     public static void presetCopiesNetworksPerType(GameTestHelper helper) {
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork lines = data.create(player.getUUID(), "Linha " + player.getUUID());
         WaNetwork fluids = data.create(player.getUUID(), "Fluidos " + player.getUUID());
         WaNetwork targetNetwork = data.create(player.getUUID(), "Destino " + player.getUUID());

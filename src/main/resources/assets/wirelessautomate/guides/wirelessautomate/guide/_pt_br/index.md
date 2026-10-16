@@ -40,6 +40,8 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:storage_battery" /> [Bateria Wireless](wireless-battery.md) | Energia sem o teto de um `int`. |
 | <ItemImage id="wirelessautomate:storage_chemical_tank" /> [Tanque Químico Wireless](wireless-chemical-tank.md) | O tanque para os químicos do Mekanism. |
 | <ItemImage id="wirelessautomate:storage_source_tank" /> [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
+| <ItemImage id="wirelessautomate:signal_crystal" /> [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
+| <ItemImage id="wirelessautomate:resonance_core" /> [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar

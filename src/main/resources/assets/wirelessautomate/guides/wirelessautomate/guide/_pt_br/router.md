@@ -122,7 +122,7 @@ O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra o
 | **Esmeralda** | 16.384 | 1.024.000 | 512.000 | 51.200 | Todas as dimensões |
 | **Allthemodium¹** | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Todas as dimensões |
 | **Vibranium¹** | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Todas as dimensões |
-| **Unobtainium¹** | 8.388.608 | 524.288.000 | 262.144.000 | 26.214.400 | Todas as dimensões |
+| **Unobtainium¹** | 8.388.608 | 524.288.000 | 2.097.152.000 | 26.214.400 | Todas as dimensões |
 | **Ultimate** | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões |
 
 ¹ Só com o mod Allthemodium. Source só com o Ars Nouveau.

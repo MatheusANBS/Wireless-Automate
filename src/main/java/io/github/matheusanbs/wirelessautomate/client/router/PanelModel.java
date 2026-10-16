@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
+import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
@@ -31,6 +32,8 @@ final class PanelModel {
     private Direction face;
     private EditTarget shownTarget;
     private @Nullable Component readOnly;
+    private boolean targetFromList;
+    private final ArmedClick unlinkArm = new ArmedClick();
 
     PanelModel(RouterSnapshot snapshot, Direction face) {
         this.snapshot = snapshot;
@@ -51,6 +54,7 @@ final class PanelModel {
         this.snapshot = snapshot;
         if (!snapshot.target().equals(shownTarget)) {
             shownTarget = snapshot.target();
+            unlinkArm.disarm();
             face = snapshot.range().present() ? snapshot.range().face() : snapshot.facing();
             return true;
         }
@@ -85,6 +89,24 @@ final class PanelModel {
 
     void setReadOnly(@Nullable Component reason) {
         this.readOnly = reason;
+    }
+
+    /** O alvo se escolhe na lista das máquinas, à vista ao lado: a linha Editando não aparece. */
+    boolean targetFromList() {
+        return targetFromList;
+    }
+
+    void setTargetFromList(boolean fromList) {
+        this.targetFromList = fromList;
+    }
+
+    /** O Desvincular da linha Editando, que pede dois cliques; desarma ao trocar de alvo. */
+    ArmedClick unlinkArm() {
+        return unlinkArm;
+    }
+
+    boolean unlinkArmed() {
+        return unlinkArm.armed(System.currentTimeMillis());
     }
 
     // ------------------------------------------------------------------ leituras
@@ -244,9 +266,14 @@ final class PanelModel {
     /** O que a face acessa: "27 slots", "1 tanque", "energia" ou "sem acesso". */
     Component access(FaceView view) {
         if (!view.available() && remote() && !remoteLoaded()) {
+            // num grupo sem máquina carregada, a trocada diz mais que o chunk
             RangeView.MachineView machine = targetMachine();
-            return machine != null && machine.state() == RangeView.MachineState.MISSING
-                    ? tr("range.access.missing") : tr("range.access.unloaded");
+            RangeView.GroupView group = targetGroup();
+            RangeView.MachineState state = machine != null ? machine.state()
+                    : group != null && RangeRowButtons.replaced(range(), group.id()) > 0
+                            ? RangeView.MachineState.REPLACED : null;
+            return state == RangeView.MachineState.MISSING ? tr("range.access.missing")
+                    : state == RangeView.MachineState.REPLACED ? tr("range.access.replaced") : tr("range.access.unloaded");
         }
         if (!view.available()) {
             return tr("access.none");

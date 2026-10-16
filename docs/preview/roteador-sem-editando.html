@@ -1,0 +1,247 @@
+<title>Roteador sem Editando</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: cabeçalho curto, telas lado a lado (Hoje × Proposta), depois os estados e as decisões. As cores da tela são as do GuiPalette (claro; escuro no tema escuro). */
+:root {
+  --page: #E9E2D3; --ink: #2A2730; --ink-2: #6B6458; --rule: #CFC5B1;
+  --gui-bg: #F2EBDD; --gui-btn: #FFFBF3; --gui-inset: #DDD3BF; --gui-border: #BDB19A; --gui-row: #F8F3E8;
+  --gui-fg: #2A2730; --gui-muted: #7A7366; --gui-disabled: #B5AC9D;
+  --accent: #F0603E; --accent-dark: #C2442A; --ok: #2F9D5C; --warn: #D88A1A; --danger: #D5453A; --net: #6B6FD0; --tier: #B48E2E;
+  --sel: #FFE3D9; --cut: rgba(240,96,62,.14);
+  --f-gui: "Pixelify Sans", "Courier New", monospace;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark }
+
+body { background: var(--page); color: var(--ink); font-family: var(--f-body); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 36px; }
+h1 { font-family: var(--f-gui); font-weight: 600; font-size: 1.9rem; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-gui); font-weight: 600; font-size: 1.25rem; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink-2); margin-top: 6px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); gap: 24px; }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { font-size: .92rem; color: var(--ink-2); }
+figcaption b { color: var(--ink); font-family: var(--f-gui); font-size: 1.05rem; font-weight: 600; letter-spacing: .02em; }
+.scroll { overflow-x: auto; }
+
+/* ---------- a tela (1 px de GUI = 1.8 px aqui) ---------- */
+.gui { --u: 1.8px; width: calc(300 * var(--u)); background: var(--gui-bg); border: 2px solid var(--gui-border);
+  border-top: 3px solid var(--tier); font-family: var(--f-gui); font-size: calc(8.6 * var(--u)); color: var(--gui-fg);
+  padding: calc(6 * var(--u)); display: grid; gap: calc(4 * var(--u)); line-height: 1.15; }
+.hdr { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+.hdr .name { flex: 1; }
+.muted { color: var(--gui-muted); }
+.pill { border: 1px solid var(--tier); border-radius: 99px; padding: 0 calc(4 * var(--u)); }
+.tabs { display: flex; gap: calc(9 * var(--u)); align-items: center; }
+.tab { border: 1px solid var(--gui-border); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); border-bottom: 2px solid var(--accent); }
+.dot { display: inline-block; width: calc(6 * var(--u)); height: calc(6 * var(--u)); border-radius: 50%; }
+.tabs .spacer { flex: 1; }
+.body { display: grid; grid-template-columns: 112fr 162fr; gap: calc(7 * var(--u)); }
+.col { display: grid; gap: calc(3 * var(--u)); align-content: start; min-width: 0; }
+.btn { background: var(--gui-btn); border: 1px solid var(--gui-border); padding: 0 calc(3 * var(--u)); white-space: nowrap; }
+.drop { display: flex; justify-content: space-between; }
+.list { background: var(--gui-row); border: 1px solid var(--gui-border); min-height: calc(104 * var(--u)); padding: 1px 0; }
+.r { display: flex; align-items: center; gap: calc(3 * var(--u)); padding: 0 calc(3 * var(--u)); height: calc(11 * var(--u)); position: relative; }
+.r.two { height: calc(19 * var(--u)); }
+.r.two .t { display: grid; }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.r.ind { padding-left: calc(9 * var(--u)); }
+.r .grow { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ico { width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 1px; flex: none; }
+.chest { background: #9C6A2E; } .furn { background: #6E6A66; }
+.exc { color: var(--accent); }
+.mini { display: inline-grid; place-items: center; width: calc(10 * var(--u)); height: calc(10 * var(--u)); border: 1px solid var(--gui-border);
+  background: var(--gui-btn); font-size: calc(7.5 * var(--u)); flex: none; line-height: 1; }
+.mini.rev { color: var(--accent); border-color: var(--accent); }
+.mini.hover { border-color: var(--gui-fg); }
+.mini.x { position: relative; }
+.mini.x::before, .mini.x::after { content: ""; position: absolute; left: 50%; top: 50%; width: calc(6 * var(--u)); height: calc(1.2 * var(--u)); background: var(--gui-fg); transform: translate(-50%, -50%) rotate(45deg); }
+.mini.x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.mini.arm { color: #fff; background: var(--danger); border-color: var(--danger); width: auto; padding: 0 calc(3 * var(--u)); }
+.cube { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(2 * var(--u)); margin-top: calc(6 * var(--u)); }
+.cube span { border: 1px dashed var(--gui-border); text-align: center; color: var(--gui-muted); }
+.cube .on { border: 2px solid var(--accent); color: var(--gui-fg); }
+.row { display: flex; gap: calc(3 * var(--u)); align-items: center; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(3 * var(--u)); }
+.modes span { background: var(--gui-btn); border: 1px solid var(--gui-border); text-align: center; height: calc(11 * var(--u)); }
+.modes .on { background: var(--sel); border-color: var(--accent); }
+.net { flex: 1; border: 1px solid var(--net); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); display: flex; justify-content: space-between; }
+.slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; border: 1px solid var(--gui-border); margin-top: calc(4 * var(--u)); }
+.slots i { aspect-ratio: 1; border: 1px solid var(--gui-inset); background: var(--gui-inset); opacity: .55; }
+.cut { background: var(--cut); outline: 2px dashed var(--accent); outline-offset: 1px; position: relative; }
+.cut::after { content: "sai"; position: absolute; right: -2px; top: 50%; transform: translate(100%, -50%); font-size: calc(6.5 * var(--u));
+  color: var(--accent); padding-left: 6px; }
+.new { outline: 2px solid var(--ok); outline-offset: 1px; }
+.tip { position: absolute; z-index: 2; right: calc(-2 * var(--u)); top: calc(13 * var(--u)); background: #100E14; color: #EEE7F7;
+  border: 1px solid #5A36B0; padding: calc(2 * var(--u)) calc(4 * var(--u)); white-space: nowrap; font-size: calc(7.5 * var(--u)); }
+.tip .m { color: #A79F90; }
+
+/* ---------- estados ---------- */
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.state { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.state .gui { --u: 1.5px; }
+.snip { width: calc(112 * var(--u)); }
+.state p { font-size: .92rem; color: var(--ink-2); }
+
+.decide { border-top: 1px solid var(--rule); padding-top: 20px; display: grid; gap: 14px; }
+.decide ol { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; max-width: 78ch; }
+.decide li b { font-weight: 600; }
+.keep { font-size: .92rem; color: var(--ink-2); }
+</style>
+
+<main>
+  <header>
+    <h1>Roteador sem a linha Editando</h1>
+    <p class="lede">Com a lista das máquinas à vista, a linha Editando só repete o que a lista já marca. A proposta tira a linha e leva Voltar ao perfil e Desvincular para a linha da máquina escolhida na lista. O painel ganha uma linha de altura.</p>
+  </header>
+
+  <section class="pair">
+    <figure>
+      <figcaption><b>Hoje</b> · Fornalha #1 escolhida, com exceção</figcaption>
+      <div class="scroll"><div class="gui" aria-label="Tela atual">
+        <div class="hdr"><span class="name">Fornalha</span><span class="muted">0 itens/s</span><span class="pill">● Avançado</span><span>☾</span></div>
+        <div class="tabs"><span class="tab">● Itens</span><span class="dot" style="background:#3B82C4"></span><span class="dot" style="background:var(--warn)"></span><span class="dot" style="background:var(--ok)"></span><span class="dot" style="background:var(--net)"></span><span class="spacer"></span><span class="muted">1 rede</span></div>
+        <div class="body">
+          <div class="col">
+            <div class="btn">▾ Máquinas · 3/8</div>
+            <div class="list">
+              <div class="r"><span class="ico chest"></span><span class="grow">Máquina presa</span></div>
+              <div class="r two"><span class="muted">▸</span><span class="ico chest"></span><span class="t grow"><span>Baú ×2</span><span class="muted">todas no perfil</span></span></div>
+              <div class="r two"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fornalha ×1</span><span class="exc">1 exceção</span></span></div>
+              <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#1 · 3 blocos</span><span class="exc">exc.</span></div>
+            </div>
+            <div class="cube"><span></span><span>Cima</span><span></span><span></span><span>Esq.</span><span class="on">F</span><span>Dir.</span><span>T</span><span></span><span>B</span><span></span><span></span></div>
+          </div>
+          <div class="col">
+            <div class="row cut"><span class="muted">Editando</span><span class="btn drop" style="flex:1;border-color:var(--accent)">Fornalha #1</span></div>
+            <div class="row cut"><span class="btn">Voltar ao perfil</span><span class="btn">Desvincular</span></div>
+            <div>Frente · 1 slot</div>
+            <div class="modes"><span>↑</span><span class="on">↓</span><span>⇅</span><span>–</span></div>
+            <div class="row"><span class="muted">Rede</span><span class="net"><span>● E2E Principal</span><span>▾</span></span></div>
+            <div class="row"><span class="muted">Filtro</span><span style="flex:1">Passa tudo</span><span class="btn">Editar</span></div>
+            <div class="row"><span class="muted">Prior.</span><span class="btn">−</span><span class="btn" style="background:var(--gui-inset)">0</span><span class="btn">+</span><span class="btn drop" style="flex:1">Ignorar ▾</span></div>
+            <div class="slots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div></div>
+    </figure>
+
+    <figure>
+      <figcaption><b>Proposta</b> · os botões vão para a linha da máquina na lista</figcaption>
+      <div class="scroll"><div class="gui" aria-label="Tela proposta">
+        <div class="hdr"><span class="name">Fornalha</span><span class="muted">0 itens/s</span><span class="pill">● Avançado</span><span>☾</span></div>
+        <div class="tabs"><span class="tab">● Itens</span><span class="dot" style="background:#3B82C4"></span><span class="dot" style="background:var(--warn)"></span><span class="dot" style="background:var(--ok)"></span><span class="dot" style="background:var(--net)"></span><span class="spacer"></span><span class="muted">1 rede</span></div>
+        <div class="body">
+          <div class="col">
+            <div class="btn">▾ Máquinas · 3/8</div>
+            <div class="list">
+              <div class="r"><span class="ico chest"></span><span class="grow">Máquina presa</span></div>
+              <div class="r two"><span class="muted">▸</span><span class="ico chest"></span><span class="t grow"><span>Baú ×2</span><span class="muted">todas no perfil</span></span></div>
+              <div class="r two"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fornalha ×1</span><span class="exc">1 exceção</span></span></div>
+              <div class="r ind sel new"><span style="color:var(--ok)">●</span><span class="grow">#1 · 3 blocos</span><span class="mini rev" title="Voltar ao perfil">↺</span><span class="mini x" title="Desvincular" aria-label="Desvincular"></span></div>
+            </div>
+            <div class="cube"><span></span><span>Cima</span><span></span><span></span><span>Esq.</span><span class="on">F</span><span>Dir.</span><span>T</span><span></span><span>B</span><span></span><span></span></div>
+          </div>
+          <div class="col">
+            <div>Frente · 1 slot</div>
+            <div class="modes"><span>↑</span><span class="on">↓</span><span>⇅</span><span>–</span></div>
+            <div class="row"><span class="muted">Rede</span><span class="net"><span>● E2E Principal</span><span>▾</span></span></div>
+            <div class="row"><span class="muted">Filtro</span><span style="flex:1">Passa tudo</span><span class="btn">Editar</span></div>
+            <div class="row"><span class="muted">Prior.</span><span class="btn">−</span><span class="btn" style="background:var(--gui-inset)">0</span><span class="btn">+</span><span class="btn drop" style="flex:1">Ignorar ▾</span></div>
+            <div class="slots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div></div>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Como a linha da máquina se comporta</h2>
+    <p class="lede">Os botões só aparecem na máquina escolhida. As outras linhas continuam como hoje, com o "exc." quando têm exceção.</p>
+  </section>
+  <section class="states">
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#1 · 2 blocos</span><span class="exc">exc.</span></div>
+        <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#2 · 2 blocos</span><span class="mini x" aria-label="Desvincular"></span></div>
+      </div></div>
+      <p><b>Máquina no perfil.</b> Só o Desvincular (✕). Não há o que voltar, então o ↺ não aparece.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip" style="position:relative"><div class="list" style="min-height:0">
+        <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#1 · 3 blocos</span><span class="mini rev hover">↺</span><span class="mini x" aria-label="Desvincular"></span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#2 · 4 blocos</span></div>
+      </div>
+      <div class="tip">Voltar ao perfil<br><span class="m">Esta Fornalha volta a ser igual às outras</span></div></div>
+      <p><b>Máquina com exceção.</b> O ↺ coral no lugar do "exc." já mostra a exceção. A dica diz o que ele faz.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#1 · 3 bl…</span><span class="mini arm">Desvincular?</span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#2 · 4 blocos</span></div>
+      </div></div>
+      <p><b>Desvincular em dois cliques.</b> O primeiro arma o botão e o segundo confirma, como o Remover do Tablet. Sair com o mouse desarma. Hoje é um clique só, mas o botão era grande; um ícone pequeno na lista pede a confirmação.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Máquina trocada no lugar: Atualizar</h2>
+    <p class="lede">Hoje, quando uma máquina vinculada vira outro bloco na mesma posição (o upgrade de tier de uma fábrica do Mekanism, por exemplo), ela fica com a bolinha vermelha de "sumiu" e para de mover. Para voltar, é preciso desvincular e vincular de novo. A proposta separa dois casos: o bloco que <b>sumiu</b> (quebrado, ar ou sem capability) e o bloco que <b>foi trocado</b> por outra máquina. No segundo caso aparece o Atualizar.</p>
+  </section>
+  <section class="states">
+    <div class="state">
+      <div class="gui snip" style="position:relative"><div class="list" style="min-height:0">
+        <div class="r two"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fábrica Básica ×3</span><span style="color:var(--tier)">1 trocada</span></span></div>
+        <div class="r ind sel"><span style="color:var(--tier)">●</span><span class="grow">#2 · trocada</span><span class="mini hover" style="color:var(--ok);border-color:var(--ok)">⟳</span><span class="mini x" aria-label="Desvincular"></span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#3 · 5 blocos</span></div>
+      </div>
+      <div class="tip">Atualizar<br><span class="m">No lugar há uma Fábrica Avançada.</span><br><span class="m">Passa para o grupo dela, com a mesma configuração</span></div></div>
+      <p><b>Uma máquina trocada.</b> Bolinha cor de latão (trocada) em vez da vermelha (sumiu). O ⟳ verde ao lado do ✕ atualiza num clique, sem confirmação, porque nada se perde.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r two sel"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fábrica Básica ×3</span><span style="color:var(--tier)">3 trocadas</span></span><span class="mini" style="color:var(--ok);border-color:var(--ok)">⟳</span></div>
+        <div class="r ind"><span style="color:var(--tier)">●</span><span class="grow">#1 · trocada</span></div>
+        <div class="r ind"><span style="color:var(--tier)">●</span><span class="grow">#2 · trocada</span></div>
+        <div class="r ind"><span style="color:var(--tier)">●</span><span class="grow">#3 · trocada</span></div>
+      </div></div>
+      <p><b>O grupo inteiro de uma vez.</b> Com o grupo escolhido e alguma máquina trocada, o ⟳ fica na linha do grupo e atualiza todas as trocadas. É o caso de quem faz o upgrade de várias fábricas iguais.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r two"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fábrica Avançada ×3</span><span class="muted">todas no perfil</span></span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#1 · 5 blocos</span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#2 · 5 blocos</span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#3 · 5 blocos</span></div>
+      </div></div>
+      <p><b>Depois.</b> As máquinas vão para o grupo do bloco novo. Se esse grupo ainda não existe, ele nasce com o perfil do grupo antigo, e o grupo antigo, vazio, some. Quem tinha exceção continua com ela.</p>
+    </div>
+  </section>
+
+  <section class="decide">
+    <h2>O que muda e o que fica</h2>
+    <ol>
+      <li><b>Com a lista à vista</b> (botão Máquinas ligado ou tela larga lado a lado), a linha Editando some inteira. O painel sobe uma linha, ou duas quando há uma máquina escolhida.</li>
+      <li><b>Grupo ou máquina presa escolhidos:</b> nenhum botão na lista. É o que acontece hoje, já que esses alvos não têm Voltar nem Desvincular.</li>
+      <li><b>Sem a lista</b> (visor 3D no lugar dela) <b>e no Tablet</b>, a linha Editando continua como hoje, com a pílula que abre a lista do alvo. É o único jeito de trocar o alvo nesses casos.</li>
+      <li><b>Decidido:</b> o Desvincular pede dois cliques.</li>
+      <li><b>Atualizar:</b> um estado novo, "trocada", separado do "sumiu". Vale para a máquina e para o grupo. Também aparece sem a lista à vista, como botão na linha Editando, ao lado do Desvincular.</li>
+      <li><b>Para decidir:</b> no grupo novo, a máquina leva o perfil do grupo antigo (proposta) ou começa do zero. E se o grupo do bloco novo já existe, a máquina entra nele e segue o perfil dele.</li>
+    </ol>
+    <p class="keep">As cores seguem o tema do mod: claro aqui, escuro quando a página está no escuro.</p>
+  </section>
+</main>

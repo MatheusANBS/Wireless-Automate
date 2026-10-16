@@ -3,7 +3,7 @@ navigation:
   title: All recipes
   icon: minecraft:crafting_table
   parent: index.md
-  position: 20
+  position: 22
 ---
 
 
@@ -31,4 +31,11 @@ All of them with vanilla items, in a crafting table.
 <RecipeFor id="wirelessautomate:configurator" />
 <RecipeFor id="wirelessautomate:network_tablet" />
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
+<RecipeFor id="wirelessautomate:cut_signal_crystal" />
+<RecipeFor id="wirelessautomate:resonator_casing" />
+<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonance_core" />
+<RecipeFor id="wirelessautomate:resonator_energy_port" />
+<RecipeFor id="wirelessautomate:resonator_crystal_port" />
+<RecipeFor id="wirelessautomate:resonator_tuner" />
 <Recipe id="wirelessautomate:guide" />

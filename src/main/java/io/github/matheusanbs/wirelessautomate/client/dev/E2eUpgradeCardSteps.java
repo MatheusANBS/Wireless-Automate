@@ -121,7 +121,7 @@ final class E2eUpgradeCardSteps {
     }
 
     /** Na vitrine, tira os avisos (receitas desbloqueadas) e o chat de cima das telas antes de uma captura. */
-    private static void quietShowcase() {
+    static void quietShowcase() {
         if (SHOWCASE != null) {
             Minecraft.getInstance().getToasts().clear();
             Minecraft.getInstance().gui.getChat().clearMessages(false);
@@ -129,7 +129,7 @@ final class E2eUpgradeCardSteps {
     }
 
     /** O mouse sobre o slot {@code 9 + index} do inventário (a primeira linha de cima). */
-    private static void hoverSlot(InventoryScreen screen, int index) {
+    static void hoverSlot(InventoryScreen screen, int index) {
         for (Slot slot : screen.getMenu().slots) {
             if (slot.container instanceof net.minecraft.world.entity.player.Inventory && slot.getContainerSlot() == 9 + index) {
                 moveMouse(screen.getGuiLeft() + slot.x + 8, screen.getGuiTop() + slot.y + 8);

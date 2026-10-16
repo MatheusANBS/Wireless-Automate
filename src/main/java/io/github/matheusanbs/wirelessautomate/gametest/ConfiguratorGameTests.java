@@ -106,8 +106,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
         RouterBlockEntity foreign = place(helper, new BlockPos(0, 1, 2), Direction.EAST);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork own = data.create(player.getUUID(), "Pincel " + player.getUUID());
         WaNetwork other = data.create(UUID.randomUUID(), "Alheia " + player.getUUID());
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
@@ -252,8 +251,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity sameA = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
         RouterBlockEntity sameB = place(helper, new BlockPos(2, 0, 2), Direction.NORTH, Blocks.FURNACE);
         RouterBlockEntity chest = place(helper, new BlockPos(0, 0, 2), Direction.UP, Blocks.CHEST);
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         // O jogador falso nasce longe da estrutura; a área exige estar perto.
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
@@ -347,8 +345,7 @@ public final class ConfiguratorGameTests {
     public static void areaAnyMachinePastesEverywhere(GameTestHelper helper) {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.BARREL);
         RouterBlockEntity chest = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.CHEST);
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
@@ -437,8 +434,7 @@ public final class ConfiguratorGameTests {
         ConfiguratorItem.setPasteMode(configurator, PasteMode.BRUSH);
         configurator.set(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), true);
         helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel com any_machine");
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         try {
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
             clickAir(helper, player, true);
@@ -458,8 +454,7 @@ public final class ConfiguratorGameTests {
     public static void areaTooBigIsRefused(GameTestHelper helper) {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
         RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
@@ -519,8 +514,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
         RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork items = data.create(player.getUUID(), "Itens " + player.getUUID());
         WaNetwork fluids = data.create(player.getUUID(), "Fluidos " + player.getUUID());
         WaNetwork energy = data.create(player.getUUID(), "Energia " + player.getUUID());
@@ -590,8 +584,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
         RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork power = data.create(player.getUUID(), "Energia área " + player.getUUID());
         WaNetwork before = data.create(player.getUUID(), "Antes área " + player.getUUID());
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
@@ -639,8 +632,7 @@ public final class ConfiguratorGameTests {
      */
     @GameTest(template = "empty")
     public static void cycleConfiguratorTypeSkipsChemicalsWithoutMekanism(GameTestHelper helper) {
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         try {
             ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
@@ -685,8 +677,7 @@ public final class ConfiguratorGameTests {
      */
     @GameTest(template = "empty")
     public static void wheelPayloadSetsModeAndType(GameTestHelper helper) {
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         try {
             ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
@@ -751,8 +742,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
         RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.NORTH);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork a = data.create(player.getUUID(), "Face A " + player.getUUID());
         WaNetwork b = data.create(player.getUUID(), "Face B " + player.getUUID());
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
@@ -803,8 +793,7 @@ public final class ConfiguratorGameTests {
         RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP);
         RouterBlockEntity target = place(helper, new BlockPos(2, 0, 2), Direction.UP);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork a = data.create(player.getUUID(), "Própria " + player.getUUID());
         WaNetwork before = data.create(player.getUUID(), "Antes " + player.getUUID());
         WaNetwork foreign = data.create(UUID.randomUUID(), "Privada " + player.getUUID());
@@ -874,8 +863,7 @@ public final class ConfiguratorGameTests {
     /** Colar só Fluidos troca as redes das faces de fluidos e não toca nas das faces de itens. */
     @GameTest(template = "empty")
     public static void pasteOnlyTypeKeepsOtherTypes(GameTestHelper helper) {
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
         WaNetwork items = data.create(player.getUUID(), "Só itens " + player.getUUID());
         WaNetwork fluids = data.create(player.getUUID(), "Só fluidos " + player.getUUID());

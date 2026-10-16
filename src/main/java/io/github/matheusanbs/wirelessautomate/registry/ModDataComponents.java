@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
+import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import java.util.function.Supplier;
 import net.minecraft.core.GlobalPos;
@@ -22,6 +23,7 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ExtraCodecs;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ModDataComponents {
@@ -132,6 +134,16 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("configurator_area", builder -> builder
                     .persistent(LinkerArea.CODEC)
                     .networkSynchronized(LinkerArea.STREAM_CODEC));
+
+    /**
+     * Carga de um Cristal de Sinal ou Lapidado ({@link CrystalCharge}). Sem o componente, o cristal está
+     * cheio; com 0, está Opaco. Um cristal com o componente valendo o cheio (por comando ou datapack) é cheio
+     * para a receita, mas só empilha com o novo depois de passar pelo {@code setCharge}, que tira o componente.
+     */
+    public static final Supplier<DataComponentType<Integer>> CRYSTAL_CHARGE =
+            DATA_COMPONENTS.registerComponentType("crystal_charge", builder -> builder
+                    .persistent(ExtraCodecs.intRange(0, CrystalCharge.FULL))
+                    .networkSynchronized(ByteBufCodecs.VAR_INT));
 
     /** Tipo (aba) que o Configurador cola; sem o componente, todos. */
     public static final Supplier<DataComponentType<ResourceType>> CONFIGURATOR_TYPE =

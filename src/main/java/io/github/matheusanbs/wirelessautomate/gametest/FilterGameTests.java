@@ -518,8 +518,7 @@ public final class FilterGameTests {
         }
 
         // Configurador: copia de um roteador e cola no outro.
-        @SuppressWarnings("removal")
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
         helper.assertTrue(use(player, node, true), "copiar não agiu");

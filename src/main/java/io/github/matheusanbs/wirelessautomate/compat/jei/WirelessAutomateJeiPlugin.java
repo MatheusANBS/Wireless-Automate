@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.world.item.Item;
@@ -20,6 +21,8 @@ import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
+import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.gui.builder.IClickableIngredientFactory;
@@ -73,6 +76,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         for (var card : ModItems.TIER_CORES.values()) {
             registration.registerSubtypeInterpreter(card.get(), OriginSubtype.INSTANCE);
         }
+        registration.registerSubtypeInterpreter(ModItems.RESONANCE_CORE.get(), CoreTierSubtype.INSTANCE);
     }
 
     /**
@@ -108,6 +112,31 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         public String getLegacyStringSubtypeInfo(ItemStack stack, UidContext context) {
             return StorageBlockItem.tierOf(stack).getSerializedName();
         }
+    }
+
+    /** O Núcleo de Ressonância guarda o tier no {@code BLOCK_STATE}, como o roteador. */
+    private enum CoreTierSubtype implements ISubtypeInterpreter<ItemStack> {
+        INSTANCE;
+
+        @Override
+        public Object getSubtypeData(ItemStack stack, UidContext context) {
+            return ResonanceCoreItem.tierOf(stack);
+        }
+
+        @Override
+        public String getLegacyStringSubtypeInfo(ItemStack stack, UidContext context) {
+            return ResonanceCoreItem.tierOf(stack).getSerializedName();
+        }
+    }
+
+    @Override
+    public void registerCategories(IRecipeCategoryRegistration registration) {
+        ResonatorJei.registerCategories(registration);
+    }
+
+    @Override
+    public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
+        ResonatorJei.registerCatalysts(registration);
     }
 
     /**
@@ -164,6 +193,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
             }
         }
         registration.addRecipes(RecipeTypes.CRAFTING, shown);
+        ResonatorJei.registerRecipes(registration);
         WirelessAutomate.LOGGER.info("JEI: {} receitas de exibição de upgrade registradas", shown.size());
     }
 

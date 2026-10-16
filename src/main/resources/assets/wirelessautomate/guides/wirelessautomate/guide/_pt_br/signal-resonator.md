@@ -149,7 +149,7 @@ A cena mostra a montagem **Vitrine**, com a janela de vidro numa face e o Núcle
    Ressonância**, as portas e o Sintonizador nas posições do miolo das faces. O interior 3×3×3 fica vazio.
 3. Precisa de **um Núcleo**, **pelo menos uma Porta de Energia** e **pelo menos uma Porta de Cristais**; o
    **Sintonizador** é opcional (no máximo um). O Núcleo e as portas ficam no miolo das faces, nunca nas arestas.
-4. Duas montagens de exemplo valem: a **Vitrine** (janela de Vidro 3×3 na frente) e a **Faixa** (três vidros na
+4. Duas montagens de exemplo valem: a **Vitrine** (janela de Vidro 3×3 numa lateral) e a **Faixa** (três vidros na
    linha de cima de cada lateral). Outros arranjos também montam: o Vidro pode ficar em qualquer posição do
    miolo das faces.
 5. Uma **parede não pode ser dividida** com outro Ressonador: cada um tem a sua caixa.
@@ -185,7 +185,7 @@ para recarregar os Opacos, como na página do [Quartzo de Sinal](signal-quartz.m
 Clique no Núcleo montado, com a mão vazia, para abrir a tela. O Ressonador tem uma **estação**, uma
 frequência escondida, e o **dial** precisa estar em cima dela:
 
-- Gire o dial com os botões (**±1 MHz** e **±0,05 MHz**) ou com a **roda do mouse** (±0,05 MHz).
+- Gire o dial com os botões (**±1 MHz** e **±0,05 MHz**) ou com a **roda do mouse** sobre o dial (±0,05 MHz).
 - O ponteiro mostra se está perto; quando acende a lâmpada **EM SINTONIA**, a geração está a 100%.
 - Se o ponteiro diz **sem sinal: varra o dial**, o dial está longe: varra-o até o ponteiro aparecer.
 - Quanto mais longe da estação, menos energia. Muito longe, a geração vai a **zero**.
@@ -236,7 +236,7 @@ mais FE por cristal. O Lapidado rende o dobro do que a tabela mostra para o Cris
 
 ¹ Só com o mod Allthemodium.
 
-Valores padrão: o servidor pode mudar o FE por cristal. O JEI mostra os do seu pack no Núcleo.
+Os números são os padrões; o JEI mostra os do seu pack.
 
 ## Receitas
 

@@ -63,4 +63,6 @@ nothing, but you can **recharge** it:
 The Crystal Port only hands the Dull crystals back when the Core has no redstone; with redstone in it, the Dull
 crystal stays inside, waiting its turn to recharge.
 
+The numbers are the defaults; JEI shows your pack's.
+
 See how to build the generator in [Signal Resonator](signal-resonator.md).

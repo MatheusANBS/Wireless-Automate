@@ -2326,6 +2326,8 @@ Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco 
 A Porta de Cristais só devolve os Opacos quando o Núcleo está sem redstone; com redstone, o Opaco fica
 lá dentro esperando a vez de recarregar.
 
+Os números são os padrões; o JEI mostra os do seu pack.
+
 Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).
 ''', front('Signal Quartz and crystals', 'wirelessautomate:signal_crystal', 18, item_ids=[
     'wirelessautomate:signal_quartz_ore', 'wirelessautomate:deepslate_signal_quartz_ore',
@@ -2381,6 +2383,8 @@ nothing, but you can **recharge** it:
 The Crystal Port only hands the Dull crystals back when the Core has no redstone; with redstone in it, the Dull
 crystal stays inside, waiting its turn to recharge.
 
+The numbers are the defaults; JEI shows your pack's.
+
 See how to build the generator in [Signal Resonator](signal-resonator.md).
 ''')
 
@@ -2411,7 +2415,7 @@ A cena mostra a montagem **Vitrine**, com a janela de vidro numa face e o Núcle
    Ressonância**, as portas e o Sintonizador nas posições do miolo das faces. O interior 3×3×3 fica vazio.
 3. Precisa de **um Núcleo**, **pelo menos uma Porta de Energia** e **pelo menos uma Porta de Cristais**; o
    **Sintonizador** é opcional (no máximo um). O Núcleo e as portas ficam no miolo das faces, nunca nas arestas.
-4. Duas montagens de exemplo valem: a **Vitrine** (janela de Vidro 3×3 na frente) e a **Faixa** (três vidros na
+4. Duas montagens de exemplo valem: a **Vitrine** (janela de Vidro 3×3 numa lateral) e a **Faixa** (três vidros na
    linha de cima de cada lateral). Outros arranjos também montam: o Vidro pode ficar em qualquer posição do
    miolo das faces.
 5. Uma **parede não pode ser dividida** com outro Ressonador: cada um tem a sua caixa.
@@ -2447,7 +2451,7 @@ para recarregar os Opacos, como na página do [Quartzo de Sinal](signal-quartz.m
 Clique no Núcleo montado, com a mão vazia, para abrir a tela. O Ressonador tem uma **estação**, uma
 frequência escondida, e o **dial** precisa estar em cima dela:
 
-- Gire o dial com os botões (**±1 MHz** e **±0,05 MHz**) ou com a **roda do mouse** (±0,05 MHz).
+- Gire o dial com os botões (**±1 MHz** e **±0,05 MHz**) ou com a **roda do mouse** sobre o dial (±0,05 MHz).
 - O ponteiro mostra se está perto; quando acende a lâmpada **EM SINTONIA**, a geração está a 100%.
 - Se o ponteiro diz **sem sinal: varra o dial**, o dial está longe: varra-o até o ponteiro aparecer.
 - Quanto mais longe da estação, menos energia. Muito longe, a geração vai a **zero**.
@@ -2487,7 +2491,7 @@ mais FE por cristal. O Lapidado rende o dobro do que a tabela mostra para o Cris
 
 ''' + resonator_table('pt') + '''
 
-Valores padrão: o servidor pode mudar o FE por cristal. O JEI mostra os do seu pack no Núcleo.
+Os números são os padrões; o JEI mostra os do seu pack.
 
 ## Receitas
 
@@ -2524,7 +2528,7 @@ The scene shows the **Showcase** build, with the glass window on one face and th
    ports and the Tuner on the face positions in between. The 3×3×3 inside stays empty.
 3. It needs **one Core**, **at least one Energy Port** and **at least one Crystal Port**; the **Tuner** is optional
    (at most one). The Core and the ports go on face positions, never on the edges.
-4. Two example builds work: the **Showcase** (a 3×3 Glass window in front) and the **Band** (three glass blocks on
+4. Two example builds work: the **Showcase** (a 3×3 Glass window on one side) and the **Band** (three glass blocks on
    the top row of each side). Other layouts also build: the Glass can go on any face position.
 5. A **wall can't be shared** with another Resonator: each one has its own box.
 
@@ -2559,7 +2563,7 @@ recharging Dull crystals, as on the [Signal Quartz](signal-quartz.md) page.
 Click the formed Core with an empty hand to open its screen. The Resonator has a **station**, a hidden
 frequency, and the **dial** has to sit right on it:
 
-- Turn the dial with the buttons (**±1 MHz** and **±0.05 MHz**) or with the **mouse wheel** (±0.05 MHz).
+- Turn the dial with the buttons (**±1 MHz** and **±0.05 MHz**) or with the **mouse wheel** over the dial (±0.05 MHz).
 - The pointer shows how close you are; when the **IN TUNE** lamp lights up, generation is at 100%.
 - If the pointer says **no signal: sweep the dial**, the dial is far off: sweep it until the pointer shows up.
 - The farther from the station, the less power. Far enough, generation drops to **zero**.
@@ -2599,7 +2603,7 @@ more FE per crystal. The Cut Crystal yields twice what the table shows for the S
 
 ''' + resonator_table('en') + '''
 
-Default values: the server can change the FE per crystal. JEI shows your pack's values on the Core.
+The numbers are the defaults; JEI shows your pack's.
 
 ## Recipes
 

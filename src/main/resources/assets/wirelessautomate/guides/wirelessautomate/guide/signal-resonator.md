@@ -149,7 +149,7 @@ The scene shows the **Showcase** build, with the glass window on one face and th
    ports and the Tuner on the face positions in between. The 3×3×3 inside stays empty.
 3. It needs **one Core**, **at least one Energy Port** and **at least one Crystal Port**; the **Tuner** is optional
    (at most one). The Core and the ports go on face positions, never on the edges.
-4. Two example builds work: the **Showcase** (a 3×3 Glass window in front) and the **Band** (three glass blocks on
+4. Two example builds work: the **Showcase** (a 3×3 Glass window on one side) and the **Band** (three glass blocks on
    the top row of each side). Other layouts also build: the Glass can go on any face position.
 5. A **wall can't be shared** with another Resonator: each one has its own box.
 
@@ -184,7 +184,7 @@ recharging Dull crystals, as on the [Signal Quartz](signal-quartz.md) page.
 Click the formed Core with an empty hand to open its screen. The Resonator has a **station**, a hidden
 frequency, and the **dial** has to sit right on it:
 
-- Turn the dial with the buttons (**±1 MHz** and **±0.05 MHz**) or with the **mouse wheel** (±0.05 MHz).
+- Turn the dial with the buttons (**±1 MHz** and **±0.05 MHz**) or with the **mouse wheel** over the dial (±0.05 MHz).
 - The pointer shows how close you are; when the **IN TUNE** lamp lights up, generation is at 100%.
 - If the pointer says **no signal: sweep the dial**, the dial is far off: sweep it until the pointer shows up.
 - The farther from the station, the less power. Far enough, generation drops to **zero**.
@@ -235,7 +235,7 @@ more FE per crystal. The Cut Crystal yields twice what the table shows for the S
 
 ¹ Only with the Allthemodium mod.
 
-Default values: the server can change the FE per crystal. JEI shows your pack's values on the Core.
+The numbers are the defaults; JEI shows your pack's.
 
 ## Recipes
 

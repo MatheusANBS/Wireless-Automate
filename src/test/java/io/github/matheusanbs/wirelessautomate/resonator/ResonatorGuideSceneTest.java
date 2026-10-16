@@ -16,8 +16,10 @@ import org.junit.jupiter.api.Test;
 
 /**
  * A cena do guia (a Vitrine montada, em linhas {@code <Block>} do GuideME) fica em
- * {@code scripts/guide/resonator_scene.txt}; este teste a escreve e confere, para o Python não repetir a regra das
- * texturas conectadas. Para regerar: {@code ./gradlew test --tests "*ResonatorGuideSceneTest" -Dwa.regen=true}.
+ * {@code scripts/guide/resonator_scene.txt}; este teste a confere com o {@link ResonatorBill}, para o Python não
+ * repetir a regra das texturas conectadas, e falha se o arquivo faltar. Só escreve com
+ * {@code ./gradlew test --tests "*ResonatorGuideSceneTest" -Dwa.regen=true}. Que as propriedades são as do estado
+ * montado de verdade, o {@code ResonatorGuideSceneGameTests} confere.
  */
 class ResonatorGuideSceneTest {
     private static final Path FILE = Path.of(System.getProperty("user.dir"), "scripts", "guide", "resonator_scene.txt");
@@ -25,11 +27,13 @@ class ResonatorGuideSceneTest {
     @Test
     void cenaDoGuiaConfereComOArquivo() throws IOException {
         String scene = String.join("\n", lines()) + "\n";
-        if (Boolean.getBoolean("wa.regen") || !Files.exists(FILE)) {
+        if (Boolean.getBoolean("wa.regen")) {
             Files.createDirectories(FILE.getParent());
             Files.writeString(FILE, scene, StandardCharsets.UTF_8);
             return;
         }
+        assertTrue(Files.exists(FILE), "Falta " + FILE
+                + ": rode ./gradlew test --tests \"*ResonatorGuideSceneTest\" -Dwa.regen=true");
         String saved = Files.readString(FILE, StandardCharsets.UTF_8).replace("\r\n", "\n");
         assertEquals(scene, saved,
                 "A cena mudou: rode ./gradlew test --tests \"*ResonatorGuideSceneTest\" -Dwa.regen=true");
@@ -49,7 +53,10 @@ class ResonatorGuideSceneTest {
         return lines;
     }
 
-    /** As propriedades são as do {@code ResonatorFormation.formedState}, com a frente para fora ({@code face}). */
+    /**
+     * A linha de um membro: a peça, a posição e as propriedades montadas, com a frente para fora ({@code face}). O
+     * {@code ResonatorGuideSceneGameTests} compara cada linha do arquivo com o {@code ResonatorFormation.formedState}.
+     */
     private static String line(Member member) {
         String facing = member.face() == null ? null : member.face().name().toLowerCase(Locale.ROOT);
         String id;

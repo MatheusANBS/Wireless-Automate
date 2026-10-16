@@ -63,4 +63,6 @@ Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco 
 A Porta de Cristais só devolve os Opacos quando o Núcleo está sem redstone; com redstone, o Opaco fica
 lá dentro esperando a vez de recarregar.
 
+Os números são os padrões; o JEI mostra os do seu pack.
+
 Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).

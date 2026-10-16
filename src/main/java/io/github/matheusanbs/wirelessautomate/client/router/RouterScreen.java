@@ -510,6 +510,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.rangeButtonCenter(action);
     }
 
+    /** O ✕ da linha do alvo na lista está armado, esperando o segundo clique (gancho do e2e). */
+    public boolean rangeUnlinkArmed() {
+        return column.rangeUnlinkArmed();
+    }
+
     /** Ponto da seta de um grupo na lista, que abre e fecha sem escolher (gancho do e2e). */
     public int @Nullable [] rangeArrowPoint(int group) {
         return column.rangeArrowPoint(group);

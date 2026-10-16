@@ -231,6 +231,13 @@ final class PanelLayout {
             if (machine != null) {
                 arrangeTargetButtons(font, x, y, w, machine.exception(),
                         machine.state() == RangeView.MachineState.REPLACED);
+                Hot unlink = hot(Kind.UNLINK);
+                if (model.unlinkArmed() && unlink != null) {
+                    // armado, o Desvincular fica sozinho, do começo da linha até onde ele estava (o mouse
+                    // continua em cima dele), com o texto inteiro, como na lista
+                    hots.removeIf(h -> h.kind() == Kind.REVERT || h.kind() == Kind.UPDATE || h.kind() == Kind.UNLINK);
+                    hots.add(new Hot(Kind.UNLINK, x, y, unlink.x() + unlink.w() - x, ROW_H, 0));
+                }
                 y += ROW_H + GAP;
             }
         }

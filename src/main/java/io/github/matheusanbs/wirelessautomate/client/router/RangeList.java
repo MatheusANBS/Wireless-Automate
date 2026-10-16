@@ -130,12 +130,12 @@ final class RangeList {
         return x + width - 1 - (maxScroll(rows) > 0 ? 3 : 0);
     }
 
-    /** Os botões da linha do alvo, onde ela está agora; nenhum se o alvo não tem linha. */
-    private List<RangeRowButtons.Button> targetButtons(RangeView view, EditTarget target) {
+    /** Os botões da linha do alvo, onde ela está agora (o armado vai até o texto); nenhum sem a linha. */
+    private List<RangeRowButtons.Button> targetButtons(Font font, RangeView view, EditTarget target) {
         for (Row row : rows(view)) {
             if (row.target().equals(target)) {
                 int ry = y + 1 + row.top() - scroll;
-                return buttons.place(view, target, ry, row.height(), rowRight(rows(view)), x + 40);
+                return buttons.place(font, view, target, ry, row.height(), rowRight(rows(view)), x + 16);
             }
         }
         return List.of();
@@ -199,7 +199,7 @@ final class RangeList {
      * seta de um grupo, ou o grupo já escolhido, abre e fecha; qualquer outra linha escolhe o alvo
      * ({@code select}). Devolve se o clique foi na lista.
      */
-    boolean click(RangeView view, EditTarget target, double mouseX, double mouseY, Consumer<Row> select,
+    boolean click(Font font, RangeView view, EditTarget target, double mouseX, double mouseY, Consumer<Row> select,
             BiConsumer<Row, RangeRowButtons.Action> act) {
         if (!contains(mouseX, mouseY)) {
             return false;
@@ -208,7 +208,7 @@ final class RangeList {
         if (row == null) {
             return true;
         }
-        RangeRowButtons.Button button = RangeRowButtons.at(targetButtons(view, target), mouseX, mouseY);
+        RangeRowButtons.Button button = RangeRowButtons.at(targetButtons(font, view, target), mouseX, mouseY);
         if (button != null) {
             RangeRowButtons.Action action = buttons.press(button, target);
             if (action != null) {
@@ -334,10 +334,10 @@ final class RangeList {
     }
 
     /** A dica do botão da linha escolhida sob o mouse, ou {@code null} se o mouse não está num botão. */
-    @Nullable Component buttonTooltip(RangeView view, EditTarget target, double mouseX, double mouseY) {
+    @Nullable Component buttonTooltip(Font font, RangeView view, EditTarget target, double mouseX, double mouseY) {
         Row row = rowAt(view, mouseX, mouseY);
         RangeRowButtons.Button button = row == null ? null
-                : RangeRowButtons.at(targetButtons(view, target), mouseX, mouseY);
+                : RangeRowButtons.at(targetButtons(font, view, target), mouseX, mouseY);
         return button == null ? null : buttons.tooltip(view, target, button.action());
     }
 
@@ -356,6 +356,7 @@ final class RangeList {
         int top = y + 1;
         int bottom = y + 1 + innerHeight();
         g.enableScissor(x + 1, top, x + width - 1, bottom);
+        boolean targetShown = false;
         for (Row row : rows) {
             int ry = top + row.top() - scroll;
             if (ry + row.height() <= top || ry >= bottom) {
@@ -368,7 +369,7 @@ final class RangeList {
             } else if (row.equals(hovered)) {
                 g.fill(x + 1, ry, right, ry + row.height(), GuiPaint.ROW_HOVER);
             }
-            List<RangeRowButtons.Button> placed = selected ? targetButtons(view, target) : List.of();
+            List<RangeRowButtons.Button> placed = selected ? targetButtons(font, view, target) : List.of();
             int textRight = placed.isEmpty() ? right : placed.getLast().x() - 1;
             switch (row.kind()) {
                 case ATTACHED -> renderAttached(g, font, attachedIcon, ry, right);
@@ -376,9 +377,13 @@ final class RangeList {
                 case MACHINE -> renderMachine(g, font, view, row, ry, textRight, placed.isEmpty());
             }
             if (selected) {
+                targetShown = true;
                 buttons.track(target, placed, mouseX, mouseY);
                 buttons.render(g, font, target, placed, mouseX, mouseY);
             }
+        }
+        if (!targetShown) { // a linha do alvo saiu da vista pela rolagem: o "Desvincular?" desarma
+            buttons.track(target, List.of(), mouseX, mouseY);
         }
         if (view.machines().isEmpty()) {
             int hy = top + ATTACHED_H + 3 - scroll;
@@ -475,9 +480,14 @@ final class RangeList {
         return null;
     }
 
-    /** Centro do botão {@code action} da linha do alvo (gancho do e2e); {@code null} se ele não está lá. */
-    int @Nullable [] buttonCenter(RangeView view, EditTarget target, RangeRowButtons.Action action) {
-        return rowCenter(view, target) == null ? null : RangeRowButtons.center(targetButtons(view, target), action);
+    /** Centro do botão {@code act} da linha do alvo (gancho do e2e); {@code null} se ele não está lá. */
+    int @Nullable [] buttonCenter(Font font, RangeView view, EditTarget target, RangeRowButtons.Action act) {
+        return rowCenter(view, target) == null ? null : RangeRowButtons.center(targetButtons(font, view, target), act);
+    }
+
+    /** O ✕ do alvo está armado (gancho do e2e). */
+    boolean unlinkArmed(EditTarget target) {
+        return buttons.unlinkArmed(target);
     }
 
     /** Ponto da seta de um grupo (abre e fecha sem escolher; gancho do e2e). */

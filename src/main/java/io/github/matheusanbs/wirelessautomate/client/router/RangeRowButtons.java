@@ -10,7 +10,6 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -55,10 +54,6 @@ public final class RangeRowButtons {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
     }
 
-    private static Font font() {
-        return Minecraft.getInstance().font;
-    }
-
     /** Quantas máquinas do grupo {@code group} estão trocadas. */
     static int replaced(RangeView view, int group) {
         int count = 0;
@@ -90,15 +85,17 @@ public final class RangeRowButtons {
         return null;
     }
 
-    private boolean unlinkArmed(EditTarget target) {
+    /** O ✕ do alvo {@code target} está armado, esperando o segundo clique. */
+    boolean unlinkArmed(EditTarget target) {
         return target.equals(armedFor) && unlinkArm.armed(System.currentTimeMillis());
     }
 
     /**
      * Os botões da linha do alvo {@code target}, com o topo em {@code ry} e a borda direita em {@code right};
-     * {@code minX} é até onde o "Desvincular?" pode crescer. Vazia se o alvo não tem botões.
+     * {@code minX} é até onde o "Desvincular?" pode crescer. Vazia se o alvo não tem botões. Com o ✕ armado,
+     * só ele: os outros saem para o texto caber.
      */
-    List<Button> place(RangeView view, EditTarget target, int ry, int rowH, int right, int minX) {
+    List<Button> place(Font font, RangeView view, EditTarget target, int ry, int rowH, int right, int minX) {
         List<Action> actions = new ArrayList<>();
         switch (target.kind()) {
             case ATTACHED -> {
@@ -112,10 +109,11 @@ public final class RangeRowButtons {
                 MachineView machine = view.machine(target.id());
                 if (machine != null) {
                     actions.add(Action.UNLINK);
-                    if (machine.exception()) {
+                    boolean armed = unlinkArmed(target);
+                    if (!armed && machine.exception()) {
                         actions.add(Action.REVERT);
                     }
-                    if (machine.state() == MachineState.REPLACED) {
+                    if (!armed && machine.state() == MachineState.REPLACED) {
                         actions.add(Action.UPDATE);
                     }
                 }
@@ -127,7 +125,7 @@ public final class RangeRowButtons {
         for (Action action : actions) {
             int w = SIZE;
             if (action == Action.UNLINK && unlinkArmed(target)) {
-                w = Math.max(SIZE, Math.min(font().width(tr("range.unlink.armed")) + 6, bx - minX));
+                w = Math.max(SIZE, Math.min(font.width(tr("range.unlink.armed")) + 6, bx - minX));
             }
             bx -= w;
             buttons.add(new Button(action, bx, by, w, SIZE));
@@ -137,8 +135,9 @@ public final class RangeRowButtons {
     }
 
     /**
-     * Acompanha o mouse e o alvo a cada quadro: o "Desvincular?" desarma quando o mouse sai dele ou o alvo
-     * muda. {@code buttons} são os da linha do alvo, postos agora.
+     * Acompanha o mouse e o alvo a cada quadro: o "Desvincular?" desarma quando o mouse sai dele, o alvo
+     * muda ou a linha sai da vista. {@code buttons} são os da linha do alvo, postos agora (vazia se a linha
+     * não está à vista).
      */
     void track(EditTarget target, List<Button> buttons, int mouseX, int mouseY) {
         if (!target.equals(armedFor)) {
@@ -181,8 +180,9 @@ public final class RangeRowButtons {
                 case REVERT -> GuiPaint.ACCENT;
                 case UNLINK -> GuiPaint.FG;
             };
-            int border = hovered ? GuiPaint.BUTTON_HOVER_BORDER
-                    : b.action() == Action.UNLINK ? GuiPaint.BUTTON_BORDER : color;
+            // o ↺ já tem a borda coral: com o mouse em cima, ela escurece
+            int hover = b.action() == Action.REVERT ? GuiPaint.FG : GuiPaint.BUTTON_HOVER_BORDER;
+            int border = hovered ? hover : b.action() == Action.UNLINK ? GuiPaint.BUTTON_BORDER : color;
             GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, border);
             if (b.action() == Action.UNLINK) {
                 cross(g, b.x() + 2, b.y() + 2, color);

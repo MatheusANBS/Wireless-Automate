@@ -39,6 +39,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -600,10 +601,7 @@ public class RouterBlockEntity extends BlockEntity {
         return range.link(pos, network);
     }
 
-    /**
-     * Desvincula a máquina do índice {@code index}. Se o grupo dela esvazia, ele sai e os cartões dele
-     * caem na posição do roteador.
-     */
+    /** Desvincula a máquina do índice {@code index}; um grupo que esvazia sai e os cartões caem no roteador. */
     public boolean unlinkMachine(int index) {
         return range.unlink(index);
     }
@@ -616,6 +614,16 @@ public class RouterBlockEntity extends BlockEntity {
     /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
     public boolean revertToProfile(int index) {
         return range.revertToProfile(index);
+    }
+
+    /** O id do bloco no lugar da máquina trocada (ativa, carregada, outro bloco com capability), ou {@code null}. */
+    public @Nullable ResourceLocation replacedBy(RemoteMachine machine) {
+        return range.replacedBy(machine);
+    }
+
+    /** Atualizar: as trocadas de {@code indices} vão para o grupo do bloco novo ({@link RemoteMachines#regroup}). */
+    public RemoteMachines.Regroup updateReplaced(List<Integer> indices) {
+        return range.updateReplaced(indices);
     }
 
     /**

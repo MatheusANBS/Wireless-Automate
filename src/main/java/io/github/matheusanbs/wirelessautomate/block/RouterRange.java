@@ -3,14 +3,19 @@ package io.github.matheusanbs.wirelessautomate.block;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules;
+import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -76,6 +81,56 @@ final class RouterRange {
         machine.setException(null);
         router.changed(NetworkManager.ALL_TYPES);
         return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#replacedBy}. */
+    @Nullable ResourceLocation replacedBy(RemoteMachine machine) {
+        Level level = router.getLevel();
+        int index = remotes.index(machine.pos());
+        if (level == null || index < 0 || !router.rangeActive()
+                || router.machineReach()[index] != RangeRules.Reach.ACTIVE
+                || !level.isLoaded(machine.pos())) {
+            return null;
+        }
+        BlockState state = level.getBlockState(machine.pos());
+        if (state.isAir()) {
+            return null;
+        }
+        ResourceLocation block = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (block.equals(remotes.groupOf(machine).block())) {
+            return null;
+        }
+        return RemoteCapabilities.any(level, machine.pos()) ? block : null;
+    }
+
+    /** Ver {@link RouterBlockEntity#updateReplaced}. */
+    RemoteMachines.Regroup updateReplaced(List<Integer> indices) {
+        Level level = router.getLevel();
+        if (level == null || level.isClientSide) {
+            return RemoteMachines.Regroup.EMPTY;
+        }
+        Map<Integer, ResourceLocation> moves = new LinkedHashMap<>();
+        for (int index : indices) {
+            RemoteMachine machine = remotes.machine(index);
+            ResourceLocation block = machine == null ? null : replacedBy(machine);
+            if (block != null) {
+                moves.put(index, block);
+            }
+        }
+        RemoteMachines.Regroup result = remotes.regroup(moves);
+        if (result.isEmpty()) {
+            return result;
+        }
+        for (int index : result.destinations().keySet()) {
+            RemoteMachine machine = remotes.machine(index);
+            // O replacedBy conferiu o chunk carregado.
+            storeFront(machine, level.getBlockState(machine.pos()));
+        }
+        dropAtRouter(result.cards());
+        pruneCaches();
+        remotesChanged();
+        router.changed(NetworkManager.ALL_TYPES);
+        return result;
     }
 
     private void dropAtRouter(List<ItemStack> stacks) {

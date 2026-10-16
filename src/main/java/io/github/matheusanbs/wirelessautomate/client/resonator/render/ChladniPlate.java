@@ -21,6 +21,7 @@ final class ChladniPlate {
     /** O chão da câmara fica em {@code −1,5} do centro; a placa, um pouco acima. */
     private static final float FLOOR_Y = -1.48f;
     private static final double DELAY = 0.3;
+    private static final float[][] CORNERS = {{-HALF, -HALF}, {-HALF, HALF}, {HALF, HALF}, {HALF, -HALF}};
 
     private ChladniPlate() {
     }
@@ -44,12 +45,12 @@ final class ChladniPlate {
         }
         TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(ChamberLens.ATLAS).apply(texture);
         float strength = Math.min(1, alpha);
-        float[][] corners = {{-HALF, -HALF}, {-HALF, HALF}, {HALF, HALF}, {HALF, -HALF}};
-        float[][] uvs = {{sprite.getU0(), sprite.getV0()}, {sprite.getU0(), sprite.getV1()},
-            {sprite.getU1(), sprite.getV1()}, {sprite.getU1(), sprite.getV0()}};
         for (int i = 0; i < 4; i++) {
-            out.addVertex(pose, corners[i][0], FLOOR_Y, corners[i][1]).setColor(1f, 1f, 1f, strength)
-                    .setUv(uvs[i][0], uvs[i][1]).setOverlay(OverlayTexture.NO_OVERLAY)
+            // Os cantos de CORNERS em ordem: (U0, V0), (U0, V1), (U1, V1), (U1, V0).
+            float u = i < 2 ? sprite.getU0() : sprite.getU1();
+            float v = i == 1 || i == 2 ? sprite.getV1() : sprite.getV0();
+            out.addVertex(pose, CORNERS[i][0], FLOOR_Y, CORNERS[i][1]).setColor(1f, 1f, 1f, strength)
+                    .setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
                     .setLight(LightTexture.FULL_BRIGHT).setNormal(pose, 0, 1, 0);
         }
     }

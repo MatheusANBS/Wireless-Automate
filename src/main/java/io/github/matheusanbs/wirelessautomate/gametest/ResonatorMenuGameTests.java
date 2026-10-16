@@ -263,6 +263,42 @@ public final class ResonatorMenuGameTests {
     }
 
     @GameTest(template = "empty7")
+    public static void lampadaApagaNaBordaForaDoPlato(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = near(helper, core);
+            ResonatorMenu menu = openMenu(player, core);
+            try {
+                core.setStationForTest(98.02);
+                core.setDial(97.75);
+                ResonatorStatePayload state = menu.pollState(100);
+                helper.assertTrue(state != null, "o primeiro estado não foi");
+                helper.assertValueEqual(state.deviationSteps(), TuneSignal.PLATEAU_STEPS, "desvio de 0,27 em passos");
+                helper.assertTrue(!state.tuned(), "a lâmpada acendeu com 0,27 MHz de desvio");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void lampadaAcendeDentroDoPlato(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = near(helper, core);
+            ResonatorMenu menu = openMenu(player, core);
+            try {
+                core.setStationForTest(98.02);
+                core.setDial(97.80);
+                ResonatorStatePayload state = menu.pollState(100);
+                helper.assertTrue(state != null, "o primeiro estado não foi");
+                helper.assertValueEqual(state.deviationSteps(), 4, "desvio de 0,22 em passos");
+                helper.assertTrue(state.tuned(), "a lâmpada não acendeu com 0,22 MHz de desvio");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    @GameTest(template = "empty7")
     public static void estadoTrazAGeracaoMaximaComOpacos(GameTestHelper helper) {
         formed(helper, RouterTier.ADVANCED, core -> {
             ServerPlayer player = near(helper, core);
@@ -342,7 +378,7 @@ public final class ResonatorMenuGameTests {
     @GameTest(template = "empty")
     public static void estadoIdaEVoltaPeloCodec(GameTestHelper helper) {
         ResonatorStatePayload state = new ResonatorStatePayload(CONTAINER_ID, 1_234_567_890_123L, 9_000_000_000L, 77,
-                1L << 40, 97.45, 720, 980, true, false, -13, 300, 600, 2, 1, 2);
+                1L << 40, 97.45, 720, 980, true, false, -13, true, 300, 600, 2, 1, 2);
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
         ResonatorStatePayload.STREAM_CODEC.encode(buf, state);
         helper.assertValueEqual(ResonatorStatePayload.STREAM_CODEC.decode(buf), state, "estado depois do codec");

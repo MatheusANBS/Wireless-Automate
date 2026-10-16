@@ -9,11 +9,13 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 /**
  * Servidor → cliente: o estado da tela do Núcleo aberta. A estação não vai: o desvio vai em passos de 0,05 MHz só
  * dentro de ±2 MHz ({@code TuneSignal.NO_SIGNAL} fora). Eficiência e teto em milésimos; {@code layout} 0 própria,
- * 1 Vitrine, 2 Faixa; {@code recharge} são os ticks andados da recarga em curso (0 sem Opaco ou sem redstone).
+ * 1 Vitrine, 2 Faixa; {@code tuned} é a lâmpada, calculada no servidor pelo desvio exato ({@code TuneSignal.tuned}),
+ * porque os passos arredondados acenderiam além do platô; {@code recharge} são os ticks andados da recarga em curso
+ * (0 sem Opaco ou sem redstone).
  */
 public record ResonatorStatePayload(int containerId, long energy, long capacity, long generation, long maxGeneration,
         double dial, int efficiencyPermille, int ceilingPermille, boolean auto, boolean tuner, int deviationSteps,
-        int recharge, int rechargeTicks, int energyPorts, int crystalPorts, int layout) implements CustomPacketPayload {
+        boolean tuned, int recharge, int rechargeTicks, int energyPorts, int crystalPorts, int layout) implements CustomPacketPayload {
     public static final Type<ResonatorStatePayload> TYPE = new Type<>(WirelessAutomate.id("resonator_state"));
     /** À mão: o {@code StreamCodec.composite} só vai até 6 campos. */
     public static final StreamCodec<RegistryFriendlyByteBuf, ResonatorStatePayload> STREAM_CODEC =
@@ -31,6 +33,7 @@ public record ResonatorStatePayload(int containerId, long energy, long capacity,
         ByteBufCodecs.BOOL.encode(buf, p.auto);
         ByteBufCodecs.BOOL.encode(buf, p.tuner);
         ByteBufCodecs.VAR_INT.encode(buf, p.deviationSteps);
+        ByteBufCodecs.BOOL.encode(buf, p.tuned);
         ByteBufCodecs.VAR_INT.encode(buf, p.recharge);
         ByteBufCodecs.VAR_INT.encode(buf, p.rechargeTicks);
         ByteBufCodecs.VAR_INT.encode(buf, p.energyPorts);
@@ -43,7 +46,7 @@ public record ResonatorStatePayload(int containerId, long energy, long capacity,
                 ByteBufCodecs.VAR_LONG.decode(buf), ByteBufCodecs.VAR_LONG.decode(buf), ByteBufCodecs.VAR_LONG.decode(buf),
                 ByteBufCodecs.DOUBLE.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
                 ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
-                ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
+                ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
                 ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf));
     }
 

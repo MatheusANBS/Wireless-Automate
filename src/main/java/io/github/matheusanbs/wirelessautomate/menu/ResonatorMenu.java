@@ -185,7 +185,8 @@ public class ResonatorMenu extends AbstractContainerMenu {
         return new ResonatorStatePayload(containerId, core.energy(), core.capacity(), core.generationPerTick(),
                 CoreMath.perTick(fePerCrystal, yieldSum, 1.0), core.dial(),
                 (int) Math.round(core.efficiency() * 1000), (int) Math.round(Tuning.ceiling(core.tier().ordinal()) * 1000),
-                core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()), recharge,
+                core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()),
+                TuneSignal.tuned(core.station(), core.dial()), recharge,
                 (int) Math.min(Integer.MAX_VALUE, Config.rechargeTicks()), core.energyPorts(), core.crystalPorts(),
                 layout);
     }

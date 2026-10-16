@@ -64,7 +64,7 @@ final class ScopeView {
         double e = signal ? Math.max(0, Math.min(1, state.efficiencyPermille() / 1000.0)) : 0;
         long millis = Util.getMillis();
         wave(g, x, y, w, h, e, millis / 1000.0 * PHASE_SPEED, millis / 50);
-        GuiText.draw(g, font, ResonatorText.scope(state.deviationSteps()), x + 4, y + 4, w - 8, GuiPaint.SCOPE_LINE);
+        GuiText.draw(g, font, ResonatorText.scope(state.deviationSteps(), state.tuned()), x + 4, y + 4, w - 8, GuiPaint.SCOPE_LINE);
     }
 
     /** O traço, uma coluna por pixel, ligando as vizinhas por um traço vertical. */

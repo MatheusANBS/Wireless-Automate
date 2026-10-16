@@ -39,6 +39,10 @@ final class ChamberCrystals {
     private static final byte DULL_SIGNAL = 3;
     /** Uma pilha por código da câmara: vazia, Cristal, Lapidado e os dois Opacos. */
     private static ItemStack[] stacks;
+    /** Rascunhos do desenho, que é só na thread de render: nada alocado por quadro. */
+    private static final double[] AT = new double[3];
+    private static final float[] FROM = new float[3];
+    private static final float[] TO = new float[3];
 
     private ChamberCrystals() {
     }
@@ -61,7 +65,7 @@ final class ChamberCrystals {
                 continue;
             }
             boolean dull = isDull(chambers[i]);
-            double[] at = crystalPos(i, chambers, q, ticks, view);
+            double[] at = crystalPos(i, chambers, q, ticks, view, AT);
             double seed = seed(i);
             double fallen = 1 - smoothstep(recharge(i, chambers, ticks, view));
             poseStack.pushPose();
@@ -87,8 +91,9 @@ final class ChamberCrystals {
         }
         double t = ticks * TICK_SECONDS;
         double[] head = scene.headPoint(partialTick);
-        float[] to = {(float) head[0], (float) head[1], (float) head[2]};
-        float[] from = new float[3];
+        TO[0] = (float) head[0];
+        TO[1] = (float) head[1];
+        TO[2] = (float) head[2];
         VertexConsumer out = null;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY || isDull(chambers[i])) {
@@ -99,28 +104,32 @@ final class ChamberCrystals {
             if (alpha <= 0) {
                 continue;
             }
-            double[] at = crystalPos(i, chambers, q, ticks, scene.view());
-            from[0] = (float) at[0];
-            from[1] = (float) at[1];
-            from[2] = (float) at[2];
+            double[] at = crystalPos(i, chambers, q, ticks, scene.view(), AT);
+            FROM[0] = (float) at[0];
+            FROM[1] = (float) at[1];
+            FROM[2] = (float) at[2];
             if (out == null) {
                 out = buffer.getBuffer(RenderType.lightning());
             }
-            LissajousTrace.segment(pose, out, from, to, BEAM_HALF, LissajousTrace.CORAL_LIGHT, alpha, alpha);
+            LissajousTrace.segment(pose, out, FROM, TO, BEAM_HALF, LissajousTrace.CORAL_LIGHT, alpha, alpha);
         }
     }
 
     /**
      * Onde fica o cristal da câmara {@code i}, relativo ao centro, no tempo {@code ticks} (com a fração do tick):
      * no anel, girando devagar, subindo e descendo com a sintonia; o Opaco mais baixo até a recarga terminar.
+     * Escreve em {@code out} e o devolve.
      */
-    static double[] crystalPos(int i, byte[] chambers, double q, double ticks, ChamberView view) {
+    static double[] crystalPos(int i, byte[] chambers, double q, double ticks, ChamberView view, double[] out) {
         double t = ticks * TICK_SECONDS;
         double a = 2 * Math.PI * i / chambers.length + RING_SPEED * t + Math.PI / 4;
         double phase = seed(i) * (1 - q);
         double bob = Math.sin(2 * Math.PI * t / BOB_SECONDS + phase) * BOB * q;
         double rise = isDull(chambers[i]) ? -DULL_DROP * (1 - smoothstep(recharge(i, chambers, ticks, view))) : 0;
-        return new double[] {Math.cos(a) * RADIUS, bob + rise + BASE_Y, Math.sin(a) * RADIUS};
+        out[0] = Math.cos(a) * RADIUS;
+        out[1] = bob + rise + BASE_Y;
+        out[2] = Math.sin(a) * RADIUS;
+        return out;
     }
 
     /** A câmara do Opaco que recarrega agora (o primeiro, como no servidor), ou -1. */

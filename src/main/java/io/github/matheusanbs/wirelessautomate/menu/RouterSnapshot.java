@@ -16,8 +16,8 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
-import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
@@ -37,8 +37,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -341,7 +339,7 @@ public record RouterSnapshot(
                     pos.getZ());
             RangeView.MachineState state = state(level, remotes, remote, reach[i]);
             // Só quando o bloco já não bate: a consulta de capability da trocada não roda nas outras.
-            ResourceLocation replacedBy = state == RangeView.MachineState.MISSING ? router.replacedBy(remote) : null;
+            ResourceLocation replacedBy = state == RangeView.MachineState.MISSING ? router.replacedBy(remote, reach[i]) : null;
             if (replacedBy != null) {
                 state = RangeView.MachineState.REPLACED;
             }

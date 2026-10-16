@@ -280,9 +280,9 @@ public final class ModPayloads {
 
     /**
      * Atualizar: passa para o grupo do bloco novo a máquina trocada do índice (conferida pela posição) ou as
-     * trocadas do grupo (conferido pelo bloco). Depois, uma máquina escolhida continua; um grupo escolhido que
-     * saiu dá lugar ao grupo de destino da primeira máquina atualizada, e um que só trocou de bloco continua,
-     * reescolhido com o bloco novo.
+     * trocadas do grupo (conferido pelo bloco). Depois, uma máquina escolhida continua, e um grupo escolhido
+     * que só trocou de bloco também ({@link EditTargetRef#refresh} o segue pelo id); um que saiu dá lugar ao
+     * grupo de destino da primeira máquina atualizada.
      */
     public static boolean handleUpdateMachine(@Nullable ServerPlayer player, UpdateMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -296,15 +296,11 @@ public final class ModPayloads {
         if (result.isEmpty()) {
             return false;
         }
-        MachineGroup chosen = before.target().kind() == EditTarget.Kind.GROUP
-                ? router.remoteMachines().group(before.target().id())
-                : null;
-        if (before.target().kind() == EditTarget.Kind.GROUP && chosen == null) {
+        if (before.target().kind() == EditTarget.Kind.GROUP
+                && router.remoteMachines().group(before.target().id()) == null) {
             int destination = result.destinations().values().iterator().next();
             MachineGroup group = router.remoteMachines().group(destination);
             host.selectTarget(EditTarget.group(destination), null, group == null ? null : group.block());
-        } else if (chosen != null && !chosen.block().equals(before.block())) {
-            host.selectTarget(before.target(), null, chosen.block());
         } else {
             host.validTarget();
         }

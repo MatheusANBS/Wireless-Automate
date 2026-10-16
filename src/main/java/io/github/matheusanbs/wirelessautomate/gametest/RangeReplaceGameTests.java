@@ -36,6 +36,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Roteador de alcance, a máquina trocada no lugar: o estado {@link RangeView.MachineState#REPLACED} no
@@ -47,6 +48,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class RangeReplaceGameTests {
     /** Alto-forno do lado das fornalhas, para o grupo do bloco novo já existir. */
     private static final BlockPos BLAST = new BlockPos(2, 1, 2);
+    /** Uma terceira fornalha, para o grupo antigo ficar com uma máquina. */
+    private static final BlockPos FURNACE_C = new BlockPos(2, 1, 1);
 
     private static ResourceLocation id(Block block) {
         return BuiltInRegistries.BLOCK.getKey(block);
@@ -62,6 +65,10 @@ public final class RangeReplaceGameTests {
 
     private static RemoteMachine machine(GameTestHelper helper, RouterBlockEntity router, BlockPos relative) {
         return router.remoteMachines().machine(index(helper, router, relative));
+    }
+
+    private static @Nullable ResourceLocation replacedBy(GameTestHelper helper, RouterBlockEntity router, BlockPos relative) {
+        return router.replacedBy(machine(helper, router, relative), router.machineReach()[index(helper, router, relative)]);
     }
 
     private static PortMode profileMode(RouterBlockEntity router, int group, Direction side) {
@@ -93,7 +100,7 @@ public final class RangeReplaceGameTests {
                         helper.assertTrue(b.replacedBy() == null, "a sumida com replacedBy");
                         helper.assertValueEqual(barrel.state(), RangeView.MachineState.LOADED, "barril");
                         helper.assertTrue(barrel.replacedBy() == null, "a carregada com replacedBy");
-                        helper.assertTrue(Objects.equals(router.replacedBy(machine(helper, router, FURNACE_A)),
+                        helper.assertTrue(Objects.equals(replacedBy(helper, router, FURNACE_A),
                                 id(Blocks.BLAST_FURNACE)), "o roteador não vê a trocada");
 
                         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
@@ -135,7 +142,7 @@ public final class RangeReplaceGameTests {
                     helper.assertTrue(router.card(EditTarget.group(furnaces), ResourceType.ITEM, Direction.SOUTH, 0)
                             .is(ModItems.FILTER_CARD.get()), "o cartão saiu");
                     helper.assertValueEqual(machine(helper, router, FURNACE_A).front(), Direction.WEST.ordinal(), "frente");
-                    helper.assertTrue(router.replacedBy(machine(helper, router, FURNACE_A)) == null, "continua trocada");
+                    helper.assertTrue(replacedBy(helper, router, FURNACE_A) == null, "continua trocada");
                 })
                 .thenSucceed();
     }
@@ -336,6 +343,109 @@ public final class RangeReplaceGameTests {
                                 "o grupo trocou de bloco com uma sumida");
                     } finally {
                         removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Duas de três para um bloco sem grupo: nasce um grupo só, com as duas, e o antigo fica com a terceira. */
+    @GameTest(template = "empty")
+    public static void updateTwoOfThreeOneNewGroup(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    helper.setBlock(FURNACE_C, Blocks.FURNACE);
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    link(helper, router, FURNACE_C);
+                    int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
+                    blastAt(helper, FURNACE_A, Direction.EAST);
+                    blastAt(helper, FURNACE_B, Direction.SOUTH);
+
+                    router.updateReplaced(List.of(index(helper, router, FURNACE_A), index(helper, router, FURNACE_B)));
+                    int blasts = groupOf(router, helper.absolutePos(FURNACE_A));
+                    helper.assertTrue(blasts != furnaces, "A ficou no grupo antigo");
+                    helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_B)), blasts, "B noutro grupo novo");
+                    helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_C)), furnaces, "C saiu do grupo antigo");
+                    long blastGroups = router.remoteMachines().groups().stream()
+                            .filter(group -> group.block().equals(id(Blocks.BLAST_FURNACE))).count();
+                    helper.assertValueEqual(blastGroups, 1L, "grupos dos altos-fornos");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O grupo escolhido que só trocou de bloco continua escolhido, com a mesma face, na tela de quem clicou e
+     * numa segunda tela aberta no mesmo grupo.
+     */
+    @GameTest(template = "empty")
+    public static void updateKeepsGroupTargetAndFace(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    ServerPlayer[] first = new ServerPlayer[1];
+                    ServerPlayer[] second = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, first);
+                    RouterMenu other = openMenu(helper, router, second);
+                    try {
+                        int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
+                        helper.assertTrue(ModPayloads.handleSelectTarget(first[0],
+                                SelectTargetPayload.group(menu.containerId, furnaces, id(Blocks.FURNACE))), "não escolheu o grupo");
+                        helper.assertTrue(ModPayloads.handleSelectTarget(second[0],
+                                SelectTargetPayload.group(other.containerId, furnaces, id(Blocks.FURNACE))),
+                                "não escolheu o grupo na outra tela");
+                        menu.select(ResourceType.ITEM, Direction.SOUTH);
+                        other.select(ResourceType.ITEM, Direction.SOUTH);
+                        blastAt(helper, FURNACE_A, Direction.EAST);
+
+                        helper.assertTrue(ModPayloads.handleUpdateMachine(first[0],
+                                UpdateMachinePayload.group(menu.containerId, furnaces, id(Blocks.FURNACE))), "não atualizou");
+                        helper.assertValueEqual(menu.target(), EditTarget.group(furnaces), "alvo de quem clicou");
+                        helper.assertValueEqual(menu.selectedFace(), Direction.SOUTH, "face de quem clicou");
+                        helper.assertTrue(Objects.equals(menu.targetRef().block(), id(Blocks.BLAST_FURNACE)),
+                                "o alvo não tem o bloco novo");
+                        helper.assertValueEqual(other.validTarget(), EditTarget.group(furnaces), "alvo da outra tela");
+                        helper.assertValueEqual(other.selectedFace(), Direction.SOUTH, "face da outra tela");
+                    } finally {
+                        removePlayer(helper, first[0]);
+                        removePlayer(helper, second[0]);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Sem o upgrade valendo, o payload é recusado e a trocada fica no grupo. */
+    @GameTest(template = "empty")
+    public static void updateRefusedWithoutUpgrade(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    try {
+                        BlockPos a = helper.absolutePos(FURNACE_A);
+                        int index = router.remoteMachines().index(a);
+                        int furnaces = groupOf(router, a);
+                        blastAt(helper, FURNACE_A, Direction.EAST);
+                        router.setRangeUpgrade(ItemStack.EMPTY);
+
+                        helper.assertFalse(ModPayloads.handleUpdateMachine(holder[0],
+                                UpdateMachinePayload.machine(menu.containerId, index, a)), "atualizou a máquina sem o upgrade");
+                        helper.assertFalse(ModPayloads.handleUpdateMachine(holder[0],
+                                UpdateMachinePayload.group(menu.containerId, furnaces, id(Blocks.FURNACE))),
+                                "atualizou o grupo sem o upgrade");
+                        helper.assertTrue(router.remoteMachines().group(furnaces).block().equals(id(Blocks.FURNACE)),
+                                "o grupo trocou de bloco sem o upgrade");
+                    } finally {
+                        removePlayer(helper, holder[0]);
                     }
                 })
                 .thenSucceed();

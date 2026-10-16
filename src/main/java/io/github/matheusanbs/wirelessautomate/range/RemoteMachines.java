@@ -158,7 +158,7 @@ public final class RemoteMachines {
         for (Integer index : pending.keySet()) {
             ordered.put(index, destinations.get(index));
         }
-        return new Regroup(cards, ordered);
+        return new Regroup(List.copyOf(cards), Collections.unmodifiableMap(ordered));
     }
 
     /** O bloco novo se todas as máquinas de {@code group} estão em {@code pending} e vão para ele; senão {@code null}. */

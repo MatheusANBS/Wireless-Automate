@@ -245,7 +245,24 @@ final class E2eResonatorSteps {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
                     if (VITRINE[x][y][z] != Part.AIR && halfBuilt(x, y, z) == half) {
-                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(VITRINE[x][y][z], x, y, z));
+                        level.setBlockAndUpdate(origin.offset(x, y, z),
+                                looseState(VITRINE[x][y][z], x, y, z, RouterTier.ELITE));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * A Vitrine inteira, com o Núcleo virado para o leste no tier dado e a janela na face sul; monta sozinha pelo
+     * tick agendado do Núcleo. A vitrine do CurseForge usa a mesma.
+     */
+    static void placeVitrine(ServerLevel level, BlockPos origin, RouterTier tier) {
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                for (int z = 0; z < 5; z++) {
+                    if (VITRINE[x][y][z] != Part.AIR) {
+                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(VITRINE[x][y][z], x, y, z, tier));
                     }
                 }
             }
@@ -271,7 +288,7 @@ final class E2eResonatorSteps {
         }
     }
 
-    private static BlockPos core(BlockPos origin) {
+    static BlockPos core(BlockPos origin) {
         return origin.offset(4, 2, 2);
     }
 
@@ -300,14 +317,14 @@ final class E2eResonatorSteps {
     }
 
     /** O bloco solto de cada peça; o Núcleo e as peças de face nascem virados para fora, como a montagem os deixa. */
-    private static BlockState looseState(Part part, int x, int y, int z) {
+    private static BlockState looseState(Part part, int x, int y, int z, RouterTier tier) {
         Direction out = x == 0 ? Direction.WEST : x == 4 ? Direction.EAST : y == 0 ? Direction.DOWN
                 : y == 4 ? Direction.UP : z == 0 ? Direction.NORTH : Direction.SOUTH;
         return switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get().defaultBlockState();
             case GLASS -> ModBlocks.RESONATOR_GLASS.get().defaultBlockState();
             case CORE -> ModBlocks.RESONANCE_CORE.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out)
-                    .setValue(RouterBlock.TIER, RouterTier.ELITE);
+                    .setValue(RouterBlock.TIER, tier);
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out);
             case CRYSTAL_PORT -> ModBlocks.RESONATOR_CRYSTAL_PORT.get().defaultBlockState()
                     .setValue(ResonatorPartBlock.FACING, out);

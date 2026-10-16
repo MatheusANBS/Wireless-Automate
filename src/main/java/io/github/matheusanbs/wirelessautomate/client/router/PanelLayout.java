@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.TabLayout;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
@@ -39,11 +40,10 @@ final class PanelLayout {
     static final int PRIO_VALUE_W = 22;
     private static final int EDIT_PAD = 5;
     static final int TARGET_PAD = 3;
-    static final int NOTICE_H = 13;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS, PRIO_PLUS,
-        REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS,
+        PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -67,6 +67,8 @@ final class PanelLayout {
     int bodyX;
     int bodyY;
     int bodyW;
+    /** Altura da faixa do aviso no quadro atual: cresce com as linhas do texto ({@link NoticeBand}). */
+    private int noticeH = NoticeBand.LINE_H;
     int bodyH;
 
     // o que arrange() calcula a cada quadro
@@ -131,6 +133,9 @@ final class PanelLayout {
     /** Posições e áreas de clique do quadro atual, pelo snapshot, pela aba e pelo espaço. */
     void arrange(Font font, PanelModel model) {
         hots.clear();
+        PanelNoticePayload notice = PanelNotices.current();
+        noticeH = notice == null ? NoticeBand.LINE_H
+                : NoticeBand.height(font, notice, bodyW, notice.undo() != PanelNoticePayload.Undo.NONE);
         arrangeTabs(font, model);
         arrangeNet();
         arrangeBody(font, model);
@@ -216,17 +221,30 @@ final class PanelLayout {
         arrangeControls(font, model, x, y, w);
     }
 
-    /** A linha Editando e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. */
+    /**
+     * A linha Editando e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a
+     * lista das máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
+     */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
-        if (model.rangeShown()) {
+        if (model.rangeShown() && !model.targetFromList()) {
             targetY = y;
             int labelW = font.width(PanelModel.panelTr("target")) + 5;
             hots.add(new Hot(Kind.TARGET, x + labelW, y, w - labelW, ROW_H, 0));
             y += ROW_H + GAP;
             RangeView.MachineView machine = model.targetMachine();
             if (machine != null) {
-                arrangeTargetButtons(font, x, y, w, machine.exception());
+                arrangeTargetButtons(font, x, y, w, machine.exception(),
+                        machine.state() == RangeView.MachineState.REPLACED);
+                Hot unlink = hot(Kind.UNLINK);
+                if (model.unlinkArmed() && unlink != null) {
+                    // armado, o Desvincular fica sozinho, do começo da linha até onde ele estava (o mouse
+                    // continua em cima dele) ou até onde o texto armado couber inteiro, como na lista
+                    int armedW = font.width(PanelModel.tr("range.unlink.armed")) + 2 * TARGET_PAD;
+                    hots.removeIf(h -> h.kind() == Kind.REVERT || h.kind() == Kind.UPDATE || h.kind() == Kind.UNLINK);
+                    hots.add(new Hot(Kind.UNLINK, x, y, Math.min(w, Math.max(unlink.x() + unlink.w() - x, armedW)),
+                            ROW_H, 0));
+                }
                 y += ROW_H + GAP;
             }
         }
@@ -294,42 +312,67 @@ final class PanelLayout {
 
         PanelNoticePayload notice = PanelNotices.current();
         if (notice != null && notice.undo() != PanelNoticePayload.Undo.NONE) {
-            Component undo = PanelModel.panelTr("notice.undo");
-            int undoW = font.width(undo) + 8;
-            hots.add(new Hot(Kind.UNDO, x + w - undoW, noticeY(), undoW, NOTICE_H, 0));
+            int undoW = NoticeBand.undoWidth(font);
+            hots.add(new Hot(Kind.UNDO, x + w - undoW, noticeY(), undoW, NoticeBand.LINE_H, 0));
         }
     }
 
     /**
-     * Voltar a igual às outras (só na exceção) e Desvincular, lado a lado: o texto da especificação, ou o
-     * curto se os dois não couberem; se nem assim, o Desvincular fica com até metade.
+     * Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o texto
+     * da especificação, ou um Voltar mais curto ("Voltar ao perfil", "Voltar") se não couberem; se nem assim,
+     * cada um fica com até uma parte igual e o Voltar com o resto.
      */
-    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception) {
-        Component unlink = PanelModel.tr("range.unlink");
-        int unlinkW = font.width(unlink) + 2 * TARGET_PAD;
-        int bx = x;
+    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
+        int unlinkW = font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD;
+        int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
+        int count = 1 + (replaced ? 1 : 0) + (exception ? 1 : 0);
+        int revertW = 0;
         if (exception) {
             revertLabel = PanelModel.panelTr("target.revert");
-            int revertW = font.width(revertLabel) + 2 * TARGET_PAD;
-            if (revertW + GAP + unlinkW > w) {
-                revertLabel = PanelModel.tr("range.revert");
-                revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+            revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+            for (String shorter : new String[] {"range.revert", "range.revert.short"}) {
+                if (total(revertW, updateW, unlinkW) > w) {
+                    revertLabel = PanelModel.tr(shorter);
+                    revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+                }
             }
-            if (revertW + GAP + unlinkW > w) {
-                unlinkW = Math.min(unlinkW, (w - GAP) / 2);
-                revertW = w - GAP - unlinkW;
-            }
-            hots.add(new Hot(Kind.REVERT, bx, y, revertW, ROW_H, 0));
-            bx += revertW + GAP;
         }
-        hots.add(new Hot(Kind.UNLINK, bx, y, Math.min(unlinkW, w), ROW_H, 0));
+        if (total(revertW, updateW, unlinkW) > w) {
+            int share = (w - (count - 1) * GAP) / count;
+            unlinkW = Math.min(unlinkW, share);
+            updateW = Math.min(updateW, share);
+            if (exception) {
+                revertW = w - total(0, updateW, unlinkW) - GAP;
+            }
+        }
+        int bx = x;
+        for (Kind kind : new Kind[] {Kind.REVERT, Kind.UPDATE, Kind.UNLINK}) {
+            int bw = kind == Kind.REVERT ? revertW : kind == Kind.UPDATE ? updateW : unlinkW;
+            if (bw > 0) {
+                hots.add(new Hot(kind, bx, y, Math.min(bw, x + w - bx), ROW_H, 0));
+                bx += bw + GAP;
+            }
+        }
+    }
+
+    /** Largura dos botões da linha da máquina, com o espaço entre eles; largura 0 é o botão que não aparece. */
+    private static int total(int... widths) {
+        int sum = 0;
+        int shown = 0;
+        for (int width : widths) {
+            if (width > 0) {
+                sum += width;
+                shown++;
+            }
+        }
+        return sum + Math.max(0, shown - 1) * GAP;
     }
 
     // ------------------------------------------------------------------ consultas
 
     /** Topo da faixa do aviso, na base do corpo. */
     int noticeY() {
-        return bodyY + bodyH - NOTICE_H;
+        return bodyY + bodyH - noticeH;
     }
 
     @Nullable Hot hot(Kind kind) {
@@ -374,6 +417,6 @@ final class PanelLayout {
     /** O ponto está na faixa do aviso do painel (que fica por cima do que estiver embaixo dela). */
     boolean inNotice(double mx, double my) {
         return bodyW > 0 && PanelNotices.current() != null && mx >= bodyX && mx < bodyX + bodyW
-                && my >= noticeY() && my < noticeY() + NOTICE_H;
+                && my >= noticeY() && my < noticeY() + noticeH;
     }
 }

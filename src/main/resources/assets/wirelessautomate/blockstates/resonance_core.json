@@ -1,0 +1,404 @@
+{
+  "variants": {
+    "facing=north,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic"
+    },
+    "facing=north,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced"
+    },
+    "facing=north,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite"
+    },
+    "facing=north,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald"
+    },
+    "facing=north,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium"
+    },
+    "facing=north,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium"
+    },
+    "facing=north,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium"
+    },
+    "facing=north,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate"
+    },
+    "facing=north,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose"
+    },
+    "facing=north,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose"
+    },
+    "facing=north,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose"
+    },
+    "facing=north,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose"
+    },
+    "facing=north,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose"
+    },
+    "facing=north,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose"
+    },
+    "facing=north,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose"
+    },
+    "facing=north,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose"
+    },
+    "facing=south,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium",
+      "y": 180
+    },
+    "facing=south,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
+      "y": 180
+    },
+    "facing=south,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose",
+      "y": 180
+    },
+    "facing=east,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium",
+      "y": 90
+    },
+    "facing=east,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
+      "y": 90
+    },
+    "facing=east,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose",
+      "y": 90
+    },
+    "facing=west,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium",
+      "y": 270
+    },
+    "facing=west,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
+      "y": 270
+    },
+    "facing=west,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose",
+      "y": 270
+    },
+    "facing=up,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose",
+      "x": 270,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=true,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=basic": {
+      "model": "wirelessautomate:block/resonance_core_basic_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=advanced": {
+      "model": "wirelessautomate:block/resonance_core_advanced_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=elite": {
+      "model": "wirelessautomate:block/resonance_core_elite_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=emerald": {
+      "model": "wirelessautomate:block/resonance_core_emerald_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=allthemodium": {
+      "model": "wirelessautomate:block/resonance_core_allthemodium_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=vibranium": {
+      "model": "wirelessautomate:block/resonance_core_vibranium_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=unobtainium": {
+      "model": "wirelessautomate:block/resonance_core_unobtainium_loose",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,formed=false,tier=ultimate": {
+      "model": "wirelessautomate:block/resonance_core_ultimate_loose",
+      "x": 90,
+      "y": 180
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "ambientocclusion": true,
+  "textures": {
+    "resonator_casing_b": "wirelessautomate:block/resonator_casing_b",
+    "resonator_casing_b_coral": "wirelessautomate:block/resonator_casing_b_coral",
+    "resonator_casing_campo": "wirelessautomate:block/resonator_casing_campo",
+    "resonator_forro": "wirelessautomate:block/resonator_forro",
+    "particle": "wirelessautomate:block/resonator_casing_campo"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_b",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_casing_b_coral",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}

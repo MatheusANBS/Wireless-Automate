@@ -73,6 +73,9 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `bigstack` | 1 par (máquinas de teste): origem de 1 slot com uma pilha de 1.000.000 de pedregulhos (como gaveta ou bin, extrai até 64 por vez) para um ralo, tier Allthemodium | Vazão de uma pilha enorme num slot só | Perto da vazão do Allthemodium (131.072 itens/s) |
 | `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
 | `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
+| `resonator-gen` | n Ressonadores de Sinal Ultimate (padrão 100), montados, sintonizados e com 8 Lapidados; um roteador Ultimate na Porta de Energia de cada um, para uma Bateria Ultimate, cada par numa rede | Custo do Ressonador gerando, com o transporte da energia | Bem abaixo do orçamento |
+| `resonator-idle` | Os mesmos (padrão 500), sem roteador: o buffer enche em 10 s e para | Custo de existir do Ressonador | Perto de 0 |
+| `resonator-event` | 50 Ressonadores ociosos; no meio da medição, um canto de cada casca sai no mesmo tick e volta 40 ticks depois | Pico de um tick com todas as revalidações juntas | Um pico de poucos ms, nunca por tick |
 
 Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots.
 
@@ -271,3 +274,44 @@ Medido com um cenário temporário (não versionado): Baú do mod (Ultimate) com
 
 Os cenários antigos (`many` com 500 no vanilla, `raw` vanilla, `big` e `bigfull` no Sophisticated) ficaram dentro do ruído da máquina, antes e depois. A origem do Sophisticated para o Sophisticated não muda: o `extractItem` dele entrega uma pilha por chamada.
 
+
+## Ressonador de Sinal (15 de outubro de 2026)
+
+Mede o "sem lag" do Ressonador de Sinal (etapa 2, ramo `ressonador`, cenários em `5f85acf`): `./scripts/bench.sh resonator-gen:100:3,resonator-gen:500:3,resonator-idle:500:3,resonator-event:50:3`, máquina local (Windows 11, 24 CPUs, Java 21, heap de 2 GB). Relatório bruto: `run/bench/reports/20261015-165446.md`, fora do git.
+
+**Montagem.** Cada Ressonador é a caixa 5×5×5 do GameTest `ENERGY_ON_TOP` (`bench/BenchResonators.java`): Núcleo Ultimate no centro da face leste, Porta de Cristais na norte, janela na sul e a Porta de Energia no centro da face de cima, com o roteador em cima dela, como nos outros cenários. A grade tem passo de 7 × 6 blocos (a Bateria ao lado e um bloco de folga). A **linha de base** tem a casca inteira sem o Núcleo: nenhum Núcleo no gerenciador e, no `resonator-gen`, os roteadores e as Baterias já postos, sem rede. Ao pôr a rede entram os Núcleos (8 Lapidados cheios e 64 de redstone), que montam pela revalidação de sempre; o dial vai para a estação depois de montar (`setDial`). No modo automático, um `resonator-gen` de 100 e um `resonator-event` de 50 aquecem o JIT antes (descartados).
+
+**Colunas.** "Ressonador" é o tick do `ResonatorManager` (a varredura do balde e os lotes), lido do `ResonatorProfile` no fim de cada tick, o mesmo número do `/wa profile`; "mod" é o laço do transporte. Os dois rodam no `ServerTickEvent.Post` e entram no MSPT medido. "Montagem" é a soma das revalidações da montagem de todos os Núcleos (caem quase todas num tick só). No evento, "quebra" e "volta" são o maior tick e a maior soma de revalidações nos 5 ticks depois de tirar e de devolver os cantos.
+
+| Cenário | n | MSPT base (ms) | MSPT medido (ms) | Δ MSPT (ms) | MSPT p99 (ms) | MSPT máx (ms) | mod (ms/tick) | Ressonador (ms/tick) | Ressonador p99 | Ressonador máx |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `resonator-gen` | 100 | 0,160 ± 0,024 | 0,251 ± 0,033 | 0,091 ± 0,026 | 0,585 ± 0,196 | 1,18 ± 0,83 | 0,048 ± 0,003 | **0,035 ± 0,007** | 0,089 | 0,108 |
+| `resonator-gen` | 500 | 0,161 ± 0,011 | 0,467 ± 0,026 | 0,306 ± 0,036 | 0,828 ± 0,042 | 1,00 ± 0,09 | 0,173 ± 0,007 | **0,096 ± 0,009** | 0,199 | 0,240 |
+| `resonator-idle` | 500 | 0,157 ± 0,009 | 0,187 ± 0,020 | 0,030 ± 0,014 | 0,362 ± 0,047 | 0,95 ± 0,96 | 0,0002 | **0,035 ± 0,010** | 0,132 | 0,70 ± 1,03 |
+| `resonator-event` | 50 | 0,118 ± 0,008 | 0,176 ± 0,004 | 0,058 ± 0,007 | 0,318 ± 0,055 | **8,08 ± 0,41** | 0,0002 | 0,010 | 0,034 | 0,040 |
+
+| Cenário | n | Energia movida | Buffer médio no fim | Montagem (ms, num tick) | Quebra: tick máx (revalidação) | Volta: tick máx (revalidação) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `resonator-gen` | 100 | 3,44 × 10¹³ FE/s, todas as origens | 0,5% | 9,6 ± 2,0 | — | — |
+| `resonator-gen` | 500 | 1,72 × 10¹⁴ FE/s, todas as origens | 0,5% | 42,0 ± 2,1 | — | — |
+| `resonator-idle` | 500 | — | 100% | 31,7 ± 0,8 | — | — |
+| `resonator-event` | 50 | — | 100% | 3,1 ± 0,5 | **8,08 ms** (7,89 ms; 0/50 montados depois) | 3,02 ms (2,83 ms) |
+
+A energia movida é exatamente a geração cheia (500 × 8 Lapidados × 1.073.741.824 FE × 2 × 20 ticks): o roteador Ultimate tira tudo e o buffer nunca enche.
+
+### Comparação com a estimativa (`identidade.md`, "Sem lag")
+
+| Medida | Estimativa | Medido | Leitura |
+| --- | --- | --- | --- |
+| 500 gerando, Ressonador | ~0,12 ms/tick (até ~0,2) | **0,096 ms/tick** (p99 0,20) | Dentro: ~3,9 µs por lote gerando, como os ~3 µs estimados |
+| 500 gerando, servidor | +0,1 a +0,3 ms | +0,31 ms (0,17 do transporte + 0,10 do Ressonador + o resto do tick) | No topo da faixa; o transporte de 500 pares pesa mais que o gerador |
+| 500 ociosos, Ressonador | ~2 µs/tick depois dos baldes | **35 µs/tick** | Acima: a varredura caiu, mas o lote com o buffer cheio custa ~1,4 µs (estimado 0,3 µs), 25 lotes por tick |
+| Evento, 50 revalidações num tick | ~5 ms | **8,1 ms** (7,9 de revalidação, ~160 µs cada) | Acima: a casca quebrada tenta as 54 caixas; a volta (montar de novo, com a regravação da casca) fica em ~57 µs cada |
+| Montagem de 500 num tick | não estimada | 32 a 42 ms | O pico que o perfil mostra: aparece ao montar (ou ao carregar uma região com muitos Núcleos) |
+
+### Leitura
+
+- **Gerando, o Ressonador cumpre:** 0,1 ms/tick com 500 Núcleos Ultimate, um décimo do orçamento do mod, e o pico de um tick não passa de 0,24 ms. O custo por lote bate com a estimativa.
+- **O custo de existir não é ~0:** 35 µs/tick com 500 ociosos. Não vem da varredura (os baldes já a dividem por 20), e sim do lote com o buffer cheio, que ainda percorre as câmaras (`dullCount` duas vezes, `generationPerTick`) antes de ver que não há espaço. Uma saída barata é olhar `energy == capacity` (e a recarga sem Opaco) antes dos laços.
+- **O evento passa a estimativa em 60%:** 8 ms num tick para 50 cascas quebradas no mesmo tick. É um tick só e um caso extremo (50 Ressonadores quebrados juntos), mas a revalidação de uma casca quebrada (~160 µs) é o lado caro: sem a caixa da frente, ela tenta as 54. A volta, que monta, custa um terço.
+- **A montagem em massa é o maior pico:** 32 a 42 ms num tick para 500 Núcleos montando juntos (~65 a 85 µs cada, com a regravação dos 98 estados da casca). No jogo isso só acontece numa carga de região com muitos Núcleos; vale medir o cenário "cargas" da estimativa e, se preciso, espalhar as revalidações da carga por alguns ticks.

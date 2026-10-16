@@ -13,8 +13,13 @@ import org.jetbrains.annotations.Nullable;
  * O alvo de edição da tela do roteador ({@link EditTarget}) com o que o identifica de verdade: a
  * posição da máquina ({@link EditTarget.Kind#MACHINE}) ou o id do bloco do grupo
  * ({@link EditTarget.Kind#GROUP}). O índice de uma máquina muda quando outra é desvinculada, e o id
- * de um grupo pode ser reaproveitado depois de recarregar o mundo; por isso o menu e o filtro de face
- * guardam esta referência e a conferem ({@link #refresh}) antes de cada ação. Só no servidor.
+ * de um grupo pode ser reaproveitado; por isso o menu e o filtro de face guardam esta referência e a
+ * conferem ({@link #refresh}) antes de cada ação. O bloco só confere o que a tela mandou ({@link #resolve});
+ * o {@link #refresh} segue o grupo pelo id, para um grupo que trocou de bloco (o Atualizar) continuar o
+ * mesmo. Limitação: o próximo id não é gravado, e sim refeito ({@code max + 1}) quando o block entity
+ * carrega (também quando o chunk do roteador recarrega). Depois que um grupo sai e o roteador recarrega,
+ * o id dele pode voltar num grupo novo, e um alvo lembrado (o do Tablet) reabre nesse grupo. Só no
+ * servidor.
  */
 public record EditTargetRef(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
     public static final EditTargetRef ATTACHED = new EditTargetRef(EditTarget.ATTACHED_TARGET, null, null);
@@ -47,8 +52,8 @@ public record EditTargetRef(EditTarget target, @Nullable BlockPos pos, @Nullable
 
     /**
      * A mesma referência, conferida no roteador: uma máquina que mudou de índice (outra antes dela
-     * foi desvinculada) é achada pela posição; um alvo que não existe mais, ou sem o upgrade valendo,
-     * volta para a presa ({@link #ATTACHED}).
+     * foi desvinculada) é achada pela posição; um grupo que trocou de bloco segue pelo id, com o bloco
+     * novo; um alvo que não existe mais, ou sem o upgrade valendo, volta para a presa ({@link #ATTACHED}).
      */
     public EditTargetRef refresh(RouterBlockEntity router) {
         if (target.attached()) {
@@ -60,7 +65,10 @@ public record EditTargetRef(EditTarget target, @Nullable BlockPos pos, @Nullable
         RemoteMachines remotes = router.remoteMachines();
         if (target.kind() == EditTarget.Kind.GROUP) {
             MachineGroup group = remotes.group(target.id());
-            return group != null && group.block().equals(block) ? this : ATTACHED;
+            if (group == null) {
+                return ATTACHED;
+            }
+            return group.block().equals(block) ? this : new EditTargetRef(target, null, group.block());
         }
         RemoteMachine machine = remotes.machine(target.id());
         if (machine != null && machine.pos().equals(pos)) {

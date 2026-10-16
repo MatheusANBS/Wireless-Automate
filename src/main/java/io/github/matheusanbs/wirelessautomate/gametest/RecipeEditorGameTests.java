@@ -116,6 +116,14 @@ public final class RecipeEditorGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void cutCrystalFicaForaDaLista(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        helper.assertTrue(entry(server, id("cut_signal_crystal")).isEmpty(),
+                "cut_signal_crystal (tipo próprio) não é editável");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void saveWritesValidRecipe(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ResourceLocation id = id("storage_tank");
@@ -270,7 +278,7 @@ public final class RecipeEditorGameTests {
         MinecraftServer server = helper.getLevel().getServer();
         ResourceLocation id = id("chunk_loader_upgrade");
         ResourceLocation opId = id("storage_battery");
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         // Operador fora da lista de jogadores (sem conexão): só o handle o vê.
         ServerPlayer operator = new ServerPlayer(server, helper.getLevel(),
                 new GameProfile(UUID.randomUUID(), "test-mock-operator"), ClientInformation.createDefault()) {

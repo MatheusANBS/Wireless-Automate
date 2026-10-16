@@ -35,33 +35,23 @@ import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JavaOps;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.UUID;
-import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.CommonListenerCookie;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -73,13 +63,12 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Lado do servidor da tela de filtro e o Cartão de Filtro: abrir pelo roteador, as edições, o
  * Shift + clique no inventário, importar e exportar o cartão e o menu do próprio cartão. Os
  * handlers são chamados direto, com o menu no {@code containerMenu} do jogador falso, que volta ao
- * inventário no fim de cada teste. O jogador falso é um {@link MockPlayer}, que abre telas sem o
+ * inventário no fim de cada teste. O jogador falso é um {@link TestPlayers.MenuPlayer}, que abre telas sem o
  * pacote da NeoForge.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -96,59 +85,8 @@ public final class FilterMenuGameTests {
         return helper.getBlockEntity(pos);
     }
 
-    /**
-     * Jogador falso como o do {@link GameTestHelper#makeMockServerPlayerInLevel()}, mas que abre
-     * telas sem mandar o pacote de abertura da NeoForge (a conexão falsa não negocia canais) e
-     * guarda os dados extras da abertura, para o teste lê-los como o cliente leria.
-     */
-    private static final class MockPlayer extends ServerPlayer {
-        private static int nextContainerId = 100;
-        @Nullable RegistryFriendlyByteBuf openData;
-
-        MockPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
-            super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
-        }
-
-        @Override
-        public boolean isSpectator() {
-            return false;
-        }
-
-        @Override
-        public boolean isCreative() {
-            return true;
-        }
-
-        @Override
-        public OptionalInt openMenu(@Nullable MenuProvider provider,
-                @Nullable Consumer<RegistryFriendlyByteBuf> extraDataWriter) {
-            if (provider == null) {
-                return OptionalInt.empty();
-            }
-            if (containerMenu != inventoryMenu) {
-                doCloseContainer();
-            }
-            int containerId = nextContainerId++;
-            AbstractContainerMenu menu = provider.createMenu(containerId, getInventory(), this);
-            if (menu == null) {
-                return OptionalInt.empty();
-            }
-            openData = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess());
-            if (extraDataWriter != null) {
-                extraDataWriter.accept(openData);
-            }
-            containerMenu = menu;
-            return OptionalInt.of(containerId);
-        }
-    }
-
-    private static MockPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
-        CommonListenerCookie cookie = CommonListenerCookie.createInitial(
-                new GameProfile(UUID.randomUUID(), "test-mock-player"), false);
-        MockPlayer player = new MockPlayer(helper, cookie);
-        Connection connection = new Connection(PacketFlow.SERVERBOUND);
-        new EmbeddedChannel(connection);
-        helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+    private static TestPlayers.MenuPlayer playerNear(GameTestHelper helper, RouterBlockEntity router) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         return player;
     }
@@ -185,7 +123,7 @@ public final class FilterMenuGameTests {
     @GameTest(template = "empty")
     public static void openFilterFromRouter(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper);
-        MockPlayer player = playerNear(helper, router);
+        TestPlayers.MenuPlayer player = playerNear(helper, router);
         try {
             RouterMenu routerMenu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
                     RouterSnapshot.capture(router, player));
@@ -372,7 +310,7 @@ public final class FilterMenuGameTests {
     @GameTest(template = "empty")
     public static void cardMenuWritesTheCard(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper);
-        MockPlayer player = playerNear(helper, router);
+        TestPlayers.MenuPlayer player = playerNear(helper, router);
         ItemStack card = new ItemStack(ModItems.FILTER_CARD.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, card);
         try {
@@ -450,7 +388,7 @@ public final class FilterMenuGameTests {
     /** O filtro aberto pelo painel do Tablet vale a 40 blocos; sem o Tablet ou com o roteador removido, fecha. */
     @GameTest(template = "empty")
     public static void filterFromTheTabletValidAtDistance(GameTestHelper helper) {
-        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        TestPlayers.MenuPlayer player = playerNear(helper, chestWithRouter(helper));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-longe");
         helper.startSequence()
@@ -489,7 +427,7 @@ public final class FilterMenuGameTests {
     @GameTest(template = "empty")
     public static void nearFilterStillClosesBeyondEightBlocks(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper);
-        MockPlayer player = playerNear(helper, router);
+        TestPlayers.MenuPlayer player = playerNear(helper, router);
         try {
             FilterMenu menu = openFace(player, router, ResourceType.ITEM);
             helper.assertValueEqual(((RouterFaceFilterTarget) menu.target()).origin(), FilterOrigin.NEAR, "origem");
@@ -505,7 +443,7 @@ public final class FilterMenuGameTests {
     /** Aberto da tela do roteador à distância: vale no alcance, e o Voltar reabre a tela à distância. */
     @GameTest(template = "empty")
     public static void filterFromTheRemoteRouterBacksToIt(GameTestHelper helper) {
-        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        TestPlayers.MenuPlayer player = playerNear(helper, chestWithRouter(helper));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-remoto");
         helper.startSequence()
@@ -535,7 +473,7 @@ public final class FilterMenuGameTests {
     /** Voltar do filtro do Tablet reabre o Tablet na aba, com a consulta e o nó escolhido de antes; o estado vai no buffer. */
     @GameTest(template = "empty")
     public static void backFromTheTabletFilterRestoresTheTablet(GameTestHelper helper) {
-        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        TestPlayers.MenuPlayer player = playerNear(helper, chestWithRouter(helper));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-volta");
         TabletSnapshot.Query query = TabletSnapshot.Query.of("elite").withType(Optional.of(ResourceType.ITEM));
@@ -577,9 +515,9 @@ public final class FilterMenuGameTests {
     }
 
     /** Com um tier que cruza dimensão, o filtro do Tablet e o da tela à distância valem com o jogador em outra dimensão; o NEAR não. */
-    @GameTest(template = "empty", batch = "wirelessautomate_config")
+    @GameTest(template = "empty", batch = "wirelessautomate_config_dimension_filter")
     public static void filterFromTheTabletValidAcrossDimensions(GameTestHelper helper) {
-        MockPlayer player = playerNear(helper, chestWithRouter(helper));
+        TestPlayers.MenuPlayer player = playerNear(helper, chestWithRouter(helper));
         player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
         RouterBlockEntity elite = eliteOf(helper, player, "teste-filtro-dimensao");
         boolean before = Config.TIERS.get(RouterTier.ELITE).crossDimension().get();

@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
+import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -65,6 +66,8 @@ final class ListLayout {
     int listW;
     int panelX;
     int panelW;
+    /** Altura do aviso sem painel no quadro atual: cresce com as linhas do texto ({@link NoticeBand}). */
+    private int ownNoticeH = NoticeBand.LINE_H;
     int rowsTop;
     int rowsBottom;
     /** A primeira linha que não coube (as de antes, a partir da rolagem, estão nos {@link #hots}). */
@@ -110,13 +113,16 @@ final class ListLayout {
     }
 
     int ownNoticeY() {
-        return bottom - 13;
+        return bottom - ownNoticeH;
     }
 
     /** Posições e áreas de clique do quadro atual. */
     void arrange() {
         Font font = TabletList.font();
         hots.clear();
+        PanelNoticePayload notice = PanelNotices.current();
+        ownNoticeH = notice == null ? NoticeBand.LINE_H
+                : NoticeBand.height(font, notice, panelW, notice.undo() != PanelNoticePayload.Undo.NONE);
         int y = y0;
         arrangeSearch(font);
         y += SEARCH_H + GAP;
@@ -313,10 +319,12 @@ final class ListLayout {
                 int pw = font.width(pasteLabel()) + 10;
                 hots.add(new Hot(Kind.PASTE, panelX + panelW - pw, copyRowY(), pw, BAR_H, 0));
             }
-        } else if (PanelNotices.current() != null && PanelNotices.current().undo() != PanelNoticePayload.Undo.NONE) {
-            Component undo = Component.translatable("gui.wirelessautomate.panel.notice.undo");
-            int uw = font.width(undo) + 8;
-            hots.add(new Hot(Kind.UNDO, panelX + panelW - uw, ownNoticeY(), uw, 13, 0));
+            return;
+        }
+        PanelNoticePayload notice = PanelNotices.current();
+        if (notice != null && notice.undo() != PanelNoticePayload.Undo.NONE) {
+            int uw = NoticeBand.undoWidth(font);
+            hots.add(new Hot(Kind.UNDO, panelX + panelW - uw, ownNoticeY(), uw, NoticeBand.LINE_H, 0));
         }
     }
 

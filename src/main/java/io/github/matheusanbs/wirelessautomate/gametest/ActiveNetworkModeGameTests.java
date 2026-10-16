@@ -56,9 +56,8 @@ public final class ActiveNetworkModeGameTests {
         return helper.getBlockEntity(machine.above());
     }
 
-    @SuppressWarnings("removal")
     private static RouterMenu openMenu(GameTestHelper helper, RouterBlockEntity router, ServerPlayer[] out) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
         RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router, RouterSnapshot.capture(router, player));
         player.containerMenu = menu;

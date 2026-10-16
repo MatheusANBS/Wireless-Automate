@@ -40,10 +40,12 @@ Cinco tiers (oito com o Allthemodium), ×8 por degrau. Os tiers feitos com itens
 | Esmeralda | 16.384 | 1.024.000 | 512.000 | 51.200 | Entre dimensões |
 | Allthemodium¹ | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Entre dimensões |
 | Vibranium¹ | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Entre dimensões |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 262.144.000 | 26.214.400 | Entre dimensões |
+| Unobtainium¹ | 8.388.608 | 524.288.000 | 2.097.152.000² | 26.214.400 | Entre dimensões |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões |
 
 ¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
+
+² A energia do Unobtainium sobe ×64 sobre o Vibranium (não ×8), para o roteador dar conta da geração cheia do Ressonador de Sinal do mesmo tier (1.879.048.192 FE/t; decisão do dono, 15/10/2026).
 
 A Source (Ars Nouveau) é opcional: sem filtro e sem cartões, como a energia; a vazão é a chave `sourcePerSecond` da config.
 
@@ -342,6 +344,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 **v2, escala e integrações**
 
+- [x] Ressonador de Sinal (gerador multibloco): etapas 1 (minério, cristais e a receita do Lapidado), 2 (estrutura, Núcleo, Portas, comando e projeção), 3 (tela do Núcleo, Sintonizador automático e câmara animada) e 4 (JEI, guia e GIF da vitrine; sem Tablet, por decisão do dono) prontas no ramo `ressonador`. Spec em `docs/superpowers/specs/2026-10-15-ressonador-de-sinal-design.md`
 - [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
 - [x] Source do Ars Nouveau (aba Source, sem filtro e sem cartões, vazão por tier)
 - [x] Tablet: lista, mapa, estatísticas, redes e grupos

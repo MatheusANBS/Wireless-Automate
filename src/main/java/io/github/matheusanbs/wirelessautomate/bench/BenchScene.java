@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -66,7 +67,8 @@ final class BenchScene {
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
-    enum Machine { SMALL, BIG, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK }
+    /** {@code RESONATOR} é a Porta de Energia de um Ressonador e {@code BATTERY} a Bateria dele ({@link BenchResonators}). */
+    enum Machine { SMALL, BIG, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
 
     /** Um nó: máquina, roteador em cima, tipo e papel; {@code index} varia o padrão de itens. */
     record Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind) {
@@ -91,6 +93,8 @@ final class BenchScene {
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
     private @Nullable TabletMenu tablet;
+    /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
+    private @Nullable BenchResonators resonators;
     private final LongSet forcedChunks = new LongOpenHashSet();
     private final List<Item> sourceItems;
     private final List<Item> junkItems;
@@ -130,6 +134,10 @@ final class BenchScene {
     }
 
     private void plan(int count) {
+        if (scenario.resonator()) {
+            planResonators(count);
+            return;
+        }
         int width = scenario.bigInventories() && storage.bigIsDoubleChest() ? 2 : 1;
         int side = (int) Math.ceil(Math.sqrt(count));
         for (int i = 0; i < count; i++) {
@@ -157,6 +165,29 @@ final class BenchScene {
         refilled = new long[count];
     }
 
+    /**
+     * {@code count} Ressonadores; no cenário que gera, cada um com dois nós: a Porta de Energia (origem) e a Bateria
+     * (destino), vizinhos em {@link #nodes} para o {@link #attach} pôr cada par numa rede.
+     */
+    private void planResonators(int count) {
+        BenchResonators planned = new BenchResonators(level, ORIGIN, count, scenario == BenchScenario.RESONATOR_GEN);
+        resonators = planned;
+        if (scenario == BenchScenario.RESONATOR_GEN) {
+            for (BenchResonators.Resonator resonator : planned.list) {
+                BlockPos battery = Objects.requireNonNull(resonator.battery());
+                nodes.add(new Node(nodes.size(), resonator.energyPort(), resonator.energyPort().above(),
+                        ResourceType.ENERGY, true, Machine.RESONATOR));
+                nodes.add(new Node(nodes.size(), battery, battery.above(), ResourceType.ENERGY, false, Machine.BATTERY));
+            }
+        }
+        max = planned.max();
+        refilled = new long[nodes.size()];
+    }
+
+    @Nullable BenchResonators resonators() {
+        return resonators;
+    }
+
     /** Põe máquinas e roteadores, enche as máquinas e configura as faces. Os roteadores ficam sem rede. */
     void build() {
         for (int cx = min.getX() >> 4; cx <= max.getX() >> 4; cx++) {
@@ -168,6 +199,9 @@ final class BenchScene {
         if (transport.logisticsNetwork()) {
             buildLogisticsNetwork();
             return;
+        }
+        if (resonators != null) {
+            resonators.build();
         }
         BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP)
@@ -237,6 +271,9 @@ final class BenchScene {
             case ENERGY_SINK -> level.setBlock(node.machine(), BenchCapabilities.ENERGY_SINK.defaultBlockState(), PLACE_FLAGS);
             case STACK_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.STACK_SOURCE.defaultBlockState(), PLACE_FLAGS);
             case ITEM_SINK -> level.setBlock(node.machine(), BenchCapabilities.ITEM_SINK.defaultBlockState(), PLACE_FLAGS);
+            case RESONATOR, BATTERY -> {
+                // Postas pelo BenchResonators.build.
+            }
         }
     }
 
@@ -276,10 +313,11 @@ final class BenchScene {
 
     /**
      * Põe os roteadores (ou os nós do Logistics Network) em redes novas: uma só com todos, ou uma por par
-     * de origem e destino vizinhos ({@link BenchScenario#PAIRS}).
+     * de origem e destino vizinhos ({@link BenchScenario#PAIRS} e cada Ressonador com a sua Bateria). Nos cenários do
+     * Ressonador, põe também os Núcleos, que montam nos ticks seguintes.
      */
     void attach() {
-        int group = scenario == BenchScenario.PAIRS ? 2 : nodes.size();
+        int group = scenario == BenchScenario.PAIRS || scenario == BenchScenario.RESONATOR_GEN ? 2 : nodes.size();
         for (int start = 0; start < nodes.size(); start += group) {
             int end = Math.min(nodes.size(), start + group);
             String name = "bench-" + scenario.id + "-" + level.getGameTime() + "-" + start / group;
@@ -297,6 +335,9 @@ final class BenchScene {
             }
         }
         network = networks.isEmpty() ? null : networks.get(0);
+        if (resonators != null) {
+            resonators.form();
+        }
     }
 
     /**
@@ -323,8 +364,16 @@ final class BenchScene {
         return System.nanoTime() - start;
     }
 
+    /** O que a cena faz no fim de cada tick depois de pôr a rede: os relógios de redstone e a sintonia dos Ressonadores. */
+    void step() {
+        toggleClocks();
+        if (resonators != null) {
+            resonators.tune();
+        }
+    }
+
     /** Liga ou desliga os blocos de redstone em cima dos roteadores, avisando os vizinhos. */
-    void toggleClocks() {
+    private void toggleClocks() {
         if (scenario != BenchScenario.REDSTONE) {
             return;
         }
@@ -597,6 +646,9 @@ final class BenchScene {
         }
         networks.clear();
         network = null;
+        if (resonators != null) {
+            resonators.teardown();
+        }
         for (Node node : nodes) {
             IItemHandler handler = items(node);
             if (handler != null) {

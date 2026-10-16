@@ -1,0 +1,14 @@
+{
+  "type": "wirelessautomate:cut_crystal",
+  "category": "misc",
+  "pattern": [
+    " C ",
+    "CAC",
+    " C "
+  ],
+  "key": {
+    "C": { "item": "wirelessautomate:signal_crystal" },
+    "A": { "item": "minecraft:amethyst_shard" }
+  },
+  "result": { "id": "wirelessautomate:cut_signal_crystal", "count": 1 }
+}

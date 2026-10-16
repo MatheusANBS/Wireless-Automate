@@ -630,7 +630,7 @@ public final class StorageGameTests {
             }
         }
         helper.assertTrue(orphan != null, "o conteúdo ficou no servidor");
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.getInventory().clearContent();
         try {
             helper.getLevel().getServer().getCommands().getDispatcher().execute("wa storage recover " + orphan,
@@ -675,11 +675,10 @@ public final class StorageGameTests {
      * exatamente um item com o conteúdo no chão. O total é diferente em cada teste, porque os testes
      * do lote rodam lado a lado e os drops de um vizinho podem cair perto.
      */
-    @SuppressWarnings("removal")
     private static void breakByPlayer(GameTestHelper helper, GameType mode, ItemStack tool, long total) {
         storageChest(helper, A, RouterTier.ADVANCED).storage().insert(new ItemStack(Items.COBBLESTONE), total, false);
         BlockPos absolute = helper.absolutePos(A);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(absolute.above()));
         player.setGameMode(mode);
         player.setItemInHand(InteractionHand.MAIN_HAND, tool);
@@ -703,9 +702,8 @@ public final class StorageGameTests {
         drops.forEach(ItemEntity::discard);
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer playerNear(GameTestHelper helper, StorageChestBlockEntity chest) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above()));
         return player;
     }
@@ -811,10 +809,9 @@ public final class StorageGameTests {
 
     /** Balde no bloco: esvazia o balde cheio no Tanque e enche o vazio com o que tiver, como num tanque comum. */
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void bucketOnTheTankBlock(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
         player.setGameMode(GameType.SURVIVAL);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
@@ -903,11 +900,10 @@ public final class StorageGameTests {
 
     /** Tanque e Bateria quebrados no criativo também viram item com o conteúdo, e o conteúdo volta ao colocar. */
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void tankAndBatteryKeepContentsWhenBroken(GameTestHelper helper) {
         storageTank(helper, A, RouterTier.ELITE).storage().insert(new FluidStack(Fluids.LAVA, 1), 7_654_321L, false);
         storageBattery(helper, B, RouterTier.ELITE).store().insert(9_876_543L, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.setGameMode(GameType.CREATIVE);
         for (BlockPos pos : List.of(A, B)) {
             player.moveTo(Vec3.atCenterOf(helper.absolutePos(pos).above()));
@@ -995,11 +991,10 @@ public final class StorageGameTests {
 
     /** Tanque de Source Ultimate (sem limite) quebrado cheio: o item leva a Source e o tier, e o nível volta ao colocar. */
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void sourceTankKeepsSourceWhenBroken(GameTestHelper helper) {
         long source = 3_000_000_001L;
         storageSourceTank(helper, C, RouterTier.ULTIMATE).store().insert(source, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.setGameMode(GameType.CREATIVE);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(C).above()));
         player.gameMode.destroyBlock(helper.absolutePos(C));
@@ -1017,7 +1012,6 @@ public final class StorageGameTests {
      * criativo): o item leva a energia e colocá-lo a devolve.
      */
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void batteryKeepsEnergyHoweverBroken(GameTestHelper helper) {
         Object[][] cases = {
                 {GameType.SURVIVAL, new ItemStack(Items.DIAMOND_PICKAXE), 30_000_001L},
@@ -1028,7 +1022,7 @@ public final class StorageGameTests {
             long energy = (long) c[2];
             storageBattery(helper, A, RouterTier.ELITE).store().insert(energy, false);
             BlockPos absolute = helper.absolutePos(A);
-            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ServerPlayer player = TestPlayers.inLevel(helper);
             player.moveTo(Vec3.atCenterOf(absolute.above()));
             player.setGameMode((GameType) c[0]);
             player.setItemInHand(InteractionHand.MAIN_HAND, (ItemStack) c[1]);
@@ -1061,7 +1055,7 @@ public final class StorageGameTests {
     public static void tankScreenFillsAndEmptiesBuckets(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         tank.storage().insert(new FluidStack(Fluids.WATER, 1), 5_000, false);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(tank.getBlockPos().above()));
         player.getInventory().clearContent();
         StorageListMenu<FluidStack> menu = (StorageListMenu<FluidStack>) (StorageListMenu<?>)

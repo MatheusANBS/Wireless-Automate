@@ -16,6 +16,11 @@ import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import net.minecraft.resources.ResourceLocation;
@@ -47,6 +52,7 @@ public final class WirelessAutomate {
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(ModPayloads::register);
         modEventBus.addListener(StorageCapabilities::register);
+        modEventBus.addListener(ResonatorCapabilities::register);
         modEventBus.addListener(RecipeOverridePack::onAddPackFinders);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
@@ -73,6 +79,7 @@ public final class WirelessAutomate {
     private static void onServerTick(ServerTickEvent.Post event) {
         NetworkManager.get().tick(event.getServer());
         SourceTankLevels.tick();
+        ResonatorManager.tick(event.getServer());
     }
 
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -83,6 +90,10 @@ public final class WirelessAutomate {
         NetworkManager.reset();
         RemoteIndex.reset();
         SourceTankLevels.reset();
+        ResonatorManager.reset();
+        ResonatorPorts.reset();
+        ResonatorMembers.reset();
+        ResonatorProfile.reset();
         RecipeEditor.reset();
         TabletMenu.resetStates();
     }

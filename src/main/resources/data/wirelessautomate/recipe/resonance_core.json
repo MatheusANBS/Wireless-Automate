@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "KKK",
+    "KLK",
+    "KDK"
+  ],
+  "key": {
+    "K": {
+      "item": "wirelessautomate:resonator_casing"
+    },
+    "L": {
+      "item": "wirelessautomate:cut_signal_crystal"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:resonance_core",
+    "count": 1
+  }
+}

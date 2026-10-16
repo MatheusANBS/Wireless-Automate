@@ -1,0 +1,87 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "ambientocclusion": true,
+  "textures": {
+    "resonance_core_advanced": "wirelessautomate:block/resonance_core_advanced",
+    "resonance_core_advanced_dentro": "wirelessautomate:block/resonance_core_advanced_dentro",
+    "resonator_forro": "wirelessautomate:block/resonator_forro",
+    "particle": "wirelessautomate:block/resonance_core_advanced"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonance_core_advanced",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonance_core_advanced_dentro",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_forro",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}

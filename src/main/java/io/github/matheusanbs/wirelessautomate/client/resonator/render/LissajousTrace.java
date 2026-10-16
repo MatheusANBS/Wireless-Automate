@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.RenderType;
  */
 final class LissajousTrace {
     private static final float HALF_WIDTH = 0.012f;
-    private static final int CORAL_LIGHT = 0xFFFFB39E;
+    static final int CORAL_LIGHT = 0xFFFFB39E;
     private static final int PORCELAIN = 0xFFFFFBF3;
     private static final double HALO_SIZE = 0.55;
     private static final float CORE_RADIUS = 0.05f;
@@ -53,7 +53,7 @@ final class LissajousTrace {
         drawTrail(pose, buffer.getBuffer(RenderType.lightning()), scene, partialTick, color, alpha);
 
         double[] head = scene.headPoint(partialTick);
-        ChamberLens.halo(pose, buffer.getBuffer(RenderType.eyes(ChamberLens.ATLAS)), head[0], head[1], head[2],
+        ChamberLens.halo(pose, buffer.getBuffer(ChamberRenderTypes.glow()), head[0], head[1], head[2],
                 HALO_SIZE, (float) (lit * (0.35 + 0.55 * q)));
         if (q > CORE_MIN_Q) {
             int core = GuiPaint.mix(PORCELAIN, CORAL_LIGHT, (float) (1 - q));
@@ -74,7 +74,7 @@ final class LissajousTrace {
             int alphaA = (int) Math.round(255 * alpha * i / last);
             int alphaB = (int) Math.round(255 * alpha * (i + 1) / last);
             if (alphaB > 0) {
-                segment(pose, out, a, b, color, alphaA, alphaB);
+                segment(pose, out, a, b, HALF_WIDTH, color, alphaA, alphaB);
             }
             float[] swap = a;
             a = b;
@@ -89,8 +89,11 @@ final class LissajousTrace {
         }
     }
 
-    /** Dois quads cruzados ao longo de {@code a → b}: um pelo plano vertical do segmento e um deitado nele. */
-    private static void segment(PoseStack.Pose pose, VertexConsumer out, float[] a, float[] b, int color,
+    /**
+     * Dois quads cruzados ao longo de {@code a → b}, de meia largura {@code half}: um pelo plano vertical do
+     * segmento e um deitado nele. Os feixes dos cristais usam o mesmo desenho.
+     */
+    static void segment(PoseStack.Pose pose, VertexConsumer out, float[] a, float[] b, float half, int color,
             int alphaA, int alphaB) {
         float dx = b[0] - a[0];
         float dy = b[1] - a[1];
@@ -120,8 +123,8 @@ final class LissajousTrace {
             uy /= upLength;
             uz /= upLength;
         }
-        ribbon(pose, out, a, b, ux * HALF_WIDTH, uy * HALF_WIDTH, uz * HALF_WIDTH, color, alphaA, alphaB);
-        ribbon(pose, out, a, b, sx * HALF_WIDTH, 0, sz * HALF_WIDTH, color, alphaA, alphaB);
+        ribbon(pose, out, a, b, ux * half, uy * half, uz * half, color, alphaA, alphaB);
+        ribbon(pose, out, a, b, sx * half, 0, sz * half, color, alphaA, alphaB);
     }
 
     private static void ribbon(PoseStack.Pose pose, VertexConsumer out, float[] a, float[] b, float ox, float oy,

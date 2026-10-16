@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
@@ -52,6 +53,10 @@ final class E2eResonatorSteps {
     private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
     /** Os dois vidros da janela que ficam faltando. */
     private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
+    /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
+    private static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
+    /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
+    private static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
 
     private E2eResonatorSteps() {
     }
@@ -84,7 +89,7 @@ final class E2eResonatorSteps {
                     && minecraft.level.getBlockState(origin[0].offset(DIRT[0], DIRT[1], DIRT[2])).is(Blocks.DIRT)
                     && minecraft.player.getMainHandItem().isEmpty();
         }, () -> "Núcleo e terra no cliente, mão " + Minecraft.getInstance().player.getMainHandItem()));
-        list.add(camera("Ressonador: câmera", playerId, () -> origin[0]));
+        list.add(camera("Ressonador: câmera", playerId, () -> origin[0], SIDE_VIEW));
         list.add(new Step("Ressonador: clique no Núcleo liga a projeção", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
                 () -> ResonatorProjection.isOn() && ResonatorProjection.result() != null,
                 () -> "projeção " + ResonatorProjection.isOn()));
@@ -113,6 +118,7 @@ final class E2eResonatorSteps {
         list.add(DevEndToEnd.wait("Ressonador montado", 10));
         list.add(capture("ressonador-montado"));
         screenSteps(list, origin);
+        chamberSteps(list, playerId, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             clear(player.serverLevel(), origin[0]);
@@ -195,6 +201,42 @@ final class E2eResonatorSteps {
         list.add(clipCheck("ressonador-tela-pt"));
         list.add(close("Ressonador: fechar em pt_br"));
         list.add(language("en_us"));
+    }
+
+    /**
+     * A câmara vista pela janela: em sintonia (a figura fechada, os cristais juntos e os feixes, o Opaco caído e a
+     * placa com a figura) e depois a 72% (o rabisco, os cristais fora de ritmo e a placa com ruído).
+     */
+    private static void chamberSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
+        list.add(new Step("Ressonador: dial na estação, sem Sintonizador", STEP_TIMEOUT_MS, () -> {
+            // sem a mão, a mira e o contorno do vidro na frente da câmara
+            Minecraft.getInstance().options.hideGui = true;
+            onServer(server -> {
+                ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
+                        .getBlockEntity(core(origin[0]));
+                core.setAuto(false);
+                core.setDial(98.0);
+                return null;
+            });
+        }, () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
+                .clientView().band() == TuneSignal.BANDS - 1, () -> "faixa no cliente"));
+        list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
+        list.add(DevEndToEnd.wait("a câmara acender", 30));
+        list.add(capture("ressonador-camara"));
+        list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
+            return null;
+        }), () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
+                .clientView().band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
+        list.add(DevEndToEnd.wait("a figura escorregar", 60));
+        list.add(capture("ressonador-camara-chiado"));
+        list.add(new Step("Ressonador: dial de volta a 98,0", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = false;
+            onServer(server -> {
+                ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(98.0);
+                return null;
+            });
+        }, () -> true, () -> "dial"));
     }
 
     /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */
@@ -283,15 +325,16 @@ final class E2eResonatorSteps {
         }
     }
 
-    /** O jogador voando a leste e ao sul da caixa, a uns 7 blocos do Núcleo, olhando o centro dela. */
-    private static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin) {
+    /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da caixa. */
+    private static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
+            double[] feet) {
         double[] cam = new double[3];
         float[] ang = new float[2];
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             BlockPos o = origin.get();
-            cam[0] = o.getX() + 8.5;
-            cam[1] = o.getY() + 3.2;
-            cam[2] = o.getZ() + 7.5;
+            cam[0] = o.getX() + feet[0];
+            cam[1] = o.getY() + feet[1];
+            cam[2] = o.getZ() + feet[2];
             double ex = o.getX() + 2.5 - cam[0];
             double ey = o.getY() + 2.3 - (cam[1] + 1.62);
             double ez = o.getZ() + 2.5 - cam[2];

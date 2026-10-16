@@ -13,20 +13,26 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A câmara animada do Núcleo montado: a figura de Lissajous e a lente, desenhadas a partir do centro da estrutura.
- * O estado de cada câmara fica numa {@link ChamberScene} por posição, atualizada uma vez por tick novo; as que não
- * são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks.
+ * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais e
+ * os feixes, a figura de Lissajous e a lente (os cristais são opacos e vão antes dos aditivos). O estado de cada
+ * câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as que não são
+ * desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks.
  */
 public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCoreBlockEntity> {
     private static final int VIEW_DISTANCE = 64;
     private static final long FORGET_TICKS = 200;
-    private static final Map<BlockPos, ChamberScene> SCENES = new HashMap<>();
+    private static final Map<SceneKey, ChamberScene> SCENES = new HashMap<>();
     private static long lastSweep;
+
+    private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
+    }
 
     public ResonatorRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -42,7 +48,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         }
         long gameTime = level.getGameTime();
         sweep(gameTime);
-        ChamberScene scene = SCENES.computeIfAbsent(core.getBlockPos(), ChamberScene::new);
+        ChamberScene scene = SCENES.computeIfAbsent(new SceneKey(level.dimension(), core.getBlockPos()),
+                key -> new ChamberScene(key.pos()));
         if (scene.lastUsed != gameTime) {
             scene.update(view, core.tunedAt(), gameTime, level);
         }
@@ -53,6 +60,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         Vec3 center = scene.center();
         poseStack.pushPose();
         poseStack.translate(center.x, center.y, center.z);
+        ChladniPlate.render(poseStack, buffer, scene, partialTick);
+        ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
         LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
         ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
                 state.getValue(ResonatorPartBlock.FACING));
@@ -80,7 +89,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
     /** A caixa 5 × 5 × 5 da estrutura, para a câmara não sumir quando só o Núcleo sai da tela. */
     @Override
     public AABB getRenderBoundingBox(ResonanceCoreBlockEntity core) {
-        ChamberScene scene = SCENES.get(core.getBlockPos());
+        Level level = core.getLevel();
+        ChamberScene scene = level == null ? null : SCENES.get(new SceneKey(level.dimension(), core.getBlockPos()));
         if (scene != null && scene.view() != ChamberView.EMPTY) {
             return scene.box();
         }

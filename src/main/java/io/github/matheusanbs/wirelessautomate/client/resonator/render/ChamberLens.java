@@ -45,7 +45,7 @@ final class ChamberLens {
         }
         double t = scene.sinceTuned(gameTime, partialTick);
         if (t < FLASH_SECONDS) {
-            halo(pose, buffer.getBuffer(RenderType.eyes(ATLAS)), 0, 0, 0, 1 + FLASH_GROWTH * t,
+            halo(pose, buffer.getBuffer(ChamberRenderTypes.glow()), 0, 0, 0, 1 + FLASH_GROWTH * t,
                     (float) (Math.max(0, 1 - t / FLASH_SECONDS) * FLASH_ALPHA));
         }
     }
@@ -73,10 +73,7 @@ final class ChamberLens {
         }
     }
 
-    /**
-     * O halo virado para a câmera, de lado {@code size} blocos, centrado em {@code (x, y, z)}. O {@code eyes} soma
-     * a cor sem olhar o alfa, então o alfa vai multiplicado na cor.
-     */
+    /** O halo virado para a câmera, de lado {@code size} blocos, centrado em {@code (x, y, z)}. */
     static void halo(PoseStack.Pose pose, VertexConsumer out, double x, double y, double z, double size,
             float alpha) {
         if (alpha <= 0) {
@@ -85,20 +82,17 @@ final class ChamberLens {
         TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(ATLAS).apply(HALO);
         Quaternionf rotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
         float half = (float) (size / 2);
-        float shade = Math.min(1, alpha);
+        float strength = Math.min(1, alpha);
         float[][] corners = {{-1, -1}, {-1, 1}, {1, 1}, {1, -1}};
         float[][] uvs = {{sprite.getU1(), sprite.getV1()}, {sprite.getU1(), sprite.getV0()},
             {sprite.getU0(), sprite.getV0()}, {sprite.getU0(), sprite.getV1()}};
         Vector3f corner = new Vector3f();
-        for (int side = 0; side < 2; side++) {
-            for (int k = 0; k < 4; k++) {
-                int i = side == 0 ? k : 3 - k;
-                corner.set(corners[i][0] * half, corners[i][1] * half, 0).rotate(rotation);
-                out.addVertex(pose, (float) x + corner.x, (float) y + corner.y, (float) z + corner.z)
-                        .setColor(shade, shade, shade, 1f).setUv(uvs[i][0], uvs[i][1])
-                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT)
-                        .setNormal(pose, 0, 1, 0);
-            }
+        for (int i = 0; i < 4; i++) {
+            corner.set(corners[i][0] * half, corners[i][1] * half, 0).rotate(rotation);
+            out.addVertex(pose, (float) x + corner.x, (float) y + corner.y, (float) z + corner.z)
+                    .setColor(1f, 1f, 1f, strength).setUv(uvs[i][0], uvs[i][1])
+                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT)
+                    .setNormal(pose, 0, 1, 0);
         }
     }
 }

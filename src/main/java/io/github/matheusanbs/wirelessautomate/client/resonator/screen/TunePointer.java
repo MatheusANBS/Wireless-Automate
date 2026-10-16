@@ -16,8 +16,7 @@ import net.minecraft.network.chat.Component;
 /**
  * O ponteiro de sintonia e a lâmpada embaixo dele. A faixa vai de −2 a +2 MHz com a estação no centro e o platô em
  * verde; o ponteiro mostra onde o dial está. Sem sinal, ele encosta do lado do último sinal visto (ou na esquerda,
- * como a galeria do mockup),
- * tremendo um pouco, apagado e com o convite para varrer o dial.
+ * como a galeria do mockup), tremendo um pouco, apagado e com o convite para varrer o dial.
  */
 final class TunePointer {
     private static final int BAND_H = 14;
@@ -89,7 +88,7 @@ final class TunePointer {
     private void lamp(GuiGraphics g, Font font, ResonatorStatePayload state) {
         int x = left + LAMP.x();
         int y = top + LAMP.y();
-        boolean on = state != null && Math.abs(state.deviationSteps()) <= TuneSignal.PLATEAU_STEPS;
+        boolean on = state != null && state.tuned();
         int color = on ? GuiPaint.OK : GuiPaint.DISABLED;
         if (on) {
             disc(g, x - 1, y - 1, 9, GuiPaint.alpha(GuiPaint.OK, 64));

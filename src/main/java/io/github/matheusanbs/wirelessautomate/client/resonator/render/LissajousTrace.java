@@ -19,6 +19,9 @@ final class LissajousTrace {
     private static final float CORE_RADIUS = 0.05f;
     private static final double CORE_MIN_Q = 0.03;
     private static final double TRACE_DELAY = 0.9;
+    /** Rascunhos da cauda, que é desenhada só na thread de render: nada alocado por quadro. */
+    private static final float[] TRAIL_A = new float[3];
+    private static final float[] TRAIL_B = new float[3];
     private static final float[][] ICO_VERTICES;
     private static final int[][] ICO_FACES = {
         {0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11}, {1, 5, 9}, {5, 11, 4}, {11, 10, 2}, {10, 7, 6},
@@ -66,8 +69,8 @@ final class LissajousTrace {
         double[] now = scene.current();
         double[] before = scene.previous();
         int last = LissajousCurve.POINTS - 1;
-        float[] a = new float[3];
-        float[] b = new float[3];
+        float[] a = TRAIL_A;
+        float[] b = TRAIL_B;
         point(before, now, 0, partialTick, a);
         for (int i = 0; i < last; i++) {
             point(before, now, i + 1, partialTick, b);

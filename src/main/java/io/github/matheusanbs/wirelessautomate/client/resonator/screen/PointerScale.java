@@ -30,7 +30,7 @@ final class PointerScale {
 
     /**
      * Onde o ponteiro fica, em MHz da escala, para o desvio em passos. Sem sinal devolve {@link #RANGE_MHZ}: quem
-     * chama escolhe o lado (o do último sinal visto, ou a direita).
+     * chama escolhe o lado (o do último sinal visto, ou a esquerda).
      */
     static double pointerMhz(int steps) {
         if (steps == TuneSignal.NO_SIGNAL) {

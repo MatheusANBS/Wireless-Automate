@@ -8,8 +8,10 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A linha da action bar do clique no Núcleo: montado, o tier, os cristais nas câmaras, a eficiência, a geração e
- * o modo; solto, o problema que impede montar, com a posição do bloco quando ela importa.
+ * A linha do estado do Núcleo. Solto, é o que o clique de mão vazia mostra na action bar: o problema que impede
+ * montar, com a posição do bloco quando ela importa. Montado, o clique abre a tela, e a linha (o tier, os cristais nas
+ * câmaras, a eficiência, a geração e o modo) só vai à action bar quando quem clica não é um {@code ServerPlayer}.
+ * O {@code /wa resonator info} usa as partes {@link #mode} e {@link #crystals}.
  */
 public final class ResonatorStatus {
     private static final String KEY = "block.wirelessautomate.resonance_core.";

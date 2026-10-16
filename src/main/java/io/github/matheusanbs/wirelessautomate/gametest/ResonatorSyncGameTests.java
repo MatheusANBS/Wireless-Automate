@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -78,6 +79,23 @@ public final class ResonatorSyncGameTests {
             helper.assertTrue(view.equals(ChamberView.load(tag)), "a view mudou pelo array devolvido");
             helper.assertTrue(ChamberView.EMPTY.origin()[0] == 0, "o EMPTY mudou pelo array devolvido");
             helper.assertTrue(ChamberView.EMPTY.rechargeTicks() > 0, "o EMPTY tem recarga de 0 ticks");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void montagemMandaUmaUpdateTag(GameTestHelper helper) {
+        formed(helper, RouterTier.EMERALD, core -> {
+            ResonatorFormation.disassemble(helper.getLevel(), core);
+            helper.assertTrue(!core.formed(), "não desmontou");
+            int before = core.syncCount();
+            ResonatorFormation.revalidate(helper.getLevel(), core);
+            helper.assertTrue(core.formed(), "não montou de novo");
+            helper.assertTrue(core.syncCount() == before + 1,
+                    "a montagem mandou " + (core.syncCount() - before) + " update tags, esperava 1");
+            BlockPos origin = helper.absolutePos(ORIGIN);
+            int[] sent = tagView(helper, core).origin();
+            helper.assertTrue(Arrays.equals(sent, new int[] {origin.getX(), origin.getY(), origin.getZ()}),
+                    "origem errada: " + Arrays.toString(sent));
         });
     }
 

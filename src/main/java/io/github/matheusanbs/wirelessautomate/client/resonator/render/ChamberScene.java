@@ -34,6 +34,7 @@ final class ChamberScene {
     private final BlockPos core;
     private final double[] current = new double[LissajousCurve.POINTS * 3];
     private final double[] previous = new double[LissajousCurve.POINTS * 3];
+    private final double[] headAt = new double[3];
     private ChamberView view = ChamberView.EMPTY;
     private byte[] chambers = new byte[0];
     private int[] origin;
@@ -181,13 +182,13 @@ final class ChamberScene {
         return 0.4 + 1.2 * q;
     }
 
-    /** A cabeça da figura, interpolada, relativa ao centro. */
+    /** A cabeça da figura, interpolada, relativa ao centro, num array da cena que a próxima chamada reescreve. */
     double[] headPoint(float partialTick) {
         int at = (LissajousCurve.POINTS - 1) * 3;
-        return new double[] {
-            previous[at] + (current[at] - previous[at]) * partialTick,
-            previous[at + 1] + (current[at + 1] - previous[at + 1]) * partialTick,
-            previous[at + 2] + (current[at + 2] - previous[at + 2]) * partialTick};
+        for (int k = 0; k < 3; k++) {
+            headAt[k] = previous[at + k] + (current[at + k] - previous[at + k]) * partialTick;
+        }
+        return headAt;
     }
 
     /** Segundos desde a montagem; montado de antes (0) ou nunca (-1), muito tempo. */

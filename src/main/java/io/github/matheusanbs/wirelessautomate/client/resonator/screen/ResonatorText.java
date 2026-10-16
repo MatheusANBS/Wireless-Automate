@@ -49,11 +49,11 @@ final class ResonatorText {
     }
 
     /** O rótulo do osciloscópio: ESTAÇÃO no platô, QUASE LÁ com sinal, CHIADO sem. */
-    static Component scope(int steps) {
+    static Component scope(int steps, boolean tuned) {
         if (steps == TuneSignal.NO_SIGNAL) {
             return key("scope.static");
         }
-        return key(Math.abs(steps) <= TuneSignal.PLATEAU_STEPS ? "scope.station" : "scope.close");
+        return key(tuned ? "scope.station" : "scope.close");
     }
 
     /** Uma dica: a primeira linha comum, as outras em {@link GuiPaint#TOOLTIP_MUTED}. */

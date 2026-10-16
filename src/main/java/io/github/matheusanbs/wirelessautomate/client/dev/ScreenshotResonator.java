@@ -123,7 +123,8 @@ final class ScreenshotResonator {
         menu.apply(new ResonatorStatePayload(0, Math.round(capacity * sample.energy()), capacity,
                 CoreMath.perTick(fe, activeYield, efficiency), CoreMath.perTick(fe, allYield, 1.0), dial,
                 (int) Math.round(efficiency * 1000), (int) Math.round(Tuning.ceiling(tier) * 1000), sample.auto(),
-                sample.tuner(), TuneSignal.steps(dial + sample.deviation(), dial), rechargeTicks * rechargePercent / 100,
+                sample.tuner(), TuneSignal.steps(dial + sample.deviation(), dial),
+                TuneSignal.tuned(dial + sample.deviation(), dial), rechargeTicks * rechargePercent / 100,
                 rechargeTicks, sample.energyPorts(), sample.crystalPorts(), sample.layout()));
         resonatorScreen = new ResonatorScreen(menu, inventory,
                 Component.translatable("block.wirelessautomate.resonance_core"));

@@ -151,7 +151,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     /**
      * Guarda o que a montagem achou na casca; sem Sintonizador o modo volta a Manual com o dial onde parou. O tempo
      * só muda quando a estrutura estava desmontada: a revalidação de uma estrutura de pé não reacende a câmara. Um
-     * Núcleo salvo montado sem o tempo ganha 0, para a carga do chunk não acender a câmara em sequência.
+     * Núcleo salvo montado sem o tempo ganha 0, para a carga do chunk não acender a câmara em sequência. Não manda a
+     * câmara: quem monta manda uma vez só depois do {@code setFormed}, já com a origem nova.
      */
     void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, ResonatorBlueprint.@Nullable Layout layout,
             long gameTime) {
@@ -174,7 +175,6 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         if (changed) {
             setChanged();
-            syncIfChanged();
         }
     }
 

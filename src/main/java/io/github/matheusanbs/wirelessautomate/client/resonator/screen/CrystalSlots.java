@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os slots do Núcleo: o rótulo das câmaras, o fundo de cada câmara e da redstone (o tracejado na vazia), a barra da
- * recarga em latão sobre o Opaco e o rótulo da redstone. Os itens e a barra de carga dos cristais são do vanilla.
+ * recarga em latão sobre o Opaco que recarrega (o primeiro, como no servidor) e o rótulo da redstone. Os itens e a barra de carga dos cristais são do vanilla.
  */
 final class CrystalSlots {
     private static final int BAR_W = 13;
@@ -67,8 +67,7 @@ final class CrystalSlots {
      */
     void renderBar(GuiGraphics g, Slot slot) {
         ResonatorStatePayload state = menu.state();
-        if (state == null || slot.container != menu.getSlot(0).container || slot.index >= menu.chambers()
-                || !(slot.getItem().getItem() instanceof SignalCrystalItem) || !SignalCrystalItem.isDull(slot.getItem())) {
+        if (state == null || slot.container != menu.getSlot(0).container || slot.index != recharging()) {
             return;
         }
         int x = slot.x + 2;
@@ -92,7 +91,7 @@ final class CrystalSlots {
             int x = left + slot.x - 1;
             int y = top + slot.y - 1;
             if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
-                return i == menu.redstoneSlot() ? redstoneTip() : chamberTip(slot.getItem());
+                return i == menu.redstoneSlot() ? redstoneTip() : chamberTip(i, slot.getItem());
             }
         }
         return null;
@@ -107,7 +106,7 @@ final class CrystalSlots {
                 ResonatorText.key("redstone.tooltip.time", seconds(state.rechargeTicks())));
     }
 
-    private @Nullable List<Component> chamberTip(ItemStack stack) {
+    private @Nullable List<Component> chamberTip(int index, ItemStack stack) {
         if (stack.isEmpty()) {
             return ResonatorText.tip(ResonatorText.key("chamber.empty"), ResonatorText.key("chamber.accepts"));
         }
@@ -118,6 +117,10 @@ final class CrystalSlots {
         List<Component> lines = new ArrayList<>();
         lines.add(stack.getHoverName());
         if (SignalCrystalItem.isDull(stack)) {
+            if (index != recharging()) {
+                lines.add(ResonatorText.muted(ResonatorText.key("chamber.waiting")));
+                return lines;
+            }
             int percent = state.rechargeTicks() <= 0 ? 0
                     : (int) Math.min(100, (long) state.recharge() * 100 / state.rechargeTicks());
             lines.add(ResonatorText.muted(ResonatorText.key("chamber.recharging", percent)));
@@ -131,6 +134,17 @@ final class CrystalSlots {
         lines.add(ResonatorText.muted(ResonatorText.key("chamber.yield", crystal.yield(),
                 ResonatorText.fe(share(state.generation(), crystal.yield())))));
         return lines;
+    }
+
+    /** A câmara do Opaco que recarrega: o primeiro, a mesma regra do servidor e da câmara; -1 sem Opaco. */
+    private int recharging() {
+        for (int i = 0; i < menu.chambers(); i++) {
+            ItemStack stack = menu.getSlot(i).getItem();
+            if (stack.getItem() instanceof SignalCrystalItem && SignalCrystalItem.isDull(stack)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** A parte da geração de um cristal: {@code fePerCrystal} não chega ao cliente, então pela soma dos rendimentos. */

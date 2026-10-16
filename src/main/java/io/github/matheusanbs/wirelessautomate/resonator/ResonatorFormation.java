@@ -200,6 +200,7 @@ public final class ResonatorFormation {
         updatePorts(level, core, ports);
         structure(level, core, formed);
         core.setFormed(true, members);
+        core.syncIfChanged();
         if (released) {
             ResonatorManager.wakeBlockedBy(level, at);
         }
@@ -210,7 +211,9 @@ public final class ResonatorFormation {
 
     /**
      * Passa ao Núcleo o que a casca tem: o Sintonizador, as Portas e a montagem reconhecida. Vem antes do
-     * {@code setFormed}, para o Núcleo saber se a estrutura estava desmontada.
+     * {@code setFormed}, para o Núcleo saber se a estrutura estava desmontada; a câmara vai ao cliente depois dos
+     * dois, numa update tag só (o {@code setFormed} manda se a montagem mudou, e o {@code syncIfChanged} seguinte
+     * cobre a estrutura que mudou com os mesmos membros).
      */
     private static void structure(ServerLevel level, ResonanceCoreBlockEntity core, ResonatorLayout.Formed formed) {
         int size = ResonatorLayout.SIZE;

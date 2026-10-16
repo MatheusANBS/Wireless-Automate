@@ -39,6 +39,7 @@ final class ChamberParticles {
 
     private final Traveler[] sparks = travelers(MAX_SPARKS);
     private final Traveler[] redstone = travelers(MAX_REDSTONE);
+    private final double[] crystalAt = new double[3];
     private double sparkClock;
     private double redClock;
 
@@ -87,7 +88,8 @@ final class ChamberParticles {
                 grain.alive = false;
             }
             if (advance(grain, REDSTONE_TICKS)) {
-                double[] crystal = ChamberCrystals.crystalPos(grain.chamber, chambers, scene.q(), gameTime, view);
+                double[] crystal = ChamberCrystals.crystalPos(grain.chamber, chambers, scene.q(), gameTime, view,
+                        crystalAt);
                 Vec3 at = lerp(grain.from, center.add(crystal[0], crystal[1], crystal[2]), grain.t);
                 level.addParticle(REDSTONE, at.x, at.y, at.z, 0, 0, 0);
             }

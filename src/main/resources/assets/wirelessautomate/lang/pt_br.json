@@ -1074,5 +1074,11 @@
   "gui.wirelessautomate.resonator.no": "não",
   "gui.wirelessautomate.resonator.layout.vitrine": "Vitrine",
   "gui.wirelessautomate.resonator.layout.faixa": "Faixa",
-  "gui.wirelessautomate.resonator.layout.custom": "Própria"
+  "gui.wirelessautomate.resonator.layout.custom": "Própria",
+  "jei.wirelessautomate.resonator.recharge.title": "Recarga no Núcleo",
+  "jei.wirelessautomate.resonator.recharge.time": "%s s",
+  "jei.wirelessautomate.resonator.recharge.note": "Um cristal Opaco por vez, numa câmara do Núcleo montado",
+  "jei.wirelessautomate.resonator.info": "Núcleo de Ressonância: gerador multibloco. Monte a estrutura 5x5x5 em volta dele, ponha Cristais de Sinal nas câmaras e sintonize o dial na estação para transformá-los em energia.",
+  "jei.wirelessautomate.resonator.info.tier.one": "%s: %s câmara · %s FE/t por cristal · teto do Sintonizador %s%%",
+  "jei.wirelessautomate.resonator.info.tier.many": "%s: %s câmaras · %s FE/t por cristal · teto do Sintonizador %s%%"
 }

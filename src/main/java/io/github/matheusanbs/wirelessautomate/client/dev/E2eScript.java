@@ -11,6 +11,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePortugueseSte
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRangeSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRecipeSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eResonatorSteps.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eJeiResonatorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSourceTankSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
@@ -54,6 +55,7 @@ final class E2eScript {
         recipeEditorSteps(list);
         darkSteps(list);
         resonatorSteps(list);
+        jeiResonatorSteps(list);
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
         }

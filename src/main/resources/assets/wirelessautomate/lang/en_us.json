@@ -1074,5 +1074,11 @@
   "gui.wirelessautomate.resonator.no": "no",
   "gui.wirelessautomate.resonator.layout.vitrine": "Showcase",
   "gui.wirelessautomate.resonator.layout.faixa": "Band",
-  "gui.wirelessautomate.resonator.layout.custom": "Custom"
+  "gui.wirelessautomate.resonator.layout.custom": "Custom",
+  "jei.wirelessautomate.resonator.recharge.title": "Core recharge",
+  "jei.wirelessautomate.resonator.recharge.time": "%s s",
+  "jei.wirelessautomate.resonator.recharge.note": "One dull crystal at a time, in a chamber of an assembled Core",
+  "jei.wirelessautomate.resonator.info": "Resonance Core: a multiblock generator. Build the 5x5x5 structure around it, put Signal Crystals in its chambers and tune the dial to the station to turn them into energy.",
+  "jei.wirelessautomate.resonator.info.tier.one": "%s: %s chamber · %s FE/t per crystal · Tuner ceiling %s%%",
+  "jei.wirelessautomate.resonator.info.tier.many": "%s: %s chambers · %s FE/t per crystal · Tuner ceiling %s%%"
 }

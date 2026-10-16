@@ -329,7 +329,7 @@ public final class NodePanel {
                 }
             }
             case TARGET -> {
-                if (edit && !model.targetFromList()) {
+                if (edit) {
                     lists.open(Popup.TARGET, lists.targetScroll());
                 }
             }
@@ -512,6 +512,11 @@ public final class NodePanel {
 
     public int @Nullable [] updateCenter() {
         return center(Kind.UPDATE);
+    }
+
+    /** O Desvincular da linha Editando está armado, esperando o segundo clique (gancho do e2e). */
+    public boolean unlinkArmed() {
+        return model.unlinkArmed();
     }
 
     public int @Nullable [] unlinkCenter() {

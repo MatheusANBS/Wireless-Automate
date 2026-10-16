@@ -206,8 +206,8 @@ final class MachineColumn {
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (listShown() && button == 0
-                && rangeList.click(range(), snapshot.get().target(), mouseX, mouseY, this::selectTarget,
-                        this::rowAction)) {
+                && rangeList.click(Minecraft.getInstance().font, range(), snapshot.get().target(), mouseX, mouseY,
+                        this::selectTarget, this::rowAction)) {
             return true;
         }
         return viewShown() && machineView.mouseClicked(mouseX, mouseY, button);
@@ -255,7 +255,8 @@ final class MachineColumn {
         RangeList.Row row = listShown() ? rangeList.rowAt(range(), mouseX, mouseY) : null;
         if (row != null) {
             machineTip = true;
-            Component button = rangeList.buttonTooltip(range(), snapshot.get().target(), mouseX, mouseY);
+            Component button = rangeList.buttonTooltip(Minecraft.getInstance().font, range(), snapshot.get().target(),
+                    mouseX, mouseY);
             set.accept(button != null ? button : rangeList.tooltip(range(), row, attachedName()));
         }
         return machineTip;
@@ -371,7 +372,13 @@ final class MachineColumn {
     }
 
     int @Nullable [] rangeButtonCenter(RangeRowButtons.Action action) {
-        return listShown() ? rangeList.buttonCenter(range(), snapshot.get().target(), action) : null;
+        return listShown() ? rangeList.buttonCenter(Minecraft.getInstance().font, range(), snapshot.get().target(), action)
+                : null;
+    }
+
+    /** O ✕ do alvo na lista está armado. */
+    boolean rangeUnlinkArmed() {
+        return listShown() && rangeList.unlinkArmed(snapshot.get().target());
     }
 
     int @Nullable [] rangeArrowPoint(int group) {

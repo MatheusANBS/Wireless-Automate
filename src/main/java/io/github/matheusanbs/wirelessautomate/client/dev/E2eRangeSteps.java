@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -266,6 +267,14 @@ final class E2eRangeSteps {
                 }, () -> "alcance " + rangeView()));
         list.add(rangeClipCheck(label + "exceção"));
         list.add(capture("range-3-excecao" + suffix));
+        if (suffix.isEmpty()) {
+            // armado, o ✕ fica sozinho na linha (o ↺ sai) e sair com o mouse desarma
+            armUnlinkSteps(list, label, suffix, () -> rangeFurnace);
+            list.add(new Step(label + "sair com o mouse desarma", STEP_TIMEOUT_MS, () -> moveMouse(0, 0),
+                    () -> stepTicks >= 2 && !routerScreen().rangeUnlinkArmed()
+                            && routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT) != null,
+                    () -> "armado " + routerScreen().rangeUnlinkArmed()));
+        }
         list.add(new Step(label + "Voltar ao perfil", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT), "o ↺ da fornalha"),
                 () -> {
@@ -293,17 +302,37 @@ final class E2eRangeSteps {
                 () -> clickRow(EditTarget.machine(rangeMachine(rangeChestB))),
                 () -> rangeTargetIs(EditTarget.machine(rangeMachine(rangeChestB))),
                 () -> "alvo " + routerScreen().getMenu().snapshot().target()));
-        // o ✕ da linha pede dois cliques: o primeiro só arma
-        list.add(new Step(label + "Desvincular: o primeiro clique arma", STEP_TIMEOUT_MS,
-                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UNLINK), "o ✕ do segundo baú"),
-                () -> stepTicks >= 4 && rangeView().machines().size() == 3
-                        && onServer(server -> router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
-                () -> "alcance " + rangeView()));
+        armUnlinkSteps(list, label, "-pt", () -> rangeChestB);
         list.add(new Step(label + "Desvincular: o segundo confirma", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UNLINK), "Desvincular?"),
                 () -> rangeView().machines().size() == 2 && routerScreen().getMenu().snapshot().target().attached()
                         && onServer(server -> !router(server, rangeRouter).remoteMachines().contains(rangeChestB)),
                 () -> "alcance " + rangeView()));
+    }
+
+    /**
+     * O ✕ da máquina escolhida pede dois cliques: o primeiro só arma, e o botão vira o "Desvincular?"
+     * sozinho na linha, com o texto inteiro ({@code range-6-desvincular-armado}).
+     */
+    private static void armUnlinkSteps(List<Step> list, String label, String suffix, Supplier<BlockPos> pos) {
+        list.add(new Step(label + "Desvincular: o primeiro clique arma", STEP_TIMEOUT_MS,
+                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UNLINK), "o ✕ da máquina"),
+                () -> stepTicks >= 4 && routerScreen().rangeUnlinkArmed()
+                        && routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT) == null
+                        && onServer(server -> router(server, rangeRouter).remoteMachines().contains(pos.get())),
+                () -> "armado " + routerScreen().rangeUnlinkArmed() + ", alcance " + rangeView()));
+        // a captura comum tira o mouse da tela, o que desarma: esta deixa o mouse no botão. O nome da linha
+        // pode sair abreviado (o texto inteiro fica na dica), o "Desvincular?" nunca
+        list.add(new Step(label + "armado: só o nome da linha abreviado", STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            boolean onlyName = clippedTexts().stream().allMatch(text -> text.startsWith("#"));
+            if (stepTicks < 6 || !routerScreen().rangeUnlinkArmed() || !onlyName) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "range-6-desvincular-armado" + suffix);
+            return true;
+        }, () -> "armado " + routerScreen().rangeUnlinkArmed() + ", " + GuiText.clipCount() + " texto(s) cortado(s): "
+                + clippedTexts()));
     }
 
     /** Alcance, só em inglês: tira o upgrade pelo slot com a tela num alvo remoto. */
@@ -386,12 +415,12 @@ final class E2eRangeSteps {
                 () -> GuiText.clipCount() + " texto(s) cortado(s): " + clippedTexts());
     }
 
-    private static String clippedTexts() {
+    private static List<String> clippedTexts() {
         List<String> texts = new ArrayList<>();
         for (int[] c : GuiText.clipCenters()) {
             Component full = GuiText.clipAt(c[0], c[1]);
             texts.add(full == null ? "?" : full.getString());
         }
-        return texts.toString();
+        return texts;
     }
 }

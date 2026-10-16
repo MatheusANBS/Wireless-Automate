@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import io.github.matheusanbs.wirelessautomate.resonator.Tuning;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,22 +26,23 @@ final class ResonatorJei {
 
     static void registerCategories(IRecipeCategoryRegistration registration) {
         var helper = registration.getJeiHelpers().getGuiHelper();
-        registration.addRecipeCategories(new ResonatorRechargeCategory(helper));
-        // A categoria da estrutura (Task 3) se registra aqui.
+        registration.addRecipeCategories(new ResonatorStructureCategory(helper), new ResonatorRechargeCategory(helper));
     }
 
     static void registerRecipes(IRecipeRegistration registration) {
         registration.addRecipes(ResonatorRechargeCategory.TYPE, List.of(
                 ResonatorRechargeCategory.Recharge.of(ModItems.SIGNAL_CRYSTAL.get()),
                 ResonatorRechargeCategory.Recharge.of(ModItems.CUT_SIGNAL_CRYSTAL.get())));
-        // As receitas da estrutura (Task 3) se registram aqui.
+        registration.addRecipes(ResonatorStructureCategory.TYPE, List.of(
+                ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.VITRINE),
+                ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.FAIXA)));
         registration.addItemStackInfo(cores(), info());
     }
 
     static void registerCatalysts(IRecipeCatalystRegistration registration) {
         for (ItemStack core : cores()) {
             registration.addRecipeCatalysts(ResonatorRechargeCategory.TYPE, core);
-            // O catalisador da estrutura (Task 3) entra aqui.
+            registration.addRecipeCatalysts(ResonatorStructureCategory.TYPE, core);
         }
     }
 

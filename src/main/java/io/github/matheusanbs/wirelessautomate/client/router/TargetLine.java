@@ -51,8 +51,14 @@ final class TargetLine {
         if (pill != null) {
             RangeView.MachineView machine = model.targetMachine();
             int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
-            PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
-                    pill.contains(mx, my) || open, model.readOnly() == null, border);
+            Component name = model.targetName(model.snapshot().target());
+            if (model.targetFromList()) {
+                GuiText.draw(g, font, name, pill.x() + 4, pill.y() + (pill.h() - 8) / 2, pill.w() - 4,
+                        machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.FG);
+            } else {
+                PanelPainter.dropButton(g, font, pill, name, pill.contains(mx, my) || open,
+                        model.readOnly() == null, border);
+            }
         }
         Hot revert = layout.hot(Kind.REVERT);
         if (revert != null) {
@@ -88,7 +94,8 @@ final class TargetLine {
             scope = group == null ? panelTr("target.attached")
                     : tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(), group.count());
         }
-        return scope.copy().append("\n").append(panelTr("target.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        Component how = panelTr(model.targetFromList() ? "target.tooltip.list" : "target.tooltip");
+        return scope.copy().append("\n").append(how.copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
 
     // ------------------------------------------------------------------ a lista do alvo

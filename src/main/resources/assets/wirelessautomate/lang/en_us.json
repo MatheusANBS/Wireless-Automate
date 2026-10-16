@@ -1002,6 +1002,7 @@
   "gui.wirelessautomate.panel.target.exception": "has an exception",
   "gui.wirelessautomate.panel.target.revert": "Make it like the others",
   "gui.wirelessautomate.panel.target.tooltip": "Choose what to edit: the attached machine, all of one kind or just one",
+  "gui.wirelessautomate.panel.target.tooltip.list": "Choose what to edit in the machine list",
   "gui.wirelessautomate.panel.filter.none": "No filter",
   "gui.wirelessautomate.panel.priority": "Prior.",
   "gui.wirelessautomate.panel.redstone.hint": "Click to choose when the face works",

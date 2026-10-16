@@ -32,7 +32,7 @@ import org.lwjgl.opengl.GL11;
  * são montadas uma vez, no primeiro desenho; por quadro só a matriz e a ordem dos Vidros mudam.
  */
 final class StructureView {
-    /** Camadas da caixa; a camada {@code LAYERS + 1} é o Tudo (e a {@code LAYERS} também mostra a caixa inteira). */
+    /** Camadas da caixa; a camada {@code LAYERS} é o Tudo, a caixa inteira montada. */
     static final int LAYERS = 5;
 
     private static final float DEPTH = 150f;
@@ -64,7 +64,7 @@ final class StructureView {
     private float yaw = 45f;
     private float pitch = 30f;
     private float zoom = 1f;
-    private int layer = LAYERS + 1;
+    private int layer = LAYERS;
 
     private final Matrix4f matrix = new Matrix4f();
     private final Vector3f light0 = new Vector3f();
@@ -80,7 +80,7 @@ final class StructureView {
     }
 
     void setLayer(int layer) {
-        this.layer = Mth.clamp(layer, 1, LAYERS + 1);
+        this.layer = Mth.clamp(layer, 1, LAYERS);
     }
 
     void drag(double dx, double dy) {

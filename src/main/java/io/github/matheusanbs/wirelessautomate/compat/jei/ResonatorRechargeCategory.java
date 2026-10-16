@@ -6,6 +6,8 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
@@ -86,7 +88,8 @@ final class ResonatorRechargeCategory implements IRecipeCategory<ResonatorRechar
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, Recharge recipe, IFocusGroup focuses) {
         builder.addRecipePlusSignWidget().setPosition(45, 9);
-        builder.addAnimatedRecipeArrowWidget(Math.max(20, (int) Config.rechargeTicks())).setPosition(86, 6);
+        builder.addAnimatedRecipeArrowWidget((int) Math.min(Integer.MAX_VALUE, Math.max(20L, Config.rechargeTicks())))
+                .setPosition(86, 6);
     }
 
     @Override
@@ -101,9 +104,18 @@ final class ResonatorRechargeCategory implements IRecipeCategory<ResonatorRechar
         }
     }
 
-    /** Segundos da recarga; sem casas quando inteiro. */
+    /**
+     * Segundos da recarga; sem casas quando inteiro, senão uma casa com o separador decimal do idioma do jogo (não o
+     * {@code Locale} do sistema), como o dial da tela do Núcleo.
+     */
     private static String seconds() {
         double value = Config.rechargeTicks() / 20.0;
-        return value == Math.rint(value) ? Long.toString((long) value) : String.format("%.1f", value);
+        if (value == Math.rint(value)) {
+            return Long.toString((long) value);
+        }
+        String code = Minecraft.getInstance().getLanguageManager().getSelected();
+        char separator = DecimalFormatSymbols.getInstance(Locale.forLanguageTag(code.replace('_', '-')))
+                .getDecimalSeparator();
+        return String.format(Locale.ROOT, "%.1f", value).replace('.', separator);
     }
 }

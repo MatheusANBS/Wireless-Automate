@@ -9,8 +9,10 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBill;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint.Layout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
@@ -28,6 +30,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -50,10 +53,11 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
     private static final int BUTTON_HEIGHT = 11;
     private static final int BUTTON_GAP = 2;
     private static final int NOTE_Y = 148;
+    /** As linhas da nota que cabem na altura base; uma tradução mais longa aumenta a categoria. */
     private static final int NOTE_LINES = 3;
-    private static final int HEIGHT = NOTE_Y + NOTE_LINES * 10;
-    /** Os botões 1 a 5 e o Tudo; o Tudo é a camada {@code LAYERS + 1}. */
-    private static final int BUTTONS = StructureView.LAYERS + 1;
+    private static final int NOTE_LINE_HEIGHT = 10;
+    /** Os botões 1 a 4 e o Tudo; o Tudo é a camada {@code LAYERS}, a caixa inteira montada. */
+    private static final int BUTTONS = StructureView.LAYERS;
 
     private static final int TEXT_COLOR = 0xFF404040;
     private static final int VIEW_FILL = 0xFF8B8B8B;
@@ -74,6 +78,8 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
 
     private final IDrawable icon;
     private final Map<Layout, StructureView> views = new EnumMap<>(Layout.class);
+    /** Os textos e as medidas no idioma de agora; refeitos só quando o idioma muda. */
+    private Texts texts;
 
     ResonatorStructureCategory(IGuiHelper helper) {
         this.icon = helper.createDrawableItemStack(new ItemStack(ModItems.RESONATOR_CASING.get()));
@@ -96,7 +102,7 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
 
     @Override
     public int getHeight() {
-        return HEIGHT;
+        return NOTE_Y + Math.max(NOTE_LINES, texts().note().size()) * NOTE_LINE_HEIGHT;
     }
 
     @Override
@@ -132,7 +138,7 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
     public void createRecipeExtras(IRecipeExtrasBuilder builder, Structure recipe, IFocusGroup focuses) {
         StructureView view = view(recipe);
         builder.addInputHandler(new ViewInput(view));
-        builder.addInputHandler(new LayerInput(view));
+        builder.addInputHandler(new LayerInput(view, this::texts));
     }
 
     private StructureView view(Structure recipe) {
@@ -142,7 +148,8 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
     @Override
     public void draw(Structure recipe, IRecipeSlotsView slots, GuiGraphics graphics, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        Component name = layoutName(recipe.layout());
+        Texts texts = texts();
+        Component name = texts.names().get(recipe.layout());
         graphics.drawString(font, name, (VIEW_SIZE - font.width(name)) / 2, 1, TEXT_COLOR, false);
 
         graphics.fill(0, VIEW_Y, VIEW_SIZE, VIEW_Y + VIEW_SIZE, EDGE_DARK);
@@ -151,54 +158,76 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
         StructureView view = view(recipe);
         view.draw(graphics, 1, VIEW_Y + 1, VIEW_SIZE - 2, VIEW_SIZE - 2);
 
-        drawButtons(graphics, font, view.layer());
+        drawButtons(graphics, font, texts, view.layer());
         int y = NOTE_Y;
-        var lines = font.split(Component.translatable("jei.wirelessautomate.resonator.structure.note"), WIDTH);
-        for (int i = 0; i < Math.min(NOTE_LINES, lines.size()); i++) {
-            graphics.drawString(font, lines.get(i), 0, y, TEXT_COLOR, false);
-            y += font.lineHeight + 1;
+        for (FormattedCharSequence line : texts.note()) {
+            graphics.drawString(font, line, 0, y, TEXT_COLOR, false);
+            y += NOTE_LINE_HEIGHT;
         }
     }
 
-    /** "Camada" e os botões 1 a 5 e Tudo; o da camada mostrada, afundado. */
-    private static void drawButtons(GuiGraphics graphics, Font font, int layer) {
-        Component label = Component.translatable("jei.wirelessautomate.resonator.structure.layer");
-        graphics.drawString(font, label, 0, BUTTONS_Y + 2, TEXT_COLOR, false);
+    private Texts texts() {
+        Minecraft minecraft = Minecraft.getInstance();
+        String language = minecraft.getLanguageManager().getSelected();
+        if (texts == null || !texts.language().equals(language)) {
+            texts = Texts.of(language, minecraft.font);
+        }
+        return texts;
+    }
+
+    /** "Camada" e os botões 1 a 4 e Tudo; o da camada mostrada, afundado. */
+    private static void drawButtons(GuiGraphics graphics, Font font, Texts texts, int layer) {
+        graphics.drawString(font, texts.label(), 0, BUTTONS_Y + 2, TEXT_COLOR, false);
         for (int i = 0; i < BUTTONS; i++) {
-            int left = buttonLeft(font, i);
-            int right = left + buttonWidth(font, i);
+            int left = texts.lefts()[i];
+            int right = left + texts.widths()[i];
             int bottom = BUTTONS_Y + BUTTON_HEIGHT;
             boolean pressed = i + 1 == layer;
             graphics.fill(left, BUTTONS_Y, right, bottom, pressed ? PRESSED_LIGHT : BUTTON_SHADE);
             graphics.fill(left, BUTTONS_Y, right - 1, bottom - 1, pressed ? PRESSED_DARK : EDGE_LIGHT);
             graphics.fill(left + 1, BUTTONS_Y + 1, right - 1, bottom - 1, pressed ? PRESSED_FILL : BUTTON_FILL);
-            Component text = buttonText(i);
-            graphics.drawString(font, text, left + (right - left - font.width(text) + 1) / 2, BUTTONS_Y + 2,
+            graphics.drawString(font, texts.buttons()[i], texts.textXs()[i], BUTTONS_Y + 2,
                     pressed ? 0xFFFFFFFF : TEXT_COLOR, false);
         }
     }
 
-    private static Component buttonText(int index) {
-        return index < StructureView.LAYERS
-                ? Component.literal(Integer.toString(index + 1))
-                : Component.translatable("jei.wirelessautomate.resonator.structure.all");
-    }
-
-    private static int buttonWidth(Font font, int index) {
-        return Math.max(BUTTON_HEIGHT, font.width(buttonText(index)) + 6);
-    }
-
-    private static int buttonLeft(Font font, int index) {
-        int left = font.width(Component.translatable("jei.wirelessautomate.resonator.structure.layer")) + 4;
-        for (int i = 0; i < index; i++) {
-            left += buttonWidth(font, i) + BUTTON_GAP;
+    /**
+     * Os textos da categoria num idioma, com as medidas dos botões e a nota já quebrada na largura: montados uma vez
+     * por idioma, para o desenho não traduzir nem medir a cada quadro.
+     */
+    private record Texts(String language, Component label, Component[] buttons, int[] lefts, int[] widths,
+            int[] textXs, Map<Layout, Component> names, List<FormattedCharSequence> note) {
+        static Texts of(String language, Font font) {
+            Component label = resolved("jei.wirelessautomate.resonator.structure.layer");
+            Component[] buttons = new Component[BUTTONS];
+            int[] lefts = new int[BUTTONS];
+            int[] widths = new int[BUTTONS];
+            int[] textXs = new int[BUTTONS];
+            int left = font.width(label) + 4;
+            for (int i = 0; i < BUTTONS; i++) {
+                buttons[i] = i < BUTTONS - 1
+                        ? Component.literal(Integer.toString(i + 1))
+                        : resolved("jei.wirelessautomate.resonator.structure.all");
+                int textWidth = font.width(buttons[i]);
+                lefts[i] = left;
+                widths[i] = Math.max(BUTTON_HEIGHT, textWidth + 6);
+                textXs[i] = left + (widths[i] - textWidth + 1) / 2;
+                left += widths[i] + BUTTON_GAP;
+            }
+            Map<Layout, Component> names = new EnumMap<>(Layout.class);
+            for (Layout layout : Layout.values()) {
+                names.put(layout, resolved("block.wirelessautomate.resonance_core.projection.layout."
+                        + layout.name().toLowerCase(Locale.ROOT)));
+            }
+            List<FormattedCharSequence> note = List.copyOf(font.split(
+                    Component.translatable("jei.wirelessautomate.resonator.structure.note"), WIDTH));
+            return new Texts(language, label, buttons, lefts, widths, textXs, names, note);
         }
-        return left;
-    }
 
-    private static Component layoutName(Layout layout) {
-        return Component.translatable("block.wirelessautomate.resonance_core.projection.layout."
-                + layout.name().toLowerCase(Locale.ROOT));
+        /** O texto já traduzido, para o desenho não procurar a chave a cada quadro. */
+        private static Component resolved(String key) {
+            return Component.literal(Component.translatable(key).getString());
+        }
     }
 
     @Override
@@ -240,7 +269,7 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
     }
 
     /** Os botões de camada; o JEI simula o clique ao apertar e o executa ao soltar. */
-    private record LayerInput(StructureView view) implements IJeiInputHandler {
+    private record LayerInput(StructureView view, Supplier<Texts> texts) implements IJeiInputHandler {
         @Override
         public ScreenRectangle getArea() {
             return new ScreenRectangle(0, BUTTONS_Y, WIDTH, BUTTON_HEIGHT);
@@ -251,10 +280,10 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
             if (!isMouse(input)) {
                 return false;
             }
-            Font font = Minecraft.getInstance().font;
+            Texts current = texts.get();
             for (int i = 0; i < BUTTONS; i++) {
-                int left = buttonLeft(font, i);
-                if (mouseX >= left && mouseX < left + buttonWidth(font, i)) {
+                int left = current.lefts()[i];
+                if (mouseX >= left && mouseX < left + current.widths()[i]) {
                     if (!input.isSimulate()) {
                         view.setLayer(i + 1);
                     }

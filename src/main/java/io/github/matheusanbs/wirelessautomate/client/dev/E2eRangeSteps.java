@@ -48,18 +48,20 @@ final class E2eRangeSteps {
     private E2eRangeSteps() {
     }
 
-    private static BlockPos rangeRouter;
+    static BlockPos rangeRouter;
     private static BlockPos rangeChestA;
     private static BlockPos rangeChestB;
-    private static BlockPos rangeFurnace;
+    static BlockPos rangeFurnace;
 
     /**
      * Roteador de alcance pela tela: um roteador Avançado num baú, com o Upgrade de Alcance e dois baús e
      * uma fornalha vinculados (a até 3 blocos) pela API do servidor. Em inglês e em português: abre a
      * tela, mostra a lista ({@code range-1-lista}), escolhe o grupo dos baús e põe Trás em Extrair (o
      * perfil; {@code range-2-grupo}, com os lados relativos), escolhe a fornalha e põe Frente em Inserir
-     * (vira exceção; {@code range-3-excecao}, com Voltar ao perfil) e volta ao perfil. Na volta em
-     * português, desvincula o segundo baú pela tela. Sem texto cortado em nenhuma captura.
+     * (vira exceção; {@code range-3-excecao}, com o ↺ na linha dela) e volta ao perfil pelo ↺. Depois, a
+     * fornalha trocada no lugar e o Atualizar ({@link E2eRangeReplaceSteps}). Na volta em português,
+     * desvincula o segundo baú pela tela, em dois cliques. Sem texto cortado nas capturas (no Desvincular
+     * armado da lista, só o nome da linha abreviado).
      */
     static void rangeSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -76,6 +78,8 @@ final class E2eRangeSteps {
                 rangeNetworkAndViewSteps(list, label);
             }
             rangeExceptionSteps(list, label, suffix);
+            // em inglês o Atualizar sai pelo ⟳ da lista; em português, pelo botão da linha Editando
+            E2eRangeReplaceSteps.rangeReplaceSteps(list, label, suffix, !pt);
             if (pt) {
                 rangeUnlinkSteps(list, label);
             }
@@ -381,7 +385,7 @@ final class E2eRangeSteps {
     }
 
     /** O índice da máquina em {@code pos} na tela. */
-    private static int rangeMachine(BlockPos pos) throws StepFailure {
+    static int rangeMachine(BlockPos pos) throws StepFailure {
         List<RangeView.MachineView> machines = rangeView().machines();
         for (int i = 0; i < machines.size(); i++) {
             if (machines.get(i).pos().equals(pos)) {
@@ -401,7 +405,7 @@ final class E2eRangeSteps {
     }
 
     /** A tela e o menu do servidor estão no alvo {@code target}. */
-    private static boolean rangeTargetIs(EditTarget target) throws Exception {
+    static boolean rangeTargetIs(EditTarget target) throws Exception {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         return routerScreen().getMenu().snapshot().target().equals(target) && onServer(server ->
                 server.getPlayerList().getPlayer(playerId).containerMenu instanceof RouterMenu menu
@@ -415,7 +419,7 @@ final class E2eRangeSteps {
                 () -> GuiText.clipCount() + " texto(s) cortado(s): " + clippedTexts());
     }
 
-    private static List<String> clippedTexts() {
+    static List<String> clippedTexts() {
         List<String> texts = new ArrayList<>();
         for (int[] c : GuiText.clipCenters()) {
             Component full = GuiText.clipAt(c[0], c[1]);

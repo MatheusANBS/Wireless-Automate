@@ -327,7 +327,10 @@ final class MachineColumn {
         } else if (remote() && !remoteLoaded()) {
             RangeView.MachineView machine = s.target().kind() == EditTarget.Kind.MACHINE
                     ? range().machine(s.target().id()) : null;
-            RangeView.MachineState state = machine == null ? RangeView.MachineState.UNLOADED : machine.state();
+            boolean groupReplaced = s.target().kind() == EditTarget.Kind.GROUP
+                    && RangeRowButtons.replaced(range(), s.target().id()) > 0;
+            RangeView.MachineState state = machine != null ? machine.state()
+                    : groupReplaced ? RangeView.MachineState.REPLACED : RangeView.MachineState.UNLOADED;
             Component label = switch (state) {
                 case MISSING -> tr("range.access.missing");
                 case REPLACED -> tr("range.access.replaced");

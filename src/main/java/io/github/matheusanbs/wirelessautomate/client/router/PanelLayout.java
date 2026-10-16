@@ -234,9 +234,11 @@ final class PanelLayout {
                 Hot unlink = hot(Kind.UNLINK);
                 if (model.unlinkArmed() && unlink != null) {
                     // armado, o Desvincular fica sozinho, do começo da linha até onde ele estava (o mouse
-                    // continua em cima dele), com o texto inteiro, como na lista
+                    // continua em cima dele) ou até onde o texto armado couber inteiro, como na lista
+                    int armedW = font.width(PanelModel.tr("range.unlink.armed")) + 2 * TARGET_PAD;
                     hots.removeIf(h -> h.kind() == Kind.REVERT || h.kind() == Kind.UPDATE || h.kind() == Kind.UNLINK);
-                    hots.add(new Hot(Kind.UNLINK, x, y, unlink.x() + unlink.w() - x, ROW_H, 0));
+                    hots.add(new Hot(Kind.UNLINK, x, y, Math.min(w, Math.max(unlink.x() + unlink.w() - x, armedW)),
+                            ROW_H, 0));
                 }
                 y += ROW_H + GAP;
             }
@@ -313,21 +315,22 @@ final class PanelLayout {
 
     /**
      * Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o texto
-     * da especificação, ou o curto se não couberem; se nem assim, cada um fica com até uma parte igual e o
-     * Voltar com o resto. O Desvincular tem a largura do texto armado, para não mudar de tamanho ao armar.
+     * da especificação, ou um Voltar mais curto ("Voltar ao perfil", "Voltar") se não couberem; se nem assim,
+     * cada um fica com até uma parte igual e o Voltar com o resto.
      */
     private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
-        int unlinkW = Math.max(font.width(PanelModel.tr("range.unlink")),
-                font.width(PanelModel.tr("range.unlink.armed"))) + 2 * TARGET_PAD;
+        int unlinkW = font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD;
         int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
         int count = 1 + (replaced ? 1 : 0) + (exception ? 1 : 0);
         int revertW = 0;
         if (exception) {
             revertLabel = PanelModel.panelTr("target.revert");
             revertW = font.width(revertLabel) + 2 * TARGET_PAD;
-            if (total(revertW, updateW, unlinkW) > w) {
-                revertLabel = PanelModel.tr("range.revert");
-                revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+            for (String shorter : new String[] {"range.revert", "range.revert.short"}) {
+                if (total(revertW, updateW, unlinkW) > w) {
+                    revertLabel = PanelModel.tr(shorter);
+                    revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+                }
             }
         }
         if (total(revertW, updateW, unlinkW) > w) {

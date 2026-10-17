@@ -320,6 +320,24 @@ final class NodePorts {
     }
 
     /**
+     * O sinal de redstone do roteador mudou: trava ou destrava as portas já lidas com controle por redstone, sem
+     * remontar ({@link Port#applyRedstone}). A que destrava acorda as origens que esperam por ela; as de um tipo
+     * ainda por ler pegam o sinal na leitura.
+     */
+    void poweredChanged(boolean powered, long now) {
+        for (Port[] active : collected) {
+            if (active == null) {
+                continue;
+            }
+            for (Port port : active) {
+                if (port.redstone != RedstoneMode.IGNORE && port.applyRedstone(powered, now) && port.destination) {
+                    wakeFeeders(port);
+                }
+            }
+        }
+    }
+
+    /**
      * A capability de uma face mudou (máquina trocada, chunk na borda, mod que invalida): acorda só
      * as portas dessa face e tipo e as origens que esperam por elas. As rotas não dependem de
      * capability, então nada é remontado.
@@ -347,6 +365,9 @@ final class NodePorts {
     }
 
     private static void wakePort(Port port) {
+        if (port.redstoneOff) {
+            return;
+        }
         port.sourceBackoff.wake();
         port.destinationBackoff.wake();
         // O inventário mudou: a volta sem achar nada recomeça do zero.
@@ -354,6 +375,11 @@ final class NodePorts {
     }
 
     private static void wakeFeeders(Port destination) {
+        long tick = NetworkManager.lastTick();
+        if (destination.feedersWokenAt == tick) {
+            return;
+        }
+        destination.feedersWokenAt = tick;
         wakeWaiting(destination.feeders);
         wakeWaiting(destination.sharedFeeders);
         wakeWaiting(destination.sharedBothFeeders);
@@ -363,7 +389,7 @@ final class NodePorts {
     private static void wakeWaiting(List<Port> sources) {
         for (int i = 0, n = sources.size(); i < n; i++) {
             Port source = sources.get(i);
-            if (source.waitsDestination) {
+            if (source.waitsDestination && !source.redstoneOff) {
                 source.sourceBackoff.wake();
             }
         }

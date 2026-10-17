@@ -6,6 +6,11 @@ package io.github.matheusanbs.wirelessautomate.network;
  * testada por JUnit. Começa acordado.
  */
 public final class Backoff {
+    /**
+     * Quantas vezes algum {@code Backoff} acordou: quem guardou "todos dormindo" no mesmo tick sabe, por ele, que
+     * nada acordou desde então (dormir mais não desfaz um "todos dormindo"). Só a thread do servidor mexe.
+     */
+    private static long wakes;
     private final int maxTicks;
     private int nextInterval = 1;
     private long wakeAt = Long.MIN_VALUE;
@@ -51,6 +56,12 @@ public final class Backoff {
     public void wake() {
         wakeAt = Long.MIN_VALUE;
         nextInterval = 1;
+        wakes++;
+    }
+
+    /** Ver {@link #wakes}. */
+    static long wakes() {
+        return wakes;
     }
 
     public boolean isSleeping(long gameTime) {

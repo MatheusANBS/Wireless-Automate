@@ -24,9 +24,9 @@ Spec: `docs/superpowers/specs/2026-10-17-correcao-alcance-design.md`. Ramo: `cor
 | `network/NodeProbe.java`, `network/NodePorts.java` | 1 | Contar destinos cheios sem criar porta, com as remotas |
 | `range/RangeLinks.java`, `range/RemoteMachines.java`, `block/RouterBlockEntity.java` (doc) | 2 | O Vinculador vincula sem rede |
 | `block/RouterTargets.java` (ou parte nova de pacote) e `block/RouterBlockEntity.java` | 3 | Limpar e devolver as redes das faces sem modo de um alvo |
-| `packet/ClearIdleNetworksPayload.java` (novo), `packet/ModPayloads.java`, `packet/PanelNoticePayload.java` | 3 | Payload, handler, `Undo.RESTORE_IDLE_NETWORKS`, versão 17 |
+| `packet/ClearIdleNetworksPayload.java` (novo), `packet/ModPayloads.java`, `packet/PanelNoticePayload.java` | 3 | Payload, handler, `Undo.RESTORE_IDLE_NETWORKS`, versão 19 |
 | `menu/IdleNetworkUndo.java` (novo) | 3 | O último limpar por jogador, para o Desfazer |
-| `client/router/IdleNetworkLine.java` (novo), `client/router/NodePanel.java`, `client/router/PanelLayout.java`, `client/router/RouterPanelActions.java`, `client/tablet/TabletList.java`/`TabletActions.java` | 3 | O botão, a ação e o Desfazer no aviso |
+| `client/router/IdleNetworks.java` (novo: quando o botão aparece, os textos e o ícone ⊘), `client/router/TargetLine.java` (o botão na ponta direita da linha Editando), `client/router/RangeRowButtons.java` (o ⊘ na linha do alvo com a lista à vista), `client/router/NodePanel.java`, `client/router/PanelLayout.java`, `client/router/RouterPanelActions.java`, `client/tablet/TabletList.java`/`TabletActions.java` | 3 | O botão, a ação e o Desfazer no aviso |
 | `lang/en_us.json`, `lang/pt_br.json` | 3 | Textos |
 | `gametest/RangeFixGameTests.java` (novo) e os testes de alcance que mudarem | 1–3 | GameTests |
 | `client/dev/E2eRangeSteps.java` | 3 | Capturas do botão e do aviso |
@@ -66,5 +66,5 @@ Spec: `docs/superpowers/specs/2026-10-17-correcao-alcance-design.md`. Ramo: `cor
 ### Tarefa 4: documentação e fechamento
 
 1. `scripts/guide/gerar_guia.py` (nunca os `.md`), nos dois idiomas: a linha do modo Máquinas do Vinculador (pt ~1124, en ~1192) passa a dizer que a máquina de um tipo novo entra sem rede e que a face entra na rede ativa ao escolher um modo; na página do roteador de alcance, o botão "Tirar a rede das faces sem modo" e o Desfazer. Rodar o gerador.
-2. `docs/especificacao.md`: Vinculador (modo Máquinas) e Roteador (painel do nó, o botão). `CLAUDE.md`: mapa do código (`IdleNetworkLine`, `ClearIdleNetworksPayload`, `IdleNetworkUndo`, `RangeFixGameTests`, protocolo `17`). `docs/progresso.md`: estado, próximo passo (etapa 1 da central) e uma linha no histórico com os números de testes.
+2. `docs/especificacao.md`: Vinculador (modo Máquinas) e Roteador (painel do nó, o botão). `CLAUDE.md`: mapa do código (`IdleNetworks` e onde o botão ficou, `ClearIdleNetworksPayload`, `IdleNetworkUndo`, `IdleNetworkFace`, `RangeFixGameTests`, protocolo `19`). `docs/progresso.md`: estado, próximo passo (etapa 1 da central) e uma linha no histórico com os números de testes.
 3. Verificação completa uma vez (as quatro runs + e2e) e commit: `Docs: correção do alcance`.

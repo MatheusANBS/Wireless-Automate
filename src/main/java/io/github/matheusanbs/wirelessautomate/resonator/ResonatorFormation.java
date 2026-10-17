@@ -23,6 +23,12 @@ import org.jetbrains.annotations.Nullable;
  * evento de bloco (o tick agendado do Núcleo), nunca por tick.
  */
 public final class ResonatorFormation {
+    /**
+     * Troca só o estado conectado (a textura): manda ao cliente sem refazer a forma dos vizinhos, porque nenhum
+     * depende dela. Montar e desmontar trocam até 98 blocos num tick.
+     */
+    private static final int STATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
     /** Jogadores a até 16 blocos do Núcleo veem o aviso de montado. */
     private static final double NOTICE_RADIUS_SQR = 16 * 16;
     private static final int SPAN = 2 * ResonatorLayout.SIZE - 1;
@@ -186,7 +192,7 @@ public final class ResonatorFormation {
             BlockState state = level.getBlockState(pos);
             BlockState next = formedState(state, member);
             if (next != state) {
-                level.setBlock(pos, next, Block.UPDATE_CLIENTS);
+                level.setBlock(pos, next, STATE_FLAGS);
             }
         }
         Set<BlockPos> current = new HashSet<>(members);
@@ -275,7 +281,7 @@ public final class ResonatorFormation {
         BlockState state = level.getBlockState(pos);
         BlockState next = looseState(state);
         if (next != state) {
-            level.setBlock(pos, next, Block.UPDATE_CLIENTS);
+            level.setBlock(pos, next, STATE_FLAGS);
         }
     }
 

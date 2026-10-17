@@ -379,7 +379,7 @@ final class ItemTransfer {
     static int planInsert(Port source, Port destination, IItemHandler target, ItemStack offered,
             ItemStack probe, long stock, boolean components) {
         if (stock <= 0) {
-            return PLAN.simulate(target, probe, ItemInsertPlan.COUNT_NONE, 0);
+            return PLAN.simulate(destination, target, probe);
         }
         boolean remember = !sameMachine(source, destination);
         int memo = remember ? PLAN.recall(destination, offered, components) : -1;
@@ -390,7 +390,7 @@ final class ItemTransfer {
             if (counted >= stock) {
                 return -1;
             }
-            accepts = PLAN.simulate(target, probe, ItemInsertPlan.COUNT_NONE, 0);
+            accepts = PLAN.simulate(destination, target, probe);
         } else {
             accepts = PLAN.simulate(target, probe,
                     components ? ItemInsertPlan.COUNT_COMPONENTS : ItemInsertPlan.COUNT_ITEM, stock);

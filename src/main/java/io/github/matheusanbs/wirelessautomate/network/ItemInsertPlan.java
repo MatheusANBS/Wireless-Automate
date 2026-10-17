@@ -209,6 +209,32 @@ final class ItemInsertPlan {
     }
 
     /**
+     * A {@link #simulate} sem contagem, começando pela dica do destino ({@link Port#insertHint}): o último slot onde
+     * o item entrou. Se ele ainda guarda o mesmo item e aceita tudo, o plano é só ele, sem varrer o inventário;
+     * senão, a varredura inteira, que deixa a dica nova. A dica cai quando a máquina avisa mudança de fora. O
+     * pior caso de uma dica velha (alguém tirou de uma pilha anterior sem avisar) é o item ir para uma pilha
+     * seguinte, ainda empilhando.
+     */
+    int simulate(Port destination, IItemHandler target, ItemStack stack) {
+        int hint = destination.insertHint;
+        if (hint >= 0 && hint < target.getSlots()
+                && ItemStack.isSameItemSameComponents(target.getStackInSlot(hint), stack)) {
+            size = 0;
+            open = 0;
+            itemMax = stack.getMaxStackSize();
+            counted = 0;
+            emptySeen = 0;
+            sameSeen = true;
+            if (offer(target, hint, stack).isEmpty()) {
+                return stack.getCount();
+            }
+        }
+        int accepted = simulate(target, stack, COUNT_NONE, 0);
+        destination.insertHint = size > 0 ? slots[size - 1] : -1;
+        return accepted;
+    }
+
+    /**
      * A última {@link #simulate} não aceitou nada porque o destino recusa o item, não por falta
      * de espaço: havia slot vazio, nenhum deles o aceita ({@link IItemHandler#isItemValid}) e não
      * havia pilha dele no destino. Uma máquina cheia de verdade fica de fora: sem vazio, ou com

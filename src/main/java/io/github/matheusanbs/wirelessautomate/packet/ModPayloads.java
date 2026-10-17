@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
@@ -30,6 +31,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -66,7 +68,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "18";
+    public static final String VERSION = "19";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -98,6 +100,8 @@ public final class ModPayloads {
                 (payload, context) -> handleUnlinkMachine(serverPlayer(context), payload));
         registrar.playToServer(UpdateMachinePayload.TYPE, UpdateMachinePayload.STREAM_CODEC,
                 (payload, context) -> handleUpdateMachine(serverPlayer(context), payload));
+        registrar.playToServer(ClearIdleNetworksPayload.TYPE, ClearIdleNetworksPayload.STREAM_CODEC,
+                (payload, context) -> handleClearIdleNetworks(serverPlayer(context), payload));
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
@@ -332,6 +336,52 @@ public final class ModPayloads {
             }
         }
         return indices;
+    }
+
+    /**
+     * "Tirar a rede das faces sem modo" no alvo de edição (um grupo ou uma máquina com exceção; na presa não
+     * faz nada) ou, com {@code undo}, o Desfazer dele. Com alguma face limpa, o aviso leva o Desfazer, que só
+     * vale uma vez, no mesmo menu, roteador e alvo ({@link IdleNetworkUndo}), e devolve a rede só às faces que
+     * continuam sem modo e sem rede, numa rede que ainda existe; sem nenhuma face devolvida, não há aviso.
+     * Devolve quantas faces mudaram, ou -1 se recusou.
+     */
+    public static int handleClearIdleNetworks(@Nullable ServerPlayer player, ClearIdleNetworksPayload payload) {
+        RouterEditHost host = host(player, payload.containerId());
+        EditTarget target = host == null ? null : host.actionTarget();
+        if (target == null) {
+            return -1;
+        }
+        RouterBlockEntity router = host.editedRouter();
+        if (payload.undo()) {
+            List<IdleNetworkFace> faces = IdleNetworkUndo.take(player, host);
+            if (faces == null) {
+                return -1;
+            }
+            NetworkSavedData data = NetworkSavedData.get(player.server);
+            int restored = router.restoreIdleNetworks(target,
+                    faces.stream().filter(face -> data.network(face.network()) != null).toList());
+            host.editApplied();
+            if (restored > 0) {
+                sendNotice(player, PanelNoticePayload.plain(
+                        Component.translatable("gui.wirelessautomate.panel.notice.idle_restored", restored)));
+            }
+            return restored;
+        }
+        IdleNetworkUndo.forget(player.getUUID());
+        List<IdleNetworkFace> cleared = router.clearIdleNetworks(target);
+        if (cleared.isEmpty()) {
+            return 0;
+        }
+        IdleNetworkUndo.remember(player, host, cleared);
+        host.editApplied();
+        sendNotice(player, idleClearedNotice(host.containerId(), cleared.size()));
+        return cleared.size();
+    }
+
+    /** O aviso do limpar: quantas faces perderam a rede, com o Desfazer pelo {@link ClearIdleNetworksPayload}. */
+    public static PanelNoticePayload idleClearedNotice(int containerId, int count) {
+        return new PanelNoticePayload(Component.translatable("gui.wirelessautomate.panel.notice.idle_cleared", count),
+                PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS, containerId, ResourceType.ITEM, Direction.UP);
     }
 
     /** Com o Upgrade de Alcance valendo (como o {@code SelectTarget}), a máquina do índice está em {@code pos}. */

@@ -523,6 +523,7 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
+| **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
 ## Modos da face
 
@@ -622,6 +623,7 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | **Dot on a face** | The color of that face's network (no dot: no network). |
 | **Network row** | The selected face's network; click to change it. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
+| **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
 
 ## Face modes
 
@@ -1125,7 +1127,7 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Uma máquina de um tipo novo entra com todas as faces na sua rede ativa. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Uma máquina de um tipo novo entra sem rede; a face entra na sua rede ativa quando você escolhe um modo nela. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Faces** | As seis (padrão) ou só algumas: Frente, Trás, Esquerda, Direita, Cima e Baixo, lados da máquina de cada roteador. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
@@ -1193,7 +1195,7 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. A machine of a new kind joins with all its faces on your active network. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Faces** | All six (default) or just some: Front, Back, Left, Right, Top and Bottom, the sides of each router's machine. |
 | **Network** | One of your networks, or **None (unlink)**. |

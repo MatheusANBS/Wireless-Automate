@@ -51,7 +51,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 
 /**
  * O Tablet de rede no e2e: busca e etiquetas, filtro rápido, painel do nó, perfil (copiar, colar, desfazer),
- * estatísticas, grupos com pausa e o roteador aberto à distância.
+ * Fluxos ({@link E2eFlowsSteps}), grupos com pausa e o roteador aberto à distância.
  */
 final class E2eTabletSteps {
     private E2eTabletSteps() {
@@ -79,7 +79,7 @@ final class E2eTabletSteps {
         tabletSearchSteps(list, playerId);
         tabletPanelSteps(list);
         tabletProfileSteps(list);
-        tabletStatsSteps(list);
+        E2eFlowsSteps.flowsSteps(list);
         tabletGroupSteps(list);
         tabletRemoteSteps(list, playerId);
     }
@@ -257,41 +257,6 @@ final class E2eTabletSteps {
         }, () -> tabletScreen().getMenu().snapshot().profile().isEmpty(), () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
     }
 
-    /** Tablet: as Estatísticas, o cartão de energia que filtra a Lista e o tamanho mínimo. */
-    private static void tabletStatsSteps(List<Step> list) {
-        list.add(new Step("aba Estatísticas", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
-                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
-                () -> "aba " + tabletScreen().currentTab()));
-        list.add(capture("7c-tablet-estatisticas"));
-        list.add(new Step("Tablet maior", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(470, 260),
-                () -> tabletScreen().size()[0] > 300 && tabletScreen().cardCenter(ResourceType.ITEM) != null,
-                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
-        list.add(capture("7d-tablet-estatisticas-grande"));
-        list.add(new Step("cartão de energia filtra a Lista", STEP_TIMEOUT_MS,
-                () -> {
-                    int[] c = tabletScreen().cardCenter(ResourceType.ENERGY);
-                    click(tabletScreen(), c[0], c[1]);
-                },
-                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST
-                        && tabletScreen().getMenu().snapshot().query().type().equals(Optional.of(ResourceType.ENERGY)),
-                () -> "aba " + tabletScreen().currentTab() + ", consulta " + tabletScreen().getMenu().snapshot().query()));
-        list.add(capture("7e-tablet-lista-energia"));
-        list.add(new Step("Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(300, 240),
-                () -> tabletScreen().size()[0] == 300,
-                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
-        list.add(clipCheck("Tablet: Lista no mínimo"));
-        list.add(listClipTooltip("Tablet: Lista no mínimo"));
-        // o "Só Energia ✕" tira o filtro: os passos seguintes procuram B na Lista sem filtro de tipo
-        list.add(new Step("tirar o filtro de tipo", STEP_TIMEOUT_MS, () -> {
-            int[] c = tabletScreen().list().typeChipCenter();
-            click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().getMenu().snapshot().query().type().isEmpty(),
-                () -> "consulta " + tabletScreen().getMenu().snapshot().query()));
-    }
-
     /** Tablet: cria um grupo com a rede dos itens, pausa e retoma. */
     private static void tabletGroupSteps(List<Step> list) {
         // os widgets da aba só aparecem no quadro seguinte, como para o jogador
@@ -424,7 +389,7 @@ final class E2eTabletSteps {
      * Cada texto cortado da tela do Tablet tem, na dica da Lista naquele ponto, o texto inteiro (a dica da linha
      * ou do cabeçalho não esconde a segunda linha nem o "N diferentes" cortados).
      */
-    private static Step listClipTooltip(String name) {
+    static Step listClipTooltip(String name) {
         String[] missing = {""};
         return new Step(name + ": dica com o texto cortado inteiro", STEP_TIMEOUT_MS, () -> {
         }, () -> {

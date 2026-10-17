@@ -355,7 +355,7 @@ DESTAQUES = [
      VITRINE / "s13-vinculador.png", (164, 84, 1116, 716)),
     ("feature-6-tablet", "Network Tablet",
      "Every router, from anywhere: live stats per resource type, a map and groups.",
-     VITRINE / "s6b-tablet-estatisticas.png", (60, 80, 1222, 720)),
+     VITRINE / "s6b-tablet-fluxos.png", (60, 80, 1222, 720)),
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
      VITRINE / "s8-guia.png", (296, 52, 1266, 658)),

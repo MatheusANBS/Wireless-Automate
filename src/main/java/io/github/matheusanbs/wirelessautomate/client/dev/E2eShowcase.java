@@ -364,12 +364,12 @@ final class E2eShowcase {
                 () -> tabletScreen().size()[0] > 400,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(capture("s6-tablet-lista"));
-        list.add(new Step("aba Estatísticas", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
-                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
+        list.add(new Step("aba Fluxos", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.flows"), "aba Fluxos")),
+                () -> tabletScreen().currentTab() == TabletScreen.Tab.FLOWS,
                 () -> "aba " + tabletScreen().currentTab()));
-        list.add(DevEndToEnd.wait("vazão nas estatísticas", 40));
-        list.add(capture("s6b-tablet-estatisticas"));
+        list.add(DevEndToEnd.wait("os 5 s dos Fluxos", 140));
+        list.add(capture("s6b-tablet-fluxos"));
         list.add(new Step("aba Mapa", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.map")), "aba Mapa")),
                 () -> true, () -> "mapa"));

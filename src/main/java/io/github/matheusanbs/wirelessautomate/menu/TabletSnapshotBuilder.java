@@ -8,15 +8,12 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickCounts;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
-import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
-import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
@@ -40,7 +37,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Monta o {@link TabletSnapshot} de um jogador: percorre o índice, conta as facetas e os filtros rápidos,
- * mede a vazão por nó e por rede na amostra e monta a página, as redes e os grupos. É dono do estado da
+ * mede a vazão por nó na amostra e monta a página, as redes e os grupos. É dono do estado da
  * amostra (quando foi, o movido por nó, os nós ativos e os cheios) e das versões lidas na última montagem.
  */
 final class TabletSnapshotBuilder {
@@ -60,8 +57,6 @@ final class TabletSnapshotBuilder {
     private final Set<NodeKey> activeNodes = new HashSet<>();
     /** Vazão por nó na última amostra, por tipo, na unidade do registro (só os que moveram algo). */
     private final Map<NodeKey, long[]> nodeRates = new HashMap<>();
-    /** Vazão por rede na última amostra, por tipo, na unidade do registro. */
-    private final Map<UUID, long[]> networkRates = new HashMap<>();
 
     TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query) {
         this.viewer = viewer;
@@ -93,8 +88,7 @@ final class TabletSnapshotBuilder {
      *
      * <p>Percorre o índice uma vez para contar, filtrar e medir a vazão (esta só na amostra), mas só
      * sonda o motor ({@link io.github.matheusanbs.wirelessautomate.network.NodeProbe}) para os nós da
-     * página. Os cheios de cada rede vêm das estatísticas do gerenciador; com o filtro de problemas, os nós
-     * cheios vêm de uma sondagem de todos que vale por uma amostra.
+     * página. Com o filtro de problemas, os nós cheios vêm de uma sondagem de todos que vale por uma amostra.
      */
     TabletSnapshot build(boolean sample, Component notice, int noticeId) {
         MinecraftServer server = viewer.server;
@@ -120,7 +114,7 @@ final class TabletSnapshotBuilder {
 
         Map<UUID, Totals> totals = new LinkedHashMap<>();
         for (WaNetwork network : data.networks()) {
-            if (operator || network.owner().equals(me) || network.isPublic()) {
+            if (TabletNodes.visible(network, operator, me)) {
                 totals.put(network.id(), new Totals());
             }
         }
@@ -130,8 +124,6 @@ final class TabletSnapshotBuilder {
         Scan scan = scan(index, data, totals, sample, probeAll, operator, me, now, elapsed, networkNames);
         if (sample) {
             lastMoved.keySet().retainAll(scan.seen);
-            networkRates.clear();
-            totals.forEach((id, t) -> networkRates.put(id, t.rates(elapsed)));
         }
 
         List<Match> matches = scan.matches;
@@ -154,7 +146,13 @@ final class TabletSnapshotBuilder {
         List<NodeView> nodes = pageNodes(matches, data, profile, groupSizes, groupCounts);
 
         Map<UUID, String> names = new HashMap<>();
-        List<NetworkView> networks = networkViews(server, data, totals, me, names);
+        List<NetworkView> networks = new ArrayList<>();
+        totals.forEach((id, t) -> {
+            WaNetwork network = data.network(id);
+            networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
+                    network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
+                    t.nodes, t.unloaded));
+        });
         List<GroupView> groups = new ArrayList<>();
         for (WaGroup group : data.groups()) {
             if (operator || group.owner().equals(me)) {
@@ -163,10 +161,9 @@ final class TabletSnapshotBuilder {
             }
         }
 
-        TickBudget budget = NetworkManager.get().budget();
         return new TabletSnapshot(operator, viewer.level().dimension().location(), center,
                 Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
-                Math.round(budget.averageUsedNanos()), budget.limitNanos(), query.query(), scan.total, matches.size(),
+                query.query(), scan.total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(scan.machineCounts), facets(scan.networkCounts),
                 new QuickCounts(scan.problemCount, scan.noNetworkCount, scan.unloadedCount),
                 TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes), List.copyOf(groupCounts),
@@ -189,7 +186,7 @@ final class TabletSnapshotBuilder {
             if (loaded) {
                 if (sample) {
                     scan.seen.add(key);
-                    moved = sampleMoved(entry, router, totals, elapsed);
+                    moved = sampleMoved(entry, router, elapsed);
                     if (moved) {
                         activeNodes.add(key);
                     }
@@ -268,34 +265,6 @@ final class TabletSnapshotBuilder {
         return nodes;
     }
 
-    /** As redes que o jogador vê, com a vazão da amostra e as estatísticas do gerenciador. */
-    private List<NetworkView> networkViews(MinecraftServer server, NetworkSavedData data, Map<UUID, Totals> totals,
-            UUID me, Map<UUID, String> names) {
-        Map<UUID, NetworkStats> stats = new HashMap<>();
-        for (NetworkStats s : NetworkManager.get().stats(server)) {
-            stats.put(s.id(), s);
-        }
-        List<NetworkView> networks = new ArrayList<>();
-        totals.forEach((id, t) -> {
-            WaNetwork network = data.network(id);
-            NetworkStats s = stats.get(id);
-            long[] rates = networkRates.getOrDefault(id, new long[ResourceType.values().length]);
-            List<TabletSnapshot.TypeStats> types = new ArrayList<>(rates.length);
-            for (ResourceType type : ResourceType.values()) {
-                NetworkStats.TypeCount count = s == null ? null : s.byType().get(type.ordinal());
-                types.add(count == null ? new TabletSnapshot.TypeStats(rates[type.ordinal()], 0, 0, 0)
-                        : new TabletSnapshot.TypeStats(rates[type.ordinal()], count.sources(), count.destinations(),
-                                count.sleeping()));
-            }
-            networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
-                    network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
-                    t.nodes, t.unloaded, s == null ? 0 : s.destinationsFull(), s == null ? 0 : s.destinationsSleeping(),
-                    s == null ? 0 : Math.round(s.averageNanos()), s == null ? 0 : s.opsLastSecond(),
-                    List.copyOf(types)));
-        });
-        return networks;
-    }
-
     /** A consulta atual vale para o nó, com o estado da última amostra: filtros rápidos, etiquetas, tipo e texto. */
     boolean matchesQuery(NodeIndex.Entry entry, NetworkSavedData data, Map<UUID, String> networkNames) {
         boolean loaded = entry.router() != null;
@@ -313,13 +282,8 @@ final class TabletSnapshotBuilder {
         return facets;
     }
 
-    /**
-     * Soma a vazão do nó às redes das faces de cada tipo; devolve se ele moveu algo desde a amostra
-     * anterior. O roteador só conta o movido por tipo ({@link RouterBlockEntity#moved}), não por rede:
-     * com as faces de um tipo em duas redes, o total do tipo vai para cada uma delas (a vazão de uma
-     * rede conta o nó inteiro). A vazão exata por rede pediria contar o movido por porta no motor.
-     */
-    private boolean sampleMoved(NodeIndex.Entry entry, RouterBlockEntity router, Map<UUID, Totals> totals, long elapsed) {
+    /** Mede a vazão do nó por tipo; devolve se ele moveu algo desde a amostra anterior. */
+    private boolean sampleMoved(NodeIndex.Entry entry, RouterBlockEntity router, long elapsed) {
         long[] last = lastMoved.get(entry.key());
         if (last == null) {
             last = new long[ResourceType.values().length];
@@ -330,20 +294,13 @@ final class TabletSnapshotBuilder {
             return false;
         }
         boolean moved = false;
-        for (int t = 0; t < TabletNodes.TRANSFER_TYPES.length; t++) {
-            ResourceType type = TabletNodes.TRANSFER_TYPES[t];
+        for (ResourceType type : TabletNodes.TRANSFER_TYPES) {
             long now = router.moved(type);
             long delta = Math.max(0, now - last[type.ordinal()]);
             if (delta > 0) {
                 moved = true;
                 nodeRates.computeIfAbsent(entry.key(), key -> new long[ResourceType.values().length])[type.ordinal()] =
                         RateMath.rate(delta, elapsed, type.ratePerTick());
-                for (UUID id : entry.networks(type)) {
-                    Totals network = totals.get(id);
-                    if (network != null) {
-                        network.moved[t] = RateMath.add(network.moved[t], delta);
-                    }
-                }
             }
         }
         for (ResourceType type : ResourceType.values()) {
@@ -417,17 +374,5 @@ final class TabletSnapshotBuilder {
     private static final class Totals {
         int nodes;
         int unloaded;
-        /** Movido desde a amostra anterior, na ordem de {@link TabletNodes#TRANSFER_TYPES}. */
-        final long[] moved = new long[TabletNodes.TRANSFER_TYPES.length];
-
-        /** Por tipo, na unidade do registro: por segundo, ou por tick para a energia. */
-        long[] rates(long elapsed) {
-            ResourceType[] types = ResourceType.values();
-            long[] rates = new long[types.length];
-            for (int t = 0; t < types.length; t++) {
-                rates[t] = RateMath.rate(moved[t], elapsed, types[t].ratePerTick());
-            }
-            return rates;
-        }
     }
 }

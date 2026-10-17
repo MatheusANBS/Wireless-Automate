@@ -41,6 +41,20 @@ public final class ResourceStyle {
         };
     }
 
+    /**
+     * Um número já escrito ({@code "370 → 374"}) com a unidade da vazão do tipo: itens/s, mB/s (fluidos e
+     * químicos sempre em mB), FE/t, Source/s.
+     */
+    public static Component rateText(ResourceType type, String number) {
+        String prefix = "gui.wirelessautomate.router.rate.";
+        return switch (type) {
+            case ITEM -> Component.translatable(prefix + "items", number);
+            case FLUID, CHEMICAL -> Component.translatable(prefix + "millibuckets", number);
+            case ENERGY -> Component.translatable(prefix + "energy", number);
+            case SOURCE -> Component.translatable(prefix + "source", number);
+        };
+    }
+
     /** O que a face oferece (slots, tanques, bateria, Source). */
     public static Component access(ResourceType type, int slots) {
         String prefix = "gui.wirelessautomate.router.access.";

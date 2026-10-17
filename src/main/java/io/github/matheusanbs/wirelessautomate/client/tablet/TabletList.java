@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.IntSupplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -200,7 +201,20 @@ public final class TabletList {
         search.clearAll();
     }
 
-    /** Só os nós com o tipo (o clique num cartão das Estatísticas), e o painel nessa aba. */
+    /**
+     * O clique numa linha dos Fluxos: só os nós da rede (a única etiqueta de rede) e do tipo, com o painel na
+     * aba dele; sem tipo, a rede com todos os tipos.
+     */
+    void filterFlow(Optional<ResourceType> type, Optional<UUID> network) {
+        network.ifPresent(search::onlyNetwork);
+        if (type.isPresent()) {
+            filterType(type.get());
+        } else {
+            search.clearType();
+        }
+    }
+
+    /** Só os nós com o tipo, e o painel nessa aba. */
     void filterType(ResourceType type) {
         search.typeFilter = Optional.of(type);
         chipType = type;

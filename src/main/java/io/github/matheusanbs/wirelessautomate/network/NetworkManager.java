@@ -270,6 +270,12 @@ public final class NetworkManager {
         return budget;
     }
 
+    /** O tempo médio por tick da rede movendo recursos, em ns; 0 sem rotas (rede sem nós carregados ou pausada). */
+    public double averageNanos(UUID network) {
+        NetworkRoutes routes = networks.get(network);
+        return routes == null ? 0 : routes.averageNanos;
+    }
+
     /** O amostrador dos Fluxos: quem olha a aba Fluxos e o resultado da última amostra. */
     public FlowSampler flows() {
         return flows;

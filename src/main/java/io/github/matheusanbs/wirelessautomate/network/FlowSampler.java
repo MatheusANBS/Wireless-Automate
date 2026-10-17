@@ -35,7 +35,8 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  * Depois, da configuração dos nós carregados que o gerenciador conhece (presa, e as remotas que viram
  * porta pelos perfis e exceções), conta as faces com modo que o redstone desliga, por rede, e as faces
- * com modo e sem rede (ou com uma rede que não existe mais), por tipo. Não lê o mundo: a configuração
+ * com modo e sem rede (ou com uma rede que não existe mais), por tipo e, só dos nós que têm alguma, por nó
+ * (o Tablet de quem não é operador só conta os nós que o jogador vê). Não lê o mundo: a configuração
  * está no roteador.
  *
  * <p>A primeira amostra depois de ficar sem ninguém olhando só zera os contadores e reinicia as
@@ -79,6 +80,10 @@ public final class FlowSampler {
     private final Set<UUID> watchers = new HashSet<>();
     private final Map<UUID, NetworkFlows> flows = new HashMap<>();
     private final int[] withoutNetwork = new int[TYPES.length];
+    /** As faces sem rede do nó contado agora, por tipo. */
+    private final int[] nodeWithout = new int[TYPES.length];
+    /** Os nós com alguma face sem rede nesta amostra. */
+    private final List<NodeWithoutNetwork> nodesWithout = new ArrayList<>();
     /** A última amostra zerou os contadores: a próxima conta. Falso enquanto ninguém olha. */
     private boolean primed;
     private int stamp;
@@ -158,6 +163,7 @@ public final class FlowSampler {
             }
         }
         Arrays.fill(withoutNetwork, 0);
+        nodesWithout.clear();
         for (NodePorts ports : nodes) {
             countConfig(ports.node, data, sampleStamp);
         }
@@ -232,6 +238,23 @@ public final class FlowSampler {
      * cada uma (exceção ou perfil do grupo).
      */
     private void countConfig(RouterBlockEntity node, NetworkSavedData data, int sampleStamp) {
+        Arrays.fill(nodeWithout, 0);
+        countFaces(node, data, sampleStamp);
+        boolean any = false;
+        for (int count : nodeWithout) {
+            any |= count > 0;
+        }
+        if (any && node.getLevel() != null) {
+            List<Integer> counts = new ArrayList<>(TYPES.length);
+            for (int count : nodeWithout) {
+                counts.add(count);
+            }
+            nodesWithout.add(new NodeWithoutNetwork(NodeIndex.NodeKey.of(node.getLevel(), node.getBlockPos()),
+                    List.copyOf(counts)));
+        }
+    }
+
+    private void countFaces(RouterBlockEntity node, NetworkSavedData data, int sampleStamp) {
         boolean powered = node.powered();
         for (ResourceType type : LOADED) {
             for (RelativeSide side : SIDES) {
@@ -268,6 +291,7 @@ public final class FlowSampler {
         UUID network = face.network();
         if (network == null || data.network(network) == null) {
             withoutNetwork[type.ordinal()]++;
+            nodeWithout[type.ordinal()]++;
         } else if (!face.redstone().allows(powered)) {
             entry(network, sampleStamp).states[type.ordinal()][REDSTONE]++;
         }
@@ -316,7 +340,7 @@ public final class FlowSampler {
         for (int count : withoutNetwork) {
             noNetwork.add(count);
         }
-        return new Report(now, List.copyOf(rows), List.copyOf(noNetwork));
+        return new Report(now, List.copyOf(rows), List.copyOf(noNetwork), List.copyOf(nodesWithout));
     }
 
     private static FlowStats.States states(int[] states) {
@@ -343,10 +367,14 @@ public final class FlowSampler {
      * @param flows          os Fluxos de cada rede × tipo em uso (com porta nas rotas ou face parada por
      *                       redstone), sem ordem definida; as redes pausadas só aparecem com faces
      *                       paradas por redstone, porque não têm rotas
-     * @param withoutNetwork as faces com modo e sem rede (ou numa rede apagada), pelo ordinal do tipo
+     * @param withoutNetwork as faces com modo e sem rede (ou numa rede apagada), pelo ordinal do tipo, de
+     *                       todos os nós carregados
+     * @param nodesWithout   as mesmas faces por nó, só dos nós que têm alguma: quem não é operador só conta as
+     *                       dos nós que vê
      */
-    public record Report(long sampledAt, List<FlowStats> flows, List<Integer> withoutNetwork) {
-        public static final Report EMPTY = new Report(-1, List.of(), zeros());
+    public record Report(long sampledAt, List<FlowStats> flows, List<Integer> withoutNetwork,
+            List<NodeWithoutNetwork> nodesWithout) {
+        public static final Report EMPTY = new Report(-1, List.of(), zeros(), List.of());
 
         private static List<Integer> zeros() {
             List<Integer> zeros = new ArrayList<>(TYPES.length);
@@ -370,6 +398,10 @@ public final class FlowSampler {
             }
             return null;
         }
+    }
+
+    /** As faces com modo e sem rede de um nó carregado, pelo ordinal do tipo. */
+    public record NodeWithoutNetwork(NodeIndex.NodeKey node, List<Integer> counts) {
     }
 
     /**

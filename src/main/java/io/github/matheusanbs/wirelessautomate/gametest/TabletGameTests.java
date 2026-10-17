@@ -282,8 +282,6 @@ public final class TabletGameTests {
                     helper.assertTrue(listed(s, key(energy)), "nó de energia fora do filtro de energia");
                     helper.assertFalse(listed(s, key(items)), "nó só de itens no filtro de energia");
                     helper.assertTrue(s.query().type().equals(Optional.of(ResourceType.ENERGY)), "filtro perdido");
-                    helper.assertTrue(s.network(network).map(n -> n.types().size() == ResourceType.values().length)
-                            .orElse(false), "estatística sem um item por tipo");
                 })
                 .thenSucceed();
     }

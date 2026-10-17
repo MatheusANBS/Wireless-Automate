@@ -25,7 +25,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.ArrayList;
@@ -51,8 +50,8 @@ import org.lwjgl.glfw.GLFW;
  *       colar em vários nós ({@link SelectBar});
  *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar
  *       seleciona e mostra o nó, com Abrir ({@link MapTab});
- *   <li><b>Estatísticas:</b> tempo do mod por tick, vazão por tipo e, por rede, vazão, ms/tick,
- *       destinos cheios ou dormindo e nós descarregados ({@link StatsTab});
+ *   <li><b>Fluxos:</b> tempo do mod por tick e o que entra e sai de cada tipo, Por tipo ou Por rede, média
+ *       dos últimos 5 s ({@link FlowsTab});
  *   <li><b>Redes:</b> lista à esquerda e a rede escolhida à direita (nome, cor, privacidade, usar
  *       como ativa, remover); nova rede fica recolhida ({@link NetworksTab});
  *   <li><b>Grupos:</b> o mesmo para grupos: pausar e retomar o grupo todo e marcar as redes dele
@@ -71,7 +70,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private static int savedW = DEFAULT_W;
     private static int savedH = DEFAULT_H;
 
-    public enum Tab { LIST, MAP, STATS, NETWORKS, GROUPS }
+    public enum Tab { LIST, MAP, FLOWS, NETWORKS, GROUPS }
 
     /** Põe um botão fixo na tela; {@code owner} nulo: visível em todas as abas. */
     @FunctionalInterface
@@ -86,7 +85,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final TabletList list;
     private final SelectBar selectBar;
     private final MapTab map;
-    private final StatsTab stats;
+    private final FlowsTab flows;
     private final SideList side;
     private final NameFields names;
     private final NetworksTab networks;
@@ -120,7 +119,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.list = new TabletList(menu, actions, nodes, () -> layout.h);
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
         this.map = new MapTab(layout, menu::snapshot, nodes, actions);
-        this.stats = new StatsTab(layout, menu::snapshot);
+        this.flows = new FlowsTab(layout, menu, (type, network) -> {
+            switchTab(Tab.LIST);
+            list.filterFlow(type, network);
+        });
         this.side = new SideList(layout);
         this.names = new NameFields(layout, actions, () -> networks().selected(), () -> groups().selected(),
                 this::setFocused, this::refresh);
@@ -181,6 +183,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         addRenderableWidget(searchBox);
         selectBar.addButtons(this::add, font);
         map.addButtons(this::add);
+        flows.addButtons(this::add, font);
         networks.addButtons(this::add);
         groups.addButtons(this::add);
 
@@ -241,7 +244,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (tab != t) {
             tab = t;
             actions.tab(t.ordinal());
-            stats.clearCards();
+            if (t == Tab.FLOWS) {
+                flows.shown();
+            }
             names.reset();
             setFocused(null);
             if (t == Tab.LIST) {
@@ -359,13 +364,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             case GROUPS -> {
                 return groups.mouseClicked(mouseX, mouseY);
             }
-            case STATS -> {
-                ResourceType card = stats.cardAt(mouseX, mouseY);
-                if (card != null) {
-                    switchTab(Tab.LIST);
-                    list.filterType(card);
-                    return true;
-                }
+            case FLOWS -> {
+                return flows.mouseClicked(mouseX, mouseY);
             }
             case LIST -> {
             }
@@ -422,8 +422,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         String newText = newBox == null ? "" : newBox.getValue();
         names.clearRename();
         setFocused(null);
-        // os cartões voltam no próximo quadro, já na nova grade
-        stats.clearCards();
         rebuildWidgets();
         names.newBox().setValue(newText);
     }
@@ -440,7 +438,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         switch (tab) {
             case LIST -> list.mouseScrolled(mouseX, mouseY, scrollY);
             case MAP -> map.mouseScrolled(mouseX, mouseY, scrollY);
-            case STATS -> stats.mouseScrolled(step);
+            case FLOWS -> flows.mouseScrolled(step);
             case NETWORKS -> side.mouseScrolled(step, snapshot().networks().size());
             case GROUPS -> groups.mouseScrolled(mouseX, step);
         }
@@ -558,7 +556,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return switch (tab) {
             case LIST -> list.tooltip(mouseX, mouseY);
             case MAP -> map.tooltip(mouseX, mouseY);
-            case STATS -> stats.tooltip(mouseX, mouseY);
+            case FLOWS -> flows.tooltip(mouseX, mouseY);
             case NETWORKS -> networks.tooltip(mouseX, mouseY);
             case GROUPS -> groups.tooltip(mouseX, mouseY);
         };
@@ -604,7 +602,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         switch (tab) {
             case LIST -> list.render(g, mouseX, mouseY);
             case MAP -> map.render(g, font, mouseX, mouseY);
-            case STATS -> stats.render(g, font);
+            case FLOWS -> flows.render(g, font, mouseX, mouseY);
             case NETWORKS -> networks.render(g, font, mouseX, mouseY);
             case GROUPS -> groups.render(g, font, mouseX, mouseY);
         }
@@ -650,9 +648,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return new int[] {layout.w, layout.h};
     }
 
-    /** Centro do cartão do tipo nas Estatísticas (último frame), ou {@code null} se não aparece. */
-    public int @Nullable [] cardCenter(ResourceType type) {
-        return stats.cardCenter(type);
+    /** A aba Fluxos, para os ganchos do e2e e das capturas. */
+    public FlowsTab flows() {
+        return flows;
     }
 
     public Tab currentTab() {

@@ -153,6 +153,7 @@ final class E2ePortugueseSteps {
 
     /** Português: o Tablet no mínimo e no máximo, e a volta ao inglês. */
     private static void ptTabletSteps(List<Step> list) {
+        list.add(E2eFlowsSteps.machines("pt: roteadores dos Fluxos", true));
         list.add(new Step("pt: Tablet na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
             server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
                     .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.NETWORK_TABLET.get()));
@@ -172,15 +173,22 @@ final class E2ePortugueseSteps {
                 () -> tabletScreen().size()[0] == 300 && stepTicks >= 10,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("pt: Tablet Lista"));
-        list.add(new Step("pt: aba Estatísticas", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.stats"), "aba Estatísticas")),
-                () -> tabletScreen().cardCenter(ResourceType.ITEM) != null,
+        list.add(new Step("pt: aba Fluxos", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.tab.flows"), "aba Fluxos")),
+                () -> tabletScreen().currentTab() == TabletScreen.Tab.FLOWS,
                 () -> "aba " + tabletScreen().currentTab()));
+        list.add(E2eFlowsSteps.measured("pt: Fluxos medidos"));
         list.add(clipCheck("pt: Tablet mínimo"));
         list.add(capture("7f-tablet-pt-min"));
+        list.add(new Step("pt: Tablet médio", STEP_TIMEOUT_MS, () -> tabletScreen().previewResize(470, 280),
+                () -> tabletScreen().size()[0] == 470 && E2eFlowsSteps.flows().rowCenter(ResourceType.ENERGY, null) != null,
+                () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
+        list.add(clipCheck("pt: Fluxos"));
+        list.add(capture("7c-tablet-fluxos-pt"));
         list.add(new Step("pt: Tablet no máximo", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewResize(10_000, 10_000),
-                () -> tabletScreen().size()[0] == tabletScreen().width - 8 && tabletScreen().cardCenter(ResourceType.ITEM) != null,
+                () -> tabletScreen().size()[0] == tabletScreen().width - 8
+                        && E2eFlowsSteps.flows().rowCenter(ResourceType.ENERGY, null) != null,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("pt: Tablet máximo"));
         list.add(capture("7g-tablet-pt-max"));
@@ -189,6 +197,7 @@ final class E2ePortugueseSteps {
                 () -> tabletScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(close("pt: fechar o Tablet"));
+        list.add(E2eFlowsSteps.machines("pt: tirar os roteadores dos Fluxos", false));
         list.add(language("en_us"));
     }
 }

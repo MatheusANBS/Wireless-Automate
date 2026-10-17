@@ -21,8 +21,9 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Fluxos do Tablet no servidor: com ela aberta, o jogador olha o amostrador
- * ({@link FlowSampler#watch}); trocar de aba ou fechar o Tablet tira o jogador dele. A cada amostra nova
+ * A aba Fluxos do Tablet no servidor: com ela aberta, o jogador entra na lista de quem olha o amostrador
+ * ({@link FlowSampler#watch}), que roda sempre; trocar de aba ou fechar o Tablet tira o jogador dela e o
+ * pacote para. A cada amostra nova
  * monta o {@link TabletFlowsPayload} com as redes que o jogador vê (as dele e as públicas; todas para
  * operador) e as faces sem rede só dos nós que ele vê na Lista, e só o devolve se ficou diferente do último
  * enviado. O tempo de cada rede é uma leitura direta do gerenciador, sem percorrer as portas. Como a amostra sai de 20 em 20 ticks, o
@@ -41,7 +42,7 @@ final class TabletFlows {
         this.containerId = containerId;
     }
 
-    /** A tela mostra a aba {@code tab}: olha o amostrador só na aba Fluxos. */
+    /** A tela mostra a aba {@code tab}: só a aba Fluxos recebe o pacote. */
     void tab(int tab) {
         if (tab == TabletMenu.FLOWS_TAB) {
             if (!watching) {

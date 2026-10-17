@@ -15,11 +15,15 @@ import org.jetbrains.annotations.Nullable;
 /**
  * As linhas da aba Fluxos do Tablet, sem classes do Minecraft: o total de cada tipo somando as redes não
  * pausadas (Por tipo), as redes na ordem da tela (Por rede), o texto curto dos estados e os números.
- * Os números são por segundo na unidade do tipo; a energia vai para a tela por tick ({@link #screenUnit}).
+ * Os números são por segundo na unidade do tipo; a energia vai para a tela por tick ({@link #screenUnit}) e
+ * fluidos e químicos em B/s a partir de um balde por segundo ({@link #inBuckets}), como no resto do mod.
  */
 final class FlowLines {
     /** Abaixo disso, um número por segundo conta como zero na tela. */
     static final double EPSILON = 0.05;
+
+    /** Um balde em mB. */
+    static final double BUCKET = 1000;
 
     private FlowLines() {
     }
@@ -192,6 +196,27 @@ final class FlowLines {
     /** O por segundo na unidade da tela do tipo: por tick para a energia, por segundo para os outros. */
     static double screenUnit(ResourceType type, double perSecond) {
         return type.ratePerTick() ? perSecond / 20 : perSecond;
+    }
+
+    /**
+     * Se os números vão em B/s: só fluidos e químicos, quando o maior deles chega a um balde por segundo (o
+     * mesmo corte da vazão da tela do roteador e da Lista). Os números de uma linha dividem a unidade.
+     */
+    static boolean inBuckets(ResourceType type, double... perSecond) {
+        if (type != ResourceType.FLUID && type != ResourceType.CHEMICAL) {
+            return false;
+        }
+        for (double value : perSecond) {
+            if (Math.abs(value) >= BUCKET) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Se a linha vai em B/s, pelo que ela mostra: entra, sai e o saldo. */
+    static boolean inBuckets(ResourceType type, Totals totals) {
+        return inBuckets(type, totals.produced(), totals.consumed(), totals.balance());
     }
 
     /** Zero na tela. */

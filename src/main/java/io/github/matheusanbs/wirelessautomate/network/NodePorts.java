@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
@@ -132,6 +133,22 @@ final class NodePorts {
         }
         if (remotes.isEmpty()) {
             remotes = null;
+        }
+    }
+
+    /** Chama {@code action} em cada porta já criada de uma máquina remota no tipo; não cria nada. */
+    void forEachRemote(ResourceType type, Consumer<Port> action) {
+        if (remotes == null) {
+            return;
+        }
+        int first = type.ordinal() * FACES;
+        for (Port[] byFace : remotes.values()) {
+            for (int i = first; i < first + FACES; i++) {
+                Port port = byFace[i];
+                if (port != null) {
+                    action.accept(port);
+                }
+            }
         }
     }
 

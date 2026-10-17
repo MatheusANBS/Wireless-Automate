@@ -277,8 +277,12 @@ public final class ChunkLoaderGameTests {
         BlockPos farMachine = nextChunkAbove(helper);
         ChunkPos farChunk = new ChunkPos(farMachine);
         List<RouterBlockEntity> far = new ArrayList<>();
+        // Como no machineChunkForcedToo: o chunk de C pode ser o de outro teste da grade, e soltá-lo
+        // deixaria esse teste sem tick para sempre. Só solta no fim se não estava forçado antes.
+        boolean[] wasForced = new boolean[1];
         helper.startSequence()
                 .thenExecute(() -> {
+                    wasForced[0] = level.getForcedChunks().contains(farChunk.toLong());
                     level.setChunkForced(farChunk.x, farChunk.z, true);
                     far.add(chestWithRouterAt(level, farMachine, Direction.UP));
                 })
@@ -314,7 +318,9 @@ public final class ChunkLoaderGameTests {
                     helper.assertFalse(RouterChunkLoader.hasTicket(level, c.getBlockPos(), farChunk.toLong()),
                             "ticket de C ficou");
                     helper.assertValueEqual(RouterChunkLoader.get().forcedChunks(owner), 0, "chunks do dono no fim");
-                    level.setChunkForced(farChunk.x, farChunk.z, false);
+                    if (!wasForced[0]) {
+                        level.setChunkForced(farChunk.x, farChunk.z, false);
+                    }
                     RouterChunkLoader.overrideLimit(owner, null);
                 })
                 .thenSucceed();

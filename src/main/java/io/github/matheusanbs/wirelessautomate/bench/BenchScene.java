@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import com.mojang.authlib.GameProfile;
@@ -89,7 +90,7 @@ final class BenchScene {
     /** Itens tirados dos destinos pelo reenchimento (esvaziar), somados. */
     private long destinationCleared;
     private final List<BlockPos> extraBlocks = new ArrayList<>();
-    /** Blocos de redstone que ligam e desligam ({@link BenchScenario#REDSTONE}), um acima de cada roteador. */
+    /** Blocos de redstone que ligam e desligam ({@link BenchScenario#clocked}), um acima de cada roteador. */
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
     private @Nullable TabletMenu tablet;
@@ -161,7 +162,7 @@ final class BenchScene {
             }
             nodes.add(new Node(i, machine, machine.above(), type, source, kind));
         }
-        max = ORIGIN.offset(side * width, scenario == BenchScenario.REDSTONE ? 2 : 1, (count + side - 1) / side);
+        max = ORIGIN.offset(side * width, scenario.clocked() ? 2 : 1, (count + side - 1) / side);
         refilled = new long[count];
     }
 
@@ -279,6 +280,9 @@ final class BenchScene {
 
     private void configure(Node node, RouterBlockEntity router) {
         router.setMode(node.type(), Direction.UP, node.source() ? PortMode.EXTRACT : PortMode.INSERT);
+        if (scenario == BenchScenario.REDSTONE_FACE && node.source()) {
+            router.setRedstone(node.type(), Direction.UP, RedstoneMode.HIGH);
+        }
         if (scenario == BenchScenario.TYPES) {
             router.setFilter(ResourceType.ITEM, Direction.UP, node.source() ? sourceFilter() : destinationFilter());
         } else if (scenario == BenchScenario.STOCK && !node.source()) {
@@ -374,7 +378,7 @@ final class BenchScene {
 
     /** Liga ou desliga os blocos de redstone em cima dos roteadores, avisando os vizinhos. */
     private void toggleClocks() {
-        if (scenario != BenchScenario.REDSTONE) {
+        if (!scenario.clocked()) {
             return;
         }
         clockOn = !clockOn;

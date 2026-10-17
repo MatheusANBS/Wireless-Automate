@@ -42,14 +42,14 @@ public final class ResourceStyle {
     }
 
     /**
-     * Um número já escrito ({@code "370 → 374"}) com a unidade da vazão do tipo: itens/s, mB/s (fluidos e
-     * químicos sempre em mB), FE/t, Source/s.
+     * Um número já escrito ({@code "370 → 374"}) com a unidade da vazão do tipo: itens/s, mB/s ou B/s (fluidos
+     * e químicos, pelo {@code buckets}; o número já vem na unidade), FE/t, Source/s.
      */
-    public static Component rateText(ResourceType type, String number) {
+    public static Component rateText(ResourceType type, String number, boolean buckets) {
         String prefix = "gui.wirelessautomate.router.rate.";
         return switch (type) {
             case ITEM -> Component.translatable(prefix + "items", number);
-            case FLUID, CHEMICAL -> Component.translatable(prefix + "millibuckets", number);
+            case FLUID, CHEMICAL -> Component.translatable(prefix + (buckets ? "buckets" : "millibuckets"), number);
             case ENERGY -> Component.translatable(prefix + "energy", number);
             case SOURCE -> Component.translatable(prefix + "source", number);
         };

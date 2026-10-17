@@ -88,7 +88,7 @@ public final class NetworkManager {
     /** Origens que pararam num teto da visita com saldo, para as voltas extras do tick. */
     private final List<Port> hungry = new ArrayList<>();
     private final TickBudget budget = new TickBudget(500_000L);
-    /** O amostrador dos Fluxos do Tablet; parado sem ninguém olhando. */
+    /** O amostrador dos Fluxos do Tablet: uma amostra por segundo, fora do orçamento do transporte. */
     private final FlowSampler flows = new FlowSampler(networkList, nodes.values());
     private int cursor;
     private boolean dirty;
@@ -391,17 +391,18 @@ public final class NetworkManager {
 
     /**
      * Para GameTests e diagnóstico: o que a porta (da presa com {@code machinePos} nulo, ou da remota)
-     * entregou como origem desde a última leitura do contador; -1 se a porta não existe.
+     * entregou como origem desde que existe, o que o amostrador já leu mais o que ainda não leu; -1 se a
+     * porta não existe.
      */
     public long gaveForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
         Port port = portOrNull(node, machinePos, type, face);
-        return port == null ? -1 : port.gave;
+        return port == null ? -1 : port.gaveRead + port.gave;
     }
 
     /** O mesmo de {@link #gaveForTests}, para o que a porta recebeu como destino; -1 se ela não existe. */
     public long gotForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
         Port port = portOrNull(node, machinePos, type, face);
-        return port == null ? -1 : port.got;
+        return port == null ? -1 : port.gotRead + port.got;
     }
 
     private @Nullable Port portOrNull(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,

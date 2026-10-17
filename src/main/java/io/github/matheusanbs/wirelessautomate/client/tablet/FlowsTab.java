@@ -267,7 +267,7 @@ public final class FlowsTab {
         int x = layout.left + X0;
         int y = layout.top + BODY_Y;
         int x1 = layout.left + layout.x1();
-        Component time = flows == null ? tr("flows.measuring") : FlowsText.time(flows.modNanos(), flows.budgetNanos());
+        Component time = flows == null ? FlowsText.NONE_YET : FlowsText.time(flows.modNanos(), flows.budgetNanos());
         int timeW = Math.min(font.width(time), (x1 - x) / 2);
         GuiText.draw(g, font, tr("flows.time"), x, y, x1 - x - timeW - 6, GuiPaint.FG);
         GuiText.draw(g, font, time, x1 - timeW, y, timeW, GuiPaint.MUTED);

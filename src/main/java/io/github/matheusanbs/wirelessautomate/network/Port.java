@@ -45,6 +45,13 @@ final class Port {
      * transferências a cada entrega; o amostrador dos Fluxos lê e zera.
      */
     long got;
+    /**
+     * O que o amostrador já leu de {@link #gave} e de {@link #got} desde que a porta existe: com ele, o total
+     * de uma porta nos GameTests não depende de quando a amostra passou. Só o amostrador soma, uma vez por
+     * segundo.
+     */
+    long gaveRead;
+    long gotRead;
     /** Próximo slot a varrer como origem de itens. */
     int slotCursor;
     /** Slots varridos seguidos sem mover nada, somando visitas: uma volta inteira faz a origem dormir. */

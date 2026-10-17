@@ -45,7 +45,7 @@ public record FlowStats(UUID network, ResourceType type, long produced, long con
         return perSecond(stored - released);
     }
 
-    /** A janela cobre os {@link FlowWindow#SECONDS} segundos: acabou o "medindo…". */
+    /** A janela cobre os {@link FlowWindow#SECONDS} segundos. */
     public boolean filled() {
         return seconds == FlowWindow.SECONDS;
     }

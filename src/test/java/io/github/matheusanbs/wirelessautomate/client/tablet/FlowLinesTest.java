@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
+import static io.github.matheusanbs.wirelessautomate.network.ResourceType.CHEMICAL;
 import static io.github.matheusanbs.wirelessautomate.network.ResourceType.ENERGY;
 import static io.github.matheusanbs.wirelessautomate.network.ResourceType.FLUID;
 import static io.github.matheusanbs.wirelessautomate.network.ResourceType.ITEM;
@@ -11,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.Net;
 import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.NetLine;
 import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.StateKind;
 import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.StatePart;
+import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.Totals;
 import io.github.matheusanbs.wirelessautomate.client.tablet.FlowLines.TypeLine;
 import io.github.matheusanbs.wirelessautomate.network.FlowStats;
 import io.github.matheusanbs.wirelessautomate.network.FlowStats.States;
@@ -69,7 +71,7 @@ class FlowLinesTest {
 
     @Test
     void sumUsesPerSecondAndTheShortestWindow() {
-        // 100 em 5 s (20/s) mais 30 em 2 s (15/s): 35/s, ainda medindo
+        // 100 em 5 s (20/s) mais 30 em 2 s (15/s): 35/s, com a janela ainda curta
         Net a = net("A", false, stats(null, ITEM, 100, 0, 0, 0, 5, States.NONE));
         Net b = net("B", false, stats(null, ITEM, 30, 0, 0, 0, 2, States.NONE));
         TypeLine items = FlowLines.byType(List.of(a, b), TYPES, NO_FACES).getFirst();
@@ -127,5 +129,18 @@ class FlowLinesTest {
         assertEquals(20_000, FlowLines.screenUnit(ITEM, 20_000), 1e-9);
         assertTrue(FlowLines.zero(0.04));
         assertFalse(FlowLines.zero(0.06));
+    }
+
+    @Test
+    void fluidsGoToBucketsLikeTheRestOfTheMod() {
+        assertFalse(FlowLines.inBuckets(FLUID, 999, 0));
+        assertTrue(FlowLines.inBuckets(FLUID, 0, 1_000));
+        assertTrue(FlowLines.inBuckets(CHEMICAL, -2_000));
+        assertFalse(FlowLines.inBuckets(ITEM, 50_000), "só fluidos e químicos");
+        assertFalse(FlowLines.inBuckets(ENERGY, 50_000));
+        Totals storageOnly = new Totals(0, 0, 4_000, 0, FlowWindow.SECONDS, States.NONE);
+        assertTrue(FlowLines.inBuckets(FLUID, storageOnly), "o saldo também decide a unidade da linha");
+        Totals small = new Totals(500, 400, 300, 0, FlowWindow.SECONDS, States.NONE);
+        assertFalse(FlowLines.inBuckets(FLUID, small));
     }
 }

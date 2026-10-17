@@ -4,7 +4,7 @@ package io.github.matheusanbs.wirelessautomate.network;
  * Janela deslizante de {@link #SECONDS} baldes de um segundo para um número dos Fluxos (o que entrou,
  * saiu, o Armazém recebeu ou deu, numa rede e num tipo). {@link #add} soma no balde aberto e
  * {@link #roll} o fecha; a média é a dos baldes fechados, então a janela dá um número desde o primeiro
- * segundo e só fica {@link #filled() cheia} (o fim do "medindo…") depois de {@link #SECONDS}.
+ * segundo e só fica {@link #filled() cheia} depois de {@link #SECONDS}.
  * Lógica pura, sem classes do Minecraft.
  */
 public final class FlowWindow {

@@ -23,23 +23,45 @@ final class FlowsText {
     private FlowsText() {
     }
 
-    /** Um número por segundo do tipo, já na unidade da tela e curto. */
-    static String amount(ResourceType type, double perSecond) {
-        return FlowLines.amount(FlowLines.screenUnit(type, perSecond));
+    /** Um número por segundo do tipo, já na unidade da tela ({@code buckets}: em B/s) e curto. */
+    static String amount(ResourceType type, double perSecond, boolean buckets) {
+        return FlowLines.amount(screen(type, perSecond, buckets));
     }
 
-    /** "entra → sai", com a unidade do tipo ou sem ela; "medindo…" antes do primeiro segundo. */
+    private static double screen(ResourceType type, double perSecond, boolean buckets) {
+        double value = FlowLines.screenUnit(type, perSecond);
+        return buckets ? value / FlowLines.BUCKET : value;
+    }
+
+    /** Um número por segundo sozinho, com a unidade dele. */
+    private static Component rate(ResourceType type, double perSecond) {
+        boolean buckets = FlowLines.inBuckets(type, perSecond);
+        return ResourceStyle.rateText(type, amount(type, perSecond, buckets), buckets);
+    }
+
+    /** Sem número ainda: antes da primeira amostra que contou. */
+    static final Component NONE_YET = Component.literal("—");
+
+    /**
+     * "entra → sai", com a unidade do tipo ou sem ela: a média do que a janela já tem (até 5 s); "—" sem
+     * nenhum segundo medido.
+     */
     static Component pair(ResourceType type, Totals totals, boolean unit) {
         if (totals.measuring()) {
-            return tr("flows.measuring");
+            return NONE_YET;
         }
-        String number = tr("flows.pair", amount(type, totals.produced()), amount(type, totals.consumed())).getString();
-        return unit ? ResourceStyle.rateText(type, number) : Component.literal(number);
+        boolean buckets = FlowLines.inBuckets(type, totals);
+        String number = tr("flows.pair", amount(type, totals.produced(), buckets),
+                amount(type, totals.consumed(), buckets)).getString();
+        return unit ? ResourceStyle.rateText(type, number, buckets) : Component.literal(number);
     }
 
-    /** O saldo dos Armazéns ("+16.5k", ou "+16.5k enchendo" com a palavra), ou {@code null} quando é zero. */
+    /**
+     * O saldo dos Armazéns ("+16.5k", ou "+16.5k enchendo" com a palavra), na unidade do "entra → sai" da
+     * linha, ou {@code null} quando é zero.
+     */
     static @Nullable Component balance(ResourceType type, Totals totals, boolean word) {
-        double value = FlowLines.screenUnit(type, totals.balance());
+        double value = screen(type, totals.balance(), FlowLines.inBuckets(type, totals));
         if (totals.measuring() || FlowLines.zero(value)) {
             return null;
         }
@@ -58,11 +80,8 @@ final class FlowsText {
         return line;
     }
 
-    /** O lado direito de uma linha: o saldo e os estados, ou "medindo…" enquanto a janela não enche. */
+    /** O lado direito de uma linha: o saldo e os estados. */
     static Component right(@Nullable ResourceType type, Totals totals, int withoutNetwork, boolean word) {
-        if (!totals.filled()) {
-            return totals.measuring() ? Component.empty() : tr("flows.measuring").copy().withColor(GuiPaint.MUTED);
-        }
         MutableComponent line = Component.empty();
         Component balance = type == null ? null : balance(type, totals, word);
         if (balance != null) {
@@ -117,13 +136,12 @@ final class FlowsText {
     }
 
     private static void body(MutableComponent tip, ResourceType type, Totals totals) {
-        if (!totals.filled()) {
-            tip.append("\n").append(muted(tr("flows.tip.measuring")));
+        if (!totals.filled() && !totals.measuring()) {
+            tip.append("\n").append(muted(tr("flows.tip.short_window", totals.seconds())));
         }
         if (!FlowLines.zero(totals.stored()) || !FlowLines.zero(totals.released())) {
             tip.append("\n").append(muted(tr("flows.tip.storage",
-                    ResourceStyle.rateText(type, amount(type, totals.stored())),
-                    ResourceStyle.rateText(type, amount(type, totals.released())))));
+                    rate(type, totals.stored()), rate(type, totals.released()))));
         }
         states(tip, totals.states());
     }
@@ -147,9 +165,9 @@ final class FlowsText {
         return tr("flows.time.value", TabletText.decimal(modNanos / 1e6), TabletText.decimal(budgetNanos / 1e6));
     }
 
-    /** As listas de linhas vazias: nenhuma rede, ainda sem amostra, ou nada em uso. */
+    /** As listas de linhas vazias: nenhuma rede, ainda sem o primeiro pacote, ou nada em uso. */
     static Component empty(boolean noNetworks, boolean waiting) {
-        return noNetworks ? tr("networks.empty") : waiting ? tr("flows.measuring") : tr("flows.none");
+        return noNetworks ? tr("networks.empty") : waiting ? NONE_YET : tr("flows.none");
     }
 
     static List<Component> modeLabels() {

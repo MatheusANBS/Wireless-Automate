@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
+import io.github.matheusanbs.wirelessautomate.network.FlowSampler;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -60,6 +61,7 @@ final class BenchRun {
             int sourcesSleeping, int sourcesTotal, int destinationsSleeping, int destinationsTotal,
             long attachModNanos, long rebuilds, double rebuildMeanNanos, long afterTouchMaxNanos, int slots,
             double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos,
+            double flowsNanosPerSample, double flowsNanosPerTick,
             boolean engine, double costNanos, double workerNanos, double neutralItems, double neutralFluid,
             double neutralEnergy, int neutralMoved, int neutralSources) {
         /** Unidades por segundo da contagem neutra (itens, mB e FE somados). */
@@ -126,6 +128,8 @@ final class BenchRun {
     private long neutralEnergyStart;
     private long[] extractedStart;
     private long workerStart;
+    private long flowsSamplesStart;
+    private long flowsNanosStart;
     private long opsSum;
     private int opsSeconds;
     private boolean done;
@@ -314,6 +318,9 @@ final class BenchRun {
         neutralEnergyStart = scene.delivered(ResourceType.ENERGY);
         extractedStart = scene.extractedBySource();
         workerStart = workerCpuNanos();
+        FlowSampler.Cost flows = engine.flows().cost();
+        flowsSamplesStart = flows.samples();
+        flowsNanosStart = flows.totalNanos();
         opsSum = 0;
         opsSeconds = 0;
     }
@@ -359,6 +366,9 @@ final class BenchRun {
         double opsPerSecond = opsSeconds == 0 ? 0 : (double) opsSum / opsSeconds;
         double deliveries = opsPerSecond * seconds;
         NetworkStats stats = networkStats(server);
+        FlowSampler.Cost flows = engine.flows().cost();
+        long flowSamples = flows.samples() - flowsSamplesStart;
+        long flowNanos = flows.totalNanos() - flowsNanosStart;
         Rep result = new Rep(rep + 1, baseMspt.mean(), baseMspt.percentile(99), mspt.mean(), mspt.percentile(50),
                 mspt.percentile(99), mspt.max(), mod.mean(), mod.percentile(50), mod.percentile(99), mod.max(),
                 limitNanos, exhausted,
@@ -377,6 +387,7 @@ final class BenchRun {
                 attachModNanos, rebuilds, rebuilds <= 0 ? Double.NaN : (double) rebuildNanos / rebuilds,
                 afterTouch.max(), scene.slotsPerMachine(), rebuilds / seconds,
                 job.scenario() == BenchScenario.TABLET ? tablet.mean() : Double.NaN, tablet.max(),
+                flowSamples <= 0 ? Double.NaN : (double) flowNanos / flowSamples, (double) flowNanos / ticks,
                 waEngine, mspt.mean() - baseMspt.mean(), (double) (workerCpuNanos() - workerStart) / ticks,
                 (scene.delivered(ResourceType.ITEM) - neutralItemsStart) / seconds,
                 (scene.delivered(ResourceType.FLUID) - neutralFluidStart) / seconds,
@@ -417,7 +428,7 @@ final class BenchRun {
                         + " | %.0f itens/s, %.0f mB/s, %.0f FE/s | origens que moveram %d/%d"
                         + " | dormindo: origens %d/%d, destinos %d/%d"
                         + " | 1ª montagem %.3f ms, %s remontagens (%.1f/s, %s ms cada; tick depois da mudança: máx %.3f ms)"
-                        + " | %d slots%s",
+                        + " | %d slots | Fluxos %s ms/amostra (%.4f ms/tick)%s",
                 r.rep(), ms(r.baseMsptMean()), ms(r.baseMsptP99()), ms(r.msptMean()), ms(r.msptP50()), ms(r.msptP99()),
                 ms(r.msptMax()), ms(r.modMean()), ms(r.modP50()), ms(r.modP99()), ms(r.modMax()), ms(r.limitNanos()),
                 r.exhaustedPct(), num(r.visitsPerTick(), 1), num(r.nanosPerVisit() / 1000.0, 2), num(r.nanosPerDelivery() / 1000.0, 2),
@@ -426,6 +437,7 @@ final class BenchRun {
                 r.sourcesSleeping(), r.sourcesTotal(), r.destinationsSleeping(), r.destinationsTotal(),
                 ms(r.attachModNanos()), r.rebuilds() < 0 ? "—" : Long.toString(r.rebuilds()), r.rebuildsPerSecond(),
                 num(ms(r.rebuildMeanNanos()), 3), ms(r.afterTouchMaxNanos()), r.slots(),
+                num(ms(r.flowsNanosPerSample()), 4), ms(r.flowsNanosPerTick()),
                 Double.isNaN(r.tabletMeanNanos()) ? "" : String.format(Locale.ROOT, " | Tablet aberto %.4f ms/tick (máx %.3f)",
                         ms(r.tabletMeanNanos()), ms(r.tabletMaxNanos())));
     }

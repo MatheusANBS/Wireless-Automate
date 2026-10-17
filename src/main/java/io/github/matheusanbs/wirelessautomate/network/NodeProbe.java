@@ -20,23 +20,35 @@ public final class NodeProbe {
     private NodeProbe() {
     }
 
-    /** Destinos de {@code type} do nó que estão cheios agora (ver {@link #FULL_INTERVAL}). 0 se o nó não está no motor. */
+    /**
+     * Destinos de {@code type} do nó que estão cheios agora (ver {@link #FULL_INTERVAL}), os da máquina presa
+     * e os das remotas. Só olha as portas que já existem, e delas as que estão numa rota ({@link Port#network}):
+     * uma face que saiu de Insere ou perdeu a rede sai da contagem quando as rotas são remontadas, mesmo com
+     * o sono do destino ainda correndo. Não cria nenhuma porta. 0 se o nó não está no motor.
+     */
     public static int fullDestinations(RouterBlockEntity node, ResourceType type, long now) {
         NodePorts ports = NetworkManager.get().ports(node);
         if (ports == null || ports.networks(type).length == 0) {
             return 0;
         }
-        int count = 0;
+        int[] count = {0};
         for (Direction face : DIRECTIONS) {
-            if (!node.face(type, face).mode().inserts()) {
-                continue;
-            }
-            Port port = ports.port(type, face);
-            if (port.destination && isFull(port, now)) {
-                count++;
+            Port port = ports.peek(type, face);
+            if (port != null && countsAsFull(port, now)) {
+                count[0]++;
             }
         }
-        return count;
+        ports.forEachRemote(type, port -> {
+            if (countsAsFull(port, now)) {
+                count[0]++;
+            }
+        });
+        return count[0];
+    }
+
+    /** Um destino com rota, cheio agora. */
+    private static boolean countsAsFull(Port port, long now) {
+        return port.network != null && port.destination && isFull(port, now);
     }
 
     /** O destino dorme depois de recusas seguidas (ver {@link #FULL_INTERVAL}). */

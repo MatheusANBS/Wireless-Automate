@@ -212,8 +212,8 @@ public final class TabletList {
     }
 
     /**
-     * Escolhe o nó do painel (no servidor também). O aviso da regra D1 sai: o Desfazer dele age no nó escolhido,
-     * e ele passaria a ser outro.
+     * Escolhe o nó do painel (no servidor também). O aviso da regra D1 e o do tirar a rede das faces sem modo
+     * saem: o Desfazer deles age no nó escolhido, e ele passaria a ser outro.
      */
     void choose(@Nullable NodeKey key) {
         if (key != null && key.equals(chosen)) {
@@ -221,7 +221,8 @@ public final class TabletList {
         }
         chosen = key;
         PanelNoticePayload notice = PanelNotices.current();
-        if (notice != null && notice.undo() == PanelNoticePayload.Undo.CLEAR_FACE_NETWORK) {
+        if (notice != null && (notice.undo() == PanelNoticePayload.Undo.CLEAR_FACE_NETWORK
+                || notice.undo() == PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS)) {
             PanelNotices.clear();
         }
         actions.selectNode(key);

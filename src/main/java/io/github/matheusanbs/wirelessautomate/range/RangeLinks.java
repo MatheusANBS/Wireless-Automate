@@ -11,13 +11,11 @@ import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
-import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -171,7 +169,7 @@ public final class RangeLinks {
         if (refusal == LinkRefusal.NONE) {
             refusal = rangeRefusal(router, distance, used(router));
         }
-        if (refusal == LinkRefusal.NONE && !router.linkMachine(pos, groupNetwork(player, stack))) {
+        if (refusal == LinkRefusal.NONE && !router.linkMachine(pos, null)) {
             refusal = LinkRefusal.NOT_A_MACHINE;
         }
         if (refusal != LinkRefusal.NONE) {
@@ -181,20 +179,6 @@ public final class RangeLinks {
                 max(router)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
         return Result.of(Status.LINKED);
-    }
-
-    /**
-     * A rede em que nasce um grupo novo (decisão 5 da spec da rede por face): a rede ativa de quem
-     * vincula, se ela existe e ele pode usá-la; senão nenhuma. Com o Vinculador em "Nenhuma
-     * (desvincular)", nenhuma também: a tela não mostra a rede ativa. Nunca cria rede. Um grupo que
-     * já existe não muda.
-     */
-    private static @Nullable UUID groupNetwork(ServerPlayer player, ItemStack stack) {
-        if (LinkerItem.unlink(stack)) {
-            return null;
-        }
-        WaNetwork network = LinkerActions.activeNetwork(player);
-        return network != null && network.canUse(player) ? network.id() : null;
     }
 
     // ------------------------------------------------------------------ área
@@ -260,7 +244,6 @@ public final class RangeLinks {
         int max = max(router);
         InteractionHand hand = player.getItemInHand(InteractionHand.MAIN_HAND) == stack
                 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-        UUID network = groupNetwork(player, stack);
         router.batchChanges(() -> {
             int used = used(router);
             for (BlockPos pos : candidates) {
@@ -277,7 +260,7 @@ public final class RangeLinks {
                     counts[3]++;
                 } else if (!clickAllowed(player, hand, pos)) {
                     counts[4]++;
-                } else if (router.linkMachine(pos, network)) {
+                } else if (router.linkMachine(pos, null)) {
                     counts[0]++;
                     used++;
                 }

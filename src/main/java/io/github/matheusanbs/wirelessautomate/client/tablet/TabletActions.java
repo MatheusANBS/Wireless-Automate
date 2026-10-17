@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
@@ -66,6 +67,10 @@ final class TabletActions {
     void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
             List<NodeKey> keys) {
         send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine), keys));
+    }
+
+    void clearIdleNetworks(boolean undo) {
+        send(new ClearIdleNetworksPayload(menu.containerId, undo));
     }
 
     void networkPublic(UUID network, boolean value) {

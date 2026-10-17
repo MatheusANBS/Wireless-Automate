@@ -266,6 +266,12 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         return stillValid(player);
     }
 
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        IdleNetworkUndo.closed(player, this);
+    }
+
     /** O roteador; só existe no servidor. */
     public @Nullable RouterBlockEntity router() {
         return router;

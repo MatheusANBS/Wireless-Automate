@@ -166,7 +166,7 @@ final class E2eRangeReplaceSteps {
      * Captura com o mouse onde está (a dica do botão fica à vista, e o Desvincular armado continua armado),
      * quando {@code ready} vale e nenhum texto está cortado.
      */
-    private static Step hoverCapture(String name, String file, Check ready) {
+    static Step hoverCapture(String name, String file, Check ready) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
         }, () -> {
             if (stepTicks < 6 || GuiText.clipCount() != 0 || !ready.done()) {

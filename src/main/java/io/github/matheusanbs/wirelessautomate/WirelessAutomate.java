@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate;
 import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
+import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
@@ -84,6 +85,7 @@ public final class WirelessAutomate {
 
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         TabletMenu.forget(event.getEntity().getUUID());
+        IdleNetworkUndo.forget(event.getEntity().getUUID());
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {
@@ -96,6 +98,7 @@ public final class WirelessAutomate {
         ResonatorProfile.reset();
         RecipeEditor.reset();
         TabletMenu.resetStates();
+        IdleNetworkUndo.reset();
     }
 
     private static void onChunkLoad(ChunkEvent.Load event) {

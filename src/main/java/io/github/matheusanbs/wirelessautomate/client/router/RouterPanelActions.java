@@ -3,16 +3,19 @@ package io.github.matheusanbs.wirelessautomate.client.router;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * O que o painel do nó manda da tela do roteador: pelo menu dela, ou, numa captura sem servidor, só no
- * snapshot local (modo, prioridade, redstone e rede).
+ * snapshot local (modo, prioridade, redstone, rede e o tirar a rede das faces sem modo, sem o Desfazer).
  */
 final class RouterPanelActions implements NodePanel.Actions {
     private final RouterMenu menu;
@@ -34,6 +37,17 @@ final class RouterPanelActions implements NodePanel.Actions {
             applyLocally(payload);
         } else {
             PacketDistributor.sendToServer(payload);
+        }
+    }
+
+    @Override
+    public void clearIdleNetworks(boolean undo) {
+        if (!preview) {
+            PacketDistributor.sendToServer(new ClearIdleNetworksPayload(menu.containerId, undo));
+        } else if (!undo) {
+            List<FaceView> faces = new ArrayList<>(menu.snapshot().faces());
+            faces.replaceAll(face -> face.mode() == PortMode.NONE ? face.withNetwork(Optional.empty()) : face);
+            menu.applySnapshot(menu.snapshot().withFaces(List.copyOf(faces)));
         }
     }
 

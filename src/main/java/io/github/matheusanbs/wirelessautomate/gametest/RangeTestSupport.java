@@ -9,16 +9,20 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,6 +37,7 @@ import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Apoio dos GameTests do roteador de alcance ({@code Range*GameTests}): o Upgrade de Alcance, o roteador num baú
@@ -194,5 +199,26 @@ final class RangeTestSupport {
 
     static RangeLinks.Result toggle(GameTestHelper helper, ServerPlayer player, BlockPos relative) {
         return RangeLinks.toggle(player, player.getMainHandItem(), helper.absolutePos(relative));
+    }
+
+    /** Confere a rede de todas as faces de todos os tipos carregados do perfil do grupo da máquina. */
+    static void assertProfileNetwork(GameTestHelper helper, RouterBlockEntity router, BlockPos relative,
+            @Nullable UUID expected, String what) {
+        MachineConfig profile = router.remoteMachines().group(groupOf(router, helper.absolutePos(relative))).profile();
+        for (ResourceType type : LoadedTypes.LIST) {
+            for (RemoteSide side : RemoteSide.values()) {
+                UUID actual = profile.face(type, side).network();
+                helper.assertTrue(Objects.equals(actual, expected),
+                        what + " (" + type + ", " + side + "): esperava " + expected + ", veio " + actual);
+            }
+        }
+    }
+
+    /** Rede nova do jogador, ativa para ele. */
+    static UUID activeNetworkOf(GameTestHelper helper, ServerPlayer player, String name) {
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        UUID id = data.create(player.getUUID(), name).id();
+        data.setActiveNetwork(player.getUUID(), id);
+        return id;
     }
 }

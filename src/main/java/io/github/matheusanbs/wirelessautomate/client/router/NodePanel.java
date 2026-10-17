@@ -75,6 +75,9 @@ public final class NodePanel {
         /** O Desfazer de um aviso de colar. */
         default void undoPaste() {
         }
+
+        /** "Tirar a rede das faces sem modo" no alvo, ou o Desfazer do aviso dele ({@code undo}). */
+        void clearIdleNetworks(boolean undo);
     }
 
     private final Actions actions;
@@ -269,6 +272,7 @@ public final class NodePanel {
             case CLEAR_FACE_NETWORK -> actions.send(new SetNetworkPayload(notice.containerId(), notice.resource(),
                     notice.face(), Optional.empty()));
             case UNDO_PASTE -> actions.undoPaste();
+            case RESTORE_IDLE_NETWORKS -> actions.clearIdleNetworks(true);
             case NONE -> {
             }
         }
@@ -331,6 +335,11 @@ public final class NodePanel {
             case TARGET -> {
                 if (edit) {
                     lists.open(Popup.TARGET, lists.targetScroll());
+                }
+            }
+            case IDLE_NETWORKS -> {
+                if (edit) {
+                    actions.clearIdleNetworks(false);
                 }
             }
             case REVERT -> {
@@ -522,6 +531,11 @@ public final class NodePanel {
 
     public int @Nullable [] unlinkCenter() {
         return center(Kind.UNLINK);
+    }
+
+    /** O "Tirar redes" da linha Editando, ou {@code null} se ele não aparece. */
+    public int @Nullable [] idleNetworksCenter() {
+        return center(Kind.IDLE_NETWORKS);
     }
 
     public int @Nullable [] undoCenter() {

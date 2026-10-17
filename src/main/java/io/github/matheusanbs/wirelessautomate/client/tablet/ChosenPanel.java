@@ -110,6 +110,11 @@ final class ChosenPanel {
         public void undoPaste() {
             list.actions.profile(Action.UNDO, null, null, List.of());
         }
+
+        @Override
+        public void clearIdleNetworks(boolean undo) {
+            list.actions.clearIdleNetworks(undo);
+        }
     }
 
     /**

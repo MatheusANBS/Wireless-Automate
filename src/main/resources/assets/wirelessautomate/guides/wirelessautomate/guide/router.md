@@ -81,6 +81,7 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | **Dot on a face** | The color of that face's network (no dot: no network). |
 | **Network row** | The selected face's network; click to change it. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
+| **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
 
 ## Face modes
 

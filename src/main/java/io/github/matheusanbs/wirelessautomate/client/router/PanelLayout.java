@@ -40,10 +40,12 @@ final class PanelLayout {
     static final int PRIO_VALUE_W = 22;
     private static final int EDIT_PAD = 5;
     static final int TARGET_PAD = 3;
+    /** O que a pílula com lista ({@link PanelPainter#dropButton}) gasta além do texto: margem e seta. */
+    private static final int DROP_TEXT_PAD = 15;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT, PRIO_MINUS,
-        PRIO_PLUS, REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, TARGET, IDLE_NETWORKS, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT,
+        PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -88,6 +90,8 @@ final class PanelLayout {
     int prioY;
     boolean prioLabel;
     Component revertLabel = Component.empty();
+    /** O "Tirar redes" da linha Editando só com o ícone (o rótulo não cabe). */
+    boolean idleIcon;
     Component redstoneLabel = Component.empty();
 
     // ------------------------------------------------------------------ retângulos
@@ -222,15 +226,20 @@ final class PanelLayout {
     }
 
     /**
-     * A linha Editando e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a
-     * lista das máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
+     * A linha Editando, com o "Tirar redes" na ponta quando ele vale, e, numa máquina do alcance, os botões
+     * dela; devolve o topo do que vem depois. Com a lista das máquinas à vista ao lado, a linha não aparece:
+     * a lista marca o alvo e tem os botões.
      */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
         if (model.rangeShown() && !model.targetFromList()) {
             targetY = y;
             int labelW = font.width(PanelModel.panelTr("target")) + 5;
-            hots.add(new Hot(Kind.TARGET, x + labelW, y, w - labelW, ROW_H, 0));
+            int pillW = w - labelW;
+            if (model.readOnly() == null && IdleNetworks.shown(model.snapshot())) {
+                pillW -= arrangeIdleNetworks(font, model, x + w, y, pillW);
+            }
+            hots.add(new Hot(Kind.TARGET, x + labelW, y, pillW, ROW_H, 0));
             y += ROW_H + GAP;
             RangeView.MachineView machine = model.targetMachine();
             if (machine != null) {
@@ -249,6 +258,22 @@ final class PanelLayout {
             }
         }
         return y;
+    }
+
+    /**
+     * O "Tirar redes" na ponta direita ({@code right}) da linha Editando: com o rótulo, se a pílula ainda
+     * mostra o nome do alvo inteiro (texto e seta, como no {@link PanelPainter#dropButton}); senão, só com o
+     * ícone. Devolve o que ele tira da pílula.
+     */
+    private int arrangeIdleNetworks(Font font, PanelModel model, int right, int y, int pillW) {
+        int bw = font.width(IdleNetworks.label()) + 2 * TARGET_PAD;
+        int nameW = font.width(model.targetName(model.snapshot().target()));
+        idleIcon = pillW - bw - GAP - DROP_TEXT_PAD < nameW;
+        if (idleIcon) {
+            bw = ROW_H;
+        }
+        hots.add(new Hot(Kind.IDLE_NETWORKS, right - bw, y, bw, ROW_H, 0));
+        return bw + GAP;
     }
 
     /** Os quatro modos em uma ou duas linhas, com ou sem o nome; devolve a altura deles. */

@@ -9,6 +9,8 @@ O dono quer ver e aprovar a ideia antes de qualquer código, e depois quer que o
 
 A conversa é em português, e também o código, os comentários, os commits e as docs.
 
+**Performance máxima em toda etapa (skill `wa-performance`, indispensável):** carregue-a junto com esta. O custo da ideia é a primeira pergunta, antes do visual; o plano diz o custo de cada tarefa; todo brief de implementador manda ler a skill e rodar `python -I .claude/skills/wa-performance/scripts/varrer_perf.py`; toda revisão confere as leis dela; e etapa que mexe em motor, menus ou render fecha com o bench antes e depois.
+
 ## 1. Ideia em artifact, antes de tudo
 
 Depois das perguntas de escopo (poucas, uma de cada vez, com opção recomendada), publique um artifact com a ideia: mockups das telas no estilo das telas do mod, o fluxo, as decisões e o que fica de fora. Para texturas e modelos, gere um protótipo de verdade (PIL, a partir de `scripts/textures/gerar_texturas.py`) e mostre a imagem, porque o dono julga pelo visual ("não gostei do design, quero algo mais slim" só aparece vendo).
@@ -43,6 +45,8 @@ Se mexeu em tela, payload ou mundo, rode também o e2e: `WA_E2E="$PWD/run/e2e" .
 Cada run de jogo usa uns 3 GB e o build service `oneGame` já serializa as runs. Mesmo assim, nunca dispare dois jogos ao mesmo tempo.
 
 Comentários (skill `wa-comentarios`): antes do commit, rode `python -I .claude/skills/wa-comentarios/scripts/varrer.py` (só os arquivos mudados no ramo) e resolva os candidatos. Diga isso a todo implementador, e peça ao revisor de tarefa e ao revisor final que confiram no diff: código comentado, comentário desatualizado (nome, número ou comportamento que mudou), histórico ("antes era") e redundante.
+
+Performance (skill `wa-performance`): antes do commit, rode `python -I .claude/skills/wa-performance/scripts/varrer_perf.py` (os arquivos mudados contra o `origin/main`) e resolva ou justifique cada candidato no relatório. Diga isso a todo implementador, e peça ao revisor de tarefa e ao revisor final que confiram as leis da skill no diff (parado custa zero, caminho quente sem alocação, nada de busca repetida, trabalho proporcional à mudança, sem picos, cliente só com o que muda, nada por quadro além de desenhar, `setChanged` só quando precisa, memória sob demanda, medido e não suposto). Item do backlog (`references/auditoria.md`) feito numa tarefa é marcado lá com o commit e os números.
 
 Tamanho e divisão (skill `wa-modular`): no plano, cada tela ou componente novo diz em quais classes vai, com a responsabilidade de cada uma; antes do commit, rode `python -I .claude/skills/wa-modular/scripts/medir.py` nos arquivos que mudou e divida o que passar do limite. Diga isso a todo implementador, e peça ao revisor de tarefa e ao revisor final que confiram arquivo novo acima do alvo, componente que manda payload direto e lógica pura sem JUnit.
 

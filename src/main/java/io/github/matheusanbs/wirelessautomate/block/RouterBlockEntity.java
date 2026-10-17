@@ -593,9 +593,9 @@ public class RouterBlockEntity extends BlockEntity {
     /**
      * Vincula o bloco em {@code pos} como máquina remota, lendo o id e a frente do mundo. Só no
      * servidor e com o chunk carregado. Recusa ar, a posição do próprio roteador e uma posição já
-     * vinculada. As regras de raio, limite e dimensão ficam com quem chama (o Vinculador). Se a
-     * máquina abre um grupo novo, o perfil dele nasce com todas as faces na rede {@code network}
-     * (a rede ativa de quem vinculou, já conferida por quem chama); um grupo que já existe não muda.
+     * vinculada. As regras de raio, limite e dimensão ficam com quem chama (o Vinculador, que vincula
+     * sempre sem rede). Se a máquina abre um grupo novo, o perfil dele nasce com todas as faces na rede
+     * {@code network} ({@code null} = sem rede); um grupo que já existe não muda.
      */
     public boolean linkMachine(BlockPos pos, @Nullable UUID network) {
         return range.link(pos, network);

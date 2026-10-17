@@ -321,8 +321,9 @@ final class ListLayout {
             }
             return;
         }
+        // sem painel, só o Desfazer do colar: os outros agem no nó do painel
         PanelNoticePayload notice = PanelNotices.current();
-        if (notice != null && notice.undo() != PanelNoticePayload.Undo.NONE) {
+        if (notice != null && notice.undo() == PanelNoticePayload.Undo.UNDO_PASTE) {
             int uw = NoticeBand.undoWidth(font);
             hots.add(new Hot(Kind.UNDO, panelX + panelW - uw, ownNoticeY(), uw, NoticeBand.LINE_H, 0));
         }

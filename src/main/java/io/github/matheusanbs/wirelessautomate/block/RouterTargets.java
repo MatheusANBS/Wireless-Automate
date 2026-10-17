@@ -2,17 +2,21 @@ package io.github.matheusanbs.wirelessautomate.block;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.core.Direction;
@@ -88,6 +92,57 @@ final class RouterTargets {
             }
             return changed;
         });
+    }
+
+    /** Ver {@link RouterBlockEntity#clearIdleNetworks(EditTarget)}. */
+    List<IdleNetworkFace> clearIdleNetworks(EditTarget target) {
+        if (!hasOwnFaces(target)) {
+            return List.of();
+        }
+        List<IdleNetworkFace> cleared = new ArrayList<>();
+        router.batchChanges(() -> {
+            for (ResourceType type : LoadedTypes.LIST) {
+                for (Direction side : Direction.values()) {
+                    FaceConfig face = face(target, type, side);
+                    UUID network = face.network();
+                    if (face.mode() == PortMode.NONE && network != null
+                            && editRemote(target, type, side, config -> config.setNetwork(null))) {
+                        cleared.add(new IdleNetworkFace(type, side, network));
+                    }
+                }
+            }
+        });
+        return cleared;
+    }
+
+    /** Ver {@link RouterBlockEntity#restoreIdleNetworks(EditTarget, List)}. */
+    int restoreIdleNetworks(EditTarget target, List<IdleNetworkFace> faces) {
+        if (target.attached()) {
+            return 0;
+        }
+        int[] restored = new int[1];
+        router.batchChanges(() -> {
+            for (IdleNetworkFace idle : faces) {
+                FaceConfig face = face(target, idle.type(), idle.side());
+                if (face.mode() == PortMode.NONE && face.network() == null
+                        && editRemote(target, idle.type(), idle.side(), config -> config.setNetwork(idle.network()))) {
+                    restored[0]++;
+                }
+            }
+        });
+        return restored[0];
+    }
+
+    /** O alvo tem faces próprias: um grupo (o perfil) ou uma máquina com exceção. */
+    private boolean hasOwnFaces(EditTarget target) {
+        return switch (target.kind()) {
+            case ATTACHED -> false;
+            case GROUP -> remotes.group(target.id()) != null;
+            case MACHINE -> {
+                RemoteMachine machine = remotes.machine(target.id());
+                yield machine != null && machine.hasException();
+            }
+        };
     }
 
     /** Ver {@link RouterBlockEntity#setFilter(EditTarget, ResourceType, Direction, Filter)}. */

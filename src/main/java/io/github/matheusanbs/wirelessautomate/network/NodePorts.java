@@ -313,8 +313,12 @@ final class NodePorts {
                 continue;
             }
             wakePort(port);
-            if (feeders && port.destination) {
-                wakeFeeders(port);
+            if (feeders) {
+                // Mudança de fora: o slot da dica de inserção pode não ser mais o certo.
+                port.insertHint = -1;
+                if (port.destination) {
+                    wakeFeeders(port);
+                }
             }
         }
     }
@@ -377,6 +381,7 @@ final class NodePorts {
             return;
         }
         wakePort(port);
+        port.insertHint = -1;
         if (port.destination) {
             wakeFeeders(port);
         }

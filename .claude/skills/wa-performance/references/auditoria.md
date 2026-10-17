@@ -77,4 +77,4 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 ## Em andamento
 
-(nada)
+- Pacote T e A8 no ramo local `tablet-rede` (T1 a T6 e A8 feitos, GameTests verdes; faltam o e2e, o bench antes e depois e marcar os estados aqui). Ver o item 0j do `docs/progresso.md`.

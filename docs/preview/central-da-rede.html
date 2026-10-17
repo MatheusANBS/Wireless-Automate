@@ -1,0 +1,905 @@
+<title>Central da rede</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: estudo em seções verticais (investigação, abas da central, mundo, tela do roteador, decisões, etapas); as telas do jogo usam as cores do GuiPaint e trocam de tema pelo seletor fixo, a página segue o tema do leitor. */
+:root {
+  --u: 2.05px;
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --m-ext: #2F6FD6; --m-ins: #E8742B; --m-both: #2F9D5C; --m-none: #CFC4AE;
+  --r-it: #B57A3A; --r-fl: #2F6FD6; --r-en: #D9931A; --r-ch: #5E9A2B; --r-so: #8E4FC9;
+  --n-base: #1FA7A0; --n-mina: #4A6FD0; --n-forja: #C9A227; --n-nether: #D0478C;
+  --hl: #3FC9BE;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+@media (max-width: 1100px) { :root { --u: 1.85px } }
+@media (max-width: 760px) { :root { --u: 1.7px } }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 34px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 23px; margin: 0 0 10px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 18px 0 6px }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px; margin-left: 12px; vertical-align: 6px }
+.lede { color: var(--page-mu); max-width: 84ch; margin: 8px 0 0 }
+p, li { max-width: 80ch }
+section.part { border-top: 1px solid var(--page-line); margin-top: 40px; padding-top: 28px }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.stage { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; margin-top: 16px }
+.stage > .shot { flex: none; max-width: 100% }
+.side { flex: 1 1 280px; min-width: 0; font-size: 14px; color: var(--page-mu) }
+.side b { color: var(--page-fg) }
+.side ol, .side ul { margin: 0; padding-left: 20px } .side li { margin-bottom: 7px }
+.shot { overflow-x: auto; padding-bottom: 8px; max-width: 100% }
+.cap { font-family: var(--pix); font-size: 13px; color: var(--page-mu); margin: 0 0 6px }
+kbd { font-family: var(--pix); font-size: 13px; border: 1px solid var(--page-line); border-bottom-width: 2px; padding: 0 5px; background: var(--page-card); color: var(--page-fg); white-space: nowrap }
+code { font-size: 13px; background: var(--page-card); border: 1px solid var(--page-line); padding: 0 4px; overflow-wrap: anywhere }
+.tbl { overflow-x: auto; margin-top: 12px }
+table { border-collapse: collapse; font-size: 14px; min-width: 640px; width: 100% }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top }
+th { font-family: var(--pix); font-weight: 500; color: var(--page-mu) }
+td.num { font-variant-numeric: tabular-nums; min-width: 170px }
+td:first-child { white-space: nowrap }
+.find { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) }
+.find > div { background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px; min-width: 0; font-size: 14px }
+.find > div > b:first-child { font-family: var(--pix); font-weight: 500; font-size: 16px; display: block; margin-bottom: 4px }
+.find .bug { color: var(--coral); font-family: var(--pix); font-size: 12px; letter-spacing: .05em; text-transform: uppercase }
+.dec { display: grid; gap: 12px; margin-top: 14px }
+.dec > div { display: grid; grid-template-columns: 44px 1fr; gap: 10px; background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px }
+.dec > div > b:first-child { font-family: var(--pix); color: var(--coral); font-weight: 500; font-size: 16px }
+.dec > div > div { min-width: 0 }
+.dec span { display: block; font-size: 14px; color: var(--page-mu) }
+.dec .rec { color: var(--m-both); font-weight: 700 }
+.steps { display: grid; gap: 10px; margin-top: 14px; counter-reset: st }
+.steps > div { display: grid; grid-template-columns: 54px 1fr; gap: 12px; padding: 12px 14px; border: 1px solid var(--page-line); background: var(--page-card) }
+.steps > div > b:first-child { font-family: var(--pix); font-weight: 500; font-size: 22px; color: var(--coral) }
+.steps > div > div { min-width: 0; font-size: 14px }
+.steps h4 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 0 0 4px; color: var(--page-fg) }
+.steps p { margin: 0; color: var(--page-mu) }
+
+/* seletor do tema das telas */
+.themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--page); border-bottom: 1px solid var(--page-line); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-block: 8px; margin-top: 18px; font-family: var(--pix); font-size: 14px }
+.seg { display: inline-flex; border: 1px solid var(--page-fg) }
+.seg button { font: inherit; background: var(--page-card); color: var(--page-fg); border: 0; padding: 3px 12px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--page-fg); color: var(--page) }
+.seg button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px }
+.themebar .mu { color: var(--page-mu) }
+.toc { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto }
+.toc a { color: var(--page-mu); text-decoration: none } .toc a:hover { color: var(--coral) }
+
+/* ---- telas do jogo ---- */
+.gui {
+  --g-panel: #F2EBDD; --g-light: #FFFBF3; --g-dark: #BDB19A; --g-inset: #DDD3BF; --g-ink: #2A2730; --g-mu: #7A7366; --g-dis: #B5AC9D; --g-tab: #5A5660;
+  --g-ac: #F0603E; --g-ok: #2F9D5C; --g-warn: #D88A1A; --g-danger: #D5453A; --g-paused: #6B6FD0; --g-selbg: #FBE7DE; --g-grp: #E9E0CE; --g-shadow: #BDB19A; --g-hover: #F8F3E8; --g-hl: #1E9C93; --g-none: #CFC4AE; --g-view: #FFFBF3;
+  position: relative; background: var(--g-panel); border: var(--u) solid var(--g-ink); box-shadow: calc(var(--u) * 2) calc(var(--u) * 2) 0 var(--g-shadow);
+  font-family: var(--pix); font-size: calc(var(--u) * 6.6); line-height: 1.15; color: var(--g-ink); user-select: none; overflow: hidden }
+[data-gui="dark"] .gui {
+  --g-panel: #26232B; --g-light: #312D37; --g-dark: #4A4550; --g-inset: #1C1A20; --g-ink: #ECE5D6; --g-mu: #A79F90; --g-dis: #625C66; --g-tab: #9A9284;
+  --g-ac: #F26A48; --g-ok: #3DB56E; --g-warn: #E39A2E; --g-danger: #E55A4E; --g-paused: #8A8EE8; --g-selbg: #3C2C2A; --g-grp: #2D2A32; --g-shadow: #0F0E12; --g-hover: #3A3640; --g-hl: #8EE8E1; --g-none: #4F4955; --g-view: #1C1A20 }
+.gui .top { height: calc(var(--u) * 3); background: var(--g-ac) }
+.gui .hd { display: flex; align-items: center; gap: calc(var(--u) * 4); padding: calc(var(--u) * 4) calc(var(--u) * 6) calc(var(--u) * 2); font-size: calc(var(--u) * 7.5) }
+.gui .hd .mu { font-size: calc(var(--u) * 6.3) }
+.gui .hd .theme { margin-left: auto; width: calc(var(--u) * 11); height: calc(var(--u) * 11); border: var(--u) solid var(--g-ink); display: grid; place-items: center; font-size: calc(var(--u) * 6.5) }
+.gui .tabs { display: flex; gap: calc(var(--u) * 5); padding: 0 calc(var(--u) * 6); align-items: flex-end }
+.gui .tab { padding: calc(var(--u) * 2) calc(var(--u) * 3); color: var(--g-tab); font-size: calc(var(--u) * 6.8); display: inline-flex; gap: calc(var(--u) * 2); align-items: center }
+.gui .tab.on { color: var(--g-ink); border: var(--u) solid var(--g-ink); box-shadow: inset 0 calc(var(--u) * -2) 0 var(--g-ac); background: var(--g-light) }
+.badge { font-size: calc(var(--u) * 5.5); background: var(--g-danger); color: #fff; padding: 0 calc(var(--u) * 2); line-height: 1.3 }
+.badge.warn { background: var(--g-warn) }
+.gui .body { padding: calc(var(--u) * 4) calc(var(--u) * 6) calc(var(--u) * 6); display: grid; gap: calc(var(--u) * 3) }
+.split { display: grid; grid-template-columns: 55fr 45fr; gap: calc(var(--u) * 5) }
+.split > div { min-width: 0; display: grid; gap: calc(var(--u) * 3); align-content: start }
+.vline { border-left: var(--u) solid var(--g-dark); padding-left: calc(var(--u) * 5) }
+.mu { color: var(--g-mu) }
+.sm { font-size: calc(var(--u) * 5.8) }
+.btn { display: inline-flex; align-items: center; gap: calc(var(--u) * 2); height: calc(var(--u) * 12); padding: 0 calc(var(--u) * 4); border: var(--u) solid var(--g-ink); background: var(--g-light); white-space: nowrap; font-size: calc(var(--u) * 6.3); color: var(--g-ink) }
+.btn.ac { border-color: var(--g-ac); box-shadow: inset 0 0 0 var(--u) var(--g-ac) }
+.btn.on { background: var(--g-selbg); border-color: var(--g-ac) }
+.btn.hl { border-color: var(--g-hl); color: var(--g-ink); box-shadow: inset 0 0 0 var(--u) var(--g-hl) }
+.btn.sm { height: calc(var(--u) * 10); padding: 0 calc(var(--u) * 3); font-size: calc(var(--u) * 5.8) }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 3) }
+.bar .grow { flex: 1 }
+.search { border: var(--u) solid var(--g-ac); background: var(--g-inset); height: calc(var(--u) * 12); display: flex; align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 3); color: var(--g-mu); overflow: hidden; white-space: nowrap }
+.search .cur { color: var(--g-ink) }
+.chip { display: inline-flex; align-items: center; gap: calc(var(--u) * 2); border: var(--u) solid var(--g-dark); padding: 0 calc(var(--u) * 2.5); height: calc(var(--u) * 10); font-size: calc(var(--u) * 5.8); white-space: nowrap; background: var(--g-light); color: var(--g-ink) }
+.chip.lab { background: var(--g-panel); border-color: var(--g-ink) }
+.chip i { width: calc(var(--u) * 3); height: calc(var(--u) * 3); display: inline-block }
+.segg { display: inline-flex; border: var(--u) solid var(--g-ink) }
+.segg span { padding: 0 calc(var(--u) * 3.5); height: calc(var(--u) * 10); display: inline-flex; align-items: center; font-size: calc(var(--u) * 6) }
+.segg span.on { background: var(--g-ink); color: var(--g-panel) }
+.dot { width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; display: inline-block; flex: none }
+.list { background: var(--g-light); box-shadow: inset 0 0 0 var(--u) var(--g-dark); overflow: hidden }
+.row { display: flex; align-items: center; gap: calc(var(--u) * 2.5); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-bottom: var(--u) solid var(--g-inset); white-space: nowrap; min-height: calc(var(--u) * 20) }
+.row .two { display: grid; gap: calc(var(--u) * .5); min-width: 0; overflow: hidden }
+.row .two > * { overflow: hidden; text-overflow: ellipsis }
+.row .two small { color: var(--g-mu); font-size: calc(var(--u) * 5.6) }
+.row.sel { background: var(--g-selbg); box-shadow: inset calc(var(--u) * 2) 0 0 var(--g-ac) }
+.row.hov { background: var(--g-hover) }
+.row.grp { background: var(--g-grp); min-height: calc(var(--u) * 13); font-size: calc(var(--u) * 6.2) }
+.row.l1 { padding-left: calc(var(--u) * 10) }
+.row.l2 { padding-left: calc(var(--u) * 17) }
+.row .right { margin-left: auto; display: flex; align-items: center; gap: calc(var(--u) * 3); flex: none }
+.row .guide { color: var(--g-dark) }
+.chev { color: var(--g-mu); width: calc(var(--u) * 4); display: inline-block; flex: none; text-align: center }
+.blk { width: calc(var(--u) * 9); height: calc(var(--u) * 9); flex: none; display: inline-block; box-shadow: inset 0 0 0 var(--u) rgba(0,0,0,.25) }
+.b-chest { background: linear-gradient(#9c6b30 0 40%, #6b4a22 40% 48%, #9c6b30 48%) }
+.b-furn { background: linear-gradient(#8d8d8d 0 30%, #5a5a5a 30% 75%, #8d8d8d 75%) }
+.b-furn.lit { background: linear-gradient(#8d8d8d 0 30%, #e2902c 30% 75%, #8d8d8d 75%) }
+.b-crush { background: linear-gradient(135deg, #c3c8cc 0 50%, #2f6f9a 50%) }
+.b-quarry { background: linear-gradient(#4b4f57 0 50%, #e5c449 50%) }
+.b-tank { background: linear-gradient(90deg, #c7d0d6 0 20%, #d2522a 20% 80%, #c7d0d6 80%) }
+.b-gen { background: linear-gradient(#3f3a35 0 35%, #d9931a 35% 65%, #3f3a35 65%) }
+.b-router { background: linear-gradient(#FFFBF3 0 60%, #F0603E 60%) }
+.b-smelt { background: linear-gradient(#9aa0a6 0 50%, #c2442a 50%) }
+.b-cell { background: linear-gradient(90deg, #2a2730 0 30%, #D9931A 30% 70%, #2a2730 70%) }
+.flow { display: inline-flex; gap: calc(var(--u) * 3); font-size: calc(var(--u) * 5.8); font-variant-numeric: tabular-nums }
+.flow b { font-weight: 400 }
+.t-it { color: var(--r-it) } .t-fl { color: var(--r-fl) } .t-en { color: var(--r-en) } .t-ch { color: var(--r-ch) } .t-so { color: var(--r-so) }
+[data-gui="dark"] .t-it { color: #D69A5A }
+.ty { width: calc(var(--u) * 7); height: calc(var(--u) * 7); display: inline-grid; place-items: center; border-radius: 50%; color: #fff; font-size: calc(var(--u) * 4.6); flex: none }
+.ty.it { background: var(--r-it) } .ty.fl { background: var(--r-fl) } .ty.en { background: var(--r-en) } .ty.ch { background: var(--r-ch) } .ty.so { background: var(--r-so) }
+.tag { font-size: calc(var(--u) * 5.3); padding: 0 calc(var(--u) * 2); border: var(--u) solid var(--g-dark); color: var(--g-mu); white-space: nowrap }
+.tag.ac { border-color: var(--g-ac); color: var(--g-ac) }
+.tag.warn { border-color: var(--g-warn); color: var(--g-warn) }
+.tag.ok { border-color: var(--g-ok); color: var(--g-ok) }
+.tag.hl { border-color: var(--g-hl); color: var(--g-hl) }
+.st-ok { color: var(--g-ok) } .st-warn { color: var(--g-warn) } .st-bad { color: var(--g-danger) } .st-mu { color: var(--g-mu) } .st-pause { color: var(--g-paused) }
+.sq { display: grid; grid-template-columns: repeat(3, calc(var(--u) * 3.5)); gap: calc(var(--u) * 1); flex: none }
+.sq i { width: calc(var(--u) * 3.5); height: calc(var(--u) * 3.5); background: var(--g-none) }
+.sq i.e { background: var(--m-ext) } .sq i.n { background: var(--m-ins) } .sq i.b { background: var(--m-both) }
+.eye { color: var(--g-hl); font-size: calc(var(--u) * 6) }
+.eye.off { color: var(--g-dis) }
+.pill { display: inline-flex; align-items: center; gap: calc(var(--u) * 2); border: var(--u) solid currentColor; padding: 0 calc(var(--u) * 3); height: calc(var(--u) * 10); font-size: calc(var(--u) * 6); background: var(--g-light); white-space: nowrap }
+.pill > span { color: var(--g-ink) }
+.foot { display: flex; align-items: center; gap: calc(var(--u) * 3); font-size: calc(var(--u) * 5.8); color: var(--g-mu) }
+.foot .grow { flex: 1 }
+.box { border: var(--u) solid var(--g-dark); background: var(--g-light); padding: calc(var(--u) * 3) calc(var(--u) * 4); display: grid; gap: calc(var(--u) * 2) }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: calc(var(--u) * 1.5) calc(var(--u) * 4); font-size: calc(var(--u) * 6) }
+.kv > :nth-child(odd) { color: var(--g-mu) }
+.cube { display: grid; grid-template-columns: repeat(3, calc(var(--u) * 26)); gap: calc(var(--u) * 2); justify-content: start }
+.cube span { height: calc(var(--u) * 11); border: var(--u) dashed var(--g-dark); display: flex; align-items: center; justify-content: space-between; padding: 0 calc(var(--u) * 2); font-size: calc(var(--u) * 5.6) }
+.cube span.e { border: var(--u) solid var(--m-ext); box-shadow: inset 0 calc(var(--u) * 2) 0 var(--m-ext) }
+.cube span.n { border: var(--u) solid var(--m-ins); box-shadow: inset 0 calc(var(--u) * 2) 0 var(--m-ins) }
+.cube span.on { outline: var(--u) solid var(--g-ac); outline-offset: var(--u) }
+.cube span.nil { border: none }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--u) * 2) }
+.modes .btn { height: calc(var(--u) * 11) }
+.mi { width: calc(var(--u) * 5); height: calc(var(--u) * 5); display: inline-block }
+.notice { background: var(--g-ink); color: var(--g-panel); padding: calc(var(--u) * 3) calc(var(--u) * 4); font-size: calc(var(--u) * 5.8); display: flex; gap: calc(var(--u) * 4); align-items: center }
+.notice b { color: var(--g-ac); font-weight: 400 }
+.meter { height: calc(var(--u) * 4); background: var(--g-inset); position: relative; display: flex; overflow: hidden }
+.meter i { display: block; height: 100% }
+.grip { position: absolute; right: calc(var(--u) * 2); bottom: calc(var(--u) * 2); color: var(--g-dark); font-size: calc(var(--u) * 6) }
+.w470 { width: calc(var(--u) * 470) }
+.w420 { width: calc(var(--u) * 420) }
+.w380 { width: calc(var(--u) * 380) }
+.w300 { width: calc(var(--u) * 300) }
+/* fluxos */
+.ftable { display: grid; grid-template-columns: calc(var(--u) * 54) 1fr 1fr 1fr calc(var(--u) * 92) calc(var(--u) * 72); align-items: center; font-size: calc(var(--u) * 6); font-variant-numeric: tabular-nums }
+.ftable > div { padding: calc(var(--u) * 2) calc(var(--u) * 2.5); border-bottom: var(--u) solid var(--g-inset); white-space: nowrap; overflow: hidden }
+.ftable .h { color: var(--g-mu); font-size: calc(var(--u) * 5.5); border-bottom: var(--u) solid var(--g-dark) }
+.ftable .net { grid-column: 1 / -1; background: var(--g-grp); display: flex; gap: calc(var(--u) * 3); align-items: center }
+.ftable .net .right { margin-left: auto; color: var(--g-mu); font-size: calc(var(--u) * 5.6) }
+.ftable .hot { background: var(--g-selbg) }
+.ports { display: flex; height: calc(var(--u) * 5); gap: var(--u) }
+.ports i { display: block; height: 100% }
+.p-act { background: var(--g-ok) } .p-empty { background: var(--g-none) } .p-wait { background: var(--g-warn) } .p-stop { background: var(--g-paused) } .p-full { background: var(--g-danger) }
+.crumbs { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; font-size: calc(var(--u) * 6.2) }
+.crumbs a { color: var(--g-mu); text-decoration: underline; text-decoration-color: var(--g-dark) }
+.crumbs .sep { color: var(--g-dis) }
+.flowcols { display: grid; grid-template-columns: 1fr calc(var(--u) * 92) 1fr; gap: calc(var(--u) * 4); align-items: start }
+.flowcols > div { min-width: 0; display: grid; gap: calc(var(--u) * 2) }
+.fl-h { color: var(--g-mu); font-size: calc(var(--u) * 5.8) }
+.fport { border: var(--u) solid var(--g-dark); background: var(--g-light); padding: calc(var(--u) * 2) calc(var(--u) * 3); display: grid; gap: var(--u); font-size: calc(var(--u) * 5.8) }
+.fport .top2 { display: flex; gap: calc(var(--u) * 2); align-items: center; white-space: nowrap; overflow: hidden }
+.fport .top2 .r { margin-left: auto; font-variant-numeric: tabular-nums }
+.fport .bar2 { height: calc(var(--u) * 2.5); background: var(--g-inset) }
+.fport .bar2 i { display: block; height: 100% }
+.fport.dim { opacity: .62 }
+.center { border: var(--u) solid var(--g-ink); background: var(--g-light); padding: calc(var(--u) * 3); display: grid; gap: calc(var(--u) * 2); justify-items: center; text-align: center; font-size: calc(var(--u) * 6) }
+.mlist { display: grid; font-size: calc(var(--u) * 6.2); font-variant-numeric: tabular-nums }
+.mnet { display: flex; align-items: center; gap: calc(var(--u) * 3); padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 1.5); border-top: var(--u) solid var(--g-inset) }
+.mnet:first-child { border-top: 0 }
+.mnet .note { margin-left: auto; font-size: calc(var(--u) * 5.8) }
+.mrow { display: grid; grid-template-columns: calc(var(--u) * 52) 1fr auto; gap: calc(var(--u) * 4); align-items: center; padding: calc(var(--u) * 1.5) calc(var(--u) * 4) calc(var(--u) * 1.5) calc(var(--u) * 12); white-space: nowrap }
+.mrow > span:first-child { display: inline-flex; gap: calc(var(--u) * 2); align-items: center }
+.mrow.hot { background: var(--g-selbg) }
+.mtype { display: grid; grid-template-columns: calc(var(--u) * 5) calc(var(--u) * 52) 1fr auto; gap: calc(var(--u) * 3); align-items: center; padding: calc(var(--u) * 3) calc(var(--u) * 4); border-top: var(--u) solid var(--g-inset); white-space: nowrap; font-size: calc(var(--u) * 6.4) }
+.mtype:first-child { border-top: 0 }
+.mtype > span:nth-child(2) { display: inline-flex; gap: calc(var(--u) * 2); align-items: center }
+.mtype .note { font-size: calc(var(--u) * 5.8) }
+.mrow.net > span:first-child { gap: calc(var(--u) * 2) }
+/* problemas */
+.prob { display: grid; grid-template-columns: calc(var(--u) * 2) 1fr auto; gap: calc(var(--u) * 4); align-items: center; padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 3) 0; border-bottom: var(--u) solid var(--g-inset); background: var(--g-light) }
+.prob > i { align-self: stretch }
+.prob .two { display: grid; gap: var(--u); min-width: 0 }
+.prob .two small { color: var(--g-mu); font-size: calc(var(--u) * 5.6); white-space: normal }
+.prob.grp { background: var(--g-grp); grid-template-columns: 1fr auto; padding-left: calc(var(--u) * 4); font-size: calc(var(--u) * 6) }
+/* mapa */
+.map { position: relative; height: calc(var(--u) * 180); background: var(--g-view); box-shadow: inset 0 0 0 var(--u) var(--g-dark); overflow: hidden;
+  background-image: linear-gradient(var(--g-inset) var(--u), transparent var(--u)), linear-gradient(90deg, var(--g-inset) var(--u), transparent var(--u)); background-size: calc(var(--u) * 20) calc(var(--u) * 20) }
+.map svg { position: absolute; inset: 0; width: 100%; height: 100% }
+/* tela do roteador */
+.rgrid { display: grid; grid-template-columns: 52fr 48fr; gap: calc(var(--u) * 5) }
+.rgrid > div { min-width: 0; display: grid; gap: calc(var(--u) * 3); align-content: start }
+.visor { position: relative; height: calc(var(--u) * 92); background: var(--g-view); box-shadow: inset 0 0 0 var(--u) var(--g-dark); overflow: hidden }
+.visor svg { position: absolute; inset: 0; width: 100%; height: 100% }
+.radar { position: absolute; right: calc(var(--u) * 3); top: calc(var(--u) * 3); width: calc(var(--u) * 44); height: calc(var(--u) * 44); border: var(--u) solid var(--g-dark); background: var(--g-panel) }
+.world { background: #1d2430; border: var(--u) solid #0f0e12; max-width: 100% }
+.world svg { display: block; width: 100%; height: auto }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--page-mu); margin-top: 8px }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.legend i { width: 12px; height: 12px; display: inline-block }
+.callout { border-left: 3px solid var(--coral); padding: 2px 0 2px 12px; margin-top: 12px; color: var(--page-mu); font-size: 14px }
+@media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.6s ease-in-out infinite } @keyframes pulse { 50% { opacity: .45 } } }
+</style>
+
+<div class="wrap" id="top">
+  <div class="eyebrow">Tablet de rede · refactor total</div>
+  <h1>Central da rede <span class="status">versão 6 · para aprovar</span></h1>
+  <p class="lede">O Tablet passa de "onde estão os roteadores" para "o que acontece na rede": as máquinas viram linhas próprias, a busca acha conteúdo, os fluxos têm direção (entra na rede × sai da rede), os problemas vêm numa lista que leva ao conserto, e uma máquina escolhida se acende no mundo. Esta é a sexta versão, já com as suas respostas e sem poluição na tela: primeiro o que a investigação achou, depois as telas, as decisões tomadas e as etapas.</p>
+
+  <div class="themebar" role="group" aria-label="Tema das telas do jogo">
+    <span class="mu">Telas do jogo</span>
+    <div class="seg"><button id="gt-light" type="button" aria-pressed="true">Claro</button><button id="gt-dark" type="button" aria-pressed="false">Escuro</button></div>
+    <nav class="toc" aria-label="Seções">
+      <a href="#investigacao">Investigação</a><a href="#lista">Lista</a><a href="#busca">Busca</a><a href="#fluxos">Fluxos</a><a href="#problemas">Problemas</a><a href="#mapa">Mapa e Redes</a><a href="#mundo">Mundo</a><a href="#roteador">Roteador</a><a href="#vincular">Vincular</a><a href="#decisoes">Decididas</a><a href="#etapas">Etapas</a>
+    </nav>
+  </div>
+
+  <!-- ===================== INVESTIGAÇÃO ===================== -->
+  <section class="part" id="investigacao">
+    <div class="eyebrow">Antes do desenho</div>
+    <h2>O que a investigação achou</h2>
+
+    <h3>1. O que o servidor já mede e o que falta</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Medida</th><th>Hoje</th><th>Falta</th><th>Custo da medida nova</th></tr></thead>
+      <tbody>
+        <tr><td>Quantidade movida</td><td>Um <code>long</code> por tipo no nó (<code>RouterBlockEntity.moved</code>), só como origem e só o que chegou ao destino. Junta presa e remotas. O Tablet lê a diferença a cada 20 ticks; a vazão de uma rede é aproximada (o nó inteiro entra em cada rede do tipo).</td><td>Por porta (nó, máquina, face, tipo): quanto <b>saiu</b> dela como origem e quanto <b>entrou</b> nela como destino.</td><td class="num">2 somas por visita que move, 0 alocação · 16 B por porta</td></tr>
+        <tr><td>Extraído × entregue</td><td>Os dois valores existem juntos no código da visita (<code>takenCount</code> e <code>delivered</code>), mas só o entregue é somado.</td><td>O extraído, para mostrar o que voltou à origem.</td><td class="num">+1 soma · +8 B por porta</td></tr>
+        <tr><td>De onde vem, para onde vai</td><td>Nada. Por rede só há o número de entregas por segundo (<code>ops</code>), sem quantidade.</td><td>A aresta origem → destino.</td><td class="num">1 soma indexada por entrega · 8 B por destino da origem, <b>só enquanto alguém olha o micro dessa rede</b></td></tr>
+        <tr><td>Sono e motivo</td><td>Dois <code>Backoff</code> por porta; a origem guarda vazia × espera destino (<code>waitsDestination</code>). "Cheio" é deduzido (intervalo ≥ 8). Destino sem máquina dorme sem dobrar e não se distingue de "recusou uma vez".</td><td>O motivo do destino (cheio, sem máquina, recusa por filtro ou estoque).</td><td class="num">1 byte por porta, escrito onde o sono já é gravado</td></tr>
+        <tr><td>Redstone e sem rede</td><td>Face parada por redstone nem vira porta; face sem rede vira porta sem rota (<code>faceNetwork == null</code>).</td><td>Nada no motor: o diagnóstico calcula da configuração, na hora.</td><td class="num">0 no laço</td></tr>
+        <tr><td>Item que passou</td><td>Nada.</td><td><b>Fica de fora</b> (decidido): a busca usa só os filtros e os armazenamentos do mod.</td><td class="num">0</td></tr>
+        <tr><td>Remota descarregada</td><td>Não há estado: o cache devolve nulo e a porta dorme. Só a tela calcula "descarregada" na hora.</td><td>Calcular no diagnóstico com <code>isLoaded</code>, como a tela já faz.</td><td class="num">0 no laço</td></tr>
+      </tbody>
+    </table></div>
+    <p class="callout">A janela de tempo fica fora do laço quente: um amostrador lê os contadores das portas uma vez por segundo, <b>só enquanto existe um Tablet aberto</b>, e guarda os 5 últimos segundos. Com o Tablet fechado, o custo extra é o das somas acima. Referência atual de <code>/wa bench</code> (8/10): many 500 = 1,037 ms/tick, raw = 111 a 117 µs por visita, tablet 1000 = 0,123 ms/tick. A etapa 1 mede de novo os mesmos cenários antes e depois.</p>
+
+    <h3>2. Como as máquinas remotas chegariam ao cliente</h3>
+    <ul>
+      <li><b>No índice de nós</b> (<code>NodeIndex</code>, já salvo e válido com o roteador descarregado): cada nó ganha a lista das remotas (posição, grupo, exceção, rótulo, modos por lado e o resumo dos filtros). É atualizada no mesmo <code>changed()</code> que já atualiza o índice. Teto: 512 máquinas por roteador.</li>
+      <li><b>Na página, só o que está à vista:</b> as máquinas vão apenas para os roteadores <b>abertos na árvore</b>, para a visão por máquinas (paginada) e para o resultado da busca. O limite de 256 passa a contar <b>linhas</b>, não nós. Cada máquina custa uns 30 a 40 B; um roteador aberto com 128 máquinas, cerca de 5 KB.</li>
+      <li><b>Só quando muda:</b> o cabeçalho e a página continuam indo só se ficaram diferentes. A vazão por linha vai num pacote à parte, a cada segundo e só para as linhas visíveis.</li>
+    </ul>
+    <h3>3. O que dá para aproveitar</h3>
+    <ul>
+      <li><b>Fica:</b> o painel do nó inteiro (<code>NodePanel</code>, <code>ChosenPanel</code>, <code>TargetLine</code>; já editam grupo e exceção), o perfil (copiar, colar, desfazer), o <code>RouterEditHost</code> e os payloads de face, a busca com sugestões (<code>TabletSearch</code>, <code>SearchSuggestions</code>, <code>ListSearch</code>) com grupos novos, o Mapa, Redes e Grupos.</li>
+      <li><b>Reescrito:</b> o modelo da lista (<code>ListGroups</code> tem um nível só e indexa pela página), o <code>ListLayout</code>, o <code>ListRows</code> e a navegação por teclado; a aba Estatísticas vira Fluxos; no servidor, a montagem da página e a ordenação (<code>TabletSnapshotBuilder</code>).</li>
+      <li><b>Antes de crescer:</b> <code>TabletScreen</code> (685 linhas) e <code>RouterMenu</code> (933) já estão no aviso da <code>wa-modular</code>, e <code>RouterScreen</code> e <code>NodePanel</code> passam de 500. Nada novo entra neles: cada parte nova vai em classe própria.</li>
+    </ul>
+    <h3>4. Como o destaque chega ao mundo, sem sincronizar</h3>
+    <p>A posição de cada máquina <b>já está no cliente</b> (a tela do roteador recebe a <code>pos</code> de cada remota; as linhas novas do Tablet também trazem). O destaque é só do cliente: a tela escolhe a máquina e um <code>MachineHighlight</code> guarda posição, dimensão e prazo. Ele dura enquanto a tela está aberta e mais 10 s depois de fechar. Desenha no <code>RenderLevelStageEvent</code>, como o <code>AreaRenderer</code>, mas com um <code>RenderType</code> sem teste de profundidade (o mod ainda não tem um), para aparecer através dos blocos. <b>Nenhum pacote novo.</b></p>
+
+    <h3>Achados no caminho</h3>
+    <div class="find">
+      <div><span class="bug">bug</span><b>Resgate na máquina errada</b><code>ItemGiveBack.rescue</code> devolve o que um destino remoto recusou na máquina <b>presa</b> do nó, não na remota. Só acontece com destino que mente na simulação. Correção à parte, antes da etapa 1.</div>
+      <div><span class="bug">bug</span><b>Destino cheio só olha a presa</b><code>NodeProbe.fullDestinations</code> ignora as remotas, e o <code>ports.port()</code> que ele usa <b>cria</b> uma porta quando ela não existe. Um destino remoto cheio não aparece no Tablet.</div>
+      <div><span class="bug">bug</span><b>Filtro de tipo ignora as remotas</b><code>roles</code> e <code>face_modes</code> do índice olham só a presa: um roteador que só extrai das máquinas vinculadas some do filtro "Só Itens".</div>
+      <div><b>Grupos recolhidos não são lembrados</b>Ficam num campo do <code>TabletList</code>, recriado a cada abertura. O pedido supõe que já são; a etapa 3 passa a lembrar os grupos recolhidos e os roteadores abertos.</div>
+      <div><b>Grupo sem nome editável</b><code>MachineGroup.setName</code> existe e ninguém chama. O rótulo por máquina não existe; a etapa 2 cria os dois.</div>
+    </div>
+  </section>
+
+  <!-- ===================== LISTA ===================== -->
+  <section class="part" id="lista">
+    <div class="eyebrow">Aba Lista · por roteador</div>
+    <h2>O roteador abre em árvore, e cada máquina é uma linha</h2>
+    <p>As abas passam a ser <b>Lista · Fluxos · Problemas · Mapa · Redes</b>. Estatísticas vira Fluxos, com o macro e o micro no mesmo lugar. Grupos entra em Redes, porque um grupo é só um jeito de juntar redes. A contagem dos Problemas fica na própria aba.</p>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Fornalhas da Forja abertas · Fundição 3 escolhida · Fundição 3 e #9 acesas no mundo</p>
+        <div class="gui w470">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede <span class="mu">14 roteadores · 63 máquinas · 4 redes</span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab on">Lista</span><span class="tab">Fluxos</span><span class="tab">Problemas <span class="badge">6</span></span><span class="tab">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="split">
+              <div>
+                <div class="search"><span class="cur">_</span>Procurar roteador, máquina, item, rede…</div>
+                <div class="bar"><span class="segg"><span class="on">Roteadores</span><span>Máquinas</span></span><span class="chip"><i style="background:var(--g-danger)"></i>Com problema 3</span><span class="chip"><i style="background:var(--g-warn)"></i>Descarregadas 1</span></div>
+                <div class="list">
+                  <div class="row grp"><span class="chev">▾</span>Baú do mod · 3</div>
+                  <div class="row"><span class="chev">▾</span><span class="dot" style="background:var(--g-ok)"></span><span class="blk b-chest"></span><div class="two"><span>Forja</span><small>Elite · 15 máquinas · <span style="color:var(--n-forja)">● Forja</span></small></div><div class="right"><span class="flow"><b class="t-it">↑96</b><b class="t-it">↓96/s</b></span><span class="sq"><i class="n"></i><i></i><i></i><i class="e"></i><i></i><i></i></span></div></div>
+                  <div class="row l1"><span class="chev"> </span><span class="blk b-chest"></span><div class="two"><span>Máquina presa</span><small>Baú do mod · Baixo do roteador</small></div><div class="right"><span class="flow"><b class="t-it">↑96</b><b class="t-it">↓96/s</b></span></div></div>
+                  <div class="row l1"><span class="chev">▾</span><span class="blk b-furn"></span><div class="two"><span>Fornalhas ×12</span><small>1 exceção</small></div><div class="right"><span class="flow"><b class="t-it">↓64</b><b class="t-it">↑64/s</b></span></div></div>
+                  <div class="row l2"><span class="dot" style="background:var(--g-ok)"></span><span class="blk b-furn lit"></span><div class="two"><span>Fundição 1</span><small>−120 64 231 · movendo</small></div><div class="right"><span class="flow"><b class="t-it">↓8/s</b></span><span class="eye off">◉</span></div></div>
+                  <div class="row l2"><span class="dot" style="background:var(--g-ok)"></span><span class="blk b-furn lit"></span><div class="two"><span>Fundição 2</span><small>−119 64 231 · movendo</small></div><div class="right"><span class="flow"><b class="t-it">↓8/s</b></span><span class="eye off">◉</span></div></div>
+                  <div class="row l2 sel"><span class="dot" style="background:var(--g-ok)"></span><span class="blk b-furn lit"></span><div class="two"><span>Fundição 3</span><small>−118 65 231 · movendo</small></div><div class="right"><span class="tag ac">exceção</span><span class="flow"><b class="t-it">↓8/s</b></span><span class="eye">◉</span></div></div>
+                  <div class="row l2"><span class="dot" style="background:var(--g-warn)"></span><span class="blk b-furn"></span><div class="two"><span>#4</span><small>−117 64 231 · <span class="st-warn">dormindo: entrada cheia</span></small></div><div class="right"><span class="flow"><b class="st-mu">0/s</b></span><span class="eye off">◉</span></div></div>
+                  <div class="row l2"><span class="dot" style="background:var(--g-mu)"></span><span class="blk b-furn"></span><div class="two"><span>#9</span><small>−111 64 225 · <span class="st-warn">descarregada</span></small></div><div class="right"><span class="flow"><b class="st-mu">—</b></span><span class="eye">◉</span></div></div>
+                  <div class="row l2"><span class="chev"> </span><span class="mu sm">… mais 7 · Mostrar todas</span></div>
+                  <div class="row l1"><span class="chev">▸</span><span class="blk b-crush"></span><div class="two"><span>Trituradores ×2</span></div><div class="right"><span class="flow"><b class="t-it">↓32/s</b><b class="t-en">↓40k FE/t</b></span></div></div>
+                  <div class="row"><span class="chev">▸</span><span class="dot" style="background:var(--g-ok)"></span><span class="blk b-chest"></span><div class="two"><span>Mina</span><small>Avançado · 1 máquina · <span style="color:var(--n-mina)">● Mina</span></small></div><div class="right"><span class="flow"><b class="t-it">↑210/s</b></span><span class="sq"><i></i><i class="e"></i><i></i><i></i><i></i><i></i></span></div></div>
+                </div>
+                <div class="foot"><span>22 de 77 linhas</span><span class="grow"></span><span class="btn sm"><span class="eye">◉</span>Apagar todas (2)</span><span class="btn sm">Selecionar</span></div>
+              </div>
+              <div class="vline">
+                <div class="bar"><span style="font-size:calc(var(--u)*7.2)">Fundição 3</span><span class="mu">✎</span><span class="grow"></span><span class="btn sm hl"><span class="eye">◉</span>No mundo</span><span class="btn sm">Tela completa</span></div>
+                <div class="sm mu">Fornalha · via <u>Forja</u> · −118 65 231 · 41 blocos</div>
+                <div class="bar sm"><span class="ty it">▣</span><span class="t-it">↓8 ↑8/s</span><span class="mu">·</span><u>Quem abastece →</u></div>
+                <div class="bar"><span class="ty it">▣</span><span class="ty fl" style="opacity:.4">◆</span><span class="ty en" style="opacity:.4">ϟ</span><span class="grow"></span><span class="mu sm">1 rede</span></div>
+                <div class="bar sm"><span class="mu">Editando</span><span class="pill" style="color:var(--g-ac)"><span>Exceção · Fundição 3</span></span><span class="btn sm">Voltar a igual</span></div>
+                <div class="cube">
+                  <span class="nil"></span><span class="n on">Cima <span class="dot" style="background:var(--n-forja)"></span></span><span class="nil"></span>
+                  <span>Esq.</span><span>Frente</span><span>Dir.</span>
+                  <span class="nil"></span><span class="e">Baixo <span class="dot" style="background:var(--n-forja)"></span></span><span class="nil"></span>
+                </div>
+                <div class="modes"><span class="btn"><i class="mi" style="background:var(--m-ext)"></i>Extrai</span><span class="btn on"><i class="mi" style="background:var(--m-ins)"></i>Insere</span><span class="btn"><i class="mi" style="background:var(--m-both)"></i>Armazém</span><span class="btn"><i class="mi" style="background:var(--g-none)"></i>Nenhum</span></div>
+                <div class="bar sm"><span class="mu">Rede</span><span class="pill" style="color:var(--n-forja)"><span class="dot" style="background:var(--n-forja)"></span><span>Forja</span></span><span class="mu">Filtro</span>2 entradas<span class="grow"></span><span class="btn sm">Editar</span></div>
+              </div>
+            </div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="side">
+        <ol>
+          <li><b>▸ abre o roteador</b> na própria linha (que continua como hoje, com os seis quadradinhos das faces, mais a vazão): a máquina presa, cada grupo ("1 exceção" só quando houver) e, aberto o grupo, cada máquina. Até 8 máquinas por grupo; o resto vem em "Mostrar todas". Vários roteadores podem ficar abertos, e o Tablet lembra quais ao reabrir, junto com os grupos recolhidos.</li>
+          <li><b>Linha da máquina:</b> na primeira linha, o rótulo (ou "#4" sem rótulo) e, à direita, o que ela recebe (↓) e dá (↑) por segundo, na cor do tipo. Na segunda, as coordenadas e o estado em palavras: movendo, dormindo e por quê, descarregada, fora do raio. A marca "exceção" só aparece quando a máquina é uma; igual ao perfil é o normal e não ganha marca.</li>
+          <li><b>Olho ◉ em cada linha:</b> liga e desliga "Mostrar no mundo" daquela máquina. Várias podem ficar acesas ao mesmo tempo, e elas ficam acesas, com a tela aberta ou fechada, até você desligar ou sair do mundo. Passar o mouse não acende nada.</li>
+          <li><b>Clicar escolhe a máquina:</b> o painel abre já com ela como alvo ("Editando · Exceção · Fundição 3"). No topo do painel: o nome com ✎ para o rótulo (ou duplo clique no nome da linha; Enter salva, Esc cancela), "No mundo" e "Tela completa"; embaixo, o bloco, o roteador, as coordenadas e a distância; e uma linha de fluxo com "Quem abastece →", que leva ao micro dos Fluxos. "Apagar todas" fica no pé da lista, só quando há alguma acesa. Daí para baixo é o painel de hoje: exceção, Voltar a igual, Desvincular, faces, rede, filtro.</li>
+          <li><b>Selecionar</b> marca roteadores e máquinas juntos, de um ou mais roteadores: Mover de rede e Colar perfil nas marcadas. Numa máquina, colar grava a exceção dela.</li>
+        </ol>
+        <div class="legend"><span><i style="background:var(--m-ext)"></i>Extrai</span><span><i style="background:var(--m-ins)"></i>Insere</span><span><i style="background:var(--m-both)"></i>Armazém</span><span><i style="background:#3FC9BE"></i>Mostrar no mundo ligado</span></div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:34px">Visão por máquinas, lista vazia e muitos nós</h3>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Máquinas · todas as fornalhas da base, de qualquer roteador</p>
+        <div class="gui w300">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede<span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab on">Lista</span><span class="tab">Fluxos</span><span class="tab">Problemas <span class="badge">6</span></span><span class="tab">…</span></div>
+          <div class="body">
+            <div class="search"><span class="cur">_</span>Procurar…</div>
+            <div class="bar"><span class="segg"><span>Roteadores</span><span class="on">Máquinas</span></span></div>
+            <div class="list">
+              <div class="row grp"><span class="chev">▾</span><span class="blk b-furn"></span>Fornalha · 23 · 3 roteadores</div>
+              <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Fundição 1</span><small>via Forja · −120 64 231</small></div><div class="right"><span class="flow"><b class="t-it">↓8/s</b></span><span class="eye off">◉</span></div></div>
+              <div class="row sel"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Fundição 3</span><small>via Forja · −118 65 231</small></div><div class="right"><span class="tag ac">exc.</span><span class="flow"><b class="t-it">↓8/s</b></span><span class="eye">◉</span></div></div>
+              <div class="row"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Mercado</span><small>presa · −40 70 12</small></div><div class="right"><span class="flow"><b class="t-it">↓2/s</b></span><span class="eye off">◉</span></div></div>
+              <div class="row"><span class="dot" style="background:var(--g-mu)"></span><div class="two"><span>#9</span><small>via Forja · <span class="st-warn">descarregada</span></small></div><div class="right"><span class="flow"><b class="st-mu">—</b></span><span class="eye">◉</span></div></div>
+              <div class="row grp"><span class="chev">▸</span><span class="blk b-crush"></span>Triturador · 6 · 2 roteadores</div>
+              <div class="row grp"><span class="chev">▸</span><span class="blk b-tank"></span>Tanque · 4 · 4 roteadores</div>
+              <div class="row grp"><span class="chev">▸</span><span class="blk b-gen"></span>Gerador · 9 · 1 roteador</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="shot">
+        <p class="cap">Nenhum roteador ainda</p>
+        <div class="gui w300">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede<span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab on">Lista</span><span class="tab">Fluxos</span><span class="tab">Problemas</span><span class="tab">…</span></div>
+          <div class="body">
+            <div class="list" style="padding:calc(var(--u)*10) calc(var(--u)*8);display:grid;gap:calc(var(--u)*4);justify-items:center;text-align:center;white-space:normal">
+              <span class="blk b-router" style="width:calc(var(--u)*16);height:calc(var(--u)*16)"></span>
+              <span>Nenhum roteador que você possa ver</span>
+              <span class="mu sm">Coloque um roteador numa máquina e escolha a rede das faces. Ele aparece aqui, com as máquinas que vincular.</span>
+              <span class="btn sm">Abrir Redes</span>
+            </div>
+          </div>
+        </div>
+        <p class="cap" style="margin-top:18px">Base grande · 1.204 linhas</p>
+        <div class="gui w300">
+          <div class="body">
+            <div class="list">
+              <div class="row grp"><span class="chev">▸</span>Baú do mod · 41</div>
+              <div class="row grp"><span class="chev">▸</span>Fornalha · 118</div>
+              <div class="row grp"><span class="chev">▸</span>Triturador · 64 · <span class="st-bad">2 com problema</span></div>
+              <div class="row grp"><span class="chev">▸</span>Tanque · 37</div>
+            </div>
+            <div class="foot"><span>Mostrando 256 de 1.204 linhas · refine a busca</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Máquinas</b> junta todas as máquinas, presas e vinculadas, pelo tipo de bloco. A vinculada mostra "via &lt;roteador&gt;"; a presa mostra o nome do roteador, que é o nome dela. Escolher uma abre o mesmo painel da visão por roteador.</li>
+          <li>Com a base grande, os grupos começam recolhidos e o limite de 256 conta linhas. Cabeçalho recolhido é uma linha só, então dá para ver a base inteira por cima e abrir só o que interessa.</li>
+          <li>O estado vazio diz o que fazer, em vez de uma lista em branco.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BUSCA ===================== -->
+  <section class="part" id="busca">
+    <div class="eyebrow">Aba Lista · busca por conteúdo</div>
+    <h2>"ferro" acha quem extrai, quem recebe e onde está parado</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Etiqueta "Item: Lingote de ferro" · papéis e vazão</p>
+        <div class="gui w470">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede <span class="mu">7 lugares com Lingote de ferro</span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab on">Lista</span><span class="tab">Fluxos</span><span class="tab">Problemas <span class="badge">6</span></span><span class="tab">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="split">
+              <div>
+                <div class="search"><span class="chip lab"><span class="blk" style="width:calc(var(--u)*6);height:calc(var(--u)*6);background:#d8d8d8"></span>Item: Lingote de ferro ✕</span><span class="cur">_</span></div>
+                <div class="bar"><span class="chip" style="border-color:var(--m-ext)">Extrai 2</span><span class="chip" style="border-color:var(--m-ins)">Insere 3</span><span class="chip">Filtra 4</span><span class="chip" style="border-color:var(--g-warn)">Parado 1</span></div>
+                <div class="list">
+                  <div class="row grp">Extraem · tiram da máquina</div>
+                  <div class="row"><span class="blk b-furn lit"></span><div class="two"><span>Fornalhas ×12 · Forja</span><small>Baixo · filtro: #c:ingots</small></div><div class="right"><span class="flow"><b class="t-it">↑64/s</b></span></div></div>
+                  <div class="row"><span class="blk b-smelt"></span><div class="two"><span>Fundidor de Ferro · Fábrica</span><small>Trás · filtro: Lingote de ferro · <span class="st-warn">espera destino</span></small></div><div class="right"><span class="flow"><b class="st-mu">0/s</b></span></div></div>
+                  <div class="row grp">Inserem · põem na máquina</div>
+                  <div class="row"><span class="blk b-chest"></span><div class="two"><span>Forja · Baú do mod</span><small>Armazém · tem 18.402</small></div><div class="right"><span class="flow"><b class="t-it">↓64/s</b></span></div></div>
+                  <div class="row"><span class="blk b-crush"></span><div class="two"><span>Prensa · Fábrica</span><small>Cima · filtro: #c:ingots/iron</small></div><div class="right"><span class="flow"><b class="t-it">↓4/s</b></span></div></div>
+                  <div class="row"><span class="blk b-chest"></span><div class="two"><span>Armazém Central</span><small>Cima · filtro: Lingote de ferro · <span class="st-bad">cheio</span></small></div><div class="right"><span class="tag warn">parado</span></div></div>
+                  <div class="row grp">Só filtram · passam ou barram</div>
+                  <div class="row"><span class="blk b-chest"></span><div class="two"><span>Lixeira · Mina</span><small>lista negra · barra Lingote de ferro</small></div><div class="right"><span class="tag">barra</span></div></div>
+                </div>
+              </div>
+              <div class="vline">
+                <div class="bar"><span class="blk" style="background:#d8d8d8"></span><span style="font-size:calc(var(--u)*7.2)">Lingote de ferro</span></div>
+                <div class="sm mu">minecraft:iron_ingot · #c:ingots/iron · Minecraft</div>
+                <div class="box">
+                  <div class="kv"><span>Entra na rede</span><span class="t-it">64/s</span><span>Sai da rede</span><span class="t-it">68/s</span><span>Armazéns</span><span>−4/s (esvaziando)</span><span>Guardado</span><span>18.402 nos Baús do mod</span></div>
+                </div>
+                <div class="box">
+                  <div class="sm"><span class="st-warn">●</span> 1 origem esperando destino</div>
+                  <div class="sm"><span class="st-bad">●</span> 1 destino cheio: Armazém Central</div>
+                  <div class="sm mu">O Fundidor espera porque o único destino dele está cheio.</div>
+                </div>
+                <div class="bar"><span class="btn sm">Ver no Fluxos</span><span class="btn sm hl"><span class="eye">◉</span>Mostrar os 7 no mundo</span></div>
+                <div class="sm mu">Sugestões ao digitar "ferro": Itens (Lingote de ferro, Minério de ferro bruto…), Tags (#c:ingots/iron…), Máquinas (Fundidor de Ferro), Redes, Nomes.</div>
+              </div>
+            </div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Etiquetas novas:</b> Item, Fluido, Químico, Tag e Mod, ao lado das de hoje (Máquina e Rede). O cliente transforma o texto em ids, porque é ele quem conhece os nomes traduzidos, e o servidor compara os ids.</li>
+          <li><b>O que conta como "tem ferro":</b> o filtro da face deixa passar ou barra o ferro (pelo item, pela tag, pelo mod ou pela regra), ou um armazenamento do mod guarda ferro. Os dois já estão na memória, então a busca não custa nada no motor. Uma origem sem filtro que tirou ferro não aparece: ler o que passou custaria no motor, e ler o inventário de outros mods custaria em cada busca.</li>
+          <li><b>Papéis:</b> Extrai, Insere, Armazém, Filtra (passa ou barra) e Parado (dormindo cheio ou à espera de destino), cada um com a vazão daquele tipo. Os botões de papel só aparecem quando têm resultado; clicar filtra e clicar de novo desliga.</li>
+          <li>"Mostrar os 7 no mundo" liga o destaque de todos os lugares do resultado de uma vez.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FLUXOS ===================== -->
+  <section class="part" id="fluxos">
+    <div class="eyebrow">Aba Fluxos · macro</div>
+    <h2>Por rede e por tipo: o que entra, o que sai e quem está parado</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Por tipo (padrão) · o total da base inteira, Energia aberta com as redes</p>
+        <div class="gui w470">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede <span class="mu">média dos últimos 5 s</span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab">Lista</span><span class="tab on">Fluxos</span><span class="tab">Problemas <span class="badge">6</span></span><span class="tab">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="bar sm"><span class="mu">Tempo do mod</span><span class="grow"><span class="meter"><i style="width:42%;background:var(--g-ok)"></i></span></span><span>0,42 de 1,00 ms</span></div>
+            <div class="crumbs"><b>Todas as redes</b><span class="grow" style="flex:1"></span><span class="segg"><span class="on">Por tipo</span><span>Por rede</span></span></div>
+            <div class="list">
+              <div class="mlist">
+                <div class="mtype"><span class="chev">▾</span><span><span class="ty en">ϟ</span>Energia</span><span class="t-en">88.000 → 71.500 FE/t</span><span class="note st-ok">+16.500 enchendo</span></div>
+                <div class="mrow net"><span><span class="dot" style="background:var(--n-base)"></span>Base</span><span class="t-en">48.000 → 31.500</span><span>+16.500</span></div>
+                <div class="mrow net"><span><span class="dot" style="background:var(--n-forja)"></span>Forja</span><span class="t-en">40.000 → 40.000</span><span></span></div>
+                <div class="mtype"><span class="chev">▸</span><span><span class="ty it">▣</span>Itens</span><span class="t-it">370 → 374/s</span><span class="note"><span>−4</span> · <span class="st-warn">3 esperando · 1 cheio</span></span></div>
+                <div class="mtype"><span class="chev">▸</span><span><span class="ty fl">◆</span>Fluidos</span><span class="t-fl">2.000 → 2.000 mB/s</span><span></span></div>
+                <div class="mtype"><span class="chev"> </span><span class="mu">Nether</span><span class="mu">rede pausada, fora dos totais</span><span></span></div>
+              </div>
+            </div>
+            <div class="foot"><span>entra → sai da rede · clique numa linha para descer · os detalhes ficam na dica</span></div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="shot">
+        <p class="cap">Por rede · a mesma janela vista rede a rede</p>
+        <div class="gui w300">
+          <div class="body">
+            <div class="crumbs"><b>Todas as redes</b><span class="grow" style="flex:1"></span><span class="segg"><span>Por tipo</span><span class="on">Por rede</span></span></div>
+            <div class="list">
+              <div class="mlist">
+                <div class="mnet"><span class="dot" style="background:var(--n-base)"></span>Base</div>
+                <div class="mrow"><span><span class="ty en">ϟ</span>Energia</span><span class="t-en">48.000 → 31.500 FE/t</span><span class="st-ok">+16.500 enchendo</span></div>
+                <div class="mrow"><span><span class="ty fl">◆</span>Fluidos</span><span class="t-fl">2.000 → 2.000 mB/s</span><span></span></div>
+                <div class="mnet"><span class="dot" style="background:var(--n-forja)"></span>Forja<span class="note st-warn">3 esperando · 1 cheio</span></div>
+                <div class="mrow hot"><span><span class="ty it">▣</span>Itens</span><span class="t-it">160 → 164/s</span><span>−4</span></div>
+                <div class="mrow"><span><span class="ty en">ϟ</span>Energia</span><span class="t-en">40.000 → 40.000 FE/t</span><span></span></div>
+                <div class="mnet"><span class="dot" style="background:var(--n-mina)"></span>Mina</div>
+                <div class="mrow"><span><span class="ty it">▣</span>Itens</span><span class="t-it">210 → 210/s</span><span></span></div>
+                <div class="mnet"><span class="dot" style="background:var(--n-nether)"></span>Nether<span class="note st-pause">pausada</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Por tipo</b> (o padrão) responde "quanto entra e sai na base": uma linha por tipo com o total de todas as redes. ▸ abre o tipo com as redes dele. <b>Por rede</b> mostra a mesma coisa rede a rede. Rede pausada fica fora dos totais e aparece apagada.</li>
+          <li><b>"entra → sai":</b> o que as origens deram (Extrai e Armazém dando) e o que os destinos receberam (Insere e Armazém recebendo). O saldo só aparece quando não é zero: "+16.500 enchendo" diz que sobra energia e vai para os Armazéns, e um saldo negativo diz que a reserva está acabando.</li>
+          <li><b>Estados em texto curto, só quando importam:</b> "3 esperando · 1 cheio" na linha do tipo ou da rede, e nada quando está tudo movendo. A contagem completa (movendo, vazias, esperando destino, cheias, paradas por redstone ou sem rede) fica na dica da linha, e o tempo do mod na rede, na dica do nome dela.</li>
+          <li>Clicar numa linha desce para o tipo na rede (os nós e as máquinas, da maior vazão para a menor). Só aparecem os tipos em uso; Químicos e Source só existem com o Mekanism e o Ars.</li>
+          <li>A janela é fixa, a média dos últimos 5 s. Nada é salvo: ao reabrir o Tablet, ela enche de novo em 5 s ("medindo…").</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="eyebrow" style="margin-top:34px">Aba Fluxos · micro</div>
+    <h2>De onde vem e para onde vai, até a face</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Forja › Itens › Fundição 3 · quem abastece e para onde ela manda</p>
+        <div class="gui w470">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede <span class="mu">média dos últimos 5 s</span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab">Lista</span><span class="tab on">Fluxos</span><span class="tab">Problemas <span class="badge">6</span></span><span class="tab">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="crumbs"><a>Todas as redes</a><span class="sep">›</span><a><span class="dot" style="background:var(--n-forja)"></span> Forja</a><span class="sep">›</span><a>Itens</a><span class="sep">›</span><a>Roteador Forja</a><span class="sep">›</span><b>Fundição 3</b><span style="flex:1"></span><span class="btn sm">Escolher na Lista</span></div>
+            <div class="flowcols">
+              <div>
+                <span class="fl-h">Vem de · quem abastece</span>
+                <div class="fport"><div class="top2"><span class="blk b-chest"></span>Forja · Baú do mod<span class="r t-it">8/s</span></div><div class="mu">Armazém · Baixo</div></div>
+                <div class="fport dim"><div class="top2"><span class="blk b-quarry"></span>Mina · Quarry<span class="r mu">0/s</span></div><div class="mu">Extrai · Cima · manda para outros destinos</div></div>
+              </div>
+              <div class="center">
+                <span class="blk b-furn lit" style="width:calc(var(--u)*18);height:calc(var(--u)*18)"></span>
+                <span>Fundição 3</span>
+                <span class="mu sm">exceção · −118 65 231</span>
+                <span class="sm"><span class="t-it">↓ 8/s</span> · <span class="t-it">↑ 8/s</span></span>
+                <div style="display:grid;gap:var(--u);justify-items:start;width:100%" class="sm">
+                  <span><span class="mi" style="background:var(--m-ins)"></span> Cima · recebe 8/s</span>
+                  <span><span class="mi" style="background:var(--m-ext)"></span> Baixo · dá 8/s</span>
+                  <span class="mu"><span class="mi" style="background:var(--g-none)"></span> outras 4 sem modo</span>
+                </div>
+              </div>
+              <div>
+                <span class="fl-h">Vai para</span>
+                <div class="fport"><div class="top2"><span class="blk b-chest"></span>Forja · Baú do mod<span class="r t-it">6/s</span></div><div class="mu">Armazém · Cima</div></div>
+                <div class="fport"><div class="top2"><span class="blk b-crush"></span>Prensa · Fábrica<span class="r t-it">2/s</span></div><div class="mu">Insere · Cima · filtro #c:ingots/iron</div></div>
+                <div class="fport dim"><div class="top2"><span class="blk b-chest"></span>Armazém Central<span class="r st-bad">cheio</span></div><div class="mu">Insere · dormindo há 3 min</div></div>
+              </div>
+            </div>
+            <div class="foot"><span>Clique numa caixa para centrar nela</span><span class="grow"></span><span class="btn sm hl"><span class="eye">◉</span>Mostrar os 4 no mundo</span></div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li>O caminho em migalhas: <b>rede › tipo › nó › máquina</b>. Cada pedaço volta àquele nível; a face aparece no centro, com o que cada lado recebe e dá.</li>
+          <li><b>Vem de</b> é "quem abastece esta máquina"; <b>Vai para</b> é o inverso. Clicar numa caixa a põe no centro, então dá para seguir o recurso de máquina em máquina.</li>
+          <li>Uma porta que não move diz o motivo: vazia, espera destino, cheio, filtro barrou, redstone, sem rede, descarregada.</li>
+          <li>A ligação origem → destino só é medida <b>enquanto este nível está aberto</b> para aquela rede, então ela aparece depois de 1 ou 2 segundos ("medindo…"). Os totais de cada porta, que valem sempre, já aparecem na hora.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PROBLEMAS ===================== -->
+  <section class="part" id="problemas">
+    <div class="eyebrow">Aba Problemas</div>
+    <h2>Uma lista que leva ao conserto</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Só configuração e alcance · calculados com esta aba aberta</p>
+        <div class="gui w420">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede <span class="mu">6 problemas em 3 roteadores</span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab">Lista</span><span class="tab">Fluxos</span><span class="tab on">Problemas <span class="badge">6</span></span><span class="tab">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="bar"><span class="chip">Todas as redes ▾</span><span class="chip">Todos os tipos ▾</span><span class="grow"></span><span class="mu sm">atualizado agora</span></div>
+            <div class="list">
+              <div class="prob grp"><span>Configuração · 3</span><span class="mu sm">▾</span></div>
+              <div class="prob"><i style="background:var(--g-danger)"></i><div class="two"><span>Face com modo e sem rede</span><small>Fábrica · Prensa · Cima · Itens: Insere, mas não está em nenhuma rede</small></div><span class="btn sm">Escolher rede</span></div>
+              <div class="prob"><i style="background:var(--g-danger)"></i><div class="two"><span>Face numa rede apagada</span><small>Mina · Quarry · Baixo · Itens: a rede "Mina antiga" foi removida</small></div><span class="btn sm">Escolher rede</span></div>
+              <div class="prob"><i style="background:var(--g-danger)"></i><div class="two"><span>Filtro não deixa nada passar</span><small>Mina · Lixeira · Insere com lista branca vazia</small></div><span class="btn sm">Editar filtro</span></div>
+              <div class="prob grp"><span>Alcance · 3</span><span class="mu sm">▾</span></div>
+              <div class="prob"><i style="background:var(--g-warn)"></i><div class="two"><span>Máquina vinculada descarregada</span><small>Forja · Fornalhas · #9 · −111 64 225</small></div><span class="btn sm hl"><span class="eye">◉</span>No mundo</span></div>
+              <div class="prob"><i style="background:var(--g-warn)"></i><div class="two"><span>Fora do raio</span><small>Forja · Trituradores · #2 · −105 64 240 · 18 blocos, o Elite alcança 16</small></div><span class="btn sm hl"><span class="eye off">◉</span>No mundo</span></div>
+              <div class="prob"><i style="background:var(--g-warn)"></i><div class="two"><span>3 máquinas acima do limite</span><small>Forja · o Elite permite 32; as 3 últimas vinculadas não movem</small></div><span class="btn sm">Ver na Lista</span></div>
+            </div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Só o que é sempre erro e você corrige:</b> <b>Configuração</b> (face com modo e sem rede, face numa rede apagada, lista branca vazia) e <b>Alcance</b> (máquina vinculada descarregada, fora do raio, acima do limite).</li>
+          <li><b>Fora da lista, de propósito:</b> destino cheio, origem esperando destino, redstone e pausa. Muitas vezes são intencionais (um baú de transbordo cheio, uma fornalha esperando, uma rede pausada) e encheriam a lista. Eles aparecem como texto curto nos Fluxos ("3 esperando · 1 cheio") e no estado de cada linha.</li>
+          <li>Cada linha tem <b>uma ação</b>, que leva ao lugar certo: abre a Lista com a máquina e a face escolhidas, a tela de filtro (pelo filtro à distância de hoje) ou liga o destaque no mundo.</li>
+          <li><b>Custo:</b> a lista com os detalhes é calculada no servidor só com esta aba aberta, uma vez por segundo. O número na aba vem no mesmo passe do índice que o Tablet já faz a cada amostra, pelas mesmas regras, sem ler nenhuma porta.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MAPA E REDES ===================== -->
+  <section class="part" id="mapa">
+    <div class="eyebrow">Abas Mapa e Redes</div>
+    <h2>O que fica, com as máquinas no mapa e os grupos dentro de Redes</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Mapa · Forja aberta, máquinas ligadas ao roteador</p>
+        <div class="gui w300">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede<span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab">Lista</span><span class="tab">Fluxos</span><span class="tab">…</span><span class="tab on">Mapa</span><span class="tab">Redes</span></div>
+          <div class="body">
+            <div class="map">
+              <svg viewBox="0 0 300 180" preserveAspectRatio="none" aria-label="Mapa da base visto de cima">
+                <g stroke="var(--g-mu)" stroke-dasharray="2 3" stroke-width="1" fill="none">
+                  <path d="M120 90 L150 70 M120 90 L158 70 M120 90 L166 70 M120 90 L174 70 M120 90 L150 78 M120 90 L158 78 M120 90 L166 78 M120 90 L180 112"/>
+                </g>
+                <g fill="var(--g-mu)"><rect x="147" y="67" width="5" height="5"/><rect x="155" y="67" width="5" height="5"/><rect x="163" y="67" width="5" height="5"/><rect x="171" y="67" width="5" height="5"/><rect x="147" y="75" width="5" height="5"/><rect x="155" y="75" width="5" height="5"/></g>
+                <rect x="163" y="75" width="5" height="5" fill="var(--g-hl)"/><rect x="160" y="72" width="11" height="11" fill="none" stroke="var(--g-hl)" stroke-width="1.5"/>
+                <rect x="177" y="109" width="5" height="5" fill="var(--g-warn)"/>
+                <circle cx="120" cy="90" r="5" fill="var(--g-ok)" stroke="var(--g-ink)" stroke-width="1.5"/>
+                <circle cx="62" cy="40" r="4" fill="var(--g-ok)"/><circle cx="230" cy="140" r="4" fill="var(--g-danger)"/><circle cx="250" cy="44" r="4" fill="var(--g-mu)"/><circle cx="80" cy="140" r="4" fill="var(--g-ok)"/>
+                <circle cx="150" cy="150" r="3" fill="var(--g-ac)"/>
+              </svg>
+            </div>
+            <div class="foot"><span>Fundição 3 · −118 65 231</span><span class="grow"></span><span class="btn sm">Abrir</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="shot">
+        <p class="cap">Redes · grupos como seções</p>
+        <div class="gui w300">
+          <div class="top"></div>
+          <div class="hd">Tablet de rede<span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab">Lista</span><span class="tab">…</span><span class="tab">Mapa</span><span class="tab on">Redes</span></div>
+          <div class="body">
+            <div class="list">
+              <div class="row grp"><span class="chev">▾</span>Grupo Produção<span class="right"><span class="btn sm">Pausar</span></span></div>
+              <div class="row sel"><span class="dot" style="background:var(--n-forja)"></span><div class="two"><span>Forja</span><small>3 roteadores · 18 máquinas · pública</small></div></div>
+              <div class="row"><span class="dot" style="background:var(--n-mina)"></span><div class="two"><span>Mina</span><small>2 roteadores · privada</small></div></div>
+              <div class="row grp"><span class="chev">▾</span>Grupo Expansão<span class="right"><span class="tag" style="color:var(--g-paused);border-color:var(--g-paused)">pausado</span></span></div>
+              <div class="row"><span class="dot" style="background:var(--n-nether)"></span><div class="two"><span>Nether</span><small>1 roteador · pausada</small></div></div>
+              <div class="row grp"><span class="chev">▾</span>Sem grupo</div>
+              <div class="row"><span class="dot" style="background:var(--n-base)"></span><div class="two"><span>Base</span><small>6 roteadores · 31 máquinas</small></div></div>
+            </div>
+            <div class="foot"><span class="btn sm">+ Nova rede</span><span class="btn sm">+ Novo grupo</span><span class="grow"></span><span>arraste uma rede para um grupo</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Mapa:</b> só o roteador escolhido ou aberto mostra as máquinas dele, como quadradinhos ligados por linha tracejada; os outros ficam como hoje, para o mapa não lotar. As máquinas com "Mostrar no mundo" ligado ganham o contorno do destaque.</li>
+          <li><b>Redes:</b> as duas colunas de hoje (Redes e Grupos) viram uma lista com os grupos como seções; Pausar fica no cabeçalho do grupo. O lado direito (cor, membros, privacidade, renomear) continua igual.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MUNDO ===================== -->
+  <section class="part" id="mundo">
+    <div class="eyebrow">No mundo</div>
+    <h2>A máquina escolhida se acende, até atrás de uma parede</h2>
+    <div class="stage">
+      <div class="shot" style="flex:1 1 560px">
+        <p class="cap">Fundição 3 com "Mostrar no mundo" ligado, atrás da parede</p>
+        <div class="world"><svg id="world" viewBox="0 0 640 340" role="img" aria-label="Fileira de fornalhas com uma parede de pedra na frente; a terceira fornalha tem um contorno ciano visível através da parede, e uma linha tracejada até o roteador"></svg></div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Contorno ciano</b> (o do osciloscópio do Ressonador, para não confundir com o coral da área do Vinculador), desenhado por cima dos blocos, com um véu leve nas faces, para aparecer mesmo atrás de uma parede.</li>
+          <li><b>Linha tracejada</b> do roteador até a máquina, para achar uma máquina fora do campo de visão. Sem etiqueta: o nome fica nas telas.</li>
+          <li><b>Quanto dura:</b> fica aceso, com a tela aberta ou fechada, até você desligar o Olho daquela máquina, usar "Apagar todas" ou sair do mundo. Várias máquinas podem ficar acesas ao mesmo tempo.</li>
+          <li><b>O inverso:</b> clicar numa máquina com o Tablet na mão abre a central com ela escolhida (ou diz "não está em nenhum roteador seu"). O Vinculador no modo Máquinas, ao vincular ou desvincular, passa a dizer o rótulo e o grupo na mensagem que já mostra.</li>
+          <li>Só do cliente: a posição já veio na lista, e nada é enviado para acender. As acesas ficam guardadas só na sessão, nada vai para o save.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ROTEADOR ===================== -->
+  <section class="part" id="roteador">
+    <div class="eyebrow">Tela do roteador</div>
+    <h2>As máquinas iguais com nome, coordenadas e o Olho</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Forja · grupo Fornalhas aberto · Fundição 3 escolhida · 2 acesas no mundo</p>
+        <div class="gui w420">
+          <div class="top"></div>
+          <div class="hd">Forja <span class="mu">96 itens/s</span><span class="pill" style="color:#1FA9A0"><span class="dot" style="background:#1FA9A0"></span><span>Elite</span></span><span class="theme">☾</span></div>
+          <div class="tabs"><span class="tab on"><span class="ty it">▣</span>Itens</span><span class="tab"><span class="ty fl">◆</span></span><span class="tab"><span class="ty en">ϟ</span></span><span class="tab" style="margin-left:auto">1 rede</span></div>
+          <div class="body">
+            <div class="rgrid">
+              <div>
+                <div class="list">
+                  <div class="row grp"><span class="chev">▾</span>Máquinas · 15/32</div>
+                  <div class="row"><span class="blk b-chest"></span><div class="two"><span>Máquina presa</span></div></div>
+                  <div class="row"><span class="chev">▾</span><span class="blk b-furn"></span><div class="two"><span>Fornalhas ×12</span><small>1 exceção</small></div></div>
+                  <div class="row l1"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Fundição 1</span><small>−120 64 231 · 7 blocos</small></div><div class="right"><span class="eye off">◉</span></div></div>
+                  <div class="row l1"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Fundição 2</span><small>−119 64 231 · 7 blocos</small></div><div class="right"><span class="eye off">◉</span></div></div>
+                  <div class="row l1 sel"><span class="dot" style="background:var(--g-ok)"></span><div class="two"><span>Fundição 3</span><small>−118 65 231 · 7 blocos</small></div><div class="right"><span class="tag ac">exc.</span><span class="eye">◉</span></div></div>
+                  <div class="row l1 hov"><span class="dot" style="background:var(--g-warn)"></span><div class="two"><span>#4</span><small>−117 64 231 · entrada cheia</small></div><div class="right"><span class="eye off">◉</span></div></div>
+                  <div class="row l1"><span class="dot" style="background:var(--g-mu)"></span><div class="two"><span>#9</span><small>−111 64 225 · descarregada</small></div><div class="right"><span class="eye">◉</span></div></div>
+                </div>
+                <div class="visor">
+                  <svg viewBox="0 0 200 92" aria-label="Visor 3D com a fornalha escolhida">
+                    <g transform="translate(70 18)">
+                      <polygon points="30,0 60,15 30,30 0,15" fill="#a0a0a0"/><polygon points="0,15 30,30 30,62 0,47" fill="#6d6d6d"/><polygon points="30,30 60,15 60,47 30,62" fill="#5a5a5a"/>
+                      <polygon points="6,26 24,35 24,50 6,41" fill="#e2902c"/>
+                      <polygon points="30,0 60,15 30,30 0,15" fill="none" stroke="#F0603E" stroke-width="1.5"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="bar sm"><span class="mu">2 máquinas acesas no mundo</span><span class="grow"></span><span class="btn sm">Apagar todas</span></div>
+              </div>
+              <div>
+                <div class="bar sm"><span class="mu">Editando</span><span style="font-size:calc(var(--u)*6.6)">Fundição 3</span><span class="mu">✎</span></div>
+                <div class="bar sm"><span class="btn sm hl"><span class="eye">◉</span>No mundo</span><span class="btn sm">Voltar a igual</span><span class="btn sm">Desvincular</span></div>
+                <div class="cube">
+                  <span class="nil"></span><span class="n on">Cima</span><span class="nil"></span>
+                  <span>Esq.</span><span>Frente</span><span>Dir.</span>
+                  <span class="nil"></span><span class="e">Baixo</span><span class="nil"></span>
+                </div>
+                <div class="modes"><span class="btn"><i class="mi" style="background:var(--m-ext)"></i>Extrai</span><span class="btn on"><i class="mi" style="background:var(--m-ins)"></i>Insere</span><span class="btn"><i class="mi" style="background:var(--m-both)"></i>Armazém</span><span class="btn"><i class="mi" style="background:var(--g-none)"></i>Nenhum</span></div>
+                <div class="bar sm"><span class="mu">Rede</span><span class="pill" style="color:var(--n-forja)"><span class="dot" style="background:var(--n-forja)"></span><span>Forja</span></span></div>
+                <div class="bar sm"><span class="mu">Filtro</span>2 entradas<span class="grow"></span><span class="btn sm">Editar</span></div>
+                <div class="notice"><span>Rótulo: <b>Fundição 3</b></span><span class="grow" style="flex:1"></span><span>Enter salva · Esc cancela</span></div>
+              </div>
+            </div>
+          </div>
+          <span class="grip">◢</span>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>A mesma linha da máquina do Tablet</b> na lista de máquinas do roteador: o rótulo ou #N, as coordenadas com a distância ao roteador e o estado, a marca "exc." quando for exceção, e o Olho ◉ que liga "Mostrar no mundo".</li>
+          <li><b>Rótulo:</b> ✎ ao lado do nome em "Editando", ou duplo clique no nome da linha; Enter salva e Esc cancela. Fica salvo no roteador (na máquina vinculada) e aparece em todo lugar: Tablet, Fluxos, Problemas e mensagem do Vinculador. O grupo também ganha nome pelo mesmo ✎. A máquina presa usa o nome do roteador.</li>
+          <li><b>Visor 3D como hoje:</b> mostra a máquina escolhida, sem radar nem seta. Onde ela está fica nas coordenadas e no destaque no mundo.</li>
+          <li><b>No mundo:</b> "No mundo" no painel e o Olho na linha ligam o destaque; "Apagar todas", embaixo da lista, desliga todos. As acesas continuam depois de fechar a tela, e o jogo desenha o mundo atrás da tela, então dá para ver com ela aberta.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== VINCULAR SEM REDE ===================== -->
+  <section class="part" id="vincular">
+    <div class="eyebrow">Correção 0 · vincular sem rede</div>
+    <h2>O grupo novo nasce sem rede, e um botão limpa os antigos</h2>
+    <div class="stage">
+      <div class="shot">
+        <p class="cap">Grupo antigo com rede em todas as abas · depois de "Tirar a rede das faces sem modo"</p>
+        <div class="gui w300">
+          <div class="body">
+            <div class="bar sm"><span class="mu">Editando</span><span class="pill" style="color:var(--g-ac)"><span>Perfil · Fornalhas ×12</span></span><span class="mu">✎</span></div>
+            <div class="cube">
+              <span class="nil"></span><span class="n">Cima <span class="dot" style="background:var(--n-forja)"></span></span><span class="nil"></span>
+              <span>Esq.</span><span>Frente</span><span>Dir.</span>
+              <span class="nil"></span><span class="e">Baixo <span class="dot" style="background:var(--n-forja)"></span></span><span class="nil"></span>
+            </div>
+            <div class="bar sm"><span class="btn sm">Tirar a rede das faces sem modo</span></div>
+            <div class="notice"><span>Rede tirada de <b>26 faces</b> sem modo</span><span style="flex:1"></span><span>Desfazer</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <ul>
+          <li><b>Hoje:</b> no modo Máquinas, a primeira máquina de um tipo de bloco cria o grupo, e ele nasce com as seis faces de <b>todos os tipos</b> na rede ativa do Vinculador. Nada se move (os modos ficam em Nenhum), mas todas as abas aparecem com rede.</li>
+          <li><b>Depois:</b> o grupo nasce <b>sem rede</b>. A rede entra face a face, só quando você escolhe um modo, pela regra que já vale no painel ("Cima entrou em Forja", com Desfazer).</li>
+          <li><b>Grupos antigos:</b> o botão "Tirar a rede das faces sem modo" aparece no perfil e na exceção só quando há face sem modo com rede. Ele não mexe em face que move algo, e o aviso tem Desfazer.</li>
+          <li><b>Para hoje, antes da correção:</b> escolha "Nenhuma (desvincular)" no Vinculador antes de vincular no modo Máquinas; o grupo nasce sem rede.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DECISÕES ===================== -->
+  <section class="part" id="decisoes">
+    <div class="eyebrow">Respondidas por você</div>
+    <h2>Decisões tomadas</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Assunto</th><th>Decisão</th></tr></thead>
+      <tbody>
+        <tr><td>Abas</td><td>Lista · Fluxos · Problemas · Mapa · Redes. Estatísticas vira Fluxos; Grupos entra em Redes como seções.</td></tr>
+        <tr><td>Onde fica a máquina</td><td>Só coordenadas ("−118 65 231"), sem direção; a distância ao roteador onde já existe.</td></tr>
+        <tr><td>Ramo</td><td>Novo, a partir do <code>main</code>.</td></tr>
+        <tr><td>Bugs do motor</td><td>Corrigidos antes, à parte (resgate na máquina presa; destino cheio que ignora as remotas e cria porta).</td></tr>
+        <tr><td>Vincular máquina</td><td>Grupo novo nasce sem rede; a rede entra face a face ao escolher um modo. Os antigos ganham "Tirar a rede das faces sem modo", com Desfazer. Vai junto da correção 0.</td></tr>
+        <tr><td>Destaque no mundo</td><td>Ciano, por cima dos blocos, com a linha tracejada até o roteador; sem etiqueta. Ligado por máquina ("Mostrar no mundo"), várias ao mesmo tempo, até desligar, "Apagar todas" ou sair do mundo (só na sessão). Passar o mouse não acende.</td></tr>
+        <tr><td>Onde se liga</td><td>Painel do Tablet, Olho na linha da lista (Tablet e roteador), tela do roteador, Fluxos e Problemas.</td></tr>
+        <tr><td>Visor 3D</td><td>Como hoje, sem radar nem seta.</td></tr>
+        <tr><td>Rótulo</td><td>Máquinas vinculadas e grupos; a presa usa o nome do roteador. Edita pelo ✎ ou duplo clique no nome.</td></tr>
+        <tr><td>Clique no mundo</td><td>Com o Tablet, abre a central com a máquina escolhida; o Vinculador diz o rótulo e o grupo ao vincular ou desvincular.</td></tr>
+        <tr><td>Janela das vazões</td><td>5 s fixa, sem histórico salvo.</td></tr>
+        <tr><td>Busca por conteúdo</td><td>Filtro da face e armazenamentos do mod (custo zero no motor).</td></tr>
+        <tr><td>Linha da máquina</td><td>Rótulo ou #N, vazão ↑ ↓, coordenadas, estado em palavras e a marca "exceção" só quando for.</td></tr>
+        <tr><td>Lista</td><td>8 máquinas por grupo antes de "Mostrar todas"; Selecionar marca roteadores e máquinas juntos; a visão por máquinas inclui as presas.</td></tr>
+        <tr><td>Fluxos</td><td>Macro: seletor Por tipo (padrão: o total de cada tipo na base, que abre com as redes) e Por rede; uma linha por tipo, "entra → sai" e o saldo só quando não é zero; estados em texto curto ao lado da rede só quando não são zero ("3 esperando · 1 cheio"); a contagem completa e o tempo por rede na dica. Micro: a ligação origem → destino medida só enquanto alguém olha.</td></tr>
+        <tr><td>Problemas</td><td>Só Configuração e Alcance, calculados com a aba aberta, 1×/s.</td></tr>
+        <tr><td>Mapa</td><td>Máquinas só do roteador escolhido.</td></tr>
+        <tr><td>Ordem</td><td>Medição primeiro.</td></tr>
+        <tr><td>Linha do roteador</td><td>Como hoje (seis quadradinhos das faces), mais a vazão; o visor 3D não muda neste refactor.</td></tr>
+        <tr><td>Linha do grupo</td><td>Só "N exceções" quando houver, e a vazão somada.</td></tr>
+        <tr><td>Topo do painel</td><td>Nome com ✎, "No mundo" e "Tela completa"; bloco, roteador, coordenadas e distância numa linha; o fluxo numa linha com "Quem abastece →". "Apagar todas" no pé da lista.</td></tr>
+        <tr><td>Papéis da busca</td><td>Só os que têm resultado, sem "Todos".</td></tr>
+        <tr><td>Regra geral</td><td>Não poluir a tela: só o essencial e o que pede atenção; o resto na dica.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ===================== ETAPAS ===================== -->
+  <section class="part" id="etapas">
+    <div class="eyebrow">Divisão</div>
+    <h2>Uma correção e cinco etapas, cada uma usável sozinha</h2>
+    <div class="steps">
+      <div><b>0</b><div><h4>Correção à parte e vincular sem rede</h4><p>O resgate na máquina presa e o destino cheio que ignora as remotas (e cria porta); o grupo novo que nasce sem rede e o botão "Tirar a rede das faces sem modo". Com GameTests, num ramo próprio a partir do <code>main</code>; pode sair numa versão pequena antes da central.</p></div></div>
+      <div><b>1</b><div><h4>Medição e Fluxos macro</h4><p>Os contadores por porta (saiu, entrou, extraído, motivo do sono do destino), o amostrador de 5 s ligado só com o Tablet aberto e a aba Fluxos no nível de rede e tipo (entra → sai, o saldo e os estados só quando não são zero). <code>/wa bench</code> antes e depois nos cenários many, raw, mixed, idle e tablet.</p></div></div>
+      <div><b>2</b><div><h4>Identificar máquinas</h4><p>O rótulo da máquina e o nome do grupo (NBT no roteador, payload, ✎ e duplo clique), as coordenadas nas linhas, o destaque no mundo (render sem profundidade e linha até o roteador, ligado por máquina até desligar) e o Olho nas linhas. Na tela do roteador e no painel do Tablet de hoje. Também o clique com o Tablet numa máquina e a mensagem do Vinculador. Sozinha, já resolve as fornalhas indistinguíveis.</p></div></div>
+      <div><b>3</b><div><h4>A Lista com as máquinas</h4><p>As remotas no índice de nós (com o conserto do filtro de tipo), a árvore roteador → presa e grupos → máquinas, a visão por máquinas, o limite de 256 por linhas, Selecionar e colar em máquinas, e lembrar roteadores abertos e grupos recolhidos. Abas reorganizadas (Grupos dentro de Redes).</p></div></div>
+      <div><b>4</b><div><h4>Busca por conteúdo e Fluxos micro</h4><p>O resumo dos filtros no índice, as etiquetas Item, Fluido, Químico, Tag e Mod, os papéis no resultado (pelos filtros e pelos armazenamentos do mod), e o micro dos Fluxos (vem de / vai para) com a medição origem → destino ligada só enquanto alguém olha aquela rede.</p></div></div>
+      <div><b>5</b><div><h4>Problemas</h4><p>A aba com os problemas de configuração e de alcance, calculados no servidor só com ela aberta, a contagem na aba e a ação de cada linha levando à Lista, ao filtro ou ao mundo. Guia do GuideME atualizado em cada etapa, só com "como operar".</p></div></div>
+    </div>
+    <p class="callout">Cada etapa tem spec, plano, um subagente por tarefa, GameTests nas quatro runs, e2e com capturas e o <code>docs/progresso.md</code> em dia, como pede a <code>wa-feature</code>. Pela <code>wa-modular</code>, nada novo entra em <code>TabletScreen</code>, <code>RouterMenu</code>, <code>RouterScreen</code> e <code>NodePanel</code>: cada parte nova vai em classe própria.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, bL = document.getElementById('gt-light'), bD = document.getElementById('gt-dark');
+  function set(dark) { if (dark) document.body.setAttribute('data-gui', 'dark'); else document.body.removeAttribute('data-gui'); bL.setAttribute('aria-pressed', String(!dark)); bD.setAttribute('aria-pressed', String(dark)); }
+  var pref = root.getAttribute('data-theme');
+  var startDark = pref ? pref === 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  set(!!startDark);
+  bL.addEventListener('click', function () { set(false) });
+  bD.addEventListener('click', function () { set(true) });
+
+  // cena do mundo: projeção isométrica simples
+  var svg = document.getElementById('world'), W = 30, H = 34, ox = 250, oy = 70, out = [];
+  function p(x, y, z) { return [ox + (x - z) * W, oy + (x + z) * W * 0.5 - y * H]; }
+  function poly(pts, fill, extra) { out.push('<polygon points="' + pts.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1) }).join(' ') + '" fill="' + fill + '"' + (extra || '') + '/>'); }
+  function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+  function cube(x, y, z, c, mouth) {
+    poly([p(x, y + 1, z), p(x + 1, y + 1, z), p(x + 1, y + 1, z + 1), p(x, y + 1, z + 1)], c[0]);
+    var f = [p(x, y, z + 1), p(x + 1, y, z + 1), p(x + 1, y + 1, z + 1), p(x, y + 1, z + 1)];
+    poly(f, c[1]);
+    poly([p(x + 1, y, z), p(x + 1, y, z + 1), p(x + 1, y + 1, z + 1), p(x + 1, y + 1, z)], c[2]);
+    if (mouth) { var a = lerp(f[0], f[3], .25), b = lerp(f[1], f[2], .25), cc = lerp(f[1], f[2], .6), d = lerp(f[0], f[3], .6); poly([lerp(a, b, .2), lerp(a, b, .8), lerp(d, cc, .8), lerp(d, cc, .2)], mouth); }
+  }
+  // chão
+  for (var gx = -3; gx <= 7; gx++) for (var gz = -1; gz <= 4; gz++) poly([p(gx, 0, gz), p(gx + 1, 0, gz), p(gx + 1, 0, gz + 1), p(gx, 0, gz + 1)], ((gx + gz) % 2 ? '#3b5a2c' : '#41632f'));
+  var furn = ['#a6a6a6', '#707070', '#5b5b5b'], stone = ['#9a9a9a', '#7c7c7c', '#696969'], chest = ['#b07a36', '#8a5a26', '#744b1f'], rtr = ['#FFFBF3', '#E6DCC8', '#F0603E'];
+  var blocks = [];
+  for (var i = 0; i < 6; i++) blocks.push([i, 0, 0, furn, (i === 4 ? '#3a2a1a' : '#e2902c')]);
+  for (var j = 2; j <= 4; j++) for (var jy = 0; jy < 3; jy++) blocks.push([j, jy, 1, stone]);
+  blocks.push([-2, 0, 2, chest]); blocks.push([-2, 1, 2, rtr]);
+  var tgt = [3, 0, 0];
+  blocks.sort(function (a, b) { return (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]; });
+  blocks.forEach(function (b) { cube(b[0], b[1], b[2], b[3], b[4]); });
+  // linha do roteador até a máquina
+  var r = p(-1.5, 2, 2.5), m = p(tgt[0] + .5, tgt[1] + 1, tgt[2] + .5);
+  out.push('<path d="M' + r[0] + ' ' + r[1] + ' Q ' + ((r[0] + m[0]) / 2) + ' ' + (Math.min(r[1], m[1]) - 60) + ' ' + m[0] + ' ' + m[1] + '" fill="none" stroke="#8EE8E1" stroke-width="2" stroke-dasharray="6 5" opacity=".85"/>');
+  // contorno através dos blocos
+  var x = tgt[0], y = tgt[1], z = tgt[2], E = [
+    [[x, y, z], [x + 1, y, z]], [[x, y, z], [x, y, z + 1]], [[x, y, z], [x, y + 1, z]],
+    [[x + 1, y, z], [x + 1, y, z + 1]], [[x + 1, y, z], [x + 1, y + 1, z]], [[x, y, z + 1], [x + 1, y, z + 1]], [[x, y, z + 1], [x, y + 1, z + 1]], [[x + 1, y, z + 1], [x + 1, y + 1, z + 1]],
+    [[x, y + 1, z], [x + 1, y + 1, z]], [[x, y + 1, z], [x, y + 1, z + 1]], [[x + 1, y + 1, z], [x + 1, y + 1, z + 1]], [[x, y + 1, z + 1], [x + 1, y + 1, z + 1]]];
+  poly([p(x, y + 1, z), p(x + 1, y + 1, z), p(x + 1, y + 1, z + 1), p(x, y + 1, z + 1)], '#8EE8E1', ' fill-opacity=".18"');
+  poly([p(x, y, z + 1), p(x + 1, y, z + 1), p(x + 1, y + 1, z + 1), p(x, y + 1, z + 1)], '#8EE8E1', ' fill-opacity=".22"');
+  poly([p(x + 1, y, z), p(x + 1, y, z + 1), p(x + 1, y + 1, z + 1), p(x + 1, y + 1, z)], '#8EE8E1', ' fill-opacity=".14"');
+  E.forEach(function (e, k) { var a = p.apply(null, e[0]), b = p.apply(null, e[1]); var back = k < 3; out.push('<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#8EE8E1" stroke-width="' + (back ? 1.6 : 3) + '" ' + (back ? 'opacity=".55"' : '') + ' stroke-linecap="square"/>'); });
+  out.push('<text x="16" y="326" font-family="Pixelify Sans, monospace" font-size="12" fill="#A79F90">o roteador fica à esquerda; a parede de pedra esconde a Fundição 3, e o contorno e o véu ciano passam por cima</text>');
+  svg.innerHTML = out.join('');
+})();
+</script>

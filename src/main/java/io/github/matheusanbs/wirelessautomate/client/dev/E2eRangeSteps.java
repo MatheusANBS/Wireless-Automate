@@ -7,6 +7,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.*
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -307,10 +308,12 @@ final class E2eRangeSteps {
      * Alcance: "Tirar a rede das faces sem modo". Um dropper vinculado pela API com as faces de todos os tipos
      * na rede principal (como os grupos de antes do Vinculador vincular sem rede), e o grupo dele como alvo.
      * Na tela larga sem a lista, o "Tirar redes" com o rótulo na linha Editando ({@code range-6-limpar-redes});
-     * em inglês, também a dica dele ({@code range-6d-limpar-dica}) e, no mínimo com a lista, o ícone na linha do
-     * grupo com a dica ({@code range-6c-limpar-lista}). O clique tira a rede das faces sem modo, o aviso traz o
-     * Desfazer ({@code range-6b-limpar-aviso}) e o Desfazer devolve a rede. No fim, o dropper sai e a fornalha
-     * volta a ser o alvo, no mínimo com a lista.
+     * em inglês, também a dica dele ({@code range-6d-limpar-dica}), no mínimo sem a lista só o ícone
+     * ({@code range-6e-limpar-icone}), no mínimo com a lista o ícone na linha do grupo com a dica
+     * ({@code range-6c-limpar-lista}) e, no tema escuro, o botão e o aviso ({@code range-6f-limpar-escuro} e
+     * {@code range-6f-limpar-escuro-aviso}), antes de voltar ao claro. O clique tira a rede das faces sem modo,
+     * o aviso traz o Desfazer ({@code range-6b-limpar-aviso}) e o Desfazer devolve a rede. No fim, o dropper
+     * sai e a fornalha volta a ser o alvo, no mínimo com a lista.
      */
     private static void rangeIdleNetworkSteps(List<Step> list, String label, String suffix, UUID playerId) {
         list.add(new Step(label + "grupo do dropper com rede em todas as abas", STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -337,6 +340,11 @@ final class E2eRangeSteps {
             list.add(E2eRangeReplaceSteps.hoverCapture(label + "dica do Tirar redes", "range-6d-limpar-dica",
                     () -> panel().idleNetworksCenter() != null));
             list.add(resizeStep(label + "no mínimo", 300));
+            list.add(new Step(label + "no mínimo sem a lista: só o ícone na linha Editando", STEP_TIMEOUT_MS, () -> {
+            }, () -> !routerScreen().rangeListShown() && panel().idleNetworksCenter() != null && stepTicks >= 4,
+                    () -> "lista " + routerScreen().rangeListShown()));
+            list.add(rangeClipCheck(label + "só o ícone"));
+            list.add(capture("range-6e-limpar-icone"));
             list.add(showListStep(label + "com a lista: o ícone na linha do grupo", true));
             list.add(new Step(label + "o mouse no ícone da lista", STEP_TIMEOUT_MS,
                     () -> moveTo(routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS),
@@ -345,19 +353,13 @@ final class E2eRangeSteps {
                     () -> routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS) != null));
             list.add(resizeStep(label + "de volta à tela larga", MEDIUM_W));
             list.add(showListStep(label + "de volta à linha Editando", false));
+            list.add(E2eDarkSteps.themeClick(label + "tema escuro", GuiTheme.DARK));
+            list.add(rangeClipCheck(label + "Tirar redes no escuro"));
+            list.add(capture("range-6f-limpar-escuro"));
+            clearAndUndoSteps(list, label + "escuro: ", "range-6f-limpar-escuro-aviso");
+            list.add(E2eDarkSteps.themeClick(label + "de volta ao tema claro", GuiTheme.LIGHT));
         }
-        list.add(new Step(label + "Tirar redes", STEP_TIMEOUT_MS,
-                () -> clickPanel(panel().idleNetworksCenter(), "Tirar redes"),
-                () -> dropperProfileIs(null) && panel().idleNetworksCenter() == null
-                        && noticeUndo() == PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS,
-                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
-        list.add(rangeClipCheck(label + "aviso do Tirar redes"));
-        list.add(capture("range-6b-limpar-aviso" + suffix));
-        list.add(new Step(label + "Desfazer devolve a rede", STEP_TIMEOUT_MS,
-                () -> clickPanel(panel().undoCenter(), "Desfazer"),
-                () -> dropperProfileIs(mainNetwork) && panel().idleNetworksCenter() != null
-                        && noticeUndo() == PanelNoticePayload.Undo.NONE,
-                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
+        clearAndUndoSteps(list, label, "range-6b-limpar-aviso" + suffix);
         list.add(resizeStep(label + "de volta ao mínimo", 300));
         list.add(showListStep(label + "de volta à lista", true));
         list.add(new Step(label + "o dropper sai e a fornalha volta a ser o alvo", STEP_TIMEOUT_MS,
@@ -371,6 +373,22 @@ final class E2eRangeSteps {
                 }), () -> rangeView().machines().size() == 3
                         && rangeTargetIs(EditTarget.machine(rangeMachine(rangeFurnace))),
                 () -> "alcance " + rangeView()));
+    }
+
+    /** O clique no "Tirar redes", a captura {@code file} do aviso com o Desfazer e o Desfazer, que devolve a rede. */
+    private static void clearAndUndoSteps(List<Step> list, String label, String file) {
+        list.add(new Step(label + "Tirar redes", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().idleNetworksCenter(), "Tirar redes"),
+                () -> dropperProfileIs(null) && panel().idleNetworksCenter() == null
+                        && noticeUndo() == PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS,
+                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
+        list.add(rangeClipCheck(label + "aviso do Tirar redes"));
+        list.add(capture(file));
+        list.add(new Step(label + "Desfazer devolve a rede", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().undoCenter(), "Desfazer"),
+                () -> dropperProfileIs(mainNetwork) && panel().idleNetworksCenter() != null
+                        && noticeUndo() == PanelNoticePayload.Undo.NONE,
+                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
     }
 
     /** A tela do roteador com a largura {@code width} (até a janela menos 8 px) e a altura mínima. */

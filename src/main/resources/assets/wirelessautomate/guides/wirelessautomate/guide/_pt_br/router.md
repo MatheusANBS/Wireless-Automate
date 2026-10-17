@@ -82,6 +82,7 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
+| **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
 ## Modos da face
 

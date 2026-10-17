@@ -6,20 +6,33 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeProbe;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -29,8 +42,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Correções do roteador de alcance: o resgate da sobra na máquina da porta que recebe e o destino
- * cheio que conta as remotas sem criar porta.
+ * Correções do roteador de alcance: o resgate da sobra na máquina da porta que recebe, o destino
+ * cheio que conta as remotas sem criar porta e o grupo vinculado pelo Vinculador, que nasce sem rede.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -129,6 +142,102 @@ public final class RangeFixGameTests {
                             0, "destinos cheios");
                     helper.assertValueEqual(NetworkManager.get().destinationSleepInterval(router, ResourceType.ITEM, Direction.UP),
                             -1, "porta criada pela contagem");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Vinculador no modo Máquinas, com uma rede ativa utilizável, vincula uma fornalha pelo clique: o
+     * grupo novo nasce com as seis faces de todos os tipos carregados sem rede.
+     */
+    @GameTest(template = "empty")
+    public static void linkerCreatesGroupWithoutNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        activeNetworkOf(helper, player, "ativa do clique");
+                        router.setRangeUpgrade(rangeUpgrade());
+                        click(helper, player, ROUTER, false);
+                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.LINKED,
+                                "clique na fornalha");
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil da fornalha");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** O mesmo pela área: o grupo do barril, vinculado pelo Vincular da tela, também nasce sem rede. */
+    @GameTest(template = "empty")
+    public static void linkerAreaCreatesGroupWithoutNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ItemStack linker = machinesLinker();
+        ServerPlayer player = linkerPlayer(helper, linker);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        activeNetworkOf(helper, player, "ativa da área");
+                        router.setRangeUpgrade(rangeUpgrade());
+                        click(helper, player, ROUTER, false);
+                        BlockPos barrel = helper.absolutePos(BARREL);
+                        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
+                        LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(), barrel)
+                                .withSecond(barrel));
+                        RangeLinks.Result area = RangeLinks.linkArea(player, linker);
+                        helper.assertTrue(area.ok() && area.linked() == 1, "área do barril: " + area);
+                        assertProfileNetwork(helper, router, BARREL, null, "perfil do barril (área)");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Regra D1 no perfil de um grupo sem rede: escolher Insere numa face põe só aquela face (aquele tipo)
+     * na rede ativa, na mesma edição; as outras faces e os outros tipos continuam sem rede.
+     */
+    @GameTest(template = "empty")
+    public static void groupModeJoinsActiveNetworkOnlyThatFace(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    ItemStack linker = machinesLinker();
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        UUID active = activeNetworkOf(helper, player, "ativa do perfil");
+                        player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+                        click(helper, player, ROUTER, false);
+                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.LINKED,
+                                "clique na fornalha");
+                        int group = groupOf(router, helper.absolutePos(FURNACE_A));
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil recém-criado");
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.group(menu.containerId,
+                                group, BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE))), "não escolheu o grupo");
+                        helper.assertTrue(ModPayloads.handleSetFace(player, new SetFacePayload(menu.containerId,
+                                ResourceType.ITEM, Direction.UP, PortMode.INSERT, 0, RedstoneMode.IGNORE)),
+                                "recusou a face do grupo");
+                        for (ResourceType type : LoadedTypes.LIST) {
+                            for (Direction face : Direction.values()) {
+                                UUID expected = type == ResourceType.ITEM && face == Direction.UP ? active : null;
+                                helper.assertTrue(Objects.equals(
+                                        router.face(EditTarget.group(group), type, face).network(), expected),
+                                        "rede de " + type + " em " + face + ": esperava " + expected);
+                            }
+                        }
+                    } finally {
+                        removePlayer(helper, player);
+                    }
                 })
                 .thenSucceed();
     }

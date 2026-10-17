@@ -344,8 +344,13 @@ public final class FlowGameTests {
         return helper.getLevel().getServer().getTickCount();
     }
 
+    /**
+     * Fechou uma volta inteira depois do tick: a volta que fecha logo depois pode ter passado pelo balde do nó
+     * antes dele.
+     */
     private static void sampledAfter(GameTestHelper helper, long tick) {
-        helper.assertTrue(flows().report().sampledAt() > tick, "nenhuma amostra depois do tick " + tick);
+        helper.assertTrue(flows().report().sampledAt() >= tick + FlowSampler.SAMPLE_TICKS,
+                "nenhuma volta inteira depois do tick " + tick);
     }
 
     private static FlowStats stats(GameTestHelper helper, UUID network, ResourceType type) {

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -119,7 +118,6 @@ final class TabletSnapshotBuilder {
             }
         }
 
-        BlockPos center = viewer.blockPosition();
         Map<UUID, String> networkNames = query.networkNames(data);
         Scan scan = scan(index, data, totals, sample, probeAll, operator, me, now, elapsed, networkNames);
         if (sample) {
@@ -161,7 +159,7 @@ final class TabletSnapshotBuilder {
             }
         }
 
-        return new TabletSnapshot(operator, viewer.level().dimension().location(), center,
+        return new TabletSnapshot(operator, viewer.level().dimension().location(),
                 Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
                 query.query(), scan.total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(scan.machineCounts), facets(scan.networkCounts),

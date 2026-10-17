@@ -52,12 +52,6 @@ final class Port {
      */
     long gaveRead;
     long gotRead;
-    /**
-     * Como destino de itens, o último slot onde o item entrou: a próxima simulação começa por ele
-     * ({@link ItemInsertPlan#simulate(Port, net.neoforged.neoforge.items.IItemHandler, net.minecraft.world.item.ItemStack)});
-     * -1 sem dica. Cai quando a máquina avisa mudança de fora ou troca de capability.
-     */
-    int insertHint = -1;
     /** Próximo slot a varrer como origem de itens. */
     int slotCursor;
     /** Slots varridos seguidos sem mover nada, somando visitas: uma volta inteira faz a origem dormir. */

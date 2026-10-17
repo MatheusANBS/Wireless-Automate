@@ -1408,13 +1408,25 @@ Uma visão de todas as suas redes, de qualquer lugar.
 | --- | --- |
 | **Lista** | Todos os nós, agrupados pela máquina, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
-| **Estatísticas** | Quanto cada rede move por tipo, destinos cheios e roteadores em chunks descarregados. |
+| **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, o saldo dos Armazéns e o que precisa de atenção (veja abaixo). |
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
 
-A aba Estatísticas tem um cartão por tipo. Clique num cartão para ver na Lista só os roteadores daquele tipo; o chip "Só …" na Lista tira o filtro.
-
 Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra o aviso **faces sem rede: rede removida**: escolha outra rede para elas.
+
+## Fluxos
+
+Cada linha mostra **entra → sai**, a média dos últimos 5 segundos na unidade do tipo (itens/s, mB/s ou B/s, FE/t, Source/s):
+
+- **entra** é o que as faces **Extrai** entregam: a produção da rede;
+- **sai** é o que as faces **Insere** recebem: o consumo;
+- à direita, o **saldo** dos Armazéns: **+N enchendo** quando eles recebem mais do que dão, **-N esvaziando** quando dão mais.
+
+**Por tipo** mostra uma linha por tipo, somando as redes; a seta abre as redes daquele tipo, da que mais move para a que menos move. **Por rede** mostra cada rede com uma linha por tipo. Uma rede pausada num grupo aparece apagada e fica fora dos totais.
+
+Ao lado, só o que precisa de atenção: **esperando** (faces Extrai com o que dar e sem destino), **cheios** (destinos sem espaço), **por redstone** (faces paradas pelo sinal) e **sem rede** (faces com modo e sem rede). Passe o mouse numa linha para ver a contagem completa. Uma rede que acabou de começar mostra a média dos segundos que já tem.
+
+Clique numa linha para ver na Lista só os roteadores daquele tipo, daquela rede ou dos dois; o chip "Só …" e a etiqueta da rede na Lista tiram o filtro.
 
 ## Buscar na Lista
 
@@ -1476,13 +1488,25 @@ An overview of all your networks, from anywhere.
 | --- | --- |
 | **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
 | **Map** | Top-down view colored by status. Click a point to open the node. |
-| **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
+| **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
 
-The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
-
 If a network is deleted, the faces that were on it are left without a network and the node shows the warning **faces without network: network removed**: pick another network for them.
+
+## Flows
+
+Each row shows **in → out**, the average of the last 5 seconds in the type's unit (items/s, mB/s or B/s, FE/t, Source/s):
+
+- **in** is what the **Extract** faces deliver: the network's production;
+- **out** is what the **Insert** faces receive: the consumption;
+- on the right, the **balance** of Storage faces: **+N filling** when they receive more than they give, **-N draining** when they give more.
+
+**By type** shows one row per type, adding up the networks; the arrow opens that type's networks, from the one that moves most to the one that moves least. **By network** shows each network with one row per type. A network paused in a group is greyed out and left out of the totals.
+
+Next to it, only what needs attention: **waiting** (Extract faces with something to give and no destination), **full** (destinations with no room), **by redstone** (faces stopped by the signal) and **without network** (faces with a mode and no network). Hover a row for the full count. A network that has just started shows the average of the seconds it has so far.
+
+Click a row to list only the routers of that type, that network or both; the "Only …" chip and the network label in the List remove the filter.
 
 ## Searching the List
 
@@ -2639,8 +2663,8 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | Não consigo pôr na rede | A rede é de outro jogador. | Peça ao dono, ou use uma rede sua. |
 | Vazão menor que a do tier | Muitas máquinas movendo ao mesmo tempo. | Normal: a vazão se divide entre elas, sem travar o jogo. |
 
-Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
-cada rede está movendo e quais destinos estão cheios.
+Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Fluxos** mostra o que
+cada rede está movendo, quais faces esperam destino e quais destinos estão cheios.
 ''', front('Troubleshooting', 'minecraft:barrier', 20) + '''
 # Troubleshooting
 
@@ -2660,8 +2684,8 @@ Something not moving? Check in order: it's almost always one of these.
 | Can't put it in a network | The network belongs to another player. | Ask the owner, or use one of yours. |
 | Less throughput than the tier | Many machines moving at once. | Normal: throughput is shared between them, without freezing the game. |
 
-Still stuck? Open the [Network Tablet](network-tablet.md): the **Statistics** tab shows what each
-network is moving and which destinations are full.
+Still stuck? Open the [Network Tablet](network-tablet.md): the **Flows** tab shows what each
+network is moving, which faces are waiting for a destination and which destinations are full.
 ''')
 
 # =====================================================================================

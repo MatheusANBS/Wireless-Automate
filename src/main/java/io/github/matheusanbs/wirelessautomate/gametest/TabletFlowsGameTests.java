@@ -32,9 +32,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Fluxos do Tablet no servidor: o jogador só olha o amostrador com ela aberta, o {@link TabletFlowsPayload}
- * só sai nela e uma vez por amostra, e leva só as redes que o jogador vê. No lote dos Fluxos
- * ({@code wirelessautomate_flows}), com os outros que olham; cada teste confere só as próprias redes.
+ * A aba Fluxos do Tablet no servidor: o jogador só fica na lista de quem olha com ela aberta, o
+ * {@link TabletFlowsPayload} só sai nela e uma vez por amostra, e leva só as redes que o jogador vê. No lote
+ * dos Fluxos ({@code wirelessautomate_flows}); cada teste confere só as próprias redes.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)

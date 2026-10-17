@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.FlowSampler;
 import io.github.matheusanbs.wirelessautomate.network.FlowStats;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -21,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -37,13 +37,13 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * Os contadores de entrega e recebimento da porta ({@code Port.gave} e {@code Port.got}): a origem
  * soma o que entregou, o destino o que recebeu, e os dois crescem do mesmo tanto. Cada teste cria a
- * própria rede e lê os contadores pela porta do próprio roteador, nunca pelo total do servidor.
+ * própria rede e lê os contadores pela porta do próprio roteador, nunca pelo total do servidor; a leitura
+ * de teste soma o que o amostrador já leu, então não depende de quando a amostra passou.
  * Máquinas em y=1 com o roteador em cima (facing=UP), então a face configurada é {@link Direction#UP}.
  *
- * <p>E o amostrador dos Fluxos ({@link FlowSampler}), que é do servidor inteiro: os testes que olham
- * ficam no lote {@link #WATCHING}, longe dos que leem os contadores (o amostrador os zera), cada um com
- * um jogador próprio olhando (o logout no fim do teste para de olhar) e conferindo só a própria rede.
- * O que ninguém olha fica num lote só dele ({@link #IDLE}).
+ * <p>E o amostrador dos Fluxos ({@link FlowSampler}), que é do servidor inteiro e roda sempre: os testes
+ * dele ficam no lote {@link #SAMPLER}, cada um conferindo só a própria rede ou o próprio nó. O que confere
+ * que ninguém olha fica num lote só dele ({@link #IDLE}), longe dos testes do Tablet, que olham.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -51,8 +51,8 @@ public final class FlowGameTests {
     private static final BlockPos A = new BlockPos(0, 1, 0);
     private static final BlockPos B = new BlockPos(2, 1, 2);
     private static final BlockPos C = new BlockPos(2, 1, 0);
-    /** Lote dos testes com alguém olhando os Fluxos. */
-    private static final String WATCHING = "wirelessautomate_flows";
+    /** Lote dos testes do amostrador. */
+    private static final String SAMPLER = "wirelessautomate_flows";
     /** Lote do teste sem ninguém olhando. */
     private static final String IDLE = "wirelessautomate_flows_idle";
 
@@ -344,13 +344,6 @@ public final class FlowGameTests {
         return helper.getLevel().getServer().getTickCount();
     }
 
-    /** Um jogador do teste passa a olhar os Fluxos; devolve o tick. Para de olhar no logout do fim do teste. */
-    private static long watch(GameTestHelper helper) {
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        flows().watch(player.getUUID());
-        return tick(helper);
-    }
-
     private static void sampledAfter(GameTestHelper helper, long tick) {
         helper.assertTrue(flows().report().sampledAt() > tick, "nenhuma amostra depois do tick " + tick);
     }
@@ -362,11 +355,11 @@ public final class FlowGameTests {
     }
 
     /**
-     * Sem ninguém olhando, o amostrador não roda: nenhuma amostra em mais de dois segundos, e os
-     * contadores da porta continuam com tudo o que somaram.
+     * Sem ninguém olhando, o amostrador roda do mesmo jeito: amostras a cada segundo, a rede nos Fluxos com o
+     * que moveu, e a leitura de teste dos contadores da porta com tudo o que somaram.
      */
     @GameTest(template = "empty", batch = IDLE, timeoutTicks = 300)
-    public static void samplerIdleWithoutWatchers(GameTestHelper helper) {
+    public static void samplerRunsWithoutWatchers(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-sem-olhar");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
@@ -379,8 +372,12 @@ public final class FlowGameTests {
                 .thenExecute(() -> samples[0] = flows().cost().samples())
                 .thenIdle(45)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(flows().cost().samples(), samples[0], "amostras sem ninguém olhando");
+                    helper.assertTrue(flows().cost().samples() >= samples[0] + 2,
+                            "amostras sem ninguém olhando: " + (flows().cost().samples() - samples[0]));
                     helper.assertValueEqual(flows().cost().watchers(), 0, "jogadores olhando");
+                    FlowStats stats = stats(helper, network, ResourceType.ITEM);
+                    helper.assertValueEqual(stats.produced(), 16L, "entra");
+                    helper.assertValueEqual(stats.consumed(), 16L, "sai");
                     assertGave(helper, source, ResourceType.ITEM, 16, "a origem");
                     assertGot(helper, target, ResourceType.ITEM, 16, "o destino");
                 })
@@ -388,21 +385,20 @@ public final class FlowGameTests {
     }
 
     /**
-     * Com alguém olhando, a amostra que só zera e a seguinte: o que a Extrai entregou entra e o que a
-     * Insere recebeu sai, e os contadores da porta foram zerados. A origem só passa a Extrai depois da
-     * primeira amostra, para nada mover antes de o amostrador contar.
+     * O que a Extrai entregou entra e o que a Insere recebeu sai, e a amostra não muda o total da porta. A
+     * origem só passa a Extrai depois de uma amostra, para a conta caber na janela.
      */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerTotalsExtractToInsert(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-entra-sai");
         RouterBlockEntity source = chest(helper, A, network, PortMode.NONE);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
         chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 16));
-        long watched = watch(helper);
+        long start = tick(helper);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
-                .thenWaitUntil(() -> sampledAfter(helper, watched))
+                .thenWaitUntil(() -> sampledAfter(helper, start))
                 .thenExecute(() -> source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT))
                 .thenWaitUntil(() -> {
                     FlowStats stats = stats(helper, network, ResourceType.ITEM);
@@ -415,24 +411,24 @@ public final class FlowGameTests {
                     helper.assertValueEqual(stats.released(), 0L, "o Armazém deu");
                     helper.assertTrue(stats.seconds() > 0 && stats.producedPerSecond() > 0, "sem média por segundo");
                     helper.assertValueEqual(count(helper, B, Items.DIAMOND), 16, "itens no destino");
-                    assertGave(helper, source, ResourceType.ITEM, 0, "a origem depois da amostra");
-                    assertGot(helper, target, ResourceType.ITEM, 0, "o destino depois da amostra");
+                    assertGave(helper, source, ResourceType.ITEM, 16, "a origem depois da amostra");
+                    assertGot(helper, target, ResourceType.ITEM, 16, "o destino depois da amostra");
                 })
                 .thenSucceed();
     }
 
     /** Extrai → Armazém: entra o que a origem deu, o Armazém recebe o mesmo e não dá nada; o saldo enche. */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerStorageFills(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-armazem");
         RouterBlockEntity source = chest(helper, A, network, PortMode.NONE);
         RouterBlockEntity storage = chest(helper, B, network, PortMode.BOTH);
         chestAt(helper, A).setItem(0, new ItemStack(Items.EMERALD, 16));
-        long watched = watch(helper);
+        long start = tick(helper);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, storage))
-                .thenWaitUntil(() -> sampledAfter(helper, watched))
+                .thenWaitUntil(() -> sampledAfter(helper, start))
                 .thenExecute(() -> source.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT))
                 .thenWaitUntil(() -> {
                     FlowStats stats = stats(helper, network, ResourceType.ITEM);
@@ -449,12 +445,11 @@ public final class FlowGameTests {
     }
 
     /** Origem sem nada para dar: dorme vazia. */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerCountsEmptySource(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-vazia");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
-        watch(helper);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source, target))
@@ -467,10 +462,10 @@ public final class FlowGameTests {
     }
 
     /** Destino lotado: a origem com o que dar espera destino. */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerCountsWaitingSource(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-espera");
-        RouterBlockEntity[] routers = fullDestination(helper, network);
+        RouterBlockEntity[] routers = fullDestination(helper, network, PortMode.EXTRACT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, routers))
@@ -482,11 +477,32 @@ public final class FlowGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Armazém com o que dar e o destino lotado: não conta como esperando destino (só as Extrai esperam),
+     * nem como vazio. O destino cheio aparece, para provar que a amostra já viu as duas portas.
+     */
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
+    public static void samplerStorageNeverWaits(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-fluxos-armazem-espera");
+        RouterBlockEntity[] routers = fullDestination(helper, network, PortMode.BOTH);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, routers))
+                .thenWaitUntil(() -> helper.assertValueEqual(
+                        stats(helper, network, ResourceType.ITEM).states().destinationsFull(), 1, "destinos cheios"))
+                .thenExecute(() -> {
+                    FlowStats.States states = stats(helper, network, ResourceType.ITEM).states();
+                    helper.assertValueEqual(states.sourcesWaiting(), 0, "origens esperando destino");
+                    helper.assertValueEqual(states.sourcesEmpty(), 0, "origens vazias");
+                })
+                .thenSucceed();
+    }
+
     /** Destino lotado que recusou várias vezes: cheio. */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerCountsFullDestination(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-cheio");
-        RouterBlockEntity[] routers = fullDestination(helper, network);
+        RouterBlockEntity[] routers = fullDestination(helper, network, PortMode.EXTRACT);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, routers))
@@ -495,26 +511,24 @@ public final class FlowGameTests {
                 .thenSucceed();
     }
 
-    /** Origem com diamantes e destino lotado de pedra, na rede, com um jogador olhando. */
-    private static RouterBlockEntity[] fullDestination(GameTestHelper helper, UUID network) {
-        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+    /** Origem com diamantes ({@code sourceMode}) e destino lotado de pedra, na rede. */
+    private static RouterBlockEntity[] fullDestination(GameTestHelper helper, UUID network, PortMode sourceMode) {
+        RouterBlockEntity source = chest(helper, A, network, sourceMode);
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
         chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 8));
         ChestBlockEntity full = chestAt(helper, B);
         for (int i = 0; i < full.getContainerSize(); i++) {
             full.setItem(i, new ItemStack(Items.STONE, 64));
         }
-        watch(helper);
         return new RouterBlockEntity[] {source, target};
     }
 
     /** Face com modo que o redstone desliga (só com sinal, e sem sinal): parada por redstone, na rede dela. */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerCountsRedstoneStopped(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-fluxos-redstone");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
         source.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.HIGH);
-        watch(helper);
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, source))
@@ -527,7 +541,7 @@ public final class FlowGameTests {
      * Faces com modo e sem rede contam por tipo, no servidor inteiro: as três do teste aparecem, e saem
      * quando voltam a Nenhum. A contagem é global, então o teste compara antes e depois.
      */
-    @GameTest(template = "empty", batch = WATCHING, timeoutTicks = 300)
+    @GameTest(template = "empty", batch = SAMPLER, timeoutTicks = 300)
     public static void samplerCountsFacesWithoutNetwork(GameTestHelper helper) {
         helper.setBlock(A, Blocks.CHEST.defaultBlockState());
         helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState()
@@ -537,7 +551,6 @@ public final class FlowGameTests {
         for (Direction face : faces) {
             router.setMode(ResourceType.ITEM, face, PortMode.EXTRACT);
         }
-        watch(helper);
         long[] mark = {0, 0};
 
         helper.startSequence()
@@ -547,7 +560,7 @@ public final class FlowGameTests {
                 .thenExecute(() -> {
                     int count = flows().report().withoutNetwork(ResourceType.ITEM);
                     helper.assertTrue(count >= faces.length, "faces sem rede: " + count);
-                    mark[0] = count;
+                    helper.assertValueEqual(withoutNetwork(router), faces.length, "faces sem rede do nó");
                 })
                 .thenExecute(() -> {
                     for (Direction face : faces) {
@@ -556,12 +569,22 @@ public final class FlowGameTests {
                     mark[1] = tick(helper);
                 })
                 .thenWaitUntil(() -> sampledAfter(helper, mark[1]))
-                .thenExecute(() -> {
-                    int count = flows().report().withoutNetwork(ResourceType.ITEM);
-                    helper.assertTrue(count <= mark[0] - faces.length,
-                            "faces sem rede depois: " + count + " (antes " + mark[0] + ")");
-                })
+                .thenExecute(() -> helper.assertValueEqual(withoutNetwork(router), 0, "faces sem rede do nó depois"))
                 .thenSucceed();
+    }
+
+    /**
+     * As faces de itens sem rede de um nó na última amostra. A contagem global não serve para comparar antes
+     * e depois: outro teste do lote pode pôr faces sem rede no meio.
+     */
+    private static int withoutNetwork(RouterBlockEntity router) {
+        NodeIndex.NodeKey key = NodeIndex.NodeKey.of(router.getLevel(), router.getBlockPos());
+        for (FlowSampler.NodeWithoutNetwork node : flows().report().nodesWithout()) {
+            if (node.node().equals(key)) {
+                return node.counts().get(ResourceType.ITEM.ordinal());
+            }
+        }
+        return 0;
     }
 
     private FlowGameTests() {

@@ -20,9 +20,9 @@ import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O amostrador dos Fluxos, um por {@link NetworkManager}: só trabalha enquanto alguém olha a aba
- * Fluxos do Tablet ({@link #watch}), e aí uma vez a cada {@link #SAMPLE_TICKS} ticks. Sem ninguém
- * olhando, o tick do gerenciador custa um {@code if} e os contadores das portas só crescem.
+ * O amostrador dos Fluxos, um por {@link NetworkManager}: roda sempre, uma vez a cada
+ * {@link #SAMPLE_TICKS} ticks, com ou sem alguém olhando, para a aba Fluxos do Tablet abrir com as
+ * janelas cheias. Quem olha ({@link #watch}) só decide para quem o Tablet manda o pacote.
  *
  * <p>A cada amostra, para cada rede com rotas e cada tipo carregado:
  * <ul>
@@ -31,7 +31,8 @@ import org.jetbrains.annotations.Nullable;
  *       tem o que recebeu e o que deu à parte;
  *   <li>conta os estados das portas: movendo (entregou ou recebeu desde a amostra anterior), origem
  *       vazia ou esperando destino (pelo sono e pelo {@link Port#waitsDestination}; uma origem sem
- *       destino ao alcance espera destino) e destino cheio ({@link NodeProbe#isFull}).
+ *       destino ao alcance espera destino; só as Extrai esperam, porque o Armazém guarda o que não
+ *       tem para onde ir) e destino cheio ({@link NodeProbe#isFull}).
  * </ul>
  * Depois, da configuração dos nós carregados que o gerenciador conhece (presa, e as remotas que viram
  * porta pelos perfis e exceções), conta as faces com modo que o redstone desliga, por rede, e as faces
@@ -39,8 +40,8 @@ import org.jetbrains.annotations.Nullable;
  * (o Tablet de quem não é operador só conta os nós que o jogador vê). Não lê o mundo: a configuração
  * está no roteador.
  *
- * <p>A primeira amostra depois de ficar sem ninguém olhando só zera os contadores e reinicia as
- * janelas, porque eles acumularam por um tempo desconhecido. Os números de cada rede × tipo vão para
+ * <p>A primeira amostra do gerenciador só zera os contadores e reinicia as janelas, porque eles
+ * acumularam por um tempo que não fecha com o segundo da amostra. Os números de cada rede × tipo vão para
  * uma {@link FlowWindow} cada, e o resultado da amostra fica no {@link #report()}, imutável. As redes
  * que sumiram do gerenciador e da configuração saem na amostra seguinte; um tipo que deixou de ter
  * porta numa rede recomeça a janela quando voltar.
@@ -84,61 +85,47 @@ public final class FlowSampler {
     private final int[] nodeWithout = new int[TYPES.length];
     /** Os nós com alguma face sem rede nesta amostra. */
     private final List<NodeWithoutNetwork> nodesWithout = new ArrayList<>();
-    /** A última amostra zerou os contadores: a próxima conta. Falso enquanto ninguém olha. */
+    /** A primeira amostra já zerou os contadores: as seguintes contam. */
     private boolean primed;
     private int stamp;
     private Report report = Report.EMPTY;
     private long samples;
     private long lastNanos;
     private double averageNanos;
+    private long totalNanos;
 
     FlowSampler(List<NetworkRoutes> networks, Collection<NodePorts> nodes) {
         this.networks = networks;
         this.nodes = nodes;
     }
 
-    /**
-     * O jogador abriu a aba Fluxos: o amostrador passa a rodar. Se ninguém olhava, a próxima amostra
-     * só zera. Devolve se ele ainda não estava olhando.
-     */
+    /** O jogador abriu a aba Fluxos. Devolve se ele ainda não estava olhando. */
     public boolean watch(UUID player) {
-        if (watchers.isEmpty()) {
-            primed = false;
-        }
         return watchers.add(player);
     }
 
-    /**
-     * O jogador fechou a aba Fluxos, o Tablet, ou saiu do servidor. Com o último, o amostrador para e
-     * esquece as janelas e o resultado. Devolve se ele estava olhando.
-     */
+    /** O jogador fechou a aba Fluxos, o Tablet, ou saiu do servidor. Devolve se ele estava olhando. */
     public boolean unwatch(UUID player) {
-        boolean removed = watchers.remove(player);
-        if (removed && watchers.isEmpty()) {
-            primed = false;
-            flows.clear();
-            report = Report.EMPTY;
-        }
-        return removed;
+        return watchers.remove(player);
     }
 
     public boolean isWatching(UUID player) {
         return watchers.contains(player);
     }
 
-    /** O resultado da última amostra; {@link Report#EMPTY} sem ninguém olhando ou antes da primeira. */
+    /** O resultado da última amostra; {@link Report#EMPTY} antes da primeira. */
     public Report report() {
         return report;
     }
 
     /** O custo do amostrador, para o {@code /wa profile} e o bench. */
     public Cost cost() {
-        return new Cost(watchers.size(), samples, averageNanos, lastNanos);
+        return new Cost(watchers.size(), samples, averageNanos, lastNanos, totalNanos);
     }
 
-    /** Chamado pelo gerenciador a cada tick: só amostra com alguém olhando, a cada {@link #SAMPLE_TICKS} ticks. */
+    /** Chamado pelo gerenciador a cada tick: amostra a cada {@link #SAMPLE_TICKS} ticks. */
     void tick(MinecraftServer server, long now) {
-        if (watchers.isEmpty() || now % SAMPLE_TICKS != 0) {
+        if (now % SAMPLE_TICKS != 0) {
             return;
         }
         long started = System.nanoTime();
@@ -146,6 +133,7 @@ public final class FlowSampler {
         long nanos = System.nanoTime() - started;
         samples++;
         lastNanos = nanos;
+        totalNanos += nanos;
         averageNanos += (nanos - averageNanos) * AVERAGE_WEIGHT;
     }
 
@@ -195,6 +183,7 @@ public final class FlowSampler {
             Port port = sources.get(i);
             long gave = port.gave;
             port.gave = 0;
+            port.gaveRead += gave;
             if (counting) {
                 amounts[port.destination ? RELEASED : PRODUCED] += gave;
             }
@@ -202,9 +191,15 @@ public final class FlowSampler {
                 states[SOURCES_MOVING]++;
             } else if (port.order == null) {
                 // Sem destino ao alcance o laço não a visita: o que ela tiver espera destino.
-                states[SOURCES_WAITING]++;
+                if (!port.destination) {
+                    states[SOURCES_WAITING]++;
+                }
             } else if (port.sourceBackoff.isSleeping(now)) {
-                states[port.waitsDestination ? SOURCES_WAITING : SOURCES_EMPTY]++;
+                if (!port.waitsDestination) {
+                    states[SOURCES_EMPTY]++;
+                } else if (!port.destination) {
+                    states[SOURCES_WAITING]++;
+                }
             }
         }
     }
@@ -221,6 +216,7 @@ public final class FlowSampler {
             Port port = destinations.get(i);
             long got = port.got;
             port.got = 0;
+            port.gotRead += got;
             if (counting) {
                 amounts[port.source ? STORED : CONSUMED] += got;
             }
@@ -411,8 +407,9 @@ public final class FlowSampler {
      * @param samples      amostras desde que o gerenciador foi criado
      * @param averageNanos média móvel do tempo de uma amostra, em ns
      * @param lastNanos    tempo da última amostra, em ns
+     * @param totalNanos   tempo de todas as amostras, em ns (o bench mede pela diferença)
      */
-    public record Cost(int watchers, long samples, double averageNanos, long lastNanos) {
+    public record Cost(int watchers, long samples, double averageNanos, long lastNanos, long totalNanos) {
     }
 
     /** Os números de uma rede: os da amostra em curso e as janelas, por ordinal do tipo. */

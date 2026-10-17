@@ -41,6 +41,11 @@ final class ItemInsertPlan {
 
     private int[] slots = new int[8];
     private int size;
+    /**
+     * O primeiro slot do plano que ainda pode aceitar: os de antes lotaram num {@link #execute} anterior. A rajada
+     * insere várias vezes no mesmo plano, e sem isto cada passo bateria de novo em todas as pilhas já cheias.
+     */
+    private int open;
     private int[] empties = new int[64];
     private int[] fulls = new int[16];
     private long counted;
@@ -127,6 +132,7 @@ final class ItemInsertPlan {
      */
     int simulate(IItemHandler target, ItemStack stack, int count, long stock) {
         size = 0;
+        open = 0;
         itemMax = stack.getMaxStackSize();
         counted = 0;
         emptySeen = 0;
@@ -243,8 +249,12 @@ final class ItemInsertPlan {
      */
     ItemStack execute(IItemHandler target, ItemStack stack) {
         ItemStack rest = stack;
-        for (int i = 0; i < size && !rest.isEmpty(); i++) {
+        for (int i = open; i < size && !rest.isEmpty(); i++) {
             rest = insert(target, slots[i], rest, itemMax, false);
+            if (!rest.isEmpty()) {
+                // O slot recusou parte: lotou, e a rajada não volta nele.
+                open = i + 1;
+            }
         }
         return rest.isEmpty() ? rest : insertStacked(target, rest, itemMax);
     }

@@ -98,6 +98,8 @@ public final class NetworkManager {
     private int savedVersion;
     /** Entrou rede nova no gerenciador: a existência dela ainda não foi conferida. */
     private boolean networksAdded = true;
+    /** O {@link Config#tiersFingerprint()} da última montagem por config. */
+    private long tiersFingerprint;
     // Contadores cumulativos (benchmark e diagnóstico): só somam; quem lê faz a diferença entre leituras.
     private long visitCount;
     private long exhaustedTicks;
@@ -632,13 +634,21 @@ public final class NetworkManager {
             savedServer = server;
             savedData = NetworkSavedData.get(server);
             networksAdded = true;
+            tiersFingerprint = Config.tiersFingerprint();
         }
         NetworkSavedData data = savedData;
-        boolean all = configChanged;
+        boolean all = false;
+        if (configChanged) {
+            configChanged = false;
+            // Só os valores dos tiers mudam as rotas: recarregar outra chave (o Ressonador, o chunk loading) não
+            // remonta nada.
+            long fingerprint = Config.tiersFingerprint();
+            all = fingerprint != tiersFingerprint;
+            tiersFingerprint = fingerprint;
+        }
         if (!all && !networksAdded && data.version() == savedVersion) {
             return;
         }
-        configChanged = false;
         networksAdded = false;
         savedVersion = data.version();
         if (all) {

@@ -721,7 +721,8 @@ public class RouterBlockEntity extends BlockEntity {
         if (now != powered) {
             powered = now;
             changeVersion++;
-            setChanged();
+            // Só marca o chunk: avisar os vizinhos a cada pulso de um relógio não serve a ninguém.
+            level.blockEntityChanged(worldPosition);
             int types = redstoneTypes();
             if (types != 0) {
                 NetworkManager.get().nodeChanged(this, types);

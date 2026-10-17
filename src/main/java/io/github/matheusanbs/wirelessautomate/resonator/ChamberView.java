@@ -56,18 +56,39 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         int count = core.chambers();
         byte[] chambers = new byte[count];
         for (int i = 0; i < count; i++) {
-            ItemStack stack = core.crystals().get(i);
-            if (stack.getItem() instanceof SignalCrystalItem item) {
-                boolean dull = SignalCrystalItem.isDull(stack);
-                chambers[i] = (byte) ((item.isCut() ? CUT : SIGNAL) + (dull ? DULL_OFFSET : 0));
-            } else {
-                chambers[i] = EMPTY_CHAMBER;
-            }
+            chambers[i] = chamber(core.crystals().get(i));
         }
         return new ChamberView(chambers, TuneSignal.band(core.efficiency()),
                 TuneSignal.tuned(core.station(), core.dial()), rechargeStart,
-                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(),
-                origin(core.members(), core.getBlockPos()));
+                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(), core.origin());
+    }
+
+    /**
+     * Se a view é a do Núcleo agora (o que o {@link #of} montaria), sem montar outra: o lote pergunta a cada 20
+     * ticks, e quase sempre nada mudou.
+     */
+    boolean matches(ResonanceCoreBlockEntity core, long rechargeStart) {
+        int count = core.chambers();
+        if (chambers.length != count || this.rechargeStart != rechargeStart || formedAt != core.formedAt()
+                || band != TuneSignal.band(core.efficiency()) || tuned != TuneSignal.tuned(core.station(), core.dial())
+                || rechargeTicks != Math.max(1, (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE))
+                || !Arrays.equals(origin, core.origin())) {
+            return false;
+        }
+        for (int i = 0; i < count; i++) {
+            if (chambers[i] != chamber(core.crystals().get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static byte chamber(ItemStack stack) {
+        if (stack.getItem() instanceof SignalCrystalItem item) {
+            boolean dull = SignalCrystalItem.isDull(stack);
+            return (byte) ((item.isCut() ? CUT : SIGNAL) + (dull ? DULL_OFFSET : 0));
+        }
+        return EMPTY_CHAMBER;
     }
 
     /** Se há recarga em curso: um Opaco numa câmara do tier e redstone no Núcleo. */
@@ -84,7 +105,8 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         return false;
     }
 
-    private static int[] origin(List<BlockPos> members, BlockPos core) {
+    /** O canto mínimo da caixa (x, y, z): o dos membros, ou o próprio Núcleo sem membros. */
+    static int[] origin(List<BlockPos> members, BlockPos core) {
         if (members.isEmpty()) {
             return new int[] {core.getX(), core.getY(), core.getZ()};
         }

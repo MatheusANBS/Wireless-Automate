@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -36,7 +35,6 @@ import net.minecraft.resources.ResourceLocation;
  * ({@link #STREAM_CODEC}).
  *
  * @param dimension     dimensão do jogador, para o mapa
- * @param center        posição do jogador, centro do mapa
  * @param query         a consulta que esta página responde
  * @param totalNodes    nós visíveis ao jogador, sem filtro
  * @param matchingNodes nós que passam na consulta (os nós enviados são os {@link #MAX_NODES} primeiros)
@@ -52,7 +50,6 @@ import net.minecraft.resources.ResourceLocation;
 public record TabletSnapshot(
         boolean operator,
         ResourceLocation dimension,
-        BlockPos center,
         Optional<UUID> activeNetwork,
         Query query,
         int totalNodes,
@@ -326,7 +323,7 @@ public record TabletSnapshot(
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
-        return new TabletSnapshot(operator, dimension, center, activeNetwork, page.query(),
+        return new TabletSnapshot(operator, dimension, activeNetwork, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
                 page.nodes(), page.groupCounts(), page.originGroup(), notice, noticeId);
     }
@@ -369,7 +366,6 @@ public record TabletSnapshot(
     private static void encodeHeader(RegistryFriendlyByteBuf buf, TabletSnapshot s) {
         buf.writeBoolean(s.operator);
         buf.writeResourceLocation(s.dimension);
-        buf.writeBlockPos(s.center);
         buf.writeOptional(s.activeNetwork, (b, id) -> b.writeUUID(id));
         buf.writeVarInt(s.networks.size());
         for (NetworkView n : s.networks) {
@@ -464,7 +460,6 @@ public record TabletSnapshot(
     private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
         boolean operator = buf.readBoolean();
         ResourceLocation dimension = buf.readResourceLocation();
-        BlockPos center = buf.readBlockPos();
         Optional<UUID> active = buf.readOptional(b -> b.readUUID());
         int networkCount = buf.readVarInt();
         List<NetworkView> networks = new ArrayList<>(networkCount);
@@ -521,7 +516,7 @@ public record TabletSnapshot(
         });
         Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
         int noticeId = buf.readVarInt();
-        return new TabletSnapshot(operator, dimension, center, active, Page.EMPTY.query(),
+        return new TabletSnapshot(operator, dimension, active, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
                 List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), Optional.empty(), notice, noticeId);
     }

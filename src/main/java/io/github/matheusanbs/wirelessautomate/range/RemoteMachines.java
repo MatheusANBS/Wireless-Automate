@@ -57,7 +57,7 @@ public final class RemoteMachines {
     /**
      * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, que não muda,
      * ou num grupo novo com o perfil vazio e as seis faces de todos os tipos carregados na rede
-     * {@code network} ({@code null} = sem rede; decisão 5 da spec da rede por face). Devolve
+     * {@code network} ({@code null} = sem rede, o que o Vinculador sempre passa). Devolve
      * {@code false} se a posição já estava vinculada. Só pelo {@code RouterBlockEntity.linkMachine}
      * (ver a classe).
      */

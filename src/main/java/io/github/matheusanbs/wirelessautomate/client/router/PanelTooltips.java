@@ -52,6 +52,7 @@ final class PanelTooltips {
                             .append(panelTr("redstone.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED))
                     : disabled;
             case TARGET -> readOnly != null ? readOnly : targetLine.tooltip();
+            case IDLE_NETWORKS -> readOnly != null ? readOnly : IdleNetworks.tooltip();
             case REVERT -> readOnly != null ? readOnly : tr("range.revert.tooltip");
             case UPDATE -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UPDATE);
             case UNLINK -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UNLINK);

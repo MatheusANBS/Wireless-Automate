@@ -17,9 +17,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A linha Editando do painel do nó, com o Upgrade de Alcance e sem a lista das máquinas à vista: a pílula
- * do alvo de edição (a máquina presa, um grupo ou uma máquina), os botões Voltar a igual às outras,
- * Atualizar (máquina trocada) e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da
- * lista que abre na pílula e o pedido de troca de alvo.
+ * do alvo de edição (a máquina presa, um grupo ou uma máquina), o "Tirar redes" ({@link IdleNetworks}) ao
+ * lado dela, os botões Voltar a igual às outras, Atualizar (máquina trocada) e Desvincular (em dois
+ * cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o pedido de troca de alvo.
  */
 final class TargetLine {
     /** Uma linha da lista da linha Editando. */
@@ -54,6 +54,16 @@ final class TargetLine {
             int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
             PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
                     pill.contains(mx, my) || open, model.readOnly() == null, border);
+        }
+        Hot idle = layout.hot(Kind.IDLE_NETWORKS);
+        if (idle != null && layout.idleIcon) {
+            boolean hovered = idle.contains(mx, my);
+            GuiPaint.box(g, idle.x(), idle.y(), idle.w(), idle.h(), GuiPaint.BUTTON,
+                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+            IdleNetworks.icon(g, idle.x() + (idle.w() - IdleNetworks.ICON_SIZE) / 2,
+                    idle.y() + (idle.h() - IdleNetworks.ICON_SIZE) / 2, GuiPaint.FG);
+        } else if (idle != null) {
+            clippedButton(g, font, idle, IdleNetworks.label(), idle.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
         Hot revert = layout.hot(Kind.REVERT);
         if (revert != null) {

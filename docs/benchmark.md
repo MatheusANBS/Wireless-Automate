@@ -315,3 +315,20 @@ A energia movida é exatamente a geração cheia (500 × 8 Lapidados × 1.073.74
 - **O custo de existir não é ~0:** 35 µs/tick com 500 ociosos. Não vem da varredura (os baldes já a dividem por 20), e sim do lote com o buffer cheio, que ainda percorre as câmaras (`dullCount` duas vezes, `generationPerTick`) antes de ver que não há espaço. Uma saída barata é olhar `energy == capacity` (e a recarga sem Opaco) antes dos laços.
 - **O evento passa a estimativa em 60%:** 8 ms num tick para 50 cascas quebradas no mesmo tick. É um tick só e um caso extremo (50 Ressonadores quebrados juntos), mas a revalidação de uma casca quebrada (~160 µs) é o lado caro: sem a caixa da frente, ela tenta as 54. A volta, que monta, custa um terço.
 - **A montagem em massa é o maior pico:** 32 a 42 ms num tick para 500 Núcleos montando juntos (~65 a 85 µs cada, com a regravação dos 98 estados da casca). No jogo isso só acontece numa carga de região com muitos Núcleos; vale medir o cenário "cargas" da estimativa e, se preciso, espalhar as revalidações da carga por alguns ticks.
+
+## Fluxos do Tablet: antes e depois (17 de outubro de 2026)
+
+Mede a etapa 1 da central da rede (os contadores por porta e o amostrador dos Fluxos sempre ligado, em 20 baldes de fase): `./scripts/bench.sh many:500:3:vanilla,raw:1:3:vanilla,mixed:498:3,idle:500:3,tablet:1000:3`, máquina local (Windows 11, 12 CPUs, Java 21, heap de 2 GB). Antes: `run/bench/reports/20261017-134054.md` (sem os Fluxos); depois: `run/bench/reports/20261017-155755.md` (commit `d0c598a`), fora do git. "Custo" é o MSPT com a rede menos o base; "mod" é o tick do `NetworkManager`; "Fluxos" é o amostrador, já dentro dos dois.
+
+| Cenário | Custo antes (ms/tick) | Custo depois | Mod antes | Mod depois | µs/visita antes → depois | Tablet antes → depois (ms/tick) | Fluxos (ms/tick) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| many 500 | 0,629 ± 0,018 | 0,593 ± 0,079 | 0,629 ± 0,013 | 0,642 ± 0,020 | 10,05 → 10,34 | — | 0,007–0,009 |
+| raw | 0,137 ± 0,017 | 0,151 ± 0,016 | 0,140 ± 0,012 | 0,152 ± 0,013 | 70,1 → 76,1 (± 6) | — | 0,001 |
+| mixed 498 | 0,717 ± 0,009 | 0,748 ± 0,026 | 0,711 ± 0,010 | 0,723 ± 0,006 | 4,48 → 4,61 | — | 0,008–0,009 |
+| idle 500 | 0,004 ± 0,007 | 0,011 ± 0,009 | 0,009 ± 0,001 | 0,010 ± 0,000 | 3,64 → 3,80 | — | 0,011–0,012 |
+| tablet 1000 | 1,186 ± 0,071 | 1,162 ± 0,036 | 1,041 ± 0,014 | 1,039 ± 0,007 | 51,7 → 55,3 | 0,144 → 0,168 (± 0,05) | 0,012–0,014 |
+
+### Leitura
+
+- many, raw, idle e tablet ficam dentro do ruído. O mixed passa um pouco (+0,03 ms/tick no custo, +0,012 no mod), numa rodada em que o MSPT base subiu em todos os cenários (mixed 0,136 → 0,248 ms): a máquina estava mais carregada. O aumento do mod é do tamanho do próprio amostrador. O dono aceitou e mandou seguir para o backlog da auditoria.
+- O amostrador custa de 0,02 ms por segundo (raw) a 0,28 ms por segundo (tablet, 1.000 nós), ou 0,001 a 0,014 ms/tick, dividido em 20 ticks, sem pico. Parado (idle, 500 nós) ainda custa 0,011 ms/tick, porque lê as portas dormindo para contar os estados; está no backlog (`F1` em `.claude/skills/wa-performance/references/auditoria.md`).

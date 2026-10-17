@@ -69,6 +69,12 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | R2 | Cada filtro expande as próprias tags; compartilhar o mapa expandido | `Filter:154`, `CompiledMatcher:82` | médio | pendente |
 | R3 | O índice de nós é regravado inteiro a cada mudança e guarda roteadores sumidos | `NodeIndex:322, 503` | baixo-médio | pendente |
 
+## F · Fluxos
+
+| Id | Achado | Onde | Ganho | Estado |
+| --- | --- | --- | --- | --- |
+| F1 | Parado, o amostrador ainda lê as portas dormindo de todos os nós para contar os estados (idle com 500 nós: 0,011 ms/tick); pular o nó sem nada que mudou desde a volta anterior | `FlowSampler.read` | baixo (parado perto de zero) | pendente |
+
 ## Em andamento
 
-- Fluxos (etapa 1 da central): o amostrador sempre ligado espalhado em 20 baldes de fase pela posição do nó, com a configuração por nó em cache (`FlowSampler.NodeConfig`, pelo `changeVersion`, o `NetworkSavedData.version()` e a recarga da config) e o resultado montado só quando alguém pede. Falta o bench depois.
+(nada)

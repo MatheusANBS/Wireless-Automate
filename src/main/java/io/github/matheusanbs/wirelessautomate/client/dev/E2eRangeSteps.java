@@ -15,14 +15,22 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -39,10 +47,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O roteador de alcance no e2e: a lista de grupos e máquinas, o perfil do grupo, a exceção da fornalha, o visor,
- * desvincular pela tela e tirar o upgrade com a tela aberta, em inglês e em português.
+ * o "Tirar redes" com o Desfazer, desvincular pela tela e tirar o upgrade com a tela aberta, em inglês e em
+ * português.
  */
 final class E2eRangeSteps {
     private E2eRangeSteps() {
@@ -52,6 +62,9 @@ final class E2eRangeSteps {
     private static BlockPos rangeChestA;
     private static BlockPos rangeChestB;
     static BlockPos rangeFurnace;
+    private static BlockPos rangeDropper;
+    /** Largura da tela larga sem a lista ao lado do visor: com o botão Máquinas, a linha Editando aparece. */
+    private static final int MEDIUM_W = 470;
 
     /**
      * Roteador de alcance pela tela: um roteador Avançado num baú, com o Upgrade de Alcance e dois baús e
@@ -80,6 +93,7 @@ final class E2eRangeSteps {
             rangeExceptionSteps(list, label, suffix);
             // em inglês o Atualizar sai pelo ⟳ da lista; em português, pelo botão da linha Editando
             E2eRangeReplaceSteps.rangeReplaceSteps(list, label, suffix, !pt);
+            rangeIdleNetworkSteps(list, label, suffix, playerId);
             if (pt) {
                 rangeUnlinkSteps(list, label);
             }
@@ -289,6 +303,134 @@ final class E2eRangeSteps {
                 }, () -> "alcance " + rangeView()));
     }
 
+    /**
+     * Alcance: "Tirar a rede das faces sem modo". Um dropper vinculado pela API com as faces de todos os tipos
+     * na rede principal (como os grupos de antes do Vinculador vincular sem rede), e o grupo dele como alvo.
+     * Na tela larga sem a lista, o "Tirar redes" com o rótulo na linha Editando ({@code range-6-limpar-redes});
+     * em inglês, também a dica dele ({@code range-6d-limpar-dica}) e, no mínimo com a lista, o ícone na linha do
+     * grupo com a dica ({@code range-6c-limpar-lista}). O clique tira a rede das faces sem modo, o aviso traz o
+     * Desfazer ({@code range-6b-limpar-aviso}) e o Desfazer devolve a rede. No fim, o dropper sai e a fornalha
+     * volta a ser o alvo, no mínimo com a lista.
+     */
+    private static void rangeIdleNetworkSteps(List<Step> list, String label, String suffix, UUID playerId) {
+        list.add(new Step(label + "grupo do dropper com rede em todas as abas", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            rangeDropper = rangeChestA.offset(0, 0, -1);
+            server.overworld().setBlockAndUpdate(rangeDropper, Blocks.DROPPER.defaultBlockState());
+            RouterBlockEntity router = router(server, rangeRouter);
+            router.linkMachine(rangeDropper, mainNetwork);
+            var machines = router.remoteMachines();
+            int group = machines.groupOf(machines.machine(machines.index(rangeDropper))).id();
+            selectOnServer(server, playerId, id -> SelectTargetPayload.group(id, group,
+                    BuiltInRegistries.BLOCK.getKey(Blocks.DROPPER)));
+            return null;
+        }), () -> groupShown(Blocks.DROPPER) && rangeTargetIs(EditTarget.group(rangeGroup(Blocks.DROPPER)))
+                && dropperProfileIs(mainNetwork),
+                () -> "alvo " + routerScreen().getMenu().snapshot().target() + ", grupos " + rangeView().groups()));
+        list.add(resizeStep(label + "tela larga", MEDIUM_W));
+        list.add(showListStep(label + "sem a lista: o Tirar redes na linha Editando", false));
+        list.add(rangeClipCheck(label + "Tirar redes"));
+        list.add(capture("range-6-limpar-redes" + suffix));
+        if (suffix.isEmpty()) {
+            list.add(new Step(label + "o mouse no Tirar redes", STEP_TIMEOUT_MS,
+                    () -> moveTo(panel().idleNetworksCenter(), "Tirar redes"), () -> stepTicks >= 2,
+                    () -> "Tirar redes"));
+            list.add(E2eRangeReplaceSteps.hoverCapture(label + "dica do Tirar redes", "range-6d-limpar-dica",
+                    () -> panel().idleNetworksCenter() != null));
+            list.add(resizeStep(label + "no mínimo", 300));
+            list.add(showListStep(label + "com a lista: o ícone na linha do grupo", true));
+            list.add(new Step(label + "o mouse no ícone da lista", STEP_TIMEOUT_MS,
+                    () -> moveTo(routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS),
+                            "o ícone do Tirar redes"), () -> stepTicks >= 2, () -> "ícone"));
+            list.add(E2eRangeReplaceSteps.hoverCapture(label + "ícone e dica na lista", "range-6c-limpar-lista",
+                    () -> routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS) != null));
+            list.add(resizeStep(label + "de volta à tela larga", MEDIUM_W));
+            list.add(showListStep(label + "de volta à linha Editando", false));
+        }
+        list.add(new Step(label + "Tirar redes", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().idleNetworksCenter(), "Tirar redes"),
+                () -> dropperProfileIs(null) && panel().idleNetworksCenter() == null
+                        && noticeUndo() == PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS,
+                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
+        list.add(rangeClipCheck(label + "aviso do Tirar redes"));
+        list.add(capture("range-6b-limpar-aviso" + suffix));
+        list.add(new Step(label + "Desfazer devolve a rede", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().undoCenter(), "Desfazer"),
+                () -> dropperProfileIs(mainNetwork) && panel().idleNetworksCenter() != null
+                        && noticeUndo() == PanelNoticePayload.Undo.NONE,
+                () -> "aviso " + PanelNotices.current() + ", botão " + (panel().idleNetworksCenter() != null)));
+        list.add(resizeStep(label + "de volta ao mínimo", 300));
+        list.add(showListStep(label + "de volta à lista", true));
+        list.add(new Step(label + "o dropper sai e a fornalha volta a ser o alvo", STEP_TIMEOUT_MS,
+                () -> onServer(server -> {
+                    RouterBlockEntity router = router(server, rangeRouter);
+                    router.unlinkMachine(rangeDropper);
+                    server.overworld().setBlockAndUpdate(rangeDropper, Blocks.AIR.defaultBlockState());
+                    int furnace = router.remoteMachines().index(rangeFurnace);
+                    selectOnServer(server, playerId, id -> SelectTargetPayload.machine(id, furnace, rangeFurnace));
+                    return null;
+                }), () -> rangeView().machines().size() == 3
+                        && rangeTargetIs(EditTarget.machine(rangeMachine(rangeFurnace))),
+                () -> "alcance " + rangeView()));
+    }
+
+    /** A tela do roteador com a largura {@code width} (até a janela menos 8 px) e a altura mínima. */
+    private static Step resizeStep(String name, int width) {
+        return new Step(name, STEP_TIMEOUT_MS,
+                () -> routerScreen().previewResize(Math.min(width, routerScreen().width - 8), 240),
+                () -> routerScreen().size()[0] == Math.min(width, routerScreen().width - 8) && stepTicks >= 2,
+                () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()));
+    }
+
+    /** Mostra ({@code shown}) ou esconde a lista das máquinas pelo botão Máquinas, se ela não está assim. */
+    private static Step showListStep(String name, boolean shown) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> {
+            if (routerScreen().rangeListShown() != shown) {
+                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+            }
+        }, () -> routerScreen().rangeListShown() == shown && stepTicks >= 4,
+                () -> "lista " + routerScreen().rangeListShown());
+    }
+
+    /** Põe o mouse num ponto da tela do roteador (um gancho dela); {@code null} = o controle não está lá. */
+    private static void moveTo(int @Nullable [] point, String what) throws StepFailure {
+        if (point == null) {
+            throw new StepFailure("não achei " + what + " na tela do roteador");
+        }
+        moveMouse(point[0], point[1]);
+    }
+
+    /** O Desfazer do aviso do painel, ou {@code null} sem aviso. */
+    private static PanelNoticePayload.@Nullable Undo noticeUndo() {
+        PanelNoticePayload notice = PanelNotices.current();
+        return notice == null ? null : notice.undo();
+    }
+
+    /** Troca o alvo do menu aberto do jogador no servidor, pelo handler do pacote (como a lista faz). */
+    private static void selectOnServer(MinecraftServer server, UUID playerId, IntFunction<SelectTargetPayload> payload) {
+        ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+        ModPayloads.handleSelectTarget(player, payload.apply(player.containerMenu.containerId));
+    }
+
+    /** No servidor, as faces de todos os tipos do perfil do grupo do dropper estão em {@code network}. */
+    private static boolean dropperProfileIs(@Nullable UUID network) throws Exception {
+        return onServer(server -> {
+            var machines = router(server, rangeRouter).remoteMachines();
+            var machine = machines.machine(machines.index(rangeDropper));
+            if (machine == null) {
+                return false;
+            }
+            MachineConfig profile = machines.groupOf(machine).profile();
+            for (ResourceType type : LoadedTypes.LIST) {
+                for (RemoteSide side : RemoteSide.values()) {
+                    if (!Objects.equals(profile.face(type, side).network(), network)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+    }
+
     /** Alcance, só em português: desvincula o segundo baú pela tela. */
     private static void rangeUnlinkSteps(List<Step> list, String label) {
         // desvincular pela tela: o segundo baú sai e a tela volta para a máquina presa
@@ -382,6 +524,12 @@ final class E2eRangeSteps {
             }
         }
         throw new StepFailure("sem grupo de " + id + " na tela: " + rangeView().groups());
+    }
+
+    /** A tela já mostra um grupo do bloco {@code block} (o snapshot pode chegar depois da ação). */
+    private static boolean groupShown(net.minecraft.world.level.block.Block block) throws StepFailure {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        return rangeView().groups().stream().anyMatch(group -> group.block().equals(id));
     }
 
     /** O índice da máquina em {@code pos} na tela. */

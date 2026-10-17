@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
@@ -170,21 +171,24 @@ public class RouterBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * Rede da face {@code side} do alvo de edição, no quadro da tela (como
-     * {@link #face(EditTarget, ResourceType, Direction)}): numa máquina remota, a que vale (exceção ou perfil).
-     */
+    /** Rede da face {@code side} do alvo, no quadro da tela: numa máquina remota, a que vale (exceção ou perfil). */
     public @Nullable UUID faceNetwork(EditTarget target, ResourceType type, Direction side) {
         return face(target, type, side).network();
     }
 
-    /**
-     * Põe a face {@code side} do alvo (quadro da tela) na rede {@code network}. Num grupo, muda o
-     * perfil; numa máquina remota, cria a exceção (ou a apaga se ficar igual ao perfil), como as
-     * outras edições por alvo.
-     */
+    /** Põe a face {@code side} do alvo (quadro da tela) na rede {@code network}, como as outras edições por alvo. */
     public void setFaceNetwork(EditTarget target, ResourceType type, Direction side, @Nullable UUID network) {
         targets.setFaceNetwork(target, type, side, network);
+    }
+
+    /** Tira a rede das faces sem modo de um grupo ou de uma exceção, numa mudança só; devolve o que tirou. */
+    public List<IdleNetworkFace> clearIdleNetworks(EditTarget target) {
+        return targets.clearIdleNetworks(target);
+    }
+
+    /** Devolve as redes às faces de {@code faces} que continuam sem modo e sem rede, numa mudança só; quantas. */
+    public int restoreIdleNetworks(EditTarget target, List<IdleNetworkFace> faces) {
+        return targets.restoreIdleNetworks(target, faces);
     }
 
     /**
@@ -198,10 +202,7 @@ public class RouterBlockEntity extends BlockEntity {
         return count[0];
     }
 
-    /**
-     * Todas as faces absolutas da presa marcadas em {@code absoluteFaceMask}, nos tipos {@code types},
-     * já estão na rede {@code network} (o "já estavam" do Vinculador).
-     */
+    /** As faces absolutas da presa em {@code absoluteFaceMask} e {@code types} já estão em {@code network} (Vinculador). */
     public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
         return faces.attachedIn(types, facing(), spin(), absoluteFaceMask, network);
     }

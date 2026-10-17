@@ -143,9 +143,11 @@ final class RangeList {
 
     /**
      * Chamado a cada quadro: quando o alvo muda (pela lista ou pelo servidor), o grupo dele abre e a
-     * linha dele entra na área visível. Os outros grupos ficam como o jogador deixou.
+     * linha dele entra na área visível. Os outros grupos ficam como o jogador deixou. {@code idleNetworks}
+     * diz se a linha do alvo tem o "Tirar redes".
      */
-    void sync(RangeView view, EditTarget target) {
+    void sync(RangeView view, EditTarget target, boolean idleNetworks) {
+        buttons.idleNetworks(idleNetworks);
         if (target.equals(shownTarget)) {
             scroll = Math.max(0, Math.min(scroll, maxScroll(rows(view))));
             return;

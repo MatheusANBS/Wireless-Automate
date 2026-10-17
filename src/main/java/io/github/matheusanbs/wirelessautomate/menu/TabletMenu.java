@@ -204,6 +204,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     @Override
     public void removed(Player player) {
         super.removed(player);
+        IdleNetworkUndo.closed(player, this);
         if (viewer != null && !viewer.hasDisconnected()) {
             TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef()));
         }

@@ -332,3 +332,30 @@ Mede a etapa 1 da central da rede (os contadores por porta e o amostrador dos Fl
 
 - many, raw, idle e tablet ficam dentro do ruído. O mixed passa um pouco (+0,03 ms/tick no custo, +0,012 no mod), numa rodada em que o MSPT base subiu em todos os cenários (mixed 0,136 → 0,248 ms): a máquina estava mais carregada. O aumento do mod é do tamanho do próprio amostrador. O dono aceitou e mandou seguir para o backlog da auditoria.
 - O amostrador custa de 0,02 ms por segundo (raw) a 0,28 ms por segundo (tablet, 1.000 nós), ou 0,001 a 0,014 ms/tick, dividido em 20 ticks, sem pico. Parado (idle, 500 nós) ainda custa 0,011 ms/tick, porque lê as portas dormindo para contar os estados; está no backlog (`F1` em `.claude/skills/wa-performance/references/auditoria.md`).
+
+## Pacote A da auditoria de eficiência (17 de outubro de 2026)
+
+Os itens rápidos do backlog (`.claude/skills/wa-performance/references/auditoria.md`, pacote A), no ramo `eficiencia` (commit `0da992c`): `./scripts/bench.sh resonator-gen:500:3,resonator-idle:500:3,resonator-event:50:3,redstone:100:3,stock:20:3,bigfull:20:3,rebuild:500:3`, máquina local. Antes: `run/bench/reports/20261017-160856.md`; depois: `20261017-162040.md`, fora do git. "Ressonador" é o tick do `ResonatorManager` medido por ele mesmo (média das 3 repetições); "montagem" é a soma das revalidações quando os Núcleos montam.
+
+| Cenário | Medida | Antes | Depois |
+| --- | --- | --- | --- |
+| resonator-gen 500 | Ressonador (ms/tick) | 0,215 | **0,152** (−29%) |
+| resonator-gen 500 | mod (ms/tick) | 0,203 ± 0,003 | **0,163 ± 0,008** |
+| resonator-gen 500 | custo (ms/tick) | 0,441 ± 0,011 | **0,342 ± 0,018** |
+| resonator-gen 500 | montagem (ms) | 87–115 | 43–86 |
+| resonator-idle 500 | Ressonador (ms/tick) | 0,111 | **0,068** (−39%) |
+| resonator-idle 500 | montagem (ms) | 50–62 | 36–40 |
+| resonator-event 50 | Ressonador / revalidações (ms/tick) | 0,021 / 0,098 | **0,014 / 0,076** |
+| resonator-event 50 | tick da quebra (ms) | 13,7–14,1 | **11,2–12,1** |
+| redstone 100 | mod (ms/tick) | 0,155 ± 0,005 | **0,139 ± 0,005** |
+| rebuild 500 | custo (ms/tick) | 0,780 ± 0,101 | 0,688 ± 0,019 |
+| rebuild 500 | µs/visita | 15,2 ± 4,2 | 11,1 ± 0,4 |
+| stock 20 | mod (ms/tick) | 0,0104 | 0,0105 (igual) |
+| bigfull 20 | mod (ms/tick) | 0,0191 | 0,0185 (igual) |
+
+### Leitura
+
+- O Ressonador é o maior ganho: o Núcleo deixou de avisar os 6 vizinhos a cada extração e a cada lote (A1), o lote deixou de montar a `ChamberView` com a origem dos 98 membros quando nada mudou (A2) e montar e desmontar não refazem a forma dos vizinhos (A3).
+- O redstone ao lado do roteador não avisa mais os vizinhos a cada pulso (A4): −10% no mod do cenário `redstone`.
+- O estoque (A6) e a rajada (A5) ficam iguais nestes cenários: o ganho deles é de memória (sem `long[]` por item a cada visita) e de chamadas num destino comum que enche, que o `bigfull` não exercita.
+- O MSPT base também caiu nesta rodada (a máquina estava mais quieta), então os números de custo têm essa folga; os do Ressonador não, porque são medidos pelo próprio gerenciador.

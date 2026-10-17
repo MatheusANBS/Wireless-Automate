@@ -41,6 +41,8 @@ public enum BenchScenario {
             "Pilha enorme: origem de 1 slot com 1.000.000 de itens para um ralo, tier Allthemodium (131.072 itens/s; máquinas de teste)"),
     REDSTONE("redstone", 100, RouterTier.ELITE, 60, 20,
             "Relógio de redstone: como Muitos nós, com um bloco de redstone que liga e desliga a cada tick em cima de cada roteador (nenhum usa redstone)"),
+    REDSTONE_FACE("redstone-face", 100, RouterTier.ELITE, 60, 20,
+            "Relógio nas faces: como o relógio de redstone, com as faces das origens em redstone alto (cada pulso liga ou desliga as portas)"),
     TABLET("tablet", 1000, RouterTier.ELITE, 60, 20,
             "Tablet aberto: como Muitos nós, com um jogador falso de Tablet aberto, sincronizado a cada tick"),
     PAIRS("pairs", 500, RouterTier.ELITE, 60, 20,
@@ -87,8 +89,13 @@ public enum BenchScenario {
     public boolean comparable() {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
-            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, RESONATOR_GEN, RESONATOR_IDLE, RESONATOR_EVENT -> false;
+            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, RESONATOR_GEN, RESONATOR_IDLE, RESONATOR_EVENT -> false;
         };
+    }
+
+    /** Tem os relógios de redstone em cima dos roteadores. */
+    public boolean clocked() {
+        return this == REDSTONE || this == REDSTONE_FACE;
     }
 
     public static @Nullable BenchScenario byId(String id) {

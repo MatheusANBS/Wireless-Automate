@@ -72,6 +72,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `stock` | Pares de inventários grandes (padrão 20): origem cheia de pedregulho; destino com lista branca de pedregulho com estoque de 1.000 e já com 1.000 dentro | Custo de tentar inserir num destino que já atingiu o estoque | Perto de 0 (nada se move) |
 | `bigstack` | 1 par (máquinas de teste): origem de 1 slot com uma pilha de 1.000.000 de pedregulhos (como gaveta ou bin, extrai até 64 por vez) para um ralo, tier Allthemodium | Vazão de uma pilha enorme num slot só | Perto da vazão do Allthemodium (131.072 itens/s) |
 | `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
+| `redstone-face` | Como `redstone`, com as faces das origens em redstone alto: cada pulso liga ou desliga as portas | Custo do sinal numa face com controle por redstone | Sem remontagem por pulso |
 | `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
 | `resonator-gen` | n Ressonadores de Sinal Ultimate (padrão 100), montados, sintonizados e com 8 Lapidados; um roteador Ultimate na Porta de Energia de cada um, para uma Bateria Ultimate, cada par numa rede | Custo do Ressonador gerando, com o transporte da energia | Bem abaixo do orçamento |
 | `resonator-idle` | Os mesmos (padrão 500), sem roteador: o buffer enche em 10 s e para | Custo de existir do Ressonador | Perto de 0 |
@@ -359,3 +360,21 @@ Os itens rápidos do backlog (`.claude/skills/wa-performance/references/auditori
 - O redstone ao lado do roteador não avisa mais os vizinhos a cada pulso (A4): −10% no mod do cenário `redstone`.
 - O estoque (A6) e a rajada (A5) ficam iguais nestes cenários: o ganho deles é de memória (sem `long[]` por item a cada visita) e de chamadas num destino comum que enche, que o `bigfull` não exercita.
 - O MSPT base também caiu nesta rodada (a máquina estava mais quieta), então os números de custo têm essa folga; os do Ressonador não, porque são medidos pelo próprio gerenciador.
+
+## M1 e M2 da auditoria: acordar sem cascata e redstone como trava (17 de outubro de 2026)
+
+Ramo `motor-m1-m2` (commit `0eb40a5`): `./scripts/bench.sh sparse:500:3,full:100:3,many:500:3:vanilla,redstone:100:3,redstone-face:100:3`, máquina local. Antes: a base `6467190` com só o cenário novo `redstone-face` aplicado (`run/bench/reports/20261017-164504.md`); depois: `20261017-165156.md`, fora do git.
+
+| Cenário | mod antes (ms/tick) | mod depois | p99 antes → depois | µs/visita antes → depois | remontagens/s |
+| --- | --- | --- | --- | --- | --- |
+| redstone-face 100 | 0,237 ± 0,022 | **0,137 ± 0,001** (−42%) | 1,054 → 1,038 | 10,50 → **6,13** | **20 → 0** |
+| redstone 100 | 0,141 ± 0,006 | 0,136 ± 0,005 | 1,036 → 1,044 | 9,29 → 8,95 | 0 → 0 |
+| full 100 | 0,0056 ± 0,0002 | **0,0044 ± 0,0003** (−21%) | **0,057 → 0,008** | 11,26 → 8,87 | 0 → 0 |
+| sparse 500 | 0,0177 ± 0,0005 | **0,0150 ± 0,0003** (−15%) | 0,131 → 0,117 | 4,36 → 3,71 | 0 → 0 |
+| many 500 | 0,679 ± 0,007 | 0,679 ± 0,066 | 1,156 → 1,060 | 11,06 → 11,24 | 0 → 0 |
+
+### Leitura
+
+- M2: a face com controle por redstone fica nas rotas, travada (`Port.redstoneOff`): o sinal só a faz dormir sem prazo ou acordar, e nenhum aviso a destrava. O relógio nas faces deixou de remontar 20 vezes por segundo.
+- M1: "todos os destinos dormindo" é decidido e calculado numa varredura só e guardado por lista de destinos no mesmo tick, enquanto nada acordar (`SourceSleep.allAsleep`, invalidado pela contagem de `Backoff.wake`); um destino acorda as alimentadoras no máximo uma vez por tick. O ganho aparece no `full` (o p99 caiu 7×) e no `sparse`; o caso extremo (uma máquina "barulhenta" acordando centenas de origens) não tem cenário próprio.
+- many e redstone ficam iguais, dentro do ruído.

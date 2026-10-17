@@ -10,9 +10,12 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.FlowStats;
+import io.github.matheusanbs.wirelessautomate.network.FlowWindow;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -99,8 +102,14 @@ final class ScreenshotTablet {
                     tabletScreen.previewTab(TabletScreen.Tab.MAP);
                     tabletScreen.previewMapSelect(3);
                 }, "t4-tablet-mapa"),
-                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.STATS), "t5-tablet-estatisticas"),
                 new Step(() -> {
+                    tabletScreen.previewTab(TabletScreen.Tab.FLOWS);
+                    tabletScreen.getMenu().applyFlows(sampleFlows());
+                    tabletScreen.flows().previewOpen(ResourceType.ENERGY, true);
+                }, "t5-tablet-fluxos"),
+                new Step(() -> tabletScreen.flows().previewMode(true), "t5b-tablet-fluxos-rede"),
+                new Step(() -> {
+                    tabletScreen.flows().previewMode(false);
                     tabletScreen.previewTab(TabletScreen.Tab.NETWORKS);
                     tabletScreen.previewNetwork(0);
                 }, "t6-tablet-redes"),
@@ -126,14 +135,32 @@ final class ScreenshotTablet {
         return sampleTablet(false).nodes().stream().filter(n -> n.name().equals(name)).findFirst().orElseThrow().key();
     }
 
-    /** Vazões de exemplo na ordem de {@link ResourceType#values()} (itens, fluidos, energia, químicos). */
-    private static List<TabletSnapshot.TypeStats> rates(long items, long fluids, long energy, long chemicals) {
-        long[] values = {items, fluids, energy, chemicals};
-        List<TabletSnapshot.TypeStats> types = new ArrayList<>();
-        for (ResourceType type : ResourceType.values()) {
-            types.add(new TabletSnapshot.TypeStats(type.ordinal() < values.length ? values[type.ordinal()] : 0, 0, 0, 0));
-        }
-        return List.copyOf(types);
+    /**
+     * Fluxos de exemplo nas redes do {@link #sampleTablet}: a Base com itens e energia enchendo, os Fluidos, a
+     * Energia de outro dono e a Linha de fundição pausada; totais da janela cheia de 5 s.
+     */
+    private static TabletFlowsPayload sampleFlows() {
+        UUID base = UUID.nameUUIDFromBytes("base".getBytes());
+        UUID fluids = UUID.nameUUIDFromBytes("fluidos".getBytes());
+        UUID energy = UUID.nameUUIDFromBytes("energia".getBytes());
+        UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
+        FlowStats.States waiting = new FlowStats.States(3, 1, 3, 4, 1, 0);
+        FlowStats.States moving = new FlowStats.States(2, 0, 0, 2, 0, 0);
+        List<TabletFlowsPayload.NetworkFlows> networks = List.of(
+                new TabletFlowsPayload.NetworkFlows(base, false, 42_000, List.of(
+                        flow(base, ResourceType.ITEM, 1_850, 1_870, 0, 20, waiting),
+                        flow(base, ResourceType.ENERGY, 4_800_000, 3_150_000, 1_650_000, 0, moving))),
+                new TabletFlowsPayload.NetworkFlows(fluids, false, 18_000, List.of(
+                        flow(fluids, ResourceType.FLUID, 10_000, 10_000, 0, 0, moving))),
+                new TabletFlowsPayload.NetworkFlows(energy, false, 9_000, List.of(
+                        flow(energy, ResourceType.ENERGY, 4_000_000, 4_000_000, 0, 0, moving))),
+                new TabletFlowsPayload.NetworkFlows(line, true, 0, List.of()));
+        return new TabletFlowsPayload(0, 80_000, 500_000, networks, List.of(0, 0, 0, 0, 0));
+    }
+
+    private static FlowStats flow(UUID network, ResourceType type, long produced, long consumed, long stored,
+            long released, FlowStats.States states) {
+        return new FlowStats(network, type, produced, consumed, stored, released, FlowWindow.SECONDS, states);
     }
 
     /** {@code bits} com o modo da face do lado {@code side} da máquina, do tipo {@code type}. */
@@ -153,16 +180,11 @@ final class ScreenshotTablet {
         UUID ore = UUID.nameUUIDFromBytes("minerio".getBytes());
         UUID line = UUID.nameUUIDFromBytes("linha".getBytes());
         List<TabletSnapshot.NetworkView> networks = List.of(
-                new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1, 1, 2,
-                        42_000, 61, rates(1_240, 0, 0, 0)),
-                new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0, 0, 0,
-                        18_000, 20, rates(0, 48_000, 0, 0)),
-                new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0, 0,
-                        0, 9_000, 20, rates(0, 0, 120_000, 0)),
-                new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0, 0, 0,
-                        0, 0, rates(0, 0, 0, 0)),
-                new TabletSnapshot.NetworkView(line, "Linha de fundição", 0xA46CFF, "Dev", true, true, false, true, 8, 0,
-                        0, 0, 0, 0, rates(0, 0, 0, 0)));
+                new TabletSnapshot.NetworkView(base, "Base", 0x45D6CC, "Dev", true, true, false, false, 5, 1),
+                new TabletSnapshot.NetworkView(fluids, "Fluidos", 0x3D8BFF, "Dev", true, true, false, false, 2, 0),
+                new TabletSnapshot.NetworkView(energy, "Energia", 0xFFB020, "Convidado", false, false, true, false, 3, 0),
+                new TabletSnapshot.NetworkView(ore, "Minério", 0xD8875A, "Dev", true, true, true, true, 4, 0),
+                new TabletSnapshot.NetworkView(line, "Linha de fundição", 0xA46CFF, "Dev", true, true, false, true, 8, 0));
         int extractItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT);
         int insertItems = NodeIndex.role(ResourceType.ITEM, NodeIndex.INSERT);
         int insertFluids = NodeIndex.role(ResourceType.FLUID, NodeIndex.INSERT);
@@ -239,7 +261,7 @@ final class ScreenshotTablet {
                         List.of(ResourceType.ITEM, ResourceType.ENERGY), 3))
                 : Optional.empty();
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
-                Optional.of(base), 80_000, 500_000, TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
+                Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
                 List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
     }

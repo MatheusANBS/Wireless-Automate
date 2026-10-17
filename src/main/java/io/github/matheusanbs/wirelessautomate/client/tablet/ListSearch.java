@@ -210,6 +210,12 @@ final class ListSearch {
         sendQuery();
     }
 
+    /** A etiqueta de rede passa a ser só {@code id} (as de máquina ficam); a consulta sai depois, por quem chamou. */
+    void onlyNetwork(UUID id) {
+        labels.removeIf(label -> label.network() != null);
+        labels.add(new Label(null, id));
+    }
+
     void toggleQuick(QuickFilter filter) {
         if (!quick.remove(filter)) {
             quick.add(filter);

@@ -43,6 +43,11 @@ final class TabletNodes {
         return false;
     }
 
+    /** O jogador vê a rede: operador, dono, ou a rede é pública. */
+    static boolean visible(WaNetwork network, boolean operator, UUID me) {
+        return operator || network.owner().equals(me) || network.isPublic();
+    }
+
     static NodeStatus status(NodeIndex.Entry entry, boolean loaded, int full, boolean moved, NetworkSavedData data) {
         if (!loaded) {
             return NodeStatus.UNLOADED;

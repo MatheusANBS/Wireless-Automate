@@ -53,10 +53,6 @@ final class TabletText {
         return tr("ms", decimal(nanos / 1_000_000.0));
     }
 
-    static Component rate(ResourceType type, long value) {
-        return ResourceStyle.rate(type, value);
-    }
-
     /** Junta uma parte à linha, separada por um ponto. */
     static void appendPart(MutableComponent line, Component part) {
         if (!line.getSiblings().isEmpty()) {

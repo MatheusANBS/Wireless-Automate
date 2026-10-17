@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
@@ -50,8 +51,9 @@ import org.jetbrains.annotations.Nullable;
  * mudaram (chunks que carregam ou descarregam só aparecem na amostra seguinte). Uma montagem
  * ({@link TabletSnapshotBuilder}) percorre o índice uma vez (O(nós visíveis)) e sonda o motor uma vez por
  * amostra para saber quais nós têm destino cheio (as contagens dos filtros rápidos). O cabeçalho
- * (estatísticas, redes, grupos, facetas) e a página de nós vão em pacotes separados, cada um só se ficou
- * diferente do último enviado.
+ * (redes, grupos, facetas) e a página de nós vão em pacotes separados, cada um só se ficou
+ * diferente do último enviado. Só com a aba Fluxos aberta, o {@link TabletFlowsPayload} sai a cada amostra
+ * nova do amostrador, se mudou ({@link TabletFlows}).
  *
  * <p>Nó escolhido (servidor): o painel do Tablet mostra e edita um nó ({@link #chooseNode}). O menu é o
  * {@link RouterEditHost} desse nó, então os pacotes de face de sempre editam o roteador à distância
@@ -67,7 +69,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>As partes do servidor: a consulta ({@link TabletQuery}), a montagem ({@link TabletSnapshotBuilder}),
  * as regras de um nó ({@link TabletNodes}), o nó escolhido ({@link TabletChosenNode}), o perfil
- * ({@link TabletProfile}), as ações ({@link TabletMenuActions}) e o estado por jogador ({@link TabletPlayers}).
+ * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}) e o estado por
+ * jogador ({@link TabletPlayers}).
  */
 public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
@@ -118,6 +121,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
     private @Nullable TabletPanelPayload panel;
     private int panelVersion;
+    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
+    private @Nullable TabletFlowsPayload flowsPayload;
     /** Cliente: a aba e o nó escolhido que o servidor restaurou ao abrir. */
     private int restoredTab;
     private @Nullable NodeKey restoredNode;
@@ -129,6 +134,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable TabletChosenNode node;
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
+    private final @Nullable TabletFlows flows;
     private int tab;
     private boolean forced;
     private @Nullable TabletSnapshot sent;
@@ -144,7 +150,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder);
         this.actions = new TabletMenuActions(this, viewer);
+        this.flows = new TabletFlows(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
+        flows.tab(tab);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
     }
@@ -168,6 +176,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.node = null;
         this.profile = null;
         this.actions = null;
+        this.flows = null;
         this.snapshot = snapshot;
         this.restoredTab = restoredTab;
         this.restoredNode = restoredNode;
@@ -205,6 +214,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public void removed(Player player) {
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
+        if (flows != null) {
+            flows.stop();
+        }
         if (viewer != null && !viewer.hasDisconnected()) {
             TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef()));
         }
@@ -212,6 +224,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /** Quantas abas a tela tem ({@code TabletScreen.Tab}); o servidor só guarda uma posição dentro delas. */
     public static final int TAB_COUNT = 5;
+    /** A posição da aba Fluxos ({@code TabletScreen.Tab.FLOWS}): só com ela aberta o jogador olha o amostrador. */
+    public static final int FLOWS_TAB = 2;
 
     /** Servidor: a aba que a tela mostra. Devolve se o valor era de uma aba que existe. */
     public boolean setTab(int tab) {
@@ -219,6 +233,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             return false;
         }
         this.tab = tab;
+        if (flows != null) {
+            flows.tab(tab);
+        }
         return true;
     }
 
@@ -364,6 +381,16 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         return panelVersion;
     }
 
+    /** Cliente: os Fluxos novos ({@code TabletFlowsPayload}). */
+    public void applyFlows(TabletFlowsPayload flows) {
+        this.flowsPayload = flows;
+    }
+
+    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
+    public @Nullable TabletFlowsPayload flows() {
+        return flowsPayload;
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
@@ -394,6 +421,18 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (panelNow != null) {
             send(panelNow);
         }
+        TabletFlowsPayload flowsNow = pollFlows();
+        if (flowsNow != null) {
+            send(flowsNow);
+        }
+    }
+
+    /**
+     * Os Fluxos de uma amostra nova, se a aba Fluxos está aberta e eles mudaram desde o último enviado; senão
+     * {@code null}. Só no servidor; público para os GameTests.
+     */
+    public @Nullable TabletFlowsPayload pollFlows() {
+        return flows == null ? null : flows.poll();
     }
 
     private void send(CustomPacketPayload payload) {

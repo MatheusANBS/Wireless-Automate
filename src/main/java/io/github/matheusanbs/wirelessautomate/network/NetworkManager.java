@@ -376,6 +376,21 @@ public final class NetworkManager {
         return port != null && port.waitsDestination;
     }
 
+    /**
+     * Para GameTests e diagnóstico: o que a porta (da presa com {@code machinePos} nulo, ou da remota)
+     * entregou como origem desde a última leitura do contador; -1 se a porta não existe.
+     */
+    public long gaveForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port == null ? -1 : port.gave;
+    }
+
+    /** O mesmo de {@link #gaveForTests}, para o que a porta recebeu como destino; -1 se ela não existe. */
+    public long gotForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type, Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port == null ? -1 : port.got;
+    }
+
     private @Nullable Port portOrNull(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
             Direction face) {
         NodePorts ports = nodes.get(node);

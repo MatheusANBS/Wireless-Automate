@@ -99,6 +99,35 @@ public final class SourceGameTests {
         return true;
     }
 
+    /** Os contadores da porta: a origem entregou os 5000 de Source e o destino recebeu os mesmos 5000. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void sourceCountsBothSides(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-source-fluxo");
+        RouterBlockEntity from = jar(helper, A, RouterTier.ULTIMATE, network, PortMode.EXTRACT);
+        RouterBlockEntity to = jar(helper, B, RouterTier.ULTIMATE, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(from, to), "roteadores não registrados"))
+                .thenExecute(() -> set(helper, A, 5_000))
+                .thenWaitUntil(() -> {
+                    helper.assertValueEqual(amount(helper, B), 5_000, "Source no destino");
+                    helper.assertValueEqual(NetworkManager.get().gaveForTests(from, null, ResourceType.SOURCE,
+                            Direction.UP), 5_000L, "entregue pela origem");
+                    helper.assertValueEqual(NetworkManager.get().gotForTests(to, null, ResourceType.SOURCE,
+                            Direction.UP), 5_000L, "recebido pelo destino");
+                })
+                .thenExecute(() -> {
+                    helper.assertValueEqual(NetworkManager.get().gotForTests(from, null, ResourceType.SOURCE,
+                            Direction.UP), 0L, "recebido pela origem");
+                    helper.assertValueEqual(NetworkManager.get().gaveForTests(to, null, ResourceType.SOURCE,
+                            Direction.UP), 0L, "entregue pelo destino");
+                })
+                .thenSucceed();
+    }
+
     /** Uma jarra para outra pela rede, sem limite de vazão (Ultimate). */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void sourceMovesBetweenJars(GameTestHelper helper) {

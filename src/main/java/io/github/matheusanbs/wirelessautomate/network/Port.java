@@ -34,6 +34,17 @@ final class Port {
     final Backoff sourceBackoff = new Backoff(NetworkManager.MAX_SLEEP_TICKS);
     /** Destino que recusou. */
     final Backoff destinationBackoff = new Backoff(NetworkManager.MAX_SLEEP_TICKS);
+    /**
+     * O que esta porta entregou como origem desde a última leitura, na unidade do tipo (itens, mB, FE,
+     * Source ou unidades de químico). Somado pelas transferências no fim da visita que moveu; o
+     * amostrador dos Fluxos lê e zera.
+     */
+    long gave;
+    /**
+     * O que esta porta recebeu como destino desde a última leitura, na mesma unidade. Somado pelas
+     * transferências a cada entrega; o amostrador dos Fluxos lê e zera.
+     */
+    long got;
     /** Próximo slot a varrer como origem de itens. */
     int slotCursor;
     /** Slots varridos seguidos sem mover nada, somando visitas: uma volta inteira faz a origem dormir. */

@@ -44,12 +44,20 @@ final class ItemGiveBack {
      * Devolve ao mesmo slot da origem o que o destino recusou depois de aceitar na simulação. Outro
      * slot da origem não serve: pode ser a entrada da máquina (a pedra tirada da saída de um forno
      * voltava pela entrada e virava pedra lisa), e o filtro da face nem é consultado. O que não couber
-     * vai para os destinos da passada cujo filtro aceite, e só o resto cai no mundo.
+     * vai para os destinos da passada cujo filtro aceite, e só o resto cai no mundo. O que volta à origem
+     * não conta como entregue; o resgatado conta como recebido pelo destino e como entregue pela origem.
      */
     static void giveBack(Port source, IItemHandler handler, int slot, ItemStack leftover, List<Port> pass) {
         ItemStack rest = handler.insertItem(slot, leftover, false);
         for (int i = 0, n = pass.size(); i < n && !rest.isEmpty(); i++) {
-            rest = rescue(pass.get(i), rest);
+            Port destination = pass.get(i);
+            int before = rest.getCount();
+            rest = rescue(destination, rest);
+            int rescued = before - rest.getCount();
+            if (rescued > 0) {
+                destination.got += rescued;
+                source.gave += rescued;
+            }
         }
         if (!rest.isEmpty()) {
             Level level = source.node.getLevel();

@@ -112,6 +112,7 @@ final class ItemBulkTransfer {
         source.slotCursor = index;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
+            source.gave += moved;
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
@@ -218,7 +219,7 @@ final class ItemBulkTransfer {
                 }
                 if (delivered > 0) {
                     ItemTransfer.PLAN.delivered(destination, key, delivered);
-                    delivered(source, destination, order);
+                    delivered(source, destination, order, delivered);
                     moved += delivered;
                     remaining -= delivered;
                 } else if (first) {
@@ -269,7 +270,7 @@ final class ItemBulkTransfer {
             ItemGiveBack.giveBackBulk(source, bulk, key, taken - in);
         }
         if (in > 0) {
-            delivered(source, destination, order);
+            delivered(source, destination, order, in);
         } else {
             destination.destinationBackoff.sleep(now);
             ItemTransfer.destinationSlept = true;
@@ -281,8 +282,9 @@ final class ItemBulkTransfer {
     }
 
     /** Uma entrega que deixou algo no destino: acorda-o, conta na volta da passada e nas operações. */
-    private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order) {
+    private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order, long amount) {
         destination.destinationBackoff.wake();
+        destination.got += amount;
         order.delivered(destination);
         if (source.network != null) {
             source.network.ops++;

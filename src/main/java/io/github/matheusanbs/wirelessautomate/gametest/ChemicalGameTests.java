@@ -105,6 +105,36 @@ public final class ChemicalGameTests {
                 .thenSucceed();
     }
 
+    /** Os contadores da porta: a origem entregou os 2000 mB e o destino recebeu os mesmos 2000. */
+    @GameTest(template = "empty")
+    public static void chemicalCountsBothSides(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-quimico-fluxo");
+        RouterBlockEntity source = tank(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = tank(helper, B, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
+                        && NetworkManager.get().contains(target), "roteadores não registrados"))
+                .thenExecute(() -> fill(helper, A, HYDROGEN, 2_000))
+                .thenWaitUntil(() -> {
+                    helper.assertValueEqual(amount(helper, B, HYDROGEN), 2_000L, "hidrogênio no destino");
+                    helper.assertValueEqual(NetworkManager.get().gaveForTests(source, null, ResourceType.CHEMICAL,
+                            Direction.UP), 2_000L, "entregue pela origem");
+                    helper.assertValueEqual(NetworkManager.get().gotForTests(target, null, ResourceType.CHEMICAL,
+                            Direction.UP), 2_000L, "recebido pelo destino");
+                })
+                .thenExecute(() -> {
+                    helper.assertValueEqual(NetworkManager.get().gotForTests(source, null, ResourceType.CHEMICAL,
+                            Direction.UP), 0L, "recebido pela origem");
+                    helper.assertValueEqual(NetworkManager.get().gaveForTests(target, null, ResourceType.CHEMICAL,
+                            Direction.UP), 0L, "entregue pelo destino");
+                })
+                .thenSucceed();
+    }
+
     /** Lista branca de oxigênio na origem: o hidrogênio fica; o estoque mantém 500 mB na origem. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void chemicalFilterAndStock(GameTestHelper helper) {

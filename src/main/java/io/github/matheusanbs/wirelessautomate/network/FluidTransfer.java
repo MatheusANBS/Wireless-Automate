@@ -51,11 +51,10 @@ final class FluidTransfer {
         if (tokens <= 0) {
             return false;
         }
-        List<Port> pass = order.pass();
-        if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            SourceSleep.untilDestinations(source, pass, now);
+        if (SourceSleep.allAsleep(source, order, now)) {
             return false;
         }
+        List<Port> pass = order.pass();
         int tanks = bulk != null ? bulk.types() : handler.getTanks();
         if (tanks <= 0) {
             SourceSleep.nothingToMove(source, now);

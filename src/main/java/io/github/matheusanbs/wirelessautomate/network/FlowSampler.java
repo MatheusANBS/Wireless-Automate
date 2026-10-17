@@ -212,6 +212,14 @@ public final class FlowSampler {
                 }
                 NetworkFlows entry = entry(routes);
                 entry.used[t] = true;
+                if (port.redstoneOff) {
+                    // Travada pelo redstone: conta como parada por redstone, pela configuração, e não nos estados.
+                    port.gaveRead += port.gave;
+                    port.gotRead += port.got;
+                    port.gave = 0;
+                    port.got = 0;
+                    continue;
+                }
                 if (port.source) {
                     readSource(entry, t, port, now);
                 }

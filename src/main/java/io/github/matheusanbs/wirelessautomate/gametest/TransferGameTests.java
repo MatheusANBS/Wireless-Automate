@@ -310,6 +310,34 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * A dica de inserção do destino (o último slot onde o item entrou) cai quando o baú muda por fora: com uma
+     * pilha igual aparecendo num slot anterior, o próximo item vai para ela, como no {@code insertItemStacked}.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void insertHintDropsOnOutsideChange(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-dica-insercao");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        chestAt(helper, B).setItem(0, new ItemStack(Items.STONE, 1));
+        chestAt(helper, B).setItem(1, new ItemStack(Items.STONE, 1));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10)))
+                .thenWaitUntil(() -> helper.assertValueEqual(chestAt(helper, B).getItem(2).getCount(), 10,
+                        "diamantes no slot 2"))
+                .thenExecute(() -> {
+                    chestAt(helper, B).setItem(0, new ItemStack(Items.DIAMOND, 1));
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 5));
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(chestAt(helper, B).getItem(0).getCount(), 6,
+                        "a pilha anterior não recebeu"))
+                .thenExecute(() -> helper.assertValueEqual(chestAt(helper, B).getItem(2).getCount(), 10,
+                        "a dica velha recebeu"))
+                .thenSucceed();
+    }
+
     /** A origem com redstone HIGH para de extrair quando o sinal some e volta quando ele volta. */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void redstoneLatchedSourceStopsAndResumes(GameTestHelper helper) {

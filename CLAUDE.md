@@ -12,6 +12,7 @@ Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o
 
 ## Skills do projeto (`.claude/skills/`)
 
+- `wa-performance` (**indispensável, em toda tarefa que mexe em código**): as leis de performance do mod (parado custa zero, caminho quente sem alocação, nada de busca repetida, trabalho proporcional à mudança, sem picos, cliente só com o que muda, nada por quadro além de desenhar, `setChanged` só quando precisa, memória sob demanda, medido e não suposto), a varredura `python -I .claude/skills/wa-performance/scripts/varrer_perf.py`, o roteiro do bench antes e depois (`references/medir.md`) e o backlog da auditoria de eficiência (`references/auditoria.md`). O custo de uma ideia é a primeira pergunta, antes do visual.
 - `wa-feature`: feature, tela ou item novo, do mockup aprovado ao commit, com um subagente por tarefa.
 - `wa-mod-opcional`: integrar outro mod opcional (como Mekanism e Ars), sem quebrar o mod quando ele não está instalado.
 - `wa-release`: fechar uma versão (changelog separado e unificado, tag, release com o jar).
@@ -112,7 +113,7 @@ Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChem
 - **Pastas de dados do 1.21.1 são no singular:** `recipe/`, `loot_table/`, `structure/`, `tags/block/`, `tags/item/`.
 - **GameTests:** a classe leva `@GameTestHolder(WirelessAutomate.MODID)` e `@PrefixGameTestTemplate(false)`, e o template é `"empty"`. Os testes do mesmo lote rodam em paralelo e dividem o `NetworkManager`, então teste pertinência (`contains`) e não contagem. Também dividem o `NetworkSavedData`: cada teste cria a própria rede (`NetworkSavedData.get(server).create(...)`), porque uma rede que não existe lá deixa a face parada. Compare redes (que podem ser nulas) com `Objects.equals`: o `assertValueEqual` com valor nulo derruba o servidor de GameTest, não só o teste. O `onLoad` de um block entity recém-colocado só roda no tick seguinte: use `startSequence().thenWaitUntil(...)`. Jogador de teste no mundo só pelo `TestPlayers.inLevel` (ou `removedAtEnd` para um jogador próprio): sai da lista quando o teste termina, porque a grade reaproveita as posições entre lotes e um jogador esquecido impede colocar bloco ali. Teste que grava a config (`Config.SPEC.save()`, `migrateBalance()`) fica num lote só dele e espera a recarga do arquivo, que chega pelo relógio e remonta as redes.
 - **Lógica pura sem classes do Minecraft** (como `TickBudget`) vai com teste JUnit em `src/test/java`. Lógica que depende do jogo vai com GameTest.
-- **Performance é requisito**, não detalhe (ver "Arquitetura de performance" na especificação):
+- **Performance é requisito**, não detalhe (ver "Arquitetura de performance" na especificação e a skill `wa-performance`, que vale em toda tarefa):
   - nada de tick por bloco;
   - nada de busca de capability por tick, use `BlockCapabilityCache`;
   - nada de sincronizar o cliente com a tela fechada.

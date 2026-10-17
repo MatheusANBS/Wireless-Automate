@@ -57,7 +57,7 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | C1 | A busca `#` do Baú limpa o cache e refaz o tooltip de todos os tipos a cada tecla | `ShownList:72`, `StorageKeys:49` | alto (100–300 ms/tecla) | pendente |
 | C2 | Lista do Baú copiada, reordenada e com o mod buscado no registro a cada sincronização | `ShownList:82-114` | médio | pendente |
 | C3 | Layout do painel do nó e da Lista do Tablet refeito 3–4× por quadro | `NodePanel:212`, `ListLayout` | médio-baixo | pendente |
-| C4 | A aba Fluxos monta linhas e textos por quadro | `FlowsTab:236` | médio | pendente |
+| C4 | A aba Fluxos monta linhas e textos por quadro | `FlowsTab:236` | médio | feito na etapa 1 da central (linhas e textos numa `FlowRow`, refeitas só quando os Fluxos, as redes, a vista, os tipos abertos ou o tema mudam) |
 | C5 | Abrir o Filtro percorre o registro inteiro por entrada de mod | `FilterMembers:46` | baixo-médio | pendente |
 | C6 | Miúdos: BER do Ressonador troca de `RenderType` ~7× por Núcleo, lista do editor de receitas por quadro, `ResourceLocation` por ícone, projeção por quadro | vários | baixo | pendente |
 
@@ -71,4 +71,4 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 ## Em andamento
 
-- Fluxos (etapa 1 da central): o amostrador sempre ligado está sendo espalhado em 20 fases, com a configuração por nó em cache (commit WIP 55e3236, não verificado).
+- Fluxos (etapa 1 da central): o amostrador sempre ligado espalhado em 20 baldes de fase pela posição do nó, com a configuração por nó em cache (`FlowSampler.NodeConfig`, pelo `changeVersion`, o `NetworkSavedData.version()` e a recarga da config) e o resultado montado só quando alguém pede. Falta o bench depois.

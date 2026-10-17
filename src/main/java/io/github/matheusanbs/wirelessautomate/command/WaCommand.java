@@ -178,7 +178,8 @@ public final class WaCommand {
                 flows.watchers(),
                 flows.samples(),
                 ms(flows.averageNanos()),
-                ms(flows.lastNanos())), false);
+                ms(flows.lastNanos()),
+                ms(flows.peakNanos())), false);
         return manager.nodeCount();
     }
 

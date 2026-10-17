@@ -6,8 +6,8 @@ import net.minecraft.core.Direction;
 /**
  * Leitura do estado do motor para o Tablet: só lê as portas de um nó carregado, sem criar rotas nem
  * acordar nada. O menu do Tablet aberto só sonda os nós da página mostrada (e, com o filtro de
- * problemas, todos uma vez por amostra); os cheios de cada rede vêm contados nas estatísticas do
- * gerenciador ({@link NetworkStats#destinationsFull()}).
+ * problemas, todos uma vez por amostra); os cheios de cada rede vêm contados pelo amostrador dos Fluxos
+ * ({@link FlowSampler}) e, no {@code /wa profile}, pelo gerenciador ({@link NetworkStats#destinationsFull()}).
  */
 public final class NodeProbe {
     /**

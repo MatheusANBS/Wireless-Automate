@@ -8,7 +8,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
- * Servidor → cliente: o cabeçalho do Tablet aberto (estatísticas, redes, grupos e aviso) mudou. Vai
+ * Servidor → cliente: o cabeçalho do Tablet aberto (redes, grupos, facetas e aviso) mudou. Vai
  * sem a página de nós ({@link TabletSnapshot#HEADER_CODEC}); o cliente mantém a que já tem.
  */
 public record TabletHeaderPayload(int containerId, TabletSnapshot header) implements CustomPacketPayload {

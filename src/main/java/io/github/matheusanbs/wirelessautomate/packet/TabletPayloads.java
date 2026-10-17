@@ -23,6 +23,8 @@ public final class TabletPayloads {
                 TabletPayloads::onPage);
         registrar.playToClient(TabletPanelPayload.TYPE, TabletPanelPayload.STREAM_CODEC,
                 TabletPayloads::onPanel);
+        registrar.playToClient(TabletFlowsPayload.TYPE, TabletFlowsPayload.STREAM_CODEC,
+                TabletPayloads::onFlows);
         registrar.playToServer(TabletSelectNodePayload.TYPE, TabletSelectNodePayload.STREAM_CODEC,
                 (payload, context) -> handleSelectNode(serverPlayer(context), payload));
         registrar.playToServer(TabletTabPayload.TYPE, TabletTabPayload.STREAM_CODEC,
@@ -63,6 +65,13 @@ public final class TabletPayloads {
         Player player = context.player();
         if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
             menu.applyPanel(payload);
+        }
+    }
+
+    private static void onFlows(TabletFlowsPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
+            menu.applyFlows(payload);
         }
     }
 

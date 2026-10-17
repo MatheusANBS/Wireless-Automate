@@ -31,14 +31,12 @@ import net.minecraft.resources.ResourceLocation;
  * {@code matchingNodes} diz quantos casaram, para nenhum pacote levar milhares de nós.
  *
  * <p>Vai ao cliente em duas partes, cada uma só quando muda: o cabeçalho ({@link #HEADER_CODEC}:
- * estatísticas, redes, grupos, facetas, contagens dos filtros rápidos e aviso, pequeno e mutável a
- * cada amostra) e a página de nós ({@link Page}, a parte grande). O buffer de abertura leva as duas
+ * redes, grupos, facetas, contagens dos filtros rápidos e aviso, pequeno) e a página de nós ({@link Page},
+ * a parte grande). O buffer de abertura leva as duas
  * ({@link #STREAM_CODEC}).
  *
  * @param dimension     dimensão do jogador, para o mapa
  * @param center        posição do jogador, centro do mapa
- * @param modNanos      tempo médio do mod por tick (todas as redes)
- * @param budgetNanos   teto atual do orçamento por tick
  * @param query         a consulta que esta página responde
  * @param totalNodes    nós visíveis ao jogador, sem filtro
  * @param matchingNodes nós que passam na consulta (os nós enviados são os {@link #MAX_NODES} primeiros)
@@ -56,8 +54,6 @@ public record TabletSnapshot(
         ResourceLocation dimension,
         BlockPos center,
         Optional<UUID> activeNetwork,
-        long modNanos,
-        long budgetNanos,
         Query query,
         int totalNodes,
         int matchingNodes,
@@ -258,26 +254,13 @@ public record TabletSnapshot(
     }
 
     /**
-     * Uma rede visível. Vazões da última amostra, por tipo (unidade do registro); o tempo e as operações vêm
-     * do profiler do motor ({@code /wa profile}).
+     * Uma rede visível.
      *
      * @param manageable o jogador pode renomear, mudar cor e privacidade e remover (dono ou op)
      * @param unloaded   nós da rede em chunks descarregados
-     * @param full       destinos cheios (dormindo depois de recusas seguidas)
-     * @param sleeping   destinos dormindo, cheios ou não
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
-            boolean isPublic, boolean paused, int nodes, int unloaded, int full, int sleeping, long averageNanos,
-            int opsPerSecond, List<TypeStats> types) {
-        /** Por {@link ResourceType#ordinal()}. */
-        public TypeStats type(ResourceType type) {
-            return type.ordinal() < types.size() ? types.get(type.ordinal()) : TypeStats.EMPTY;
-        }
-    }
-
-    /** Vazão e portas de um tipo numa rede; vazão na unidade da tela (itens/s, mB/s, FE/t). */
-    public record TypeStats(long rate, int sources, int destinations, int sleeping) {
-        public static final TypeStats EMPTY = new TypeStats(0, 0, 0, 0);
+            boolean isPublic, boolean paused, int nodes, int unloaded) {
     }
 
     /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
@@ -343,7 +326,7 @@ public record TabletSnapshot(
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
-        return new TabletSnapshot(operator, dimension, center, activeNetwork, modNanos, budgetNanos, page.query(),
+        return new TabletSnapshot(operator, dimension, center, activeNetwork, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
                 page.nodes(), page.groupCounts(), page.originGroup(), notice, noticeId);
     }
@@ -388,8 +371,6 @@ public record TabletSnapshot(
         buf.writeResourceLocation(s.dimension);
         buf.writeBlockPos(s.center);
         buf.writeOptional(s.activeNetwork, (b, id) -> b.writeUUID(id));
-        buf.writeVarLong(s.modNanos);
-        buf.writeVarLong(s.budgetNanos);
         buf.writeVarInt(s.networks.size());
         for (NetworkView n : s.networks) {
             buf.writeUUID(n.id);
@@ -402,17 +383,6 @@ public record TabletSnapshot(
             buf.writeBoolean(n.paused);
             buf.writeVarInt(n.nodes);
             buf.writeVarInt(n.unloaded);
-            buf.writeVarInt(n.full);
-            buf.writeVarInt(n.sleeping);
-            buf.writeVarLong(n.averageNanos);
-            buf.writeVarInt(n.opsPerSecond);
-            buf.writeVarInt(n.types().size());
-            for (TypeStats t : n.types()) {
-                buf.writeVarLong(t.rate());
-                buf.writeVarInt(t.sources());
-                buf.writeVarInt(t.destinations());
-                buf.writeVarInt(t.sleeping());
-            }
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -496,8 +466,6 @@ public record TabletSnapshot(
         ResourceLocation dimension = buf.readResourceLocation();
         BlockPos center = buf.readBlockPos();
         Optional<UUID> active = buf.readOptional(b -> b.readUUID());
-        long modNanos = buf.readVarLong();
-        long budgetNanos = buf.readVarLong();
         int networkCount = buf.readVarInt();
         List<NetworkView> networks = new ArrayList<>(networkCount);
         for (int i = 0; i < networkCount; i++) {
@@ -511,17 +479,8 @@ public record TabletSnapshot(
             boolean paused = buf.readBoolean();
             int nodes = buf.readVarInt();
             int unloaded = buf.readVarInt();
-            int full = buf.readVarInt();
-            int sleeping = buf.readVarInt();
-            long averageNanos = buf.readVarLong();
-            int opsPerSecond = buf.readVarInt();
-            int typeCount = buf.readVarInt();
-            List<TypeStats> types = new ArrayList<>(typeCount);
-            for (int t = 0; t < typeCount; t++) {
-                types.add(new TypeStats(buf.readVarLong(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt()));
-            }
             networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
-                    unloaded, full, sleeping, averageNanos, opsPerSecond, List.copyOf(types)));
+                    unloaded));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
@@ -562,7 +521,7 @@ public record TabletSnapshot(
         });
         Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
         int noticeId = buf.readVarInt();
-        return new TabletSnapshot(operator, dimension, center, active, modNanos, budgetNanos, Page.EMPTY.query(),
+        return new TabletSnapshot(operator, dimension, center, active, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
                 List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), Optional.empty(), notice, noticeId);
     }

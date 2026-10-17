@@ -1,6 +1,6 @@
 # Correção do alcance: resgate, destino cheio e vincular sem rede (etapa 0 da central da rede)
 
-Data: 17/10/2026. Ramo: `correcao-alcance`, a partir do `main` (2.0.1). Primeira entrega do refactor do Tablet ("central da rede"), cujo mockup aprovado está em `docs/preview/central-da-rede.html` (versão 6). Esta etapa sai sozinha, numa versão pequena, antes da central.
+Data: 17/10/2026. Ramo: `correcao-alcance`, sobre o `origin/main` 2.1.0 (com o Ressonador). Primeira entrega do refactor do Tablet ("central da rede"), cujo mockup aprovado está em `docs/preview/central-da-rede.html` (versão 6). Esta etapa sai sozinha, numa versão pequena, antes da central.
 
 ## O que muda
 
@@ -31,10 +31,10 @@ Hoje, no modo Máquinas do Vinculador (clique e área), a primeira máquina de u
 
 Para os grupos e as exceções que já nasceram com rede em tudo.
 
-- **Onde:** no painel do nó (tela do roteador, roteador aberto pelo Tablet e painel do Tablet), logo abaixo do cubo das faces, numa linha que só aparece quando o alvo de edição é um **grupo** (o perfil) ou uma **máquina com exceção** e há ao menos uma face, de qualquer tipo, com modo Nenhum e com rede. Na presa e no painel só leitura não aparece. A tela decide pelo snapshot que já recebe (`FaceView.mode` e `FaceView.network` de todos os tipos do alvo); nada novo no snapshot.
+- **Onde:** no painel do nó (tela do roteador, roteador aberto pelo Tablet e painel do Tablet), na **linha Editando**, como um botão pequeno ao lado de "Voltar a igual", "Atualizar" e "Desvincular" (rótulo "Tirar redes", só o ícone se não couber; o nome inteiro na dica). Não cria linha nova nem aperta o corpo. Aparece só quando o alvo de edição é um **grupo** (o perfil) ou uma **máquina com exceção** e há ao menos uma face, de qualquer tipo, com modo Nenhum e com rede. Na presa e no painel só leitura não aparece. A tela decide pelo snapshot que já recebe (`FaceView.mode` e `FaceView.network` de todos os tipos do alvo); nada novo no snapshot.
 - **O que faz:** tira a rede de todas as faces do alvo, em todos os tipos, que têm modo Nenhum e rede. Não mexe em face com modo (Extrai, Insere, Armazém), nem em prioridade, redstone ou filtro. Uma mudança só no roteador (um `changed`).
-- **Aviso:** "Rede tirada de N faces sem modo" (en_us: "Network removed from N faces with no mode"), com **Desfazer**. O Desfazer devolve a rede só às faces que continuam com modo Nenhum e sem rede (o que você mudou depois não é sobrescrito). Vale até o próximo limpar do mesmo jogador, ele fechar a tela ou o servidor parar.
-- **Protocolo:** payload novo cliente → servidor `ClearIdleNetworksPayload(int containerId, boolean undo)`, pelo `RouterEditHost` (vale na tela do roteador, no roteador remoto e no Tablet, com as validações de hoje: menu aberto, nó visível, carregado, ao alcance, acesso de edição). `PanelNoticePayload.Undo` ganha `RESTORE_IDLE_NETWORKS`. `ModPayloads.VERSION` sobe de `16` para `17`.
+- **Aviso:** numa linha só, como os outros: "Rede tirada de N faces" (en_us: "Network removed from N faces"), com **Desfazer**. O Desfazer devolve a rede só às faces que continuam com modo Nenhum e sem rede (o que você mudou depois não é sobrescrito). Se nenhuma face pôde voltar, não há aviso. Vale até o próximo limpar do mesmo jogador, ele fechar a tela ou o servidor parar.
+- **Protocolo:** payload novo cliente → servidor `ClearIdleNetworksPayload(int containerId, boolean undo)`, pelo `RouterEditHost` (vale na tela do roteador, no roteador remoto e no Tablet, com as validações de hoje: menu aberto, nó visível, carregado, ao alcance, acesso de edição). `PanelNoticePayload.Undo` ganha `RESTORE_IDLE_NETWORKS`. `ModPayloads.VERSION` sobe de `18` para `19`.
 - **Dica do botão:** "Tira a rede das faces com modo Nenhum, em todas as abas. As faces que movem algo ficam como estão."
 
 ## Guia do jogador

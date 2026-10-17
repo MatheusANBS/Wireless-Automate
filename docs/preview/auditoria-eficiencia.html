@@ -1,0 +1,163 @@
+<title>Auditoria de eficiência</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: relatório em pacotes (um por área e risco), cada pacote numa tabela com o ganho e o risco como selos; resumo no topo. */
+:root {
+  --page: #ECE5D6; --fg: #2A2730; --mu: #6E675B; --line: #CFC5B0; --card: #F6F1E6;
+  --coral: #F0603E; --hi: #2F9D5C; --mid: #D88A1A; --lo: #8A8170; --risk: #D5453A;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --fg: #EDE6D8; --mu: #A79F90; --line: #3A363F; --card: #222026; --hi: #3DB56E; --mid: #E39A2E; --lo: #9A9284; --risk: #E55A4E; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --fg: #EDE6D8; --mu: #A79F90; --line: #3A363F; --card: #222026; --hi: #3DB56E; --mid: #E39A2E; --lo: #9A9284; --risk: #E55A4E; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 6px; text-wrap: balance }
+.eyebrow { font-family: var(--pix); font-size: 13px; letter-spacing: .06em; color: var(--coral); text-transform: uppercase; margin-bottom: 4px }
+.lede { color: var(--mu); max-width: 84ch; margin: 8px 0 0 }
+section { border-top: 1px solid var(--line); margin-top: 34px; padding-top: 22px }
+section > p { max-width: 84ch; color: var(--mu); margin: 0 0 10px }
+.sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 18px }
+.sum div { background: var(--card); border: 1px solid var(--line); padding: 12px 14px; font-size: 14px; min-width: 0 }
+.sum b { font-family: var(--pix); font-weight: 500; font-size: 16px; display: block }
+.tbl { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-family: var(--pix); font-weight: 500; color: var(--mu) }
+td.id { font-family: var(--pix); white-space: nowrap; color: var(--coral) }
+td.w { white-space: nowrap }
+code { font-size: 12.5px; background: var(--card); border: 1px solid var(--line); padding: 0 4px; overflow-wrap: anywhere }
+.tag { font-family: var(--pix); font-size: 12px; padding: 0 6px; border: 1px solid currentColor; white-space: nowrap }
+.g-hi { color: var(--hi) } .g-mid { color: var(--mid) } .g-lo { color: var(--lo) }
+.r-hi { color: var(--risk) } .r-mid { color: var(--mid) } .r-lo { color: var(--hi) }
+ul { margin: 6px 0 0; padding-left: 20px } li { max-width: 84ch; margin-bottom: 4px }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Wireless Automate · 17/10/2026</div>
+  <h1>Auditoria de eficiência</h1>
+  <p class="lede">Cinco auditores leram o mod inteiro, sem rodar nada: o motor, o Tablet e os menus, as telas e o desenho no mundo, os armazenamentos e o Ressonador, e a memória e a carga do mundo. Os ganhos são estimativas pela leitura do código; cada correção escolhida será medida no <code>/wa bench</code> antes e depois. Os achados estão em pacotes, para escolher por área e por risco.</p>
+
+  <div class="sum">
+    <div><b>Maior ganho no servidor</b>Acordar em cascata (M1), remontar a rede a cada chunk carregado (M5) e o redstone que remonta as rotas a cada pulso (M2).</div>
+    <div><b>Maior ganho na rede</b>A página do Tablet volta inteira a cada segundo só porque a vazão mudou: ~30–38 KB/s por jogador (T1).</div>
+    <div><b>Travadas no cliente</b>A busca <code>#</code> do Baú refaz o tooltip de todos os tipos a cada tecla: 100–300 ms com milhares de tipos (C1).</div>
+    <div><b>Já resolvido nesta conversa</b>O amostrador dos Fluxos sempre ligado ia dar picos de 1–10 ms por segundo; está sendo espalhado em 20 fases (Tarefa 4 da etapa 1).</div>
+  </div>
+
+  <section>
+    <div class="eyebrow">Pacote A</div>
+    <h2>Rápidos e de baixo risco</h2>
+    <p>Mudanças pequenas, locais, que não mudam comportamento. Bom primeiro passo.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">A1</td><td>O Núcleo do Ressonador grava e avisa os 6 vizinhos a cada extração de energia; basta marcar o chunk (<code>blockEntityChanged</code>).</td><td><code>ResonanceCoreBlockEntity:322</code>, <code>ResonatorBatch:189</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A2</td><td>O lote do Ressonador remonta a vista da câmara (98 membros, arrays) a cada lote, mesmo sem mudança.</td><td><code>ResonatorBatch:200</code>, <code>ChamberView:70</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A3</td><td>Montar e desmontar o Ressonador grava 98 blocos sem <code>UPDATE_KNOWN_SHAPE</code>: centenas de <code>updateShape</code> inúteis.</td><td><code>ResonatorFormation:189, 278</code></td><td class="w"><span class="tag g-mid">médio (picos)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A4</td><td>O redstone ao lado do roteador grava o chunk e avisa os vizinhos a cada pulso, mesmo sem face usando redstone.</td><td><code>RouterBlockEntity:724</code></td><td class="w"><span class="tag g-lo">baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A5</td><td>A rajada num destino comum chama <code>insertItem</code> em todas as pilhas já cheias (O(k²) ao encher).</td><td><code>ItemInsertPlan:244-327</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A6</td><td>A contagem de estoque da origem aloca um <code>long[]</code> e uma cópia de pilha por item a cada visita, e o mapa nunca encolhe.</td><td><code>ItemStockTally:40-111</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A7</td><td>Micro do motor: consulta à remota durante a visita, <code>BlockPos</code> e <code>getBlockState</code> por <code>setChanged</code>, capability antes do balde, cópias de fluido e químico por chamada, multiplicação do orçamento por consulta, lista achatada refeita com uma rede só suja.</td><td><code>RemoteIndex:83</code>, <code>RouterBlock:178</code>, <code>ItemTransfer:86</code>, <code>FluidTransfer:215</code>, <code>TickBudget</code>, <code>NetworkManager.rebuild</code></td><td class="w"><span class="tag g-lo">baixo, somado médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A8</td><td>O Tablet aloca 10–20 mil objetos por montagem com 1.000 nós (<code>List.of</code> por rede, dois <code>HashSet</code> por nó, boxing, <code>values()</code>); a sondagem de cheios aloca por nó.</td><td><code>NodeIndex:124</code>, <code>TabletSnapshotBuilder</code>, <code>TabletNodes</code>, <code>NodeProbe</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A9</td><td>O cabeçalho do Tablet volta inteiro quando o jogador anda (leva a posição dele, que o cliente já sabe).</td><td><code>TabletSnapshotBuilder:122</code></td><td class="w"><span class="tag g-mid">médio (rede)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A10</td><td>Recarregar qualquer chave da config remonta todas as redes num tick; só os tiers precisam.</td><td><code>NetworkManager:641</code></td><td class="w"><span class="tag g-lo">baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">A11</td><td>As redes de um tipo no roteador são recalculadas com <code>LinkedHashSet</code> a cada consulta; guardar até a próxima mudança.</td><td><code>RouterFaces:166</code></td><td class="w"><span class="tag g-lo">baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pacote M</div>
+    <h2>Motor: os ganhos grandes</h2>
+    <p>Onde o servidor gasta mais numa base grande. Mexem no núcleo do transporte, então cada um vai com GameTests e bench próprios.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">M1</td><td>Acordar em cascata: uma máquina "barulhenta" ou um Armazém sendo esvaziado acorda centenas de origens, e cada uma varre todos os destinos duas vezes (~125 mil leituras num tick). Correção: acordar as alimentadoras uma vez por tick e guardar "algum destino acordado" por lista.</td><td><code>NodePorts:290-365</code>, <code>SourceSleep</code></td><td class="w"><span class="tag g-hi">alto (0,3–0,5 ms/tick)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">M2</td><td>Uma face com controle por redstone remonta as rotas a cada pulso (relógio de 2 ticks = 10 remontagens/s). Correção: o sinal vira uma trava na porta, sem remontar.</td><td><code>RouterBlockEntity:716</code></td><td class="w"><span class="tag g-hi">alto nesse caso</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">M3</td><td>A simulação de inserção varre o destino inteiro a cada entrega. Correção: a "varredura incremental" que a especificação já planeja, com uma dica por destino e item.</td><td><code>ItemInsertPlan:128-203</code></td><td class="w"><span class="tag g-hi">20–35% da visita em inventário grande</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">M4</td><td>Energia e Source consultam todos os destinos a cada visita. Correção sem mudar comportamento: parar nos grupos de prioridade menor quando o atual já cobre o oferecido.</td><td><code>ScalarTransfer:51-73</code></td><td class="w"><span class="tag g-mid">médio (mixed)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">M5</td><td>Carregar ou descarregar um chunk remonta a rede inteira, O(origens × destinos) quando há alcance limitado. Um jogador voando na borda de uma base grande repete isso a cada tick. Correção: juntar os avisos e remontar no máximo a cada N ticks, ou remontar só o membro que mudou.</td><td><code>NetworkManager:136-157, 706</code>, <code>NetworkRoutes:205</code></td><td class="w"><span class="tag g-hi">alto (1–3 ms em picos)</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">M6</td><td>O laço passa por todas as origens a cada tick, inclusive as que dormem (duas indireções cada). Correção: o instante de acordar num array paralelo, ou uma roda de tempo.</td><td><code>NetworkManager:530-561</code></td><td class="w"><span class="tag g-mid">médio com 10 mil portas</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pacote T</div>
+    <h2>Tablet e telas do roteador: rede e servidor</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">T1</td><td>A página do Tablet volta inteira a cada segundo porque a vazão de algum nó mudou. Correção: a estrutura só quando muda e um pacote pequeno com vazão e estado (~8–12 B por nó).</td><td><code>TabletMenu:471</code>, <code>TabletSnapshotBuilder:254</code></td><td class="w"><span class="tag g-hi">alto (30 KB/s → 3 KB/s)</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">T2</td><td>A página repete a dimensão, o id da máquina e 16 B por rede em cada nó. Correção: uma paleta no próprio pacote.</td><td><code>TabletSnapshot:424-462</code></td><td class="w"><span class="tag g-mid">médio-alto (rede)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">T3</td><td>Cada jogador com o Tablet aberto refaz a amostra de vazão e de cheios e ordena ~1.000 nós a cada montagem. Correção: amostra compartilhada e lista ordenada em cache.</td><td><code>TabletSnapshotBuilder:104-133</code></td><td class="w"><span class="tag g-mid">médio, alto com vários jogadores</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">T4</td><td>O painel do nó manda o snapshot inteiro do roteador quando só a distância muda (andando).</td><td><code>TabletChosenNode:152</code></td><td class="w"><span class="tag g-mid">médio-baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">T5</td><td>Um pulso de redstone recaptura e reenvia a tela do roteador aberta (10/s com relógio).</td><td><code>RouterMenu:889</code></td><td class="w"><span class="tag g-lo">baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">T6</td><td>A área marcada do Vinculador é revarrida quando qualquer roteador do servidor carrega.</td><td><code>LinkerMenu:84</code></td><td class="w"><span class="tag g-lo">baixo-médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pacote S</div>
+    <h2>Armazenamentos do mod</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">S1</td><td>Cada inserção ou extração real avisa os 6 vizinhos (250 origens num Baú = 250 avisos por tick). Correção: marcar o chunk na hora e juntar o aviso num só por tick.</td><td><code>StorageChestBlockEntity:15</code>, <code>ScalarStorageBlockEntity:346</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">S2</td><td>Estoque sem componentes conta em O(tipos), até 3× por entrega (10 mil tipos = 30 mil entradas). Correção: soma por item mantida.</td><td><code>ItemStorage:41</code>, <code>KeyedStorage:113</code></td><td class="w"><span class="tag g-hi">alto nesse caso</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">S3</td><td>Gravar o Baú recodifica cada chave inteira a cada salvamento do chunk (dezenas de ms com milhares de tipos).</td><td><code>KeyedStorage:181</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">S4</td><td>Funis e outros mods: <code>getStackInSlot</code> aloca uma pilha por chamada.</td><td><code>ItemStorageHandler:29</code></td><td class="w"><span class="tag g-lo">baixo-médio</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">S5</td><td>Os armazenamentos quebrados guardam o conteúdo para sempre, mesmo quando o item sumiu (criativo, explosão, Create): o arquivo cresce e é regravado inteiro. Correção: não guardar quando não há drop e expirar os antigos.</td><td><code>StorageSavedData:37</code></td><td class="w"><span class="tag g-mid">médio (memória e salvar)</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pacote C</div>
+    <h2>Cliente: telas e desenho</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">C1</td><td>A busca <code>#</code> do Baú limpa o cache e refaz o tooltip de todos os tipos a cada tecla.</td><td><code>ShownList:72</code>, <code>StorageKeys:49</code></td><td class="w"><span class="tag g-hi">alto (100–300 ms por tecla)</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">C2</td><td>A lista do Baú é copiada, reordenada e o mod de cada tipo buscado no registro a cada sincronização (4×/s).</td><td><code>ShownList:82-114</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">C3</td><td>O layout do painel do nó e da Lista do Tablet é refeito 3–4 vezes por quadro (~30 medidas de texto cada vez).</td><td><code>NodePanel:212</code>, <code>ListLayout</code></td><td class="w"><span class="tag g-mid">médio-baixo</span></td><td class="w"><span class="tag r-mid">médio</span></td></tr>
+        <tr><td class="id">C4</td><td>A aba Fluxos monta as linhas e os textos a cada quadro.</td><td><code>FlowsTab:236</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">C5</td><td>Abrir o Filtro percorre o registro inteiro de itens para cada entrada de mod.</td><td><code>FilterMembers:46</code></td><td class="w"><span class="tag g-lo">baixo-médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">C6</td><td>Miúdos: a câmara do Ressonador troca de modo de desenho ~7 vezes por Núcleo, a lista do editor de receitas é refiltrada por quadro, o ícone de tipo cria um <code>ResourceLocation</code> por desenho, a projeção refaz os fantasmas por quadro.</td><td>vários</td><td class="w"><span class="tag g-lo">baixo</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pacote R</div>
+    <h2>Memória</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Id</th><th>Achado</th><th>Onde</th><th>Ganho</th><th>Risco</th></tr></thead>
+      <tbody>
+        <tr><td class="id">R1</td><td>Cada máquina vinculada aloca os 9 caches de capability e um array de 30 portas, quase tudo vazio (200 roteadores × 64 máquinas ≈ 5 MB, 80% vazio).</td><td><code>MachineCaches:47</code>, <code>NodePorts:83</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">R2</td><td>Cada filtro expande as próprias tags: mil faces com o mesmo <code>#c:ingots</code> duplicam 4–8 MB, e todos refazem o mapa depois de um <code>/reload</code>.</td><td><code>Filter:154</code>, <code>CompiledMatcher:82</code></td><td class="w"><span class="tag g-mid">médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+        <tr><td class="id">R3</td><td>O índice de nós é regravado inteiro a cada mudança (300–600 KB com 2.000 roteadores) e guarda entradas de roteadores que sumiram sem aviso.</td><td><code>NodeIndex:322, 503</code></td><td class="w"><span class="tag g-lo">baixo-médio</span></td><td class="w"><span class="tag r-lo">baixo</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Fora da mesa</div>
+    <h2>O que está bom e não deve ser mexido</h2>
+    <ul>
+      <li>Nada no motor faz tick por bloco; o roteador não tem tick e junta as mudanças. O laço lê o relógio uma vez por visita e as voltas extras só com quem tem fome.</li>
+      <li>Rotas remontadas só no tipo sujo, com os cursores preservados; o filtro compilado com as tags expandidas; o mixin sem alocação.</li>
+      <li>Nada é sincronizado com a tela fechada: tudo passa pelo <code>broadcastChanges</code> com versões, cabeçalho e página separados, e limites nos decoders.</li>
+      <li>O Ressonador em 20 baldes de fase, sem alocar no desenho, com o update tag só quando a câmara muda; o armazenamento com total e contagem O(1) e sem conteúdo indo ao cliente.</li>
+      <li>Os mapas por jogador são limpos no logout e na parada do servidor; o <code>NodeIndex</code> só guarda o block entity enquanto ele está carregado.</li>
+    </ul>
+  </section>
+</div>

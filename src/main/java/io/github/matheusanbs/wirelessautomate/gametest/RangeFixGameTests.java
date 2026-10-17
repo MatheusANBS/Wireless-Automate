@@ -67,9 +67,9 @@ public final class RangeFixGameTests {
     private static final BlockPos NORMAL = new BlockPos(2, 1, 2);
 
     /**
-     * A presa é uma máquina de entrada e saída (a sobra não volta pelo slot de saída) e os dois destinos
-     * são remotos: o que o destino que mente recusa tem de ir para o remoto normal, e não para a
-     * máquina presa, onde o resgate antigo (que lia o nó e não a porta) a devolveria pela entrada.
+     * O resgate usa a máquina da porta que recebeu: a presa é uma máquina de entrada e saída (a sobra não
+     * volta pelo slot de saída) e os dois destinos são remotos; o que o destino que mente recusa termina no
+     * remoto normal, e nada entra na entrada da presa nem cai no mundo.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void remoteRescueGoesToRemoteMachine(GameTestHelper helper) {
@@ -315,9 +315,10 @@ public final class RangeFixGameTests {
     /**
      * No perfil de um grupo antigo (rede em tudo), o botão pelo pacote tira a rede só das faces com modo
      * Nenhum, de todos os tipos, numa mudança só; a face que insere fica com a rede e a presa não muda. O
-     * Desfazer fica guardado e o aviso leva o {@code RESTORE_IDLE_NETWORKS} (o jogador de teste não negocia o
-     * canal do aviso: o texto e o Desfazer vêm do mesmo {@link ModPayloads#idleClearedNotice}). Limpar de novo
-     * não acha nada e esquece o Desfazer.
+     * Desfazer fica guardado. Do aviso, o teste confere só a montagem ({@link ModPayloads#idleClearedNotice},
+     * o mesmo método que o handler usa: leva o {@code RESTORE_IDLE_NETWORKS} e o container); o envio não é
+     * observável aqui, porque o jogador de teste não negocia o canal, e fica com o e2e. Limpar de novo não
+     * acha nada e esquece o Desfazer.
      */
     @GameTest(template = "empty")
     public static void idleClearOnProfileKeepsFacesWithMode(GameTestHelper helper) {
@@ -492,7 +493,10 @@ public final class RangeFixGameTests {
                 .thenSucceed();
     }
 
-    /** O pacote com o container de outro jogador, ou com o do próprio menu já fechado, é ignorado. */
+    /**
+     * O pacote do jogador A com o container do menu aberto do jogador B é ignorado, e o do próprio menu de A
+     * já fechado também; o mesmo container, mandado por B, limpa.
+     */
     @GameTest(template = "empty")
     public static void idleClearIgnoresOtherOrClosedContainer(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -510,10 +514,14 @@ public final class RangeFixGameTests {
                         RouterMenu otherMenu = openMenuAs(router, other, OTHER_CONTAINER_ID);
                         selectGroup(helper, other, otherMenu.containerId, group);
                         selectGroup(helper, player, menu.containerId, group);
-                        helper.assertValueEqual(clearIdle(player, OTHER_CONTAINER_ID, false), -1, "container de outro jogador");
+                        helper.assertValueEqual(clearIdle(player, otherMenu.containerId, false), -1,
+                                "container do menu de outro jogador");
+                        assertProfileNetwork(helper, router, FURNACE_A, network, "perfil depois do container de B");
                         player.doCloseContainer();
                         helper.assertValueEqual(clearIdle(player, menu.containerId, false), -1, "container fechado");
-                        assertProfileNetwork(helper, router, FURNACE_A, network, "perfil");
+                        assertProfileNetwork(helper, router, FURNACE_A, network, "perfil depois do fechado");
+                        helper.assertValueEqual(clearIdle(other, otherMenu.containerId, false), allFaces(),
+                                "o mesmo container, pelo dono");
                     } finally {
                         forgetPlayer(helper, other);
                         forgetPlayer(helper, player);
@@ -546,6 +554,166 @@ public final class RangeFixGameTests {
                         selectGroup(helper, player, reopened.containerId, group);
                         helper.assertValueEqual(clearIdle(player, reopened.containerId, true), -1, "desfez depois de fechar");
                         assertProfileNetwork(helper, router, FURNACE_A, null, "perfil");
+                    } finally {
+                        forgetPlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um destino remoto cheio sai da contagem quando a face vai para Nenhum, assim que as rotas são
+     * remontadas, mesmo com o sono do destino ainda correndo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void fullDestinationLeavesWhenModeGoesNone(GameTestHelper helper) {
+        RouterBlockEntity router = rangeRouter(helper);
+        helper.setBlock(NORMAL, Blocks.CHEST);
+        Container full = container(helper, NORMAL);
+        for (int slot = 0; slot < full.getContainerSize(); slot++) {
+            full.setItem(slot, new ItemStack(Items.DIRT, 64));
+        }
+        container(helper, CHEST).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+                    linkInNetwork(helper, router, NORMAL);
+                    profile(helper, router, NORMAL, Direction.UP, PortMode.INSERT);
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(fullNow(helper, router), 1, "destinos cheios"))
+                .thenExecute(() -> {
+                    long now = helper.getLevel().getServer().getTickCount();
+                    helper.assertTrue(NetworkManager.get().sleepForTests(router, helper.absolutePos(NORMAL),
+                            ResourceType.ITEM, Direction.UP, now, 1000), "sem a porta do destino remoto");
+                    profile(helper, router, NORMAL, Direction.UP, PortMode.NONE);
+                })
+                .thenIdle(3)
+                .thenExecute(() -> helper.assertValueEqual(fullNow(helper, router), 0, "destinos cheios depois do Nenhum"))
+                .thenSucceed();
+    }
+
+    private static int fullNow(GameTestHelper helper, RouterBlockEntity router) {
+        return NodeProbe.fullDestinations(router, ResourceType.ITEM, helper.getLevel().getServer().getTickCount());
+    }
+
+    /**
+     * O Desfazer não vale num grupo recriado: limpar o grupo, desvincular as duas fornalhas e vincular uma de
+     * novo cria outro grupo do mesmo bloco, sem rede; escolhido ele, o Desfazer não devolve nada.
+     */
+    @GameTest(template = "empty")
+    public static void idleUndoIgnoresRecreatedGroup(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        UUID network = router.networkId(ResourceType.ITEM);
+                        int group = oldGroup(helper, router, network);
+                        selectGroup(helper, player, menu.containerId, group);
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, false), allFaces(), "faces limpas");
+                        helper.assertTrue(router.unlinkMachine(helper.absolutePos(FURNACE_A)), "não desvinculou A");
+                        helper.assertTrue(router.unlinkMachine(helper.absolutePos(FURNACE_B)), "não desvinculou B");
+                        helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_A)), "não vinculou A de novo");
+                        int recreated = groupOf(router, helper.absolutePos(FURNACE_A));
+                        helper.assertTrue(recreated != group, "o grupo recriado tem o mesmo id");
+                        selectGroup(helper, player, menu.containerId, recreated);
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, true), -1, "desfez no grupo recriado");
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil do grupo recriado");
+                    } finally {
+                        forgetPlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Uma rede apagada depois do limpar não volta pelo Desfazer: a face fica sem rede. */
+    @GameTest(template = "empty")
+    public static void idleUndoSkipsDeletedNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+                        UUID doomed = data.create(UUID.randomUUID(), "apagada antes do desfazer").id();
+                        int group = oldGroup(helper, router, doomed);
+                        selectGroup(helper, player, menu.containerId, group);
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, false), allFaces(), "faces limpas");
+                        helper.assertTrue(data.remove(doomed), "não apagou a rede");
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, true), 0, "faces devolvidas");
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil");
+                    } finally {
+                        forgetPlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Desfazer só vale no alvo do limpar: com uma máquina do grupo escolhida, não devolve nada; de volta ao
+     * grupo, devolve.
+     */
+    @GameTest(template = "empty")
+    public static void idleUndoNeedsTheSameTarget(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        UUID network = router.networkId(ResourceType.ITEM);
+                        int group = oldGroup(helper, router, network);
+                        selectGroup(helper, player, menu.containerId, group);
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, false), allFaces(), "faces limpas");
+                        BlockPos a = helper.absolutePos(FURNACE_A);
+                        helper.assertTrue(ModPayloads.handleSelectTarget(player, SelectTargetPayload.machine(menu.containerId,
+                                router.remoteMachines().index(a), a)), "não escolheu a fornalha A");
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, true), -1, "desfez em outro alvo");
+                        assertProfileNetwork(helper, router, FURNACE_A, null, "perfil com outro alvo");
+                        selectGroup(helper, player, menu.containerId, group);
+                        helper.assertValueEqual(clearIdle(player, menu.containerId, true), allFaces(),
+                                "desfez de volta ao grupo");
+                        assertProfileNetwork(helper, router, FURNACE_A, network, "perfil devolvido");
+                    } finally {
+                        forgetPlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Pelo Tablet, com o nó fora do alcance (painel só leitura), limpar não faz nada nem guarda Desfazer. */
+    @GameTest(template = "empty")
+    public static void idleClearReadOnlyTabletDoesNothing(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = linkerPlayer(helper, ItemStack.EMPTY);
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        NodeIndex.placedBy(router, player.getUUID());
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    try {
+                        UUID network = router.networkId(ResourceType.ITEM);
+                        int group = oldGroup(helper, router, network);
+                        TabletMenu menu = new TabletMenu(TABLET_ID, player.getInventory(), player);
+                        player.containerMenu = menu;
+                        helper.assertTrue(TabletPayloads.handleSelectNode(player, new TabletSelectNodePayload(TABLET_ID,
+                                Optional.of(NodeKey.of(router.getLevel(), router.getBlockPos())))), "não escolheu o nó");
+                        selectGroup(helper, player, TABLET_ID, group);
+                        player.moveTo(Vec3.atCenterOf(router.getBlockPos()).add(2000, 0, 0));
+                        helper.assertFalse(menu.canEdit(player), "editável fora do alcance");
+                        helper.assertValueEqual(clearIdle(player, TABLET_ID, false), -1, "limpou fora do alcance");
+                        helper.assertFalse(IdleNetworkUndo.has(player.getUUID()), "guardou Desfazer fora do alcance");
+                        assertProfileNetwork(helper, router, FURNACE_A, network, "perfil");
                     } finally {
                         forgetPlayer(helper, player);
                     }

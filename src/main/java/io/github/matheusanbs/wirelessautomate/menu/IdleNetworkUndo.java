@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import java.util.HashMap;
 import java.util.List;
@@ -77,9 +78,13 @@ public final class IdleNetworkUndo {
         LAST.clear();
     }
 
-    /** O mesmo alvo: o mesmo tipo e a mesma máquina (posição) ou o mesmo grupo (bloco), mesmo com outro índice. */
+    /**
+     * O mesmo alvo: a mesma máquina (pela posição, mesmo com outro índice) ou o mesmo grupo (pelo id e pelo
+     * bloco: um grupo recriado com o mesmo bloco tem outro id).
+     */
     private static boolean sameTarget(EditTargetRef a, EditTargetRef b) {
-        return a.target().kind() == b.target().kind() && Objects.equals(a.pos(), b.pos())
+        boolean sameGroup = a.target().kind() != EditTarget.Kind.GROUP || a.target().id() == b.target().id();
+        return a.target().kind() == b.target().kind() && sameGroup && Objects.equals(a.pos(), b.pos())
                 && Objects.equals(a.block(), b.block());
     }
 }

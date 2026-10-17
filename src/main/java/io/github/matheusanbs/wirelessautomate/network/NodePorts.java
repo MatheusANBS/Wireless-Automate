@@ -52,6 +52,11 @@ final class NodePorts {
      * passa por {@link NetworkManager#nodeChanged}, que descarta a leitura.
      */
     private final Port[][] collected = new Port[TYPES.length][];
+    /** O balde de fase do amostrador dos Fluxos e a posição do nó nele ({@link FlowSampler#add}). */
+    @Nullable List<NodePorts> flowPhase;
+    int flowSlot = -1;
+    /** A configuração que o amostrador dos Fluxos contou; {@code null} até a primeira leitura. */
+    FlowSampler.@Nullable NodeConfig flowConfig;
 
     NodePorts(RouterBlockEntity node) {
         this.node = node;

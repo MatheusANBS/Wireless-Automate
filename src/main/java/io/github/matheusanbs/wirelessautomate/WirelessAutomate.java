@@ -86,6 +86,7 @@ public final class WirelessAutomate {
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
+        NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {

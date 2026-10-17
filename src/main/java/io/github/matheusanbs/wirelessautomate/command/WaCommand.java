@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.bench.BenchCommand;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
+import io.github.matheusanbs.wirelessautomate.network.FlowSampler;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -129,8 +130,8 @@ public final class WaCommand {
     }
 
     /**
-     * Total de nós e orçamento, uma linha por rede e a do Ressonador (o gerenciador e as revalidações, fora do
-     * orçamento do transporte). Os nós de uma rede são os que têm algum tipo nela (ver
+     * Total de nós e orçamento, uma linha por rede, a do Ressonador (o gerenciador e as revalidações, fora do
+     * orçamento do transporte) e a do amostrador dos Fluxos (também fora do orçamento). Os nós de uma rede são os que têm algum tipo nela (ver
      * {@link NetworkStats#nodes()}), então a soma das linhas pode passar do total.
      */
     private static int profile(CommandSourceStack source) {
@@ -172,6 +173,12 @@ public final class WaCommand {
                 ms(resonators.lastBatchNanos()),
                 ms(resonators.averageRevalidationNanos()),
                 ms(resonators.lastRevalidationNanos())), false);
+        FlowSampler.Cost flows = manager.flows().cost();
+        source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.flows",
+                flows.watchers(),
+                flows.samples(),
+                ms(flows.averageNanos()),
+                ms(flows.lastNanos())), false);
         return manager.nodeCount();
     }
 

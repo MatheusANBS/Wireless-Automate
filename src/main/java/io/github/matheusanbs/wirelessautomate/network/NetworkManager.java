@@ -88,6 +88,8 @@ public final class NetworkManager {
     /** Origens que pararam num teto da visita com saldo, para as voltas extras do tick. */
     private final List<Port> hungry = new ArrayList<>();
     private final TickBudget budget = new TickBudget(500_000L);
+    /** O amostrador dos Fluxos do Tablet; parado sem ninguém olhando. */
+    private final FlowSampler flows = new FlowSampler(networkList, nodes.values());
     private int cursor;
     private boolean dirty;
     /** Redes salvas do servidor atual e a versão delas já conferida ({@link #checkNetworks}). */
@@ -266,6 +268,11 @@ public final class NetworkManager {
 
     public TickBudget budget() {
         return budget;
+    }
+
+    /** O amostrador dos Fluxos: quem olha a aba Fluxos e o resultado da última amostra. */
+    public FlowSampler flows() {
+        return flows;
     }
 
     /** Visitas a origens desde que o gerenciador foi criado. */
@@ -500,6 +507,8 @@ public final class NetworkManager {
             }
         }
         budget.end(end);
+        // Fora do orçamento do transporte: o custo dele sai à parte no /wa profile.
+        flows.tick(server, now);
     }
 
     /** Visita as origens a partir do cursor enquanto houver orçamento. Devolve o último {@code nanoTime}. */

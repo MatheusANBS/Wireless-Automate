@@ -292,9 +292,9 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Versão do que a tela do roteador mostra: muda com faces, rede, nome, sinal de redstone,
-     * {@code facing}, tier e quando a máquina muda (cache de capability invalidado ou bloco
-     * trocado). Só serve para comparar com uma versão lida antes.
+     * Versão do que a tela do roteador mostra: muda com faces, rede, nome, {@code facing}, tier e quando a
+     * máquina muda (cache de capability invalidado ou bloco trocado). O sinal de redstone não a muda: quem o
+     * mostra confere à parte. Só serve para comparar com uma versão lida antes.
      */
     public int changeVersion() {
         return changeVersion;
@@ -720,8 +720,8 @@ public class RouterBlockEntity extends BlockEntity {
         boolean now = level.hasNeighborSignal(worldPosition);
         if (now != powered) {
             powered = now;
-            changeVersion++;
-            // Só marca o chunk: avisar os vizinhos a cada pulso de um relógio não serve a ninguém.
+            // Sem changeVersion: um relógio ao lado reenviaria a tela aberta a cada pulso. A tela confere o sinal
+            // uma vez por segundo. Só marca o chunk: avisar os vizinhos a cada pulso de um relógio não serve a ninguém.
             level.blockEntityChanged(worldPosition);
             if (redstoneTypes() != 0) {
                 NetworkManager.get().poweredChanged(this);

@@ -11,7 +11,6 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
-import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
@@ -19,15 +18,16 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -35,9 +35,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Monta o {@link TabletSnapshot} de um jogador: percorre o índice, conta as facetas e os filtros rápidos,
- * mede a vazão por nó na amostra e monta a página, as redes e os grupos. É dono do estado da
- * amostra (quando foi, o movido por nó, os nós ativos e os cheios) e das versões lidas na última montagem.
+ * Monta o {@link TabletSnapshot} de um jogador: percorre o índice na ordem da Lista, conta as facetas e os filtros
+ * rápidos e monta a página, as redes e os grupos. A vazão, os nós ativos, os cheios e a ordem vêm da amostra do
+ * servidor ({@link TabletSample}), a mesma para todos os jogadores; aqui ficam só quando este jogador amostrou e
+ * as versões lidas na última montagem.
  */
 final class TabletSnapshotBuilder {
     private final ServerPlayer viewer;
@@ -47,15 +48,8 @@ final class TabletSnapshotBuilder {
     /** {@link NodeIndex#dataVersion()} e versão das redes lidas na última montagem. */
     private int builtIndexVersion;
     private int builtDataVersion;
-    /** Nós cheios na última sondagem de todos os nós carregados e quando ela foi. */
-    private final Set<NodeKey> fullNodes = new HashSet<>();
-    private long fullTick = Long.MIN_VALUE;
-    /** Totais movidos por nó na última amostra, por {@link ResourceType#ordinal()}. */
-    private final Map<NodeKey, long[]> lastMoved = new HashMap<>();
-    /** Nós que moveram algo na última amostra. */
-    private final Set<NodeKey> activeNodes = new HashSet<>();
-    /** Vazão por nó na última amostra, por tipo, na unidade do registro (só os que moveram algo). */
-    private final Map<NodeKey, long[]> nodeRates = new HashMap<>();
+    /** Redes já contadas do nó em {@link #countMembership}, reaproveitado. */
+    private final List<Totals> counted = new ArrayList<>();
 
     TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query) {
         this.viewer = viewer;
@@ -83,11 +77,8 @@ final class TabletSnapshotBuilder {
     }
 
     /**
-     * O que a tela mostra agora; com {@code sample}, mede vazão e atividade desde a amostra anterior.
-     *
-     * <p>Percorre o índice uma vez para contar, filtrar e medir a vazão (esta só na amostra), mas só
-     * sonda o motor ({@link io.github.matheusanbs.wirelessautomate.network.NodeProbe}) para os nós da
-     * página. Com o filtro de problemas, os nós cheios vêm de uma sondagem de todos que vale por uma amostra.
+     * O que a tela mostra agora; com {@code sample}, pede ao {@link TabletSample} uma amostra nova (se a do servidor
+     * já tem a idade da janela). Percorre o índice uma vez, já na ordem da Lista, para contar e filtrar.
      */
     TabletSnapshot build(boolean sample, Component notice, int noticeId) {
         MinecraftServer server = viewer.server;
@@ -99,17 +90,11 @@ final class TabletSnapshotBuilder {
         builtDataVersion = data.version();
         boolean operator = viewer.hasPermissions(2);
         UUID me = viewer.getUUID();
-        long elapsed = Math.max(1, now - sampleTick);
+        TabletSample shared = TabletSample.get(server);
         if (sample) {
             sampleTick = now;
-            activeNodes.clear();
-            nodeRates.clear();
         }
-        boolean probeAll = sample || fullTick == Long.MIN_VALUE || now - fullTick >= TabletMenu.SAMPLE_TICKS;
-        if (probeAll) {
-            fullNodes.clear();
-            fullTick = now;
-        }
+        shared.sampleIfDue(index, now);
 
         Map<UUID, Totals> totals = new LinkedHashMap<>();
         for (WaNetwork network : data.networks()) {
@@ -119,16 +104,8 @@ final class TabletSnapshotBuilder {
         }
 
         Map<UUID, String> networkNames = query.networkNames(data);
-        Scan scan = scan(index, data, totals, sample, probeAll, operator, me, now, elapsed, networkNames);
-        if (sample) {
-            lastMoved.keySet().retainAll(scan.seen);
-        }
-
+        Scan scan = scan(shared.sorted(index), shared, data, totals, operator, me, networkNames);
         List<Match> matches = scan.matches;
-        matches.sort(Comparator.<Match, ResourceLocation>comparing(m -> m.entry.machine())
-                .thenComparing(m -> m.entry.name(), String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(m -> m.entry.key().dimension().location())
-                .thenComparingLong(m -> m.entry.key().pos().asLong()));
         RouterPreset profile = TabletProfile.storedProfile(viewer);
         ProfileSource source = profile == null ? null
                 : TabletMenu.tabletStack(viewer).get(ModDataComponents.PROFILE_SOURCE.get());
@@ -141,7 +118,7 @@ final class TabletSnapshotBuilder {
             }
         }
         List<Facet<ResourceLocation>> groupCounts = new ArrayList<>();
-        List<NodeView> nodes = pageNodes(matches, data, profile, groupSizes, groupCounts);
+        List<NodeView> nodes = pageNodes(matches, shared, data, profile, groupSizes, groupCounts);
 
         Map<UUID, String> names = new HashMap<>();
         List<NetworkView> networks = new ArrayList<>();
@@ -168,11 +145,12 @@ final class TabletSnapshotBuilder {
                 originGroup, notice, noticeId);
     }
 
-    /** Uma passada pelo índice: conta as facetas e os filtros rápidos, mede a vazão na amostra e filtra pela consulta. */
-    private Scan scan(NodeIndex index, NetworkSavedData data, Map<UUID, Totals> totals, boolean sample,
-            boolean probeAll, boolean operator, UUID me, long now, long elapsed, Map<UUID, String> networkNames) {
-        Scan scan = new Scan(sample);
-        for (NodeIndex.Entry entry : index.entries()) {
+    /** Uma passada pelo índice, na ordem da Lista: conta as facetas e os filtros rápidos e filtra pela consulta. */
+    private Scan scan(List<NodeIndex.Entry> entries, TabletSample shared, NetworkSavedData data,
+            Map<UUID, Totals> totals, boolean operator, UUID me, Map<UUID, String> networkNames) {
+        Scan scan = new Scan();
+        for (int i = 0, n = entries.size(); i < n; i++) {
+            NodeIndex.Entry entry = entries.get(i);
             if (!TabletNodes.visible(entry, data, operator, me)) {
                 continue;
             }
@@ -180,23 +158,9 @@ final class TabletSnapshotBuilder {
             NodeKey key = entry.key();
             RouterBlockEntity router = entry.router();
             boolean loaded = router != null;
-            boolean moved = false;
-            if (loaded) {
-                if (sample) {
-                    scan.seen.add(key);
-                    moved = sampleMoved(entry, router, elapsed);
-                    if (moved) {
-                        activeNodes.add(key);
-                    }
-                } else {
-                    moved = activeNodes.contains(key);
-                }
-                if (probeAll && TabletNodes.fullDestinations(router, now) > 0) {
-                    fullNodes.add(key);
-                }
-            }
+            boolean moved = loaded && shared.active(key);
             countMembership(entry, totals, loaded);
-            NodeStatus status = TabletNodes.status(entry, loaded, fullNodes.contains(key) ? 1 : 0, moved, data);
+            NodeStatus status = TabletNodes.status(entry, loaded, loaded && shared.full(key) ? 1 : 0, moved, data);
             boolean problem = status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK
                     || status == NodeStatus.FULL;
             boolean noNetwork = !TabletNodes.hasExistingNetwork(entry, data);
@@ -209,10 +173,10 @@ final class TabletSnapshotBuilder {
             if (!loaded) {
                 scan.unloadedCount++;
             }
-            scan.machineCounts.merge(entry.machine(), 1, Integer::sum);
+            scan.machineCounts.addTo(entry.machine(), 1);
             for (UUID id : TabletNodes.distinctNetworks(entry)) {
                 if (totals.containsKey(id)) {
-                    scan.networkCounts.merge(id, 1, Integer::sum);
+                    scan.networkCounts.addTo(id, 1);
                 }
             }
             if (!query.matches(entry, problem, noNetwork, !loaded, networkNames)) {
@@ -224,7 +188,8 @@ final class TabletSnapshotBuilder {
     }
 
     /** Os nós da página (até {@link TabletSnapshot#MAX_NODES}), e a contagem de cada grupo de máquina que aparece nela. */
-    private List<NodeView> pageNodes(List<Match> matches, NetworkSavedData data, RouterPreset profile,
+    private List<NodeView> pageNodes(List<Match> matches, TabletSample shared, NetworkSavedData data,
+            RouterPreset profile,
             Map<ResourceLocation, Integer> groupSizes, List<Facet<ResourceLocation>> groupCounts) {
         List<NodeView> nodes = new ArrayList<>();
         for (int i = 0; i < Math.min(matches.size(), TabletSnapshot.MAX_NODES); i++) {
@@ -249,7 +214,7 @@ final class TabletSnapshotBuilder {
             // só nós carregados e com perfil guardado comparam; o descarregado não tem o que ler
             Optional<ProfileDiff.ProfileMatch> comparison = profile == null || loadedNode == null ? Optional.empty()
                     : Optional.of(ProfileDiff.match(profile, loadedNode));
-            long[] rates = nodeRates.get(entry.key());
+            long[] rates = shared.rates(entry.key());
             List<Long> rateList = new ArrayList<>(ResourceType.values().length);
             for (ResourceType type : ResourceType.values()) {
                 rateList.add(rates == null ? 0L : rates[type.ordinal()]);
@@ -266,63 +231,37 @@ final class TabletSnapshotBuilder {
     /** A consulta atual vale para o nó, com o estado da última amostra: filtros rápidos, etiquetas, tipo e texto. */
     boolean matchesQuery(NodeIndex.Entry entry, NetworkSavedData data, Map<UUID, String> networkNames) {
         boolean loaded = entry.router() != null;
-        NodeStatus status = TabletNodes.status(entry, loaded, fullNodes.contains(entry.key()) ? 1 : 0,
-                activeNodes.contains(entry.key()), data);
+        TabletSample shared = TabletSample.get(viewer.server);
+        NodeStatus status = TabletNodes.status(entry, loaded, loaded && shared.full(entry.key()) ? 1 : 0,
+                loaded && shared.active(entry.key()), data);
         boolean problem = status == NodeStatus.UNLOADED || status == NodeStatus.NO_NETWORK || status == NodeStatus.FULL;
         return query.matches(entry, problem, !TabletNodes.hasExistingNetwork(entry, data), !loaded, networkNames);
     }
 
     /** As facetas pela contagem, das maiores para as menores (a chave desempata, para o cabeçalho ser estável). */
-    private static <T extends Comparable<T>> List<Facet<T>> facets(Map<T, Integer> counts) {
+    private static <T extends Comparable<T>> List<Facet<T>> facets(Object2IntOpenHashMap<T> counts) {
         List<Facet<T>> facets = new ArrayList<>(counts.size());
-        counts.forEach((id, count) -> facets.add(new Facet<>(id, count)));
+        for (Object2IntMap.Entry<T> count : Object2IntMaps.fastIterable(counts)) {
+            facets.add(new Facet<>(count.getKey(), count.getIntValue()));
+        }
         facets.sort(Comparator.<Facet<T>>comparingInt(Facet::count).reversed().thenComparing(Facet::id));
         return facets;
     }
 
-    /** Mede a vazão do nó por tipo; devolve se ele moveu algo desde a amostra anterior. */
-    private boolean sampleMoved(NodeIndex.Entry entry, RouterBlockEntity router, long elapsed) {
-        long[] last = lastMoved.get(entry.key());
-        if (last == null) {
-            last = new long[ResourceType.values().length];
-            for (ResourceType type : ResourceType.values()) {
-                last[type.ordinal()] = router.moved(type);
-            }
-            lastMoved.put(entry.key(), last);
-            return false;
-        }
-        boolean moved = false;
-        for (ResourceType type : TabletNodes.TRANSFER_TYPES) {
-            long now = router.moved(type);
-            long delta = Math.max(0, now - last[type.ordinal()]);
-            if (delta > 0) {
-                moved = true;
-                nodeRates.computeIfAbsent(entry.key(), key -> new long[ResourceType.values().length])[type.ordinal()] =
-                        RateMath.rate(delta, elapsed, type.ratePerTick());
-            }
-        }
-        for (ResourceType type : ResourceType.values()) {
-            last[type.ordinal()] = router.moved(type);
-        }
-        return moved;
-    }
-
     /**
      * Conta o nó uma vez em cada rede em que alguma face dele está. Uma rede em vários tipos conta uma
-     * vez: o {@code counted} guarda as já contadas deste nó (vazio e sem custo para quem não tem rede).
+     * vez: o {@link #counted} guarda as já contadas deste nó (poucas: busca linear, sem alocar).
      */
-    private static void countMembership(NodeIndex.Entry entry, Map<UUID, Totals> totals, boolean loaded) {
-        Set<Totals> counted = null;
+    private void countMembership(NodeIndex.Entry entry, Map<UUID, Totals> totals, boolean loaded) {
+        counted.clear();
         for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 Totals network = totals.get(id);
                 if (network == null) {
                     continue;
                 }
-                if (counted == null) {
-                    counted = new HashSet<>();
-                }
-                if (counted.add(network)) {
+                if (!counted.contains(network)) {
+                    counted.add(network);
                     network.nodes++;
                     if (!loaded) {
                         network.unloaded++;
@@ -350,18 +289,13 @@ final class TabletSnapshotBuilder {
 
     /** O que uma passada pelo índice contou e os nós que passaram na consulta. */
     private static final class Scan {
-        final Map<ResourceLocation, Integer> machineCounts = new HashMap<>();
-        final Map<UUID, Integer> networkCounts = new HashMap<>();
+        final Object2IntOpenHashMap<ResourceLocation> machineCounts = new Object2IntOpenHashMap<>();
+        final Object2IntOpenHashMap<UUID> networkCounts = new Object2IntOpenHashMap<>();
         int problemCount;
         int noNetworkCount;
         int unloadedCount;
         final List<Match> matches = new ArrayList<>();
-        final Set<NodeKey> seen;
         int total;
-
-        Scan(boolean sample) {
-            this.seen = sample ? new HashSet<>() : null;
-        }
     }
 
     /** Um nó que passou na consulta, com o estado que a lista mostra. */

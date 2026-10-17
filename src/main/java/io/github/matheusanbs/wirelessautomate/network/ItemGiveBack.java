@@ -61,17 +61,20 @@ final class ItemGiveBack {
         }
     }
 
-    /** Insere a sobra no destino, se o filtro dele deixar (sem estoque: é só para não perdê-la). */
+    /**
+     * Insere a sobra na máquina da porta de destino (a presa ou a remota), se o filtro dele deixar (sem
+     * estoque: é só para não perdê-la). Uma remota descarregada não responde, e a sobra segue adiante.
+     */
     private static ItemStack rescue(Port destination, ItemStack rest) {
         if (!destination.filter.testItem(rest)) {
             return rest;
         }
-        BulkItems bulk = destination.node.bulkItems(destination.face);
+        BulkItems bulk = destination.machine.bulkItems(destination.face);
         if (bulk != null) {
             long in = bulk.insert(rest, rest.getCount(), false);
             return rest.copyWithCount(rest.getCount() - (int) in);
         }
-        IItemHandler target = destination.node.items(destination.face);
+        IItemHandler target = destination.machine.items(destination.face);
         return target == null ? rest : ItemHandlerHelper.insertItemStacked(target, rest, false);
     }
 

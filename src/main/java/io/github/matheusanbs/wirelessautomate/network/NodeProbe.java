@@ -20,23 +20,28 @@ public final class NodeProbe {
     private NodeProbe() {
     }
 
-    /** Destinos de {@code type} do nó que estão cheios agora (ver {@link #FULL_INTERVAL}). 0 se o nó não está no motor. */
+    /**
+     * Destinos de {@code type} do nó que estão cheios agora (ver {@link #FULL_INTERVAL}), os da máquina presa
+     * e os das remotas. Só olha as portas que já existem: não cria nenhuma. 0 se o nó não está no motor.
+     */
     public static int fullDestinations(RouterBlockEntity node, ResourceType type, long now) {
         NodePorts ports = NetworkManager.get().ports(node);
         if (ports == null || ports.networks(type).length == 0) {
             return 0;
         }
-        int count = 0;
+        int[] count = {0};
         for (Direction face : DIRECTIONS) {
-            if (!node.face(type, face).mode().inserts()) {
-                continue;
-            }
-            Port port = ports.port(type, face);
-            if (port.destination && isFull(port, now)) {
-                count++;
+            Port port = ports.peek(type, face);
+            if (port != null && port.destination && isFull(port, now)) {
+                count[0]++;
             }
         }
-        return count;
+        ports.forEachRemote(type, port -> {
+            if (port.destination && isFull(port, now)) {
+                count[0]++;
+            }
+        });
+        return count[0];
     }
 
     /** O destino dorme depois de recusas seguidas (ver {@link #FULL_INTERVAL}). */

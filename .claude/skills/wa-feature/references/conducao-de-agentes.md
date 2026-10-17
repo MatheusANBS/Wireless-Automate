@@ -23,7 +23,9 @@ E sempre estas regras do projeto:
 - compile antes de rodar jogo (`./gradlew compileJava`); com `BUILD FAILED`, conserte em vez de esperar;
 - nunca rode dois jogos ao mesmo tempo;
 - não mexa em `run/options.txt`;
-- verifique com `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource` (e o e2e se mexeu em tela);
+- leia `.claude/skills/wa-performance/SKILL.md` (as leis e a lista da área) e, antes do commit, rode `python -I .claude/skills/wa-performance/scripts/varrer_perf.py`, resolvendo ou justificando cada candidato no relatório;
+- todo GameTest novo com `timeoutTicks` de no máximo 300; se uma run passar de ~10 min, olhe o `run/gametest/logs/latest.log` e ache o teste parado;
+- verifique com `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` (e o e2e se mexeu em tela);
 - commits sem linhas de atribuição (nada de `Co-Authored-By` ou `Claude-Session`).
 
 Não cole o histórico das tarefas anteriores no pedido. O subagente precisa da tarefa dele, das interfaces que toca e das restrições, nada mais.

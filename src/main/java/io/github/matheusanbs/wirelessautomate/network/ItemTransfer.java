@@ -100,11 +100,10 @@ final class ItemTransfer {
             SourceSleep.nothingToMove(source, now);
             return 0;
         }
-        List<Port> pass = order.pass();
-        if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            SourceSleep.untilDestinations(source, pass, now);
+        if (SourceSleep.allAsleep(source, order, now)) {
             return 0;
         }
+        List<Port> pass = order.pass();
         int slots = handler.getSlots();
         if (slots <= 0) {
             SourceSleep.nothingToMove(source, now);

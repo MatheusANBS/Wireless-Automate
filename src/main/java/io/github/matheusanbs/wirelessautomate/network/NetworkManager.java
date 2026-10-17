@@ -69,6 +69,8 @@ public final class NetworkManager {
     static final int MORE = 2;
 
     private static NetworkManager instance;
+    /** O tick do último {@code tick}: os avisos que chegam entre dois ticks contam como do mesmo. */
+    private static long lastTick = -1;
     private static volatile boolean configChanged;
 
     // Visita em andamento; o laço roda numa thread só (a do servidor). Fora de uma visita, visitNode é null.
@@ -123,6 +125,22 @@ public final class NetworkManager {
     /** A config dos tiers mudou: todas as redes serão remontadas no próximo tick. Seguro de qualquer thread. */
     public static void configChanged() {
         configChanged = true;
+    }
+
+    /**
+     * O sinal de redstone do nó mudou e alguma face dele usa redstone: trava ou destrava as portas, sem remontar
+     * ({@link Port#redstoneOff}).
+     */
+    public void poweredChanged(RouterBlockEntity node) {
+        NodePorts ports = nodes.get(node);
+        if (ports != null) {
+            ports.poweredChanged(node.powered(), lastTick);
+        }
+    }
+
+    /** Ver {@link #lastTick}. */
+    static long lastTick() {
+        return lastTick;
     }
 
     /** O laço está no meio de uma visita (os avisos das máquinas vêm da nossa entrega ou extração). */
@@ -354,6 +372,13 @@ public final class NetworkManager {
         return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
     }
 
+    /** Para GameTests: se a porta está travada pelo redstone ({@link Port#redstoneOff}); falso se ela não existe. */
+    public boolean redstoneOffForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
+            Direction face) {
+        Port port = portOrNull(node, machinePos, type, face);
+        return port != null && port.redstoneOff;
+    }
+
     /**
      * Para GameTests: põe a porta (da máquina presa com {@code machinePos} nulo, ou da remota) para
      * dormir como origem e como destino até {@code ticks} ticks depois de {@code now}, como um sono
@@ -498,6 +523,7 @@ public final class NetworkManager {
         }
         budget.begin(System.nanoTime());
         long now = server.getTickCount();
+        lastTick = now;
 
         if (!networkList.isEmpty()) {
             checkNetworks(server);

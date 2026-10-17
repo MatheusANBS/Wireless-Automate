@@ -12,6 +12,40 @@ import java.util.List;
  * acordado na hora (a máquina mudou) acorda as origens que esperam por ele ({@link NodePorts#wake}).
  */
 final class SourceSleep {
+    /**
+     * Se nenhum destino da passada está acordado, faz a origem dormir até o primeiro acordar
+     * ({@link #untilDestinations}) e devolve {@code true}; com algum acordado, devolve {@code false} sem mexer nela.
+     * Uma varredura só para as duas perguntas, e nenhuma para as origens seguintes com a mesma lista de destinos
+     * no mesmo tick enquanto nada acordar.
+     */
+    static boolean allAsleep(Port source, RoundRobinOrder<Port> order, long now) {
+        RoundRobinOrder.Layout<Port> layout = order.layout();
+        long wake;
+        if (layout.asleepAt == now && layout.asleepWakes == Backoff.wakes()) {
+            wake = layout.asleepUntil;
+        } else {
+            List<Port> pass = order.pass();
+            wake = Long.MAX_VALUE;
+            for (int i = 0, n = pass.size(); i < n; i++) {
+                Backoff backoff = pass.get(i).destinationBackoff;
+                if (backoff.isAwake(now)) {
+                    return false;
+                }
+                wake = backoff.earliestWake(wake);
+            }
+            layout.asleepAt = now;
+            layout.asleepWakes = Backoff.wakes();
+            layout.asleepUntil = wake;
+        }
+        source.waitsDestination = true;
+        if (wake == Long.MAX_VALUE) {
+            source.sourceBackoff.sleep(now);
+        } else {
+            source.sourceBackoff.sleepUntil(now, wake);
+        }
+        return true;
+    }
+
     /** Origem sem destino acordado: dorme até o primeiro destino acordar. */
     static void untilDestinations(Port source, List<Port> pass, long now) {
         source.waitsDestination = true;

@@ -33,11 +33,10 @@ final class ItemBulkTransfer {
         if (tokens <= 0) {
             return 0;
         }
-        List<Port> pass = order.pass();
-        if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            SourceSleep.untilDestinations(source, pass, now);
+        if (SourceSleep.allAsleep(source, order, now)) {
             return 0;
         }
+        List<Port> pass = order.pass();
         int types = bulk.types();
         if (types <= 0) {
             SourceSleep.nothingToMove(source, now);

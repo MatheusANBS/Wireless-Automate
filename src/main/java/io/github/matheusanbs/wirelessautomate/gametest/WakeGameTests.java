@@ -251,9 +251,9 @@ public final class WakeGameTests {
                 .thenSucceed();
     }
 
-    /** Remontagem por tipo: com uma face de itens por redstone, o sinal suja só os itens. */
+    /** Com uma face de itens por redstone, o sinal só trava e destrava a porta: nada suja nem remonta. */
     @GameTest(template = "empty")
-    public static void redstoneModeDirtiesOnlyItsType(GameTestHelper helper) {
+    public static void redstoneSignalLatchesWithoutRebuild(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-redstone-com-modo");
         RouterBlockEntity router = chest(helper, A, network, PortMode.EXTRACT);
         router.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.HIGH);
@@ -264,9 +264,13 @@ public final class WakeGameTests {
                 .thenWaitUntil(() -> helper.assertFalse(NetworkManager.get().isDirty(network, ResourceType.ITEM),
                         "a rede ainda não remontou"))
                 .thenExecute(() -> {
+                    helper.assertTrue(NetworkManager.get().redstoneOffForTests(router, null, ResourceType.ITEM,
+                            Direction.UP), "sem sinal, a face não travou");
                     helper.setBlock(beside, Blocks.REDSTONE_BLOCK);
-                    helper.assertTrue(NetworkManager.get().isDirty(network, ResourceType.ITEM), "itens não sujaram");
+                    helper.assertFalse(NetworkManager.get().isDirty(network, ResourceType.ITEM), "itens sujaram");
                     helper.assertFalse(NetworkManager.get().isDirty(network, ResourceType.FLUID), "fluidos sujaram");
+                    helper.assertFalse(NetworkManager.get().redstoneOffForTests(router, null, ResourceType.ITEM,
+                            Direction.UP), "com sinal, a face continuou travada");
                 })
                 .thenSucceed();
     }

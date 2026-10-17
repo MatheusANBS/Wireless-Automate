@@ -47,8 +47,15 @@ final class ScalarTransfer {
         source.offered = true;
         int count = pass.size();
         ensureCapacity(count);
+        // O que os grupos de prioridade já consultados aceitam: quando cobre o oferecido, a divisão não chega aos
+        // grupos de baixo, e consultá-los seria só custo.
+        long accepted = 0;
         for (int i = 0; i < count; i++) {
             Port destination = pass.get(i);
+            if (i > 0 && destination.priority != priorities[i - 1] && accepted >= offered) {
+                count = i;
+                break;
+            }
             priorities[i] = destination.priority;
             wants[i] = 0;
             targets[i] = null;
@@ -69,6 +76,7 @@ final class ScalarTransfer {
             }
             wants[i] = accepts;
             targets[i] = target;
+            accepted += accepts;
         }
         long total = EnergySplit.split(offered, wants, priorities, count, shares);
         long delivered = 0;

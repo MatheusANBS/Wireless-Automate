@@ -51,7 +51,7 @@ final class ItemGiveBack {
         ItemStack rest = handler.insertItem(slot, leftover, false);
         for (int i = 0, n = pass.size(); i < n && !rest.isEmpty(); i++) {
             Port destination = pass.get(i);
-            if (destination.redstoneOff) {
+            if (destination.stopped) {
                 continue;
             }
             int before = rest.getCount();

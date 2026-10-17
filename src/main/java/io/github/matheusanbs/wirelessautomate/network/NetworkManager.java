@@ -69,6 +69,8 @@ public final class NetworkManager {
     static final int MORE = 2;
 
     private static NetworkManager instance;
+    /** Ticks que a remontagem por nós que entraram ou saíram do motor pode esperar ({@link #markDirty}). */
+    static final int LOAD_REBUILD_TICKS = 20;
     /** O tick do último {@code tick}: os avisos que chegam entre dois ticks contam como do mesmo. */
     private static long lastTick = -1;
     private static volatile boolean configChanged;
@@ -89,6 +91,8 @@ public final class NetworkManager {
     private final List<Port> scratch = new ArrayList<>();
     /** Origens que pararam num teto da visita com saldo, para as voltas extras do tick. */
     private final List<Port> hungry = new ArrayList<>();
+    /** O {@code wakeAt} de cada origem de {@link #sources}, na mesma posição, copiado pelo {@link Backoff}. */
+    private long[] sourceWakeAt = new long[16];
     private final TickBudget budget = new TickBudget(500_000L);
     /** O amostrador dos Fluxos do Tablet: um balde de nós por tick, fora do orçamento do transporte. */
     private final FlowSampler flows = new FlowSampler();
@@ -100,6 +104,10 @@ public final class NetworkManager {
     private int savedVersion;
     /** Entrou rede nova no gerenciador: a existência dela ainda não foi conferida. */
     private boolean networksAdded = true;
+    /** Alguma sujeira das rotas veio de uma edição: remonta no próximo tick ({@link #markDirty}). */
+    private boolean urgent;
+    /** O tick da primeira sujeira só de entrada ou saída de nós ainda não remontada; -1 sem nenhuma. */
+    private long deferredSince = -1;
     /** O {@link Config#tiersFingerprint()} da última montagem por config. */
     private long tiersFingerprint;
     // Contadores cumulativos (benchmark e diagnóstico): só somam; quem lê faz a diferença entre leituras.
@@ -129,7 +137,7 @@ public final class NetworkManager {
 
     /**
      * O sinal de redstone do nó mudou e alguma face dele usa redstone: trava ou destrava as portas, sem remontar
-     * ({@link Port#redstoneOff}).
+     * ({@link Port#stopped}).
      */
     public void poweredChanged(RouterBlockEntity node) {
         NodePorts ports = nodes.get(node);
@@ -162,7 +170,7 @@ public final class NetworkManager {
         nodes.put(node, ports);
         flows.add(ports);
         for (ResourceType type : TYPES) {
-            setMembership(ports, type, node.networks(type));
+            setMembership(ports, type, node.networks(type), true);
         }
         RemoteIndex.get().update(node);
     }
@@ -171,8 +179,10 @@ public final class NetworkManager {
         NodePorts ports = nodes.remove(node);
         if (ports != null) {
             flows.remove(ports);
+            // As portas param na hora; tirá-las das rotas espera a remontagem adiada.
+            ports.stopAll(lastTick);
             for (ResourceType type : TYPES) {
-                setMembership(ports, type, NodePorts.NO_NETWORKS);
+                setMembership(ports, type, NodePorts.NO_NETWORKS, true);
             }
             RemoteIndex.get().remove(node);
         }
@@ -207,7 +217,7 @@ public final class NetworkManager {
         ports.invalidate(types);
         for (ResourceType type : TYPES) {
             if ((types & typeBit(type)) != 0) {
-                setMembership(ports, type, node.networks(type));
+                setMembership(ports, type, node.networks(type), false);
             }
         }
     }
@@ -372,11 +382,11 @@ public final class NetworkManager {
         return port == null ? -1 : port.sourceBackoff.nextIntervalTicks();
     }
 
-    /** Para GameTests: se a porta está travada pelo redstone ({@link Port#redstoneOff}); falso se ela não existe. */
+    /** Para GameTests: se a porta está parada ({@link Port#stopped}); falso se ela não existe. */
     public boolean redstoneOffForTests(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
             Direction face) {
         Port port = portOrNull(node, machinePos, type, face);
-        return port != null && port.redstoneOff;
+        return port != null && port.stopped;
     }
 
     /**
@@ -528,7 +538,9 @@ public final class NetworkManager {
         if (!networkList.isEmpty()) {
             checkNetworks(server);
         }
-        if (dirty) {
+        if (dirty && (urgent || deferredSince >= 0 && now - deferredSince >= LOAD_REBUILD_TICKS)) {
+            urgent = false;
+            deferredSince = -1;
             long started = System.nanoTime();
             rebuild();
             rebuildCount++;
@@ -558,9 +570,11 @@ public final class NetworkManager {
         int index = start;
         int lastMover = -1;
         hungry.clear();
+        long[] wakeAt = sourceWakeAt;
         for (int step = 0; step < count; step++) {
-            Port source = sources.get(index);
-            if (source.order != null && source.sourceBackoff.isAwake(now)) {
+            // A origem dormindo é pulada pelo array, sem tocar na porta.
+            Port source = wakeAt[index] <= now ? sources.get(index) : null;
+            if (source != null && source.order != null && source.sourceBackoff.isAwake(now)) {
                 long time = System.nanoTime();
                 // Pelo menos uma visita por tick, mesmo que a montagem tenha gastado o orçamento.
                 if (visited > 0 && !budget.hasTime(time)) {
@@ -698,7 +712,7 @@ public final class NetworkManager {
             if (all || exists != network.exists) {
                 network.exists = exists;
                 network.dirtyTypes = NetworkRoutes.ALL_TYPES;
-                dirty = true;
+                markDirty(false);
             }
         }
     }
@@ -718,6 +732,9 @@ public final class NetworkManager {
             }
             network.rebuild(scratch);
         }
+        for (int i = 0, n = sources.size(); i < n; i++) {
+            sources.get(i).sourceBackoff.mirrorTo(null, 0);
+        }
         sources.clear();
         for (int i = 0, n = networkList.size(); i < n; i++) {
             NetworkRoutes network = networkList.get(i);
@@ -731,6 +748,12 @@ public final class NetworkManager {
                 }
             }
         }
+        if (sourceWakeAt.length < sources.size()) {
+            sourceWakeAt = new long[Math.max(16, sources.size() + sources.size() / 2)];
+        }
+        for (int i = 0, n = sources.size(); i < n; i++) {
+            sources.get(i).sourceBackoff.mirrorTo(sourceWakeAt, i);
+        }
         if (cursor >= sources.size()) {
             cursor = 0;
         }
@@ -741,9 +764,10 @@ public final class NetworkManager {
      * antes e de agora (criando as novas), para que toda rede com uma porta desse tipo neste nó remonte
      * na mesma passada (a releitura limpa as portas do tipo inteiro, de todas as redes; ver
      * {@link NodePorts}). Nas redes que saíram, tira as rotas das portas do tipo e o nó deixa de ser
-     * membro se nenhum outro tipo dele continuar lá; nas novas, o nó entra se ainda não era membro.
+     * membro se nenhum outro tipo dele continuar lá; nas novas, o nó entra se ainda não era membro. Com
+     * {@code deferred} (o nó entrou ou saiu do motor), a remontagem pode esperar ({@link #markDirty}).
      */
-    private void setMembership(NodePorts ports, ResourceType type, UUID[] now) {
+    private void setMembership(NodePorts ports, ResourceType type, UUID[] now, boolean deferred) {
         UUID[] before = ports.networks(type);
         int bit = typeBit(type);
         ports.setNetworks(type, now);
@@ -753,7 +777,7 @@ public final class NetworkManager {
                 continue;
             }
             routes.dirtyTypes |= bit;
-            dirty = true;
+            markDirty(deferred);
             if (!NodePorts.contains(now, id)) {
                 ports.clearRoutes(type, routes);
                 if (!ports.inNetwork(id)) {
@@ -771,7 +795,22 @@ public final class NetworkManager {
             }
             routes.members.add(ports);
             routes.dirtyTypes |= bit;
-            dirty = true;
+            markDirty(deferred);
+        }
+    }
+
+    /**
+     * Rotas sujas: remontam no próximo tick, ou, se só nós entraram ou saíram do motor (chunk carregado ou
+     * descarregado, bloco posto ou quebrado), no máximo a cada {@link #LOAD_REBUILD_TICKS}. Um jogador na borda de
+     * uma base grande carrega e descarrega chunks a cada tick; o nó que sai já parou ({@link Port#stop}), e o que
+     * entra espera um pouco para mover.
+     */
+    private void markDirty(boolean deferred) {
+        dirty = true;
+        if (!deferred) {
+            urgent = true;
+        } else if (deferredSince < 0) {
+            deferredSince = lastTick;
         }
     }
 

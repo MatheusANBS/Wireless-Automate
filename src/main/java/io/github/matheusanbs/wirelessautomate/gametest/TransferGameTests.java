@@ -281,6 +281,35 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * O roteador do destino quebrado para na hora, antes da remontagem adiada da saída do nó: nada mais entra no baú
+     * dele. A remontagem vem dentro da janela ({@code NetworkManager.LOAD_REBUILD_TICKS}).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void brokenRouterStopsBeforeDeferredRebuild(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-saida-adiada");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 2)))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 2))
+                .thenExecute(() -> {
+                    helper.setBlock(B.above(), Blocks.AIR);
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.EMERALD, 3));
+                })
+                .thenIdle(5)
+                .thenExecute(() -> {
+                    assertCount(helper, B, Items.EMERALD, 0);
+                    assertCount(helper, A, Items.EMERALD, 3);
+                })
+                .thenWaitUntil(() -> helper.assertFalse(NetworkManager.get().isDirty(network, ResourceType.ITEM),
+                        "a remontagem adiada não veio"))
+                .thenExecute(() -> assertCount(helper, B, Items.EMERALD, 0))
+                .thenSucceed();
+    }
+
     /** A origem com redstone HIGH para de extrair quando o sinal some e volta quando ele volta. */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void redstoneLatchedSourceStopsAndResumes(GameTestHelper helper) {

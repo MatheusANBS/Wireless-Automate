@@ -267,7 +267,7 @@ final class NetworkRoutes {
         } else {
             source.order = new RoundRobinOrder<>(layout != null ? layout : layoutFor(list));
         }
-        if ((source.fresh || listFresh || gained) && !source.redstoneOff) {
+        if ((source.fresh || listFresh || gained) && !source.stopped) {
             source.sourceBackoff.wake();
         }
     }
@@ -466,7 +466,7 @@ final class NetworkRoutes {
         BlockPos machine = null;
         for (Direction face : DIRECTIONS) {
             FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, spin, face));
-            // A face que o redstone desliga entra assim mesmo, travada ({@link Port#redstoneOff}): o sinal não
+            // A face que o redstone desliga entra assim mesmo, travada ({@link Port#stopped}): o sinal não
             // remonta as rotas.
             if (config.mode() == PortMode.NONE) {
                 continue;

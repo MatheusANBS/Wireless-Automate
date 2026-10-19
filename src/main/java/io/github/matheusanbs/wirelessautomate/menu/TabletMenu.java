@@ -89,7 +89,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
     public static final int BULK_PER_SECOND = 4;
 
-    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele, e a árvore da Lista. */
+    /**
+     * O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição
+     * dele, e a árvore da Lista.
+     */
     public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target, TabletTree.Saved tree) {
     }
     /** Teto de nós movidos por pacote. */

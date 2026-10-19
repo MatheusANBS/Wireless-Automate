@@ -277,7 +277,7 @@ public record TabletSnapshot(
      * @param roles          papéis em bits ({@code NodeIndex.role})
      * @param machine        bloco da máquina, para o ícone e o nome
      * @param removedNetwork alguma face aponta para uma rede que não existe mais
-     * @param faceModes      os modos das faces da máquina presa, pelos lados dela ({@link NodeIndex#faceModes})
+     * @param faceModes      os modos das faces pelos lados, da presa, dos perfis e das exceções ({@link NodeIndex.Entry#faceModes})
      * @param rates          a vazão do nó por {@link ResourceType#ordinal()} na última amostra, na unidade da tela
      * @param profile        a comparação com o perfil copiado no Tablet; vazio sem perfil copiado
      */

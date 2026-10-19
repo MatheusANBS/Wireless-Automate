@@ -60,7 +60,9 @@ public enum BenchScenario {
     RESONATOR_EVENT("resonator-event", 50, RouterTier.ULTIMATE, 100, 0,
             "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois"),
     RANGE("range", 200, RouterTier.ULTIMATE, 100, 0,
-            "Alcance: roteadores Ultimate com o Upgrade de Alcance, cada um com 64 barris vazios vinculados num grupo que extrai, nada para mover");
+            "Alcance: roteadores Ultimate com o Upgrade de Alcance, cada um com 64 barris vazios vinculados num grupo que extrai, nada para mover"),
+    TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 20,
+            "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto");
 
     public final String id;
     public final int defaultNodes;
@@ -96,7 +98,29 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT, RANGE -> false;
+                    RESONATOR_EVENT, RANGE, TABLET_RANGE -> false;
+        };
+    }
+
+    /** Um jogador falso tem o Tablet aberto, sincronizado a cada tick ({@link BenchScene#openTablet}). */
+    public boolean tablet() {
+        return this == TABLET || this == TABLET_RANGE;
+    }
+
+    /**
+     * Cada roteador tem o Upgrade de Alcance e {@link #rangeMachines()} barris vinculados num grupo: no {@link #RANGE}
+     * o grupo extrai e nada se move; no {@link #TABLET_RANGE} a máquina presa é a origem e o grupo recebe.
+     */
+    public boolean range() {
+        return this == RANGE || this == TABLET_RANGE;
+    }
+
+    /** Máquinas remotas vinculadas a cada roteador nos cenários de alcance ({@link #range()}); 0 nos outros. */
+    public int rangeMachines() {
+        return switch (this) {
+            case RANGE -> 64;
+            case TABLET_RANGE -> 16;
+            default -> 0;
         };
     }
 

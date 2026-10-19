@@ -75,7 +75,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Este block entity é a API do nó para o resto do mod e delega às partes: as faces e as redes
  * ({@link RouterFaces}), os cartões ({@link RouterCards}), os upgrades ({@link RouterUpgrades}), a edição
  * por alvo ({@link RouterTargets}), o alcance ({@link RouterRange}, com os caches das remotas em
- * {@link RouterRemoteCaches}), o aviso das mudanças ({@link RouterChanges}) e o NBT ({@link RouterNbt}).
+ * {@link RouterRemoteCaches}), a máquina presa e o sinal de redstone ({@link RouterNeighbors}), a presença no
+ * motor, no índice e no chunk loading ({@link RouterPresence}), o aviso das mudanças ({@link RouterChanges}) e o
+ * NBT ({@link RouterNbt}).
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -84,7 +86,6 @@ public class RouterBlockEntity extends BlockEntity {
     private String name = "";
     /** Configuração das faces da presa, por tipo e lado relativo. */
     private final RouterFaces faces = new RouterFaces();
-    private boolean powered;
     /** Muda a cada alteração do que a tela mostra. Não é salvo. */
     private int changeVersion;
     /** Total movido como origem, por {@link ResourceType#ordinal()}, desde que o nó carregou. Não é salvo. */
@@ -97,17 +98,14 @@ public class RouterBlockEntity extends BlockEntity {
     private final RouterUpgrades upgrades = new RouterUpgrades();
     /** Máquinas remotas vinculadas e os grupos delas; guardadas mesmo sem o upgrade (aí não viram porta). */
     private final RemoteMachines remotes = new RemoteMachines();
-    /** O chunk descarregou: o {@link #setRemoved()} que vem depois não é o roteador saindo do mundo. */
-    private boolean chunkUnloading;
-
-    /** Caches de capability da máquina presa; apontados de novo quando o roteador gira. */
-    private final MachineCaches attachedCaches = MachineCaches.attached(this, BlockPos.ZERO);
+    /** A máquina presa (caches, bloco e frente) e o sinal de redstone. */
+    private final RouterNeighbors neighbors = new RouterNeighbors(this);
     /** O alcance: vincular, desvincular, a frente das remotas e os caches delas. */
     private final RouterRange range = new RouterRange(this, remotes);
     /** A edição por alvo (presa, grupo ou máquina remota). */
-    private final RouterTargets targets = new RouterTargets(this, remotes);
-    /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
-    private @Nullable Block machineBlock;
+    private final RouterTargets targets = new RouterTargets(this, faces, remotes);
+    /** Entrar e sair do motor, do índice e do chunk loading. */
+    private final RouterPresence presence = new RouterPresence(this, neighbors, range);
     /** O aviso das mudanças, com o lote de {@link #batchChanges}. */
     private final RouterChanges changes = new RouterChanges(this);
 
@@ -196,9 +194,7 @@ public class RouterBlockEntity extends BlockEntity {
      * Devolve quantas faces mudaram (Vinculador).
      */
     public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        int[] count = new int[1];
-        batchChanges(() -> changed(faces.setAttachedNetwork(types, facing(), spin(), absoluteFaceMask, network, count)));
-        return count[0];
+        return targets.setAttachedNetwork(types, absoluteFaceMask, network);
     }
 
     /** As faces absolutas da presa em {@code absoluteFaceMask} e {@code types} já estão em {@code network} (Vinculador). */
@@ -222,16 +218,7 @@ public class RouterBlockEntity extends BlockEntity {
      * não perguntam. Devolve quantas faces ficaram por causa do {@code canLeave}.
      */
     public int setNetworkAllFaces(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
-        int[] kept = new int[1];
-        batchChanges(() -> {
-            for (ResourceType type : types) {
-                if (faces.setNetworkAll(remotes, type, network, canLeave, kept)) {
-                    changed(NetworkManager.typeBit(type));
-                }
-            }
-            RouterFaces.dropExceptionsLikeProfile(remotes);
-        });
-        return kept[0];
+        return targets.setNetworkAll(types, network, canLeave);
     }
 
     /**
@@ -245,12 +232,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Alguma face (presa, perfil ou exceção) de algum tipo está numa rede. */
     public boolean hasNetwork() {
-        for (ResourceType type : TYPES) {
-            if (networks(type).length > 0) {
-                return true;
-            }
-        }
-        return false;
+        return faces.hasNetwork(remotes);
     }
 
     /**
@@ -259,8 +241,7 @@ public class RouterBlockEntity extends BlockEntity {
      * o carregaria à força). Só para a tela e o Vinculador, nunca por tick.
      */
     public int attachedFront() {
-        BlockPos machine = machinePos();
-        return level == null || !level.isLoaded(machine) ? -1 : RemoteMachines.frontOf(level.getBlockState(machine));
+        return neighbors.attachedFront();
     }
 
     /** Nome do nó; vazio se o jogador não deu um. */
@@ -310,19 +291,7 @@ public class RouterBlockEntity extends BlockEntity {
      * dela mudou. Trocar só o estado (fornalha acesa, máquina "ativa") não refaz o índice nem a tela.
      */
     public void machineNeighborChanged() {
-        if (level == null) {
-            return;
-        }
-        Block block = level.getBlockState(machinePos()).getBlock();
-        if (block != machineBlock) {
-            machineBlock = block;
-            machineChanged();
-            if (!level.isClientSide) {
-                // Máquina nova: as portas dela (e quem espera por elas) tentam de novo, mesmo que a
-                // troca não invalide nenhuma capability já consultada.
-                NetworkManager.get().wake(this);
-            }
-        }
+        neighbors.machineNeighborChanged();
     }
 
     /**
@@ -704,7 +673,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Sinal de redstone no roteador, guardado e atualizado em neighborChanged (sem consulta por tick). */
     public boolean powered() {
-        return powered;
+        return neighbors.powered();
     }
 
     /**
@@ -713,19 +682,7 @@ public class RouterBlockEntity extends BlockEntity {
      * (um relógio de redstone ao lado não custa remontagem).
      */
     public void updatePowered() {
-        if (level == null || level.isClientSide) {
-            return;
-        }
-        boolean now = level.hasNeighborSignal(worldPosition);
-        if (now != powered) {
-            powered = now;
-            // Sem changeVersion: um relógio ao lado reenviaria a tela aberta a cada pulso. A tela confere o sinal
-            // uma vez por segundo. Só marca o chunk: avisar os vizinhos a cada pulso de um relógio não serve a ninguém.
-            level.blockEntityChanged(worldPosition);
-            if (redstoneTypes() != 0) {
-                NetworkManager.get().poweredChanged(this);
-            }
-        }
+        neighbors.updatePowered();
     }
 
     /**
@@ -739,7 +696,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
     public @Nullable IItemHandler items(Direction machineFace) {
-        return attachedCaches.items(machineFace);
+        return neighbors.attachedCaches().items(machineFace);
     }
 
     /**
@@ -747,7 +704,7 @@ public class RouterBlockEntity extends BlockEntity {
      * O motor tenta esta antes de {@link #items}: entre dois baús do mod, um tipo inteiro numa chamada.
      */
     public @Nullable BulkItems bulkItems(Direction machineFace) {
-        return attachedCaches.bulkItems(machineFace);
+        return neighbors.attachedCaches().bulkItems(machineFace);
     }
 
     /**
@@ -755,11 +712,11 @@ public class RouterBlockEntity extends BlockEntity {
      * tiver. O motor tenta esta antes de {@link #fluids}: sem o teto de {@link Integer#MAX_VALUE} mB.
      */
     public @Nullable BulkFluids bulkFluids(Direction machineFace) {
-        return attachedCaches.bulkFluids(machineFace);
+        return neighbors.attachedCaches().bulkFluids(machineFace);
     }
 
     public @Nullable IFluidHandler fluids(Direction machineFace) {
-        return attachedCaches.fluids(machineFace);
+        return neighbors.attachedCaches().fluids(machineFace);
     }
 
     /**
@@ -767,11 +724,11 @@ public class RouterBlockEntity extends BlockEntity {
      * motor tenta esta antes de {@link #energy}: sem o teto de {@link Integer#MAX_VALUE} FE por chamada.
      */
     public @Nullable BulkEnergy bulkEnergy(Direction machineFace) {
-        return attachedCaches.bulkEnergy(machineFace);
+        return neighbors.attachedCaches().bulkEnergy(machineFace);
     }
 
     public @Nullable IEnergyStorage energy(Direction machineFace) {
-        return attachedCaches.energy(machineFace);
+        return neighbors.attachedCaches().energy(machineFace);
     }
 
     /**
@@ -780,7 +737,7 @@ public class RouterBlockEntity extends BlockEntity {
      * {@code compat/mekanism} e o {@code ChemicalTransfer} sabem o tipo.
      */
     public @Nullable Object chemicals(Direction machineFace) {
-        return attachedCaches.chemicals(machineFace);
+        return neighbors.attachedCaches().chemicals(machineFace);
     }
 
     /**
@@ -789,7 +746,7 @@ public class RouterBlockEntity extends BlockEntity {
      * chamada da capability do Ars.
      */
     public @Nullable BulkSource bulkSource(Direction machineFace) {
-        return attachedCaches.bulkSource(machineFace);
+        return neighbors.attachedCaches().bulkSource(machineFace);
     }
 
     /**
@@ -797,7 +754,7 @@ public class RouterBlockEntity extends BlockEntity {
      * Ars. Devolvido como {@code Object}: só o código de {@code compat/arsnouveau} sabe o tipo.
      */
     public @Nullable Object arsSource(Direction machineFace) {
-        return attachedCaches.arsSource(machineFace);
+        return neighbors.attachedCaches().arsSource(machineFace);
     }
 
     /**
@@ -812,7 +769,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Os caches de capability da máquina presa (uma instância só, que acompanha o giro). */
     public MachineCaches attachedCaches() {
-        return attachedCaches;
+        return neighbors.attachedCaches();
     }
 
     /**
@@ -892,74 +849,25 @@ public class RouterBlockEntity extends BlockEntity {
         RouterTier oldTier = tier();
         int oldSpin = spin();
         super.setBlockState(state);
-        boolean rotated = facing() != oldFacing;
-        // Girado no próprio eixo (spin): a máquina fica no lugar, então os caches valem; como o
-        // upgrade de tier, só as rotas e a tela precisam saber.
-        boolean changed = rotated || tier() != oldTier || spin() != oldSpin;
-        if (changed) {
-            changeVersion++;
-        }
-        if (rotated) {
-            // Girado: a configuração relativa acompanha, mas a máquina mudou de lugar.
-            attachedCaches.retarget(machinePos());
-            machineBlock = null;
-            if (level != null && !level.isClientSide && hasChunkUpgrade()) {
-                // O chunk da máquina pode ser outro.
-                RouterChunkLoader.get().update(this);
-            }
-        }
-        // Upgrade de tier muda vazão e alcance das rotas; o giro muda o lado relativo de cada face.
-        if (changed && level != null && !level.isClientSide) {
-            NetworkManager.get().nodeChanged(this);
-            NodeIndex.track(this);
-            if (tier() != oldTier) {
-                // O raio do tier novo decide se o upgrade de alcance vale.
-                range.remotesChanged();
-            }
-        }
+        presence.stateChanged(oldFacing, oldTier, oldSpin);
     }
 
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level != null && !level.isClientSide) {
-            // Ao carregar o chunk os vizinhos podem não estar carregados; aí fica o valor salvo.
-            if (level.isAreaLoaded(worldPosition, 1)) {
-                powered = level.hasNeighborSignal(worldPosition);
-                machineBlock = level.getBlockState(machinePos()).getBlock();
-            }
-            NetworkManager.get().addNode(this);
-            NodeIndex.track(this);
-            chunkUnloading = false;
-            RouterChunkLoader.get().loaded(this);
-        }
+        presence.loaded();
     }
 
     @Override
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
-        removeFromManager();
-        if (level != null && !level.isClientSide) {
-            // Descarregar não tira os tickets: eles são salvos e voltam com o mundo.
-            chunkUnloading = true;
-            RouterChunkLoader.get().unloaded(this);
-        }
+        presence.chunkUnloaded();
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        removeFromManager();
-        if (level != null && !level.isClientSide && !chunkUnloading) {
-            RouterChunkLoader.get().removed(this);
-        }
-    }
-
-    private void removeFromManager() {
-        if (level != null && !level.isClientSide) {
-            NetworkManager.get().removeNode(this);
-            NodeIndex.untrack(this);
-        }
+        presence.removed();
     }
 
     @Override
@@ -968,9 +876,7 @@ public class RouterBlockEntity extends BlockEntity {
         if (!name.isEmpty()) {
             tag.putString("name", name);
         }
-        if (powered) {
-            tag.putBoolean("powered", true);
-        }
+        neighbors.save(tag);
         RouterNbt.save(tag, registries, faces, cards, upgrades, remotes);
     }
 
@@ -979,19 +885,8 @@ public class RouterBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         UUID[] legacy = RouterNbt.legacyNetworks(tag);
         name = RenameRouterPayload.clean(tag.getString("name"));
-        powered = tag.getBoolean("powered");
+        neighbors.load(tag);
         RouterNbt.load(tag, registries, faces, cards, upgrades, remotes, legacy);
-        range.pruneCaches();
-        // As instâncias de RemoteMachine são outras: o índice do mixin aponta para as novas.
-        range.remotesChanged();
-        changeVersion++;
-        // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
-        if (level != null && !level.isClientSide) {
-            NetworkManager.get().nodeChanged(this);
-            NodeIndex.track(this);
-            if (!isRemoved()) {
-                RouterChunkLoader.get().loaded(this);
-            }
-        }
+        presence.nbtLoaded();
     }
 }

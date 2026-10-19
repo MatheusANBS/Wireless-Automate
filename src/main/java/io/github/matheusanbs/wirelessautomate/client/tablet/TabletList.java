@@ -1,7 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
-
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
@@ -18,9 +16,6 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload.Action;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,7 +30,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * A aba Lista do Tablet (especificação, "Lista do Tablet"): à esquerda a busca com sugestões e etiquetas, os
@@ -44,14 +38,12 @@ import org.lwjgl.glfw.GLFW;
  * respondido por geometria, como a {@link TabletScreen} que a hospeda; os botões fixos do modo Selecionar
  * ficam na tela ({@link SelectBar}).
  *
- * <p>Esta classe é a anfitriã da aba: guarda a lista (grupos recolhidos, rolagem, nó escolhido, seleção), repassa
- * o desenho, o mouse, o teclado e as dicas para as partes ({@link ListSearch}, {@link ChosenPanel},
- * {@link ListLayout}, {@link ListPainter}, {@link ListRows}, {@link ListKeys}, {@link ListTooltips}) e manda as
- * ações do perfil.
+ * <p>Esta classe é a anfitriã da aba: guarda a lista (rolagem, nó escolhido, seleção) e repassa o desenho, o
+ * mouse, o teclado e as dicas para as partes ({@link ListSearch}, {@link ChosenPanel}, {@link ListLayout},
+ * {@link ListPainter}, {@link ListClicks}, {@link ListKeys}, {@link ListTooltips}). As linhas são do
+ * {@link ListModel} (o modelo) e do {@link ListRows} (o desenho); as ações do perfil, do {@link ListProfileActions}.
  */
 public final class TabletList {
-    private static final long DOUBLE_CLICK_MS = 400;
-
     final TabletMenu menu;
     final TabletActions actions;
     final NodeText nodes;
@@ -65,27 +57,27 @@ public final class TabletList {
     private final ListRows rows;
     private final ListKeys keys;
     private final ListTooltips tooltips;
+    private final ListClicks clicks;
+    /** As linhas: os nós agrupados e os grupos recolhidos. */
+    final ListModel model;
+    final ListProfileActions profileActions;
 
     // lista
-    final Set<ResourceLocation> collapsed = new HashSet<>();
     int scroll;
     @Nullable NodeKey chosen;
     /** Nó a pôr na vista no próximo arranjo (o restaurado ao abrir, o escolhido pelas setas). */
     @Nullable NodeKey revealKey;
-    private @Nullable NodeKey lastClicked;
-    private long lastClickAt;
     boolean multi;
     final Set<NodeKey> selected = new LinkedHashSet<>();
     ResourceType chipType = LoadedTypes.LIST.isEmpty() ? ResourceType.ITEM : LoadedTypes.LIST.getFirst();
-    private @Nullable ListGroups<ResourceLocation> groups;
-    private @Nullable List<NodeView> groupsFor;
-    private Set<ResourceLocation> groupsCollapsed = Set.of();
 
     TabletList(TabletMenu menu, TabletActions actions, NodeText nodes, IntSupplier screenHeight) {
         this.menu = menu;
         this.actions = actions;
         this.nodes = nodes;
         this.screenHeight = screenHeight;
+        this.model = new ListModel(menu::snapshot);
+        this.profileActions = new ListProfileActions(this);
         Query query = menu.snapshot().query();
         this.search = new ListSearch(this, query);
         search.typeFilter.ifPresent(t -> chipType = t);
@@ -98,6 +90,7 @@ public final class TabletList {
         this.rows = new ListRows(this, layout);
         this.keys = new ListKeys(this);
         this.tooltips = new ListTooltips(this, layout);
+        this.clicks = new ListClicks(this, layout);
     }
 
     /** A caixa de busca da tela (um widget dela), refeita a cada {@code init}. */
@@ -143,31 +136,6 @@ public final class TabletList {
 
     Optional<ProfileSummary> profile() {
         return snapshot().profile();
-    }
-
-    ListGroups<ResourceLocation> groups() {
-        List<NodeView> nodeViews = snapshot().nodes();
-        if (groups == null || groupsFor != nodeViews || !groupsCollapsed.equals(collapsed)) {
-            groups = new ListGroups<>(nodeViews.stream().map(NodeView::machine).toList(), Set.copyOf(collapsed));
-            groupsFor = nodeViews;
-            groupsCollapsed = Set.copyOf(collapsed);
-        }
-        return groups;
-    }
-
-    int indexOf(@Nullable NodeKey key) {
-        List<NodeView> nodeViews = snapshot().nodes();
-        for (int i = 0; i < nodeViews.size(); i++) {
-            if (nodeViews.get(i).key().equals(key)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    @Nullable NodeView node(@Nullable NodeKey key) {
-        int index = indexOf(key);
-        return index < 0 ? null : snapshot().nodes().get(index);
     }
 
     /** O painel do servidor para o nó escolhido; um painel atrasado de outro nó não vale. */
@@ -243,54 +211,6 @@ public final class TabletList {
         revealKey = key;
     }
 
-    private void profileAction(Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys) {
-        actions.profile(action, key, machine, keys);
-    }
-
-    void copyProfile() {
-        if (chosen != null && chosenPanel.canEdit()) {
-            profileAction(Action.COPY, chosen, null, List.of());
-        }
-    }
-
-    void pasteProfile() {
-        if (chosen != null && profile().isPresent() && chosenPanel.canEdit()) {
-            profileAction(Action.PASTE_ONE, chosen, null, List.of());
-        }
-    }
-
-    void undo() {
-        profileAction(Action.UNDO, null, null, List.of());
-    }
-
-    private void forgetProfile() {
-        profileAction(Action.FORGET, null, null, List.of());
-    }
-
-    void pasteSelected() {
-        if (profile().isPresent() && !selected.isEmpty()) {
-            List<NodeKey> keys = new ArrayList<>(selected);
-            profileAction(Action.PASTE_SELECTED, null, null,
-                    List.copyOf(keys.size() > TabletProfilePayload.MAX_KEYS ? keys.subList(0, TabletProfilePayload.MAX_KEYS)
-                            : keys));
-        }
-    }
-
-    /** Quantos nós do grupo o "Colar nas N" atinge: os da consulta, menos a origem do perfil. */
-    int pasteCount(ResourceLocation machine) {
-        ProfileSummary summary = profile().orElse(null);
-        if (summary == null) {
-            return 0;
-        }
-        TabletSnapshot s = snapshot();
-        int count = s.groupCount(machine);
-        if (s.originGroup().equals(Optional.of(machine))) {
-            count--;
-        }
-        return Math.min(count, TabletMenu.MAX_MOVE);
-    }
-
     void toggleMulti() {
         multi = !multi;
         if (!multi) {
@@ -331,108 +251,11 @@ public final class TabletList {
     // ------------------------------------------------------------------ entrada
 
     boolean mouseClicked(double mx, double my, int button) {
-        layout.arrange();
-        NodePanel p = chosenPanel.current();
-        if (p != null && p.labelClick(mx, my, button)) {
-            return true;
-        }
-        if (p != null && p.popupOpen()) {
-            return p.mouseClicked(mx, my, button);
-        }
-        SearchSuggestions suggestions = search.suggestions;
-        if (suggestions.contains(mx, my)) {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-                suggestions.click(mx, my, search.picker);
-            }
-            return true;
-        }
-        EditBox searchBox = search.box();
-        if (suggestions.shown() && !(searchBox != null && searchBox.isMouseOver(mx, my))) {
-            suggestions.close();
-        }
-        if (p != null && mx >= layout.panelX && p.mouseClicked(mx, my, button)) {
-            return true;
-        }
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            return false;
-        }
-        Hot hot = layout.hotAt(mx, my);
-        if (hot == null) {
-            return clickEmpty(mx, my);
-        }
-        clickHot(hot);
-        return true;
-    }
-
-    private void clickHot(Hot hot) {
-        List<NodeView> nodeViews = snapshot().nodes();
-        switch (hot.kind()) {
-            case LABEL -> search.removeLabel(hot.arg());
-            case QUICK -> search.toggleQuick(QuickFilter.values()[hot.arg()]);
-            case TYPE_CHIP -> search.clearType();
-            case CLEAR -> clearAll();
-            case FORGET -> forgetProfile();
-            case HEADER -> {
-                ResourceLocation group = groups().rows().get(hot.arg()).group();
-                if (!collapsed.remove(group)) {
-                    collapsed.add(group);
-                }
-            }
-            case PASTE_GROUP -> profileAction(Action.PASTE_GROUP, null, groups().rows().get(hot.arg()).group(), List.of());
-            case ROW -> clickRow(nodeViews.get(hot.arg()).key());
-            case FULL_SCREEN -> {
-                if (chosen != null) {
-                    actions.openNode(chosen);
-                }
-            }
-            case COPY -> copyProfile();
-            case PASTE -> pasteProfile();
-            case UNDO -> {
-                PanelNotices.clear();
-                undo();
-            }
-        }
-    }
-
-    /** O "Limpar a busca" da lista vazia. */
-    private boolean clickEmpty(double mx, double my) {
-        int[] clear = layout.emptyClearCenter();
-        if (clear != null && Math.abs(mx - clear[0]) <= font().width(tr("list.clear_search")) / 2 + 2
-                && Math.abs(my - clear[1]) <= 6) {
-            clearAll();
-            return true;
-        }
-        return mx >= layout.x0 && mx < layout.x0 + layout.listW && my >= layout.rowsTop && my < layout.rowsBottom;
-    }
-
-    private void clickRow(NodeKey key) {
-        long now = System.currentTimeMillis();
-        boolean twice = key.equals(lastClicked) && now - lastClickAt <= DOUBLE_CLICK_MS;
-        lastClicked = key;
-        lastClickAt = now;
-        if (multi) {
-            if (!selected.remove(key)) {
-                selected.add(key);
-            }
-            return;
-        }
-        if (twice) {
-            lastClicked = null;
-            actions.openNode(key);
-            return;
-        }
-        choose(key);
+        return clicks.mouseClicked(mx, my, button);
     }
 
     boolean mouseScrolled(double mx, double my, double scrollY) {
-        NodePanel p = chosenPanel.current();
-        if (p != null && p.mouseScrolled(mx, my, scrollY)) {
-            return true;
-        }
-        if (mx < layout.x0 + layout.listW) {
-            scroll = Math.max(0, Math.min(layout.maxScroll(), scroll - (int) Math.signum(scrollY)));
-        }
-        return true;
+        return clicks.mouseScrolled(mx, my, scrollY);
     }
 
     /** O teclado da Lista (especificação, "Teclado"); {@code false} deixa a tecla para a busca ou a tela. */
@@ -512,19 +335,19 @@ public final class TabletList {
     }
 
     public void previewCollapse(ResourceLocation machine) {
-        collapsed.add(machine);
+        model.collapse(machine);
     }
 
     /** Rola a lista até o cabeçalho do grupo da máquina. */
     public void previewScrollTo(ResourceLocation machine) {
         layout.arrange();
-        scroll = Math.max(0, groups().headerRow(machine));
+        scroll = Math.max(0, model.groups().headerRow(machine));
     }
 
     /** Centro da linha do nó, ou {@code null} se ela não está na vista (grupo recolhido ou rolado). */
     int @Nullable [] nodeRowCenter(NodeKey key) {
         layout.arrange();
-        Hot hot = layout.hot(Kind.ROW, indexOf(key));
+        Hot hot = layout.hot(Kind.ROW, model.indexOf(key));
         return hot == null ? null : new int[] {hot.x() + hot.w() / 2, hot.y() + hot.h() / 2};
     }
 
@@ -552,14 +375,14 @@ public final class TabletList {
     /** O "Colar nas N" do grupo da máquina. */
     public int @Nullable [] pasteGroupCenter(ResourceLocation machine) {
         layout.arrange();
-        int row = groups().headerRow(machine);
+        int row = model.groups().headerRow(machine);
         Hot hot = row < 0 ? null : layout.hot(Kind.PASTE_GROUP, row);
         return hot == null ? null : hot.center();
     }
 
     int @Nullable [] groupHeaderCenter(ResourceLocation machine) {
         layout.arrange();
-        int row = groups().headerRow(machine);
+        int row = model.groups().headerRow(machine);
         Hot hot = row < 0 ? null : layout.hot(Kind.HEADER, row);
         return hot == null ? null : new int[] {hot.x() + 20, hot.y() + hot.h() / 2};
     }

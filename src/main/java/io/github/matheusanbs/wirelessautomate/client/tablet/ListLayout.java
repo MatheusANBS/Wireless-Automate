@@ -273,11 +273,11 @@ final class ListLayout {
     /** Linhas desenháveis: as dos grupos e, se o servidor cortou o resultado, a do limite. */
     int rowCount() {
         TabletSnapshot s = list.snapshot();
-        return list.groups().rows().size() + (s.matchingNodes() > s.nodes().size() ? 1 : 0);
+        return list.model.groups().rows().size() + (s.matchingNodes() > s.nodes().size() ? 1 : 0);
     }
 
     private int height(int row) {
-        List<ListGroups.Row<ResourceLocation>> rows = list.groups().rows();
+        List<ListGroups.Row<ResourceLocation>> rows = list.model.groups().rows();
         return row < rows.size() ? rowHeight(rows.get(row)) : LIMIT_ROW;
     }
 
@@ -294,7 +294,7 @@ final class ListLayout {
 
     private void arrangeRows(Font font) {
         list.scroll = Math.max(0, Math.min(list.scroll, maxScroll()));
-        List<ListGroups.Row<ResourceLocation>> rows = list.groups().rows();
+        List<ListGroups.Row<ResourceLocation>> rows = list.model.groups().rows();
         int y = rowsTop;
         drawnUntil = list.scroll;
         for (int r = list.scroll; r < rows.size(); r++) {
@@ -306,7 +306,7 @@ final class ListLayout {
             drawnUntil = r + 1;
             if (row.header()) {
                 hots.add(new Hot(Kind.HEADER, x0, y, listW, h, r));
-                int n = list.pasteCount(row.group());
+                int n = list.profileActions.pasteCount(row.group());
                 if (n > 0) {
                     Component label = pasteGroupLabel(font, row, n);
                     int bw = font.width(label) + 8;
@@ -423,7 +423,7 @@ final class ListLayout {
 
     /** Rola até a linha de {@link TabletList#revealKey}, se ela já está na lista; devolve se rolou. */
     private boolean revealNow() {
-        int row = list.groups().rowOfNode(list.indexOf(list.revealKey));
+        int row = list.model.groups().rowOfNode(list.model.indexOf(list.revealKey));
         if (row < 0) {
             return false;
         }

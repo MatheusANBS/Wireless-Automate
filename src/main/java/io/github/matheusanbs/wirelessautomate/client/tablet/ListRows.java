@@ -49,7 +49,7 @@ final class ListRows {
         }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
         ProfileSummary profile = s.profile().orElse(null);
-        List<ListGroups.Row<ResourceLocation>> rows = list.groups().rows();
+        List<ListGroups.Row<ResourceLocation>> rows = list.model.groups().rows();
         for (Hot hot : layout.hots) {
             if (hot.kind() == Kind.HEADER) {
                 renderHeader(g, font, hot, rows.get(hot.arg()), profile, mx, my);
@@ -130,7 +130,7 @@ final class ListRows {
             int fill = same ? (over ? GuiPaint.mix(GuiPaint.OK, GuiPaint.FG, 0.2f) : GuiPaint.OK)
                     : over ? GuiPaint.BUTTON : GuiPaint.PANEL;
             GuiPaint.box(g, paste.x(), paste.y(), paste.w(), paste.h(), fill, same ? fill : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.pasteCount(row.group())),
+            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.profileActions.pasteCount(row.group())),
                     paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         }
     }

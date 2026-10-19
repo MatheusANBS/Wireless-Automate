@@ -49,7 +49,7 @@ final class ListKeys {
                 if (suggesting) {
                     search.suggestions.move(direction);
                 } else {
-                    int next = list.groups().next(list.indexOf(list.chosen), direction);
+                    int next = list.model.groups().next(list.model.indexOf(list.chosen), direction);
                     if (next >= 0) {
                         list.choose(list.snapshot().nodes().get(next).key());
                     }
@@ -68,14 +68,14 @@ final class ListKeys {
                 return true;
             }
             case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT -> {
-                ResourceLocation group = list.groups().group(list.indexOf(list.chosen));
+                ResourceLocation group = list.model.groups().group(list.model.indexOf(list.chosen));
                 if (!search.text.isEmpty() || group == null) {
                     return false;
                 }
                 if (keyCode == GLFW.GLFW_KEY_LEFT) {
-                    list.collapsed.add(group);
+                    list.model.collapse(group);
                 } else {
-                    list.collapsed.remove(group);
+                    list.model.expand(group);
                 }
                 return true;
             }
@@ -99,18 +99,18 @@ final class ListKeys {
             if (searchBox != null && !searchBox.getHighlighted().isEmpty()) {
                 return false;
             }
-            list.copyProfile();
+            list.profileActions.copy();
             return true;
         }
         // com texto na busca focada, Ctrl+V cola texto
         boolean typing = searchBox != null && searchBox.isFocused() && !list.search.text.isEmpty();
         if (keyCode == GLFW.GLFW_KEY_V && list.profile().isPresent() && list.chosen != null && !typing) {
-            list.pasteProfile();
+            list.profileActions.paste();
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_Z) {
             PanelNotices.clear();
-            list.undo();
+            list.profileActions.undo();
             return true;
         }
         return null;

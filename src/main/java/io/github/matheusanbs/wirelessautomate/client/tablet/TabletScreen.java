@@ -1,16 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.BODY_Y;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.DEFAULT_H;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.DEFAULT_W;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.HEAD_Y;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.MIN_H;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.MIN_W;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.SEP_Y;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.TAB_H;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.TAB_Y;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.X0;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.plural;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
@@ -18,7 +13,6 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
-import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
@@ -59,17 +53,12 @@ import org.lwjgl.glfw.GLFW;
  * </ul>
  *
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
- * espera o servidor. A tela é a anfitriã: tamanho, cabeçalho, abas, o aviso, e repassa desenho, cliques, roda,
- * teclado e dicas para a aba aberta. Linhas de lista, pontos do mapa e cores são desenhados e clicados por
+ * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
+ * ({@link TabletResize}), o cabeçalho e o aviso ({@link TabletHeader}), o corpo da aba aberta ({@link TabletBody}:
+ * desenho, cliques, roda e dicas) e a dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores são desenhados e clicados por
  * geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    /** Alça do canto (lado, em px) e espessura das bordas que redimensionam. */
-    private static final int GRIP = 7;
-    private static final int EDGE = 3;
-    private static int savedW = DEFAULT_W;
-    private static int savedH = DEFAULT_H;
-
     public enum Tab { LIST, MAP, FLOWS, NETWORKS, GROUPS }
 
     /** Põe um botão fixo na tela; {@code owner} nulo: visível em todas as abas. */
@@ -86,18 +75,17 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final SelectBar selectBar;
     private final MapTab map;
     private final FlowsTab flows;
-    private final SideList side;
     private final NameFields names;
     private final NetworksTab networks;
     private final GroupsTab groups;
+    private final TabletBody body;
+    private final TabletTips tips;
+    private final TabletHeader header;
+    private final TabletResize resize = new TabletResize(layout);
 
     private Tab tab = Tab.LIST;
     private int lastVersion = -1;
-    private int lastNoticeId;
-    private long noticeUntil;
-    private Component noticeText = Component.empty();
     private EditBox searchBox;
-    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
     /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
     private int inkVersion = -1;
 
@@ -110,7 +98,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         super(menu, inventory, title);
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.lastNoticeId = menu.snapshot().noticeId();
+        this.header = new TabletHeader(layout, menu.snapshot().noticeId());
         if (menu.restoredTab() >= 0 && menu.restoredTab() < Tab.values().length) {
             this.tab = Tab.values()[menu.restoredTab()];
         }
@@ -123,11 +111,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);
         });
-        this.side = new SideList(layout);
+        SideList side = new SideList(layout);
         this.names = new NameFields(layout, actions, () -> networks().selected(), () -> groups().selected(),
                 this::setFocused, this::refresh);
         this.networks = new NetworksTab(layout, menu::snapshot, actions, side, names);
         this.groups = new GroupsTab(layout, menu::snapshot, actions, side, names);
+        this.body = new TabletBody(list, map, flows, side, networks, groups, () -> snapshot().networks().size());
+        this.tips = new TabletTips(resize, buttons, body);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
     }
@@ -148,8 +138,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     protected void init() {
-        int w = Math.max(MIN_W, Math.min(savedW, maxW()));
-        int h = Math.max(MIN_H, Math.min(savedH, maxH()));
+        int w = TabletResize.width(width);
+        int h = TabletResize.height(height);
         imageWidth = w;
         imageHeight = h;
         super.init();
@@ -227,11 +217,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
     private void onSnapshot() {
         TabletSnapshot s = snapshot();
-        if (s.noticeId() != lastNoticeId) {
-            lastNoticeId = s.noticeId();
-            noticeText = s.notice();
-            noticeUntil = System.currentTimeMillis() + 4000;
-        }
+        header.onSnapshot(s);
         networks.onSnapshot(s);
         groups.onSnapshot(s);
         selectBar.onSnapshot(s);
@@ -299,19 +285,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     // ------------------------------------------------------------------ geometria
 
     public int themeX() {
-        return leftPos + layout.w - 4 - ThemeToggle.SIZE;
+        return header.themeX();
     }
 
     public int themeY() {
-        return topPos + HEAD_Y + 2;
-    }
-
-    private int maxW() {
-        return Math.max(MIN_W, width - 8);
-    }
-
-    private int maxH() {
-        return Math.max(MIN_H, height - 8);
+        return header.themeY();
     }
 
     // ------------------------------------------------------------------ entrada
@@ -321,7 +299,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, layout.w, layout.h)) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resize.begin(mouseX, mouseY)) {
             return true;
         }
         // um snapshot pode ter chegado depois do último quadro: botões ativos e visíveis em dia
@@ -335,7 +313,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (tab == Tab.LIST && list.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && clickBody(mouseX, mouseY)) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && body.mouseClicked(tab, mouseX, mouseY)) {
             return true;
         }
         boolean wasOpen = names.newOpen();
@@ -353,31 +331,12 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return remove != null && remove.visible && remove.isMouseOver(mouseX, mouseY);
     }
 
-    /** Cliques nas partes desenhadas (linhas, pontos, cores). Devolve se tratou. */
-    private boolean clickBody(double mouseX, double mouseY) {
-        switch (tab) {
-            case MAP -> {
-                return map.mouseClicked(mouseX, mouseY);
-            }
-            case NETWORKS -> {
-                return networks.mouseClicked(mouseX, mouseY);
-            }
-            case GROUPS -> {
-                return groups.mouseClicked(mouseX, mouseY);
-            }
-            case FLOWS -> {
-                return flows.mouseClicked(mouseX, mouseY);
-            }
-            case LIST -> {
-            }
-        }
-        return false;
-    }
-
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (resizeHandle.dragging()) {
-            dragResize(mouseX, mouseY);
+        if (resize.dragging()) {
+            if (resize.drag(mouseX, mouseY, width, height)) {
+                rebuild();
+            }
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -385,33 +344,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizeHandle.dragging()) {
-            resizeHandle.end();
+        if (resize.dragging()) {
+            resize.end();
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
-    }
-
-    /**
-     * Redimensiona em torno do centro, como o roteador: a borda arrastada segue o mouse e a oposta se
-     * move igual, então o painel continua centralizado. Largura e altura sempre pares.
-     */
-    private void dragResize(double mouseX, double mouseY) {
-        int newW = layout.w;
-        int newH = layout.h;
-        if (resizeHandle.changesWidth()) {
-            double wanted = resizeHandle.wantedWidth(mouseX);
-            newW = Math.max(MIN_W, Math.min(maxW(), (int) Math.round(wanted / 2) * 2));
-        }
-        if (resizeHandle.changesHeight()) {
-            double wanted = resizeHandle.wantedHeight(mouseY);
-            newH = Math.max(MIN_H, Math.min(maxH(), (int) Math.round(wanted / 2) * 2));
-        }
-        if (newW != layout.w || newH != layout.h) {
-            savedW = newW;
-            savedH = newH;
-            rebuild();
-        }
     }
 
     /**
@@ -429,20 +366,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
-        resizeHandle.end();
+        resize.end();
         super.resize(minecraft, width, height);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int step = -(int) Math.signum(scrollY);
-        switch (tab) {
-            case LIST -> list.mouseScrolled(mouseX, mouseY, scrollY);
-            case MAP -> map.mouseScrolled(mouseX, mouseY, scrollY);
-            case FLOWS -> flows.mouseScrolled(step);
-            case NETWORKS -> side.mouseScrolled(step, snapshot().networks().size());
-            case GROUPS -> groups.mouseScrolled(mouseX, step);
-        }
+        body.mouseScrolled(tab, mouseX, mouseY, scrollY);
         return true;
     }
 
@@ -514,7 +444,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (tab == Tab.LIST) {
             list.renderOverlay(g, mouseX, mouseY);
         }
-        renderNotice(g);
+        header.renderNotice(g, font);
         if (popup) {
             Component clipped = GuiText.clipAt(mouseX, mouseY);
             if (clipped != null) {
@@ -525,60 +455,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         renderHoverTip(g, mouseX, mouseY);
     }
 
-    /** A dica do quadro: tema, alça, botão, a da aba aberta ou o texto abreviado sob o mouse. */
+    /** A dica do quadro: o botão do tema, ou a do {@link TabletTips}. */
     private void renderHoverTip(GuiGraphics g, int mouseX, int mouseY) {
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
             return;
         }
-        if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, layout.w, layout.h) != null) {
-            setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
-            return;
-        }
-        for (FlatButton button : buttons) {
-            if (button.visible && button.isHovered()) {
-                Component tooltip = button.currentTooltip();
-                if (tooltip != null) {
-                    setTooltipForNextRenderPass(tooltip);
-                }
-                return;
-            }
-        }
-        Component tooltip = bodyTooltip(mouseX, mouseY);
+        Component tooltip = tips.at(tab, mouseX, mouseY);
         if (tooltip != null) {
             setTooltipForNextRenderPass(tooltip);
-            return;
         }
-        // texto abreviado: a dica traz o texto inteiro
-        Component clipped = GuiText.clipAt(mouseX, mouseY);
-        if (clipped != null) {
-            setTooltipForNextRenderPass(clipped);
-        }
-    }
-
-    private @Nullable Component bodyTooltip(int mouseX, int mouseY) {
-        return switch (tab) {
-            case LIST -> list.tooltip(mouseX, mouseY);
-            case MAP -> map.tooltip(mouseX, mouseY);
-            case FLOWS -> flows.tooltip(mouseX, mouseY);
-            case NETWORKS -> networks.tooltip(mouseX, mouseY);
-            case GROUPS -> groups.tooltip(mouseX, mouseY);
-        };
-    }
-
-    private void renderNotice(GuiGraphics g) {
-        if (System.currentTimeMillis() > noticeUntil || noticeText.getString().isEmpty()) {
-            return;
-        }
-        // sobre o cabeçalho: embaixo cobriria botões
-        int width = Math.min(layout.w - 20, font.width(noticeText) + 12);
-        int x = leftPos + layout.x1() - width;
-        int y = topPos + HEAD_Y - 2;
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 300);
-        GuiPaint.box(g, x, y, width, 16, GuiPaint.INSET, GuiPaint.ACCENT);
-        GuiText.draw(g, font, noticeText, x + 6, y + 4, width - 12, GuiPaint.FG);
-        g.pose().popPose();
     }
 
     @Override
@@ -593,25 +479,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int y = topPos;
         int w = layout.w;
         int h = layout.h;
-        int x1 = layout.x1();
         GuiPaint.panel(g, x, y, w, h, GuiPaint.ACCENT);
-        GuiPaint.text(g, font, tr("title"), x + X0, y + HEAD_Y + 3, GuiPaint.FG);
-        Component meta = plural("meta.nodes", s.totalNodes()).copy().append(" · ")
-                .append(plural("meta.networks", s.networks().size()));
-        int titleEnd = X0 + font.width(tr("title")) + 8;
-        int metaW = Math.min(font.width(meta), x1 - ThemeToggle.SIZE - 4 - titleEnd);
-        GuiText.draw(g, font, meta, x + x1 - ThemeToggle.SIZE - 4 - metaW, y + HEAD_Y + 3, metaW, GuiPaint.MUTED);
-        ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
-        g.fill(x + X0, y + SEP_Y, x + x1, y + SEP_Y + 1, GuiPaint.LINE);
-        switch (tab) {
-            case LIST -> list.render(g, mouseX, mouseY);
-            case MAP -> map.render(g, font, mouseX, mouseY);
-            case FLOWS -> flows.render(g, font, mouseX, mouseY);
-            case NETWORKS -> networks.render(g, font, mouseX, mouseY);
-            case GROUPS -> groups.render(g, font, mouseX, mouseY);
-        }
+        header.render(g, font, s, mouseX, mouseY);
+        body.render(tab, g, font, mouseX, mouseY);
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), GuiPaint.ACCENT);
+        ResizeGrip.renderDotted(g, x, y, w, h, resize.hover(mouseX, mouseY), GuiPaint.ACCENT);
     }
 
     // ------------------------------------------------------------------ captura e teste de ponta a ponta
@@ -642,8 +514,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */
     public void previewResize(int width, int height) {
-        savedW = width;
-        savedH = height;
+        TabletResize.remember(width, height);
         rebuild();
     }
 

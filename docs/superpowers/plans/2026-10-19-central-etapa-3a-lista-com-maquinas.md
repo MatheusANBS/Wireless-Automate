@@ -7,7 +7,7 @@ Spec: `docs/superpowers/specs/2026-10-19-central-etapa-3a-lista-com-maquinas-des
 - **Idioma:** código, comentários, commits e docs em português; as traduções vão sempre nos dois arquivos, `en_us.json` e `pt_br.json`.
 - **NBT e protocolo:**
   - as chaves existentes de NBT, componentes e config não mudam;
-  - as únicas chaves novas no mundo são as das máquinas no índice: `remote_pos`, `remote_group`, `remote_exception`, `remote_labels` e `remote_groups`, gravadas só quando há máquinas;
+  - as únicas chaves novas no mundo são as das máquinas no índice: `remote_pos`, `remote_group`, `remote_exception`, `remote_labels` e `remote_groups`, gravadas só quando há máquinas, mais `remote_total` e o `count` de cada grupo, só acima do teto de 512;
   - `ModPayloads.VERSION` sobe de `"23"` para `"24"`, uma vez, na Tarefa 3.
 - **Performance é requisito (skill `wa-performance`, leia o `SKILL.md`):**
   - o motor não muda: nada no laço, nada por tick além do que a amostra do Tablet já faz;

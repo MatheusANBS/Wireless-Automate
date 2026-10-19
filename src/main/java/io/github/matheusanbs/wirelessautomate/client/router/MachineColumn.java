@@ -23,19 +23,20 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A coluna do visor da tela do roteador: o visor 3D da máquina ({@link MachineView3D}) e, com o Upgrade de
  * Alcance, o botão "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}), ao lado do visor ou no
  * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
- * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular.
+ * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular. O ✎ e os dois
+ * cliques no nome abrem a caixa do nome ({@link LabelEditor}) no lugar dele.
  */
 final class MachineColumn {
     /**
@@ -48,22 +49,24 @@ final class MachineColumn {
     private final Supplier<RouterSnapshot> snapshot;
     private final NodePanel panel;
     private final RouterLayout layout;
-    private final boolean preview;
+    private final Consumer<CustomPacketPayload> sender;
     private final IntSupplier containerId;
     private final MachineView3D machineView;
     private final Function<Direction, FaceView> faceViews = this::visorView;
     private final RangeList rangeList = new RangeList();
+    private final LabelEditor labelEditor = new LabelEditor(this::sendRename);
     private FlatButton machinesButton;
 
     /**
-     * @param preview sem servidor (captura de desenvolvimento): a lista não pede troca de alvo
+     * @param sender manda o pedido ao servidor, ou, numa captura sem servidor, só muda o snapshot local (o
+     *               {@link RouterPanelActions}, o mesmo do painel)
      */
-    MachineColumn(Supplier<RouterSnapshot> snapshot, NodePanel panel, RouterLayout layout, boolean preview,
-            IntSupplier containerId) {
+    MachineColumn(Supplier<RouterSnapshot> snapshot, NodePanel panel, RouterLayout layout,
+            Consumer<CustomPacketPayload> sender, IntSupplier containerId) {
         this.snapshot = snapshot;
         this.panel = panel;
         this.layout = layout;
-        this.preview = preview;
+        this.sender = sender;
         this.containerId = containerId;
         this.machineView = new MachineView3D(panel::selectFace);
     }
@@ -163,10 +166,30 @@ final class MachineColumn {
 
     // ------------------------------------------------------------------ ações
 
-    /** O pedido ao servidor; numa captura sem servidor, nada sai. */
+    /** O pedido ao servidor (numa captura sem servidor, o {@code sender} decide); {@code null} não manda nada. */
     private void send(@Nullable CustomPacketPayload payload) {
-        if (!preview && payload != null) {
-            PacketDistributor.sendToServer(payload);
+        if (payload != null) {
+            sender.accept(payload);
+        }
+    }
+
+    private void sendRename(EditTarget target, @Nullable BlockPos machinePos, String name) {
+        send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, name));
+    }
+
+    /** Abre a caixa do nome no lugar do nome da linha {@code row}, com o nome dado agora. */
+    private void startRename(RangeList.Row row) {
+        if (row.kind() == RangeList.Kind.GROUP) {
+            RangeView.GroupView group = range().group(row.group());
+            if (group != null) {
+                labelEditor.start(row.target(), null, group.name(), RangeList.groupName(group));
+            }
+        } else if (row.kind() == RangeList.Kind.MACHINE) {
+            RangeView.MachineView machine = range().machine(row.machine());
+            if (machine != null) {
+                labelEditor.start(row.target(), machine.pos(), machine.label(),
+                        RangeList.blockName(range(), row.machine()));
+            }
         }
     }
 
@@ -184,6 +207,10 @@ final class MachineColumn {
 
     /** Um botão da linha escolhida: o servidor confere o que a tela viu e age; o snapshot seguinte mostra. */
     private void rowAction(RangeList.Row row, RangeRowButtons.Action action) {
+        if (action == RangeRowButtons.Action.RENAME) {
+            startRename(row);
+            return;
+        }
         int id = containerId.getAsInt();
         if (row.kind() == RangeList.Kind.GROUP) {
             RangeView.GroupView group = range().group(row.group());
@@ -203,10 +230,27 @@ final class MachineColumn {
             case REVERT -> new RevertMachinePayload(id, row.machine(), machine.pos());
             case UNLINK -> new UnlinkMachinePayload(id, row.machine(), machine.pos());
             case CLEAR_NETWORKS -> new ClearIdleNetworksPayload(id, false);
+            case RENAME -> null;
         });
     }
 
     // ------------------------------------------------------------------ entrada
+
+    /**
+     * Um clique com o nome de uma linha em edição: dentro da caixa, fica nela ({@code true}); fora, salva o nome e
+     * o clique segue. A tela chama antes de repassar o clique a qualquer parte.
+     */
+    boolean labelClick(double mouseX, double mouseY, int button) {
+        return labelEditor.mouseClicked(mouseX, mouseY, button);
+    }
+
+    boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        return labelEditor.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    boolean charTyped(char codePoint, int modifiers) {
+        return labelEditor.charTyped(codePoint, modifiers);
+    }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (listShown() && button == 0
@@ -256,6 +300,11 @@ final class MachineColumn {
         if (machineTip) {
             set.accept(machineTooltip());
         }
+        Component hint = labelEditor.tooltip(mouseX, mouseY);
+        if (hint != null) {
+            set.accept(hint);
+            return true;
+        }
         RangeList.Row row = listShown() ? rangeList.rowAt(range(), mouseX, mouseY) : null;
         if (row != null) {
             machineTip = true;
@@ -299,7 +348,11 @@ final class MachineColumn {
     void render(GuiGraphics g, Font font, int left, int top, int pointerX, int pointerY) {
         RouterSnapshot s = snapshot.get();
         if (listShown()) {
+            placeLabelEditor();
             rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
+            labelEditor.render(g, pointerX, pointerY);
+        } else {
+            labelEditor.finish(true);
         }
         if (viewShown()) {
             renderView(g, font, s, left, top, pointerX, pointerY);
@@ -347,6 +400,22 @@ final class MachineColumn {
         }
     }
 
+    /**
+     * A caixa do nome no lugar do nome da linha em edição, onde ela está agora; se a linha saiu da vista (rolagem,
+     * grupo fechado) ou sumiu, salva e fecha.
+     */
+    private void placeLabelEditor() {
+        EditTarget editing = labelEditor.target();
+        int[] box = editing == null ? null : rangeList.nameBox(range(), editing);
+        if (editing != null && box == null) {
+            labelEditor.finish(true);
+            editing = null;
+        } else if (box != null) {
+            labelEditor.place(box[0], box[1], box[2]);
+        }
+        rangeList.editing(editing);
+    }
+
     /** Botão Máquinas: seta (lista aberta ou fechada), o nome e as vagas usadas. */
     private void paintMachines(GuiGraphics g, FlatButton b, boolean hovered) {
         Font font = Minecraft.getInstance().font;
@@ -381,6 +450,11 @@ final class MachineColumn {
     int @Nullable [] rangeButtonCenter(RangeRowButtons.Action action) {
         return listShown() ? rangeList.buttonCenter(Minecraft.getInstance().font, range(), snapshot.get().target(), action)
                 : null;
+    }
+
+    /** O nome de uma linha da lista está em edição. */
+    boolean labelEditing() {
+        return labelEditor.editing();
     }
 
     /** O ✕ do alvo na lista está armado. */

@@ -132,6 +132,13 @@ public final class MachineLabelGameTests {
                         helper.assertValueEqual(router.remoteMachines().group(groupId).name(), "Fornos",
                                 "uma recusa mudou o nome do grupo");
 
+                        router.setRangeUpgrade(net.minecraft.world.item.ItemStack.EMPTY);
+                        helper.assertFalse(ModPayloads.handleRenameTarget(player, group(menu, groupId, "Sem upgrade")),
+                                "renomeou o grupo sem o Upgrade de Alcance");
+                        helper.assertValueEqual(router.remoteMachines().group(groupId).name(), "Fornos",
+                                "o grupo mudou sem o upgrade");
+                        router.setRangeUpgrade(rangeUpgrade());
+
                         helper.assertTrue(ModPayloads.handleRenameTarget(player, machine(menu, index, furnace, "  ")),
                                 "não tirou o rótulo");
                         helper.assertValueEqual(router.remoteMachines().machine(index).label(), "", "rótulo não saiu");

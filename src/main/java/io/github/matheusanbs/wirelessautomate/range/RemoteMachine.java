@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.range;
 
+import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -69,7 +70,10 @@ public final class RemoteMachine {
         this.label = label;
     }
 
-    /** NBT com {@code pos} (long), {@code group}, {@code exception} (só se houver), {@code front} e {@code label} (só se não vazio). */
+    /**
+     * NBT com {@code pos} (long), {@code group}, {@code exception} (só se houver), {@code front} e
+     * {@code label} (só se não vazio).
+     */
     public CompoundTag save(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putLong("pos", pos.asLong());
@@ -90,7 +94,7 @@ public final class RemoteMachine {
                 : null;
         int front = tag.contains("front", CompoundTag.TAG_INT) ? tag.getInt("front") : -1;
         RemoteMachine machine = new RemoteMachine(BlockPos.of(tag.getLong("pos")), tag.getInt("group"), exception, front);
-        machine.label = tag.getString("label");
+        machine.label = RenameRouterPayload.clean(tag.getString("label"));
         return machine;
     }
 }

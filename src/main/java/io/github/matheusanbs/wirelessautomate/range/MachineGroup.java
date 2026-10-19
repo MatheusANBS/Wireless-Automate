@@ -164,7 +164,7 @@ public final class MachineGroup {
         if (block == null) {
             return null;
         }
-        MachineGroup group = new MachineGroup(tag.getInt("id"), block, tag.getString("name"),
+        MachineGroup group = new MachineGroup(tag.getInt("id"), block, RenameRouterPayload.clean(tag.getString("name")),
                 MachineConfig.load(tag.getCompound("profile"), registries));
         CompoundTag cardsTag = tag.getCompound("cards");
         for (int t = 0; t < CARD_TYPES.length; t++) {

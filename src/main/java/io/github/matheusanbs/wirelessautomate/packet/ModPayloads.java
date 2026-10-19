@@ -439,7 +439,7 @@ public final class ModPayloads {
 
     /**
      * Dá nome ao grupo ou rótulo à máquina remota. Recusa a máquina presa, nomes maiores que
-     * {@link RenameRouterPayload#MAX_LENGTH} e, numa máquina, a posição que não bate com a do índice.
+     * {@link RenameRouterPayload#MAX_LENGTH}, o roteador sem o Upgrade de Alcance e, numa máquina, a posição que não bate com a do índice.
      */
     public static boolean handleRenameTarget(@Nullable ServerPlayer player, RenameTargetPayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -448,12 +448,14 @@ public final class ModPayloads {
             return false;
         }
         RouterBlockEntity router = host.editedRouter();
-        if (payload.kind() == EditTarget.Kind.MACHINE
+        if (!router.rangeActive() || payload.kind() == EditTarget.Kind.MACHINE
                 && (payload.machinePos().isEmpty() || !sameMachine(router, payload.id(), payload.machinePos().get()))) {
             return false;
         }
         boolean renamed = router.renameTarget(new EditTarget(payload.kind(), payload.id()), payload.name());
-        host.editApplied();
+        if (renamed) {
+            host.editApplied();
+        }
         return renamed;
     }
 

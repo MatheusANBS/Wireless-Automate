@@ -54,12 +54,12 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| C1 | A busca `#` do Baú limpa o cache e refaz o tooltip de todos os tipos a cada tecla | `ShownList:72`, `StorageKeys:49` | alto (100–300 ms/tecla) | pendente |
-| C2 | Lista do Baú copiada, reordenada e com o mod buscado no registro a cada sincronização | `ShownList:82-114` | médio | pendente |
-| C3 | Layout do painel do nó e da Lista do Tablet refeito 3–4× por quadro | `NodePanel:212`, `ListLayout` | médio-baixo | pendente |
+| C1 | A busca `#` do Baú limpa o cache e refaz o tooltip de todos os tipos a cada tecla | `ShownList:72`, `StorageKeys:49` | alto (100–300 ms/tecla) | feito `5b147f0` (texto de tags e tooltip guardado por tipo, invalidado pelo idioma e pelas tags; 2.518 tipos: 14–26 ms por tecla → 0,7–2,3 ms; só a primeira tecla depois do `#` monta os textos, ~25 ms uma vez) |
+| C2 | Lista do Baú copiada, reordenada e com o mod buscado no registro a cada sincronização | `ShownList:82-114` | médio | feito `95c4874` (com os mesmos tipos, busca e ordem, a sincronização só troca as quantidades; mod guardado por tipo; 2.518 tipos: 1,5–2,6 ms por sincronização → 0,25–0,7 ms por nome ou mod, ~0,4 ms por quantidade) |
+| C3 | Layout do painel do nó e da Lista do Tablet refeito 3–4× por quadro | `NodePanel:212`, `ListLayout` | médio-baixo | feito `0bad11e` (`FrameCache` + `FrameClock`: layout uma vez por quadro, eventos e mudanças do painel invalidam; painel do nó 3–4 → 1,05 layouts/quadro, 80–240 → 46–145 µs/quadro; Lista do Tablet 3,1 → 1,0–1,2 layouts/quadro, 99–119 → 22–79 µs/quadro) |
 | C4 | A aba Fluxos monta linhas e textos por quadro | `FlowsTab:236` | médio | feito na etapa 1 da central (linhas e textos numa `FlowRow`, refeitas só quando os Fluxos, as redes, a vista, os tipos abertos ou o tema mudam) |
-| C5 | Abrir o Filtro percorre o registro inteiro por entrada de mod | `FilterMembers:46` | baixo-médio | pendente |
-| C6 | Miúdos: BER do Ressonador troca de `RenderType` ~7× por Núcleo, lista do editor de receitas por quadro, `ResourceLocation` por ícone, projeção por quadro | vários | baixo | pendente |
+| C5 | Abrir o Filtro percorre o registro inteiro por entrada de mod | `FilterMembers:46` | baixo-médio | feito `0a92910` (uma passada pelo registro agrupa por mod e conta, guardada até o jogo fechar: ~2 ms uma vez, no lugar de ~0,7 ms por entrada de mod a cada abertura) |
+| C6 | Miúdos: BER do Ressonador troca de `RenderType` ~7× por Núcleo, lista do editor de receitas por quadro, `ResourceLocation` por ícone, projeção por quadro | vários | baixo | feito `a5420fc` em parte (lista do editor de receitas refiltrada só com snapshot ou busca novos: 3,3 filtragens/quadro → 7 em 600 quadros; textura do ícone de tipo numa constante). Pulados: o `RenderType` da câmara (o `lightning` grava profundidade, então trocar a ordem dos lotes `lightning`/`glow` muda quais halos ficam escondidos; não há reordenação garantidamente igual) e a projeção (guardar os fantasmas pede um VBO com o alfa por uniform e perde a ordenação translúcida pela câmera; ela é única, temporária e só com a projeção ligada) |
 
 ## R · memória
 

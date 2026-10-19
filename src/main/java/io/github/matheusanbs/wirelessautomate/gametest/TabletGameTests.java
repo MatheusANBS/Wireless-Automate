@@ -631,12 +631,13 @@ public final class TabletGameTests {
                         NodeIndex.Entry loaded = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
                         eq(helper, loaded.faceModes(), entry.faceModes(), "modos salvos");
 
-                        // mundo antigo: sem a chave, tudo Nenhum
-                        ListTag nodes = saved.getList("nodes", Tag.TAG_COMPOUND);
+                        // mundo antigo: sem a chave, tudo Nenhum (numa cópia: as tags do save são as que o índice guarda)
+                        CompoundTag oldFile = saved.copy();
+                        ListTag nodes = oldFile.getList("nodes", Tag.TAG_COMPOUND);
                         for (int i = 0; i < nodes.size(); i++) {
                             nodes.getCompound(i).remove("face_modes");
                         }
-                        NodeIndex.Entry old = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                        NodeIndex.Entry old = NodeIndex.load(oldFile, helper.getLevel().registryAccess()).entry(key);
                         eq(helper, old.faceModes(), 0L, "índice antigo");
                         eq(helper, old.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.NONE, "modo no índice antigo");
 

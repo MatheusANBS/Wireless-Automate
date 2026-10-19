@@ -26,7 +26,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ### Range Upgrade
 
-One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs.
+One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: a face joins yours when you pick a mode on it, and **Clear networks** removes it again from every face set to None, with Undo.
 
 ![One router, many machines](https://media.forgecdn.net/attachments/2063/208/feature-17-range-png.png)
 
@@ -149,7 +149,7 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. The Core is u
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2063/197/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: one search box for machine, network and name, quick filters and the list grouped by machine, with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Copy a node's profile and paste it on one machine, a whole group or the marked ones, with undo. Also a top-down map, per-network statistics (one card per resource type; click one to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Double-click a node to open its full screen remotely.
+Every router of every network, from anywhere: one search box for machine, network and name, quick filters and the list grouped by machine, with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Copy a node's profile and paste it on one machine, a whole group or the marked ones, with undo. Also a top-down map, a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and groups to pause and resume a whole system at once. Double-click a node to open its full screen remotely.
 
 ### Built-in guide book
 

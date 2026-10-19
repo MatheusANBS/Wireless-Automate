@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.client.router;
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
@@ -37,9 +36,8 @@ import org.jetbrains.annotations.Nullable;
  * Alcance, o botão "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}), ao lado do visor ou no
  * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
  * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular. O ✎ e os dois
- * cliques no nome abrem a caixa do nome ({@link RowRename}) no lugar dele. O Olho de cada máquina acende e
- * apaga o destaque dela no mundo ({@link HighlightRenderer}) e, com alguma acesa, a linha {@link LitFooter}
- * embaixo da lista apaga todas.
+ * cliques no nome abrem a caixa do nome ({@link RowRename}) no lugar dele. O Olho das linhas e a linha das
+ * acesas embaixo da lista são do {@link LitFooter}.
  */
 final class MachineColumn {
     /**
@@ -58,8 +56,8 @@ final class MachineColumn {
     private final Function<Direction, FaceView> faceViews = this::visorView;
     private final RowRename rowRename = new RowRename(this::sendRename);
     private final LabelEditor labelEditor = rowRename.editor();
-    private final RangeList rangeList = new RangeList(rowRename, this::lit);
-    private final LitFooter litFooter = new LitFooter();
+    private final LitFooter litFooter;
+    private final RangeList rangeList;
     private FlatButton machinesButton;
 
     /**
@@ -74,6 +72,8 @@ final class MachineColumn {
         this.sender = sender;
         this.containerId = containerId;
         this.machineView = new MachineView3D(panel::selectFace);
+        this.litFooter = new LitFooter(snapshot);
+        this.rangeList = new RangeList(rowRename, litFooter.machineRow());
     }
 
     private static Component tr(String key, Object... args) {
@@ -163,33 +163,12 @@ final class MachineColumn {
         machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
         machineView.setBounds(left + layout.viewX() + 1, top + layout.boxY() + 1, layout.viewBoxW() - 2,
                 layout.boxH() - 2);
-        int listH = layout.boxH() - (footerShown() ? LitFooter.H : 0);
+        int listH = layout.boxH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0);
         rangeList.setBounds(left + RouterLayout.X0, top + layout.boxY(), layout.listW(), listH);
-        litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.boxY() + listH, layout.listW());
+        litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.boxY() + listH,
+                layout.listW());
         if (rangeShown()) {
             rangeList.sync(range(), snapshot.get().target(), IdleNetworks.shown(snapshot.get()));
-        }
-    }
-
-    /** A linha das acesas embaixo da lista: com a lista à vista e alguma máquina acesa. */
-    private boolean footerShown() {
-        return listShown() && LitFooter.shown();
-    }
-
-    // ------------------------------------------------------------------ destaque no mundo
-
-    /** A máquina na posição {@code pos} da dimensão do jogador está acesa (o Olho da linha). */
-    private boolean lit(long pos) {
-        Minecraft minecraft = Minecraft.getInstance();
-        return minecraft.level != null && HighlightRenderer.isLit(minecraft.level.dimension(), pos);
-    }
-
-    /** O Olho da linha: acende ou apaga a máquina, com a linha até este roteador. */
-    private void toggleEye(RangeList.Row row) {
-        RangeView.MachineView machine = range().machine(row.machine());
-        Minecraft minecraft = Minecraft.getInstance();
-        if (machine != null && minecraft.level != null) {
-            HighlightRenderer.toggle(minecraft.level.dimension(), machine.pos(), snapshot.get().pos());
         }
     }
 
@@ -266,13 +245,7 @@ final class MachineColumn {
     }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && footerShown() && litFooter.click(mouseX, mouseY)) {
-            return true;
-        }
-        RangeList.Row eye = listShown() && button == 0
-                ? rangeList.eyeAt(range(), snapshot.get().target(), mouseX, mouseY) : null;
-        if (eye != null) {
-            toggleEye(eye);
+        if (listShown() && button == 0 && litFooter.click(rangeList, mouseX, mouseY)) {
             return true;
         }
         if (listShown() && button == 0
@@ -327,16 +300,12 @@ final class MachineColumn {
             set.accept(hint);
             return true;
         }
-        Component footer = footerShown() ? litFooter.tooltip(mouseX, mouseY) : null;
-        if (footer != null) {
-            set.accept(footer);
+        Component lit = listShown() ? litFooter.tooltip(rangeList, mouseX, mouseY) : null;
+        if (lit != null) {
+            set.accept(lit);
             return true;
         }
         RangeList.Row row = listShown() ? rangeList.rowAt(range(), mouseX, mouseY) : null;
-        if (row != null && rangeList.eyeAt(range(), snapshot.get().target(), mouseX, mouseY) != null) {
-            set.accept(LitFooter.eyeTooltip(lit(range().machine(row.machine()).pos().asLong())));
-            return true;
-        }
         if (row != null) {
             machineTip = true;
             Component button = rangeList.buttonTooltip(Minecraft.getInstance().font, range(), snapshot.get().target(),
@@ -380,9 +349,7 @@ final class MachineColumn {
         RouterSnapshot s = snapshot.get();
         if (listShown()) {
             rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
-            if (footerShown()) {
-                litFooter.render(g, font, pointerX, pointerY);
-            }
+            litFooter.render(g, font, true, pointerX, pointerY);
         } else {
             labelEditor.finish(true);
         }
@@ -469,12 +436,12 @@ final class MachineColumn {
     }
 
     int @Nullable [] rangeEyeCenter(EditTarget target) {
-        return listShown() ? rangeList.eyeCenter(range(), target) : null;
+        return listShown() ? litFooter.eyeCenter(rangeList, target) : null;
     }
 
     /** O Apagar todas embaixo da lista, ou {@code null} se ele não aparece. */
     int @Nullable [] litClearCenter() {
-        return footerShown() ? litFooter.clearCenter() : null;
+        return LitFooter.shown(listShown()) ? litFooter.clearCenter() : null;
     }
 
     /** O nome de uma linha da lista está em edição. */

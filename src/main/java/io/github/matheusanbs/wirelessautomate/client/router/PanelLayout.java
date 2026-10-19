@@ -49,8 +49,8 @@ final class PanelLayout {
     /** Os botões da linha da máquina, da esquerda para a direita. */
     private static final Kind[] TARGET_BUTTONS = {Kind.HIGHLIGHT, Kind.REVERT, Kind.UPDATE, Kind.UNLINK};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, RENAME, IDLE_NETWORKS, HIGHLIGHT, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT,
-        PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, TARGET, RENAME, IDLE_NETWORKS, HIGHLIGHT, REVERT, UPDATE, UNLINK, MODE, NETWORK,
+        FILTER, EDIT, PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {

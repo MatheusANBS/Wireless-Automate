@@ -21,6 +21,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.GraphicsStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -34,7 +35,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * O destaque no mundo, no e2e do roteador de alcance (só em inglês): o Olho da fornalha na lista acende a máquina
  * ({@code range-8b-olho}, a lista com o Olho aceso e a linha das acesas), a tela fecha e a câmera olha a fornalha
- * atrás de uma parede de pedra ({@code range-8-no-mundo}); de volta à tela, o Apagar todas apaga. No Tablet, o
+ * atrás de uma parede de pedra ({@code range-8-no-mundo}, e nos gráficos Fabulous
+ * {@code range-8c-no-mundo-fabulous}); de volta à tela, o Apagar todas apaga. No Tablet, o
  * "In world" do painel acende a fornalha ({@code 7k-tablet-no-mundo}) e o "Turn all off (1)" da Lista apaga. No
  * fim, a tela do roteador volta como estava: no mínimo, com a lista e a fornalha como alvo.
  */
@@ -142,6 +144,23 @@ final class E2eHighlightSteps {
                 && stepTicks >= 10,
                 () -> "câmera em " + Minecraft.getInstance().player.position()));
         list.add(capture("range-8-no-mundo"));
+        // o mesmo nos gráficos Fabulous, só nesta sessão (o options.txt não muda): o modo volta logo depois
+        GraphicsStatus[] graphics = new GraphicsStatus[1];
+        list.add(new Step(l + "gráficos Fabulous", STEP_TIMEOUT_MS, () -> {
+            graphics[0] = Minecraft.getInstance().options.graphicsMode().get();
+            Minecraft.getInstance().options.graphicsMode().set(GraphicsStatus.FABULOUS);
+            // os alvos do Fabulous (nuvens, translúcidos) já no mesmo quadro: o céu do Ars Nouveau os usa
+            Minecraft.getInstance().levelRenderer.allChanged();
+        }, () -> Minecraft.getInstance().options.graphicsMode().get() == GraphicsStatus.FABULOUS && stepTicks >= 20,
+                () -> "gráficos " + Minecraft.getInstance().options.graphicsMode().get()));
+        list.add(capture("range-8c-no-mundo-fabulous"));
+        list.add(new Step(l + "gráficos de volta", STEP_TIMEOUT_MS,
+                () -> {
+                    Minecraft.getInstance().options.graphicsMode().set(graphics[0]);
+                    Minecraft.getInstance().levelRenderer.allChanged();
+                },
+                () -> Minecraft.getInstance().options.graphicsMode().get() == graphics[0] && stepTicks >= 4,
+                () -> "gráficos " + Minecraft.getInstance().options.graphicsMode().get()));
         list.add(new Step(l + "tirar a parede e voltar", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             onServer(server -> {

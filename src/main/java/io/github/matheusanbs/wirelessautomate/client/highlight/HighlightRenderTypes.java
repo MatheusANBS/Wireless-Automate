@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.OptionalDouble;
 import net.minecraft.client.renderer.RenderType;
+import org.lwjgl.opengl.GL11;
 
 /**
  * Os dois tipos de desenho do destaque das máquinas ({@link HighlightRenderer}): as linhas (arestas e a linha
@@ -14,13 +15,13 @@ import net.minecraft.client.renderer.RenderType;
  */
 final class HighlightRenderTypes extends RenderType {
     /**
-     * Desliga o teste de profundidade durante o desenho e o religa depois. O {@code NO_DEPTH_TEST} do jogo só não
-     * liga o teste: no estágio depois dos translúcidos ele continua ligado pelo tipo dos blocos translúcidos, e a
-     * parede esconderia o contorno.
+     * O teste de profundidade sempre passa durante o desenho e volta ao padrão do jogo depois. O {@code NO_DEPTH_TEST}
+     * do jogo só não liga o teste: no estágio depois dos translúcidos ele continua ligado pelo tipo dos blocos
+     * translúcidos, e a parede esconderia o contorno.
      */
     private static final LayeringStateShard THROUGH_BLOCKS = new LayeringStateShard(
-            WirelessAutomate.MODID + "_highlight_through_blocks", RenderSystem::disableDepthTest,
-            RenderSystem::enableDepthTest);
+            WirelessAutomate.MODID + "_highlight_through_blocks", () -> RenderSystem.depthFunc(GL11.GL_ALWAYS),
+            () -> RenderSystem.depthFunc(GL11.GL_LEQUAL));
     private static final RenderType LINES = create(WirelessAutomate.MODID + "_highlight_lines",
             DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1536, false, false,
             CompositeState.builder()

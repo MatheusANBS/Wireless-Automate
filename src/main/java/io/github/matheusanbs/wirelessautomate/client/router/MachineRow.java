@@ -37,6 +37,8 @@ final class MachineRow {
     static final int TEXT_X = 16;
     private static final Component SEPARATOR = Component.literal(" · ");
 
+    /** A máquina na posição dada está acesa no mundo. */
+    private final LongPredicate lit;
     private @Nullable RangeView cached;
     private Component[] names = new Component[0];
     private Component[] coords = new Component[0];
@@ -46,6 +48,11 @@ final class MachineRow {
     private int separatorW;
     private Component badgeText = Component.empty();
     private int badgeW;
+
+    /** @param lit se a máquina na posição dada está acesa no mundo (o Olho aceso) */
+    MachineRow(LongPredicate lit) {
+        this.lit = lit;
+    }
 
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
@@ -133,11 +140,10 @@ final class MachineRow {
      * A máquina {@code index} na linha com o topo em {@code ry}, numa lista com a borda esquerda em {@code x}.
      * {@code nameRight} é até onde vai a primeira linha (antes dos botões da linha escolhida, ou do lugar do Olho)
      * e {@code right} até onde vai a segunda; {@code badge} é a marca "exc." (na linha escolhida, o ↺ mostra a
-     * exceção); {@code eye} é o Olho na linha (sai com o "Desvincular?" armado) e {@code lit} diz, pela posição
-     * da máquina, se ele está aceso.
+     * exceção); {@code eye} é o Olho na linha (sai com o "Desvincular?" armado).
      */
     void render(GuiGraphics g, Font font, RangeView view, int index, int x, int ry, int nameRight, int right,
-            boolean badge, boolean eye, LongPredicate lit) {
+            boolean badge, boolean eye) {
         MachineView machine = view.machine(index);
         if (machine == null) {
             return;
@@ -145,7 +151,8 @@ final class MachineRow {
         prepare(font, view);
         GuiPaint.dot(g, x + 8, ry + 7, RangeList.stateColor(machine.state()));
         if (eye) {
-            GuiPaint.eye(g, right - EYE_W + 2, ry + LINE1_Y + 1, lit.test(machine.pos().asLong()) ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED);
+            int eyeColor = lit.test(machine.pos().asLong()) ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED;
+            GuiPaint.eye(g, right - EYE_W + 2, ry + LINE1_Y + 1, eyeColor);
         }
         int textX = x + TEXT_X;
         int end = nameRight - 2;
@@ -170,13 +177,25 @@ final class MachineRow {
         }
     }
 
-    /** O ponto está no Olho da linha com o topo em {@code ry}, numa lista com a borda direita do texto em {@code right}. */
-    static boolean eyeHit(double mouseX, double mouseY, int ry, int right) {
-        return mouseX >= right - EYE_W && mouseX < right && mouseY >= ry && mouseY < ry + EYE_H;
+    /**
+     * A linha da máquina da lista {@code list} cujo Olho está sob o mouse, ou {@code null}. Na linha do alvo com o
+     * "Desvincular?" armado, o Olho não aparece.
+     */
+    @Nullable RangeList.Row eyeAt(RangeList list, RangeView view, EditTarget target, double mouseX, double mouseY) {
+        RangeList.Row row = list.rowAt(view, mouseX, mouseY);
+        if (row == null || row.kind() != RangeList.Kind.MACHINE
+                || row.target().equals(target) && list.unlinkArmed(target)) {
+            return null;
+        }
+        int ry = list.rowTop(row);
+        int right = list.textRight(view);
+        return mouseX >= right - EYE_W && mouseX < right && mouseY >= ry && mouseY < ry + EYE_H ? row : null;
     }
 
-    /** O centro do Olho da linha com o topo em {@code ry} (gancho do e2e). */
-    static int[] eyeCenter(int ry, int right) {
-        return new int[] {right - EYE_W / 2, ry + EYE_H / 2};
+    /** O centro do Olho da linha da máquina {@code target} (gancho do e2e); {@code null} se fora da vista. */
+    int @Nullable [] eyeCenter(RangeList list, RangeView view, EditTarget target) {
+        int[] center = list.rowCenter(view, target);
+        return center == null ? null
+                : new int[] {list.textRight(view) - EYE_W / 2, center[1] - RangeList.MACHINE_H / 2 + EYE_H / 2};
     }
 }

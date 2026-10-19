@@ -34,8 +34,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -83,12 +81,6 @@ public final class NodePanel {
 
         /** "Tirar a rede das faces sem modo" no alvo, ou o Desfazer do aviso dele ({@code undo}). */
         void clearIdleNetworks(boolean undo);
-
-        /** A dimensão do roteador, para o destaque no mundo: a do jogador, ou a do nó escolhido no Tablet. */
-        default @Nullable ResourceKey<Level> dimension() {
-            Level level = Minecraft.getInstance().level;
-            return level == null ? null : level.dimension();
-        }
     }
 
     private final Actions actions;

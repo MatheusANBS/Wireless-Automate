@@ -49,6 +49,10 @@ public enum BenchScenario {
             "Pares: como Muitos nós, mas cada origem numa rede só com o destino vizinho (muitas redes pequenas)"),
     INFINITE("inf", 2, RouterTier.ULTIMATE, 60, 0,
             "Fonte e ralo infinitos: pares de máquinas de teste (pilha enorme para ralo), tier Ultimate, sem gargalo de inventário"),
+    HUB("hub", 250, RouterTier.ELITE, 60, 20,
+            "Baú central: um Baú do mod Elite de destino, com um roteador, e todas as outras máquinas origens cheias de pedregulho"),
+    CHEST_TYPES("chesttypes", 20, RouterTier.ELITE, 60, 20,
+            "Baú com milhares de tipos: pares de origem cheia de pedregulho e destino Baú do mod Elite com 2.000 tipos de papel e lista branca de pedregulho com estoque"),
     RESONATOR_GEN("resonator-gen", 100, RouterTier.ULTIMATE, 100, 0,
             "Ressonadores gerando: Ultimate montados e sintonizados, 8 Lapidados, cada um com um roteador na Porta de Energia para uma Bateria"),
     RESONATOR_IDLE("resonator-idle", 500, RouterTier.ULTIMATE, 300, 0,
@@ -89,8 +93,14 @@ public enum BenchScenario {
     public boolean comparable() {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
-            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, RESONATOR_GEN, RESONATOR_IDLE, RESONATOR_EVENT -> false;
+            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
+                    RESONATOR_EVENT -> false;
         };
+    }
+
+    /** O destino é sempre o Baú do mod ({@link BenchStorage#chest()}), qualquer que seja o armazenamento das origens. */
+    public boolean modChestDestination() {
+        return this == HUB || this == CHEST_TYPES;
     }
 
     /** Tem os relógios de redstone em cima dos roteadores. */

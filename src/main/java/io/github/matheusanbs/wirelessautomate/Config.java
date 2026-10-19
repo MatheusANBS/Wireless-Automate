@@ -148,10 +148,10 @@ public final class Config {
         }
         STORAGE_STASH_EXPIRY_DAYS = builder
                 .comment("Dias de servidor ligado que o conteúdo de um armazenamento quebrado fica guardado no servidor "
-                        + "esperando o item ser colocado (0 = para sempre). Vencido, o conteúdo some: o item que ainda "
+                        + "esperando o item ser colocado (0 = para sempre, o padrão). Com prazo, vencido, o conteúdo some: o item que ainda "
                         + "exista nasce vazio ao ser colocado. Carregar o item no inventário renova o prazo uma vez por dia; "
                         + "num baú ou num disco, não. É também o prazo do /wa storage recover.")
-                .defineInRange("stashExpiryDays", 90, 0, 36_500);
+                .defineInRange("stashExpiryDays", 0, 0, 36_500);
         builder.pop();
 
         builder.push("resonator");

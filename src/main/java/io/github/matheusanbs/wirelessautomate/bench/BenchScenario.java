@@ -58,7 +58,9 @@ public enum BenchScenario {
     RESONATOR_IDLE("resonator-idle", 500, RouterTier.ULTIMATE, 300, 0,
             "Ressonadores ociosos: os mesmos, sem roteador; o buffer enche em 10 s e para (o custo de existir)"),
     RESONATOR_EVENT("resonator-event", 50, RouterTier.ULTIMATE, 100, 0,
-            "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois");
+            "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois"),
+    RANGE("range", 200, RouterTier.ULTIMATE, 100, 0,
+            "Alcance: roteadores Ultimate com o Upgrade de Alcance, cada um com 64 barris vazios vinculados num grupo que extrai, nada para mover");
 
     public final String id;
     public final int defaultNodes;
@@ -94,13 +96,21 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT -> false;
+                    RESONATOR_EVENT, RANGE -> false;
         };
     }
 
     /** O destino é sempre o Baú do mod ({@link BenchStorage#chest()}), qualquer que seja o armazenamento das origens. */
     public boolean modChestDestination() {
         return this == HUB || this == CHEST_TYPES;
+    }
+
+    /**
+     * Mede o heap que a cena retém ({@link BenchRun}): um GC completo antes de montar e outro antes de medir, fora
+     * do tempo medido. Só onde a memória é o que se quer ver, porque o GC atrapalha os outros cenários.
+     */
+    public boolean measuresMemory() {
+        return this == RANGE;
     }
 
     /** Tem os relógios de redstone em cima dos roteadores. */

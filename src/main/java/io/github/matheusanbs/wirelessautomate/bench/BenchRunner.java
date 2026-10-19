@@ -206,6 +206,14 @@ public final class BenchRunner {
                 }
             }
         }
+        if (finished.stream().anyMatch(run -> run.job.scenario().measuresMemory())) {
+            table.append("\n### Memória\n\n").append(BenchRun.MEMORY_HEADER).append('\n');
+            for (BenchRun run : finished) {
+                if (run.job.scenario().measuresMemory()) {
+                    table.append(BenchRun.memoryLine(run.job, run.reps)).append('\n');
+                }
+            }
+        }
         emit(table.toString());
         finished.clear();
         if (auto) {

@@ -321,7 +321,7 @@ public final class NodePanel {
 
     // ------------------------------------------------------------------ entrada
 
-    /** Com o nome em edição: o clique na caixa fica nela ({@code true}); fora, salva e segue ({@link LabelEditor}). */
+    /** Com o nome em edição: o clique na caixa fica nela ({@code true}); fora, salva e segue. */
     public boolean labelClick(double mx, double my, int button) {
         return label.mouseClicked(mx, my, button);
     }
@@ -444,6 +444,11 @@ public final class NodePanel {
             return true;
         }
         return false;
+    }
+
+    /** Fecha a caixa do nome sem salvar (a tela saiu do painel). */
+    public void cancelLabel() {
+        label.finish(false);
     }
 
     public boolean charTyped(char codePoint, int modifiers) {

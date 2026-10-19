@@ -17,9 +17,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A linha Editando do painel do nó, com o Upgrade de Alcance e sem a lista das máquinas à vista: a pílula
- * do alvo de edição (a máquina presa, um grupo ou uma máquina), o ✎ do nome, o "Tirar redes" ({@link IdleNetworks}) ao
- * lado dela, os botões Voltar a igual às outras, Atualizar (máquina trocada) e Desvincular (em dois
- * cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o pedido de troca de alvo.
+ * do alvo de edição (a máquina presa, um grupo ou uma máquina), o ✎ do nome com a caixa dele, o "Tirar
+ * redes" ({@link IdleNetworks}) ao lado dela, os botões Voltar a igual às outras, Atualizar (máquina trocada)
+ * e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o
+ * pedido de troca de alvo.
  */
 final class TargetLine {
     /** Uma linha da lista da linha Editando. */

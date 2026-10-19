@@ -222,6 +222,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // com um nome em edição, o clique fora (até no tema ou na alça) salva; na caixa, fica nela
+        if (column.labelClick(mouseX, mouseY, button) || panel.labelClick(mouseX, mouseY, button)) {
+            return true;
+        }
         boolean popup = panel.popupOpen();
         if (!popup && ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
@@ -233,9 +237,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             return panel.mouseClicked(mouseX, mouseY, button);
         }
         header.clickOutside(mouseX, mouseY);
-        if (column.labelClick(mouseX, mouseY, button)) {
-            return true;
-        }
         if (panel.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }

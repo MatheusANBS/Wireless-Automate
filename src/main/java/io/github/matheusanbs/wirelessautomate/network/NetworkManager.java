@@ -565,6 +565,7 @@ public final class NetworkManager {
             long started = System.nanoTime();
             rebuild();
             rebuildCount++;
+            flows.routesChanged();
             rebuildNanos += System.nanoTime() - started;
         }
         long end = transfer(now);

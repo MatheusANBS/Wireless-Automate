@@ -39,6 +39,10 @@ import org.jetbrains.annotations.Nullable;
  *       que viram porta pelos perfis e exceções), contada uma vez e guardada no nó ({@link NodeConfig})
  *       até a versão do roteador, a das redes ou a config mudar; não lê o mundo.
  * </ul>
+ * Um nó em que nada mudou desde a leitura anterior não tem as portas lidas de novo: o que a leitura achou fica
+ * no nó ({@link NodeFlows}) e é somado outra vez. Vale enquanto nenhum contador saiu do zero, nenhum
+ * {@link Backoff} das portas mudou ({@link NodePorts#flowChanges}), nenhuma rota foi remontada e nenhuma porta
+ * que dormia acordou pelo tempo; a leitura em que algo moveu nunca é repetida.
  * No fim da volta os números de cada rede × tipo entram numa {@link FlowWindow} cada. A primeira volta
  * do gerenciador só zera os contadores e reinicia as janelas, porque eles acumularam por um tempo que não
  * fecha com o segundo. O resultado ({@link #report()}) só é montado quando alguém pede, uma vez por volta:
@@ -87,6 +91,12 @@ public final class FlowSampler {
     private int cycle;
     /** A config mudou tantas vezes: a configuração guardada nos nós vale só com a mesma contagem. */
     private int configEpoch;
+    /** As rotas foram remontadas tantas vezes: a leitura guardada nos nós vale só com a mesma contagem. */
+    private int routesEpoch;
+    /** Pular nós sem mudança ({@link NodeFlows}); só os GameTests desligam, para comparar. */
+    private boolean skipUnchanged = true;
+    /** Leituras de nó puladas por não ter mudança, desde que o gerenciador foi criado. */
+    private long skipped;
     /** A primeira volta já zerou os contadores: as seguintes contam. */
     private boolean primed;
     /** O tick do fim da última volta; {@code -1} antes da primeira. */
@@ -133,6 +143,21 @@ public final class FlowSampler {
     /** A config recarregou: o raio e o limite das remotas podem ter mudado, e a contagem de cada nó é refeita. */
     void configChanged() {
         configEpoch++;
+    }
+
+    /** As rotas foram remontadas: as leituras guardadas nos nós deixam de valer. */
+    void routesChanged() {
+        routesEpoch++;
+    }
+
+    /** Para GameTests: liga ou desliga o pulo dos nós sem mudança. */
+    public void skipUnchangedForTests(boolean skip) {
+        skipUnchanged = skip;
+    }
+
+    /** Para GameTests: leituras de nó puladas por não ter mudança, desde que o gerenciador foi criado. */
+    public long skippedForTests() {
+        return skipped;
     }
 
     /** O jogador abriu a aba Fluxos. Devolve se ele ainda não estava olhando. */
@@ -199,6 +224,24 @@ public final class FlowSampler {
     }
 
     private void read(NodePorts ports, NetworkSavedData data, long now) {
+        NodeFlows last = ports.flowRead;
+        if (skipUnchanged && last != null && last.still(ports, routesEpoch, now)) {
+            skipped++;
+            last.replay(this);
+        } else {
+            readPorts(ports, now);
+        }
+        addConfig(ports, data);
+    }
+
+    /** Lê as portas do nó e guarda o que achou ({@link NodeFlows}) para a próxima volta. */
+    private void readPorts(NodePorts ports, long now) {
+        NodeFlows found = ports.flowRead;
+        if (found == null) {
+            found = new NodeFlows();
+            ports.flowRead = found;
+        }
+        found.begin();
         for (ResourceType type : LOADED) {
             Port[] active = ports.collected(type);
             if (active == null) {
@@ -212,6 +255,7 @@ public final class FlowSampler {
                 }
                 NetworkFlows entry = entry(routes);
                 entry.used[t] = true;
+                int group = found.group(routes, t);
                 if (port.stopped) {
                     // Parada pelo redstone: conta como parada por redstone, pela configuração, e não nos estados.
                     port.gaveRead += port.gave;
@@ -221,17 +265,17 @@ public final class FlowSampler {
                     continue;
                 }
                 if (port.source) {
-                    readSource(entry, t, port, now);
+                    readSource(entry, t, port, now, found, group);
                 }
                 if (port.destination) {
-                    readDestination(entry, t, port, now);
+                    readDestination(entry, t, port, now, found, group);
                 }
             }
         }
-        addConfig(ports, data);
+        found.end(ports, routesEpoch);
     }
 
-    private static void readSource(NetworkFlows entry, int t, Port port, long now) {
+    private static void readSource(NetworkFlows entry, int t, Port port, long now, NodeFlows found, int group) {
         int[] states = entry.states[t];
         long gave = port.gave;
         port.gave = 0;
@@ -239,29 +283,42 @@ public final class FlowSampler {
         entry.amounts[t][port.destination ? RELEASED : PRODUCED] += gave;
         if (gave > 0) {
             states[SOURCES_MOVING]++;
+            found.moved();
         } else if (port.order == null) {
             // Sem destino ao alcance o laço não a visita: o que ela tiver espera destino.
             if (!port.destination) {
                 states[SOURCES_WAITING]++;
+                found.add(group, SOURCES_WAITING);
             }
         } else if (port.sourceBackoff.isSleeping(now)) {
+            // Acordar pelo tempo não muda o Backoff: a leitura guardada só vale até aqui.
+            found.until(port.sourceBackoff.wakeAt());
             if (!port.waitsDestination) {
                 states[SOURCES_EMPTY]++;
+                found.add(group, SOURCES_EMPTY);
             } else if (!port.destination) {
                 states[SOURCES_WAITING]++;
+                found.add(group, SOURCES_WAITING);
             }
         }
     }
 
-    private static void readDestination(NetworkFlows entry, int t, Port port, long now) {
+    private static void readDestination(NetworkFlows entry, int t, Port port, long now, NodeFlows found, int group) {
         long got = port.got;
         port.got = 0;
         port.gotRead += got;
         entry.amounts[t][port.source ? STORED : CONSUMED] += got;
         if (got > 0) {
             entry.states[t][DESTINATIONS_MOVING]++;
-        } else if (NodeProbe.isFull(port, now)) {
+            found.moved();
+            return;
+        }
+        if (port.destinationBackoff.isSleeping(now)) {
+            found.until(port.destinationBackoff.wakeAt());
+        }
+        if (NodeProbe.isFull(port, now)) {
             entry.states[t][DESTINATIONS_FULL]++;
+            found.add(group, DESTINATIONS_FULL);
         }
     }
 
@@ -502,6 +559,101 @@ public final class FlowSampler {
                 Arrays.fill(amounts[t], 0);
                 Arrays.fill(states[t], 0);
                 used[t] = false;
+            }
+        }
+    }
+
+    /**
+     * O que a última leitura das portas de um nó achou, por rede × tipo: os estados que dependem só delas (vazia,
+     * esperando destino e cheio), para somar de novo na volta seguinte sem ler as portas. Vale com as mesmas
+     * mudanças do nó ({@link NodePorts#flowChanges}) e a mesma contagem de remontagens, antes do primeiro
+     * {@code wakeAt} das portas que dormiam, e nunca depois de uma leitura em que algo moveu (os contadores
+     * voltam do zero, e mover de novo é uma mudança).
+     */
+    static final class NodeFlows {
+        private static final NetworkRoutes[] NO_ROUTES = new NetworkRoutes[0];
+        private static final int[] NO_INTS = new int[0];
+
+        private NetworkRoutes[] routes = NO_ROUTES;
+        private int[] types = NO_INTS;
+        private int[] empty = NO_INTS;
+        private int[] waiting = NO_INTS;
+        private int[] full = NO_INTS;
+        private int size;
+        private boolean moved;
+        private long validUntil;
+        private int changes;
+        private int routesEpoch;
+        private boolean valid;
+
+        void begin() {
+            size = 0;
+            moved = false;
+            validUntil = Long.MAX_VALUE;
+            valid = false;
+        }
+
+        /** O grupo da rede × tipo, criado na primeira porta dele nesta leitura. */
+        int group(NetworkRoutes network, int type) {
+            for (int i = 0; i < size; i++) {
+                if (routes[i] == network && types[i] == type) {
+                    return i;
+                }
+            }
+            if (size == routes.length) {
+                int grown = Math.max(2, size * 2);
+                routes = Arrays.copyOf(routes, grown);
+                types = Arrays.copyOf(types, grown);
+                empty = Arrays.copyOf(empty, grown);
+                waiting = Arrays.copyOf(waiting, grown);
+                full = Arrays.copyOf(full, grown);
+            }
+            routes[size] = network;
+            types[size] = type;
+            empty[size] = 0;
+            waiting[size] = 0;
+            full[size] = 0;
+            return size++;
+        }
+
+        void add(int group, int state) {
+            switch (state) {
+                case SOURCES_EMPTY -> empty[group]++;
+                case SOURCES_WAITING -> waiting[group]++;
+                default -> full[group]++;
+            }
+        }
+
+        void moved() {
+            moved = true;
+        }
+
+        /** Uma porta dormia até {@code wakeAt}: a leitura vale só antes. */
+        void until(long wakeAt) {
+            validUntil = Math.min(validUntil, wakeAt);
+        }
+
+        void end(NodePorts ports, int epoch) {
+            changes = ports.flowChanges[0];
+            routesEpoch = epoch;
+            valid = !moved;
+        }
+
+        /** Nada mudou nas portas do nó desde a leitura: ela pode ser somada de novo. */
+        boolean still(NodePorts ports, int epoch, long now) {
+            return valid && changes == ports.flowChanges[0] && routesEpoch == epoch && now < validUntil;
+        }
+
+        /** Soma de novo o que a leitura achou, nas redes desta volta. */
+        void replay(FlowSampler sampler) {
+            for (int i = 0; i < size; i++) {
+                NetworkFlows entry = sampler.entry(routes[i]);
+                int t = types[i];
+                entry.used[t] = true;
+                int[] states = entry.states[t];
+                states[SOURCES_EMPTY] += empty[i];
+                states[SOURCES_WAITING] += waiting[i];
+                states[DESTINATIONS_FULL] += full[i];
             }
         }
     }

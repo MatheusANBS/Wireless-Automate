@@ -58,8 +58,8 @@ final class ItemGiveBack {
             rest = rescue(destination, rest);
             int rescued = before - rest.getCount();
             if (rescued > 0) {
-                destination.got += rescued;
-                source.gave += rescued;
+                destination.addGot(rescued);
+                source.addGave(rescued);
             }
         }
         if (!rest.isEmpty()) {

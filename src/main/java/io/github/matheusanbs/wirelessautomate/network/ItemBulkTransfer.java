@@ -111,7 +111,7 @@ final class ItemBulkTransfer {
         source.slotCursor = index;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
-            source.gave += moved;
+            source.addGave(moved);
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
@@ -283,7 +283,7 @@ final class ItemBulkTransfer {
     /** Uma entrega que deixou algo no destino: acorda-o, conta na volta da passada e nas operações. */
     private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order, long amount) {
         destination.destinationBackoff.wake();
-        destination.got += amount;
+        destination.addGot(amount);
         order.delivered(destination);
         if (source.network != null) {
             source.network.ops++;

@@ -198,7 +198,7 @@ final class ItemTransfer {
             boolean destinationsAsleep, List<Port> pass, long now) {
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
-            source.gave += moved;
+            source.addGave(moved);
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
@@ -293,7 +293,7 @@ final class ItemTransfer {
             if (delivered > 0) {
                 PLAN.delivered(destination, offered, delivered);
                 destination.destinationBackoff.wake();
-                destination.got += delivered;
+                destination.addGot(delivered);
                 order.delivered(destination);
                 if (source.network != null) {
                     source.network.ops++;
@@ -352,7 +352,7 @@ final class ItemTransfer {
                 ItemGiveBack.giveBack(source, handler, slot, leftover, pass);
             }
             if (delivered > 0) {
-                destination.got += delivered;
+                destination.addGot(delivered);
                 if (source.network != null) {
                     source.network.ops++;
                 }

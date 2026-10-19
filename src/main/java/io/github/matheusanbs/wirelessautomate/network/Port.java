@@ -35,14 +35,20 @@ final class Port {
     /** Destino que recusou. */
     final Backoff destinationBackoff = new Backoff(NetworkManager.MAX_SLEEP_TICKS);
     /**
+     * As mudanças das portas do nó, em {@code [0]} (o mesmo arranjo em todas as portas dele, {@link NodePorts#flowChanges}):
+     * sobe quando um contador desta porta sai do zero e a cada mudança de estado dos dois {@link Backoff}. O amostrador
+     * dos Fluxos pula o nó em que nada mudou desde a leitura anterior.
+     */
+    final int[] flowChanges;
+    /**
      * O que esta porta entregou como origem desde a última leitura, na unidade do tipo (itens, mB, FE,
-     * Source ou unidades de químico). Somado pelas transferências no fim da visita que moveu; o
-     * amostrador dos Fluxos lê e zera.
+     * Source ou unidades de químico). Somado pelas transferências no fim da visita que moveu ({@link #addGave});
+     * o amostrador dos Fluxos lê e zera.
      */
     long gave;
     /**
      * O que esta porta recebeu como destino desde a última leitura, na mesma unidade. Somado pelas
-     * transferências a cada entrega; o amostrador dos Fluxos lê e zera.
+     * transferências a cada entrega ({@link #addGot}); o amostrador dos Fluxos lê e zera.
      */
     long got;
     /**
@@ -139,12 +145,31 @@ final class Port {
     /** Só durante a montagem: marca de "estava na ordem antiga" ({@link NetworkRoutes}). */
     int stamp;
 
-    Port(RouterBlockEntity node, MachineCaches machine, Direction face, ResourceType type) {
+    Port(RouterBlockEntity node, MachineCaches machine, Direction face, ResourceType type, int[] flowChanges) {
         this.node = node;
         this.machine = machine;
         this.machinePos = machine.pos();
         this.face = face;
         this.type = type;
+        this.flowChanges = flowChanges;
+        sourceBackoff.countChangesIn(flowChanges);
+        destinationBackoff.countChangesIn(flowChanges);
+    }
+
+    /** Soma ao que a porta entregou como origem; o primeiro desde a leitura avisa {@link #flowChanges}. */
+    void addGave(long amount) {
+        if (gave == 0) {
+            flowChanges[0]++;
+        }
+        gave += amount;
+    }
+
+    /** Soma ao que a porta recebeu como destino; o primeiro desde a leitura avisa {@link #flowChanges}. */
+    void addGot(long amount) {
+        if (got == 0) {
+            flowChanges[0]++;
+        }
+        got += amount;
     }
 
     /** Limpa tudo o que a montagem preenche, inclusive o que veio da configuração da face. */

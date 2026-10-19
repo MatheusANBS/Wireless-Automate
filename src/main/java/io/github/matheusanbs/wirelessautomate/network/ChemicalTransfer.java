@@ -94,7 +94,7 @@ final class ChemicalTransfer {
         source.slotCursor = tank;
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
-            source.gave += moved;
+            source.addGave(moved);
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
@@ -172,7 +172,7 @@ final class ChemicalTransfer {
             }
             if (filled > 0) {
                 destination.destinationBackoff.wake();
-                destination.got += filled;
+                destination.addGot(filled);
                 order.delivered(destination);
                 if (source.network != null) {
                     source.network.ops++;

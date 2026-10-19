@@ -61,6 +61,13 @@ final class NodePorts {
     int flowSlot = -1;
     /** A configuração que o amostrador dos Fluxos contou; {@code null} até a primeira leitura. */
     FlowSampler.@Nullable NodeConfig flowConfig;
+    /**
+     * As mudanças das portas do nó para o amostrador dos Fluxos, em {@code [0]}: dividido por todas as portas
+     * ({@link Port#flowChanges}) e subido também quando as rotas ou a leitura das faces do nó mudam.
+     */
+    final int[] flowChanges = new int[1];
+    /** O que a última leitura do amostrador achou nas portas, para pular o nó sem mudança; {@code null} antes. */
+    FlowSampler.@Nullable NodeFlows flowRead;
 
     NodePorts(RouterBlockEntity node) {
         this.node = node;
@@ -71,7 +78,7 @@ final class NodePorts {
         Port[] byFace = faces(ports, type);
         Port port = byFace[face.ordinal()];
         if (port == null) {
-            port = new Port(node, node.attachedCaches(), face, type);
+            port = new Port(node, node.attachedCaches(), face, type, flowChanges);
             byFace[face.ordinal()] = port;
         }
         return port;
@@ -106,7 +113,7 @@ final class NodePorts {
         Port port = byFace[face.ordinal()];
         if (port == null || port.machine != machine) {
             // Uma MachineCaches nova para a mesma posição (desvinculada e vinculada de novo): porta nova.
-            port = new Port(node, machine, face, type);
+            port = new Port(node, machine, face, type, flowChanges);
             byFace[face.ordinal()] = port;
         }
         return port;
@@ -233,6 +240,7 @@ final class NodePorts {
      * e a ordem, sem descartar a leitura nem tocar nas portas do mesmo tipo que estão noutra rede.
      */
     void clearRoutes(ResourceType type, NetworkRoutes owner) {
+        flowChanges[0]++;
         int t = type.ordinal();
         clearRoutes(ports[t], owner);
         if (remotes != null) {
@@ -261,6 +269,7 @@ final class NodePorts {
      */
     void clearRoutes(ResourceType type) {
         int t = type.ordinal();
+        flowChanges[0]++;
         collected[t] = null;
         clearRoutes(ports[t]);
         if (remotes != null) {
@@ -283,6 +292,7 @@ final class NodePorts {
 
     /** A configuração do nó mudou nos tipos de {@code types} (máscara por ordinal): a próxima montagem relê as faces deles. */
     void invalidate(int types) {
+        flowChanges[0]++;
         for (int t = 0; t < TYPES.length; t++) {
             if ((types & (1 << t)) != 0) {
                 collected[t] = null;
@@ -321,6 +331,7 @@ final class NodePorts {
     }
 
     void setCollected(ResourceType type, Port[] active) {
+        flowChanges[0]++;
         collected[type.ordinal()] = active;
     }
 

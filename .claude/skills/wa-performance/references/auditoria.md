@@ -48,7 +48,7 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | S2 | Estoque sem componentes em O(tipos), até 3× por entrega; soma por item mantida | `ItemStorage:41`, `KeyedStorage:113` | alto nesse caso | feito `accc644` (soma por item ou fluido num `Reference2LongOpenHashMap`, mantida na inserção, extração, carga e limpeza; bench `chesttypes` a rodar; chesttypes 20: mod 0,055–0,065 → 0,016–0,018 ms/tick (−70%), p99 1,0 → 0,24) |
 | S3 | Salvar recodifica cada chave a cada gravação do chunk; guardar o `Tag` da chave | `KeyedStorage:181` | médio | feito `7d1bdee` (a chave codificada no primeiro salvamento e reusada; o formato antigo `item` ainda carrega; sem cenário de bench, só o salvamento do chunk) |
 | S4 | `getStackInSlot` aloca por chamada (funis, outros mods) | `ItemStorageHandler:29` | baixo-médio | feito `a3307f9` (a visão por tipo, `KeyedStorage.view`, refeita só quando a quantidade muda e nunca alterada; também o `getFluidInTank` do Tanque; sem cenário de bench, o roteador usa o `BulkItems`) |
-| S5 | `StorageSavedData` guarda conteúdo de armazenamento sumido para sempre | `StorageSavedData:37` | médio | feito `f69d8ee` (sem drop não guarda; a data em `stored_at` e o prazo `storage.stashExpiryDays`, padrão 90 dias de servidor ligado, renovado pelo item no inventário; risco: o item guardado num baú por mais que o prazo nasce vazio) |
+| S5 | `StorageSavedData` guarda conteúdo de armazenamento sumido para sempre | `StorageSavedData:37` | médio | feito `f69d8ee` (sem drop não guarda; a data em `stored_at` e o prazo `storage.stashExpiryDays`, padrão 0, sem prazo, por decisão do dono: com prazo ligado, o item guardado num baú por mais que ele nasceria vazio; o item no inventário renova o prazo) |
 
 ## C · cliente
 

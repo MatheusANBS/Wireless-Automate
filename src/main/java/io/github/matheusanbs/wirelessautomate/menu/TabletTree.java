@@ -44,6 +44,14 @@ public final class TabletTree {
     public record GroupKey(NodeKey node, int group) {
     }
 
+    /**
+     * Cópia imutável da árvore, para o Tablet lembrar ao reabrir ({@link TabletMenu.State}): os abertos na ordem de
+     * abertura e os grupos recolhidos ou com "Mostrar todas".
+     */
+    public record Saved(List<NodeKey> open, List<GroupKey> collapsed, List<GroupKey> showAll) {
+        public static final Saved EMPTY = new Saved(List.of(), List.of(), List.of());
+    }
+
     private final ServerPlayer viewer;
     private final Set<NodeKey> open = new ObjectLinkedOpenHashSet<>();
     private final Set<GroupKey> collapsed = new ObjectOpenHashSet<>();
@@ -106,6 +114,36 @@ public final class TabletTree {
         showAll.removeIf(key -> key.node().equals(node));
     }
 
+    /** A cópia do estado de agora, ou {@link Saved#EMPTY} se não há nada aberto. */
+    Saved save() {
+        if (open.isEmpty()) {
+            return Saved.EMPTY;
+        }
+        return new Saved(List.copyOf(open), List.copyOf(collapsed), List.copyOf(showAll));
+    }
+
+    /**
+     * Põe o estado guardado, nos tetos e só com grupos de nó aberto; o que deixou de valer sai na primeira montagem
+     * ({@link #prune}).
+     */
+    void restore(Saved saved) {
+        for (NodeKey key : saved.open()) {
+            if (open.size() < MAX_OPEN) {
+                open.add(key);
+            }
+        }
+        restoreGroups(collapsed, saved.collapsed());
+        restoreGroups(showAll, saved.showAll());
+    }
+
+    private void restoreGroups(Set<GroupKey> set, List<GroupKey> keys) {
+        for (GroupKey key : keys) {
+            if (set.size() < MAX_GROUPS && open.contains(key.node())) {
+                set.add(key);
+            }
+        }
+    }
+
     boolean isOpen(NodeKey node) {
         return open.contains(node);
     }
@@ -155,6 +193,10 @@ public final class TabletTree {
     /** Abre {@code node} sem validar, para encher o conjunto. */
     public void openForTests(NodeKey node) {
         open.add(node);
+    }
+
+    public boolean isOpenForTests(NodeKey node) {
+        return open.contains(node);
     }
 
     /** Recolhe o grupo sem validar, para encher o conjunto. */

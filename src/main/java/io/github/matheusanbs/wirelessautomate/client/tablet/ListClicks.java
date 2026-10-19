@@ -16,7 +16,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * O mouse da Lista do Tablet: o clique (painel e listas abertas primeiro, depois as sugestões, depois as áreas
  * do {@link ListLayout}: etiquetas, filtros, cabeçalhos, linhas e botões do painel, com o duplo clique que abre
- * o nó) e a roda (o painel, ou a rolagem da lista).
+ * o nó, e as da árvore, que vão ao {@link TreeClicks}) e a roda (o painel, ou a rolagem da lista).
  */
 final class ListClicks {
     private static final long DOUBLE_CLICK_MS = 400;
@@ -74,9 +74,10 @@ final class ListClicks {
             case TYPE_CHIP -> list.search.clearType();
             case CLEAR -> list.clearAll();
             case FORGET -> profile.forget();
-            case HEADER -> list.model.toggle(list.model.groups().rows().get(hot.arg()).group());
-            case PASTE_GROUP -> profile.pasteGroup(list.model.groups().rows().get(hot.arg()).group());
+            case HEADER -> list.model.toggle(list.model.tree().lines().get(hot.arg()).group());
+            case PASTE_GROUP -> profile.pasteGroup(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> clickRow(nodeViews.get(hot.arg()).key());
+            case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
             case FULL_SCREEN -> {
                 if (list.chosen != null) {
                     list.actions.openNode(list.chosen);
@@ -118,6 +119,7 @@ final class ListClicks {
             list.actions.openNode(key);
             return;
         }
+        list.treeNav.clear();
         list.choose(key);
     }
 

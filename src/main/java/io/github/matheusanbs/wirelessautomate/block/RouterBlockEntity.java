@@ -709,9 +709,9 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Relê o sinal de redstone. Chamado pelo bloco quando um vizinho muda. Só remonta os tipos com
-     * alguma face que usa redstone ({@link #redstoneTypes}): sem nenhuma, o sinal não muda rota (um
-     * relógio de redstone ao lado não remonta a rede a cada pulso).
+     * Relê o sinal de redstone. Chamado pelo bloco quando um vizinho muda. Com alguma face que usa
+     * redstone ({@link #redstoneTypes}), trava ou destrava as portas dela no motor, sem remontar as rotas
+     * (um relógio de redstone ao lado não custa remontagem).
      */
     public void updatePowered() {
         if (level == null || level.isClientSide) {
@@ -723,9 +723,8 @@ public class RouterBlockEntity extends BlockEntity {
             changeVersion++;
             // Só marca o chunk: avisar os vizinhos a cada pulso de um relógio não serve a ninguém.
             level.blockEntityChanged(worldPosition);
-            int types = redstoneTypes();
-            if (types != 0) {
-                NetworkManager.get().nodeChanged(this, types);
+            if (redstoneTypes() != 0) {
+                NetworkManager.get().poweredChanged(this);
             }
         }
     }

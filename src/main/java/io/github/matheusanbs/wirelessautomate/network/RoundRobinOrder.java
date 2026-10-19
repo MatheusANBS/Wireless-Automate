@@ -27,6 +27,13 @@ public final class RoundRobinOrder<T> {
      * O(origens × destinos) de mapas e ordenações.
      */
     public static final class Layout<T> {
+        // O último "todos dormindo" desta lista de destinos ({@link SourceSleep#allAsleep}): o tick, a contagem de
+        // {@link Backoff#wakes} e quando o primeiro acorda. Várias origens dividem a mesma lista, e numa cascata de
+        // origens acordadas só a primeira a varre.
+        long asleepAt = Long.MIN_VALUE;
+        long asleepWakes;
+        long asleepUntil;
+
         /** A lista recebida, na ordem original, e a prioridade lida de cada posição (para {@link #sameAs}). */
         private final Object[] original;
         private final int[] originalPriority;

@@ -1,8 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client.highlight;
 
 /**
- * As máquinas acesas no mundo pelo Olho, só na sessão do cliente: cada uma com a dimensão, a posição da máquina e
- * a do roteador (para a linha tracejada), em arrays fixos, da mais antiga para a mais nova. Uma máquina é a
+ * As máquinas acesas no mundo pelo Olho, só na sessão do cliente: cada uma com a dimensão, a posição da máquina
+ * e a do roteador (para a linha tracejada), em arrays fixos, da mais antiga para a mais nova. Uma máquina é a
  * dimensão e a posição dela: acesa por um roteador, o Olho de outro roteador que a vincula a apaga. Até
  * {@link #LIMIT}; acender mais uma apaga a mais antiga. Posições em {@code long} ({@code BlockPos.asLong}), a
  * dimensão como chave comparada por {@code equals}. Nada aloca depois de criada: o desenho percorre por índice

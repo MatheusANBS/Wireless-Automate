@@ -22,6 +22,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -181,6 +182,40 @@ public final class MachineLabelGameTests {
                     helper.assertTrue(router.unlinkMachine(index), "não desvinculou");
                     helper.assertTrue(NetworkManager.get().isDirty(network, ResourceType.ITEM),
                             "desvincular não sujou as rotas (o teste não prova nada)");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O snapshot leva a dimensão do roteador (o destaque no mundo acende a máquina nela, também com a tela aberta à
+     * distância de outra dimensão), e ela faz a ida e volta pelo codec, inclusive uma que não é a do teste.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void snapshotCarriesTheDimension(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    linkTwo(helper, router);
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    var registries = helper.getLevel().registryAccess();
+                    RouterSnapshot snapshot = RouterSnapshot.capture(router, player);
+                    helper.assertValueEqual(snapshot.dimension(), helper.getLevel().dimension(), "dimensão no snapshot");
+                    RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+                    RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
+                    RouterSnapshot decoded = RouterSnapshot.STREAM_CODEC.decode(buf);
+                    helper.assertValueEqual(decoded.dimension(), snapshot.dimension(), "dimensão depois do codec");
+                    helper.assertTrue(decoded.equals(snapshot), "o snapshot mudou no codec");
+
+                    RouterSnapshot nether = new RouterSnapshot(snapshot.pos(), snapshot.name(), snapshot.tier(),
+                            snapshot.facing(), snapshot.attachedFront(), snapshot.networks(), snapshot.powered(),
+                            snapshot.machine(), snapshot.machineState(), snapshot.faces(), snapshot.chunkLoad(),
+                            snapshot.range(), Level.NETHER);
+                    RegistryFriendlyByteBuf netherBuf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+                    RouterSnapshot.BODY_CODEC.encode(netherBuf, nether);
+                    RouterSnapshot back = RouterSnapshot.BODY_CODEC.decode(netherBuf);
+                    helper.assertValueEqual(back.dimension(), Level.NETHER, "o Nether depois do codec do corpo");
+                    helper.assertFalse(back.sameBody(snapshot), "outra dimensão deu o mesmo corpo");
                 })
                 .thenSucceed();
     }

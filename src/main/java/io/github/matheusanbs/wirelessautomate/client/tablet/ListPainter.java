@@ -287,8 +287,8 @@ final class ListPainter {
     }
 
     /**
-     * Blocos entre o jogador e o nó escolhido (ou a máquina do alvo), pela posição local (o servidor só diz se é a
-     * mesma dimensão).
+     * Blocos entre o jogador e o nó escolhido (ou a máquina do alvo), pela posição local (o servidor só diz se é
+     * a mesma dimensão).
      */
     private static int localDistance(BlockPos pos) {
         LocalPlayer player = Minecraft.getInstance().player;

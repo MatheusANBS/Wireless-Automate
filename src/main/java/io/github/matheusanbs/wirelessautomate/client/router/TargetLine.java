@@ -14,16 +14,14 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A linha Editando do painel do nó, com o Upgrade de Alcance e sem a lista das máquinas à vista: a pílula
  * do alvo de edição (a máquina presa, um grupo ou uma máquina), o ✎ do nome com a caixa dele, o "Tirar
- * redes" ({@link IdleNetworks}) ao lado dela, os botões No mundo (o destaque, {@link HighlightRenderer}), Voltar
- * a igual às outras, Atualizar (máquina trocada) e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o
- * pedido de troca de alvo.
+ * redes" ({@link IdleNetworks}) ao lado dela, os botões No mundo (o destaque, {@link HighlightRenderer}),
+ * Voltar a igual às outras, Atualizar (máquina trocada) e Desvincular (em dois cliques) de uma máquina, a dica do
+ * alvo, as linhas da lista que abre na pílula e o pedido de troca de alvo.
  */
 final class TargetLine {
     /** Uma linha da lista da linha Editando. */
@@ -34,12 +32,10 @@ final class TargetLine {
     private final PanelModel model;
     private final PanelLayout layout;
     private final LabelEditor label;
-    private final NodePanel.Actions actions;
 
     TargetLine(PanelModel model, PanelLayout layout, NodePanel.Actions actions) {
         this.model = model;
         this.layout = layout;
-        this.actions = actions;
         this.label = new LabelEditor((target, pos, name) ->
                 actions.send(LabelEditor.payload(actions.containerId(), target, pos, name)));
     }
@@ -112,7 +108,7 @@ final class TargetLine {
         }
     }
 
-    /** O "No mundo": o Olho ciano e a borda ciano com a máquina acesa; vale também só para ler (é só do cliente). */
+    /** O "No mundo": o Olho e a borda ciano com a máquina acesa; vale também só para ler (é só do cliente). */
     private void renderHighlight(GuiGraphics g, Font font, Hot b, boolean hovered) {
         boolean lit = highlightLit();
         int border = lit ? GuiPaint.HIGHLIGHT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
@@ -124,23 +120,21 @@ final class TargetLine {
         }
         GuiPaint.eye(g, b.x() + PanelLayout.TARGET_PAD, b.y() + (b.h() - 5) / 2, eyeColor);
         int textX = b.x() + PanelLayout.TARGET_PAD + PanelLayout.HIGHLIGHT_EYE;
-        GuiText.draw(g, font, LitFooter.tr("show"), textX, b.y() + (b.h() - 8) / 2, b.x() + b.w() - PanelLayout.TARGET_PAD
-                - textX, GuiPaint.FG);
+        int room = b.x() + b.w() - PanelLayout.TARGET_PAD - textX;
+        GuiText.draw(g, font, LitFooter.tr("show"), textX, b.y() + (b.h() - 8) / 2, room, GuiPaint.FG);
     }
 
     /** A máquina do alvo está acesa no mundo. */
     boolean highlightLit() {
         RangeView.MachineView machine = model.targetMachine();
-        ResourceKey<Level> dimension = actions.dimension();
-        return machine != null && dimension != null && HighlightRenderer.isLit(dimension, machine.pos());
+        return machine != null && HighlightRenderer.isLit(model.snapshot().dimension(), machine.pos());
     }
 
     /** O "No mundo": acende ou apaga a máquina do alvo, com a linha até o roteador do painel. */
     void toggleHighlight() {
         RangeView.MachineView machine = model.targetMachine();
-        ResourceKey<Level> dimension = actions.dimension();
-        if (machine != null && dimension != null) {
-            HighlightRenderer.toggle(dimension, machine.pos(), model.snapshot().pos());
+        if (machine != null) {
+            HighlightRenderer.toggle(model.snapshot().dimension(), machine.pos(), model.snapshot().pos());
         }
     }
 

@@ -40,6 +40,8 @@ public final class HighlightRenderer {
 
     private static final MachineHighlights LIT = new MachineHighlights();
     private static final DashedLine DASHES = new DashedLine();
+    /** Quais acesas o quadro desenha, conferidas uma vez por quadro. */
+    private static final boolean[] VISIBLE = new boolean[MachineHighlights.LIMIT];
 
     private HighlightRenderer() {
     }
@@ -107,23 +109,28 @@ public final class HighlightRenderer {
         PoseStack.Pose pose = event.getPoseStack().last();
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
 
-        VertexConsumer veil = buffers.getBuffer(HighlightRenderTypes.highlightVeil());
         int shown = 0;
         for (int i = 0; i < LIT.count(); i++) {
-            if (visible(i, dimension, camera, reachSqr)) {
-                long m = LIT.machine(i);
-                veil(veil, pose, (float) (BlockPos.getX(m) - camera.x), (float) (BlockPos.getY(m) - camera.y),
-                        (float) (BlockPos.getZ(m) - camera.z));
+            VISIBLE[i] = visible(i, dimension, camera, reachSqr);
+            if (VISIBLE[i]) {
                 shown++;
             }
         }
-        buffers.endBatch(HighlightRenderTypes.highlightVeil());
         if (shown == 0) {
             return;
         }
+        VertexConsumer veil = buffers.getBuffer(HighlightRenderTypes.highlightVeil());
+        for (int i = 0; i < LIT.count(); i++) {
+            if (VISIBLE[i]) {
+                long m = LIT.machine(i);
+                veil(veil, pose, (float) (BlockPos.getX(m) - camera.x), (float) (BlockPos.getY(m) - camera.y),
+                        (float) (BlockPos.getZ(m) - camera.z));
+            }
+        }
+        buffers.endBatch(HighlightRenderTypes.highlightVeil());
         VertexConsumer lines = buffers.getBuffer(HighlightRenderTypes.highlightLines());
         for (int i = 0; i < LIT.count(); i++) {
-            if (visible(i, dimension, camera, reachSqr)) {
+            if (VISIBLE[i]) {
                 drawLines(lines, pose, camera, LIT.machine(i), LIT.router(i));
             }
         }

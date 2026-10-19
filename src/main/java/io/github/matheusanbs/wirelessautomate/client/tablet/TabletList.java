@@ -440,6 +440,14 @@ public final class TabletList {
         return keys.keyPressed(keyCode, scanCode, modifiers);
     }
 
+    /** Fecha sem salvar a caixa do nome aberta no painel (a aba trocou). */
+    void cancelLabel() {
+        NodePanel p = chosenPanel.current();
+        if (p != null) {
+            p.cancelLabel();
+        }
+    }
+
     /** Uma letra para a caixa do nome aberta no painel; {@code false} deixa a letra para a busca. */
     boolean charTyped(char codePoint, int modifiers) {
         NodePanel p = chosenPanel.current();

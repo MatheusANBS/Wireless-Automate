@@ -39,7 +39,6 @@ final class MachineRow {
     private int[] coordsW = new int[0];
     private Component[] suffixes = new Component[0];
     private int[] suffixW = new int[0];
-    private int[] suffixColors = new int[0];
     private int separatorW;
     private Component badgeText = Component.empty();
     private int badgeW;
@@ -113,7 +112,6 @@ final class MachineRow {
         coordsW = new int[n];
         suffixes = new Component[n];
         suffixW = new int[n];
-        suffixColors = new int[n];
         separatorW = font.width(SEPARATOR);
         badgeText = tr("range.exception.badge");
         badgeW = font.width(badgeText);
@@ -124,7 +122,6 @@ final class MachineRow {
             coordsW[i] = font.width(coords[i]);
             suffixes[i] = suffix(machine);
             suffixW[i] = font.width(suffixes[i]);
-            suffixColors[i] = suffixColor(machine.state());
         }
     }
 
@@ -156,12 +153,12 @@ final class MachineRow {
             GuiPaint.text(g, font, coords[index], textX, ry + LINE2_Y, GuiPaint.MUTED);
             int sx = textX + coordsW[index];
             GuiPaint.text(g, font, SEPARATOR, sx, ry + LINE2_Y, GuiPaint.MUTED);
-            GuiPaint.text(g, font, suffixes[index], sx + separatorW, ry + LINE2_Y, suffixColors[index]);
+            GuiPaint.text(g, font, suffixes[index], sx + separatorW, ry + LINE2_Y, suffixColor(machine.state()));
         } else if (machine.state() == MachineState.LOADED) {
             GuiText.draw(g, font, coords[index], textX, ry + LINE2_Y, room, GuiPaint.MUTED);
         } else {
             // sem lugar para tudo, o estado diz mais que as coordenadas (que ficam na dica)
-            GuiText.draw(g, font, suffixes[index], textX, ry + LINE2_Y, room, suffixColors[index]);
+            GuiText.draw(g, font, suffixes[index], textX, ry + LINE2_Y, room, suffixColor(machine.state()));
         }
     }
 }

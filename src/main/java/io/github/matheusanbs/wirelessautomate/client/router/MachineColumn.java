@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
  * Alcance, o botão "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}), ao lado do visor ou no
  * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
  * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular. O ✎ e os dois
- * cliques no nome abrem a caixa do nome ({@link LabelEditor}) no lugar dele.
+ * cliques no nome abrem a caixa do nome ({@link RowRename}) no lugar dele.
  */
 final class MachineColumn {
     /**
@@ -53,8 +53,9 @@ final class MachineColumn {
     private final IntSupplier containerId;
     private final MachineView3D machineView;
     private final Function<Direction, FaceView> faceViews = this::visorView;
-    private final RangeList rangeList = new RangeList();
-    private final LabelEditor labelEditor = new LabelEditor(this::sendRename);
+    private final RowRename rowRename = new RowRename(this::sendRename);
+    private final LabelEditor labelEditor = rowRename.editor();
+    private final RangeList rangeList = new RangeList(rowRename);
     private FlatButton machinesButton;
 
     /**
@@ -177,22 +178,6 @@ final class MachineColumn {
         send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, name));
     }
 
-    /** Abre a caixa do nome no lugar do nome da linha {@code row}, com o nome dado agora. */
-    private void startRename(RangeList.Row row) {
-        if (row.kind() == RangeList.Kind.GROUP) {
-            RangeView.GroupView group = range().group(row.group());
-            if (group != null) {
-                labelEditor.start(row.target(), null, group.name(), RangeList.groupName(group));
-            }
-        } else if (row.kind() == RangeList.Kind.MACHINE) {
-            RangeView.MachineView machine = range().machine(row.machine());
-            if (machine != null) {
-                labelEditor.start(row.target(), machine.pos(), machine.label(),
-                        RangeList.blockName(range(), row.machine()));
-            }
-        }
-    }
-
     /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */
     private void selectTarget(RangeList.Row row) {
         int id = containerId.getAsInt();
@@ -208,7 +193,7 @@ final class MachineColumn {
     /** Um botão da linha escolhida: o servidor confere o que a tela viu e age; o snapshot seguinte mostra. */
     private void rowAction(RangeList.Row row, RangeRowButtons.Action action) {
         if (action == RangeRowButtons.Action.RENAME) {
-            startRename(row);
+            rowRename.start(row, range());
             return;
         }
         int id = containerId.getAsInt();
@@ -348,9 +333,7 @@ final class MachineColumn {
     void render(GuiGraphics g, Font font, int left, int top, int pointerX, int pointerY) {
         RouterSnapshot s = snapshot.get();
         if (listShown()) {
-            placeLabelEditor();
             rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
-            labelEditor.render(g, pointerX, pointerY);
         } else {
             labelEditor.finish(true);
         }
@@ -398,22 +381,6 @@ final class MachineColumn {
             GuiText.draw(g, font, label, vx + 4, vy + viewH - 11, viewW - 10,
                     state == RangeView.MachineState.REPLACED ? GuiPaint.BRASS : GuiPaint.WARN);
         }
-    }
-
-    /**
-     * A caixa do nome no lugar do nome da linha em edição, onde ela está agora; se a linha saiu da vista (rolagem,
-     * grupo fechado) ou sumiu, salva e fecha.
-     */
-    private void placeLabelEditor() {
-        EditTarget editing = labelEditor.target();
-        int[] box = editing == null ? null : rangeList.nameBox(range(), editing);
-        if (editing != null && box == null) {
-            labelEditor.finish(true);
-            editing = null;
-        } else if (box != null) {
-            labelEditor.place(box[0], box[1], box[2]);
-        }
-        rangeList.editing(editing);
     }
 
     /** Botão Máquinas: seta (lista aberta ou fechada), o nome e as vagas usadas. */

@@ -52,7 +52,9 @@ final class PanelTooltips {
                             .append(panelTr("redstone.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED))
                     : disabled;
             case TARGET -> readOnly != null ? readOnly : targetLine.tooltip();
-            case RENAME -> machineTooltip(RangeRowButtons.Action.RENAME);
+            // a sua dica, sem os dois cliques da lista: na pílula, eles abrem a lista do alvo
+            case RENAME -> tr("range.rename").copy().append("\n")
+                    .append(tr("range.rename.panel.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
             case IDLE_NETWORKS -> readOnly != null ? readOnly : IdleNetworks.tooltip();
             case REVERT -> readOnly != null ? readOnly : tr("range.revert.tooltip");
             case UPDATE -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UPDATE);

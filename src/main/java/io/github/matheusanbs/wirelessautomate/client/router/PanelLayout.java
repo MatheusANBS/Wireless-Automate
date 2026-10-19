@@ -227,9 +227,9 @@ final class PanelLayout {
     }
 
     /**
-     * A linha Editando, com o ✎ do nome (grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando ele vale, e, numa máquina do alcance, os botões
-     * dela; devolve o topo do que vem depois. Com a lista das máquinas à vista ao lado, a linha não aparece:
-     * a lista marca o alvo e tem os botões.
+     * A linha Editando, com o ✎ do nome (grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando
+     * ele vale, e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a lista das
+     * máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
      */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
@@ -27,7 +28,7 @@ import org.lwjgl.glfw.GLFW;
  * quadro pelo {@link #place}. Fechada, não desenha nem responde. Só cliente.
  */
 final class LabelEditor {
-    /** O nome novo de {@code target}; {@code machinePos} é a máquina da edição, para o servidor conferir o índice. */
+    /** O nome novo de {@code target}; {@code machinePos} é a máquina da edição, para o servidor conferir. */
     interface Commit {
         void rename(EditTarget target, @Nullable BlockPos machinePos, String name);
     }
@@ -40,6 +41,9 @@ final class LabelEditor {
     private @Nullable EditTarget target;
     private @Nullable BlockPos machinePos;
     private String original = "";
+    /** O nome de quando o campo está vazio, na cor apagada; tingido de novo quando o tema muda. */
+    private Component hint = Component.empty();
+    private int inkVersion = -1;
     private int x;
     private int y;
     private int w;
@@ -54,6 +58,11 @@ final class LabelEditor {
 
     boolean editing() {
         return target != null;
+    }
+
+    /** A máquina da edição, guardada ao abrir ({@code null} num grupo ou com a caixa fechada). */
+    @Nullable BlockPos machinePos() {
+        return target == null ? null : machinePos;
     }
 
     /** O alvo em edição, ou {@code null} com a caixa fechada. */
@@ -78,7 +87,8 @@ final class LabelEditor {
         box.setValue(current);
         box.moveCursorToEnd(false);
         box.setFocused(true);
-        GuiPaint.ink(box, hint);
+        this.hint = hint;
+        inkVersion = -1;
     }
 
     /** A moldura no retângulo {@code x}, {@code y}, {@code w} × {@link #H} (a dona chama a cada quadro). */
@@ -101,7 +111,7 @@ final class LabelEditor {
         EditTarget edited = target;
         target = null;
         box.setFocused(false);
-        String name = box.getValue().strip();
+        String name = RenameRouterPayload.clean(box.getValue());
         if (save && !name.equals(original)) {
             commit.rename(edited, machinePos, name);
         }
@@ -156,8 +166,11 @@ final class LabelEditor {
             return;
         }
         GuiPaint.box(g, x, y, w, H, GuiPaint.INSET, GuiPaint.ACCENT);
-        // a cor do EditBox é do widget: segue o tema a cada quadro
-        GuiPaint.ink(box);
+        // a cor do EditBox é do widget: segue o tema quando ele muda
+        if (inkVersion != GuiThemes.version()) {
+            inkVersion = GuiThemes.version();
+            GuiPaint.ink(box, hint);
+        }
         box.render(g, mouseX, mouseY, 0f);
     }
 

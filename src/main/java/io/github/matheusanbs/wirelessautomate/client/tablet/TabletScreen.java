@@ -242,6 +242,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private void switchTab(Tab t) {
         if (tab != t) {
+            list.cancelLabel();
             tab = t;
             actions.tab(t.ordinal());
             if (t == Tab.FLOWS) {

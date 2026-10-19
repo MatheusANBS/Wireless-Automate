@@ -20,9 +20,10 @@ import org.jetbrains.annotations.Nullable;
  * Os botões pequenos da linha escolhida na lista das máquinas ({@link RangeList}), da direita para a
  * esquerda: ✕ Desvincular (máquina), ↺ Voltar ao perfil (máquina com exceção), ⟳ Atualizar (máquina
  * trocada, ou grupo com alguma trocada) e o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina com
- * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, e grupo sem outro botão). O ✕ pede
- * dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?", que desarma quando o mouse sai dele ou o alvo muda. O clique devolve a
- * ação; quem manda o pedido ao servidor é a coluna da lista. Público só pela {@link Action}, que o e2e usa.
+ * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, e grupo quando o nome cabe ao lado).
+ * O ✕ pede dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?", que desarma
+ * quando o mouse sai dele ou o alvo muda. O clique devolve a ação; quem manda o pedido ao servidor é a
+ * coluna da lista. Público só pela {@link Action}, que o e2e usa.
  */
 public final class RangeRowButtons {
     public enum Action { UPDATE, REVERT, UNLINK, CLEAR_NETWORKS, RENAME }
@@ -54,6 +55,9 @@ public final class RangeRowButtons {
     private @Nullable EditTarget armedFor;
     /** O alvo tem faces sem modo com rede ({@link IdleNetworks#shown}), lido do snapshot a cada quadro. */
     private boolean idleNetworks;
+    private @Nullable RangeView widthView;
+    private int widthGroup = -1;
+    private int groupNameW;
 
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
@@ -90,6 +94,17 @@ public final class RangeRowButtons {
         return null;
     }
 
+    /** A largura do nome do grupo na linha ("Fornalha ×3"), medida só quando a visão ou o grupo mudam. */
+    private int groupNameWidth(Font font, RangeView view, int group) {
+        if (view != widthView || group != widthGroup) {
+            RangeView.GroupView g = view.group(group);
+            widthView = view;
+            widthGroup = group;
+            groupNameW = g == null ? 0 : font.width(tr("range.group.count", RangeList.groupName(g), g.count()));
+        }
+        return groupNameW;
+    }
+
     void idleNetworks(boolean shown) {
         idleNetworks = shown;
     }
@@ -101,8 +116,9 @@ public final class RangeRowButtons {
 
     /**
      * Os botões da linha do alvo {@code target}, com o topo em {@code ry} e a borda direita em {@code right};
-     * {@code minX} é até onde o "Desvincular?" pode crescer. Vazia se o alvo não tem botões. Com o ✕ armado,
-     * só ele: os outros saem para o texto caber.
+     * {@code minX} é onde o texto da linha começa: até onde o "Desvincular?" pode crescer e, no grupo, onde o
+     * nome dele começa. Vazia se o alvo não tem botões. Com o ✕ armado, só ele: os outros saem para o texto
+     * caber. No grupo, o ✎ só sai quando o nome não cabe ao lado dele (o nome se edita então pelos dois cliques).
      */
     List<Button> place(Font font, RangeView view, EditTarget target, int ry, int rowH, int right, int minX) {
         List<Action> actions = new ArrayList<>();
@@ -116,9 +132,8 @@ public final class RangeRowButtons {
                 if (idleNetworks) {
                     actions.add(Action.CLEAR_NETWORKS);
                 }
-                // o nome do grupo não cabe ao lado de três botões na lista estreita: com o ⟳ ou o "Tirar redes",
-                // o nome se edita pelos dois cliques nele
-                if (actions.isEmpty()) {
+                int withRename = right - PAD - (actions.size() + 1) * (SIZE + GAP) - 1;
+                if (actions.isEmpty() || minX + groupNameWidth(font, view, target.id()) <= withRename - 2) {
                     actions.add(Action.RENAME);
                 }
             }

@@ -38,8 +38,8 @@ final class RangeList {
     private static final int SCROLL_STEP = 12;
     /** Largura da área da seta à esquerda de um grupo (clicar ali só abre e fecha). */
     private static final int ARROW_ZONE = 9;
-    /** Dois cliques no nome da mesma linha dentro deste prazo abrem a edição do nome. */
-    private static final long DOUBLE_CLICK_MS = 400;
+    /** Onde o nome do grupo começa, depois da seta e do ícone. */
+    static final int GROUP_TEXT_X = ARROW_ZONE + 20;
 
     enum Kind { ATTACHED, GROUP, MACHINE }
 
@@ -60,10 +60,7 @@ final class RangeList {
     private final Set<Integer> open = new HashSet<>();
     private final RangeRowButtons buttons = new RangeRowButtons();
     private final MachineRow machineRow = new MachineRow();
-    /** O alvo com o nome em edição: a linha dele fica sem os botões, para a caixa ter a largura toda. */
-    private @Nullable EditTarget editing;
-    private @Nullable EditTarget lastClick;
-    private long lastClickAt;
+    private final RowRename rename;
     private int scroll;
     private int x;
     private int y;
@@ -72,6 +69,11 @@ final class RangeList {
     private @Nullable EditTarget shownTarget;
     private @Nullable RangeView cachedView;
     private @Nullable List<Row> cachedRows;
+
+    /** @param rename a edição do nome das linhas, da coluna */
+    RangeList(RowRename rename) {
+        this.rename = rename;
+    }
 
     void setBounds(int x, int y, int width, int height) {
         this.x = x;
@@ -139,51 +141,24 @@ final class RangeList {
 
     /**
      * Os botões da linha do alvo, onde ela está agora (o armado vai até o texto); nenhum sem a linha ou com o
-     * nome dela em edição. No grupo e na máquina, na primeira linha (na máquina, antes do lugar do Olho).
+     * nome dela em edição. No grupo e na máquina, na primeira linha (na máquina, antes do lugar do Olho, que
+     * o "Desvincular?" armado ocupa).
      */
     private List<RangeRowButtons.Button> targetButtons(Font font, RangeView view, EditTarget target) {
-        if (target.equals(editing)) {
+        if (rename.editing(target)) {
             return List.of();
         }
         for (Row row : rows(view)) {
             if (row.target().equals(target)) {
                 int ry = y + 1 + row.top() - scroll;
                 // no grupo e na máquina, na primeira linha: a segunda fica com a largura toda
-                int right = rowRight(rows(view)) - (row.kind() == Kind.MACHINE ? MachineRow.EYE_W : 0);
+                boolean eye = row.kind() == Kind.MACHINE && !buttons.unlinkArmed(target);
+                int right = rowRight(rows(view)) - (eye ? MachineRow.EYE_W : 0);
                 int rowH = row.kind() == Kind.ATTACHED ? row.height() : RangeRowButtons.SIZE + 2;
-                return buttons.place(font, view, target, ry, rowH, right, x + MachineRow.TEXT_X);
+                return buttons.place(font, view, target, ry, rowH, right, x + RowRename.nameX(row));
             }
         }
         return List.of();
-    }
-
-    /** O alvo com o nome em edição ({@code null} sem edição); a coluna avisa a cada quadro. */
-    void editing(@Nullable EditTarget target) {
-        editing = target;
-    }
-
-    /** Onde o texto do nome da linha começa, a partir da borda da lista. */
-    private static int nameX(Row row) {
-        return row.kind() == Kind.GROUP ? ARROW_ZONE + 20 : MachineRow.TEXT_X;
-    }
-
-    /**
-     * A caixa do nome da linha de {@code target}, {@code {x, y, largura}}, na primeira linha dela, do começo do
-     * nome até a borda; {@code null} sem a linha ou com ela fora da vista.
-     */
-    int @Nullable [] nameBox(RangeView view, EditTarget target) {
-        List<Row> rows = rows(view);
-        for (Row row : rows) {
-            if (row.target().equals(target) && row.kind() != Kind.ATTACHED) {
-                int ry = y + 1 + row.top() - scroll;
-                if (ry < y + 1 || ry + row.height() > y + 1 + innerHeight()) {
-                    return null;
-                }
-                int left = x + nameX(row) - 3;
-                return new int[] {left, ry + 1, rowRight(rows) - 1 - left};
-            }
-        }
-        return null;
     }
 
     /**
@@ -263,13 +238,7 @@ final class RangeList {
             }
             return true;
         }
-        // dois cliques no nome: o primeiro escolhe a linha (ou abre e fecha o grupo já escolhido), o segundo edita
-        boolean onName = row.kind() != Kind.ATTACHED && mouseX >= x + nameX(row);
-        long now = System.currentTimeMillis();
-        boolean doubleClick = onName && row.target().equals(lastClick) && now - lastClickAt <= DOUBLE_CLICK_MS;
-        lastClick = onName && !doubleClick ? row.target() : null;
-        lastClickAt = now;
-        if (doubleClick) {
+        if (rename.doubleClick(row, row.kind() != Kind.ATTACHED && mouseX >= x + RowRename.nameX(row))) {
             act.accept(row, RangeRowButtons.Action.RENAME);
             return true;
         }
@@ -411,6 +380,7 @@ final class RangeList {
         int bottom = y + 1 + innerHeight();
         g.enableScissor(x + 1, top, x + width - 1, bottom);
         boolean targetShown = false;
+        rename.beginFrame();
         for (Row row : rows) {
             int ry = top + row.top() - scroll;
             if (ry + row.height() <= top || ry >= bottom) {
@@ -430,6 +400,9 @@ final class RangeList {
                 case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
                         placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty());
+            }
+            if (ry >= top && ry + row.height() <= bottom) {
+                rename.place(row, x, ry, right);
             }
             if (selected) {
                 targetShown = true;
@@ -452,6 +425,7 @@ final class RangeList {
             g.fill(x + width - 3, top, x + width - 2, bottom, GuiPaint.INSET);
             g.fill(x + width - 3, thumbY, x + width - 2, thumbY + thumb, GuiPaint.LINE);
         }
+        rename.endFrame(view, g, mouseX, mouseY);
     }
 
     private void renderAttached(GuiGraphics g, Font font, ItemStack icon, int ry, int right) {
@@ -481,7 +455,7 @@ final class RangeList {
         if (!icon.isEmpty()) {
             g.renderItem(icon, x + ARROW_ZONE + 1, ry + 2);
         }
-        int textX = x + ARROW_ZONE + 20;
+        int textX = x + GROUP_TEXT_X;
         GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2,
                 nameRight - textX - 2,
                 GuiPaint.FG);

@@ -811,6 +811,7 @@
   "gui.wirelessautomate.router.range.machine.short.over_limit": "over the limit",
   "gui.wirelessautomate.router.range.rename": "Rename",
   "gui.wirelessautomate.router.range.rename.tooltip": "Also by double-clicking the name · up to 32 characters",
+  "gui.wirelessautomate.router.range.rename.panel.tooltip": "Name of this machine or group · up to 32 characters",
   "gui.wirelessautomate.router.range.rename.hint": "Enter saves · Esc cancels",
   "gui.wirelessautomate.router.range.rename.narration": "Name",
   "gui.wirelessautomate.router.range.list.empty": "No machines linked. Use the Linker in Machines mode",

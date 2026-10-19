@@ -33,6 +33,11 @@ public abstract class KeyedStorage<K> {
     private final class Entry {
         final K key;
         long count;
+        /**
+         * A chave codificada, feita no primeiro salvamento e reusada nos seguintes (a chave nunca muda).
+         * Compartilhada entre os salvamentos: quem lê o NBT salvo não o altera.
+         */
+        @Nullable Tag tag;
 
         Entry(K key) {
             this.key = key;
@@ -220,12 +225,18 @@ public abstract class KeyedStorage<K> {
         version++;
     }
 
-    /** Lista de {@code {key, count}}. */
+    /**
+     * Lista de {@code {key, count}}. A chave de cada tipo é codificada uma vez só, no primeiro salvamento
+     * dela ({@link Entry#tag}): salvar o chunk de novo não recodifica milhares de chaves.
+     */
     public ListTag save(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Entry entry : entries) {
+            if (entry.tag == null) {
+                entry.tag = saveKey(entry.key, registries);
+            }
             CompoundTag tag = new CompoundTag();
-            tag.put("key", saveKey(entry.key, registries));
+            tag.put("key", entry.tag);
             tag.putLong("count", entry.count);
             list.add(tag);
         }

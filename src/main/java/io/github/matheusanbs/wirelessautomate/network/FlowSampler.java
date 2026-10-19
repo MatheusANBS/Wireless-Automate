@@ -8,7 +8,6 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,42 +19,42 @@ import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O amostrador dos Fluxos, um por {@link NetworkManager}: roda sempre, uma vez a cada
- * {@link #SAMPLE_TICKS} ticks, com ou sem alguém olhando, para a aba Fluxos do Tablet abrir com as
- * janelas cheias. Quem olha ({@link #watch}) só decide para quem o Tablet manda o pacote.
+ * O amostrador dos Fluxos, um por {@link NetworkManager}: roda sempre, com ou sem alguém olhando, para a
+ * aba Fluxos do Tablet abrir com as janelas cheias. Quem olha ({@link #watch}) só decide para quem o
+ * Tablet manda o pacote.
  *
- * <p>A cada amostra, para cada rede com rotas e cada tipo carregado:
+ * <p>O trabalho é espalhado em {@link #SAMPLE_TICKS} baldes de fase pela posição do nó, como no
+ * Ressonador: a cada tick só os nós do balde da vez são lidos, e a volta pelos 20 baldes é o segundo dos
+ * Fluxos. De cada nó lido:
  * <ul>
- *   <li>lê e zera os contadores das portas ({@link Port#gave}, {@link Port#got}) e os soma pelo modo
- *       da face: o que as Extrai entregaram entra, o que as Insere receberam sai, e o Armazém (Ambos)
- *       tem o que recebeu e o que deu à parte;
- *   <li>conta os estados das portas: movendo (entregou ou recebeu desde a amostra anterior), origem
+ *   <li>lê e zera os contadores das portas com rota ({@link Port#gave}, {@link Port#got}) e os soma na
+ *       rede da porta pelo modo da face: o que as Extrai entregaram entra, o que as Insere receberam sai,
+ *       e o Armazém (Ambos) tem o que recebeu e o que deu à parte;
+ *   <li>conta os estados das portas: movendo (entregou ou recebeu desde a leitura anterior), origem
  *       vazia ou esperando destino (pelo sono e pelo {@link Port#waitsDestination}; uma origem sem
  *       destino ao alcance espera destino; só as Extrai esperam, porque o Armazém guarda o que não
- *       tem para onde ir) e destino cheio ({@link NodeProbe#isFull}).
+ *       tem para onde ir) e destino cheio ({@link NodeProbe#isFull});
+ *   <li>soma as faces com modo que o redstone desliga, por rede, e as faces com modo e sem rede (ou com
+ *       uma rede que não existe mais), por tipo e por nó. Essas vêm da configuração (presa, e as remotas
+ *       que viram porta pelos perfis e exceções), contada uma vez e guardada no nó ({@link NodeConfig})
+ *       até a versão do roteador, a das redes ou a config mudar; não lê o mundo.
  * </ul>
- * Depois, da configuração dos nós carregados que o gerenciador conhece (presa, e as remotas que viram
- * porta pelos perfis e exceções), conta as faces com modo que o redstone desliga, por rede, e as faces
- * com modo e sem rede (ou com uma rede que não existe mais), por tipo e, só dos nós que têm alguma, por nó
- * (o Tablet de quem não é operador só conta os nós que o jogador vê). Não lê o mundo: a configuração
- * está no roteador.
- *
- * <p>A primeira amostra do gerenciador só zera os contadores e reinicia as janelas, porque eles
- * acumularam por um tempo que não fecha com o segundo da amostra. Os números de cada rede × tipo vão para
- * uma {@link FlowWindow} cada, e o resultado da amostra fica no {@link #report()}, imutável. As redes
- * que sumiram do gerenciador e da configuração saem na amostra seguinte; um tipo que deixou de ter
- * porta numa rede recomeça a janela quando voltar.
+ * No fim da volta os números de cada rede × tipo entram numa {@link FlowWindow} cada. A primeira volta
+ * do gerenciador só zera os contadores e reinicia as janelas, porque eles acumularam por um tempo que não
+ * fecha com o segundo. O resultado ({@link #report()}) só é montado quando alguém pede, uma vez por volta:
+ * sem ninguém olhando, a amostra não aloca. As redes que não apareceram numa volta saem no fim dela; um
+ * tipo que deixou de ter porta numa rede recomeça a janela quando voltar.
  *
  * <p>Só a thread do servidor mexe.
  */
 public final class FlowSampler {
-    /** Ticks entre duas amostras: o segundo dos Fluxos. */
-    static final int SAMPLE_TICKS = 20;
+    /** Ticks de uma volta pelos baldes: o segundo dos Fluxos. */
+    public static final int SAMPLE_TICKS = 20;
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final ResourceType[] LOADED = NetworkRoutes.TRANSFER_TYPES;
     private static final RelativeSide[] SIDES = RelativeSide.values();
     private static final RemoteSide[] REMOTE_SIDES = RemoteSide.values();
-    /** Peso da média móvel do custo, por amostra: cerca de cinco amostras de memória. */
+    /** Peso da média móvel do custo, por volta: cerca de cinco voltas de memória. */
     private static final double AVERAGE_WEIGHT = 0.2;
 
     // Índices dos números de uma rede × tipo.
@@ -74,29 +73,66 @@ public final class FlowSampler {
     private static final int REDSTONE = 5;
     private static final int STATES = 6;
 
-    /** As redes do gerenciador (a lista dele, só lida aqui). */
-    private final List<NetworkRoutes> networks;
-    /** Os nós carregados do gerenciador (a visão dele, só lida aqui). */
-    private final Collection<NodePorts> nodes;
+    /** Os nós de cada balde de fase; a posição do nó na lista fica em {@link NodePorts#flowSlot}. */
+    private final List<List<NodePorts>> phases = new ArrayList<>(SAMPLE_TICKS);
     private final Set<UUID> watchers = new HashSet<>();
     private final Map<UUID, NetworkFlows> flows = new HashMap<>();
+    /** As faces sem rede por tipo, somadas na volta em curso e as da última volta fechada. */
     private final int[] withoutNetwork = new int[TYPES.length];
-    /** As faces sem rede do nó contado agora, por tipo. */
-    private final int[] nodeWithout = new int[TYPES.length];
-    /** Os nós com alguma face sem rede nesta amostra. */
-    private final List<NodeWithoutNetwork> nodesWithout = new ArrayList<>();
-    /** A primeira amostra já zerou os contadores: as seguintes contam. */
+    private final int[] closedWithout = new int[TYPES.length];
+    /** Os nós com alguma face sem rede, na volta em curso e na última fechada (trocadas no fim da volta). */
+    private List<NodeWithoutNetwork> nodesWithout = new ArrayList<>();
+    private List<NodeWithoutNetwork> closedNodes = new ArrayList<>();
+    /** A volta em curso; marca as redes que apareceram nela. */
+    private int cycle;
+    /** A config mudou tantas vezes: a configuração guardada nos nós vale só com a mesma contagem. */
+    private int configEpoch;
+    /** A primeira volta já zerou os contadores: as seguintes contam. */
     private boolean primed;
-    private int stamp;
+    /** O tick do fim da última volta; {@code -1} antes da primeira. */
+    private long closedAt = -1;
     private Report report = Report.EMPTY;
+    private long reportAt = -1;
     private long samples;
+    private long cycleNanos;
+    private long cyclePeakNanos;
     private long lastNanos;
+    private long peakNanos;
     private double averageNanos;
     private long totalNanos;
 
-    FlowSampler(List<NetworkRoutes> networks, Collection<NodePorts> nodes) {
-        this.networks = networks;
-        this.nodes = nodes;
+    FlowSampler() {
+        for (int i = 0; i < SAMPLE_TICKS; i++) {
+            phases.add(new ArrayList<>());
+        }
+    }
+
+    /** O nó entrou no gerenciador: passa a ser lido no balde da posição dele. */
+    void add(NodePorts ports) {
+        List<NodePorts> phase = phases.get(Math.floorMod(ports.node.getBlockPos().hashCode(), SAMPLE_TICKS));
+        ports.flowPhase = phase;
+        ports.flowSlot = phase.size();
+        phase.add(ports);
+    }
+
+    /** O nó saiu do gerenciador. */
+    void remove(NodePorts ports) {
+        List<NodePorts> phase = ports.flowPhase;
+        if (phase == null) {
+            return;
+        }
+        NodePorts last = phase.remove(phase.size() - 1);
+        if (last != ports) {
+            phase.set(ports.flowSlot, last);
+            last.flowSlot = ports.flowSlot;
+        }
+        ports.flowPhase = null;
+        ports.flowSlot = -1;
+    }
+
+    /** A config recarregou: o raio e o limite das remotas podem ter mudado, e a contagem de cada nó é refeita. */
+    void configChanged() {
+        configEpoch++;
     }
 
     /** O jogador abriu a aba Fluxos. Devolve se ele ainda não estava olhando. */
@@ -113,196 +149,183 @@ public final class FlowSampler {
         return watchers.contains(player);
     }
 
-    /** O resultado da última amostra; {@link Report#EMPTY} antes da primeira. */
+    /**
+     * O resultado da última volta fechada, montado na primeira consulta depois dela e o mesmo para todos
+     * até a próxima; {@link Report#EMPTY} antes da primeira.
+     */
     public Report report() {
+        if (reportAt != closedAt) {
+            report = build();
+            reportAt = closedAt;
+        }
         return report;
     }
 
     /** O custo do amostrador, para o {@code /wa profile} e o bench. */
     public Cost cost() {
-        return new Cost(watchers.size(), samples, averageNanos, lastNanos, totalNanos);
+        return new Cost(watchers.size(), samples, averageNanos, lastNanos, peakNanos, totalNanos);
     }
 
-    /** Chamado pelo gerenciador a cada tick: amostra a cada {@link #SAMPLE_TICKS} ticks. */
+    /** Chamado pelo gerenciador a cada tick: lê os nós do balde da vez e, no último balde, fecha a volta. */
     void tick(MinecraftServer server, long now) {
-        if (now % SAMPLE_TICKS != 0) {
+        int phase = (int) (now % SAMPLE_TICKS);
+        List<NodePorts> bucket = phases.get(phase);
+        boolean closing = phase == SAMPLE_TICKS - 1;
+        if (bucket.isEmpty() && !closing) {
             return;
         }
         long started = System.nanoTime();
-        sample(NetworkSavedData.get(server), now);
-        long nanos = System.nanoTime() - started;
-        samples++;
-        lastNanos = nanos;
-        totalNanos += nanos;
-        averageNanos += (nanos - averageNanos) * AVERAGE_WEIGHT;
-    }
-
-    private void sample(NetworkSavedData data, long now) {
-        boolean counting = primed;
-        primed = true;
-        int sampleStamp = ++stamp;
-        for (int i = 0, n = networks.size(); i < n; i++) {
-            NetworkRoutes routes = networks.get(i);
-            NetworkFlows entry = entry(routes.id, sampleStamp);
-            for (ResourceType type : LOADED) {
-                int t = type.ordinal();
-                readSources(entry, t, routes.sourcesOf[t], counting, now);
-                readDestinations(entry, t, routes.destinationsOf[t], counting, now);
+        if (!bucket.isEmpty()) {
+            NetworkSavedData data = NetworkSavedData.get(server);
+            for (int i = 0, n = bucket.size(); i < n; i++) {
+                read(bucket.get(i), data, now);
             }
         }
-        Arrays.fill(withoutNetwork, 0);
-        nodesWithout.clear();
-        for (NodePorts ports : nodes) {
-            countConfig(ports.node, data, sampleStamp);
+        if (closing) {
+            close(now);
         }
-        report = build(counting, sampleStamp, now);
+        long nanos = System.nanoTime() - started;
+        cycleNanos += nanos;
+        cyclePeakNanos = Math.max(cyclePeakNanos, nanos);
+        if (closing) {
+            samples++;
+            lastNanos = cycleNanos;
+            peakNanos = cyclePeakNanos;
+            totalNanos += cycleNanos;
+            averageNanos += (cycleNanos - averageNanos) * AVERAGE_WEIGHT;
+            cycleNanos = 0;
+            cyclePeakNanos = 0;
+        }
     }
 
-    /** A entrada da rede nesta amostra, criada na primeira vez e zerada na primeira consulta da amostra. */
-    private NetworkFlows entry(UUID network, int sampleStamp) {
+    private void read(NodePorts ports, NetworkSavedData data, long now) {
+        for (ResourceType type : LOADED) {
+            Port[] active = ports.collected(type);
+            if (active == null) {
+                continue;
+            }
+            int t = type.ordinal();
+            for (Port port : active) {
+                NetworkRoutes routes = port.network;
+                if (routes == null) {
+                    continue;
+                }
+                NetworkFlows entry = entry(routes);
+                entry.used[t] = true;
+                if (port.source) {
+                    readSource(entry, t, port, now);
+                }
+                if (port.destination) {
+                    readDestination(entry, t, port, now);
+                }
+            }
+        }
+        addConfig(ports, data);
+    }
+
+    private static void readSource(NetworkFlows entry, int t, Port port, long now) {
+        int[] states = entry.states[t];
+        long gave = port.gave;
+        port.gave = 0;
+        port.gaveRead += gave;
+        entry.amounts[t][port.destination ? RELEASED : PRODUCED] += gave;
+        if (gave > 0) {
+            states[SOURCES_MOVING]++;
+        } else if (port.order == null) {
+            // Sem destino ao alcance o laço não a visita: o que ela tiver espera destino.
+            if (!port.destination) {
+                states[SOURCES_WAITING]++;
+            }
+        } else if (port.sourceBackoff.isSleeping(now)) {
+            if (!port.waitsDestination) {
+                states[SOURCES_EMPTY]++;
+            } else if (!port.destination) {
+                states[SOURCES_WAITING]++;
+            }
+        }
+    }
+
+    private static void readDestination(NetworkFlows entry, int t, Port port, long now) {
+        long got = port.got;
+        port.got = 0;
+        port.gotRead += got;
+        entry.amounts[t][port.source ? STORED : CONSUMED] += got;
+        if (got > 0) {
+            entry.states[t][DESTINATIONS_MOVING]++;
+        } else if (NodeProbe.isFull(port, now)) {
+            entry.states[t][DESTINATIONS_FULL]++;
+        }
+    }
+
+    /** A entrada da rede da porta nesta volta, guardada nas rotas para não procurar a cada porta. */
+    private NetworkFlows entry(NetworkRoutes routes) {
+        NetworkFlows entry = routes.flowEntry;
+        if (entry == null || entry.removed) {
+            entry = entry(routes.id);
+            routes.flowEntry = entry;
+        } else {
+            touch(entry);
+        }
+        return entry;
+    }
+
+    /** A entrada da rede nesta volta, criada na primeira vez. */
+    private NetworkFlows entry(UUID network) {
         NetworkFlows entry = flows.get(network);
         if (entry == null) {
             entry = new NetworkFlows(network);
             flows.put(network, entry);
         }
-        if (entry.stamp != sampleStamp) {
-            entry.stamp = sampleStamp;
-            entry.clearSample();
-        }
+        touch(entry);
         return entry;
     }
 
-    private static void readSources(NetworkFlows entry, int t, List<Port> sources, boolean counting, long now) {
-        if (sources.isEmpty()) {
-            return;
-        }
-        entry.used[t] = true;
-        long[] amounts = entry.amounts[t];
-        int[] states = entry.states[t];
-        for (int i = 0, n = sources.size(); i < n; i++) {
-            Port port = sources.get(i);
-            long gave = port.gave;
-            port.gave = 0;
-            port.gaveRead += gave;
-            if (counting) {
-                amounts[port.destination ? RELEASED : PRODUCED] += gave;
-            }
-            if (counting && gave > 0) {
-                states[SOURCES_MOVING]++;
-            } else if (port.order == null) {
-                // Sem destino ao alcance o laço não a visita: o que ela tiver espera destino.
-                if (!port.destination) {
-                    states[SOURCES_WAITING]++;
-                }
-            } else if (port.sourceBackoff.isSleeping(now)) {
-                if (!port.waitsDestination) {
-                    states[SOURCES_EMPTY]++;
-                } else if (!port.destination) {
-                    states[SOURCES_WAITING]++;
-                }
-            }
+    /** Zera os números da amostra na primeira vez que a rede aparece na volta. */
+    private void touch(NetworkFlows entry) {
+        if (entry.cycle != cycle) {
+            entry.cycle = cycle;
+            entry.clearSample();
         }
     }
 
-    private static void readDestinations(NetworkFlows entry, int t, List<Port> destinations, boolean counting,
-            long now) {
-        if (destinations.isEmpty()) {
-            return;
+    /** Soma na volta as faces paradas por redstone e as sem rede do nó, recontadas só se algo mudou. */
+    private void addConfig(NodePorts ports, NetworkSavedData data) {
+        RouterBlockEntity node = ports.node;
+        NodeConfig config = ports.flowConfig;
+        if (config == null) {
+            config = new NodeConfig();
+            ports.flowConfig = config;
         }
-        entry.used[t] = true;
-        long[] amounts = entry.amounts[t];
-        int[] states = entry.states[t];
-        for (int i = 0, n = destinations.size(); i < n; i++) {
-            Port port = destinations.get(i);
-            long got = port.got;
-            port.got = 0;
-            port.gotRead += got;
-            if (counting) {
-                amounts[port.source ? STORED : CONSUMED] += got;
+        if (!config.counted || config.changeVersion != node.changeVersion() || config.dataVersion != data.version()
+                || config.epoch != configEpoch) {
+            config.recount(node, data);
+            config.changeVersion = node.changeVersion();
+            config.dataVersion = data.version();
+            config.epoch = configEpoch;
+            config.counted = true;
+        }
+        for (int i = 0; i < config.redstoneSize; i++) {
+            entry(config.redstoneNetworks[i]).states[config.redstoneTypes[i]][REDSTONE] += config.redstoneCounts[i];
+        }
+        if (config.withoutNetwork != null) {
+            for (int t = 0; t < TYPES.length; t++) {
+                withoutNetwork[t] += config.withoutNetwork.counts().get(t);
             }
-            if (counting && got > 0) {
-                states[DESTINATIONS_MOVING]++;
-            } else if (NodeProbe.isFull(port, now)) {
-                states[DESTINATIONS_FULL]++;
-            }
+            nodesWithout.add(config.withoutNetwork);
         }
     }
 
     /**
-     * Conta as faces paradas por redstone e as sem rede do nó: as seis da presa e as das remotas que
-     * viram porta (dentro do raio e do limite, com o upgrade valendo), pela configuração que vale para
-     * cada uma (exceção ou perfil do grupo).
+     * Fecha a volta: soma os números nas janelas (ou as reinicia, na volta que só zerou), guarda os
+     * estados e as faces sem rede da volta para o {@link #report()} e esquece as redes que não apareceram
+     * e as janelas dos tipos sem porta nem face parada. Não aloca, fora a primeira janela de um tipo.
      */
-    private void countConfig(RouterBlockEntity node, NetworkSavedData data, int sampleStamp) {
-        Arrays.fill(nodeWithout, 0);
-        countFaces(node, data, sampleStamp);
-        boolean any = false;
-        for (int count : nodeWithout) {
-            any |= count > 0;
-        }
-        if (any && node.getLevel() != null) {
-            List<Integer> counts = new ArrayList<>(TYPES.length);
-            for (int count : nodeWithout) {
-                counts.add(count);
-            }
-            nodesWithout.add(new NodeWithoutNetwork(NodeIndex.NodeKey.of(node.getLevel(), node.getBlockPos()),
-                    List.copyOf(counts)));
-        }
-    }
-
-    private void countFaces(RouterBlockEntity node, NetworkSavedData data, int sampleStamp) {
-        boolean powered = node.powered();
-        for (ResourceType type : LOADED) {
-            for (RelativeSide side : SIDES) {
-                countFace(node.face(type, side), type, powered, data, sampleStamp);
-            }
-        }
-        if (!node.rangeActive()) {
-            return;
-        }
-        RemoteMachines remotes = node.remoteMachines();
-        List<RemoteMachine> machines = remotes.machines();
-        if (machines.isEmpty()) {
-            return;
-        }
-        RangeRules.Reach[] reach = node.machineReach();
-        for (int i = 0, n = machines.size(); i < n; i++) {
-            if (reach[i] != RangeRules.Reach.ACTIVE) {
-                continue;
-            }
-            MachineConfig config = remotes.effective(machines.get(i));
-            for (ResourceType type : LOADED) {
-                for (RemoteSide side : REMOTE_SIDES) {
-                    countFace(config.face(type, side), type, powered, data, sampleStamp);
-                }
-            }
-        }
-    }
-
-    private void countFace(FaceConfig face, ResourceType type, boolean powered, NetworkSavedData data,
-            int sampleStamp) {
-        if (face.mode() == PortMode.NONE) {
-            return;
-        }
-        UUID network = face.network();
-        if (network == null || data.network(network) == null) {
-            withoutNetwork[type.ordinal()]++;
-            nodeWithout[type.ordinal()]++;
-        } else if (!face.redstone().allows(powered)) {
-            entry(network, sampleStamp).states[type.ordinal()][REDSTONE]++;
-        }
-    }
-
-    /**
-     * Fecha a amostra: soma os números nas janelas (ou as reinicia, na amostra que só zerou), esquece
-     * as redes que não apareceram e os tipos sem porta nem face parada, e monta o resultado.
-     */
-    private Report build(boolean counting, int sampleStamp, long now) {
-        List<FlowStats> rows = new ArrayList<>();
+    private void close(long now) {
         Iterator<NetworkFlows> it = flows.values().iterator();
         while (it.hasNext()) {
             NetworkFlows entry = it.next();
-            if (entry.stamp != sampleStamp) {
+            if (entry.cycle != cycle) {
+                entry.removed = true;
                 it.remove();
                 continue;
             }
@@ -311,6 +334,7 @@ public final class FlowSampler {
                 int[] states = entry.states[t];
                 if (!entry.used[t] && states[REDSTONE] == 0) {
                     entry.windows[t] = null;
+                    entry.shown[t] = false;
                     continue;
                 }
                 FlowWindow[] windows = entry.windows[t];
@@ -320,23 +344,51 @@ public final class FlowSampler {
                 }
                 long[] amounts = entry.amounts[t];
                 for (int k = 0; k < AMOUNTS; k++) {
-                    if (counting) {
+                    if (primed) {
                         windows[k].add(amounts[k]);
                         windows[k].roll();
                     } else {
                         windows[k].reset();
                     }
                 }
+                System.arraycopy(states, 0, entry.closedStates[t], 0, STATES);
+                entry.shown[t] = true;
+            }
+        }
+        System.arraycopy(withoutNetwork, 0, closedWithout, 0, withoutNetwork.length);
+        Arrays.fill(withoutNetwork, 0);
+        List<NodeWithoutNetwork> swap = closedNodes;
+        closedNodes = nodesWithout;
+        nodesWithout = swap;
+        nodesWithout.clear();
+        primed = true;
+        closedAt = now;
+        cycle++;
+    }
+
+    /** Monta o resultado da última volta fechada, das janelas e do que o fim da volta guardou. */
+    private Report build() {
+        if (closedAt < 0) {
+            return Report.EMPTY;
+        }
+        List<FlowStats> rows = new ArrayList<>();
+        for (NetworkFlows entry : flows.values()) {
+            for (ResourceType type : LOADED) {
+                int t = type.ordinal();
+                if (!entry.shown[t]) {
+                    continue;
+                }
+                FlowWindow[] windows = entry.windows[t];
                 rows.add(new FlowStats(entry.id, type, windows[PRODUCED].total(), windows[CONSUMED].total(),
                         windows[STORED].total(), windows[RELEASED].total(), windows[PRODUCED].seconds(),
-                        states(states)));
+                        states(entry.closedStates[t])));
             }
         }
         List<Integer> noNetwork = new ArrayList<>(TYPES.length);
-        for (int count : withoutNetwork) {
+        for (int count : closedWithout) {
             noNetwork.add(count);
         }
-        return new Report(now, List.copyOf(rows), List.copyOf(noNetwork), List.copyOf(nodesWithout));
+        return new Report(closedAt, List.copyOf(rows), List.copyOf(noNetwork), List.copyOf(closedNodes));
     }
 
     private static FlowStats.States states(int[] states) {
@@ -357,9 +409,9 @@ public final class FlowSampler {
     }
 
     /**
-     * O resultado de uma amostra.
+     * O resultado de uma volta.
      *
-     * @param sampledAt      o tick do servidor da amostra ({@code -1} em {@link #EMPTY})
+     * @param sampledAt      o tick do servidor do fim da volta ({@code -1} em {@link #EMPTY})
      * @param flows          os Fluxos de cada rede × tipo em uso (com porta nas rotas ou face parada por
      *                       redstone), sem ordem definida; as redes pausadas só aparecem com faces
      *                       paradas por redstone, porque não têm rotas
@@ -404,23 +456,33 @@ public final class FlowSampler {
      * O custo do amostrador.
      *
      * @param watchers     jogadores com a aba Fluxos aberta
-     * @param samples      amostras desde que o gerenciador foi criado
-     * @param averageNanos média móvel do tempo de uma amostra, em ns
-     * @param lastNanos    tempo da última amostra, em ns
-     * @param totalNanos   tempo de todas as amostras, em ns (o bench mede pela diferença)
+     * @param samples      voltas fechadas desde que o gerenciador foi criado
+     * @param averageNanos média móvel do tempo de uma volta (a soma dos 20 ticks), em ns
+     * @param lastNanos    tempo da última volta, em ns
+     * @param peakNanos    o tick mais caro da última volta, em ns
+     * @param totalNanos   tempo de todas as voltas, em ns (o bench mede pela diferença)
      */
-    public record Cost(int watchers, long samples, double averageNanos, long lastNanos, long totalNanos) {
+    public record Cost(int watchers, long samples, double averageNanos, long lastNanos, long peakNanos,
+            long totalNanos) {
     }
 
-    /** Os números de uma rede: os da amostra em curso e as janelas, por ordinal do tipo. */
-    private static final class NetworkFlows {
+    /**
+     * Os números de uma rede, por ordinal do tipo: os da volta em curso, os estados da última volta fechada
+     * e as janelas. As rotas da rede guardam a entrada ({@link NetworkRoutes#flowEntry}) até ela sair.
+     */
+    static final class NetworkFlows {
         final UUID id;
         final long[][] amounts = new long[TYPES.length][AMOUNTS];
         final int[][] states = new int[TYPES.length][STATES];
+        final int[][] closedStates = new int[TYPES.length][STATES];
         final boolean[] used = new boolean[TYPES.length];
+        /** O tipo entrou no resultado da última volta fechada. */
+        final boolean[] shown = new boolean[TYPES.length];
         /** As janelas de cada tipo em uso, uma por número; {@code null} no tipo sem uso. */
         final FlowWindow[][] windows = new FlowWindow[TYPES.length][];
-        int stamp;
+        int cycle = -1;
+        /** A rede não apareceu numa volta e saiu do amostrador: as rotas que a guardam pegam outra. */
+        boolean removed;
 
         NetworkFlows(UUID id) {
             this.id = id;
@@ -432,6 +494,107 @@ public final class FlowSampler {
                 Arrays.fill(states[t], 0);
                 used[t] = false;
             }
+        }
+    }
+
+    /**
+     * A configuração de um nó que o amostrador soma a cada volta: as faces paradas por redstone por
+     * rede × tipo e as sem rede por tipo. Recontada só quando a versão do roteador (faces, redes, sinal,
+     * máquinas), a das redes salvas ou a config mudam; um nó sem nada disso guarda só as versões.
+     */
+    static final class NodeConfig {
+        private static final int[] NO_TYPES = new int[0];
+        private static final UUID[] NO_NETWORKS = new UUID[0];
+
+        int changeVersion;
+        int dataVersion;
+        int epoch;
+        boolean counted;
+        /** As faces sem rede do nó; {@code null} se não tem nenhuma. */
+        @Nullable NodeWithoutNetwork withoutNetwork;
+        UUID[] redstoneNetworks = NO_NETWORKS;
+        int[] redstoneTypes = NO_TYPES;
+        int[] redstoneCounts = NO_TYPES;
+        int redstoneSize;
+        private int[] without = NO_TYPES;
+        private boolean anyWithout;
+
+        void recount(RouterBlockEntity node, NetworkSavedData data) {
+            redstoneSize = 0;
+            anyWithout = false;
+            if (without.length > 0) {
+                Arrays.fill(without, 0);
+            }
+            boolean powered = node.powered();
+            for (ResourceType type : LOADED) {
+                for (RelativeSide side : SIDES) {
+                    count(node.face(type, side), type, powered, data);
+                }
+            }
+            if (node.rangeActive()) {
+                RemoteMachines remotes = node.remoteMachines();
+                List<RemoteMachine> machines = remotes.machines();
+                if (!machines.isEmpty()) {
+                    RangeRules.Reach[] reach = node.machineReach();
+                    for (int i = 0, n = machines.size(); i < n; i++) {
+                        if (reach[i] != RangeRules.Reach.ACTIVE) {
+                            continue;
+                        }
+                        MachineConfig config = remotes.effective(machines.get(i));
+                        for (ResourceType type : LOADED) {
+                            for (RemoteSide side : REMOTE_SIDES) {
+                                count(config.face(type, side), type, powered, data);
+                            }
+                        }
+                    }
+                }
+            }
+            withoutNetwork = anyWithout && node.getLevel() != null
+                    ? new NodeWithoutNetwork(NodeIndex.NodeKey.of(node.getLevel(), node.getBlockPos()), list(without))
+                    : null;
+        }
+
+        private void count(FaceConfig face, ResourceType type, boolean powered, NetworkSavedData data) {
+            if (face.mode() == PortMode.NONE) {
+                return;
+            }
+            UUID network = face.network();
+            if (network == null || data.network(network) == null) {
+                if (without.length == 0) {
+                    without = new int[TYPES.length];
+                }
+                without[type.ordinal()]++;
+                anyWithout = true;
+            } else if (!face.redstone().allows(powered)) {
+                addRedstone(network, type.ordinal());
+            }
+        }
+
+        private void addRedstone(UUID network, int type) {
+            for (int i = 0; i < redstoneSize; i++) {
+                if (redstoneTypes[i] == type && redstoneNetworks[i].equals(network)) {
+                    redstoneCounts[i]++;
+                    return;
+                }
+            }
+            if (redstoneSize == redstoneNetworks.length) {
+                int grown = Math.max(4, redstoneSize * 2);
+                redstoneNetworks = Arrays.copyOf(redstoneNetworks, grown);
+                redstoneTypes = Arrays.copyOf(redstoneTypes, grown);
+                redstoneCounts = Arrays.copyOf(redstoneCounts, grown);
+            }
+            redstoneNetworks[redstoneSize] = network;
+            redstoneTypes[redstoneSize] = type;
+            redstoneCounts[redstoneSize] = 1;
+            redstoneSize++;
+        }
+
+        private static List<Integer> list(int[] counts) {
+            List<Integer> list = new ArrayList<>(counts.length);
+            for (int count : counts) {
+                list.add(count);
+            }
+            return List.copyOf(list);
         }
     }
 }

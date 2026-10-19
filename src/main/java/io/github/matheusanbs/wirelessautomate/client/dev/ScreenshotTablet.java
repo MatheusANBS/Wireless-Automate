@@ -260,7 +260,7 @@ final class ScreenshotTablet {
                 ? Optional.of(new TabletSnapshot.ProfileSummary("Fornalha Elite", elite.machine(), elite.key(),
                         List.of(ResourceType.ITEM, ResourceType.ENERGY), 3))
                 : Optional.empty();
-        return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"), new BlockPos(0, 64, 0),
+        return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"),
                 Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
                 List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);

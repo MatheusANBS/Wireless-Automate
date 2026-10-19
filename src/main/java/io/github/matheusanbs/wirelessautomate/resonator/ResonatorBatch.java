@@ -28,7 +28,7 @@ public final class ResonatorBatch {
         }
         changed |= recharge(core, ticks);
         if (changed) {
-            core.setChanged();
+            core.markUnsaved();
         }
         // Só as transições que podem acordar quem dorme nas Portas: energia de 0 para mais (quem tira da Porta de
         // Energia), redstone que baixou (quem põe redstone) e cristal que ficou Opaco (quem tira o Opaco). Câmara

@@ -83,6 +83,11 @@ final class ItemTransfer {
      * balde ainda tem saldo: o gerenciador pode visitá-la de novo no mesmo tick se sobrar orçamento.
      */
     static int move(Port source, long now) {
+        // O balde vazio volta antes de consultar a máquina: a origem limitada pela vazão é a maioria das visitas.
+        long tokens = source.limiter.available(now);
+        if (tokens <= 0) {
+            return 0;
+        }
         BulkItems bulk = source.machine.bulkItems(source.face);
         if (bulk != null) {
             return ItemBulkTransfer.moveBulk(source, bulk, now);
@@ -93,10 +98,6 @@ final class ItemTransfer {
             // Máquina sumiu ou chunk descarregado: dorme como vazia. O listener da capability da
             // face (ou a troca do bloco da máquina) acorda a porta, sem remontar as rotas.
             SourceSleep.nothingToMove(source, now);
-            return 0;
-        }
-        long tokens = source.limiter.available(now);
-        if (tokens <= 0) {
             return 0;
         }
         List<Port> pass = order.pass();

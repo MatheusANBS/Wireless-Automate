@@ -88,8 +88,8 @@ public final class NetworkManager {
     /** Origens que pararam num teto da visita com saldo, para as voltas extras do tick. */
     private final List<Port> hungry = new ArrayList<>();
     private final TickBudget budget = new TickBudget(500_000L);
-    /** O amostrador dos Fluxos do Tablet: uma amostra por segundo, fora do orçamento do transporte. */
-    private final FlowSampler flows = new FlowSampler(networkList, nodes.values());
+    /** O amostrador dos Fluxos do Tablet: um balde de nós por tick, fora do orçamento do transporte. */
+    private final FlowSampler flows = new FlowSampler();
     private int cursor;
     private boolean dirty;
     /** Redes salvas do servidor atual e a versão delas já conferida ({@link #checkNetworks}). */
@@ -98,6 +98,8 @@ public final class NetworkManager {
     private int savedVersion;
     /** Entrou rede nova no gerenciador: a existência dela ainda não foi conferida. */
     private boolean networksAdded = true;
+    /** O {@link Config#tiersFingerprint()} da última montagem por config. */
+    private long tiersFingerprint;
     // Contadores cumulativos (benchmark e diagnóstico): só somam; quem lê faz a diferença entre leituras.
     private long visitCount;
     private long exhaustedTicks;
@@ -140,6 +142,7 @@ public final class NetworkManager {
         }
         NodePorts ports = new NodePorts(node);
         nodes.put(node, ports);
+        flows.add(ports);
         for (ResourceType type : TYPES) {
             setMembership(ports, type, node.networks(type));
         }
@@ -149,6 +152,7 @@ public final class NetworkManager {
     public void removeNode(RouterBlockEntity node) {
         NodePorts ports = nodes.remove(node);
         if (ports != null) {
+            flows.remove(ports);
             for (ResourceType type : TYPES) {
                 setMembership(ports, type, NodePorts.NO_NETWORKS);
             }
@@ -630,16 +634,25 @@ public final class NetworkManager {
             savedServer = server;
             savedData = NetworkSavedData.get(server);
             networksAdded = true;
+            tiersFingerprint = Config.tiersFingerprint();
         }
         NetworkSavedData data = savedData;
-        boolean all = configChanged;
+        boolean all = false;
+        if (configChanged) {
+            configChanged = false;
+            // Só os valores dos tiers mudam as rotas: recarregar outra chave (o Ressonador, o chunk loading) não
+            // remonta nada.
+            long fingerprint = Config.tiersFingerprint();
+            all = fingerprint != tiersFingerprint;
+            tiersFingerprint = fingerprint;
+        }
         if (!all && !networksAdded && data.version() == savedVersion) {
             return;
         }
-        configChanged = false;
         networksAdded = false;
         savedVersion = data.version();
         if (all) {
+            flows.configChanged();
             // O raio e o limite das máquinas remotas (e se o upgrade vale) saem da config na leitura
             // das portas: relê as faces dos nós com o upgrade valendo ou com portas remotas (que podem
             // ter deixado de valer). Os outros não dependem disso, e reler acordaria as origens deles.

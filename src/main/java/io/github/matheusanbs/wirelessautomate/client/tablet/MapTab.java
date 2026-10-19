@@ -16,8 +16,10 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import java.util.Locale;
 import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -29,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * pela roda, o nó escolhido com Abrir e a legenda.
  */
 final class MapTab {
+    private static final BlockPos PREVIEW_CENTER = new BlockPos(0, 64, 0);
     private static final int MAP_H = 136;
 
     private final TabletLayout layout;
@@ -48,6 +51,12 @@ final class MapTab {
 
     private TabletSnapshot snapshot() {
         return snapshot.get();
+    }
+
+    /** O centro do mapa: o jogador, que o cliente já sabe onde está (o servidor não manda); na prévia, a origem. */
+    private static BlockPos center() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player == null ? PREVIEW_CENTER : player.blockPosition();
     }
 
     void addButtons(TabletScreen.Buttons buttons) {
@@ -94,7 +103,7 @@ final class MapTab {
     /** Blocos por pixel: cabe o nó mais longe da página (mínimo 16 blocos), vezes o zoom. */
     private double mapScale() {
         double far = 16;
-        BlockPos center = snapshot().center();
+        BlockPos center = center();
         for (NodeView node : snapshot().nodes()) {
             if (nodes.sameDimension(node)) {
                 far = Math.max(far, Math.max(Math.abs(node.key().pos().getX() - center.getX()),
@@ -107,7 +116,7 @@ final class MapTab {
 
     /** Ponto do nó no mapa (preso à borda se estiver fora); {@code [x, y, dentro]}. */
     private int[] mapPoint(NodeView node, double scale) {
-        BlockPos center = snapshot().center();
+        BlockPos center = center();
         int cx = mapX0() + mapW() / 2;
         int cy = mapY0() + mapH() / 2;
         double px = cx + (node.key().pos().getX() - center.getX()) / scale;
@@ -209,7 +218,7 @@ final class MapTab {
         while (step / scale < 20) {
             step *= 2;
         }
-        BlockPos center = snapshot().center();
+        BlockPos center = center();
         int cx = x0 + w / 2;
         int cy = y0 + mapH() / 2;
         int gridColor = GuiPaint.VIEW_GRID;

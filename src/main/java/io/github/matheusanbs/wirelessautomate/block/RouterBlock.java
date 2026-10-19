@@ -176,7 +176,12 @@ public class RouterBlock extends BaseEntityBlock {
      */
     @Override
     public void onNeighborChange(BlockState state, LevelReader level, BlockPos pos, BlockPos neighbor) {
-        if (!level.isClientSide() && neighbor.equals(attachedPos(state, pos))
+        // A máquina presa fica atrás da face: compara sem criar a posição dela, porque toda mudança de vizinho
+        // passa por aqui.
+        Direction toMachine = state.getValue(FACING).getOpposite();
+        if (!level.isClientSide() && neighbor.getX() == pos.getX() + toMachine.getStepX()
+                && neighbor.getY() == pos.getY() + toMachine.getStepY()
+                && neighbor.getZ() == pos.getZ() + toMachine.getStepZ()
                 && level.getBlockEntity(pos) instanceof RouterBlockEntity router) {
             NetworkManager.get().wake(router);
         }

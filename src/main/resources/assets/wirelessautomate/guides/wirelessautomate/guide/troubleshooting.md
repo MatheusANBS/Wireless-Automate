@@ -25,5 +25,5 @@ Something not moving? Check in order: it's almost always one of these.
 | Can't put it in a network | The network belongs to another player. | Ask the owner, or use one of yours. |
 | Less throughput than the tier | Many machines moving at once. | Normal: throughput is shared between them, without freezing the game. |
 
-Still stuck? Open the [Network Tablet](network-tablet.md): the **Statistics** tab shows what each
-network is moving and which destinations are full.
+Still stuck? Open the [Network Tablet](network-tablet.md): the **Flows** tab shows what each
+network is moving, which faces are waiting for a destination and which destinations are full.

@@ -22,7 +22,7 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it); the message names the machine and the group or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Faces** | All six (default) or just some: Front, Back, Left, Right, Top and Bottom, the sides of each router's machine. |
 | **Network** | One of your networks, or **None (unlink)**. |

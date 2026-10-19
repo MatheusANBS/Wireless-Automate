@@ -525,6 +525,16 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 | **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
+## Máquinas à distância
+
+Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece ao lado do visor. Cada linha mostra o nome, as coordenadas e o estado da máquina.
+
+| Na lista | O que faz |
+| --- | --- |
+| **Nome** | Clique no ✎ da linha (ou dê dois cliques no nome) para dar um nome à máquina ou ao grupo. **Enter** salva e **Esc** cancela. |
+| **Olho ◉** | Acende a máquina no mundo, através dos blocos, com uma linha até o roteador. Ela fica acesa até você apagar ou sair do mundo, até 64 de uma vez. Clique de novo no olho para apagar. |
+| **Apagar todas** | Apaga de uma vez todas as máquinas acesas. |
+
 ## Modos da face
 
 | Modo | O que faz | Use para |
@@ -624,6 +634,16 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | **Network row** | The selected face's network; click to change it. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 | **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
+
+## Remote machines
+
+With the Range Upgrade, the router serves several machines around it, and their list sits next to the viewer. Each row shows the machine's name, its coordinates and its state.
+
+| In the list | What it does |
+| --- | --- |
+| **Name** | Click the ✎ on the row (or double-click the name) to name the machine or the group. **Enter** saves and **Esc** cancels. |
+| **Eye ◉** | Lights the machine up in the world, through the blocks, with a line to the router. It stays lit until you turn it off or leave the world, up to 64 at a time. Click the eye again to turn it off. |
+| **Clear all** | Turns off every lit machine at once. |
 
 ## Face modes
 
@@ -1127,7 +1147,7 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula) ou marque uma área. Uma máquina de um tipo novo entra sem rede; a face entra na sua rede ativa quando você escolhe um modo nela. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula); a mensagem diz a máquina e o grupo ou marque uma área. Uma máquina de um tipo novo entra sem rede; a face entra na sua rede ativa quando você escolhe um modo nela. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Faces** | As seis (padrão) ou só algumas: Frente, Trás, Esquerda, Direita, Cima e Baixo, lados da máquina de cada roteador. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
@@ -1195,7 +1215,7 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it) or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it); the message names the machine and the group or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Faces** | All six (default) or just some: Front, Back, Left, Right, Top and Bottom, the sides of each router's machine. |
 | **Network** | One of your networks, or **None (unlink)**. |
@@ -1446,6 +1466,10 @@ Cada máquina é um grupo que você recolhe e abre pelo cabeçalho. A linha de c
 | **Backspace** | Com a busca vazia, tira a última etiqueta. |
 | **Duplo clique num nó** | Abre a tela completa do roteador. |
 
+## Clicar numa máquina
+
+Com o Tablet na mão, clique direito numa máquina com roteador (ou numa vinculada pelo Upgrade de Alcance): o Tablet abre a central já com o nó dela escolhido, antes da interface da máquina. No painel, **No mundo** acende a máquina através dos blocos, como o Olho da tela do roteador, e o **Apagar todas (N)**, no pé da Lista, apaga as que estão acesas.
+
 ## O painel do nó
 
 Clique num nó da lista: o painel à direita é o mesmo da [tela do roteador](router.md), com o cubo desdobrado das faces, modo, rede, filtro, prioridade e redstone, e cada mudança vale na hora. Pelo Tablet você edita um nó **dentro do alcance do tier do Tablet**; com o nó descarregado, ou fora do alcance, o painel mostra o último estado só para leitura e diz o motivo.
@@ -1525,6 +1549,10 @@ Each machine is a group you collapse and open from its header. Each node's row s
 | **Esc** | Closes the suggestions; again, clears the search. |
 | **Backspace** | With an empty search, removes the last label. |
 | **Double-click a node** | Opens the router's full screen. |
+
+## Clicking a machine
+
+With the Tablet in hand, right-click a machine with a router (or one linked through the Range Upgrade): the Tablet opens the hub with its node already chosen, before the machine's own interface. In the panel, **In the world** lights the machine up through the blocks, like the Eye on the router screen, and **Clear all (N)**, at the foot of the List, turns off the ones that are lit.
 
 ## The node panel
 

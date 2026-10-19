@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.storage;
 
+import io.github.matheusanbs.wirelessautomate.filter.FilterTags;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListView;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import it.unimi.dsi.fastutil.Hash;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
 /**
@@ -22,8 +24,15 @@ final class ShownList {
     private List<Object> shown = List.of();
     /** Quantidade de cada tipo mostrado, tirada junto com a lista (por identidade, como os nomes). */
     private final Map<Object, Long> shownCounts = new IdentityHashMap<>();
-    /** Texto procurado pelo {@code #} em cada tipo (tags e tooltip), refeito quando a busca muda. */
+    /**
+     * Texto procurado pelo {@code #} em cada tipo (tags e tooltip), montado na primeira busca por {@code #} que
+     * passa pelo tipo e guardado até ele sair: digitar só filtra o que já está aqui. Some inteiro, junto dos
+     * nomes, quando o idioma ou as tags mudam ({@link #checkTexts}). O tooltip é pedido sempre sem as dicas
+     * avançadas, então o F3+H não muda o texto.
+     */
     private final Map<Object, String> searchTexts = new IdentityHashMap<>();
+    private String textsLanguage = "";
+    private int textsTags = -1;
     private int shownVersion = -1;
     private String shownSearch = "";
     private ListSort shownSort;
@@ -68,10 +77,8 @@ final class ShownList {
         if (view().version() == shownVersion && sameQuery && frozen == shownFrozen) {
             return false;
         }
+        checkTexts();
         shownVersion = view().version();
-        if (!search.equals(shownSearch)) {
-            searchTexts.clear();
-        }
         shownSearch = search;
         shownSort = sort;
         shownFrozen = frozen;
@@ -114,6 +121,20 @@ final class ShownList {
         kept.sort(order);
         shown = kept;
         return true;
+    }
+
+    /** Esvazia os nomes e os textos da busca guardados se o idioma ou as tags mudaram desde que foram montados. */
+    private void checkTexts() {
+        Minecraft minecraft = Minecraft.getInstance();
+        String language = minecraft == null ? "" : minecraft.getLanguageManager().getSelected();
+        int tags = FilterTags.generation();
+        if (language.equals(textsLanguage) && tags == textsTags) {
+            return;
+        }
+        textsLanguage = language;
+        textsTags = tags;
+        names.clear();
+        searchTexts.clear();
     }
 
     /**

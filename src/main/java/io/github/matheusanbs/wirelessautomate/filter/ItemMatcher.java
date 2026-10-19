@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link Filter} compilado para itens. Sem {@code matchComponents}, as entradas exatas valem pelo
- * {@link Item} e tudo cabe no mapa por item (com as tags expandidas). Com {@code matchComponents}, as
+ * {@link Item} e cabem no mapa por item (as tags vão na expansão compartilhada). Com {@code matchComponents}, as
  * exatas ficam num mapa por item + componentes ({@link ItemStackLinkedSet#TYPE_AND_TAG}), consultado
  * a cada pergunta só se houver exatas (hash dos componentes, sem alocar); tags e mods continuam por item.
  *

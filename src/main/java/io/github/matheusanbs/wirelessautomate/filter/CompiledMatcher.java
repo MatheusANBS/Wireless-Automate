@@ -1,26 +1,28 @@
 package io.github.matheusanbs.wirelessautomate.filter;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Um {@link Filter} compilado para um tipo de recurso ({@code K} = {@code Item} ou {@code Fluid}).
  * A resposta é o índice da primeira entrada que casa (−1 = nenhuma): dele saem o "passa?" e o estoque.
  *
- * <p>Entradas exatas por chave e tags ficam num mapa só {@code chave → primeiro índice}: as tags são
- * expandidas na compilação (cada chave da tag entra no mapa com o índice da entrada), então uma
- * consulta é uma busca de hash, com 9 ou com 4.096 entradas, sem alocar e sem cache que esvazie.
- * Mods ficam num mapa {@code namespace → índice}, consultado pelo id da chave (sem varrer o registro).
+ * <p>Entradas exatas por chave ficam num mapa {@code chave → primeiro índice}, e as tags na expansão
+ * compartilhada da lista de tags do filtro ({@link TagExpansions}: {@code chave → ordinal da tag}, que vira o
+ * índice da entrada por {@link #tagIndexes}). Uma consulta é no máximo uma busca de hash em cada, com 9 ou com
+ * 4.096 entradas, sem alocar. Mods ficam num mapa {@code namespace → índice}, consultado pelo id da chave (sem
+ * varrer o registro).
  *
- * <p>Recarga de tags ({@link FilterTags}): o mapa expandido guarda a geração das tags em que foi
- * montado e é refeito na primeira consulta depois de uma recarga. Ele é imutável depois de pronto e
- * trocado por inteiro (campo {@code volatile}), então qualquer thread pode consultar.
+ * <p>Recarga de tags ({@link FilterTags}): a expansão guarda a geração das tags em que foi montada e é trocada na
+ * primeira consulta depois de uma recarga. Ela é imutável e trocada por inteiro (campo {@code volatile}), então
+ * qualquer thread pode consultar.
  */
 abstract class CompiledMatcher<K> {
     static final int NONE = -1;
@@ -29,16 +31,15 @@ abstract class CompiledMatcher<K> {
     /** Alguma entrada que vale para este tipo tem estoque. */
     boolean usesStock;
     private final Reference2IntOpenHashMap<K> byKey = new Reference2IntOpenHashMap<>();
-    /** Entradas de tag, na ordem: a tag e o índice da entrada. */
-    private final List<TagKey<K>> tagKeys = new ArrayList<>(0);
-    private final List<Integer> tagIndexes = new ArrayList<>(0);
+    /** O índice da entrada de cada tag, pelo ordinal dela na lista do filtro. */
+    private int[] tagIndexes = NO_TAGS;
+    /** As tags do filtro, na ordem; {@code null} sem tags. */
+    private TagExpansions.@Nullable TagList tagList;
     private final Object2IntOpenHashMap<String> mods = new Object2IntOpenHashMap<>();
-    private Registry<K> registry;
-    /** Exatas mais tags expandidas, da geração {@link Expanded#generation}; sem tags, é o {@link #byKey}. */
-    private volatile Expanded<K> expanded;
+    /** A expansão de {@link #tagList}, da geração {@link TagExpansions.Expansion#generation}; {@code null} sem tags. */
+    private volatile TagExpansions.@Nullable Expansion<K> tags;
 
-    private record Expanded<K>(int generation, Reference2IntOpenHashMap<K> map) {
-    }
+    private static final int[] NO_TAGS = new int[0];
 
     CompiledMatcher(List<FilterEntry> entries) {
         this.entries = entries;
@@ -52,8 +53,9 @@ abstract class CompiledMatcher<K> {
      * ou vão para {@link #addExact} (componentes exigidos).
      */
     final void compile(Registry<K> registry, boolean exactByKey) {
-        this.registry = registry;
         ResourceKey<? extends Registry<K>> registryKey = registry.key();
+        List<TagKey<K>> tagKeys = new ArrayList<>(0);
+        IntArrayList indexes = new IntArrayList(0);
         boolean stock = false;
         for (int i = 0, n = entries.size(); i < n; i++) {
             FilterEntry entry = entries.get(i);
@@ -61,7 +63,7 @@ abstract class CompiledMatcher<K> {
             switch (entry) {
                 case FilterEntry.TagEntry tag -> {
                     tagKeys.add(TagKey.create(registryKey, tag.tag()));
-                    tagIndexes.add(i);
+                    indexes.add(i);
                 }
                 case FilterEntry.ModEntry mod -> mods.putIfAbsent(mod.modId(), i);
                 case FilterEntry.RuleEntry rule -> applies = addRule(rule, i);
@@ -79,24 +81,12 @@ abstract class CompiledMatcher<K> {
             stock |= applies && entry.stock() > 0;
         }
         usesStock = stock;
-        expanded = new Expanded<>(tagKeys.isEmpty() ? Integer.MIN_VALUE : FilterTags.generation(), expand());
-    }
-
-    /** Exatas mais o conteúdo atual das tags, num mapa novo (o {@link #byKey} mesmo, sem tags). */
-    private Reference2IntOpenHashMap<K> expand() {
-        if (tagKeys.isEmpty()) {
-            return byKey;
+        if (!tagKeys.isEmpty()) {
+            tagIndexes = indexes.toIntArray();
+            TagExpansions.TagList list = new TagExpansions.TagList(registry, List.copyOf(tagKeys));
+            tagList = list;
+            tags = TagExpansions.get(list);
         }
-        Reference2IntOpenHashMap<K> map = new Reference2IntOpenHashMap<>(byKey);
-        map.defaultReturnValue(NONE);
-        for (int t = 0, n = tagKeys.size(); t < n; t++) {
-            int index = tagIndexes.get(t);
-            for (Holder<K> holder : registry.getTagOrEmpty(tagKeys.get(t))) {
-                K key = holder.value();
-                map.put(key, first(map.getInt(key), index));
-            }
-        }
-        return map;
     }
 
     /** Guarda uma regra por propriedade; devolve se ela vale para este tipo (só itens). */
@@ -112,16 +102,26 @@ abstract class CompiledMatcher<K> {
 
     abstract String namespaceOf(K key);
 
+    /** Para GameTests: a expansão de tags em uso, ou {@code null} sem tags. */
+    final @Nullable Object tagExpansionForTests() {
+        return tags;
+    }
+
     /** Índice da primeira entrada que casa com a chave, sem as exatas com componentes. */
     final int keyIndex(K key) {
-        Expanded<K> current = expanded;
-        if (!tagKeys.isEmpty() && current.generation != FilterTags.generation()) {
-            // Recarga de tags: refaz o mapa (duas threads podem refazer juntas; dá o mesmo mapa).
-            int generation = FilterTags.generation();
-            current = new Expanded<>(generation, expand());
-            expanded = current;
+        int best = byKey.isEmpty() ? NONE : byKey.getInt(key);
+        TagExpansions.Expansion<K> current = tags;
+        if (current != null) {
+            if (current.generation() != FilterTags.generation()) {
+                // Recarga de tags: pega a expansão nova, montada uma vez para todos os filtros com estas tags.
+                current = TagExpansions.get(tagList);
+                tags = current;
+            }
+            int tag = current.map().getInt(key);
+            if (tag >= 0) {
+                best = first(best, tagIndexes[tag]);
+            }
         }
-        int best = current.map.getInt(key);
         if (!mods.isEmpty()) {
             best = first(best, mods.getInt(namespaceOf(key)));
         }

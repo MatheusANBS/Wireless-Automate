@@ -11,14 +11,20 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.FluidStorage;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.storage.StorageMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -29,19 +35,26 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ComparatorBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.ComparatorBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O pacote S da auditoria de eficiência nos armazenamentos do mod: o aviso aos vizinhos juntado num
@@ -410,5 +423,100 @@ public final class StorageEfficiencyGameTests {
                 })
                 .thenExecute(() -> helper.assertTrue(entity.storage().isEmpty(), "o Baú esvaziou"))
                 .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ S5: o StorageSavedData não cresce sem limite
+
+    /** O guardado que tem esta quantidade de diamantes (cada teste usa uma diferente), ou {@code null}. */
+    private static @Nullable UUID storedWithDiamonds(GameTestHelper helper, long count) {
+        for (Map.Entry<UUID, StorageSavedData.Stored> entry : StorageSavedData.get(helper.getLevel().getServer()).contents().entrySet()) {
+            if (entry.getValue().data() instanceof ListTag list && list.size() == 1
+                    && list.getCompound(0).getLong("count") == count) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    /** Um Baú que sai do mundo sem drop nenhum (como um {@code /setblock}) não deixa nada no servidor. */
+    @GameTest(template = "empty")
+    public static void noDropStoresNothing(GameTestHelper helper) {
+        chest(helper, A, RouterTier.BASIC).storage().insert(new ItemStack(Items.DIAMOND), 4_321, false);
+        helper.getLevel().setBlock(helper.absolutePos(A), Blocks.AIR.defaultBlockState(), 3);
+        helper.assertTrue(storedWithDiamonds(helper, 4_321) == null, "o conteúdo sem drop ficou guardado");
+        helper.succeed();
+    }
+
+    /** Quebrado no sobrevivência com a picareta, o conteúdo vai para o servidor pelo id que o drop leva. */
+    @GameTest(template = "empty")
+    public static void survivalBreakStoresTheContents(GameTestHelper helper) {
+        chest(helper, A, RouterTier.BASIC).storage().insert(new ItemStack(Items.DIAMOND), 4_322, false);
+        BlockPos absolute = helper.absolutePos(A);
+        ServerPlayer player = TestPlayers.inLevel(helper);
+        player.moveTo(Vec3.atCenterOf(absolute.above()));
+        player.setGameMode(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_PICKAXE));
+        player.gameMode.destroyBlock(absolute);
+        UUID stored = storedWithDiamonds(helper, 4_322);
+        helper.assertTrue(stored != null, "o conteúdo foi guardado");
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(1.5),
+                entity -> entity.getItem().is(ModItems.STORAGE_CHEST.get()));
+        helper.assertValueEqual(drops.size(), 1, "um Baú no chão");
+        StorageContents contents = drops.get(0).getItem().get(ModDataComponents.STORAGE_CONTENTS.get());
+        helper.assertTrue(contents != null && contents.id().equals(stored), "o drop aponta para o guardado");
+        drops.get(0).discard();
+        helper.succeed();
+    }
+
+    /**
+     * O prazo: o guardado há mais dias que o prazo sai, o recente fica, o sem data ganha a data da varredura, e o
+     * item no inventário renova o prazo uma vez por dia. Num {@code StorageSavedData} à parte, sem dividir o do
+     * servidor com os outros testes.
+     */
+    @GameTest(template = "empty")
+    public static void stashExpiresAfterTheDeadline(GameTestHelper helper) {
+        StorageSavedData data = new StorageSavedData();
+        long day = StorageMath.TICKS_PER_DAY;
+        long start = 10 * day;
+        UUID old = UUID.randomUUID();
+        UUID recent = UUID.randomUUID();
+        UUID carried = UUID.randomUUID();
+        data.put(old, StorageKind.CHEST, RouterTier.BASIC, new ListTag(), start);
+        data.put(carried, StorageKind.CHEST, RouterTier.BASIC, new ListTag(), start);
+        data.put(recent, StorageKind.CHEST, RouterTier.BASIC, new ListTag(), start + 50 * day);
+
+        data.touch(carried, start + 3 * day);
+        helper.assertValueEqual(data.contents().get(carried).storedAt(), start + 3 * day, "carregar renova o prazo");
+        data.touch(carried, start + 3 * day + 100);
+        helper.assertValueEqual(data.contents().get(carried).storedAt(), start + 3 * day, "renova no máximo uma vez por dia");
+
+        helper.assertValueEqual(data.expire(start + 92 * day, 90), 1, "um vencido");
+        helper.assertTrue(!data.contains(old), "o antigo saiu");
+        helper.assertTrue(data.contains(recent) && data.contains(carried), "o recente e o carregado ficaram");
+        helper.assertValueEqual(data.expire(start + 1_000 * day, 0), 0, "0 é sem prazo");
+        helper.succeed();
+    }
+
+    /** A data faz a ida e volta pelo NBT; o formato sem data carrega sem data e ganha a da primeira varredura. */
+    @GameTest(template = "empty")
+    public static void stashDateRoundTripsAndOldEntriesStartCounting(GameTestHelper helper) {
+        var registries = helper.getLevel().registryAccess();
+        StorageSavedData data = new StorageSavedData();
+        UUID dated = UUID.randomUUID();
+        data.put(dated, StorageKind.TANK, RouterTier.ELITE, new ListTag(), 12_345L);
+        CompoundTag saved = data.save(new CompoundTag(), registries);
+        UUID undated = UUID.randomUUID();
+        CompoundTag oldEntry = new CompoundTag();
+        oldEntry.putString("kind", StorageKind.CHEST.getSerializedName());
+        oldEntry.put("data", new ListTag());
+        saved.getCompound("contents").put(undated.toString(), oldEntry);
+
+        StorageSavedData loaded = StorageSavedData.FACTORY.deserializer().apply(saved, registries);
+        helper.assertValueEqual(loaded.contents().get(dated).storedAt(), 12_345L, "a data voltou");
+        helper.assertValueEqual(loaded.contents().get(dated).kind(), StorageKind.TANK, "o tipo voltou");
+        helper.assertValueEqual(loaded.contents().get(undated).storedAt(), StorageSavedData.UNDATED, "sem data");
+        loaded.expire(99_999L, 90);
+        helper.assertValueEqual(loaded.contents().get(undated).storedAt(), 99_999L, "a varredura põe a data");
+        helper.succeed();
     }
 }

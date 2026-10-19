@@ -25,6 +25,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -35,6 +36,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
@@ -70,6 +72,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Subida do servidor: avisa no log os overrides do editor de receitas sem padrão editável.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onServerStarted);
+        // Subida do servidor: o conteúdo de armazenamentos quebrados há mais tempo que o prazo sai do arquivo.
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStarted);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
         ChunkLoaderEvents.register(modEventBus);
     }
@@ -90,6 +94,10 @@ public final class WirelessAutomate {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
+    }
+
+    private static void onServerStarted(ServerStartedEvent event) {
+        StorageSavedData.onServerStarted(event.getServer());
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {

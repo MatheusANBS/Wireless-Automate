@@ -63,14 +63,15 @@ final class ListTooltips {
             case QUICK -> tr("list.quick." + QuickFilter.values()[hot.arg()].name().toLowerCase(Locale.ROOT) + ".tooltip");
             case TYPE_CHIP -> tr("list.type.tooltip");
             case FORGET -> tr("list.profile.forget.tooltip");
-            case HEADER -> list.model.collapsed(list.model.groups().rows().get(hot.arg()).group()) ? tr("list.group.open")
+            case HEADER -> list.model.collapsed(list.model.tree().lines().get(hot.arg()).group()) ? tr("list.group.open")
                     : tr("list.group.close");
-            case PASTE_GROUP -> pasteGroupTooltip(list.model.groups().rows().get(hot.arg()).group());
+            case PASTE_GROUP -> pasteGroupTooltip(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> list.nodes.nodeTooltip(list.snapshot().nodes().get(hot.arg()), !list.multi);
             case FULL_SCREEN -> tr("open.tooltip");
             case COPY -> list.chosenPanel.canEdit() ? tr("list.copy.tooltip") : readOnlyTip();
             case PASTE -> !list.chosenPanel.canEdit() ? readOnlyTip()
                     : list.profile().map(s -> tr("list.paste.tooltip", s.sourceName())).orElse(null);
+            case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.tooltip(hot);
             case CLEAR, UNDO -> null;
         };
     }

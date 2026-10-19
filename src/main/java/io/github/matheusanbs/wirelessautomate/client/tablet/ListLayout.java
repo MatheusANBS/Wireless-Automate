@@ -46,8 +46,18 @@ final class ListLayout {
     private static final int NET_SMALL = 3 * 13 + 2 * 2;
     private static final int TALL = 300;
 
+    /**
+     * As áreas. Nas da árvore ({@link TreeRows}), o argumento é a linha da {@link ListTree}: a linha inteira
+     * ({@code TREE}), o ▸/▾ de um nó ou de um grupo, o Olho de uma máquina e o "Mostrar menos" de um grupo.
+     */
     enum Kind { LABEL, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
-        PASTE, UNDO }
+        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW;
+
+        /** Fica por cima da linha onde está. */
+        boolean onTop() {
+            return this == PASTE_GROUP || this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW;
+        }
+    }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -169,13 +179,16 @@ final class ListLayout {
             Component count = list.texts.countText();
             // o Selecionar e, com alguma máquina acesa, o Apagar todas ficam à direita
             int buttonsW = 62 + (HighlightRenderer.count() > 0 && !list.multi ? SelectBar.clearLitWidth(font) + 2 : 0);
-            int countW = Math.min(font.width(count), Math.max(0, listW - buttonsW - cw - 8));
-            if (!list.multi) {
+            int room = listW - buttonsW - cw - 8;
+            int countW = Math.min(font.width(count), Math.max(0, room));
+            // sem lugar nem para o Limpar ao lado dos botões, ele sai (o Esc e o ✕ da busca também limpam)
+            if (!list.multi && room >= 0) {
                 hots.add(new Hot(Kind.CLEAR, x0 + countW + 4, barY(), cw + 2, BAR_H, 0));
             }
         }
         arrangePanel(font);
-        if (list.revealKey != null && revealNow()) {
+        int reveal = revealLine();
+        if (reveal >= 0 && scrollTo(reveal)) {
             compute();
         }
     }
@@ -266,19 +279,19 @@ final class ListLayout {
     }
 
     /** Altura de uma linha da lista. */
-    private static int rowHeight(ListGroups.Row<ResourceLocation> row) {
-        return row.header() ? HEADER_ROW : NODE_ROW;
+    private int rowHeight(ListTree.Line<ResourceLocation> line) {
+        return TreeRows.height(line, line.kind().tree() ? list.model.row(line) : null);
     }
 
-    /** Linhas desenháveis: as dos grupos e, se o servidor cortou o resultado, a do limite. */
+    /** Linhas desenháveis: as da árvore e, se o servidor cortou o resultado, a do limite. */
     int rowCount() {
         TabletSnapshot s = list.snapshot();
-        return list.model.groups().rows().size() + (s.matchingNodes() > s.nodes().size() ? 1 : 0);
+        return list.model.tree().lines().size() + (s.matchingNodes() > s.nodes().size() ? 1 : 0);
     }
 
     private int height(int row) {
-        List<ListGroups.Row<ResourceLocation>> rows = list.model.groups().rows();
-        return row < rows.size() ? rowHeight(rows.get(row)) : LIMIT_ROW;
+        List<ListTree.Line<ResourceLocation>> lines = list.model.tree().lines();
+        return row < lines.size() ? rowHeight(lines.get(row)) : LIMIT_ROW;
     }
 
     int maxScroll() {
@@ -294,26 +307,31 @@ final class ListLayout {
 
     private void arrangeRows(Font font) {
         list.scroll = Math.max(0, Math.min(list.scroll, maxScroll()));
-        List<ListGroups.Row<ResourceLocation>> rows = list.model.groups().rows();
+        List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
         int y = rowsTop;
         drawnUntil = list.scroll;
         for (int r = list.scroll; r < rows.size(); r++) {
-            ListGroups.Row<ResourceLocation> row = rows.get(r);
+            ListTree.Line<ResourceLocation> row = rows.get(r);
             int h = rowHeight(row);
             if (y + h > rowsBottom) {
                 break;
             }
             drawnUntil = r + 1;
-            if (row.header()) {
-                hots.add(new Hot(Kind.HEADER, x0, y, listW, h, r));
-                int n = list.profileActions.pasteCount(row.group());
-                if (n > 0) {
-                    Component label = pasteGroupLabel(font, row, n);
-                    int bw = font.width(label) + 8;
-                    hots.add(new Hot(Kind.PASTE_GROUP, x0 + listW - bw - 2, y + 1, bw, h - 2, r));
+            switch (row.kind()) {
+                case HEADER -> {
+                    hots.add(new Hot(Kind.HEADER, x0, y, listW, h, r));
+                    int n = list.profileActions.pasteCount(row.group());
+                    if (n > 0) {
+                        Component label = pasteGroupLabel(font, row, n);
+                        int bw = font.width(label) + 8;
+                        hots.add(new Hot(Kind.PASTE_GROUP, x0 + listW - bw - 2, y + 1, bw, h - 2, r));
+                    }
                 }
-            } else {
-                hots.add(new Hot(Kind.ROW, x0, y, listW, h, row.node()));
+                case NODE -> {
+                    hots.add(new Hot(Kind.ROW, x0, y, listW, h, row.node()));
+                    list.treeRows.arrangeNode(hots, list.snapshot().nodes().get(row.node()), r, x0, y, h);
+                }
+                default -> list.treeRows.arrange(font, hots, row, r, x0, y, listW, h);
             }
             y += h;
         }
@@ -381,7 +399,7 @@ final class ListLayout {
      * O texto do "Colar nas N" do cabeçalho: inteiro, "Colar N" ou só o número, o primeiro que deixa o nome do
      * grupo legível ao lado (a dica do botão diz tudo).
      */
-    Component pasteGroupLabel(Font font, ListGroups.Row<ResourceLocation> row, int n) {
+    Component pasteGroupLabel(Font font, ListTree.Line<ResourceLocation> row, int n) {
         int name = font.width(list.texts.machineName(row.group()) + " · "
                 + Math.max(row.count(), list.snapshot().groupCount(row.group())));
         int want = Math.min(name, GROUP_NAME_MIN);
@@ -412,8 +430,8 @@ final class ListLayout {
         Hot found = null;
         for (Hot hot : hots) {
             if (hot.contains(mx, my)) {
-                // o botão do cabeçalho fica por cima do cabeçalho
-                if (found == null || hot.kind() == Kind.PASTE_GROUP) {
+                // os botões de dentro de uma linha ficam por cima dela
+                if (found == null || hot.kind().onTop()) {
                     found = hot;
                 }
             }
@@ -421,13 +439,23 @@ final class ListLayout {
         return found;
     }
 
-    /** Rola até a linha de {@link TabletList#revealKey}, se ela já está na lista; devolve se rolou. */
-    private boolean revealNow() {
-        int row = list.model.groups().rowOfNode(list.model.indexOf(list.revealKey));
-        if (row < 0) {
-            return false;
+    /**
+     * A linha a pôr na vista agora: a de {@link TabletList#revealKey}, se ela já está na lista, ou a que as setas
+     * marcaram na árvore ({@link TreeNav#takeReveal}); -1 sem nenhuma.
+     */
+    private int revealLine() {
+        if (list.revealKey != null) {
+            int row = list.model.tree().lineOfNode(list.model.indexOf(list.revealKey));
+            if (row >= 0) {
+                list.revealKey = null;
+            }
+            return row;
         }
-        list.revealKey = null;
+        return list.treeNav.takeReveal();
+    }
+
+    /** Rola até a linha {@code row}; devolve se rolou. */
+    private boolean scrollTo(int row) {
         int before = list.scroll;
         if (row < list.scroll) {
             list.scroll = row;

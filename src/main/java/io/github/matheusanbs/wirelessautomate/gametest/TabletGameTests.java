@@ -1184,7 +1184,7 @@ public final class TabletGameTests {
                 }
                 nodes.add(new NodeView(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 64, -i)), "n" + i,
                         i == 1 ? furnace : chest, RouterTier.BASIC, List.copyOf(networks), 1, status, false, 5L << i,
-                        List.copyOf(rates), Optional.empty()));
+                        List.copyOf(rates), Optional.empty(), i));
             }
             return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes), TabletRows.EMPTY,
                     List.of(new TabletSnapshot.Facet<>(chest, 2), new TabletSnapshot.Facet<>(furnace, 1)),

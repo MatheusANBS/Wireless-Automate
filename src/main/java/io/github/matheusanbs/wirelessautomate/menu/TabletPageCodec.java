@@ -93,6 +93,7 @@ final class TabletPageCodec {
                     b.writeEnum(match.what());
                 }
             });
+            buf.writeVarInt(n.linked());
         }
         TabletRows.encode(buf, page.rows(), machines);
         buf.writeVarInt(page.groupCounts().size());
@@ -186,8 +187,9 @@ final class TabletPageCodec {
             Optional<ProfileMatch> profile = buf.readOptional(b -> b.readBoolean() ? ProfileMatch.EQUAL
                     : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
                             b.readEnum(What.class)));
+            int linked = buf.readVarInt();
             nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
-                    faceModes, live.rates(), profile));
+                    faceModes, live.rates(), profile, linked));
         }
         TabletRows rows = TabletRows.decode(buf, machines, nodeCount);
         int groupCount = readCount(buf, MAX_NODES);

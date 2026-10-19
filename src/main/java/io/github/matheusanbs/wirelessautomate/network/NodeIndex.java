@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -52,7 +53,8 @@ import org.jetbrains.annotations.Nullable;
  * tipo (presa, perfis e exceções, chave {@code face_networks}; a {@code networks} antiga, uma rede por
  * tipo, só é lida, para migrar), os papéis (um
  * resumo dos modos das faces por tipo, ver {@link #role}), os modos de cada face (chave {@code face_modes},
- * ver {@link #faceModes}; sem a chave, tudo Nenhum), o bloco da máquina e quem colocou.
+ * ver {@link #faceModes}; sem a chave, tudo Nenhum), o bloco da máquina, quem colocou e as máquinas
+ * vinculadas ({@link IndexRemotes}, só com máquinas).
  * Uma entrada pode ficar velha se o bloco sumir sem passar pelo {@code onRemove} (região apagada):
  * quando o chunk dela carrega, a entrada sem roteador ali sai ({@link #chunkLoaded}, pelo bloco do chunk que
  * acabou de carregar, sem carregar nenhum outro), e o Tablet também a apaga quando acha o chunk carregado sem
@@ -112,6 +114,7 @@ public final class NodeIndex extends SavedData {
         private long faceModes;
         private ResourceLocation machine = BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR);
         private @Nullable UUID placedBy;
+        private IndexRemotes remotes = IndexRemotes.EMPTY;
         /** O roteador carregado; não é salvo. */
         private @Nullable RouterBlockEntity router;
         /** Texto da busca do Tablet, feito na primeira busca e refeito só quando o nó muda; não é salvo. */
@@ -177,7 +180,7 @@ public final class NodeIndex extends SavedData {
             return roles;
         }
 
-        /** O modo de cada face da máquina presa, em bits ({@link NodeIndex#faceModes}). */
+        /** O modo de cada lado, juntando presa, perfis e exceções, em bits ({@link NodeIndex#faceModes}). */
         public long faceModes() {
             return faceModes;
         }
@@ -194,6 +197,11 @@ public final class NodeIndex extends SavedData {
 
         public @Nullable UUID placedBy() {
             return placedBy;
+        }
+
+        /** As máquinas vinculadas e os grupos, na ordem do roteador. Só leitura, sem cópia. */
+        public IndexRemotes remotes() {
+            return remotes;
         }
 
         /** O roteador, se o chunk está carregado. */
@@ -243,6 +251,10 @@ public final class NodeIndex extends SavedData {
             long newModes = NodeIndex.faceModes(from);
             if (newModes != faceModes) {
                 faceModes = newModes;
+                changed = true;
+            }
+            if (!remotes.matches(from.remoteMachines())) {
+                remotes = IndexRemotes.of(from.remoteMachines());
                 changed = true;
             }
             Level level = from.getLevel();
@@ -303,6 +315,7 @@ public final class NodeIndex extends SavedData {
             if (placedBy != null) {
                 tag.putUUID("placedBy", placedBy);
             }
+            remotes.save(tag);
             return tag;
         }
 
@@ -347,6 +360,7 @@ public final class NodeIndex extends SavedData {
                 entry.machine = machine;
             }
             entry.placedBy = tag.hasUUID("placedBy") ? tag.getUUID("placedBy") : null;
+            entry.remotes = IndexRemotes.load(tag);
             return entry;
         }
     }
@@ -372,19 +386,22 @@ public final class NodeIndex extends SavedData {
     }
 
     /**
-     * Os modos das faces da máquina presa em bits, pelos lados dela ({@link RemoteSide}, relativos à frente da
-     * máquina, como o painel do nó mostra): para cada tipo na ordem do {@link ResourceType} e cada lado na ordem
+     * Os modos das faces em bits, pelos lados ({@link RemoteSide}, relativos à frente de cada máquina, como o
+     * painel do nó mostra), com o modo mais forte de cada lado entre a presa, os perfis e as exceções
+     * ({@link IndexRemotes#stronger}): para cada tipo na ordem do {@link ResourceType} e cada lado na ordem
      * do enum, 2 bits com o ordinal do {@link PortMode}, a partir do menos significativo (o lado {@code s} do tipo
      * {@code t} começa no bit {@code (t * 6 + s) * 2}). Sem a frente da máquina (chunk dela descarregado), vale a
      * de Norte, como no painel.
      */
     public static long faceModes(RouterBlockEntity router) {
         int front = router.attachedFront();
+        RemoteMachines remotes = router.remoteMachines();
         long bits = 0;
         for (ResourceType type : TYPES) {
             for (RemoteSide side : SIDES) {
                 Direction face = DIRECTIONS[side.toAbsolute(front)];
-                bits |= (long) router.face(type, face).mode().ordinal() << faceShift(type, side);
+                PortMode mode = IndexRemotes.strongest(router.face(type, face).mode(), remotes, type, side);
+                bits |= (long) mode.ordinal() << faceShift(type, side);
             }
         }
         return bits;
@@ -399,22 +416,28 @@ public final class NodeIndex extends SavedData {
         return (type.ordinal() * SIDES.length + side.ordinal()) * 2;
     }
 
-    /** Papéis do roteador pelas faces configuradas (modo, sem olhar redstone): Armazém conta só como armazém. */
+    /**
+     * Papéis do roteador pelas faces configuradas da presa, dos perfis e das exceções (modo, sem olhar redstone):
+     * Armazém conta só como armazém.
+     */
     public static int roles(RouterBlockEntity router) {
         int roles = 0;
         for (ResourceType type : TYPES) {
             for (Direction face : DIRECTIONS) {
-                PortMode mode = router.face(type, face).mode();
-                switch (mode) {
-                    case EXTRACT -> roles |= role(type, EXTRACT);
-                    case INSERT -> roles |= role(type, INSERT);
-                    case BOTH -> roles |= role(type, STORAGE);
-                    case NONE -> {
-                    }
-                }
+                roles |= roleOf(type, router.face(type, face).mode());
             }
         }
-        return roles;
+        return roles | IndexRemotes.roles(router.remoteMachines());
+    }
+
+    /** O bit do papel de uma face do tipo {@code type} no modo {@code mode}; 0 em Nenhum. */
+    static int roleOf(ResourceType type, PortMode mode) {
+        return switch (mode) {
+            case EXTRACT -> role(type, EXTRACT);
+            case INSERT -> role(type, INSERT);
+            case BOTH -> role(type, STORAGE);
+            case NONE -> 0;
+        };
     }
 
     // ------------------------------------------------------------------ avisos do roteador
@@ -546,7 +569,7 @@ public final class NodeIndex extends SavedData {
 
     /**
      * Muda só quando um dado salvo do índice muda (nó novo ou removido, nome, tier, redes, papéis, modos das faces,
-     * máquina, quem colocou); carregar e descarregar chunks não mexe nela.
+     * máquina, quem colocou, máquinas vinculadas); carregar e descarregar chunks não mexe nela.
      */
     public int dataVersion() {
         return dataVersion;

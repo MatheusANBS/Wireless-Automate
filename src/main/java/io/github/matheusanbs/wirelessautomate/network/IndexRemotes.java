@@ -1,13 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
-import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Arrays;
-import java.util.List;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.ListTag;
@@ -36,22 +33,19 @@ public final class IndexRemotes {
     public static final IndexRemotes EMPTY = new IndexRemotes(new long[0], new int[0], new int[0], null, 0,
             new int[0], new ResourceLocation[0], new String[0], new int[0]);
 
-    private static final ResourceType[] TYPES = ResourceType.values();
-    private static final RemoteSide[] SIDES = RemoteSide.values();
-
     private final long[] pos;
     private final int[] group;
     /** Os índices das máquinas com exceção, em ordem crescente. */
     private final int[] exceptions;
     /** O rótulo de cada máquina ({@code null} = sem rótulo), ou {@code null} se nenhuma tem. */
-    private final @Nullable String[] labels;
+    private final String @Nullable [] labels;
     private final int total;
     private final int[] groupIds;
     private final ResourceLocation[] groupBlocks;
     private final String[] groupNames;
     private final int[] groupCounts;
 
-    private IndexRemotes(long[] pos, int[] group, int[] exceptions, @Nullable String[] labels, int total,
+    private IndexRemotes(long[] pos, int[] group, int[] exceptions, String @Nullable [] labels, int total,
             int[] groupIds, ResourceLocation[] groupBlocks, String[] groupNames, int[] groupCounts) {
         this.pos = pos;
         this.group = group;
@@ -136,15 +130,13 @@ public final class IndexRemotes {
     // ------------------------------------------------------------------ do roteador
 
     /** Estas são as máquinas e os grupos de {@code remotes}. Sem alocar. */
-    public boolean matches(RemoteMachines remotes) {
-        List<RemoteMachine> machines = remotes.machines();
-        List<MachineGroup> groups = remotes.groups();
-        if (machines.size() != total || groups.size() != groupIds.length) {
+    boolean matches(RemoteMachines remotes) {
+        if (remotes.size() != total || remotes.groupCount() != groupIds.length) {
             return false;
         }
         int exception = 0;
         for (int i = 0; i < pos.length; i++) {
-            RemoteMachine machine = machines.get(i);
+            RemoteMachine machine = remotes.machine(i);
             if (machine.pos().asLong() != pos[i] || machine.group() != group[i] || !machine.label().equals(label(i))) {
                 return false;
             }
@@ -157,43 +149,49 @@ public final class IndexRemotes {
             }
         }
         for (int g = 0; g < groupIds.length; g++) {
-            MachineGroup now = groups.get(g);
+            MachineGroup now = remotes.groupAt(g);
             if (now.id() != groupIds[g] || !now.block().equals(groupBlocks[g]) || !now.name().equals(groupNames[g])) {
                 return false;
             }
         }
-        return countsMatch(machines);
+        return total <= CAP || countsMatch(remotes);
     }
 
-    /** As contagens dos grupos só mudam com as máquinas acima do teto: abaixo dele, as de cima já bateram. */
-    private boolean countsMatch(List<RemoteMachine> machines) {
-        if (total <= CAP) {
-            return true;
-        }
-        int[] counts = new int[groupIds.length];
-        for (RemoteMachine machine : machines) {
-            int g = groupIndex(machine.group());
-            if (g >= 0) {
-                counts[g]++;
+    /**
+     * Acima do teto, as máquinas de fora das guardadas só aparecem nas contagens dos grupos. Uma contagem por
+     * grupo, que para na primeira diferença; só roda acima do teto.
+     */
+    private boolean countsMatch(RemoteMachines remotes) {
+        int machines = remotes.size();
+        for (int g = 0; g < groupIds.length; g++) {
+            int id = groupIds[g];
+            int count = 0;
+            for (int i = 0; i < machines; i++) {
+                if (remotes.machine(i).group() == id) {
+                    count++;
+                }
+            }
+            if (count != groupCounts[g]) {
+                return false;
             }
         }
-        return Arrays.equals(counts, groupCounts);
+        return true;
     }
 
-    public static IndexRemotes of(RemoteMachines remotes) {
-        List<RemoteMachine> machines = remotes.machines();
-        List<MachineGroup> groups = remotes.groups();
-        if (machines.isEmpty() && groups.isEmpty()) {
+    static IndexRemotes of(RemoteMachines remotes) {
+        int machines = remotes.size();
+        int groups = remotes.groupCount();
+        if (machines == 0 && groups == 0) {
             return EMPTY;
         }
-        int size = Math.min(machines.size(), CAP);
+        int size = Math.min(machines, CAP);
         long[] pos = new long[size];
         int[] group = new int[size];
         int[] exceptions = new int[size];
         int exceptionCount = 0;
         String[] labels = null;
         for (int i = 0; i < size; i++) {
-            RemoteMachine machine = machines.get(i);
+            RemoteMachine machine = remotes.machine(i);
             pos[i] = machine.pos().asLong();
             group[i] = machine.group();
             if (machine.hasException()) {
@@ -206,23 +204,23 @@ public final class IndexRemotes {
                 labels[i] = machine.label();
             }
         }
-        int[] groupIds = new int[groups.size()];
-        ResourceLocation[] groupBlocks = new ResourceLocation[groups.size()];
-        String[] groupNames = new String[groups.size()];
-        for (int g = 0; g < groupIds.length; g++) {
-            MachineGroup now = groups.get(g);
+        int[] groupIds = new int[groups];
+        ResourceLocation[] groupBlocks = new ResourceLocation[groups];
+        String[] groupNames = new String[groups];
+        for (int g = 0; g < groups; g++) {
+            MachineGroup now = remotes.groupAt(g);
             groupIds[g] = now.id();
             groupBlocks[g] = now.block();
             groupNames[g] = now.name();
         }
         int[] groupCounts = new int[groupIds.length];
-        for (RemoteMachine machine : machines) {
-            int g = indexOf(groupIds, machine.group());
+        for (int i = 0; i < machines; i++) {
+            int g = indexOf(groupIds, remotes.machine(i).group());
             if (g >= 0) {
                 groupCounts[g]++;
             }
         }
-        return new IndexRemotes(pos, group, Arrays.copyOf(exceptions, exceptionCount), labels, machines.size(),
+        return new IndexRemotes(pos, group, Arrays.copyOf(exceptions, exceptionCount), labels, machines,
                 groupIds, groupBlocks, groupNames, groupCounts);
     }
 
@@ -235,71 +233,14 @@ public final class IndexRemotes {
         return -1;
     }
 
-    /** Os papéis ({@link NodeIndex#role}) dos perfis dos grupos e das exceções; Armazém conta como armazém. */
-    static int roles(RemoteMachines remotes) {
-        int roles = 0;
-        for (MachineGroup group : remotes.groups()) {
-            roles |= roles(group.profile());
-        }
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineConfig exception = machine.exception();
-            if (exception != null) {
-                roles |= roles(exception);
-            }
-        }
-        return roles;
-    }
-
-    private static int roles(MachineConfig config) {
-        int roles = 0;
-        for (ResourceType type : TYPES) {
-            for (RemoteSide side : SIDES) {
-                roles |= NodeIndex.roleOf(type, config.face(type, side).mode());
-            }
-        }
-        return roles;
-    }
-
-    /**
-     * O modo mais forte ({@link #stronger}) do lado {@code side} do tipo {@code type} entre {@code mode} e os
-     * perfis e exceções de {@code remotes}.
-     */
-    static PortMode strongest(PortMode mode, RemoteMachines remotes, ResourceType type, RemoteSide side) {
-        for (MachineGroup group : remotes.groups()) {
-            mode = stronger(mode, group.profile().face(type, side).mode());
-        }
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineConfig exception = machine.exception();
-            if (exception != null) {
-                mode = stronger(mode, exception.face(type, side).mode());
-            }
-        }
-        return mode;
-    }
-
-    /**
-     * Extrai &gt; Insere &gt; Armazém &gt; Nenhum. Os 2 bits do {@code faceModes} são um ordinal e não bandeiras:
-     * o OU de Extrai (1) e Insere (2) daria Armazém (3), um modo que nenhuma máquina tem.
-     */
-    static PortMode stronger(PortMode a, PortMode b) {
-        return rank(b) > rank(a) ? b : a;
-    }
-
-    private static int rank(PortMode mode) {
-        return switch (mode) {
-            case EXTRACT -> 3;
-            case INSERT -> 2;
-            case BOTH -> 1;
-            case NONE -> 0;
-        };
-    }
-
     // ------------------------------------------------------------------ NBT
 
-    public void save(CompoundTag tag) {
+    void save(CompoundTag tag) {
         if (isEmpty()) {
             return;
         }
+        // As tags de array guardam os arrays deste objeto, sem cópia: a tag fica no cache da entrada
+        // (Entry.saved) e ninguém a altera, como os arrays daqui, que não mudam depois de prontos.
         tag.put("remote_pos", new LongArrayTag(pos));
         tag.put("remote_group", new IntArrayTag(group));
         if (exceptions.length > 0) {
@@ -335,7 +276,7 @@ public final class IndexRemotes {
     }
 
     /** Lê o formato de {@link #save}; sem as chaves (o formato antigo), sem máquinas. */
-    public static IndexRemotes load(CompoundTag tag) {
+    static IndexRemotes load(CompoundTag tag) {
         if (!tag.contains("remote_groups", Tag.TAG_LIST)) {
             return EMPTY;
         }
@@ -396,5 +337,28 @@ public final class IndexRemotes {
             }
         }
         return new IndexRemotes(pos, group, exceptions, labels, total, groupIds, groupBlocks, groupNames, groupCounts);
+    }
+
+    // ------------------------------------------------------------------ só para os GameTests
+
+    /** {@link #of} para os GameTests. */
+    public static IndexRemotes ofForTests(RemoteMachines remotes) {
+        return of(remotes);
+    }
+
+    /** {@link #matches} para os GameTests. */
+    public boolean matchesForTests(RemoteMachines remotes) {
+        return matches(remotes);
+    }
+
+    /** {@link #save} numa tag nova e {@link #load} de volta, para os GameTests. */
+    public static IndexRemotes roundTripForTests(IndexRemotes remotes, CompoundTag into) {
+        remotes.save(into);
+        return load(into);
+    }
+
+    /** {@link #load} para os GameTests. */
+    public static IndexRemotes loadForTests(CompoundTag tag) {
+        return load(tag);
     }
 }

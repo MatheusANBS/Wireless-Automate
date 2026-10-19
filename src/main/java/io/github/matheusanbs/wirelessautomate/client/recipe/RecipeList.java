@@ -14,6 +14,7 @@ import static io.github.matheusanbs.wirelessautomate.client.recipe.RecipeLayout.
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorSnapshot.Row;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,10 @@ final class RecipeList {
     private int scroll;
     private String search = "";
     private EditBox searchBox;
+    /** As linhas da busca, refeitas só quando o snapshot ou a busca mudam (não a cada quadro). */
+    private List<Row> visible = List.of();
+    private @Nullable RecipeEditorSnapshot visibleFor;
+    private String visibleSearch = "";
 
     RecipeList(RecipeEditorMenu menu) {
         this.menu = menu;
@@ -61,14 +66,21 @@ final class RecipeList {
     }
 
     List<Row> visibleRows() {
+        RecipeEditorSnapshot snapshot = menu.snapshot();
+        if (snapshot == visibleFor && search.equals(visibleSearch)) {
+            return visible;
+        }
         String q = search.trim().toLowerCase(Locale.ROOT);
         List<Row> out = new ArrayList<>();
-        for (Row row : menu.snapshot().rows()) {
+        for (Row row : snapshot.rows()) {
             if (q.isEmpty() || resultStack(row).getHoverName().getString().toLowerCase(Locale.ROOT).contains(q)
                     || row.id().getPath().contains(q)) {
                 out.add(row);
             }
         }
+        visible = out;
+        visibleFor = snapshot;
+        visibleSearch = search;
         return out;
     }
 

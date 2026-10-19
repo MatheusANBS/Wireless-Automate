@@ -620,8 +620,13 @@ public final class StorageGameTests {
     public static void recoverCommandGivesTheContentsBack(GameTestHelper helper) {
         StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.ELITE);
         chest.storage().insert(new ItemStack(Items.DIAMOND), 777, false);
-        // Sai do mundo sem drop nenhum, como um /setblock: o conteúdo fica órfão no servidor.
-        helper.getLevel().setBlock(helper.absolutePos(A), Blocks.AIR.defaultBlockState(), 3);
+        // Quebrado com drop, e o item some (lava, despawn): o conteúdo fica órfão no servidor.
+        BlockPos absolute = helper.absolutePos(A);
+        helper.getLevel().destroyBlock(absolute, true);
+        for (ItemEntity drop : helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(1.5),
+                entity -> entity.getItem().is(ModItems.STORAGE_CHEST.get()))) {
+            drop.discard();
+        }
         UUID orphan = null;
         for (Map.Entry<UUID, StorageSavedData.Stored> entry : StorageSavedData.get(helper.getLevel().getServer()).contents().entrySet()) {
             if (entry.getValue().data() instanceof ListTag list && list.size() == 1

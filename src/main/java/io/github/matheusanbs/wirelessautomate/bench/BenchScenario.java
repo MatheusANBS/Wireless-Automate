@@ -49,12 +49,18 @@ public enum BenchScenario {
             "Pares: como Muitos nós, mas cada origem numa rede só com o destino vizinho (muitas redes pequenas)"),
     INFINITE("inf", 2, RouterTier.ULTIMATE, 60, 0,
             "Fonte e ralo infinitos: pares de máquinas de teste (pilha enorme para ralo), tier Ultimate, sem gargalo de inventário"),
+    HUB("hub", 250, RouterTier.ELITE, 60, 20,
+            "Baú central: um Baú do mod Elite de destino, com um roteador, e todas as outras máquinas origens cheias de pedregulho"),
+    CHEST_TYPES("chesttypes", 20, RouterTier.ELITE, 60, 20,
+            "Baú com milhares de tipos: pares de origem cheia de pedregulho e destino Baú do mod Elite com 2.000 tipos de papel e lista branca de pedregulho com estoque"),
     RESONATOR_GEN("resonator-gen", 100, RouterTier.ULTIMATE, 100, 0,
             "Ressonadores gerando: Ultimate montados e sintonizados, 8 Lapidados, cada um com um roteador na Porta de Energia para uma Bateria"),
     RESONATOR_IDLE("resonator-idle", 500, RouterTier.ULTIMATE, 300, 0,
             "Ressonadores ociosos: os mesmos, sem roteador; o buffer enche em 10 s e para (o custo de existir)"),
     RESONATOR_EVENT("resonator-event", 50, RouterTier.ULTIMATE, 100, 0,
-            "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois");
+            "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois"),
+    RANGE("range", 200, RouterTier.ULTIMATE, 100, 0,
+            "Alcance: roteadores Ultimate com o Upgrade de Alcance, cada um com 64 barris vazios vinculados num grupo que extrai, nada para mover");
 
     public final String id;
     public final int defaultNodes;
@@ -89,8 +95,22 @@ public enum BenchScenario {
     public boolean comparable() {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
-            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, RESONATOR_GEN, RESONATOR_IDLE, RESONATOR_EVENT -> false;
+            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
+                    RESONATOR_EVENT, RANGE -> false;
         };
+    }
+
+    /** O destino é sempre o Baú do mod ({@link BenchStorage#chest()}), qualquer que seja o armazenamento das origens. */
+    public boolean modChestDestination() {
+        return this == HUB || this == CHEST_TYPES;
+    }
+
+    /**
+     * Mede o heap que a cena retém ({@link BenchRun}): um GC completo antes de montar e outro antes de medir, fora
+     * do tempo medido. Só onde a memória é o que se quer ver, porque o GC atrapalha os outros cenários.
+     */
+    public boolean measuresMemory() {
+        return this == RANGE;
     }
 
     /** Tem os relógios de redstone em cima dos roteadores. */

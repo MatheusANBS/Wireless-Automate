@@ -29,8 +29,9 @@ import net.minecraft.world.item.ItemStack;
 /**
  * {@code /wa storage}: o conteúdo dos armazenamentos do mod guardado no servidor enquanto eles são item.
  * {@code list} mostra cada um (tipo, total e tipos); {@code recover <id>} dá ao jogador o bloco que aponta
- * para aquele conteúdo, para recuperar o de um bloco que sumiu sem virar item (quebrado sem drop
- * antes da correção, {@code /setblock}, outro mod). É seguro: colocar tira o conteúdo do servidor,
+ * para aquele conteúdo, para recuperar o de um item que sumiu depois de cair (lava, despawn, vazio), dentro
+ * do prazo do {@link StorageSavedData} (um bloco que sai sem drop nenhum não guarda nada; ver as regras
+ * lá). É seguro: colocar tira o conteúdo do servidor,
  * então se o item original também existir, o primeiro a ser colocado leva tudo e o outro nasce
  * vazio, sem duplicar. Só para operadores.
  */

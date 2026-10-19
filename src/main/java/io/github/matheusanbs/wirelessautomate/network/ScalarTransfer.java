@@ -91,7 +91,7 @@ final class ScalarTransfer {
                 if (received > 0) {
                     Port destination = pass.get(i);
                     destination.destinationBackoff.wake();
-                    destination.got += received;
+                    destination.addGot(received);
                     order.delivered(destination);
                     if (source.network != null) {
                         source.network.ops++;
@@ -107,7 +107,7 @@ final class ScalarTransfer {
         Arrays.fill(targets, 0, count, null);
         if (delivered > 0) {
             source.node.addMoved(source.type, delivered);
-            source.gave += delivered;
+            source.addGave(delivered);
             source.limiter.consume(delivered);
             source.sourceBackoff.wake();
             return true;

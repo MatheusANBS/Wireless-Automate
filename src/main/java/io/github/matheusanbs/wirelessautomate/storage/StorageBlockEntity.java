@@ -14,8 +14,10 @@ import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,8 +25,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Base dos block entities de armazenamento do mod (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source). Não faz
- * tick: só guarda o conteúdo e, a cada mudança, chama {@link #setChanged()}, que salva o chunk e
- * avisa os vizinhos; é esse aviso que acorda os roteadores presos nele.
+ * tick: só guarda o conteúdo e, a cada mudança, chama {@link #markContentsChanged()}, que marca o chunk na
+ * hora e põe o aviso aos vizinhos na fila do {@link StorageNeighbors}, um por tick; é esse aviso que
+ * acorda os roteadores presos nele e atualiza o comparador.
  *
  * <p>Nada do conteúdo vai para o cliente pelo bloco: a tela, quando aberta, recebe o que mostra.
  *
@@ -44,6 +47,10 @@ public abstract class StorageBlockEntity extends BlockEntity {
     private Filter filter = Filter.EMPTY;
     /** Sobe quando o filtro muda: a tela de filtro aberta reenvia a visão. */
     private int filterVersion;
+    /** Já está na fila do {@link StorageNeighbors} neste tick. */
+    boolean neighborsQueued;
+    /** Um item com a referência deste conteúdo foi feito ou vai ser feito pela quebra ({@link #stash}). */
+    private boolean dropExpected;
 
     protected StorageBlockEntity(BlockEntityType<?> type, StorageKind kind, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -90,6 +97,36 @@ public abstract class StorageBlockEntity extends BlockEntity {
     /** Abre a tela do bloco para o jogador. */
     public abstract void open(ServerPlayer player);
 
+    /**
+     * O conteúdo mudou de verdade: marca o chunk para salvar (e o {@code LevelMixin} acorda os roteadores
+     * de alcance que vinculam este bloco) e, no servidor, põe o aviso aos vizinhos na fila do tick, uma vez
+     * só por mais mudanças que haja.
+     */
+    protected final void markContentsChanged() {
+        Level current = level;
+        if (current == null) {
+            return;
+        }
+        current.blockEntityChanged(worldPosition);
+        if (!current.isClientSide && !neighborsQueued) {
+            neighborsQueued = true;
+            StorageNeighbors.enqueue(this);
+        }
+    }
+
+    /** O aviso da fila: o que o {@code setChanged} faria depois de marcar o chunk. */
+    void flushNeighbors() {
+        neighborsQueued = false;
+        Level current = level;
+        if (current == null || isRemoved()) {
+            return;
+        }
+        BlockState state = getBlockState();
+        if (!state.isAir()) {
+            current.updateNeighbourForOutputSignal(worldPosition, state.getBlock());
+        }
+    }
+
     // ------------------------------------------------------------------ filtro de entrada
 
     public Filter filter() {
@@ -133,12 +170,30 @@ public abstract class StorageBlockEntity extends BlockEntity {
      * ({@code removeBlock}, que chama isto) <b>antes</b> de a loot table montar o drop
      * ({@code playerDestroy}), lendo este mesmo block entity. Esvaziado, o item cairia sem a
      * referência e o conteúdo ficaria órfão. O block entity é descartado logo depois.
+     *
+     * <p>Só guarda se um item com a referência foi feito ({@link #collectImplicitComponents}: a loot table da
+     * explosão, de {@code destroyBlock} ou da broca de outro mod, que roda antes de tirar o bloco, e o drop do
+     * próprio bloco no criativo) ou vai ser ({@link #expectDrop}: a loot table do sobrevivência, que roda
+     * depois). Sem drop nenhum ({@code /setblock}, {@code /fill}), o conteúdo some com o bloco e o
+     * {@link StorageSavedData} não cresce à toa.
      */
     void stash() {
         if (isEmptyContents() || !(level instanceof ServerLevel server)) {
             return;
         }
-        StorageSavedData.get(server.getServer()).put(storageId(), kind, tier(), saveContents(server.registryAccess()));
+        if (!dropExpected) {
+            WirelessAutomate.LOGGER.info("{} em {} saiu do mundo sem drop: {} unidades em {} tipos descartadas",
+                    kind.getSerializedName(), worldPosition, total(), types());
+            return;
+        }
+        MinecraftServer minecraft = server.getServer();
+        StorageSavedData.get(minecraft).put(storageId(), kind, tier(), saveContents(server.registryAccess()),
+                StorageSavedData.now(minecraft));
+    }
+
+    /** A quebra vai rodar a loot table depois de tirar o bloco (sobrevivência com a ferramenta certa). */
+    void expectDrop() {
+        dropExpected = true;
     }
 
     @Override
@@ -173,6 +228,8 @@ public abstract class StorageBlockEntity extends BlockEntity {
         super.collectImplicitComponents(components);
         if (!isEmptyContents()) {
             components.set(ModDataComponents.STORAGE_CONTENTS.get(), new StorageContents(storageId(), types(), total()));
+            // Um item com a referência existe: se o bloco sair agora, o conteúdo vai para o StorageSavedData.
+            dropExpected = true;
         }
         if (!filter.isEmpty()) {
             components.set(ModDataComponents.STORAGE_FILTER.get(), filter);

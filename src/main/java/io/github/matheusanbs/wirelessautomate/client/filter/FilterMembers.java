@@ -12,7 +12,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,13 +22,42 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O que uma tag ou um mod pega, para os ícones da lista e as prévias (até 64), e quantos itens (ou
- * fluidos) cada mod tem, para a busca {@code @mod}. Montado sob demanda e guardado enquanto a tela vive.
+ * fluidos) cada mod tem, para a busca {@code @mod}. Montado sob demanda e guardado enquanto a tela vive; o
+ * agrupamento por mod sai de uma passada só pelo registro ({@link ByMod}), guardada entre as aberturas.
  */
 final class FilterMembers {
+    /** Os primeiros itens (ou fluidos de fonte) de cada mod, até {@link #ICONS}, e quantos o mod tem. */
+    private record ByMod<T>(Map<String, List<T>> first, Map<String, Integer> counts) {
+        static <T> ByMod<T> of(Iterable<T> all, java.util.function.Function<T, String> modOf) {
+            Map<String, List<T>> first = new HashMap<>();
+            Map<String, Integer> counts = new HashMap<>();
+            for (T value : all) {
+                String mod = modOf.apply(value);
+                counts.merge(mod, 1, Integer::sum);
+                List<T> list = first.computeIfAbsent(mod, k -> new ArrayList<>());
+                if (list.size() < ICONS) {
+                    list.add(value);
+                }
+            }
+            return new ByMod<>(first, counts);
+        }
+
+        List<T> firstOf(String mod) {
+            return first.getOrDefault(mod, List.of());
+        }
+    }
+
+    private static final int ICONS = 64;
+    /**
+     * Os registros de itens e fluidos do jogo ficam congelados depois da carga (as recargas de dados mexem nas
+     * tags, não nos registros), então a passada vale até o jogo fechar.
+     */
+    private static @Nullable ByMod<Item> itemsByMod;
+    private static @Nullable ByMod<Fluid> fluidsByMod;
+
     private final FilterScreen screen;
     private final Map<String, List<ItemStack>> itemIcons = new HashMap<>();
     private final Map<String, List<FluidStack>> fluidIcons = new HashMap<>();
-    private @Nullable Map<String, Integer> modCounts;
 
     FilterMembers(FilterScreen screen) {
         this.screen = screen;
@@ -45,10 +73,8 @@ final class FilterMembers {
             });
             case ModEntry e -> itemIcons.computeIfAbsent("@" + e.modId(), k -> {
                 List<ItemStack> list = new ArrayList<>();
-                for (Item item : BuiltInRegistries.ITEM) {
-                    if (list.size() < 64 && BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(e.modId())) {
-                        list.add(new ItemStack(item));
-                    }
+                for (Item item : itemsByMod().firstOf(e.modId())) {
+                    list.add(new ItemStack(item));
                 }
                 return list;
             });
@@ -67,11 +93,8 @@ final class FilterMembers {
             });
             case ModEntry e -> fluidIcons.computeIfAbsent("@" + e.modId(), k -> {
                 List<FluidStack> list = new ArrayList<>();
-                for (Fluid fluid : BuiltInRegistries.FLUID) {
-                    if (list.size() < 64 && isSource(fluid)
-                            && BuiltInRegistries.FLUID.getKey(fluid).getNamespace().equals(e.modId())) {
-                        list.add(new FluidStack(fluid, 1000));
-                    }
+                for (Fluid fluid : fluidsByMod().firstOf(e.modId())) {
+                    list.add(new FluidStack(fluid, 1000));
                 }
                 return list;
             });
@@ -88,24 +111,24 @@ final class FilterMembers {
         return fluid.builtInRegistryHolder().tags();
     }
 
-    /** Itens (ou fluidos) de cada mod, para a busca {@code @mod}; montado uma vez por tela. */
+    /** Itens (ou fluidos de fonte) de cada mod, para a busca {@code @mod}. */
     Map<String, Integer> modCounts() {
-        if (modCounts == null) {
-            Map<String, Integer> counts = new HashMap<>();
-            if (screen.isFluid()) {
-                for (Fluid fluid : BuiltInRegistries.FLUID) {
-                    if (isSource(fluid)) {
-                        counts.merge(BuiltInRegistries.FLUID.getKey(fluid).getNamespace(), 1, Integer::sum);
-                    }
-                }
-            } else {
-                for (ResourceLocation id : BuiltInRegistries.ITEM.keySet()) {
-                    counts.merge(id.getNamespace(), 1, Integer::sum);
-                }
-            }
-            modCounts = counts;
+        return screen.isFluid() ? fluidsByMod().counts() : itemsByMod().counts();
+    }
+
+    private static ByMod<Item> itemsByMod() {
+        if (itemsByMod == null) {
+            itemsByMod = ByMod.of(BuiltInRegistries.ITEM, item -> BuiltInRegistries.ITEM.getKey(item).getNamespace());
         }
-        return modCounts;
+        return itemsByMod;
+    }
+
+    private static ByMod<Fluid> fluidsByMod() {
+        if (fluidsByMod == null) {
+            fluidsByMod = ByMod.of(BuiltInRegistries.FLUID.stream().filter(FilterMembers::isSource).toList(),
+                    fluid -> BuiltInRegistries.FLUID.getKey(fluid).getNamespace());
+        }
+        return fluidsByMod;
     }
 
     int memberCount(TagEntry e) {

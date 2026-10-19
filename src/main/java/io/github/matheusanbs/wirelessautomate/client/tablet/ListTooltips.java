@@ -30,7 +30,7 @@ final class ListTooltips {
      * primeiro e a dica da área depois: a segunda linha de um nó e o cabeçalho do grupo cortados ficam legíveis.
      */
     @Nullable Component tooltip(double mx, double my) {
-        layout.arrange();
+        layout.arrangeForFrame();
         NodePanel p = list.chosenPanel.current();
         if (p != null && p.popupOpen()) {
             return null;

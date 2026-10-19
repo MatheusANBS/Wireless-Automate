@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -70,5 +72,14 @@ class StorageMathTest {
         assertEquals(1, StorageMath.halfTake(1, 1));
         assertEquals(8, StorageMath.halfTake(100, 16));
         assertEquals(0, StorageMath.halfTake(0, 64));
+    }
+
+    @Test
+    void stashExpiresAfterTheDays() {
+        long day = StorageMath.TICKS_PER_DAY;
+        assertFalse(StorageMath.stashExpired(1_000, 1_000 + 90 * day, 90), "no limite ainda vale");
+        assertTrue(StorageMath.stashExpired(1_000, 1_000 + 90 * day + 1, 90), "um tick depois vence");
+        assertFalse(StorageMath.stashExpired(0, 1_000 * day, 0), "0 é sem prazo");
+        assertFalse(StorageMath.stashExpired(5 * day, day, 1), "relógio que voltou não vence");
     }
 }

@@ -19,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A pergunta "este recurso passa?" é respondida por um matcher compilado em conjuntos de hash
  * e guardado no próprio filtro ({@link CompiledMatcher}); como o filtro é imutável, o matcher só
- * é refeito quando o filtro é trocado, e o mapa das tags quando elas recarregam.
+ * é refeito quando o filtro é trocado. As tags expandidas são compartilhadas entre os filtros
+ * ({@link TagExpansions}) e trocadas quando elas recarregam.
  */
 public final class Filter {
     public static final int MAX_ENTRIES = 4096;
@@ -216,6 +217,14 @@ public final class Filter {
     /** Alguma entrada casa com o químico de id {@code chemical} (sem olhar o modo da lista). */
     boolean matchesChemical(ResourceLocation chemical) {
         return !entries.isEmpty() && chemicals().index(chemical) >= 0;
+    }
+
+    /**
+     * Para GameTests: a expansão de tags que o filtro de itens usa agora (compartilhada entre os filtros com as
+     * mesmas tags), ou {@code null} sem tags.
+     */
+    public @Nullable Object itemTagExpansionForTests() {
+        return entries.isEmpty() ? null : items().tagExpansionForTests();
     }
 
     /** O item passa pelo filtro? */

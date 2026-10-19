@@ -206,6 +206,14 @@ public final class BenchRunner {
                 }
             }
         }
+        if (finished.stream().anyMatch(run -> run.job.scenario().measuresMemory())) {
+            table.append("\n### Memória\n\n").append(BenchRun.MEMORY_HEADER).append('\n');
+            for (BenchRun run : finished) {
+                if (run.job.scenario().measuresMemory()) {
+                    table.append(BenchRun.memoryLine(run.job, run.reps)).append('\n');
+                }
+            }
+        }
         emit(table.toString());
         finished.clear();
         if (auto) {
@@ -316,6 +324,9 @@ public final class BenchRunner {
             if (!scenario.comparable()) {
                 return "o cenário " + scenario.id + " não tem equivalente no Logistics Network";
             }
+        }
+        if (scenario == BenchScenario.BIG_FULL && storage == BenchStorage.WA) {
+            return "o cenário bigfull mede a varredura de slots, que o Baú do mod não tem; rode com vanilla ou soph";
         }
         if (scenario == BenchScenario.INFINITE) {
             if (!BenchCapabilities.enabled()) {

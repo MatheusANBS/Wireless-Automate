@@ -8,11 +8,14 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.BlockItemStateProperties;
+import net.minecraft.world.level.Level;
 
 /**
  * Item de um armazenamento do mod. O tier viaja no {@code block_state}, como no roteador; um bloco
@@ -20,6 +23,9 @@ import net.minecraft.world.item.component.BlockItemStateProperties;
  * tooltip) e o filtro de entrada.
  */
 public class StorageBlockItem extends BlockItem {
+    /** De quantos em quantos ticks o item no inventário renova o prazo do conteúdo ({@link #inventoryTick}). */
+    private static final int TOUCH_PERIOD = 1_200;
+
     private final StorageKind kind;
 
     public StorageBlockItem(StorageBlock block, Properties properties) {
@@ -42,6 +48,23 @@ public class StorageBlockItem extends BlockItem {
         RouterTier tier = stack.getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY)
                 .get(RouterBlock.TIER);
         return tier != null ? tier : RouterTier.BASIC;
+    }
+
+    /**
+     * No inventário de um jogador, o item cheio renova o prazo do conteúdo no {@link StorageSavedData}. Olha
+     * uma vez por minuto ({@link #TOUCH_PERIOD}); fora disso, só a conta do relógio. Sem prazo (o padrão), nada.
+     */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
+        if (level.isClientSide || level.getGameTime() % TOUCH_PERIOD != 0 || level.getServer() == null
+                || Config.STORAGE_STASH_EXPIRY_DAYS.get() == 0) {
+            return;
+        }
+        StorageContents contents = stack.get(ModDataComponents.STORAGE_CONTENTS.get());
+        if (contents != null) {
+            MinecraftServer server = level.getServer();
+            StorageSavedData.get(server).touch(contents.id(), StorageSavedData.now(server));
+        }
     }
 
     @Override

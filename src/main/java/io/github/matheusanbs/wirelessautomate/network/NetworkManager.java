@@ -444,6 +444,28 @@ public final class NetworkManager {
         return port == null ? -1 : port.gotRead + port.got;
     }
 
+    /**
+     * Para GameTests: quantos tipos já têm o arranjo de portas criado na máquina (a presa com {@code machinePos}
+     * nulo, ou a remota); -1 se o nó não está no motor ou a remota não tem porta nenhuma.
+     */
+    public int portTypesForTests(RouterBlockEntity node, @Nullable BlockPos machinePos) {
+        NodePorts ports = nodes.get(node);
+        if (ports == null) {
+            return -1;
+        }
+        Port[][] byType = machinePos == null ? ports.attachedPorts() : ports.machinePorts(machinePos.asLong());
+        if (byType == null) {
+            return -1;
+        }
+        int count = 0;
+        for (Port[] byFace : byType) {
+            if (byFace != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private @Nullable Port portOrNull(RouterBlockEntity node, @Nullable BlockPos machinePos, ResourceType type,
             Direction face) {
         NodePorts ports = nodes.get(node);
@@ -453,8 +475,7 @@ public final class NetworkManager {
         if (machinePos == null) {
             return ports.peek(type, face);
         }
-        Port[] byFace = ports.machinePorts(machinePos.asLong());
-        return byFace == null ? null : byFace[type.ordinal() * Direction.values().length + face.ordinal()];
+        return ports.peekRemote(machinePos.asLong(), type, face);
     }
 
     /**
@@ -544,6 +565,7 @@ public final class NetworkManager {
             long started = System.nanoTime();
             rebuild();
             rebuildCount++;
+            flows.routesChanged();
             rebuildNanos += System.nanoTime() - started;
         }
         long end = transfer(now);

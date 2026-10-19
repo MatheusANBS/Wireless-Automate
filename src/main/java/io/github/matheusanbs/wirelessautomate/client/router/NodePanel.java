@@ -1,5 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
+import io.github.matheusanbs.wirelessautomate.client.FrameCache;
+import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.TabLayout;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Kind;
@@ -22,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
@@ -83,6 +86,8 @@ public final class NodePanel {
     private final Actions actions;
     private final PanelModel model;
     private final PanelLayout layout = new PanelLayout();
+    /** O layout do quadro: feito uma vez e reusado no realce, no desenho, por cima e na dica. */
+    private final FrameCache arranged = new FrameCache();
     private final TargetLine targetLine;
     private final PanelLists lists;
     private final PanelPainter painter;
@@ -125,6 +130,9 @@ public final class NodePanel {
      * servidor escolheu para ele, a lista aberta fecha e o aviso some (o Desfazer agiria no alvo novo).
      */
     public void setSnapshot(RouterSnapshot snapshot) {
+        if (snapshot != model.snapshot()) {
+            arranged.invalidate();
+        }
         if (model.setSnapshot(snapshot)) {
             lists.close();
             PanelNotices.clear();
@@ -145,17 +153,22 @@ public final class NodePanel {
     }
 
     public void select(ResourceType type) {
+        arranged.invalidate();
         model.setType(type);
         lists.close();
     }
 
     public void selectFace(Direction face) {
+        arranged.invalidate();
         model.setFace(face);
         lists.close();
     }
 
     /** Só leitura, com o motivo em cima (o Tablet longe do nó); {@code null} volta a editar. */
     public void readOnly(@Nullable Component reason) {
+        if (!Objects.equals(reason, model.readOnly())) {
+            arranged.invalidate();
+        }
         model.setReadOnly(reason);
         if (reason != null) {
             lists.close();
@@ -171,6 +184,9 @@ public final class NodePanel {
      * alvo e tem os botões da máquina. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
      */
     public void targetFromList(boolean fromList) {
+        if (fromList != model.targetFromList()) {
+            arranged.invalidate();
+        }
         if (fromList && !model.targetFromList() && lists.popup() == Popup.TARGET) {
             lists.close();
         }
@@ -190,12 +206,14 @@ public final class NodePanel {
 
     /** Empilha abas, cubo e o resto no retângulo. */
     public void layout(int x, int y, int w, int h) {
+        arranged.invalidate();
         layout.layout(x, y, w, h);
     }
 
     /** Cada parte no seu retângulo: a linha das abas, o cubo e o resto. */
     public void layoutSplit(int tabsX, int tabsY, int tabsW, int netX, int netY, int netW, int netH, int bodyX,
             int bodyY, int bodyW, int bodyH) {
+        arranged.invalidate();
         layout.layoutSplit(tabsX, tabsY, tabsW, netX, netY, netW, netH, bodyX, bodyY, bodyW, bodyH);
     }
 
@@ -208,8 +226,26 @@ public final class NodePanel {
         return Minecraft.getInstance().font;
     }
 
-    /** Posições e áreas de clique do quadro atual, e o lugar da lista aberta. */
+    /**
+     * Posições e áreas de clique, e o lugar da lista aberta, refeitos agora: para um evento ou um gancho, que
+     * podem mudar o estado em seguida (o próximo {@link #arrangeForFrame} refaz).
+     */
     private void arrange() {
+        computeArrangement();
+        arranged.invalidate();
+    }
+
+    /**
+     * O layout do quadro, para o desenho, o realce e a dica: feito na primeira chamada do quadro e reusado nas
+     * outras, enquanto o aviso é o mesmo e nada mudou o painel (snapshot, aba, face, medidas).
+     */
+    private void arrangeForFrame() {
+        if (!arranged.reuse(FrameClock.frame(), PanelNotices.current())) {
+            computeArrangement();
+        }
+    }
+
+    private void computeArrangement() {
         Font font = font();
         layout.arrange(font, model);
         lists.place(font);
@@ -220,7 +256,7 @@ public final class NodePanel {
         if (lists.open()) {
             return null;
         }
-        arrange();
+        arrangeForFrame();
         Hot hot = layout.hotAt(mx, my);
         return hot != null && hot.kind() == Kind.FACE ? model.faceOf(RemoteSide.values()[hot.arg()]) : null;
     }
@@ -382,6 +418,7 @@ public final class NodePanel {
 
     public boolean keyPressed(int keyCode) {
         if (lists.open() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            arranged.invalidate();
             lists.close();
             return true;
         }
@@ -393,7 +430,7 @@ public final class NodePanel {
         if (lists.open()) {
             return null;
         }
-        arrange();
+        arrangeForFrame();
         if (layout.inNotice(mx, my)) {
             return null;
         }
@@ -415,9 +452,12 @@ public final class NodePanel {
         // arrumar este quadro, para o botão não sair na largura do armado sem estar armado
         Hot unlink = layout.hot(Kind.UNLINK);
         if (unlink == null || !unlink.contains(mx, my)) {
+            if (model.unlinkArmed()) {
+                arranged.invalidate();
+            }
             model.unlinkArm().disarm();
         }
-        arrange();
+        arrangeForFrame();
         Font font = font();
         painter.renderTabs(g, font, mx, my);
         cube.render(g, font, mx, my, pointed);
@@ -426,7 +466,7 @@ public final class NodePanel {
 
     /** A lista aberta e o aviso, por cima de tudo (a tela chama depois de desenhar os slots). */
     public void renderOverlay(GuiGraphics g, int mouseX, int mouseY) {
-        arrange();
+        arrangeForFrame();
         Font font = font();
         PanelNoticePayload notice = PanelNotices.current();
         if (notice != null && layout.bodyW > 0) {
@@ -550,6 +590,7 @@ public final class NodePanel {
 
     /** Abre ou fecha a lista da linha Rede (captura sem mouse). */
     public void previewNetworkList(boolean open) {
+        arranged.invalidate();
         lists.open(open ? Popup.NETWORK : Popup.NONE, 0);
     }
 }

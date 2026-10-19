@@ -198,7 +198,7 @@ final class ItemTransfer {
             boolean destinationsAsleep, List<Port> pass, long now) {
         if (moved > 0) {
             source.node.addMoved(source.type, moved);
-            source.gave += moved;
+            source.addGave(moved);
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
@@ -293,7 +293,7 @@ final class ItemTransfer {
             if (delivered > 0) {
                 PLAN.delivered(destination, offered, delivered);
                 destination.destinationBackoff.wake();
-                destination.got += delivered;
+                destination.addGot(delivered);
                 order.delivered(destination);
                 if (source.network != null) {
                     source.network.ops++;
@@ -352,7 +352,7 @@ final class ItemTransfer {
                 ItemGiveBack.giveBack(source, handler, slot, leftover, pass);
             }
             if (delivered > 0) {
-                destination.got += delivered;
+                destination.addGot(delivered);
                 if (source.network != null) {
                     source.network.ops++;
                 }
@@ -405,7 +405,7 @@ final class ItemTransfer {
 
     /**
      * Quanto um Baú do mod aceita de {@code amount} da chave, já com o estoque do destino; −1 se o
-     * estoque já foi atingido. A contagem sai do próprio Baú (O(1) com componentes, O(tipos) sem).
+     * estoque já foi atingido. A contagem sai do próprio Baú, O(1) com ou sem componentes.
      */
     static long bulkAccepts(BulkItems target, ItemStack key, long amount, long stock, boolean components) {
         long room = target.insert(key, amount, true);

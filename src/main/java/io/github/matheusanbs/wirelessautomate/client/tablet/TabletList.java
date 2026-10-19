@@ -447,7 +447,7 @@ public final class TabletList {
     // ------------------------------------------------------------------ desenho
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
-        layout.arrange();
+        layout.arrangeForFrame();
         Font font = font();
         NodePanel p = chosenPanel.current();
         boolean covered = (p != null && p.popupOpen()) || search.suggestions.contains(mouseX, mouseY);
@@ -464,7 +464,7 @@ public final class TabletList {
 
     /** Por cima de tudo: as sugestões, as listas abertas do painel e os avisos. */
     void renderOverlay(GuiGraphics g, int mouseX, int mouseY) {
-        layout.arrange();
+        layout.arrangeForFrame();
         Font font = font();
         NodePanel p = chosenPanel.current();
         if (p != null) {

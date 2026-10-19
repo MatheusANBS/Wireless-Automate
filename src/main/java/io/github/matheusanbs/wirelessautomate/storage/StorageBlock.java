@@ -160,12 +160,18 @@ public class StorageBlock extends BaseEntityBlock {
     /**
      * Com conteúdo, o bloco nunca some sem virar item, como a caixa de shulker: se a quebra não vai
      * dropar nada (criativo, ou sem a ferramenta certa), o próprio bloco solta o item com o conteúdo.
-     * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui não se faz nada.
+     * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui só se avisa o block entity de
+     * que o drop vem, para o conteúdo ir ao {@link StorageSavedData}.
      */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageBlockEntity storage
-                && !storage.isEmptyContents() && !lootWillDrop(player, state, level, pos)) {
+                && !storage.isEmptyContents()) {
+            if (lootWillDrop(player, state, level, pos)) {
+                // A loot table monta o item depois de o bloco sair (e de o conteúdo ir para o StorageSavedData).
+                storage.expectDrop();
+                return super.playerWillDestroy(level, pos, state, player);
+            }
             ItemStack stack = StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
             stack.applyComponents(storage.collectComponents());
             ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);

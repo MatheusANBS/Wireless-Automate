@@ -38,7 +38,23 @@ public final class ItemStorage extends KeyedStorage<ItemStack> implements BulkIt
     }
 
     @Override
+    protected ItemStack withAmount(ItemStack key, int amount) {
+        return key.copyWithCount(amount);
+    }
+
+    @Override
+    protected int amountOf(ItemStack view) {
+        return view.getCount();
+    }
+
+    /** O grupo do estoque sem componentes: o item. */
+    @Override
+    protected Object groupOf(ItemStack key) {
+        return key.getItem();
+    }
+
+    @Override
     public long countItem(ItemStack key) {
-        return countWhere(stored -> stored.is(key.getItem()));
+        return countGroup(key);
     }
 }

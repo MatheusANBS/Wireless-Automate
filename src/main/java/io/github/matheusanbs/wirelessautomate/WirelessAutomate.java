@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
@@ -24,6 +25,8 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
+import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
+import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -34,6 +37,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
@@ -63,12 +67,14 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedOut);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
-        // Roteador de alcance: a carga de um chunk acorda as máquinas remotas vinculadas nele.
+        // Carga de chunk: acorda as máquinas remotas vinculadas nele e tira do índice de nós os roteadores que sumiram.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
         // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Subida do servidor: avisa no log os overrides do editor de receitas sem padrão editável.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onServerStarted);
+        // Subida do servidor: o conteúdo de armazenamentos quebrados há mais tempo que o prazo sai do arquivo.
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStarted);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
         ChunkLoaderEvents.register(modEventBus);
     }
@@ -81,6 +87,8 @@ public final class WirelessAutomate {
         NetworkManager.get().tick(event.getServer());
         SourceTankLevels.tick();
         ResonatorManager.tick(event.getServer());
+        // Por último: junta num aviso só as mudanças de conteúdo do tick, inclusive as do motor e do Ressonador.
+        StorageNeighbors.tick();
     }
 
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -89,10 +97,15 @@ public final class WirelessAutomate {
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
     }
 
+    private static void onServerStarted(ServerStartedEvent event) {
+        StorageSavedData.onServerStarted(event.getServer());
+    }
+
     private static void onServerStopped(ServerStoppedEvent event) {
         NetworkManager.reset();
         RemoteIndex.reset();
         SourceTankLevels.reset();
+        StorageNeighbors.reset();
         ResonatorManager.reset();
         ResonatorPorts.reset();
         ResonatorMembers.reset();
@@ -105,6 +118,7 @@ public final class WirelessAutomate {
     private static void onChunkLoad(ChunkEvent.Load event) {
         if (event.getLevel() instanceof ServerLevel level) {
             RemoteIndex.get().chunkLoaded(level, event.getChunk());
+            NodeIndex.chunkLoaded(level, event.getChunk());
         }
     }
 

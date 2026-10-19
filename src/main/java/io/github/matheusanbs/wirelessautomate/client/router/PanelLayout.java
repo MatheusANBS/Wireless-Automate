@@ -370,7 +370,7 @@ final class PanelLayout {
     private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
         int unlinkW = font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD;
         int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
-        int highlightW = font.width(LitFooter.tr("show")) + 2 * TARGET_PAD + HIGHLIGHT_EYE;
+        int highlightW = font.width(LitFooter.SHOW) + 2 * TARGET_PAD + HIGHLIGHT_EYE;
         int count = 2 + (replaced ? 1 : 0) + (exception ? 1 : 0);
         int revertW = 0;
         if (exception) {

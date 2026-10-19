@@ -23,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
 final class LitFooter {
     static final int H = 12;
     private static final Component SEPARATOR = Component.literal(" · ");
+    /** O rótulo do botão "No mundo" do painel, desenhado a cada quadro; o traduzível segue o idioma sozinho. */
+    static final Component SHOW = tr("show");
 
     private final Supplier<RouterSnapshot> snapshot;
     private final MachineRow machineRow = new MachineRow(this::lit);

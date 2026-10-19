@@ -121,7 +121,7 @@ final class TargetLine {
         GuiPaint.eye(g, b.x() + PanelLayout.TARGET_PAD, b.y() + (b.h() - 5) / 2, eyeColor);
         int textX = b.x() + PanelLayout.TARGET_PAD + PanelLayout.HIGHLIGHT_EYE;
         int room = b.x() + b.w() - PanelLayout.TARGET_PAD - textX;
-        GuiText.draw(g, font, LitFooter.tr("show"), textX, b.y() + (b.h() - 8) / 2, room, GuiPaint.FG);
+        GuiText.draw(g, font, LitFooter.SHOW, textX, b.y() + (b.h() - 8) / 2, room, GuiPaint.FG);
     }
 
     /** A máquina do alvo está acesa no mundo. */

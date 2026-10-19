@@ -434,3 +434,26 @@ Commit `738d99e` contra o main `6e20de7`: `./scripts/bench.sh full:100:3,sparse:
 
 - Nada fora do ruído: a mudança no caminho quente é um boolean a mais no `Backoff.wake()` e no laço `hungry`.
 - O `redstone-face` sofre com a carga da máquina (o MSPT base foi de 0,14 a 0,75 entre as rodadas); na rodada intercalada, com a mesma carga dos dois lados, antes e depois ficam iguais dentro do ±.
+
+## Pacotes S, R, C e o F1 da auditoria (19 de outubro de 2026)
+
+Ramo `auditoria-s-c-r-f1`. Antes: `bench-base-scr`, o main (`71640ad`) com só os dois commits de bench (`fc8b637`: o armazenamento `wa` e os cenários `hub` e `chesttypes`; `f47a3bc`: o cenário `range` e o heap retido). Duas rodadas intercaladas, antes, depois, antes, depois, de `hub:250:3,many:500:3:wa,chesttypes:20:3,range:200:3,types:20:3:soph,idle:500:3,many:500:3,mixed:498:3`, e mais duas só de `types` e `mixed`; logs `run/scr-*.log`, fora do git. Mod em ms/tick, rodada 1 / rodada 2.
+
+| Cenário | Item | mod antes | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- | --- |
+| hub 250 (250 origens num Baú) | S1 | 0,347 / 0,328 | **0,272 / 0,296** (−22% / −10%) | µs/visita 5,57 → 3,68 / 5,27 → 4,29 |
+| many 500, origens e destinos no Baú | S1 | 0,048 / 0,049 | **0,040 / 0,038** (−17% / −23%) | p99 0,50 → 0,33 / 0,54 → 0,39 |
+| chesttypes 20 (2.000 tipos, estoque) | S2 | 0,055 / 0,065 | **0,016 / 0,018** (−70% / −72%) | p99 0,99 → 0,22 / 1,04 → 0,27 |
+| range 200 (12.800 máquinas vinculadas) | R1 | 0,046 / 0,050 | 0,040 / 0,043 | **heap retido ~24,7 → ~20,8 MB** (as três repetições, nas duas rodadas) |
+| idle 500 | F1 | 0,0019 / 0,0017 | 0,0022 / 0,0019 | **Fluxos 0,0103 → 0,0080 / 0,0104 → 0,0075 ms/tick** (−25%) |
+| types 20 soph | R2 | 0,470 / 0,523 / 0,490 / 0,489 | 0,522 / 0,535 / 0,446 / 0,529 | quatro pares: +11%, +2%, −9%, +8% |
+| many 500 | regressão | 0,504 / 0,586 | 0,516 / 0,576 | igual |
+| mixed 498 | regressão | 0,422 / 0,471 / 0,449 / 0,487 | 0,438 / 0,473 / 0,451 / 0,527 | quatro pares: +4%, 0, 0, +8% (no último, o MSPT base do depois também subiu 18%) |
+
+### Leitura
+
+- S1 e S2 são os ganhos grandes: um aviso aos vizinhos por armazenamento por tick, em vez de um por entrega, e o estoque em O(1). O S2 tira 70% do custo de um destino Baú com milhares de tipos e um limite de estoque.
+- R1: cada máquina vinculada só com itens retém uns 300 bytes a menos (os caches e as portas dos tipos sem face com modo não nascem). O tempo fica igual.
+- F1: o amostrador pula o nó parado e o custo dos Fluxos parado cai um quarto; o resto é a volta pelos baldes e a configuração por nó, que já era guardada com versão.
+- `types` e `mixed` oscilam entre os pares para os dois lados, com o MSPT base da máquina mudando junto; nenhuma regressão sai do ruído. O R2 (uma busca de hash a mais por consulta num filtro com itens e tags) fica dentro dele.
+- S3, S4, S5, R3 e o pacote C não têm cenário: os GameTests provam o S3 a S5 e o R3; os números do pacote C, medidos com `System.nanoTime` num build local, estão no backlog (C1: 14–26 → 0,7–2,3 ms por tecla com 2.518 tipos; C3: o layout do painel de 3–4 para 1 por quadro).

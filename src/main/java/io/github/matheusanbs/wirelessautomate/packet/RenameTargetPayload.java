@@ -8,6 +8,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * Cliente → servidor: dá nome a um grupo ({@code GROUP}, {@code id} = id do grupo) ou rótulo a uma máquina
@@ -19,7 +20,7 @@ public record RenameTargetPayload(int containerId, EditTarget.Kind kind, int id,
     public static final Type<RenameTargetPayload> TYPE = new Type<>(WirelessAutomate.id("rename_target"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RenameTargetPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, RenameTargetPayload::containerId,
-            ByteBufCodecs.idMapper(i -> EditTarget.Kind.values()[i], EditTarget.Kind::ordinal), RenameTargetPayload::kind,
+            NeoForgeStreamCodecs.enumCodec(EditTarget.Kind.class), RenameTargetPayload::kind,
             ByteBufCodecs.VAR_INT, RenameTargetPayload::id,
             ByteBufCodecs.optional(BlockPos.STREAM_CODEC), RenameTargetPayload::machinePos,
             ByteBufCodecs.stringUtf8(64), RenameTargetPayload::name,

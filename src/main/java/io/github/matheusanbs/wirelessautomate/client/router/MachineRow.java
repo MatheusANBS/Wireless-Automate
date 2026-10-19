@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.Locale;
+import java.util.function.LongPredicate;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -17,7 +18,8 @@ import org.jetbrains.annotations.Nullable;
  * A linha de uma máquina na lista das máquinas ({@link RangeList}), em duas linhas com a altura da linha do
  * grupo: na primeira, a bolinha do estado, o nome ({@link #rowName}: o rótulo, ou {@code #N}) e a marca
  * "exc."; na segunda, as coordenadas e a distância ao roteador, ou o estado em palavras quando ela não está
- * carregada. À direita da primeira linha fica o lugar do Olho ({@link #EYE_W}).
+ * carregada. À direita da primeira linha fica o Olho ({@link #EYE_W}): ciano com a máquina acesa no mundo,
+ * cinza apagada; o clique nele é da lista ({@link #eyeHit}).
  *
  * <p>Os textos e as larguras são montados quando o snapshot muda (a visão é outro objeto), não a cada quadro: o
  * quadro só compara larguras e desenha. Quando a segunda linha não cabe inteira, fica só com as coordenadas
@@ -26,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
 final class MachineRow {
     /** O lugar do Olho, à direita da primeira linha. */
     static final int EYE_W = 10;
+    /** A altura da área de clique do Olho, a da primeira linha com os botões da linha escolhida. */
+    private static final int EYE_H = RangeRowButtons.SIZE + 1;
     /** Topo da primeira e da segunda linha de texto, a partir do topo da linha. */
     static final int LINE1_Y = 2;
     static final int LINE2_Y = 11;
@@ -129,16 +133,20 @@ final class MachineRow {
      * A máquina {@code index} na linha com o topo em {@code ry}, numa lista com a borda esquerda em {@code x}.
      * {@code nameRight} é até onde vai a primeira linha (antes dos botões da linha escolhida, ou do lugar do Olho)
      * e {@code right} até onde vai a segunda; {@code badge} é a marca "exc." (na linha escolhida, o ↺ mostra a
-     * exceção).
+     * exceção); {@code eye} é o Olho na linha (sai com o "Desvincular?" armado) e {@code lit} diz, pela posição
+     * da máquina, se ele está aceso.
      */
     void render(GuiGraphics g, Font font, RangeView view, int index, int x, int ry, int nameRight, int right,
-            boolean badge) {
+            boolean badge, boolean eye, LongPredicate lit) {
         MachineView machine = view.machine(index);
         if (machine == null) {
             return;
         }
         prepare(font, view);
         GuiPaint.dot(g, x + 8, ry + 7, RangeList.stateColor(machine.state()));
+        if (eye) {
+            GuiPaint.eye(g, right - EYE_W + 2, ry + LINE1_Y + 1, lit.test(machine.pos().asLong()) ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED);
+        }
         int textX = x + TEXT_X;
         int end = nameRight - 2;
         if (badge && machine.exception()) {
@@ -160,5 +168,15 @@ final class MachineRow {
             // sem lugar para tudo, o estado diz mais que as coordenadas (que ficam na dica)
             GuiText.draw(g, font, suffixes[index], textX, ry + LINE2_Y, room, suffixColor(machine.state()));
         }
+    }
+
+    /** O ponto está no Olho da linha com o topo em {@code ry}, numa lista com a borda direita do texto em {@code right}. */
+    static boolean eyeHit(double mouseX, double mouseY, int ry, int right) {
+        return mouseX >= right - EYE_W && mouseX < right && mouseY >= ry && mouseY < ry + EYE_H;
+    }
+
+    /** O centro do Olho da linha com o topo em {@code ry} (gancho do e2e). */
+    static int[] eyeCenter(int ry, int right) {
+        return new int[] {right - EYE_W / 2, ry + EYE_H / 2};
     }
 }

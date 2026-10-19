@@ -13,14 +13,17 @@ import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Kind;
 import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
@@ -28,8 +31,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O desenho da Lista do Tablet sobre as áreas do {@link ListLayout}: a busca com as etiquetas, os filtros
@@ -39,6 +44,10 @@ import net.minecraft.world.phys.Vec3;
 final class ListPainter {
     private final TabletList list;
     private final ListLayout layout;
+    /** A linha embaixo do nome do nó, guardada pelo snapshot e pela distância em blocos. */
+    private @Nullable RouterSnapshot metaSnap;
+    private int metaDistance = Integer.MIN_VALUE;
+    private Component metaText = Component.empty();
 
     ListPainter(TabletList list, ListLayout layout) {
         this.list = list;
@@ -195,11 +204,7 @@ final class ListPainter {
             GuiText.wrap(g, font, wait, panelX, y0 + 16, panelW, 3, payload == null ? GuiPaint.MUTED : GuiPaint.WARN);
             return;
         }
-        Component machine = RouterBlock.machineName(snap.machineState().getBlock());
-        Component distance = payload.distance() < 0 ? tr("list.panel.other_dimension")
-                : plural("list.panel.distance", localDistance(payload));
-        Component meta = machine.copy().append(" · ").append(Component.translatable(snap.tier().translationKey()))
-                .append(" · ").append(distance);
+        Component meta = meta(snap, payload);
         GuiText.draw(g, font, meta, panelX, y0 + 13, panelW, GuiPaint.MUTED);
         NodePanel p = list.chosenPanel.current();
         if (p == null) {
@@ -207,6 +212,31 @@ final class ListPainter {
         }
         p.render(g, list.search.suggestions.contains(mx, my) ? -1 : mx, my, null);
         renderProfileButtons(g, font, mx, my, payload.access() == PanelAccess.EDIT);
+    }
+
+    /**
+     * A linha embaixo do nome do nó: a máquina presa, o tier e a distância; com uma máquina do alcance como alvo, a
+     * máquina, as coordenadas dela e a distância até ela (o nome do nó já diz o roteador). Montada só quando o
+     * snapshot ou a distância mudam.
+     */
+    private Component meta(RouterSnapshot snap, TabletPanelPayload payload) {
+        RangeView.MachineView target = snap.target().kind() == EditTarget.Kind.MACHINE
+                ? snap.range().machine(snap.target().id()) : null;
+        BlockPos where = target != null ? target.pos() : payload.node().map(NodeKey::pos).orElse(null);
+        int blocks = payload.distance() < 0 || where == null ? -1 : localDistance(where);
+        if (snap == metaSnap && blocks == metaDistance) {
+            return metaText;
+        }
+        metaSnap = snap;
+        metaDistance = blocks;
+        Component machine = RouterBlock.machineName(snap.machineState().getBlock());
+        Component distance = blocks < 0 ? tr("list.panel.other_dimension") : plural("list.panel.distance", blocks);
+        metaText = target != null
+                ? machine.copy().append(" · ").append(target.pos().getX() + " " + target.pos().getY() + " "
+                        + target.pos().getZ()).append(" · ").append(distance)
+                : machine.copy().append(" · ").append(Component.translatable(snap.tier().translationKey()))
+                        .append(" · ").append(distance);
+        return metaText;
     }
 
     /** Copiar e Colar o perfil embaixo do painel (ou Copiar e a dica, sem perfil copiado). */
@@ -256,12 +286,15 @@ final class ListPainter {
         }
     }
 
-    /** Blocos entre o jogador e o nó escolhido, pela posição local (o servidor só diz se é a mesma dimensão). */
-    private static int localDistance(TabletPanelPayload payload) {
+    /**
+     * Blocos entre o jogador e o nó escolhido (ou a máquina do alvo), pela posição local (o servidor só diz se é a
+     * mesma dimensão).
+     */
+    private static int localDistance(BlockPos pos) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || payload.node().isEmpty()) {
+        if (player == null) {
             return 0;
         }
-        return (int) Math.round(Math.sqrt(player.position().distanceToSqr(Vec3.atCenterOf(payload.node().get().pos()))));
+        return (int) Math.round(Math.sqrt(player.position().distanceToSqr(Vec3.atCenterOf(pos))));
     }
 }

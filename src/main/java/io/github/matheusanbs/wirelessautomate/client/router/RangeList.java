@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.LongPredicate;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -61,6 +62,8 @@ final class RangeList {
     private final RangeRowButtons buttons = new RangeRowButtons();
     private final MachineRow machineRow = new MachineRow();
     private final RowRename rename;
+    /** A máquina na posição dada está acesa no mundo (o Olho da linha). */
+    private final LongPredicate lit;
     private int scroll;
     private int x;
     private int y;
@@ -70,9 +73,13 @@ final class RangeList {
     private @Nullable RangeView cachedView;
     private @Nullable List<Row> cachedRows;
 
-    /** @param rename a edição do nome das linhas, da coluna */
-    RangeList(RowRename rename) {
+    /**
+     * @param rename a edição do nome das linhas, da coluna
+     * @param lit    se a máquina na posição dada está acesa no mundo
+     */
+    RangeList(RowRename rename, LongPredicate lit) {
         this.rename = rename;
+        this.lit = lit;
     }
 
     void setBounds(int x, int y, int width, int height) {
@@ -356,6 +363,18 @@ final class RangeList {
         };
     }
 
+    /**
+     * A linha da máquina cujo Olho está sob o mouse, ou {@code null}. Na linha do alvo com o "Desvincular?" armado,
+     * o Olho não aparece.
+     */
+    @Nullable Row eyeAt(RangeView view, EditTarget target, double mouseX, double mouseY) {
+        Row row = rowAt(view, mouseX, mouseY);
+        if (row == null || row.kind() != Kind.MACHINE || row.target().equals(target) && buttons.unlinkArmed(target)) {
+            return null;
+        }
+        return MachineRow.eyeHit(mouseX, mouseY, y + 1 + row.top() - scroll, rowRight(rows(view))) ? row : null;
+    }
+
     /** A dica do botão da linha escolhida sob o mouse, ou {@code null} se o mouse não está num botão. */
     @Nullable Component buttonTooltip(Font font, RangeView view, EditTarget target, double mouseX, double mouseY) {
         Row row = rowAt(view, mouseX, mouseY);
@@ -399,7 +418,8 @@ final class RangeList {
                 case ATTACHED -> renderAttached(g, font, attachedIcon, ry, right);
                 case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
-                        placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty());
+                        placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
+                        !selected || !buttons.unlinkArmed(target), lit);
             }
             if (ry >= top && ry + row.height() <= bottom) {
                 rename.place(row, x, ry, right);
@@ -491,6 +511,12 @@ final class RangeList {
     /** Centro do botão {@code act} da linha do alvo (gancho do e2e); {@code null} se ele não está lá. */
     int @Nullable [] buttonCenter(Font font, RangeView view, EditTarget target, RangeRowButtons.Action act) {
         return rowCenter(view, target) == null ? null : RangeRowButtons.center(targetButtons(font, view, target), act);
+    }
+
+    /** Centro do Olho da linha da máquina {@code target} (gancho do e2e); {@code null} se fora da vista. */
+    int @Nullable [] eyeCenter(RangeView view, EditTarget target) {
+        int[] center = rowCenter(view, target);
+        return center == null ? null : MachineRow.eyeCenter(center[1] - MACHINE_H / 2, rowRight(rows(view)));
     }
 
     /** O ✕ do alvo está armado (gancho do e2e). */

@@ -170,7 +170,12 @@ final class E2eRangeLabelSteps {
                 && router(server, rangeRouter).remoteMachines().group(chestGroupOnServer(server)).name().isEmpty()),
                 () -> "nomes ainda no servidor"));
         list.add(open(l + "abrir o roteador de novo", () -> rangeRouter));
-        list.add(new Step(l + "no mínimo, com a lista e a fornalha", STEP_TIMEOUT_MS, () -> {
+        list.add(backToMinimum(l, playerId));
+    }
+
+    /** A tela do roteador aberta no mínimo, com a lista e a fornalha como alvo (como o resto do e2e espera). */
+    static Step backToMinimum(String l, UUID playerId) {
+        return new Step(l + "no mínimo, com a lista e a fornalha", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(300, 240);
             if (!routerScreen().rangeListShown()) {
                 click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
@@ -185,7 +190,7 @@ final class E2eRangeLabelSteps {
             });
         }, () -> routerScreen().size()[0] == 300 && routerScreen().rangeListShown()
                 && rangeTargetIs(EditTarget.machine(rangeMachine(rangeFurnace))) && stepTicks >= 4,
-                () -> "alvo " + routerScreen().getMenu().snapshot().target()));
+                () -> "alvo " + routerScreen().getMenu().snapshot().target());
     }
 
     // ------------------------------------------------------------------ leituras

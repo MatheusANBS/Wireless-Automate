@@ -242,6 +242,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private void switchTab(Tab t) {
         if (tab != t) {
+            list.cancelLabel();
             tab = t;
             actions.tab(t.ordinal());
             if (t == Tab.FLOWS) {
@@ -478,6 +479,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (tab == Tab.LIST && list.charTyped(codePoint, modifiers)) {
+            return true;
+        }
         if (tab == Tab.LIST && getFocused() != searchBox) {
             focusSearch();
         }

@@ -457,3 +457,19 @@ Ramo `auditoria-s-c-r-f1`. Antes: `bench-base-scr`, o main (`71640ad`) com só o
 - F1: o amostrador pula o nó parado e o custo dos Fluxos parado cai um quarto; o resto é a volta pelos baldes e a configuração por nó, que já era guardada com versão.
 - `types` e `mixed` oscilam entre os pares para os dois lados, com o MSPT base da máquina mudando junto; nenhuma regressão sai do ruído. O R2 (uma busca de hash a mais por consulta num filtro com itens e tags) fica dentro dele.
 - S3, S4, S5, R3 e o pacote C não têm cenário: os GameTests provam o S3 a S5 e o R3; os números do pacote C, medidos com `System.nanoTime` num build local, estão no backlog (C1: 14–26 → 0,7–2,3 ms por tecla com 2.518 tipos; C3: o layout do painel de 3–4 para 1 por quadro).
+
+## Etapa 2 da central da rede: identificar máquinas (19 de outubro de 2026)
+
+Ramo `central-etapa-2`. `./scripts/bench.sh tablet:1000:3,many:500:3,range:200:3`, máquina local. Antes: o `main` `e7b0eff` (2.2.0), em `run/bench/reports/20261019-125328.md`. Depois: o ramo com as quatro tarefas (`ac98a0e`). Os logs ficam em `run/e2-antes.log` e `run/e2-depois.log`, fora do git.
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| tablet 1000 | 0,995 ± 0,034 | 1,013 ± 0,019 | Tablet aberto 0,112 ± 0,036 → 0,108 ± 0,032 ms/tick; 1,3–1,7 → 1,2–1,7 KB/s |
+| many 500 | 0,519 ± 0,038 | 0,519 ± 0,035 | µs/visita 8,30 → 8,29 |
+| range 200 (12.800 máquinas vinculadas) | 0,037 ± 0,003 | 0,039 ± 0,001 | heap retido ~20,8 MB → ~20,8 MB |
+
+### Leitura
+
+- Nada muda no servidor, como pedia a etapa. O rótulo só vai no snapshot da tela aberta, e renomear não remonta as rotas.
+- O rótulo e a dimensão no snapshot não aparecem nos bytes do Tablet: o painel só manda o snapshot do nó escolhido, e só quando ele muda.
+- O destaque é só do cliente. Medido com `System.nanoTime` no `onRender`: cerca de 0,5 µs por quadro sem nada aceso e cerca de 90 µs com 64 acesas, o limite. O contorno, o véu e a linha até o roteador vão em dois lotes, sem alocar.

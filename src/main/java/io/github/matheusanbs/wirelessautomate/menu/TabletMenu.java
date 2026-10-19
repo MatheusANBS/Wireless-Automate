@@ -231,6 +231,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static final int TAB_COUNT = 5;
     /** A posição da aba Fluxos ({@code TabletScreen.Tab.FLOWS}): só com ela aberta o jogador olha o amostrador. */
     public static final int FLOWS_TAB = 2;
+    /** A posição da aba Lista ({@code TabletScreen.Tab.LIST}), a que o clique numa máquina abre. */
+    static final int LIST_TAB = 0;
 
     /** Servidor: a aba que a tela mostra. Devolve se o valor era de uma aba que existe. */
     public boolean setTab(int tab) {
@@ -262,6 +264,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             return created[0];
         }, Component.translatable("item.wirelessautomate.network_tablet")),
                 buf -> created[0].writeOpenData(buf));
+    }
+
+    /** Abre o Tablet na Lista, com o nó escolhido e o alvo de edição (o clique numa máquina). */
+    public static void open(ServerPlayer player, NodeKey node, EditTargetRef target) {
+        State saved = TabletPlayers.saved(player.getUUID());
+        TabletPlayers.save(player.getUUID(), new State(LIST_TAB,
+                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target));
+        open(player);
     }
 
     /** O que vai no buffer de abertura: o snapshot, a aba restaurada e o nó escolhido restaurado. */

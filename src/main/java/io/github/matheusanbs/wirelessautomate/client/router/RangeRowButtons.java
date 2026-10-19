@@ -20,12 +20,13 @@ import org.jetbrains.annotations.Nullable;
  * Os botões pequenos da linha escolhida na lista das máquinas ({@link RangeList}), da direita para a
  * esquerda: ✕ Desvincular (máquina), ↺ Voltar ao perfil (máquina com exceção), ⟳ Atualizar (máquina
  * trocada, ou grupo com alguma trocada) e o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina com
- * exceção com alguma face sem modo e com rede). O ✕ pede dois cliques ({@link ArmedClick}): armado, vira
- * o botão de texto "Desvincular?", que desarma quando o mouse sai dele ou o alvo muda. O clique devolve a
- * ação; quem manda o pedido ao servidor é a coluna da lista. Público só pela {@link Action}, que o e2e usa.
+ * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, e grupo quando o nome cabe ao lado).
+ * O ✕ pede dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?", que desarma
+ * quando o mouse sai dele ou o alvo muda. O clique devolve a ação; quem manda o pedido ao servidor é a
+ * coluna da lista. Público só pela {@link Action}, que o e2e usa.
  */
 public final class RangeRowButtons {
-    public enum Action { UPDATE, REVERT, UNLINK, CLEAR_NETWORKS }
+    public enum Action { UPDATE, REVERT, UNLINK, CLEAR_NETWORKS, RENAME }
 
     /** Um botão posto na tela. */
     record Button(Action action, int x, int y, int w, int h) {
@@ -47,11 +48,16 @@ public final class RangeRowButtons {
      * ficarem no centro do botão de 10 px (os da fonte do jogo saem pequenos e fora do centro).
      */
     private static final String[] ARROW = {".###.#", "#...##", "#..###", "#.....", "#....#", ".####."};
+    /** O lápis do ✎ em 6 × 6 px, na diagonal, com a ponta embaixo à esquerda. */
+    private static final String[] PENCIL = {"....##", "...#.#", "..#.#.", ".#.#..", "#.#...", "##...."};
 
     private final ArmedClick unlinkArm = new ArmedClick();
     private @Nullable EditTarget armedFor;
     /** O alvo tem faces sem modo com rede ({@link IdleNetworks#shown}), lido do snapshot a cada quadro. */
     private boolean idleNetworks;
+    private @Nullable RangeView widthView;
+    private int widthGroup = -1;
+    private int groupNameW;
 
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
@@ -88,6 +94,17 @@ public final class RangeRowButtons {
         return null;
     }
 
+    /** A largura do nome do grupo na linha ("Fornalha ×3"), medida só quando a visão ou o grupo mudam. */
+    private int groupNameWidth(Font font, RangeView view, int group) {
+        if (view != widthView || group != widthGroup) {
+            RangeView.GroupView g = view.group(group);
+            widthView = view;
+            widthGroup = group;
+            groupNameW = g == null ? 0 : font.width(tr("range.group.count", RangeList.groupName(g), g.count()));
+        }
+        return groupNameW;
+    }
+
     void idleNetworks(boolean shown) {
         idleNetworks = shown;
     }
@@ -99,8 +116,9 @@ public final class RangeRowButtons {
 
     /**
      * Os botões da linha do alvo {@code target}, com o topo em {@code ry} e a borda direita em {@code right};
-     * {@code minX} é até onde o "Desvincular?" pode crescer. Vazia se o alvo não tem botões. Com o ✕ armado,
-     * só ele: os outros saem para o texto caber.
+     * {@code minX} é onde o texto da linha começa: até onde o "Desvincular?" pode crescer e, no grupo, onde o
+     * nome dele começa. Vazia se o alvo não tem botões. Com o ✕ armado, só ele: os outros saem para o texto
+     * caber. No grupo, o ✎ só sai quando o nome não cabe ao lado dele (o nome se edita então pelos dois cliques).
      */
     List<Button> place(Font font, RangeView view, EditTarget target, int ry, int rowH, int right, int minX) {
         List<Action> actions = new ArrayList<>();
@@ -113,6 +131,10 @@ public final class RangeRowButtons {
                 }
                 if (idleNetworks) {
                     actions.add(Action.CLEAR_NETWORKS);
+                }
+                int withRename = right - PAD - (actions.size() + 1) * (SIZE + GAP) - 1;
+                if (actions.isEmpty() || minX + groupNameWidth(font, view, target.id()) <= withRename - 2) {
+                    actions.add(Action.RENAME);
                 }
             }
             case MACHINE -> {
@@ -128,6 +150,9 @@ public final class RangeRowButtons {
                     }
                     if (!armed && idleNetworks) {
                         actions.add(Action.CLEAR_NETWORKS);
+                    }
+                    if (!armed) {
+                        actions.add(Action.RENAME);
                     }
                 }
             }
@@ -191,17 +216,19 @@ public final class RangeRowButtons {
             int color = switch (b.action()) {
                 case UPDATE -> GuiPaint.OK;
                 case REVERT -> GuiPaint.ACCENT;
-                case UNLINK, CLEAR_NETWORKS -> GuiPaint.FG;
+                case UNLINK, CLEAR_NETWORKS, RENAME -> GuiPaint.FG;
             };
             // o ↺ já tem a borda coral: com o mouse em cima, ela escurece
             int hover = b.action() == Action.REVERT ? GuiPaint.FG : GuiPaint.BUTTON_HOVER_BORDER;
-            boolean plain = b.action() == Action.UNLINK || b.action() == Action.CLEAR_NETWORKS;
+            boolean plain = b.action() != Action.UPDATE && b.action() != Action.REVERT;
             int border = hovered ? hover : plain ? GuiPaint.BUTTON_BORDER : color;
             GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, border);
             if (b.action() == Action.UNLINK) {
                 cross(g, b.x() + 2, b.y() + 2, color);
             } else if (b.action() == Action.CLEAR_NETWORKS) {
                 IdleNetworks.icon(g, b.x() + 2, b.y() + 2, color);
+            } else if (b.action() == Action.RENAME) {
+                pencil(g, b.x() + 2, b.y() + 2, color);
             } else {
                 arrow(g, b.x() + 2, b.y() + 2, b.action() == Action.REVERT, color);
             }
@@ -216,10 +243,20 @@ public final class RangeRowButtons {
         }
     }
 
-    private static void arrow(GuiGraphics g, int x, int y, boolean mirror, int color) {
-        for (int row = 0; row < ARROW.length; row++) {
-            for (int col = 0; col < ARROW[row].length(); col++) {
-                if (ARROW[row].charAt(mirror ? ARROW[row].length() - 1 - col : col) == '#') {
+    /** O ⟳, ou o ↺ ({@code mirror}), em 6 × 6 px (também o Voltar só com o ícone da linha da máquina). */
+    static void arrow(GuiGraphics g, int x, int y, boolean mirror, int color) {
+        pixels(g, ARROW, x, y, mirror, color);
+    }
+
+    /** O lápis do ✎, em 6 × 6 px (também o da linha Editando). */
+    static void pencil(GuiGraphics g, int x, int y, int color) {
+        pixels(g, PENCIL, x, y, false, color);
+    }
+
+    private static void pixels(GuiGraphics g, String[] art, int x, int y, boolean mirror, int color) {
+        for (int row = 0; row < art.length; row++) {
+            for (int col = 0; col < art[row].length(); col++) {
+                if (art[row].charAt(mirror ? art[row].length() - 1 - col : col) == '#') {
                     g.fill(x + col, y + row, x + col + 1, y + row + 1, color);
                 }
             }
@@ -239,12 +276,14 @@ public final class RangeRowButtons {
             case REVERT -> tr("range.revert");
             case UNLINK -> tr(armed ? "range.unlink.armed" : "range.unlink");
             case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear");
+            case RENAME -> tr("range.rename");
         };
         Component detail = switch (action) {
             case UPDATE -> updateDetail(view, target);
             case REVERT -> tr("range.revert.tooltip");
             case UNLINK -> tr(armed ? "range.unlink.armed.tooltip" : "range.unlink.tooltip");
             case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear.tooltip");
+            case RENAME -> tr("range.rename.tooltip");
         };
         return head.copy().append("\n").append(detail.copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }

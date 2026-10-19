@@ -84,6 +84,16 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 | **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
+## Máquinas à distância
+
+Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece ao lado do visor. Cada linha mostra o nome, as coordenadas e o estado da máquina.
+
+| Na lista | O que faz |
+| --- | --- |
+| **Nome** | Clique no ✎ da linha (ou dê dois cliques no nome) para dar um nome à máquina ou ao grupo. **Enter** salva e **Esc** cancela. |
+| **Olho ◉** | Acende a máquina no mundo, através dos blocos, com uma linha até o roteador. Ela fica acesa até você apagar ou sair do mundo, até 64 de uma vez. Clique de novo no olho para apagar. |
+| **Apagar todas** | Apaga de uma vez todas as máquinas acesas. |
+
 ## Modos da face
 
 | Modo | O que faz | Use para |

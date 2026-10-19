@@ -36,10 +36,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ComparatorBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.ComparatorBlockEntity;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * O pacote S da auditoria de eficiência nos armazenamentos do mod: o aviso aos vizinhos juntado num
@@ -336,5 +338,77 @@ public final class StorageEfficiencyGameTests {
         CompoundTag saved = storage.save(registries).getCompound(0);
         helper.assertTrue(saved.contains("key") && !saved.contains("item"), "salva no formato atual");
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ S4: a pilha do slot sem cópia por chamada
+
+    /**
+     * {@code getStackInSlot} devolve a mesma pilha enquanto a quantidade do tipo não muda; quando muda, uma
+     * nova, e a antiga fica como estava (quem a guardou para comparar vê a diferença). A extração devolve uma
+     * pilha nova, e alterar a do slot (contra o contrato) não mexe no conteúdo.
+     */
+    @GameTest(template = "empty")
+    public static void slotViewIsReusedUntilTheCountChanges(GameTestHelper helper) {
+        StorageChestBlockEntity entity = chest(helper, A, RouterTier.ELITE);
+        ItemStorage storage = entity.storage();
+        IItemHandler handler = entity.handler();
+        storage.insert(new ItemStack(Items.COBBLESTONE), 100, false);
+        ItemStack first = handler.getStackInSlot(0);
+        helper.assertTrue(first == handler.getStackInSlot(0), "a mesma pilha sem mudança");
+        helper.assertValueEqual(first.getCount(), 100, "quantidade");
+
+        storage.insert(new ItemStack(Items.COBBLESTONE), 50, false);
+        ItemStack second = handler.getStackInSlot(0);
+        helper.assertTrue(second != first, "pilha nova quando a quantidade muda");
+        helper.assertValueEqual(first.getCount(), 100, "a antiga ficou como estava");
+        helper.assertValueEqual(second.getCount(), 150, "a nova tem a quantidade nova");
+
+        ItemStack taken = handler.extractItem(0, 10, false);
+        helper.assertTrue(taken != second && taken.getCount() == 10, "a extração devolve uma pilha nova");
+        helper.assertValueEqual(second.getCount(), 150, "a extração não mexeu na pilha do slot");
+        helper.assertValueEqual(handler.getStackInSlot(0).getCount(), 140, "o slot depois da extração");
+
+        handler.getStackInSlot(0).shrink(40);
+        helper.assertValueEqual(storage.count(new ItemStack(Items.COBBLESTONE)), 140L, "o conteúdo não mudou");
+        helper.assertValueEqual(handler.getStackInSlot(0).getCount(), 140, "a pilha alterada foi trocada");
+        helper.assertTrue(handler.getStackInSlot(1).isEmpty(), "o slot vazio do fim");
+        helper.succeed();
+    }
+
+    /** O mesmo no Tanque, pelo {@code getFluidInTank}. */
+    @GameTest(template = "empty")
+    public static void tankViewIsReusedUntilTheAmountChanges(GameTestHelper helper) {
+        helper.setBlock(A, ModBlocks.STORAGE.get(StorageKind.TANK).get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        StorageTankBlockEntity tank = helper.getBlockEntity(A);
+        tank.storage().insert(new FluidStack(Fluids.WATER, 1), 4_000, false);
+        FluidStack first = tank.handler().getFluidInTank(0);
+        helper.assertTrue(first == tank.handler().getFluidInTank(0), "o mesmo fluido sem mudança");
+        tank.storage().extract(new FluidStack(Fluids.WATER, 1), 1_000, false);
+        FluidStack second = tank.handler().getFluidInTank(0);
+        helper.assertTrue(second != first && first.getAmount() == 4_000 && second.getAmount() == 3_000,
+                "um novo quando a quantidade muda, o antigo como estava");
+        helper.succeed();
+    }
+
+    /** Um funil vanilla embaixo do Baú tira os itens pela visão de slot. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void hopperPullsFromTheChest(GameTestHelper helper) {
+        BlockPos above = new BlockPos(1, 2, 1);
+        BlockPos hopper = new BlockPos(1, 1, 1);
+        helper.setBlock(hopper, Blocks.HOPPER);
+        StorageChestBlockEntity entity = chest(helper, above, RouterTier.BASIC);
+        entity.storage().insert(new ItemStack(Items.DIAMOND), 3, false);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    HopperBlockEntity funnel = helper.getBlockEntity(hopper);
+                    int count = 0;
+                    for (int i = 0; i < funnel.getContainerSize(); i++) {
+                        count += funnel.getItem(i).getCount();
+                    }
+                    helper.assertValueEqual(count, 3, "diamantes no funil");
+                })
+                .thenExecute(() -> helper.assertTrue(entity.storage().isEmpty(), "o Baú esvaziou"))
+                .thenSucceed();
     }
 }

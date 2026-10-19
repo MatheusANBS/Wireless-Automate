@@ -26,7 +26,8 @@ public final class FluidStorageHandler implements IFluidHandler {
         if (tank < 0 || tank >= storage.types()) {
             return FluidStack.EMPTY;
         }
-        return storage.key(tank).copyWithAmount((int) Math.min(storage.count(tank), Integer.MAX_VALUE));
+        // O fluido guardado do tipo, sem cópia por chamada; o contrato do IFluidHandler proíbe alterá-lo.
+        return storage.view(tank);
     }
 
     @Override

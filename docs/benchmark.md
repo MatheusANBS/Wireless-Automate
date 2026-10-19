@@ -19,7 +19,7 @@ A rodada completa na máquina local (seção "Máquina local: antes e depois") c
 
 ```bash
 ./scripts/bench.sh                                # todos os cenários, 3 repetições (cerca de 30 min)
-./scripts/bench.sh many:500:3:soph,idle:500:3     # tarefas escolhidas: cenário[:n[:reps[:vanilla|soph]]]
+./scripts/bench.sh many:500:3:soph,idle:500:3     # tarefas escolhidas: cenário[:n[:reps[:vanilla|soph|wa]]]
 WA_BENCH_MEASURE=400 ./scripts/bench.sh rebuild   # mais ticks de medição
 WA_BENCH_JFR=1 WA_BENCH_SPRINT=1 ./scripts/bench.sh many:500:1:soph   # perfil do Java Flight Recorder
 ```
@@ -27,7 +27,7 @@ WA_BENCH_JFR=1 WA_BENCH_SPRINT=1 ./scripts/bench.sh many:500:1:soph   # perfil d
 O script prepara `run/bench` (eula, `server.properties` com um mundo plano novo, porta 25599, sem mobs e sem autosave) e sobe `./gradlew runBenchServer` com a variável `WA_BENCH`. O mod mede o servidor vazio, roda as tarefas uma depois da outra, grava o relatório em `run/bench/reports/<data>.md` (com o log do servidor ao lado) e para o servidor.
 
 - **Run `benchServer`** (`build.gradle`, bloco "Benchmark"): copia o Sophisticated Storage, o Sophisticated Core e o Spark do Maven do Modrinth para `run/bench/mods`. O `runClient` também carrega o Sophisticated Storage e o Sophisticated Core (para testar à mão); só o Spark é exclusivo do benchmark. Os GameTests não carregam nenhum deles. O run usa heap de 2 GB e liga `-Dwirelessautomate.bench=true` (as máquinas de teste do cenário misto).
-- **No jogo:** `/wa bench run <cenário> [n] [reps] [vanilla|soph]`, `/wa bench status` e `/wa bench stop`, com permissão 4. O comando monta a cena em x = z = 20000, y = 200, sobrescreve o que houver ali e desmonta tudo no fim. É para mundo de teste. O relatório sai no chat, no log e em `wirelessautomate-bench/` na pasta do servidor.
+- **No jogo:** `/wa bench run <cenário> [n] [reps] [vanilla|soph|wa]`, `/wa bench status` e `/wa bench stop`, com permissão 4. O comando monta a cena em x = z = 20000, y = 200, sobrescreve o que houver ali e desmonta tudo no fim. É para mundo de teste. O relatório sai no chat, no log e em `wirelessautomate-bench/` na pasta do servidor.
 - **Variáveis:** `WA_BENCH_BASELINE` (100), `WA_BENCH_WARMUP` (padrão do cenário) e `WA_BENCH_MEASURE` (200) dão o tamanho das fases em ticks. `WA_BENCH_SPRINT=1` roda com `/tick sprint`, só para perfis. `WA_BENCH_JFR=1` grava `run/bench/reports/<data>.jfr`. Tudo fica local; nada é enviado para fora (o Spark só imprime o `spark tps` no log).
 
 ## Método
@@ -74,11 +74,14 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
 | `redstone-face` | Como `redstone`, com as faces das origens em redstone alto: cada pulso liga ou desliga as portas | Custo do sinal numa face com controle por redstone | Sem remontagem por pulso |
 | `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
+| `hub` | n nós (padrão 250): o nó 1 é um Baú do mod Elite de destino, com um roteador; todos os outros são origens cheias de pedregulho, na mesma rede | Muitas origens num mesmo Baú: cada inserção marca o Baú e avisa os vizinhos (S1 da auditoria) | Abaixo do orçamento |
+| `chesttypes` | Pares (padrão 20): origem cheia de pedregulho; destino Baú do mod Elite com 2.000 tipos de papel (um nome cada) e lista branca de pedregulho com estoque de 1.000.000, nunca atingido; o reenchimento tira só o pedregulho | Estoque sem componentes num Baú com milhares de tipos, contado a cada entrega (S2 da auditoria) | Abaixo do orçamento |
 | `resonator-gen` | n Ressonadores de Sinal Ultimate (padrão 100), montados, sintonizados e com 8 Lapidados; um roteador Ultimate na Porta de Energia de cada um, para uma Bateria Ultimate, cada par numa rede | Custo do Ressonador gerando, com o transporte da energia | Bem abaixo do orçamento |
 | `resonator-idle` | Os mesmos (padrão 500), sem roteador: o buffer enche em 10 s e para | Custo de existir do Ressonador | Perto de 0 |
 | `resonator-event` | 50 Ressonadores ociosos; no meio da medição, um canto de cada casca sai no mesmo tick e volta 40 ticks depois | Pico de um tick com todas as revalidações juntas | Um pico de poucos ms, nunca por tick |
+| `range` | n roteadores Ultimate (padrão 200) com o Upgrade de Alcance, cada um num barril (Inserir) com 64 barris vazios em volta, vinculados num grupo com o lado de cima em Extrair; tudo numa rede, nada para mover. Mede também o heap retido pela cena (dois GCs completos antes de montar e antes de medir, fora do tempo medido; seção "Memória" do relatório) | Custo de existir e memória das máquinas vinculadas | Perto de 0 em tempo; memória proporcional às faces usadas |
 
-Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots.
+Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` não roda com `wa` (mede a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
 
 Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack`, `redstone` e `tablet`):
 
@@ -431,3 +434,26 @@ Commit `738d99e` contra o main `6e20de7`: `./scripts/bench.sh full:100:3,sparse:
 
 - Nada fora do ruído: a mudança no caminho quente é um boolean a mais no `Backoff.wake()` e no laço `hungry`.
 - O `redstone-face` sofre com a carga da máquina (o MSPT base foi de 0,14 a 0,75 entre as rodadas); na rodada intercalada, com a mesma carga dos dois lados, antes e depois ficam iguais dentro do ±.
+
+## Pacotes S, R, C e o F1 da auditoria (19 de outubro de 2026)
+
+Ramo `auditoria-s-c-r-f1`. Antes: `bench-base-scr`, o main (`71640ad`) com só os dois commits de bench (`fc8b637`: o armazenamento `wa` e os cenários `hub` e `chesttypes`; `f47a3bc`: o cenário `range` e o heap retido). Duas rodadas intercaladas, antes, depois, antes, depois, de `hub:250:3,many:500:3:wa,chesttypes:20:3,range:200:3,types:20:3:soph,idle:500:3,many:500:3,mixed:498:3`, e mais duas só de `types` e `mixed`; logs `run/scr-*.log`, fora do git. Mod em ms/tick, rodada 1 / rodada 2.
+
+| Cenário | Item | mod antes | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- | --- |
+| hub 250 (250 origens num Baú) | S1 | 0,347 / 0,328 | **0,272 / 0,296** (−22% / −10%) | µs/visita 5,57 → 3,68 / 5,27 → 4,29 |
+| many 500, origens e destinos no Baú | S1 | 0,048 / 0,049 | **0,040 / 0,038** (−17% / −23%) | p99 0,50 → 0,33 / 0,54 → 0,39 |
+| chesttypes 20 (2.000 tipos, estoque) | S2 | 0,055 / 0,065 | **0,016 / 0,018** (−70% / −72%) | p99 0,99 → 0,22 / 1,04 → 0,27 |
+| range 200 (12.800 máquinas vinculadas) | R1 | 0,046 / 0,050 | 0,040 / 0,043 | **heap retido ~24,7 → ~20,8 MB** (as três repetições, nas duas rodadas) |
+| idle 500 | F1 | 0,0019 / 0,0017 | 0,0022 / 0,0019 | **Fluxos 0,0103 → 0,0080 / 0,0104 → 0,0075 ms/tick** (−25%) |
+| types 20 soph | R2 | 0,470 / 0,523 / 0,490 / 0,489 | 0,522 / 0,535 / 0,446 / 0,529 | quatro pares: +11%, +2%, −9%, +8% |
+| many 500 | regressão | 0,504 / 0,586 | 0,516 / 0,576 | igual |
+| mixed 498 | regressão | 0,422 / 0,471 / 0,449 / 0,487 | 0,438 / 0,473 / 0,451 / 0,527 | quatro pares: +4%, 0, 0, +8% (no último, o MSPT base do depois também subiu 18%) |
+
+### Leitura
+
+- S1 e S2 são os ganhos grandes: um aviso aos vizinhos por armazenamento por tick, em vez de um por entrega, e o estoque em O(1). O S2 tira 70% do custo de um destino Baú com milhares de tipos e um limite de estoque.
+- R1: cada máquina vinculada só com itens retém uns 300 bytes a menos (os caches e as portas dos tipos sem face com modo não nascem). O tempo fica igual.
+- F1: o amostrador pula o nó parado e o custo dos Fluxos parado cai um quarto; o resto é a volta pelos baldes e a configuração por nó, que já era guardada com versão.
+- `types` e `mixed` oscilam entre os pares para os dois lados, com o MSPT base da máquina mudando junto; nenhuma regressão sai do ruído. O R2 (uma busca de hash a mais por consulta num filtro com itens e tags) fica dentro dele.
+- S3, S4, S5, R3 e o pacote C não têm cenário: os GameTests provam o S3 a S5 e o R3; os números do pacote C, medidos com `System.nanoTime` num build local, estão no backlog (C1: 14–26 → 0,7–2,3 ms por tecla com 2.518 tipos; C3: o layout do painel de 3–4 para 1 por quadro).

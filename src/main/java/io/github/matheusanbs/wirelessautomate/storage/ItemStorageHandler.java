@@ -26,7 +26,8 @@ public final class ItemStorageHandler implements IItemHandler {
         if (slot < 0 || slot >= storage.types()) {
             return ItemStack.EMPTY;
         }
-        return storage.key(slot).copyWithCount((int) Math.min(storage.count(slot), Integer.MAX_VALUE));
+        // A pilha guardada do tipo, sem cópia por chamada; o contrato do IItemHandler proíbe alterá-la.
+        return storage.view(slot);
     }
 
     @Override

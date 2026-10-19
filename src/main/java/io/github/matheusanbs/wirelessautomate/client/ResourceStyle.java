@@ -67,8 +67,18 @@ public final class ResourceStyle {
         };
     }
 
+    /** A textura do ícone de cada tipo, pelo {@code ordinal}: montada uma vez, não a cada desenho. */
+    private static final ResourceLocation[] ICONS = new ResourceLocation[ResourceType.values().length];
+
+    static {
+        for (ResourceType type : ResourceType.values()) {
+            ICONS[type.ordinal()] = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID,
+                    "textures/gui/type/" + type.key() + ".png");
+        }
+    }
+
     public static ResourceLocation icon(ResourceType type) {
-        return ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID, "textures/gui/type/" + type.key() + ".png");
+        return ICONS[type.ordinal()];
     }
 
     /** Lado do ícone em pixels de GUI. */

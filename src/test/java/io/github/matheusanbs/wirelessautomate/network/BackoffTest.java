@@ -128,4 +128,34 @@ class BackoffTest {
         backoff.wake();
         assertTrue(backoff.isAwake(0L));
     }
+
+    @Test
+    void countsOnlyRealChanges() {
+        int[] changes = new int[1];
+        Backoff a = new Backoff(10);
+        Backoff b = new Backoff(10);
+        a.countChangesIn(changes);
+        b.countChangesIn(changes);
+        a.wake();
+        assertEquals(0, changes[0], "acordar o acordado não conta");
+        a.sleep(0L);
+        assertEquals(1, changes[0], "dormir conta");
+        b.sleepUntil(0L, 5L);
+        assertEquals(2, changes[0], "o arranjo é dividido");
+        b.sleepUntil(0L, 5L);
+        assertEquals(2, changes[0], "o mesmo prazo não conta");
+        a.wake();
+        assertEquals(3, changes[0], "acordar o que dormia conta");
+        a.freeze();
+        a.freeze();
+        assertEquals(4, changes[0], "congelar de novo não conta");
+        a.wake();
+        a.sleep(3L);
+        assertEquals(4, changes[0], "congelado ignora acordar e dormir");
+        a.thaw();
+        assertEquals(5, changes[0], "descongelar conta");
+        a.countChangesIn(null);
+        a.wake();
+        assertEquals(5, changes[0], "sem contagem");
+    }
 }

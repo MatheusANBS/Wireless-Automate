@@ -14,7 +14,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * {@link Integer#MAX_VALUE} mB por chamada.
  */
 public class StorageTankBlockEntity extends KeyedStorageBlockEntity<FluidStack> {
-    private final FluidStorage storage = new FluidStorage(this::setChanged, this::capacity);
+    private final FluidStorage storage = new FluidStorage(this::markContentsChanged, this::capacity);
     private final FluidStorageHandler handler = new FluidStorageHandler(storage);
 
     public StorageTankBlockEntity(BlockPos pos, BlockState state) {

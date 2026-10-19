@@ -13,7 +13,7 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | A5 | A rajada chama `insertItem` em todas as pilhas já cheias (O(k²)) | `ItemInsertPlan:244-327` | médio | feito `0da992c` (o plano lembra o primeiro slot ainda aberto; o `bigfull` não exercita) |
 | A6 | `ItemStockTally` aloca `long[]` e cópia de pilha por item a cada visita e nunca encolhe | `ItemStockTally:40-111` | médio | feito `0da992c` (células reaproveitadas e mapas que encolhem; `stock` igual em tempo) |
 | A7 | Micro do motor: consulta à remota durante a visita, `BlockPos`/`getBlockState` por `setChanged`, capability antes do balde, cópias de fluido e químico, multiplicação do orçamento, lista achatada refeita | `RemoteIndex:83`, `RouterBlock:178`, `ItemTransfer:86`, `FluidTransfer:215`, `TickBudget`, `NetworkManager.rebuild` | baixo, somado médio | em parte `0da992c`: balde antes da capability e `onNeighborChange` sem `BlockPos` novo; o resto (remota durante a visita, cópias de fluido, orçamento, lista achatada) fica |
-| A8 | Tablet: 10–20 mil objetos por montagem (`List.of` por rede, `HashSet` por nó, boxing, `values()`), sondagem de cheios alocando | `NodeIndex:124`, `TabletSnapshotBuilder`, `TabletNodes`, `NodeProbe` | médio | pendente, junto do pacote T (a mesma montagem) |
+| A8 | Tablet: 10–20 mil objetos por montagem (`List.of` por rede, `HashSet` por nó, boxing, `values()`), sondagem de cheios alocando | `NodeIndex:124`, `TabletSnapshotBuilder`, `TabletNodes`, `NodeProbe` | médio | feito `b315236` (redes do `NodeIndex.Entry` em listas imutáveis devolvidas sem cópia, contagens em fastutil, sem `HashSet` por nó; sem cenário próprio) |
 | A9 | O cabeçalho do Tablet volta inteiro quando o jogador anda (leva a posição dele) | `TabletSnapshotBuilder:122` | médio (rede) | feito `0da992c` (o Mapa usa a posição local; protocolo 21) |
 | A10 | Recarregar qualquer chave da config remonta todas as redes | `NetworkManager:641` | baixo | feito `0da992c` (`Config.tiersFingerprint`: recarga sem tier mudado não remonta) |
 | A11 | `networks(type)` recalculado com `LinkedHashSet` a cada consulta | `RouterFaces:166` | baixo | descartado (só roda por evento: `addNode`, `nodeChanged` e o Vinculador) |
@@ -33,12 +33,12 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| T1 | A página do Tablet volta inteira a cada segundo porque a vazão mudou; estrutura só quando muda + pacote de vazão e estado | `TabletMenu:471`, `TabletSnapshotBuilder:254` | alto (30 → 3 KB/s) | pendente |
-| T2 | A página repete dimensão, id da máquina e 16 B por rede em cada nó; paleta no pacote | `TabletSnapshot:424-462` | médio-alto (rede) | pendente |
-| T3 | Cada jogador refaz a amostra de vazão e de cheios e ordena ~1.000 nós; compartilhar e cachear | `TabletSnapshotBuilder:104-133` | médio, alto com vários | pendente |
-| T4 | O painel do nó manda o snapshot inteiro quando só a distância muda | `TabletChosenNode:152` | médio-baixo | pendente |
-| T5 | Pulso de redstone recaptura a tela do roteador aberta | `RouterMenu:889` | baixo | pendente |
-| T6 | A área do Vinculador é revarrida quando qualquer roteador carrega | `LinkerMenu:84` | baixo-médio | pendente |
+| T1 | A página do Tablet volta inteira a cada segundo porque a vazão mudou; estrutura só quando muda + pacote de vazão e estado | `TabletMenu:471`, `TabletSnapshotBuilder:254` | alto (30 → 3 KB/s) | feito `b315236` (`TabletLivePayload` só com estado e vazão; tablet 1000: 9–30 → 0,4–1,7 KB/s, tempo do Tablet igual) |
+| T2 | A página repete dimensão, id da máquina e 16 B por rede em cada nó; paleta no pacote | `TabletSnapshot:424-462` | médio-alto (rede) | feito `b315236` (paleta de dimensões, máquinas e redes na página; junto do T1 nos bytes) |
+| T3 | Cada jogador refaz a amostra de vazão e de cheios e ordena ~1.000 nós; compartilhar e cachear | `TabletSnapshotBuilder:104-133` | médio, alto com vários | feito `b315236` (`TabletSample`, um por servidor; só aparece com vários jogadores) |
+| T4 | O painel do nó manda o snapshot inteiro quando só a distância muda | `TabletChosenNode:152` | médio-baixo | feito `b315236` (a tela calcula a distância pela posição local) |
+| T5 | Pulso de redstone recaptura a tela do roteador aberta | `RouterMenu:889` | baixo | feito `b315236` (o sinal não sobe o `changeVersion`; a tela do roteador confere uma vez por segundo) |
+| T6 | A área do Vinculador é revarrida quando qualquer roteador carrega | `LinkerMenu:84` | baixo-médio | feito `b315236` (o Vinculador revarre pela `dataVersion` do índice) |
 
 ## S · armazenamentos
 
@@ -77,4 +77,4 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 ## Em andamento
 
-- Pacote T e A8 no ramo local `tablet-rede` (T1 a T6 e A8 feitos, GameTests verdes; faltam o e2e, o bench antes e depois e marcar os estados aqui). Ver o item 0j do `docs/progresso.md`.
+(nada)

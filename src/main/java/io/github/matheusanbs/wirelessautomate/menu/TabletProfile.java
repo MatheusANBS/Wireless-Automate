@@ -290,7 +290,7 @@ final class TabletProfile {
         }
         String base = "gui.wirelessautomate.panel.notice.";
         announce(PanelNoticePayload.plain(skipped > 0 ? Component.translatable(base + "undone_skipped", restored, skipped)
-                : Component.translatable(base + "undone", restored)));
+                : Component.translatable(base + (restored == 1 ? "undone.one" : "undone"), restored)));
         return restored;
     }
 

@@ -69,11 +69,7 @@ final class ListKeys {
                 if (!search.text.isEmpty() && box != null && box.isFocused() && !list.treeNav.hasCursor()) {
                     return false;
                 }
-                if (keyCode == GLFW.GLFW_KEY_LEFT) {
-                    list.treeNav.left();
-                } else {
-                    list.treeNav.right();
-                }
+                list.treeNav.arrow(keyCode == GLFW.GLFW_KEY_LEFT);
                 return true;
             }
             case GLFW.GLFW_KEY_BACKSPACE -> {

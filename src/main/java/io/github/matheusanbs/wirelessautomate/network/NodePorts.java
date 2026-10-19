@@ -313,7 +313,7 @@ final class NodePorts {
                 continue;
             }
             wakePort(port);
-            if (feeders && port.destination) {
+            if (feeders && port.destination && !port.stopped) {
                 wakeFeeders(port);
             }
         }
@@ -339,8 +339,9 @@ final class NodePorts {
 
     /**
      * O sinal de redstone do roteador mudou: trava ou destrava as portas já lidas com controle por redstone, sem
-     * remontar ({@link Port#applyRedstone}). A que destrava acorda as origens que esperam por ela; as de um tipo
-     * ainda por ler pegam o sinal na leitura.
+     * remontar ({@link Port#applyRedstone}). A que destrava acorda as origens que esperam por ela, mesmo que outro
+     * aviso do mesmo tick já tenha passado pelo filtro do {@link Port#feedersWokenAt}; as de um tipo ainda por ler
+     * pegam o sinal na leitura.
      */
     void poweredChanged(boolean powered, long now) {
         for (Port[] active : collected) {
@@ -349,7 +350,8 @@ final class NodePorts {
             }
             for (Port port : active) {
                 if (port.redstone != RedstoneMode.IGNORE && port.applyRedstone(powered, now) && port.destination) {
-                    wakeFeeders(port);
+                    port.feedersWokenAt = NetworkManager.lastTick();
+                    wakeAllFeeders(port);
                 }
             }
         }
@@ -377,7 +379,7 @@ final class NodePorts {
             return;
         }
         wakePort(port);
-        if (port.destination) {
+        if (port.destination && !port.stopped) {
             wakeFeeders(port);
         }
     }
@@ -398,6 +400,10 @@ final class NodePorts {
             return;
         }
         destination.feedersWokenAt = tick;
+        wakeAllFeeders(destination);
+    }
+
+    private static void wakeAllFeeders(Port destination) {
         wakeWaiting(destination.feeders);
         wakeWaiting(destination.sharedFeeders);
         wakeWaiting(destination.sharedBothFeeders);

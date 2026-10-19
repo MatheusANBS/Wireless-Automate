@@ -1157,4 +1157,52 @@ public final class TabletGameTests {
             player.containerMenu = player.inventoryMenu;
         }
     }
+
+    /**
+     * Página com paleta (dimensões, máquinas e redes uma vez cada) pelo codec, e o pacote pequeno: duas páginas que só
+     * diferem em estado e vazão são iguais fora disso, e o estado e a vazão de uma, aplicados na outra, dão a primeira.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pagePaletteAndLiveUpdate(GameTestHelper helper) {
+        UUID net = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
+        ResourceLocation chest = BuiltInRegistries.BLOCK.getKey(Blocks.CHEST);
+        ResourceLocation furnace = BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE);
+        int types = ResourceType.values().length;
+        java.util.function.BiFunction<NodeStatus, Long, TabletSnapshot.Page> page = (status, rate) -> {
+            List<NodeView> nodes = new java.util.ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                List<List<UUID>> networks = new java.util.ArrayList<>();
+                for (int t = 0; t < types; t++) {
+                    networks.add(t == 0 ? List.of(net) : t == 1 && i == 2 ? List.of(net, other) : List.of());
+                }
+                List<Long> rates = new java.util.ArrayList<>();
+                for (int t = 0; t < types; t++) {
+                    rates.add(t == 0 ? rate + i : 0L);
+                }
+                nodes.add(new NodeView(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 64, -i)), "n" + i,
+                        i == 1 ? furnace : chest, RouterTier.BASIC, List.copyOf(networks), 1, status, false, 5L << i,
+                        List.copyOf(rates), Optional.empty()));
+            }
+            return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes),
+                    List.of(new TabletSnapshot.Facet<>(chest, 2), new TabletSnapshot.Facet<>(furnace, 1)),
+                    Optional.of(furnace));
+        };
+        TabletSnapshot.Page before = page.apply(NodeStatus.IDLE, 0L);
+        TabletSnapshot.Page after = page.apply(NodeStatus.ACTIVE, 40L);
+
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        TabletSnapshot.Page.STREAM_CODEC.encode(buf, after);
+        helper.assertTrue(TabletSnapshot.Page.STREAM_CODEC.decode(buf).equals(after), "página pelo codec");
+
+        helper.assertTrue(after.sameExceptLive(before), "só estado e vazão mudaram");
+        helper.assertFalse(after.equals(before), "as páginas eram iguais");
+        buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        TabletSnapshot.LIVE_CODEC.encode(buf, after.lives());
+        helper.assertTrue(before.withLives(TabletSnapshot.LIVE_CODEC.decode(buf)).equals(after), "estado e vazão aplicados");
+        TabletSnapshot.Page fewer = new TabletSnapshot.Page(after.query(), after.totalNodes(), after.matchingNodes(),
+                List.of(after.nodes().get(0), after.nodes().get(1)), after.groupCounts(), after.originGroup());
+        helper.assertFalse(fewer.sameExceptLive(after), "um nó a menos passou por só vazão");
+        helper.succeed();
+    }
 }

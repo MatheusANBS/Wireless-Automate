@@ -23,10 +23,13 @@ import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.List;
 import java.util.Objects;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * O desenho da Lista do Tablet sobre as áreas do {@link ListLayout}: a busca com as etiquetas, os filtros
@@ -194,7 +197,7 @@ final class ListPainter {
         }
         Component machine = RouterBlock.machineName(snap.machineState().getBlock());
         Component distance = payload.distance() < 0 ? tr("list.panel.other_dimension")
-                : plural("list.panel.distance", payload.distance());
+                : plural("list.panel.distance", localDistance(payload));
         Component meta = machine.copy().append(" · ").append(Component.translatable(snap.tier().translationKey()))
                 .append(" · ").append(distance);
         GuiText.draw(g, font, meta, panelX, y0 + 13, panelW, GuiPaint.MUTED);
@@ -251,5 +254,14 @@ final class ListPainter {
             g.fill(x, y + i, x + 1, y + end, color);
             g.fill(x + w - 1, y + i, x + w, y + end, color);
         }
+    }
+
+    /** Blocos entre o jogador e o nó escolhido, pela posição local (o servidor só diz se é a mesma dimensão). */
+    private static int localDistance(TabletPanelPayload payload) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null || payload.node().isEmpty()) {
+            return 0;
+        }
+        return (int) Math.round(Math.sqrt(player.position().distanceToSqr(Vec3.atCenterOf(payload.node().get().pos()))));
     }
 }

@@ -304,10 +304,11 @@ public final class FlowSampler {
             config = new NodeConfig();
             ports.flowConfig = config;
         }
-        if (!config.counted || config.changeVersion != node.changeVersion() || config.dataVersion != data.version()
-                || config.epoch != configEpoch) {
+        if (!config.counted || config.changeVersion != node.changeVersion() || config.powered != node.powered()
+                || config.dataVersion != data.version() || config.epoch != configEpoch) {
             config.recount(node, data);
             config.changeVersion = node.changeVersion();
+            config.powered = node.powered();
             config.dataVersion = data.version();
             config.epoch = configEpoch;
             config.counted = true;
@@ -507,14 +508,15 @@ public final class FlowSampler {
 
     /**
      * A configuração de um nó que o amostrador soma a cada volta: as faces paradas por redstone por
-     * rede × tipo e as sem rede por tipo. Recontada só quando a versão do roteador (faces, redes, sinal,
-     * máquinas), a das redes salvas ou a config mudam; um nó sem nada disso guarda só as versões.
+     * rede × tipo e as sem rede por tipo. Recontada só quando a versão do roteador (faces, redes, máquinas), o
+     * sinal de redstone, a das redes salvas ou a config mudam; um nó sem nada disso guarda só as versões.
      */
     static final class NodeConfig {
         private static final int[] NO_TYPES = new int[0];
         private static final UUID[] NO_NETWORKS = new UUID[0];
 
         int changeVersion;
+        boolean powered;
         int dataVersion;
         int epoch;
         boolean counted;

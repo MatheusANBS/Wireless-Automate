@@ -171,10 +171,11 @@ final class TabletChosenNode {
         }
         TabletPanelPayload built = new TabletPanelPayload(containerId, Optional.of(chosen),
                 Optional.ofNullable(lastKnown), access, distance, range);
-        if (built.equals(sentPanel)) {
+        // Compara como o cliente recebe: só a distância mudando (o jogador andando) não reenvia.
+        if (built.asSent().equals(sentPanel)) {
             return null;
         }
-        sentPanel = built;
+        sentPanel = built.asSent();
         return built;
     }
 }

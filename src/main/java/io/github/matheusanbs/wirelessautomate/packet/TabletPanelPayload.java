@@ -16,7 +16,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * {@code snapshot} é o mesmo da tela do roteador, ou vazio se o nó descarregado nunca foi lido.
  *
  * @param access   o que o jogador pode fazer no painel
- * @param distance blocos entre o jogador e o nó, ou -1 se estão em dimensões diferentes (para a mensagem de alcance)
+ * @param distance blocos entre o jogador e o nó, ou -1 se estão em dimensões diferentes (para a mensagem de alcance).
+ *                 No fio vai só a dimensão (0 ou -1): a tela calcula a distância pela posição do jogador
+ *                 ({@code client/tablet/ListPainter}), e andar não reenvia o painel
  * @param range    alcance do tier do nó em blocos (0 = a dimensão inteira)
  */
 public record TabletPanelPayload(int containerId, Optional<NodeKey> node, Optional<RouterSnapshot> snapshot,
@@ -27,9 +29,14 @@ public record TabletPanelPayload(int containerId, Optional<NodeKey> node, Option
             ByteBufCodecs.optional(NodeKey.STREAM_CODEC.<RegistryFriendlyByteBuf>cast()), TabletPanelPayload::node,
             ByteBufCodecs.optional(RouterSnapshot.STREAM_CODEC), TabletPanelPayload::snapshot,
             PanelAccess.STREAM_CODEC, TabletPanelPayload::access,
-            ByteBufCodecs.INT, TabletPanelPayload::distance,
+            ByteBufCodecs.BOOL.map(same -> same ? 0 : -1, distance -> distance >= 0), TabletPanelPayload::distance,
             ByteBufCodecs.INT, TabletPanelPayload::range,
             TabletPanelPayload::new);
+
+    /** O mesmo painel como o cliente o recebe: a distância vira só a dimensão (0 ou -1). */
+    public TabletPanelPayload asSent() {
+        return distance <= 0 ? this : new TabletPanelPayload(containerId, node, snapshot, access, 0, range);
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

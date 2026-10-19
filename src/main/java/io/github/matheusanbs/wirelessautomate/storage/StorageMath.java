@@ -52,6 +52,18 @@ public final class StorageMath {
         return Math.max(1, (int) Math.ceil(10.0 * stored / capacity));
     }
 
+    /** Ticks de um dia de servidor ligado, a 20 ticks por segundo. */
+    public static final long TICKS_PER_DAY = 24L * 60 * 60 * 20;
+
+    /**
+     * O conteúdo guardado em {@code storedAt} (game time do overworld) já venceu em {@code now}, com o
+     * prazo de {@code days} dias de servidor ligado; {@code days <= 0} é sem prazo. Um relógio que voltou
+     * (mundo trocado, {@code storedAt} no futuro) não vence nada.
+     */
+    public static boolean stashExpired(long storedAt, long now, int days) {
+        return days > 0 && now - storedAt > days * TICKS_PER_DAY;
+    }
+
     private StorageMath() {
     }
 

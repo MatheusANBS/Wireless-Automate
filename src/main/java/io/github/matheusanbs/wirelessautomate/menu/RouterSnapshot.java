@@ -344,7 +344,7 @@ public record RouterSnapshot(
                 state = RangeView.MachineState.REPLACED;
             }
             machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(), state,
-                    replacedBy));
+                    replacedBy, remote.label()));
         }
         List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
         for (MachineGroup group : remotes.groups()) {

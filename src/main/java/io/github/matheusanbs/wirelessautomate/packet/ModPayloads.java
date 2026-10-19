@@ -68,7 +68,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "22";
+    public static final String VERSION = "23";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -98,6 +98,8 @@ public final class ModPayloads {
                 (payload, context) -> handleRevertMachine(serverPlayer(context), payload));
         registrar.playToServer(UnlinkMachinePayload.TYPE, UnlinkMachinePayload.STREAM_CODEC,
                 (payload, context) -> handleUnlinkMachine(serverPlayer(context), payload));
+        registrar.playToServer(RenameTargetPayload.TYPE, RenameTargetPayload.STREAM_CODEC,
+                (payload, context) -> handleRenameTarget(serverPlayer(context), payload));
         registrar.playToServer(UpdateMachinePayload.TYPE, UpdateMachinePayload.STREAM_CODEC,
                 (payload, context) -> handleUpdateMachine(serverPlayer(context), payload));
         registrar.playToServer(ClearIdleNetworksPayload.TYPE, ClearIdleNetworksPayload.STREAM_CODEC,
@@ -433,6 +435,26 @@ public final class ModPayloads {
         host.editedRouter().setName(payload.name());
         host.editApplied();
         return true;
+    }
+
+    /**
+     * Dá nome ao grupo ou rótulo à máquina remota. Recusa a máquina presa, nomes maiores que
+     * {@link RenameRouterPayload#MAX_LENGTH} e, numa máquina, a posição que não bate com a do índice.
+     */
+    public static boolean handleRenameTarget(@Nullable ServerPlayer player, RenameTargetPayload payload) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || payload.kind() == EditTarget.Kind.ATTACHED
+                || payload.name().strip().length() > RenameRouterPayload.MAX_LENGTH) {
+            return false;
+        }
+        RouterBlockEntity router = host.editedRouter();
+        if (payload.kind() == EditTarget.Kind.MACHINE
+                && (payload.machinePos().isEmpty() || !sameMachine(router, payload.id(), payload.machinePos().get()))) {
+            return false;
+        }
+        boolean renamed = router.renameTarget(new EditTarget(payload.kind(), payload.id()), payload.name());
+        host.editApplied();
+        return renamed;
     }
 
     /**

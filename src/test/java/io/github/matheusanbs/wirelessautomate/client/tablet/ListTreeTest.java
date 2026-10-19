@@ -128,11 +128,47 @@ class ListTreeTest {
 
     @Test
     void arrowsSkipCollapsedGroups() {
-        ListTree<String> tree = flat(Set.of("chest"));
+        // de dentro do nó 1 aberto: do "mais N" ao grupo recolhido (sem máquinas abaixo dele) e dali ao nó 2
+        ListTree<String> tree = new ListTree<>(MACHINES, OPEN_1, Set.of("chest"));
+        assertEquals(8, tree.next(7, 1));
+        assertEquals(tree.lineOfNode(2), tree.next(8, 1));
+        // do nó 2, o grupo de nós recolhido (o baú) fica de fora: o próximo é o primeiro barril
         assertEquals(tree.lineOfNode(4), tree.next(tree.lineOfNode(2), 1));
+        assertEquals(tree.lineOfNode(2), tree.next(tree.lineOfNode(4), -1));
         ListTree<String> all = flat(Set.of("furnace", "chest", "barrel"));
         assertEquals(-1, all.next(-1, 1));
-        assertEquals(1, all.next(1, 1));
+    }
+
+    @Test
+    void leftClosesCollapsesOrGoesUp() {
+        boolean[] openable = {false, true, true, false, false, false};
+        ListTree<String> tree = new ListTree<>(MACHINES, OPEN_1, Set.of(), openable);
+        assertEquals(new ListTree.Arrow(ListTree.Step.CLOSE_NODE, 2), tree.left(2));
+        assertEquals(new ListTree.Arrow(ListTree.Step.MOVE_TO, 2), tree.left(3));
+        assertEquals(new ListTree.Arrow(ListTree.Step.COLLAPSE_GROUP, 4), tree.left(4));
+        assertEquals(new ListTree.Arrow(ListTree.Step.MOVE_TO, 4), tree.left(5));
+        assertEquals(new ListTree.Arrow(ListTree.Step.MOVE_TO, 4), tree.left(7));
+        // grupo recolhido: sobe para o nó
+        assertEquals(new ListTree.Arrow(ListTree.Step.MOVE_TO, 2), tree.left(8));
+        // nó fechado: recolhe o grupo de nós dele
+        assertEquals(new ListTree.Arrow(ListTree.Step.COLLAPSE_HEADER, 0), tree.left(9));
+        assertEquals(new ListTree.Arrow(ListTree.Step.COLLAPSE_HEADER, 10), tree.left(10));
+        assertEquals(ListTree.Step.NONE, tree.left(-1).step());
+    }
+
+    @Test
+    void rightOpensExpandsOrShowsAll() {
+        boolean[] openable = {false, true, true, false, false, false};
+        ListTree<String> tree = new ListTree<>(MACHINES, OPEN_1, Set.of(), openable);
+        assertEquals(ListTree.Step.NONE, tree.right(1).step());
+        assertEquals(ListTree.Step.NONE, tree.right(2).step());
+        assertEquals(new ListTree.Arrow(ListTree.Step.OPEN_NODE, 9), tree.right(9));
+        assertEquals(ListTree.Step.NONE, tree.right(4).step());
+        assertEquals(new ListTree.Arrow(ListTree.Step.EXPAND_GROUP, 8), tree.right(8));
+        assertEquals(new ListTree.Arrow(ListTree.Step.SHOW_ALL, 7), tree.right(7));
+        assertEquals(ListTree.Step.NONE, tree.right(5).step());
+        assertEquals(new ListTree.Arrow(ListTree.Step.EXPAND_HEADER, 0), tree.right(0));
+        assertEquals(ListTree.Step.NONE, tree.right(99).step());
     }
 
     @Test

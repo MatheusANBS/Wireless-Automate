@@ -48,6 +48,10 @@ final class ListClicks {
             return true;
         }
         EditBox searchBox = list.search.box();
+        if (searchBox != null && searchBox.isMouseOver(mx, my)) {
+            // de volta à busca: as setas andam no texto, não na árvore
+            list.treeNav.clear();
+        }
         if (suggestions.shown() && !(searchBox != null && searchBox.isMouseOver(mx, my))) {
             suggestions.close();
         }

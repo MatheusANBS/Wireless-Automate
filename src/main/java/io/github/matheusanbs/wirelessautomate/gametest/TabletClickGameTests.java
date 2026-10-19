@@ -15,14 +15,17 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -62,7 +65,13 @@ public final class TabletClickGameTests {
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     linkTwo(helper, router);
-                    helper.assertTrue(click(helper, player, FURNACE_B), "o Tablet não abriu o nó");
+                    // o caminho real do jogo: o forno abriria a interface dele, e o Tablet vem antes
+                    BlockPos pos = furnaceB;
+                    player.setItemInHand(InteractionHand.MAIN_HAND, player.getInventory().getItem(0));
+                    InteractionResult result = player.gameMode.useItemOn(player, helper.getLevel(),
+                            player.getMainHandItem(), InteractionHand.MAIN_HAND,
+                            new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+                    helper.assertTrue(result == InteractionResult.SUCCESS, "useItemOn devolveu " + result);
                     helper.assertTrue(player.containerMenu instanceof TabletMenu, "não abriu o menu do Tablet");
                     TabletMenu.State state = TabletMenu.savedState(player.getUUID());
                     helper.assertTrue(state != null, "sem estado gravado");
@@ -107,6 +116,7 @@ public final class TabletClickGameTests {
                     linkTwo(helper, router);
                     helper.assertFalse(click(helper, player, FURNACE_A), "abriu o nó alheio");
                     helper.assertFalse(click(helper, player, CHEST), "abriu o nó alheio pela presa");
+                    TabletClick.notifyNotLinked(player, helper.getLevel(), helper.absolutePos(FURNACE_A));
                     helper.assertTrue(player.containerMenu == player.inventoryMenu, "abriu um menu");
                     helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
                             instanceof TranslatableContents contents
@@ -147,6 +157,17 @@ public final class TabletClickGameTests {
                     args = messageArgs(helper, player, "item.wirelessautomate.linker.range.unlinked");
                     helper.assertTrue(args[0] instanceof Component machine && machine.getString().equals("Forno do ferro"),
                             "rótulo, veio " + args[0]);
+                    // grupo com nome e máquina sem rótulo: "Fornos #N"
+                    BlockPos other = helper.absolutePos(FURNACE_B);
+                    helper.assertValueEqual(RangeLinks.toggle(player, linker, other).status(),
+                            RangeLinks.Status.LINKED, "vincular a segunda");
+                    router.renameTarget(EditTarget.group(groupOf(router, other)), "Fornos");
+                    helper.assertValueEqual(RangeLinks.toggle(player, linker, furnace).status(),
+                            RangeLinks.Status.LINKED, "vincular de novo");
+                    args = messageArgs(helper, player, "item.wirelessautomate.linker.range.linked");
+                    helper.assertTrue(args[0] instanceof Component m && m.getContents() instanceof TranslatableContents n
+                            && n.getArgs()[0] instanceof Component g && g.getString().equals("Fornos"),
+                            "sem rótulo: o nome do grupo, veio " + args[0]);
                     helper.assertTrue(args[1] instanceof Component group && group.getString().equals("Fornos"),
                             "nome do grupo, veio " + args[1]);
                 })

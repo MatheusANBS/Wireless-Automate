@@ -267,7 +267,7 @@ final class NetworkRoutes {
         } else {
             source.order = new RoundRobinOrder<>(layout != null ? layout : layoutFor(list));
         }
-        if (source.fresh || listFresh || gained) {
+        if ((source.fresh || listFresh || gained) && !source.redstoneOff) {
             source.sourceBackoff.wake();
         }
     }
@@ -466,7 +466,9 @@ final class NetworkRoutes {
         BlockPos machine = null;
         for (Direction face : DIRECTIONS) {
             FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, spin, face));
-            if (!config.isActive(powered)) {
+            // A face que o redstone desliga entra assim mesmo, travada ({@link Port#redstoneOff}): o sinal não
+            // remonta as rotas.
+            if (config.mode() == PortMode.NONE) {
                 continue;
             }
             if (tier == null) {
@@ -483,6 +485,8 @@ final class NetworkRoutes {
             port.machinePos = machine;
             port.source = config.mode().extracts();
             port.destination = config.mode().inserts();
+            port.redstone = config.redstone();
+            port.applyRedstone(powered, NetworkManager.lastTick());
             active[count++] = port;
         }
         if (node.rangeActive() && !node.remoteMachines().machines().isEmpty()) {
@@ -520,7 +524,7 @@ final class NetworkRoutes {
             int front = remote.front();
             for (RemoteSide side : REMOTE_SIDES) {
                 FaceConfig face = config.face(type, side);
-                if (!face.isActive(powered)) {
+                if (face.mode() == PortMode.NONE) {
                     continue;
                 }
                 if (caches == null) {
@@ -542,6 +546,8 @@ final class NetworkRoutes {
                 port.tier = tier;
                 port.source = face.mode().extracts();
                 port.destination = face.mode().inserts();
+                port.redstone = face.redstone();
+                port.applyRedstone(powered, NetworkManager.lastTick());
                 active.add(port);
             }
         }

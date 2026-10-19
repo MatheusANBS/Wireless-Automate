@@ -42,11 +42,10 @@ final class ChemicalTransfer {
         if (tokens <= 0) {
             return false;
         }
-        List<Port> pass = order.pass();
-        if (!NetworkManager.hasAwakeDestination(pass, now)) {
-            SourceSleep.untilDestinations(source, pass, now);
+        if (SourceSleep.allAsleep(source, order, now)) {
             return false;
         }
+        List<Port> pass = order.pass();
         int tanks = handler.getChemicalTanks();
         if (tanks <= 0) {
             SourceSleep.nothingToMove(source, now);

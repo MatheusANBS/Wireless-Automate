@@ -48,7 +48,7 @@ public final class NodeProbe {
 
     /** Um destino com rota, cheio agora. */
     private static boolean countsAsFull(Port port, long now) {
-        return port.network != null && port.destination && isFull(port, now);
+        return port.network != null && port.destination && !port.redstoneOff && isFull(port, now);
     }
 
     /** O destino dorme depois de recusas seguidas (ver {@link #FULL_INTERVAL}). */

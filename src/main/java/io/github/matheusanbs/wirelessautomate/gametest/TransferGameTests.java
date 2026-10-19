@@ -246,6 +246,68 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Destino Insere com redstone LOW: com o sinal, a porta trava (sem remontar) e nada entra, nem quando a máquina
+     * dele muda (o aviso de mudança não destrava); sem o sinal, volta a receber.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void redstoneLatchedDestinationIgnoresWakes(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-redstone-destino");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        target.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.LOW);
+        BlockPos beside = B.above().east();
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 4)))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 4))
+                .thenExecute(() -> {
+                    helper.setBlock(beside, Blocks.REDSTONE_BLOCK);
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.EMERALD, 6));
+                })
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    // A máquina do destino muda: o aviso acorda as portas dela, menos a travada.
+                    chestAt(helper, B).setItem(20, new ItemStack(Items.STICK, 1));
+                })
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    assertCount(helper, B, Items.EMERALD, 0);
+                    assertCount(helper, A, Items.EMERALD, 6);
+                    helper.setBlock(beside, Blocks.AIR);
+                })
+                .thenWaitUntil(() -> assertCount(helper, B, Items.EMERALD, 6))
+                .thenSucceed();
+    }
+
+    /** A origem com redstone HIGH para de extrair quando o sinal some e volta quando ele volta. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void redstoneLatchedSourceStopsAndResumes(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-redstone-origem");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        source.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.HIGH);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        BlockPos beside = A.above().east();
+        helper.setBlock(beside, Blocks.REDSTONE_BLOCK);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenExecute(() -> chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 3)))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 3))
+                .thenExecute(() -> {
+                    helper.setBlock(beside, Blocks.AIR);
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.GOLD_INGOT, 5));
+                })
+                .thenIdle(30)
+                .thenExecute(() -> {
+                    assertCount(helper, A, Items.GOLD_INGOT, 5);
+                    helper.setBlock(beside, Blocks.REDSTONE_BLOCK);
+                })
+                .thenWaitUntil(() -> assertCount(helper, B, Items.GOLD_INGOT, 5))
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fullDestinationSleepsAndWakes(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-dormindo");

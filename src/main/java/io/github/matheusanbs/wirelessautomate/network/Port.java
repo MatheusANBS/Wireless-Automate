@@ -74,6 +74,18 @@ final class Port {
      * {@link NetworkManager} depois de uma visita que moveu ou dormiu.
      */
     boolean offered;
+    /**
+     * O tick do gerenciador em que este destino acordou as alimentadoras dele ({@link NodePorts}): uma máquina que
+     * avisa mudança várias vezes no mesmo tick não percorre a lista delas de novo.
+     */
+    long feedersWokenAt = Long.MIN_VALUE;
+    /** O controle por redstone da face, lido com a configuração. */
+    RedstoneMode redstone = RedstoneMode.IGNORE;
+    /**
+     * O sinal do roteador desliga a face: a porta fica nas rotas, mas dorme sem prazo como origem e como destino, e
+     * nada a acorda até o sinal voltar ({@link #applyRedstone}). Assim um pulso de redstone não remonta as rotas.
+     */
+    boolean redstoneOff;
 
     // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
     // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
@@ -162,6 +174,27 @@ final class Port {
      */
     void sleepWithoutMachine(long now) {
         destinationBackoff.sleepUntil(now, now + NetworkManager.MAX_SLEEP_TICKS);
+    }
+
+    /**
+     * Aplica o sinal do roteador ao controle por redstone da face: desligada, dorme sem prazo; ligada de novo,
+     * acorda. Devolve se acabou de ligar (quem chama acorda as origens que esperam por ela).
+     */
+    boolean applyRedstone(boolean powered, long now) {
+        boolean off = !redstone.allows(powered);
+        if (off == redstoneOff) {
+            return false;
+        }
+        redstoneOff = off;
+        if (off) {
+            sourceBackoff.sleepUntil(now, Long.MAX_VALUE);
+            destinationBackoff.sleepUntil(now, Long.MAX_VALUE);
+            return false;
+        }
+        sourceBackoff.wake();
+        destinationBackoff.wake();
+        idleSlots = 0;
+        return true;
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

@@ -46,7 +46,8 @@ O motor não muda.
   - `remote_labels` (`CompoundTag` índice → rótulo, só com rótulo);
   - `remote_groups` (`ListTag` com `id`, `block` e `name`).
   - O formato antigo, sem as chaves, lê sem máquinas.
-- **Teto:** 512 máquinas por roteador no índice; acima disso, guarda as 512 primeiras e a contagem total.
+- **Teto:** 512 máquinas por roteador no índice; acima disso, guarda as 512 primeiras e a contagem total (`remote_total` e um `count` em cada grupo do `remote_groups`, gravados só acima do teto).
+- **Sem o Upgrade de Alcance,** as máquinas ficam no índice, mas não contam nos papéis nem nos modos do filtro por tipo: sem o upgrade, elas não movem.
 - **O conserto do filtro por tipo:** `roles` e `faceModes` passam a juntar a máquina presa, os perfis dos grupos e as exceções. O modo de um lado conta se alguma das máquinas o tem.
 - **`dataVersion`** sobe quando as máquinas ou os grupos mudam, como qualquer dado salvo.
 

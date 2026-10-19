@@ -86,10 +86,8 @@ final class BenchScene {
     static final int CHEST_TYPES_STOCK = 1_000_000;
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
-    /** Lado da célula de cada roteador no cenário de alcance: a máquina presa no meio e as remotas em volta. */
+    /** Lado da célula de cada roteador nos cenários de alcance: a máquina presa no meio e as remotas em volta. */
     private static final int RANGE_CELL = 9;
-    /** Máquinas remotas vinculadas a cada roteador no cenário de alcance. */
-    static final int RANGE_MACHINES = 64;
 
     /** {@code RESONATOR} é a Porta de Energia de um Ressonador e {@code BATTERY} a Bateria dele ({@link BenchResonators}). */
     enum Machine { SMALL, BIG, CHEST, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
@@ -118,6 +116,8 @@ final class BenchScene {
     private boolean clockOn;
     private @Nullable TabletMenu tablet;
     private long tabletBytes;
+    /** Os barris vinculados que recebem os itens no {@link BenchScenario#TABLET_RANGE}, esvaziados no reenchimento. */
+    private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
     private final LongSet forcedChunks = new LongOpenHashSet();
@@ -163,7 +163,7 @@ final class BenchScene {
             planResonators(count);
             return;
         }
-        if (scenario == BenchScenario.RANGE) {
+        if (scenario.range()) {
             planRange(count);
             return;
         }
@@ -198,13 +198,17 @@ final class BenchScene {
         refilled = new long[count];
     }
 
-    /** {@code count} células de alcance, cada uma com a máquina presa (destino) no meio. */
+    /**
+     * {@code count} células de alcance, cada uma com a máquina presa no meio: destino no {@link BenchScenario#RANGE},
+     * origem no {@link BenchScenario#TABLET_RANGE}.
+     */
     private void planRange(int count) {
         int side = (int) Math.ceil(Math.sqrt(count));
         int half = RANGE_CELL / 2;
         for (int i = 0; i < count; i++) {
             BlockPos machine = ORIGIN.offset((i % side) * RANGE_CELL + half, 0, (i / side) * RANGE_CELL + half);
-            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, false, Machine.SMALL));
+            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, scenario == BenchScenario.TABLET_RANGE,
+                    Machine.SMALL));
         }
         max = ORIGIN.offset(side * RANGE_CELL, 1, ((count + side - 1) / side) * RANGE_CELL);
         refilled = new long[count];
@@ -257,7 +261,7 @@ final class BenchScene {
             level.setBlock(node.router(), router, PLACE_FLAGS);
             if (level.getBlockEntity(node.router()) instanceof RouterBlockEntity entity) {
                 configure(node, entity);
-                if (scenario == BenchScenario.RANGE) {
+                if (scenario.range()) {
                     linkRemotes(node, entity);
                 }
             }
@@ -343,16 +347,19 @@ final class BenchScene {
     }
 
     /**
-     * Cenário de alcance: o Upgrade de Alcance e {@link #RANGE_MACHINES} barris vazios em volta da máquina presa,
-     * vinculados (um grupo só, o dos barris) com o lado de cima em Extrair. A rede entra no {@link #attach}.
+     * Cenários de alcance: o Upgrade de Alcance e {@link BenchScenario#rangeMachines()} barris vazios em volta da
+     * máquina presa, vinculados (um grupo só, o dos barris) com o lado de cima em Extrair ({@link BenchScenario#RANGE})
+     * ou em Inserir ({@link BenchScenario#TABLET_RANGE}, que recebem os itens da presa). A rede entra no
+     * {@link #attach}.
      */
     private void linkRemotes(Node node, RouterBlockEntity router) {
         router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
         int half = RANGE_CELL / 2;
+        int wanted = scenario.rangeMachines();
         int linked = 0;
         BlockState barrel = Blocks.BARREL.defaultBlockState();
-        for (int dx = -half; dx <= half && linked < RANGE_MACHINES; dx++) {
-            for (int dz = -half; dz <= half && linked < RANGE_MACHINES; dz++) {
+        for (int dx = -half; dx <= half && linked < wanted; dx++) {
+            for (int dz = -half; dz <= half && linked < wanted; dz++) {
                 if (dx == 0 && dz == 0) {
                     continue;
                 }
@@ -361,14 +368,17 @@ final class BenchScene {
                 extraBlocks.add(pos);
                 if (router.linkMachine(pos)) {
                     linked++;
+                    if (scenario == BenchScenario.TABLET_RANGE) {
+                        remoteSinks.add(pos);
+                    }
                 }
             }
         }
         RemoteMachines remotes = router.remoteMachines();
         if (!remotes.machines().isEmpty()) {
             int group = remotes.machines().get(0).group();
-            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
-                    RedstoneMode.IGNORE);
+            PortMode mode = scenario == BenchScenario.TABLET_RANGE ? PortMode.INSERT : PortMode.EXTRACT;
+            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, mode, 0, RedstoneMode.IGNORE);
         }
     }
 
@@ -426,14 +436,26 @@ final class BenchScene {
     }
 
     /**
-     * Abre o Tablet para um jogador falso dono da rede da cena ({@link BenchScenario#TABLET}): ele vê
+     * Abre o Tablet para um jogador falso dono da rede da cena ({@link BenchScenario#tablet()}): ele vê
      * todos os nós dela. O menu é criado direto (sem pacote de abertura) e sincronizado por
      * {@link #syncTablet}, como o {@code ServerPlayer} faz a cada tick com a tela aberta.
      */
     void openTablet() {
         FakePlayer player = FakePlayerFactory.get(level, new GameProfile(OWNER, "[wa-bench]"));
         player.setPos(ORIGIN.getX() + 0.5, ORIGIN.getY() + 2, ORIGIN.getZ() + 0.5);
-        tablet = new TabletMenu(1, player.getInventory(), player);
+        TabletMenu menu = new TabletMenu(1, player.getInventory(), player);
+        tablet = menu;
+        if (scenario == BenchScenario.TABLET_RANGE) {
+            openRangeRows(menu);
+        }
+    }
+
+    /**
+     * No {@link BenchScenario#TABLET_RANGE}, o que o jogador falso abre na Lista do Tablet logo depois de abri-lo: 4
+     * roteadores e, num deles, um grupo com "Mostrar todas". A Lista ainda mostra só os nós, sem as máquinas de
+     * cada um, então não há linha a abrir e a medição é a do Tablet aberto sobre os nós de alcance.
+     */
+    private void openRangeRows(TabletMenu menu) {
     }
 
     /**
@@ -572,6 +594,12 @@ final class BenchScene {
                 total += count(handler);
             }
         }
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                total += count(handler);
+            }
+        }
         return total;
     }
 
@@ -624,6 +652,12 @@ final class BenchScene {
 
     /** Reenche as origens e esvazia os destinos (ou só a cauda livre, no quase cheio). */
     void recycle() {
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                destinationCleared += clear(handler, 0);
+            }
+        }
         for (Node node : nodes) {
             if (node.type() != ResourceType.ITEM || scenario == BenchScenario.IDLE) {
                 continue;
@@ -798,6 +832,11 @@ final class BenchScene {
         return level.getBlockEntity(node.machine()) instanceof StorageChestBlockEntity chest ? chest.storage() : null;
     }
 
+    /** O inventário de um barril vinculado ({@link #remoteSinks}). */
+    private @Nullable IItemHandler remoteItems(BlockPos pos) {
+        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, Direction.UP);
+    }
+
     private @Nullable IItemHandler items(Node node) {
         if (node.kind() != Machine.SMALL && node.kind() != Machine.BIG && node.kind() != Machine.CHEST) {
             return null;
@@ -832,6 +871,13 @@ final class BenchScene {
             }
             level.setBlock(node.router(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                clear(handler, 0);
+            }
+        }
+        remoteSinks.clear();
         for (Node node : nodes) {
             level.setBlock(node.machine(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }

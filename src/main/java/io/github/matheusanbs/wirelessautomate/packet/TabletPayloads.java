@@ -37,6 +37,8 @@ public final class TabletPayloads {
                 (payload, context) -> handleMoveNodes(serverPlayer(context), payload));
         registrar.playToServer(TabletProfilePayload.TYPE, TabletProfilePayload.STREAM_CODEC,
                 (payload, context) -> handleProfile(serverPlayer(context), payload));
+        registrar.playToServer(TabletTreePayload.TYPE, TabletTreePayload.STREAM_CODEC,
+                (payload, context) -> handleTree(serverPlayer(context), payload));
         registrar.playToServer(TabletOpenNodePayload.TYPE, TabletOpenNodePayload.STREAM_CODEC,
                 (payload, context) -> handleOpenNode(serverPlayer(context), payload));
         registrar.playToServer(TabletActionPayload.TYPE, TabletActionPayload.STREAM_CODEC,
@@ -66,7 +68,7 @@ public final class TabletPayloads {
     private static void onLive(TabletLivePayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
-            menu.applyLives(payload.lives());
+            menu.applyLives(payload.lives(), payload.machines());
         }
     }
 
@@ -127,6 +129,12 @@ public final class TabletPayloads {
         TabletMenu menu = menu(player, payload.containerId());
         return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null),
                 payload.machine().orElse(null), payload.keys());
+    }
+
+    /** Abre ou fecha um roteador na árvore da Lista, ou muda um grupo dele; recusa um nó que o jogador não vê. */
+    public static boolean handleTree(@Nullable ServerPlayer player, TabletTreePayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu != null && menu.tree(payload.action(), payload.node(), payload.group());
     }
 
     public static boolean handleOpenNode(@Nullable ServerPlayer player, TabletOpenNodePayload payload) {

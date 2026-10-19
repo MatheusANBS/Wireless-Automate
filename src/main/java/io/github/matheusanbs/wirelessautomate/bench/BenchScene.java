@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
@@ -464,11 +465,28 @@ final class BenchScene {
 
     /**
      * No {@link BenchScenario#TABLET_RANGE}, o que o jogador falso abre na Lista do Tablet logo depois de abri-lo: 4
-     * roteadores e, num deles, um grupo com "Mostrar todas". A Lista ainda mostra só os nós, sem as máquinas de
-     * cada um, então não há linha a abrir e a medição é a do Tablet aberto sobre os nós de alcance.
+     * roteadores e, no primeiro, o grupo dos barris com "Mostrar todas", pelo mesmo caminho do
+     * {@code TabletTreePayload}.
      */
     private void openRangeRows(TabletMenu menu) {
+        int opened = 0;
+        for (Node node : nodes) {
+            RouterBlockEntity router = router(node);
+            if (router == null || opened >= RANGE_ROWS_OPENED) {
+                continue;
+            }
+            NodeIndex.NodeKey key = NodeIndex.NodeKey.of(level, router.getBlockPos());
+            menu.tree(TabletTreePayload.Action.OPEN, key, 0);
+            RemoteMachines remotes = router.remoteMachines();
+            if (opened == 0 && remotes.groupCount() > 0) {
+                menu.tree(TabletTreePayload.Action.SHOW_ALL, key, remotes.groupAt(0).id());
+            }
+            opened++;
+        }
     }
+
+    /** Roteadores abertos na árvore pelo jogador falso do {@link BenchScenario#TABLET_RANGE}. */
+    private static final int RANGE_ROWS_OPENED = 4;
 
     /**
      * Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. Os pacotes que sairiam são codificados
@@ -509,8 +527,9 @@ final class BenchScene {
         TabletSnapshot page = menu.snapshot();
         return String.format(Locale.ROOT,
                 "  Tablet: %d cabeçalho(s), %d página(s), %d pacote(s) de estado e vazão depois da abertura;"
-                        + " página com %d nós (%d casam, %d no índice visível)",
-                tabletHeaders, tabletPages, tabletLives, page.nodes().size(), page.matchingNodes(), page.totalNodes());
+                        + " página com %d nós e %d linhas da árvore (%d casam, %d no índice visível)",
+                tabletHeaders, tabletPages, tabletLives, page.nodes().size(), page.rows().rows().size(),
+                page.matchingNodes(), page.totalNodes());
     }
 
     /**

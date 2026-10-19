@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -71,8 +72,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>As partes do servidor: a consulta ({@link TabletQuery}), a montagem ({@link TabletSnapshotBuilder}),
  * as regras de um nó ({@link TabletNodes}), o nó escolhido ({@link TabletChosenNode}), o perfil
- * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}) e o estado por
- * jogador ({@link TabletPlayers}).
+ * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}), a árvore da Lista
+ * ({@link TabletTree}) e o estado por jogador ({@link TabletPlayers}).
  */
 public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
@@ -137,6 +138,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
     private final @Nullable TabletFlows flows;
+    private final @Nullable TabletTree tree;
     private int tab;
     private boolean forced;
     private @Nullable TabletSnapshot sent;
@@ -150,7 +152,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = viewer;
-        this.builder = new TabletSnapshotBuilder(viewer, query);
+        this.tree = new TabletTree(viewer);
+        this.builder = new TabletSnapshotBuilder(viewer, query, tree);
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder);
         this.actions = new TabletMenuActions(this, viewer);
@@ -181,6 +184,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.profile = null;
         this.actions = null;
         this.flows = null;
+        this.tree = null;
         this.snapshot = snapshot;
         this.restoredTab = restoredTab;
         this.restoredNode = restoredNode;
@@ -380,9 +384,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         applySnapshot(snapshot.withPage(page));
     }
 
-    /** Cliente: só o estado e a vazão dos nós da página mudaram ({@code TabletLivePayload}). */
-    public void applyLives(List<TabletSnapshot.Live> lives) {
-        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives)));
+    /** Cliente: só o estado e a vazão dos nós e das linhas de máquina da página mudaram ({@code TabletLivePayload}). */
+    public void applyLives(List<TabletSnapshot.Live> lives, List<TabletRows.MachineLive> machines) {
+        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives, machines)));
     }
 
     /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
@@ -445,7 +449,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 payloads.add(new TabletHeaderPayload(containerId, changed));
             }
             if (pageChanged) {
-                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives())
+                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives(), changed.rows().lives())
                         : new TabletPagePayload(containerId, changed.page()));
             }
         }
@@ -620,6 +624,18 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     // ------------------------------------------------------------------ ações (servidor)
+
+    /** Uma ação na árvore da Lista ({@link TabletTree#apply}); a que vale refaz a página. Devolve se valeu. */
+    public boolean tree(TabletTreePayload.Action action, NodeKey key, int group) {
+        boolean done = tree != null && tree.apply(action, key, group);
+        forced |= done;
+        return done;
+    }
+
+    /** A árvore da Lista; {@code null} no cliente. Público para os GameTests. */
+    public @Nullable TabletTree treeState() {
+        return tree;
+    }
 
     /** A tela mudou a busca, as etiquetas, os filtros ou o tipo. */
     public void setQuery(Query query) {

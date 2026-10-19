@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
+import io.github.matheusanbs.wirelessautomate.packet.RenameTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import java.util.ArrayList;
@@ -15,7 +16,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * O que o painel do nó manda da tela do roteador: pelo menu dela, ou, numa captura sem servidor, só no
- * snapshot local (modo, prioridade, redstone, rede e o tirar a rede das faces sem modo, sem o Desfazer).
+ * snapshot local (modo, prioridade, redstone, rede, o nome de um grupo ou de uma máquina e o tirar a rede das faces
+ * sem modo, sem o Desfazer).
  */
 final class RouterPanelActions implements NodePanel.Actions {
     private final RouterMenu menu;
@@ -62,9 +64,13 @@ final class RouterPanelActions implements NodePanel.Actions {
         return count;
     }
 
-    /** Captura sem servidor: modo, prioridade, redstone e rede mudam só no snapshot local. */
+    /** Captura sem servidor: modo, prioridade, redstone, rede e nomes mudam só no snapshot local. */
     private void applyLocally(CustomPacketPayload payload) {
         RouterSnapshot snapshot = menu.snapshot();
+        if (payload instanceof RenameTargetPayload p) {
+            menu.applySnapshot(LabelEditor.renamed(snapshot, p));
+            return;
+        }
         List<FaceView> faces = new ArrayList<>(snapshot.faces());
         if (payload instanceof SetFacePayload p) {
             int index = RouterSnapshot.index(p.resource(), p.face());

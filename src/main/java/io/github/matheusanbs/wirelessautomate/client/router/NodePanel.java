@@ -93,6 +93,8 @@ public final class NodePanel {
     private final PanelPainter painter;
     private final FaceCube cube;
     private final PanelTooltips tooltips;
+    /** A caixa do nome do alvo, da linha Editando. */
+    private final LabelEditor label;
     private final PanelLists.Choice choice = new PanelLists.Choice() {
         @Override
         public void network(Optional<UUID> network) {
@@ -116,7 +118,8 @@ public final class NodePanel {
     public NodePanel(Actions actions, RouterSnapshot snapshot, Direction face) {
         this.actions = actions;
         this.model = new PanelModel(snapshot, face);
-        this.targetLine = new TargetLine(model, layout);
+        this.targetLine = new TargetLine(model, layout, actions);
+        this.label = targetLine.label();
         this.lists = new PanelLists(model, layout, targetLine);
         this.painter = new PanelPainter(model, layout, targetLine);
         this.cube = new FaceCube(model, layout);
@@ -134,6 +137,7 @@ public final class NodePanel {
             arranged.invalidate();
         }
         if (model.setSnapshot(snapshot)) {
+            label.finish(false);
             lists.close();
             PanelNotices.clear();
         }
@@ -171,6 +175,7 @@ public final class NodePanel {
         }
         model.setReadOnly(reason);
         if (reason != null) {
+            label.finish(false);
             lists.close();
         }
     }
@@ -316,7 +321,15 @@ public final class NodePanel {
 
     // ------------------------------------------------------------------ entrada
 
+    /** Com o nome em edição: o clique na caixa fica nela ({@code true}); fora, salva e segue. */
+    public boolean labelClick(double mx, double my, int button) {
+        return label.mouseClicked(mx, my, button);
+    }
+
     public boolean mouseClicked(double mx, double my, int button) {
+        if (labelClick(mx, my, button)) {
+            return true;
+        }
         arrange();
         if (lists.open()) {
             lists.click(mx, my, choice);
@@ -373,11 +386,17 @@ public final class NodePanel {
                     lists.open(Popup.TARGET, lists.targetScroll());
                 }
             }
+            case RENAME -> {
+                if (edit) {
+                    targetLine.startRename();
+                }
+            }
             case IDLE_NETWORKS -> {
                 if (edit) {
                     actions.clearIdleNetworks(false);
                 }
             }
+            case HIGHLIGHT -> targetLine.toggleHighlight();
             case REVERT -> {
                 if (edit && machine != null) {
                     actions.send(new RevertMachinePayload(actions.containerId(), model.snapshot().target().id(),
@@ -416,7 +435,10 @@ public final class NodePanel {
         return true;
     }
 
-    public boolean keyPressed(int keyCode) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (label.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
         if (lists.open() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             arranged.invalidate();
             lists.close();
@@ -425,8 +447,21 @@ public final class NodePanel {
         return false;
     }
 
+    /** Fecha a caixa do nome sem salvar (a tela saiu do painel). */
+    public void cancelLabel() {
+        label.finish(false);
+    }
+
+    public boolean charTyped(char codePoint, int modifiers) {
+        return label.charTyped(codePoint, modifiers);
+    }
+
     /** A dica do ponto (controles e faces), ou {@code null}; o texto abreviado fica com a tela. */
     public @Nullable Component tooltip(double mx, double my) {
+        Component hint = label.tooltip(mx, my);
+        if (hint != null) {
+            return hint;
+        }
         if (lists.open()) {
             return null;
         }
@@ -462,6 +497,7 @@ public final class NodePanel {
         painter.renderTabs(g, font, mx, my);
         cube.render(g, font, mx, my, pointed);
         painter.renderBody(g, font, mx, my, lists.popup(), actions.cardCount());
+        targetLine.renderLabel(g, mx, my);
     }
 
     /** A lista aberta e o aviso, por cima de tudo (a tela chama depois de desenhar os slots). */
@@ -576,6 +612,21 @@ public final class NodePanel {
     /** O "Tirar redes" da linha Editando, ou {@code null} se ele não aparece. */
     public int @Nullable [] idleNetworksCenter() {
         return center(Kind.IDLE_NETWORKS);
+    }
+
+    /** O "No mundo" da linha da máquina, ou {@code null} se ele não aparece. */
+    public int @Nullable [] highlightCenter() {
+        return center(Kind.HIGHLIGHT);
+    }
+
+    /** O ✎ da linha Editando, ou {@code null} se ele não aparece. */
+    public int @Nullable [] renameCenter() {
+        return center(Kind.RENAME);
+    }
+
+    /** O nome do alvo está em edição na linha Editando (gancho do e2e). */
+    public boolean labelEditing() {
+        return label.editing();
     }
 
     public int @Nullable [] undoCenter() {

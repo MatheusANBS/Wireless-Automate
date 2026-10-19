@@ -158,9 +158,11 @@ public final class RangeLinks {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         if (router.remoteMachines().contains(pos)) {
+            Component machine = MachineNames.machine(router.remoteMachines(), pos);
+            Component group = MachineNames.groupOf(router.remoteMachines(), pos);
             router.unlinkMachine(pos);
-            player.displayClientMessage(Component.translatable(KEY + "unlinked", routerName(router), used(router),
-                    max(router)), true);
+            player.displayClientMessage(Component.translatable(KEY + "unlinked", machine, group, routerName(router),
+                    used(router), max(router)), true);
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
             return Result.of(Status.UNLINKED);
         }
@@ -175,8 +177,9 @@ public final class RangeLinks {
         if (refusal != LinkRefusal.NONE) {
             return refuse(player, Result.refused(refusal), router, distance);
         }
-        player.displayClientMessage(Component.translatable(KEY + "linked", routerName(router), used(router),
-                max(router)), true);
+        player.displayClientMessage(Component.translatable(KEY + "linked",
+                MachineNames.machine(router.remoteMachines(), pos), MachineNames.groupOf(router.remoteMachines(), pos),
+                routerName(router), used(router), max(router)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
         return Result.of(Status.LINKED);
     }

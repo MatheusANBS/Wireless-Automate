@@ -27,6 +27,9 @@ final class CoreSync {
         }
         rechargeStart = resolveRechargeStart(core, level.getGameTime());
         rechargeSeen = core.rechargeProgress();
+        if (sentView != null && sentView.matches(core, rechargeStart)) {
+            return false;
+        }
         ChamberView view = ChamberView.of(core, rechargeStart);
         if (view.equals(sentView)) {
             return false;

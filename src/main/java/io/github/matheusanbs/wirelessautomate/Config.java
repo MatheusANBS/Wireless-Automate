@@ -290,6 +290,24 @@ public final class Config {
     }
 
     /** Raio, em blocos, em que o Upgrade de Alcance vincula máquinas no tier (0 = o tier não aceita o upgrade). */
+    /**
+     * Um resumo dos valores dos tiers que as rotas leem (vazões, alcance, dimensão, raio e limite de máquinas): na
+     * recarga da config, o gerenciador só remonta as redes se ele mudou.
+     */
+    public static long tiersFingerprint() {
+        long hash = 1;
+        for (TierValues values : TIERS.values()) {
+            for (ModConfigSpec.LongValue rate : values.rates().values()) {
+                hash = 31 * hash + read(rate);
+            }
+            hash = 31 * hash + read(values.range());
+            hash = 31 * hash + (read(values.crossDimension()) ? 1 : 0);
+            hash = 31 * hash + read(values.machineRadius());
+            hash = 31 * hash + read(values.maxMachines());
+        }
+        return hash;
+    }
+
     public static int machineRadius(RouterTier tier) {
         return read(TIERS.get(tier).machineRadius());
     }

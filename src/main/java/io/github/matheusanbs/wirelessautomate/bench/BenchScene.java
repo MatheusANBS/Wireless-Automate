@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
+import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -11,8 +12,11 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import com.mojang.authlib.GameProfile;
+import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +28,8 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -94,6 +100,7 @@ final class BenchScene {
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
     private @Nullable TabletMenu tablet;
+    private long tabletBytes;
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
     private final LongSet forcedChunks = new LongOpenHashSet();
@@ -355,7 +362,10 @@ final class BenchScene {
         tablet = new TabletMenu(1, player.getInventory(), player);
     }
 
-    /** Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. */
+    /**
+     * Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. Os pacotes que sairiam são codificados
+     * depois, fora do tempo medido, para somar os bytes ({@link #tabletBytes}).
+     */
     long syncTablet() {
         TabletMenu menu = tablet;
         if (menu == null) {
@@ -364,8 +374,32 @@ final class BenchScene {
         // O que o broadcastChanges do menu faz no servidor, menos o envio: o jogador falso não tem
         // canal de rede (o hasChannel dá NullPointerException) e o menu não tem slots.
         long start = System.nanoTime();
-        menu.pollSnapshot();
-        return System.nanoTime() - start;
+        List<CustomPacketPayload> payloads = menu.pollPayloads();
+        long nanos = System.nanoTime() - start;
+        for (CustomPacketPayload payload : payloads) {
+            tabletBytes += encodedSize(payload);
+        }
+        return nanos;
+    }
+
+    /** Os bytes de um pacote do Tablet pelo codec dele (cabeçalho, página ou o estado e a vazão). */
+    private int encodedSize(CustomPacketPayload payload) {
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
+        if (payload instanceof TabletHeaderPayload header) {
+            TabletHeaderPayload.STREAM_CODEC.encode(buf, header);
+        } else if (payload instanceof TabletPagePayload page) {
+            TabletPagePayload.STREAM_CODEC.encode(buf, page);
+        } else if (payload instanceof TabletLivePayload live) {
+            TabletLivePayload.STREAM_CODEC.encode(buf, live);
+        }
+        int size = buf.writerIndex();
+        buf.release();
+        return size;
+    }
+
+    /** Bytes que o Tablet aberto mandaria, somados desde que a cena começou. */
+    long tabletBytes() {
+        return tabletBytes;
     }
 
     /** O que a cena faz no fim de cada tick depois de pôr a rede: os relógios de redstone e a sintonia dos Ressonadores. */

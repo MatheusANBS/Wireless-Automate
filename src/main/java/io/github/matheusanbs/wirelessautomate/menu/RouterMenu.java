@@ -888,7 +888,9 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         int changeVersion = router.changeVersion();
         int dataVersion = NetworkSavedData.get(viewer.server).version();
         long now = viewer.server.getTickCount();
-        boolean rangeDue = snapshot.range().present() && now - rangeTick >= SAMPLE_TICKS;
+        // As remotas e o sinal de redstone (que não muda a versão do roteador) são conferidos uma vez por segundo.
+        boolean rangeDue = now - rangeTick >= SAMPLE_TICKS
+                && (snapshot.range().present() || router.powered() != snapshot.powered());
         EditTarget target = validTarget();
         if (changeVersion == sentChangeVersion && dataVersion == sentDataVersion && !targetChanged && !rangeDue) {
             return null;

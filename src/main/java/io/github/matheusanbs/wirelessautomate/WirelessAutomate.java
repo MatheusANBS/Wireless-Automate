@@ -24,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
+import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -81,6 +82,8 @@ public final class WirelessAutomate {
         NetworkManager.get().tick(event.getServer());
         SourceTankLevels.tick();
         ResonatorManager.tick(event.getServer());
+        // Por último: junta num aviso só as mudanças de conteúdo do tick, inclusive as do motor e do Ressonador.
+        StorageNeighbors.tick();
     }
 
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -93,6 +96,7 @@ public final class WirelessAutomate {
         NetworkManager.reset();
         RemoteIndex.reset();
         SourceTankLevels.reset();
+        StorageNeighbors.reset();
         ResonatorManager.reset();
         ResonatorPorts.reset();
         ResonatorMembers.reset();

@@ -20,8 +20,9 @@ import org.jetbrains.annotations.Nullable;
  * buracos. A capacidade conta o total de todos os tipos ({@link StorageMath}); {@code <= 0} é sem
  * limite, e ela é lida a cada inserção (muda com o tier e com a config, sem copiar nada).
  *
- * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e avisa os vizinhos,
- * o que acorda os roteadores presos nele) e sobe a {@link #version()}, que a tela aberta compara.
+ * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e põe o aviso aos vizinhos
+ * na fila do tick, o que acorda os roteadores presos nele) e sobe a {@link #version()}, que a tela
+ * aberta compara.
  * A {@link Admission} decide quanto de cada tipo pode entrar (o filtro de entrada), em qualquer
  * caminho: roteador, funil, outro mod ou a tela.
  *

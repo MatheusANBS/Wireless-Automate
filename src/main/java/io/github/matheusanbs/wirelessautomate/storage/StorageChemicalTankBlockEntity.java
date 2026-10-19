@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Mekanism; sem ele o bloco guarda o que tinha e não troca nada.
  */
 public class StorageChemicalTankBlockEntity extends KeyedStorageBlockEntity<ResourceLocation> {
-    private final ChemicalStorage storage = new ChemicalStorage(this::setChanged, this::capacity);
+    private final ChemicalStorage storage = new ChemicalStorage(this::markContentsChanged, this::capacity);
 
     public StorageChemicalTankBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CHEMICAL_TANK.get(), StorageKind.CHEMICAL_TANK, pos, state);

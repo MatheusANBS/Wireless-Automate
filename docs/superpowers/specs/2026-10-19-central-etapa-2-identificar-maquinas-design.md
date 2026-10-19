@@ -65,7 +65,7 @@ O rótulo e o nome do grupo são mudanças só visuais. Elas sobem o `changeVers
 - **O desenho**, num `@EventBusSubscriber` próprio do cliente, no `RenderLevelStageEvent` depois dos blocos translúcidos:
   - sem nada aceso, volta na primeira linha;
   - só as máquinas da dimensão atual e dentro da distância de visão (`options.getEffectiveRenderDistance() × 16` blocos);
-  - por máquina: o contorno ciano do mockup (`#3FC9BE` na aresta, véu leve nas faces) e uma linha tracejada até o roteador;
+  - por máquina: o contorno ciano do mockup (`#3FC9BE` na aresta, véu leve nas faces) e uma linha contínua até o roteador;
   - um `RenderType` novo de linhas e outro de faces, os dois sem teste e sem gravação de profundidade, para aparecer através dos blocos;
   - nada alocado por quadro.
 - **Onde se liga:**
@@ -98,7 +98,7 @@ O rótulo e o nome do grupo são mudanças só visuais. Elas sobem o `changeVers
   - o Tablet clicado numa remota abre com o nó e o alvo certos, e numa presa com o nó certo;
   - sem roteador, nada abre de outro jogador;
   - a mensagem do Vinculador leva o rótulo e o grupo.
-- **JUnit:** o `MachineHighlights` (limite, a mais antiga sai, ligar de novo apaga, limpar) e a geometria da linha tracejada.
+- **JUnit:** o `MachineHighlights` (limite, a mais antiga sai, ligar de novo apaga, limpar).
 - **e2e:**
   - a lista do roteador com rótulos, coordenadas e um Olho aceso;
   - a edição do nome aberta;

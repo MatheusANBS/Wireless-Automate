@@ -89,8 +89,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
     public static final int BULK_PER_SECOND = 4;
 
-    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele. */
-    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target) {
+    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele, e a árvore da Lista. */
+    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target, TabletTree.Saved tree) {
     }
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
@@ -206,6 +206,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (saved.chosen() != null && chooseNode(saved.chosen())) {
             node.restoreTarget(saved.target());
         }
+        tree.restore(saved.tree());
     }
 
     /** Esquece o estado de todos os jogadores (o servidor parou). */
@@ -227,7 +228,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             flows.stop();
         }
         if (viewer != null && !viewer.hasDisconnected()) {
-            TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef()));
+            TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef(),
+                    tree.save()));
         }
     }
 
@@ -274,7 +276,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static void open(ServerPlayer player, NodeKey node, EditTargetRef target) {
         State saved = TabletPlayers.saved(player.getUUID());
         TabletPlayers.save(player.getUUID(), new State(LIST_TAB,
-                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target));
+                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target,
+                saved == null ? TabletTree.Saved.EMPTY : saved.tree()));
         open(player);
     }
 

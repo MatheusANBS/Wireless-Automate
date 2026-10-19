@@ -102,6 +102,7 @@ final class E2eTabletTreeSteps {
         }, () -> EditTarget.machine(EXCEPTION + 1).equals(panelTarget()), () -> "alvo " + panelTarget()));
         showAllSteps(list);
         arrowSteps(list);
+        reopenSteps(list);
         list.add(new Step("árvore: o ▸ fecha o roteador", STEP_TIMEOUT_MS, () -> {
             int[] c = center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0);
             click(tabletScreen(), c[0], c[1]);
@@ -149,6 +150,19 @@ final class E2eTabletTreeSteps {
             screen.keyPressed(GLFW.GLFW_KEY_LEFT, 0, 0);
         }, () -> stepTicks >= 20 && furnaceRows() == 8 && !furnaceGroupRow().collapsed()
                 && tabletScreen().searchBox().isFocused(), () -> "linhas " + rows().size()));
+    }
+
+    /** Fechar e reabrir o Tablet com o roteador aberto: a árvore volta aberta na primeira página (só a checagem, sem captura). */
+    private static void reopenSteps(List<Step> list) {
+        // Esc com texto na busca só o limpa: fecha pela própria tela, com a busca e a árvore como estão.
+        list.add(new Step("árvore: fechar o Tablet com o roteador aberto", STEP_TIMEOUT_MS,
+                () -> tabletScreen().onClose(), () -> Minecraft.getInstance().screen == null,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(openTablet("árvore: reabrir o Tablet"));
+        list.add(new Step("árvore: o roteador continua aberto", STEP_TIMEOUT_MS, () -> {
+        }, () -> furnaceRows() == 8 && rows().getFirst() instanceof TabletRows.Attached
+                && center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0) != null,
+                () -> "linhas " + rows().size()));
     }
 
     /** Roda a lista ({@code direction} −1 desce, 1 sobe) até a área aparecer; devolve o centro dela ou {@code null}. */

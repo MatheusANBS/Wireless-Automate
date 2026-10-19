@@ -65,15 +65,15 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| R1 | Cada máquina vinculada aloca 9 caches de capability e 30 portas, quase tudo vazio | `MachineCaches:47`, `NodePorts:83` | médio | pendente |
-| R2 | Cada filtro expande as próprias tags; compartilhar o mapa expandido | `Filter:154`, `CompiledMatcher:82` | médio | pendente |
-| R3 | O índice de nós é regravado inteiro a cada mudança e guarda roteadores sumidos | `NodeIndex:322, 503` | baixo-médio | pendente |
+| R1 | Cada máquina vinculada aloca 9 caches de capability e 30 portas, quase tudo vazio | `MachineCaches:47`, `NodePorts:83` | médio | feito `78ca74f` (o arranjo das faces de cada capability nasce na primeira consulta dela e as portas ficam em [tipo][face], criadas por tipo: uma máquina só com itens cai de ~500 para ~200 B; cenário `range:200:3` com o heap retido, bench a rodar) |
+| R2 | Cada filtro expande as próprias tags; compartilhar o mapa expandido | `Filter:154`, `CompiledMatcher:82` | médio | feito `5e3b374` (`TagExpansions`: um mapa por lista de tags, compartilhado e trocado uma vez na recarga; filtro com exatas e tags faz duas buscas de hash em vez de uma, o `types:20:3` mede) |
+| R3 | O índice de nós é regravado inteiro a cada mudança e guarda roteadores sumidos | `NodeIndex:322, 503` | baixo-médio | feito `25145be` (a entrada sem roteador sai na carga do chunk dela; cada entrada guarda a tag salva até mudar, e `roles`/`face_modes` zerados não são gravados; mesmo formato, sem cenário) |
 
 ## F · Fluxos
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| F1 | Parado, o amostrador ainda lê as portas dormindo de todos os nós para contar os estados (idle com 500 nós: 0,011 ms/tick); pular o nó sem nada que mudou desde a volta anterior | `FlowSampler.read` | baixo (parado perto de zero) | pendente |
+| F1 | Parado, o amostrador ainda lê as portas dormindo de todos os nós para contar os estados (idle com 500 nós: 0,011 ms/tick); pular o nó sem nada que mudou desde a volta anterior | `FlowSampler.read` | baixo (parado perto de zero) | feito `dc42854` (`NodeFlows`: o nó sem contador fora do zero, sem mudança nos `Backoff`, sem remontagem e antes do primeiro `wakeAt` soma de novo a leitura anterior; o `idle:500:3` mede) |
 
 ## Em andamento
 

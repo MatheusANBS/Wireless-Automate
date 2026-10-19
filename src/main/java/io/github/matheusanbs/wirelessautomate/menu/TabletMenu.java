@@ -145,7 +145,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
     private boolean headerChanged;
     private boolean pageChanged;
-    /** Na página mudaram só o estado e a vazão dos nós ({@link TabletSnapshot.Page#sameExceptLive}). */
+    /** Na página mudaram só o estado e a vazão dos nós e das linhas de máquina ({@link TabletSnapshot.Page#sameExceptLive}). */
     private boolean liveOnly;
 
     /** Servidor. */

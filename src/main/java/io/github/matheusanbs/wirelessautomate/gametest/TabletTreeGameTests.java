@@ -148,8 +148,12 @@ public final class TabletTreeGameTests {
                     TabletMenu menuA = openTablet(a, 140, name);
                     eq(helper, fresh(menuA).nodes().size(), 1, "nós da consulta");
                     eq(helper, menuA.snapshot().page().rows(), TabletRows.EMPTY, "linhas antes de abrir");
+                    menuB.pollPayloads();
 
                     helper.assertTrue(tree(a, menuA, Action.OPEN, key, 0), "não abriu o roteador");
+                    helper.assertFalse(menuB.pollPayloads().stream()
+                                    .anyMatch(p -> p instanceof TabletPagePayload || p instanceof TabletLivePayload),
+                            "a ação do outro jogador mandou página");
                     TabletSnapshot.Page page = fresh(menuA);
                     List<Row> rows = page.rows().rows();
                     eq(helper, rows.size(), 1 + 1 + 8 + 1 + 1 + 2, "linhas abertas");
@@ -254,8 +258,13 @@ public final class TabletTreeGameTests {
                     helper.assertTrue(tree(player, menu, Action.EXPAND_GROUP, key, 5000), "não expandiu");
                     helper.assertTrue(tree(player, menu, Action.COLLAPSE_GROUP, key, group), "não recolheu com espaço");
 
-                    // A montagem tira dos abertos os nós que não estão no índice.
+                    // A montagem tira dos abertos os nós que não estão no índice, com os grupos deles.
+                    tree.collapseForTests(new TabletTree.GroupKey(fakes.get(2), 1));
+                    eq(helper, tree.openCountForTests(), TabletTree.MAX_OPEN, "abertos antes da montagem");
+                    eq(helper, tree.groupCountForTests(), TabletTree.MAX_GROUPS + 1, "grupos antes da montagem");
                     TabletSnapshot.Page page = fresh(menu);
+                    eq(helper, tree.openCountForTests(), 1, "abertos depois da montagem");
+                    eq(helper, tree.groupCountForTests(), TabletTree.MAX_GROUPS, "grupos depois da montagem");
                     helper.assertTrue(tree(player, menu, Action.OPEN, fakes.get(1), 0) == false,
                             "abriu um nó fora do índice");
                     helper.assertTrue(page.rows().rows().get(1) instanceof Group g && g.collapsed(), "o grupo recolhido");

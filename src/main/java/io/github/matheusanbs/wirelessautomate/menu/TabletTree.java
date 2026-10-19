@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -31,8 +32,8 @@ import org.jetbrains.annotations.Nullable;
  * ordem do {@link TreeOrder}, e valem com o roteador descarregado.
  *
  * <p>Teto: {@link #MAX_OPEN} roteadores abertos e {@link #MAX_GROUPS} grupos em cada conjunto; acima disso, a
- * ação é recusada. Fechar um roteador esquece os grupos dele, e um nó que saiu do índice ou deixou de ser visível
- * sai dos abertos na montagem seguinte.
+ * ação é recusada. Recolher e "Mostrar todas" só valem num roteador aberto; fechar um roteador esquece os grupos
+ * dele, e um nó que saiu do índice ou deixou de ser visível sai dos abertos, com os grupos, na montagem seguinte.
  */
 public final class TabletTree {
     public static final int MAX_OPEN = 64;
@@ -56,7 +57,8 @@ public final class TabletTree {
 
     /**
      * Uma ação da tela, validada: abrir, recolher e "Mostrar todas" pedem um nó que o jogador vê (e, nos grupos, um
-     * grupo que o índice tem) e espaço no conjunto; fechar, expandir e "Mostrar menos" só tiram. Devolve se valeu.
+     * nó aberto e um grupo que o índice tem) e espaço no conjunto; fechar, expandir e "Mostrar menos" só tiram.
+     * Devolve se valeu.
      */
     boolean apply(TabletTreePayload.Action action, NodeKey node, int group) {
         GroupKey groupKey = new GroupKey(node, group);
@@ -84,6 +86,9 @@ public final class TabletTree {
         if (set.contains(key)) {
             return true;
         }
+        if (!open.contains(key.node())) {
+            return false;
+        }
         NodeIndex.Entry entry = visible(key.node());
         return entry != null && entry.remotes().groupIndex(key.group()) >= 0 && set.size() < MAX_GROUPS && set.add(key);
     }
@@ -105,16 +110,25 @@ public final class TabletTree {
         return open.contains(node);
     }
 
-    /** Tira dos abertos os nós que saíram do índice ou que o jogador deixou de ver. No máximo {@link #MAX_OPEN} buscas. */
+    /**
+     * Tira dos abertos os nós que saíram do índice ou que o jogador deixou de ver, e dos grupos os de nó que não está
+     * aberto. No máximo {@link #MAX_OPEN} buscas e, só quando algum nó saiu, uma passada pelos grupos.
+     */
     void prune(NodeIndex index, NetworkSavedData data, boolean operator, UUID me) {
+        boolean removed = false;
         Iterator<NodeKey> keys = open.iterator();
         while (keys.hasNext()) {
             NodeKey key = keys.next();
             NodeIndex.Entry entry = index.entry(key);
             if (entry == null || !TabletNodes.visible(entry, data, operator, me)) {
                 keys.remove();
-                forgetGroups(key);
+                removed = true;
             }
+        }
+        // Um grupo só entra com o nó aberto e o fechar o esquece: só sobra grupo de nó fechado quando um nó sai aqui.
+        if (removed) {
+            collapsed.removeIf(key -> !open.contains(key.node()));
+            showAll.removeIf(key -> !open.contains(key.node()));
         }
     }
 
@@ -148,6 +162,15 @@ public final class TabletTree {
         collapsed.add(key);
     }
 
+    /** Quantos roteadores estão abertos e quantos grupos estão recolhidos ou com "Mostrar todas". */
+    public int openCountForTests() {
+        return open.size();
+    }
+
+    public int groupCountForTests() {
+        return collapsed.size() + showAll.size();
+    }
+
     /** As máquinas e os grupos do índice para o {@link TreeOrder}, e as linhas que ele manda montadas na página. */
     private final class Emitter implements TreeOrder.Machines, TreeOrder.Rows {
         private @Nullable NodeIndex.Entry entry;
@@ -158,6 +181,8 @@ public final class TabletTree {
         private @Nullable List<MachineLive> lives;
         private @Nullable TabletMachineSample sample;
         private long now;
+        /** As exceções de cada grupo, por posição do grupo no índice, contadas no {@link #start}. */
+        private int[] exceptions = new int[0];
 
         void start(NodeIndex.Entry entry, int parent, List<Row> rows, List<MachineLive> lives, TabletMachineSample sample,
                 long now) {
@@ -169,6 +194,18 @@ public final class TabletTree {
             this.lives = lives;
             this.sample = sample;
             this.now = now;
+            int groups = remotes.groupCount();
+            if (exceptions.length < groups) {
+                exceptions = new int[groups];
+            } else {
+                Arrays.fill(exceptions, 0, groups, 0);
+            }
+            for (int k = 0, n = remotes.exceptionCount(); k < n; k++) {
+                int g = remotes.groupIndex(remotes.group(remotes.exception(k)));
+                if (g >= 0) {
+                    exceptions[g]++;
+                }
+            }
         }
 
         void clear() {
@@ -213,15 +250,9 @@ public final class TabletTree {
         @Override
         public void group(int g) {
             int groupId = remotes.groupId(g);
-            int exceptions = 0;
-            for (int i = 0, n = remotes.size(); i < n; i++) {
-                if (remotes.group(i) == groupId && remotes.hasException(i)) {
-                    exceptions++;
-                }
-            }
             GroupKey key = new GroupKey(entry.key(), groupId);
             rows.add(new Group(parent, groupId, remotes.groupBlock(g), clip(remotes.groupName(g)), remotes.groupMachines(g),
-                    exceptions, collapsed.contains(key), showAll.contains(key)));
+                    exceptions[g], collapsed.contains(key), showAll.contains(key)));
         }
 
         @Override

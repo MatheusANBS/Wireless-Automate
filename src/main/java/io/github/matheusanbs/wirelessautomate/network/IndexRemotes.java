@@ -84,6 +84,16 @@ public final class IndexRemotes {
         return group[i];
     }
 
+    /** Quantas máquinas guardadas têm exceção. */
+    public int exceptionCount() {
+        return exceptions.length;
+    }
+
+    /** O índice da {@code k}-ésima máquina com exceção, em ordem crescente. */
+    public int exception(int k) {
+        return exceptions[k];
+    }
+
     public boolean hasException(int i) {
         return Arrays.binarySearch(exceptions, i) >= 0;
     }

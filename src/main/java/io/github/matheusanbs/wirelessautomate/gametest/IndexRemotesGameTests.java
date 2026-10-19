@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -120,8 +121,19 @@ public final class IndexRemotesGameTests {
                     eq(helper, remotes.groupMachines(remotes.groupIndex(barrels)), 1, "barris no grupo");
 
                     int b = router.remoteMachines().index(helper.absolutePos(FURNACE_B));
+                    NodeKey key = entry(helper, router).key();
+                    CompoundTag before = node(index(helper).save(new CompoundTag(), helper.getLevel().registryAccess()), key);
+                    int roles = entry(helper, router).roles();
+                    long modes = entry(helper, router).faceModes();
                     helper.assertTrue(router.renameTarget(EditTarget.machine(b), "Forno dois"), "não renomeou a máquina");
                     version = bumped(helper, version, "o rótulo");
+                    helper.assertTrue(entry(helper, router).roles() == roles && entry(helper, router).faceModes() == modes,
+                            "o rótulo mudou papéis ou modos");
+                    CompoundTag after = node(index(helper).save(new CompoundTag(), helper.getLevel().registryAccess()), key);
+                    helper.assertTrue(after != null && after != before, "a tag guardada não foi refeita com o rótulo");
+                    eq(helper, after.getCompound("remote_labels").getString(Integer.toString(b)), "Forno dois",
+                            "remote_labels na tag nova");
+                    helper.assertFalse(before.contains("remote_labels"), "rótulo na tag de antes");
                     eq(helper, entry(helper, router).remotes().label(b), "Forno dois", "rótulo no índice");
                     eq(helper, entry(helper, router).remotes().label(0), "", "rótulo de quem não tem");
 
@@ -187,7 +199,7 @@ public final class IndexRemotesGameTests {
                             "remote_groups", "remote_total")) {
                         helper.assertFalse(tag.contains(key), "nó sem máquinas gravou " + key);
                     }
-                    IndexRemotes read = IndexRemotes.load(tag);
+                    IndexRemotes read = IndexRemotes.loadForTests(tag);
                     helper.assertTrue(read.isEmpty() && read.size() == 0 && read.groupCount() == 0,
                             "o formato antigo leu máquinas");
                 })
@@ -204,23 +216,31 @@ public final class IndexRemotesGameTests {
         for (int i = 0; i < count; i++) {
             machines.link(new BlockPos(i, 64, 0), i < 10 ? barrel : chest, -1, null);
         }
-        IndexRemotes remotes = IndexRemotes.of(machines);
+        IndexRemotes remotes = IndexRemotes.ofForTests(machines);
         eq(helper, remotes.size(), IndexRemotes.CAP, "guardadas");
         eq(helper, remotes.total(), count, "total");
         eq(helper, remotes.pos(IndexRemotes.CAP - 1), new BlockPos(IndexRemotes.CAP - 1, 64, 0).asLong(), "a última guardada");
         eq(helper, remotes.groupMachines(remotes.groupIndex(machines.machines().get(20).group())), count - 10,
                 "baús no grupo, contando os de cima do teto");
-        helper.assertTrue(remotes.matches(machines), "não bate com as próprias máquinas");
+        helper.assertTrue(remotes.matchesForTests(machines), "não bate com as próprias máquinas");
 
         CompoundTag tag = new CompoundTag();
-        remotes.save(tag);
+        IndexRemotes back = IndexRemotes.roundTripForTests(remotes, tag);
         eq(helper, tag.getInt("remote_total"), count, "remote_total");
         eq(helper, tag.getLongArray("remote_pos").length, IndexRemotes.CAP, "remote_pos");
-        same(helper, remotes, IndexRemotes.load(tag), "ida e volta acima do teto");
+        same(helper, remotes, back, "ida e volta acima do teto");
+
+        // Uma máquina acima do teto que troca de grupo, com o total igual: só as contagens dos grupos mudam.
+        int above = IndexRemotes.CAP + 40;
+        machines.regroup(Map.of(above, barrel));
+        eq(helper, machines.size(), count, "o total mudou no regroup");
+        helper.assertFalse(remotes.matchesForTests(machines), "a troca de grupo acima do teto passou");
+        remotes = IndexRemotes.ofForTests(machines);
+        helper.assertTrue(remotes.matchesForTests(machines), "não bate depois de remontar");
 
         // Uma máquina acima do teto que sai muda o índice, mesmo fora das guardadas.
         machines.unlink(count - 1);
-        helper.assertFalse(remotes.matches(machines), "a saída de uma máquina acima do teto passou");
+        helper.assertFalse(remotes.matchesForTests(machines), "a saída de uma máquina acima do teto passou");
         helper.succeed();
     }
 
@@ -238,11 +258,15 @@ public final class IndexRemotesGameTests {
                     router.setRangeUpgrade(rangeUpgrade());
                     link(helper, router, FURNACE_A);
                     profile(helper, router, FURNACE_A, Direction.UP, PortMode.EXTRACT);
+                    // Lado canônico Leste é a Esquerda da remota (a fornalha está virada para leste).
+                    profile(helper, router, FURNACE_A, Direction.EAST, PortMode.INSERT);
                     NodeIndex.placedBy(router, player.getUUID());
                     NodeIndex.Entry entry = entry(helper, router);
                     helper.assertTrue((entry.roles() & NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT)) != 0,
                             "o perfil não entrou nos papéis");
                     eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.EXTRACT, "quadradinho de cima");
+                    eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.LEFT), PortMode.INSERT, "quadradinho da Esquerda");
+                    eq(helper, entry.faceMode(ResourceType.ITEM, RemoteSide.RIGHT), PortMode.NONE, "quadradinho da Direita");
 
                     TabletMenu menu = new TabletMenu(91, player.getInventory(), player);
                     player.containerMenu = menu;
@@ -256,11 +280,35 @@ public final class IndexRemotesGameTests {
                         menu.pollSnapshot();
                         helper.assertFalse(menu.snapshot().nodes().stream().anyMatch(node -> node.key().equals(key)),
                                 "o roteador das remotas entrou no filtro de fluidos");
+
+                        // Sem o Upgrade de Alcance as remotas não movem: saem dos papéis e dos modos, e voltam com ele.
+                        router.setRangeUpgrade(ItemStack.EMPTY);
+                        eq(helper, entry(helper, router).roles(), 0, "papéis sem o upgrade");
+                        eq(helper, entry(helper, router).faceModes(), 0L, "modos sem o upgrade");
+                        eq(helper, entry(helper, router).remotes().total(), 1, "a máquina saiu do índice sem o upgrade");
+                        helper.assertFalse(listedItems(menu, key), "sem o upgrade ficou no filtro de itens");
+                        router.setRangeUpgrade(rangeUpgrade());
+                        helper.assertTrue(listedItems(menu, key), "com o upgrade de volta ficou fora do filtro de itens");
+
+                        // A única fornalha ganha uma exceção sem o Extrai de cima: o perfil, que ninguém segue, sai.
+                        router.configureFace(EditTarget.machine(0), ResourceType.ITEM, Direction.UP, PortMode.NONE, 0,
+                                RedstoneMode.IGNORE);
+                        NodeIndex.Entry now = entry(helper, router);
+                        helper.assertTrue((now.roles() & NodeIndex.role(ResourceType.ITEM, NodeIndex.EXTRACT)) == 0,
+                                "o perfil sem máquinas que o seguem contou nos papéis");
+                        eq(helper, now.faceMode(ResourceType.ITEM, RemoteSide.TOP), PortMode.NONE, "cima depois da exceção");
+                        eq(helper, now.faceMode(ResourceType.ITEM, RemoteSide.LEFT), PortMode.INSERT, "Esquerda da exceção");
                     } finally {
                         player.containerMenu = player.inventoryMenu;
                     }
                 })
                 .thenSucceed();
+    }
+
+    private static boolean listedItems(TabletMenu menu, NodeKey key) {
+        menu.setQuery(Query.DEFAULT.withType(Optional.of(ResourceType.ITEM)));
+        menu.pollSnapshot();
+        return menu.snapshot().nodes().stream().anyMatch(node -> node.key().equals(key));
     }
 
     private static CompoundTag node(CompoundTag saved, NodeKey key) {

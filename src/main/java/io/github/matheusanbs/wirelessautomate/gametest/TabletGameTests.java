@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
+import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
@@ -1185,7 +1186,7 @@ public final class TabletGameTests {
                         i == 1 ? furnace : chest, RouterTier.BASIC, List.copyOf(networks), 1, status, false, 5L << i,
                         List.copyOf(rates), Optional.empty()));
             }
-            return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes),
+            return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes), TabletRows.EMPTY,
                     List.of(new TabletSnapshot.Facet<>(chest, 2), new TabletSnapshot.Facet<>(furnace, 1)),
                     Optional.of(furnace));
         };
@@ -1202,7 +1203,8 @@ public final class TabletGameTests {
         TabletSnapshot.LIVE_CODEC.encode(buf, after.lives());
         helper.assertTrue(before.withLives(TabletSnapshot.LIVE_CODEC.decode(buf)).equals(after), "estado e vazão aplicados");
         TabletSnapshot.Page fewer = new TabletSnapshot.Page(after.query(), after.totalNodes(), after.matchingNodes(),
-                List.of(after.nodes().get(0), after.nodes().get(1)), after.groupCounts(), after.originGroup());
+                List.of(after.nodes().get(0), after.nodes().get(1)), TabletRows.EMPTY, after.groupCounts(),
+                after.originGroup());
         helper.assertFalse(fewer.sameExceptLive(after), "um nó a menos passou por só vazão");
         helper.succeed();
     }

@@ -317,6 +317,9 @@ public final class BenchRunner {
                 return "o cenário " + scenario.id + " não tem equivalente no Logistics Network";
             }
         }
+        if (scenario == BenchScenario.BIG_FULL && storage == BenchStorage.WA) {
+            return "o cenário bigfull mede a varredura de slots, que o Baú do mod não tem; rode com vanilla ou soph";
+        }
         if (scenario == BenchScenario.INFINITE) {
             if (!BenchCapabilities.enabled()) {
                 return "o cenário inf precisa de -Dwirelessautomate.bench=true (run benchServer)";

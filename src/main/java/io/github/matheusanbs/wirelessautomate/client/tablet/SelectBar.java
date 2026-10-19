@@ -6,6 +6,8 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.typeName;
 
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
+import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
+import io.github.matheusanbs.wirelessautomate.client.highlight.MachineHighlights;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
@@ -23,7 +25,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Os botões fixos da aba Lista: Selecionar e, selecionando, o tipo, a rede e o Mover, o Todos e o Colar nos
- * marcados. Guarda a escolha do Mover (tipo e rede).
+ * marcados; fora da seleção e com alguma máquina acesa no mundo, o "Apagar todas (N)" ao lado do Selecionar
+ * ({@link HighlightRenderer}). Guarda a escolha do Mover (tipo e rede).
  */
 final class SelectBar {
     /** Tipos que o Mover oferece, depois de "Todas as abas". */
@@ -38,8 +41,10 @@ final class SelectBar {
     private int moveType = -1;
     private Optional<UUID> moveNetwork = Optional.empty();
     private boolean moveNetworkChosen;
-    // [Selecionar, tipo, rede, Mover, Todos, Colar nos marcados]
+    // [Selecionar, tipo, rede, Mover, Todos, Colar nos marcados, Apagar todas]
     private final List<FlatButton> buttons = new ArrayList<>();
+    /** A versão das acesas que o texto do Apagar todas mostra. */
+    private int litVersion = Integer.MIN_VALUE;
 
     SelectBar(TabletLayout layout, Supplier<TabletSnapshot> snapshot, NodeText nodes, TabletActions actions,
             TabletList list) {
@@ -84,6 +89,21 @@ final class SelectBar {
                 (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, tr("list.paste_selected", list.selected().size())),
                 list::pasteSelected).tooltip(() -> snapshot().profile()
                         .map(p -> tr("list.paste_selected.tooltip", p.sourceName(), list.selected().size())).orElse(null)));
+        int clearW = clearLitWidth(font);
+        add(adder, new FlatButton(x + X0 + lw - selectW - 2 - clearW, list.barY(), clearW, ROW_H, clearLitText(),
+                (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, b.getMessage()), HighlightRenderer::clear)
+                .tooltip(() -> Component.translatable("gui.wirelessautomate.highlight.clear_all.tooltip")));
+        litVersion = HighlightRenderer.version();
+    }
+
+    /** A largura do "Apagar todas (N)", pelo maior N: o botão não muda de tamanho quando as acesas mudam. */
+    static int clearLitWidth(Font font) {
+        return font.width(Component.translatable("gui.wirelessautomate.highlight.clear_all.count",
+                MachineHighlights.LIMIT)) + 10;
+    }
+
+    private static Component clearLitText() {
+        return Component.translatable("gui.wirelessautomate.highlight.clear_all.count", HighlightRenderer.count());
     }
 
     private void add(TabletScreen.Buttons adder, FlatButton button) {
@@ -98,6 +118,12 @@ final class SelectBar {
         FlatButton pasteSelected = buttons.get(5);
         pasteSelected.visible = shown && list.multi() && snapshot().profile().isPresent();
         pasteSelected.active = !list.selected().isEmpty();
+        FlatButton clearLit = buttons.get(6);
+        clearLit.visible = shown && !list.multi() && HighlightRenderer.count() > 0;
+        if (litVersion != HighlightRenderer.version()) {
+            litVersion = HighlightRenderer.version();
+            clearLit.setMessage(clearLitText());
+        }
     }
 
     /** Snapshot novo: sem rede escolhida no Mover, vale a ativa. */

@@ -243,7 +243,8 @@ public final class RangeRowButtons {
         }
     }
 
-    private static void arrow(GuiGraphics g, int x, int y, boolean mirror, int color) {
+    /** O ⟳, ou o ↺ ({@code mirror}), em 6 × 6 px (também o Voltar só com o ícone da linha da máquina). */
+    static void arrow(GuiGraphics g, int x, int y, boolean mirror, int color) {
         pixels(g, ARROW, x, y, mirror, color);
     }
 

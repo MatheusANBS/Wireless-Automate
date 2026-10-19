@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -114,6 +116,11 @@ final class ChosenPanel {
         @Override
         public void clearIdleNetworks(boolean undo) {
             list.actions.clearIdleNetworks(undo);
+        }
+
+        @Override
+        public @Nullable ResourceKey<Level> dimension() {
+            return list.chosen == null ? null : list.chosen.dimension();
         }
     }
 

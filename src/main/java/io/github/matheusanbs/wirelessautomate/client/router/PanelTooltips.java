@@ -56,7 +56,8 @@ final class PanelTooltips {
             case RENAME -> tr("range.rename").copy().append("\n")
                     .append(tr("range.rename.panel.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
             case IDLE_NETWORKS -> readOnly != null ? readOnly : IdleNetworks.tooltip();
-            case REVERT -> readOnly != null ? readOnly : tr("range.revert.tooltip");
+            case HIGHLIGHT -> LitFooter.eyeTooltip(targetLine.highlightLit());
+            case REVERT -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.REVERT);
             case UPDATE -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UPDATE);
             case UNLINK -> readOnly != null ? readOnly : machineTooltip(RangeRowButtons.Action.UNLINK);
             case UNDO -> null;

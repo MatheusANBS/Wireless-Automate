@@ -518,6 +518,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.rangeButtonCenter(action);
     }
 
+    /** Centro do Olho da linha da máquina {@code target} na lista, ou {@code null} (gancho do e2e). */
+    public int @Nullable [] rangeEyeCenter(EditTarget target) {
+        return column.rangeEyeCenter(target);
+    }
+
+    /** Centro do Apagar todas embaixo da lista, ou {@code null} se ele não aparece (gancho do e2e). */
+    public int @Nullable [] litClearCenter() {
+        return column.litClearCenter();
+    }
+
     /** O ✕ da linha do alvo na lista está armado, esperando o segundo clique (gancho do e2e). */
     public boolean rangeUnlinkArmed() {
         return column.rangeUnlinkArmed();

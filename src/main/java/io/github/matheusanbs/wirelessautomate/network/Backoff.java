@@ -22,6 +22,11 @@ public final class Backoff {
      */
     private long @Nullable [] mirror;
     private int mirrorSlot;
+    /**
+     * Congelado ({@link #freeze}): dorme sem prazo e ignora {@link #wake}, {@link #sleep} e {@link #sleepUntil} até
+     * {@link #thaw}. A porta parada pelo redstone usa: nenhuma entrega nem aviso a acorda no meio da visita.
+     */
+    private boolean frozen;
 
     /** {@code maxTicks} menor que 1 vira 1. */
     public Backoff(int maxTicks) {
@@ -34,6 +39,9 @@ public final class Backoff {
 
     /** O destino recusou: dorme pelo intervalo atual e dobra o próximo. */
     public void sleep(long gameTime) {
+        if (frozen) {
+            return;
+        }
         setWakeAt(gameTime + nextInterval);
         nextInterval = (int) Math.min((long) nextInterval * 2, maxTicks);
     }
@@ -44,6 +52,9 @@ public final class Backoff {
      * deles, em vez de pelo próprio intervalo (ver {@link #earliestWake}).
      */
     public void sleepUntil(long gameTime, long wakeAt) {
+        if (frozen) {
+            return;
+        }
         setWakeAt(Math.max(wakeAt, gameTime + 1));
     }
 
@@ -62,9 +73,27 @@ public final class Backoff {
 
     /** O destino aceitou ou o vizinho mudou: acorda e volta ao intervalo mínimo. */
     public void wake() {
+        if (frozen) {
+            return;
+        }
         setWakeAt(Long.MIN_VALUE);
         nextInterval = 1;
         wakes++;
+    }
+
+    /** Dorme sem prazo e ignora tudo até {@link #thaw} (ver {@link #frozen}). */
+    public void freeze() {
+        frozen = true;
+        setWakeAt(Long.MAX_VALUE);
+    }
+
+    /** Volta a aceitar {@link #wake} e os sonos; continua dormindo até alguém acordá-lo. */
+    public void thaw() {
+        frozen = false;
+    }
+
+    public boolean isFrozen() {
+        return frozen;
     }
 
     /** Passa a copiar o {@link #wakeAt} em {@code array[slot]} (ver {@link #mirror}); {@code null} para de copiar. */

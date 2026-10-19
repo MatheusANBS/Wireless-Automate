@@ -15,6 +15,7 @@ import net.minecraft.gametest.framework.GameTestListener;
 import net.minecraft.gametest.framework.GameTestRunner;
 import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
@@ -72,10 +73,19 @@ final class TestPlayers {
     static final class MenuPlayer extends ServerPlayer {
         private static int nextContainerId = 100;
         @Nullable RegistryFriendlyByteBuf openData;
+        /** O último texto mandado à barra de ação, para o teste ler (nulo: nenhum). */
+        @Nullable Component actionBar;
         private boolean creative = true;
 
         private MenuPlayer(GameTestHelper helper, CommonListenerCookie cookie) {
             super(helper.getLevel().getServer(), helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
+        }
+
+        @Override
+        public void displayClientMessage(Component message, boolean actionBar) {
+            if (actionBar) {
+                this.actionBar = message;
+            }
         }
 
         @Override

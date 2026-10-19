@@ -41,12 +41,16 @@ final class PanelLayout {
     static final int PRIO_VALUE_W = 22;
     private static final int EDIT_PAD = 5;
     static final int TARGET_PAD = 3;
+    /** O Olho do "No mundo" (5 px) e a folga até o rótulo. */
+    static final int HIGHLIGHT_EYE = 8;
     /** O que a pílula com lista ({@link PanelPainter#dropButton}) gasta além do texto: margem e seta. */
     private static final int DROP_TEXT_PAD = 15;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
+    /** Os botões da linha da máquina, da esquerda para a direita. */
+    private static final Kind[] TARGET_BUTTONS = {Kind.HIGHLIGHT, Kind.REVERT, Kind.UPDATE, Kind.UNLINK};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, IDLE_NETWORKS, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT,
-        PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, TARGET, RENAME, IDLE_NETWORKS, HIGHLIGHT, REVERT, UPDATE, UNLINK, MODE, NETWORK,
+        FILTER, EDIT, PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -93,6 +97,10 @@ final class PanelLayout {
     Component revertLabel = Component.empty();
     /** O "Tirar redes" da linha Editando só com o ícone (o rótulo não cabe). */
     boolean idleIcon;
+    /** O "No mundo" da linha da máquina só com o Olho (os botões não cabem com o rótulo). */
+    boolean highlightIcon;
+    /** O Voltar a igual só com o ↺ (nem o rótulo mais curto cabe). */
+    boolean revertIcon;
     Component redstoneLabel = Component.empty();
 
     // ------------------------------------------------------------------ retângulos
@@ -227,9 +235,9 @@ final class PanelLayout {
     }
 
     /**
-     * A linha Editando, com o "Tirar redes" na ponta quando ele vale, e, numa máquina do alcance, os botões
-     * dela; devolve o topo do que vem depois. Com a lista das máquinas à vista ao lado, a linha não aparece:
-     * a lista marca o alvo e tem os botões.
+     * A linha Editando, com o ✎ do nome (grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando
+     * ele vale, e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a lista das
+     * máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
      */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
@@ -237,8 +245,18 @@ final class PanelLayout {
             targetY = y;
             int labelW = font.width(PanelModel.panelTr("target")) + 5;
             int pillW = w - labelW;
+            int right = x + w;
+            boolean rename = model.readOnly() == null && !model.snapshot().target().attached();
+            int renameW = rename ? ROW_H + GAP : 0;
             if (model.readOnly() == null && IdleNetworks.shown(model.snapshot())) {
-                pillW -= arrangeIdleNetworks(font, model, x + w, y, pillW);
+                int used = arrangeIdleNetworks(font, model, right, y, pillW - renameW);
+                pillW -= used;
+                right -= used;
+            }
+            if (rename) {
+                // o ✎ do nome do grupo ou da máquina, logo depois da pílula
+                hots.add(new Hot(Kind.RENAME, right - ROW_H, y, ROW_H, ROW_H, 0));
+                pillW -= renameW;
             }
             hots.add(new Hot(Kind.TARGET, x + labelW, y, pillW, ROW_H, 0));
             y += ROW_H + GAP;
@@ -251,7 +269,8 @@ final class PanelLayout {
                     // armado, o Desvincular fica sozinho, do começo da linha até onde ele estava (o mouse
                     // continua em cima dele) ou até onde o texto armado couber inteiro, como na lista
                     int armedW = font.width(PanelModel.tr("range.unlink.armed")) + 2 * TARGET_PAD;
-                    hots.removeIf(h -> h.kind() == Kind.REVERT || h.kind() == Kind.UPDATE || h.kind() == Kind.UNLINK);
+                    hots.removeIf(h -> h.kind() == Kind.HIGHLIGHT || h.kind() == Kind.REVERT
+                            || h.kind() == Kind.UPDATE || h.kind() == Kind.UNLINK);
                     hots.add(new Hot(Kind.UNLINK, x, y, Math.min(w, Math.max(unlink.x() + unlink.w() - x, armedW)),
                             ROW_H, 0));
                 }
@@ -344,36 +363,52 @@ final class PanelLayout {
     }
 
     /**
-     * Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o texto
-     * da especificação, ou um Voltar mais curto ("Voltar ao perfil", "Voltar") se não couberem; se nem assim,
-     * cada um fica com até uma parte igual e o Voltar com o resto.
+     * No mundo, Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o
+     * texto da especificação; se não couberem, o No mundo só com o Olho, um Voltar mais curto ("Voltar ao
+     * perfil", "Voltar") e, por fim, o Voltar só com o ↺; se nem assim, cada um fica com até uma parte igual.
      */
     private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
         int unlinkW = font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD;
         int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
-        int count = 1 + (replaced ? 1 : 0) + (exception ? 1 : 0);
+        int highlightW = font.width(LitFooter.SHOW) + 2 * TARGET_PAD + HIGHLIGHT_EYE;
+        int count = 2 + (replaced ? 1 : 0) + (exception ? 1 : 0);
         int revertW = 0;
         if (exception) {
             revertLabel = PanelModel.panelTr("target.revert");
             revertW = font.width(revertLabel) + 2 * TARGET_PAD;
+        }
+        highlightIcon = total(highlightW, revertW, updateW, unlinkW) > w;
+        if (highlightIcon) {
+            highlightW = ROW_H;
+        }
+        if (exception) {
             for (String shorter : new String[] {"range.revert", "range.revert.short"}) {
-                if (total(revertW, updateW, unlinkW) > w) {
+                if (total(highlightW, revertW, updateW, unlinkW) > w) {
                     revertLabel = PanelModel.tr(shorter);
                     revertW = font.width(revertLabel) + 2 * TARGET_PAD;
                 }
             }
         }
-        if (total(revertW, updateW, unlinkW) > w) {
+        revertIcon = exception && total(highlightW, revertW, updateW, unlinkW) > w;
+        if (revertIcon) {
+            revertW = ROW_H;
+        }
+        if (total(highlightW, revertW, updateW, unlinkW) > w) {
             int share = (w - (count - 1) * GAP) / count;
             unlinkW = Math.min(unlinkW, share);
             updateW = Math.min(updateW, share);
             if (exception) {
-                revertW = w - total(0, updateW, unlinkW) - GAP;
+                revertW = Math.max(ROW_H, w - total(highlightW, 0, updateW, unlinkW) - GAP);
             }
         }
         int bx = x;
-        for (Kind kind : new Kind[] {Kind.REVERT, Kind.UPDATE, Kind.UNLINK}) {
-            int bw = kind == Kind.REVERT ? revertW : kind == Kind.UPDATE ? updateW : unlinkW;
+        for (Kind kind : TARGET_BUTTONS) {
+            int bw = switch (kind) {
+                case HIGHLIGHT -> highlightW;
+                case REVERT -> revertW;
+                case UPDATE -> updateW;
+                default -> unlinkW;
+            };
             if (bw > 0) {
                 hots.add(new Hot(kind, bx, y, Math.min(bw, x + w - bx), ROW_H, 0));
                 bx += bw + GAP;

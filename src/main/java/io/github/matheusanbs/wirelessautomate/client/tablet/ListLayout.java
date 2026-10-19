@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.client.FrameCache;
 import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
+import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
@@ -166,7 +167,9 @@ final class ListLayout {
             Component clear = tr("list.clear");
             int cw = font.width(clear);
             Component count = list.texts.countText();
-            int countW = Math.min(font.width(count), Math.max(0, listW - 62 - cw - 8));
+            // o Selecionar e, com alguma máquina acesa, o Apagar todas ficam à direita
+            int buttonsW = 62 + (HighlightRenderer.count() > 0 && !list.multi ? SelectBar.clearLitWidth(font) + 2 : 0);
+            int countW = Math.min(font.width(count), Math.max(0, listW - buttonsW - cw - 8));
             if (!list.multi) {
                 hots.add(new Hot(Kind.CLEAR, x0 + countW + 4, barY(), cw + 2, BAR_H, 0));
             }

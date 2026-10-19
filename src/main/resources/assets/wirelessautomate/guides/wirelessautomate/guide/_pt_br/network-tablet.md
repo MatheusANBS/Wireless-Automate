@@ -67,6 +67,10 @@ Cada máquina é um grupo que você recolhe e abre pelo cabeçalho. A linha de c
 | **Backspace** | Com a busca vazia, tira a última etiqueta. |
 | **Duplo clique num nó** | Abre a tela completa do roteador. |
 
+## Clicar numa máquina
+
+Com o Tablet na mão, clique direito numa máquina com roteador (ou numa vinculada pelo Upgrade de Alcance): o Tablet abre a central já com o nó dela escolhido, antes da interface da máquina. No painel, **No mundo** acende a máquina através dos blocos, como o Olho da tela do roteador, e o **Apagar todas (N)**, no pé da Lista, apaga as que estão acesas.
+
 ## O painel do nó
 
 Clique num nó da lista: o painel à direita é o mesmo da [tela do roteador](router.md), com o cubo desdobrado das faces, modo, rede, filtro, prioridade e redstone, e cada mudança vale na hora. Pelo Tablet você edita um nó **dentro do alcance do tier do Tablet**; com o nó descarregado, ou fora do alcance, o painel mostra o último estado só para leitura e diz o motivo.

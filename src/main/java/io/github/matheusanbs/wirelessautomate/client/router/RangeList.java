@@ -25,19 +25,21 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Lista das máquinas da tela do roteador com o Upgrade de Alcance, no lugar do visor 3D: a linha da
  * máquina presa, os grupos (ícone, nome, {@code ×N} e as exceções), que abrem e fecham, e as máquinas
- * de cada grupo aberto ({@code #N · 12 blocos}) com a bolinha do estado e a marca de exceção. Clicar
- * numa linha escolhe o alvo de edição; a seta de um grupo (ou um clique no grupo já escolhido) abre e
- * fecha. A linha escolhida ganha os botões do {@link RangeRowButtons}. Rola com a roda. Só cliente; todo
- * texto passa por {@link GuiText}.
+ * de cada grupo aberto ({@link MachineRow}: o nome, as coordenadas e a distância, a bolinha do estado e a
+ * marca de exceção). Clicar numa linha escolhe o alvo de edição; a seta de um grupo (ou um clique no grupo
+ * já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
+ * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
 final class RangeList {
     static final int ATTACHED_H = 14;
     static final int GROUP_H = 20;
-    static final int MACHINE_H = 12;
+    static final int MACHINE_H = GROUP_H;
     /** Rolagem de um passo da roda, em px. */
-    private static final int SCROLL_STEP = MACHINE_H;
+    private static final int SCROLL_STEP = 12;
     /** Largura da área da seta à esquerda de um grupo (clicar ali só abre e fecha). */
     private static final int ARROW_ZONE = 9;
+    /** Onde o nome do grupo começa, depois da seta e do ícone. */
+    static final int GROUP_TEXT_X = ARROW_ZONE + 20;
 
     enum Kind { ATTACHED, GROUP, MACHINE }
 
@@ -57,6 +59,8 @@ final class RangeList {
 
     private final Set<Integer> open = new HashSet<>();
     private final RangeRowButtons buttons = new RangeRowButtons();
+    private final MachineRow machineRow;
+    private final RowRename rename;
     private int scroll;
     private int x;
     private int y;
@@ -65,6 +69,15 @@ final class RangeList {
     private @Nullable EditTarget shownTarget;
     private @Nullable RangeView cachedView;
     private @Nullable List<Row> cachedRows;
+
+    /**
+     * @param rename     a edição do nome das linhas, da coluna
+     * @param machineRow o desenho da linha da máquina, com o Olho
+     */
+    RangeList(RowRename rename, MachineRow machineRow) {
+        this.rename = rename;
+        this.machineRow = machineRow;
+    }
 
     void setBounds(int x, int y, int width, int height) {
         this.x = x;
@@ -116,6 +129,11 @@ final class RangeList {
         return last.top() + last.height();
     }
 
+    /** O topo da linha {@code row} na tela, com a rolagem. */
+    int rowTop(Row row) {
+        return y + 1 + row.top() - scroll;
+    }
+
     /** Área útil das linhas (dentro da moldura). */
     private int innerHeight() {
         return height - 2;
@@ -125,17 +143,33 @@ final class RangeList {
         return Math.max(0, contentHeight(rows) - innerHeight());
     }
 
+    /** Borda direita do texto das linhas da visão {@code view} (o lugar do Olho termina nela). */
+    int textRight(RangeView view) {
+        return rowRight(rows(view));
+    }
+
     /** Borda direita do texto das linhas: com rolagem, deixa o espaço da barra. */
     private int rowRight(List<Row> rows) {
         return x + width - 1 - (maxScroll(rows) > 0 ? 3 : 0);
     }
 
-    /** Os botões da linha do alvo, onde ela está agora (o armado vai até o texto); nenhum sem a linha. */
+    /**
+     * Os botões da linha do alvo, onde ela está agora (o armado vai até o texto); nenhum sem a linha ou com o
+     * nome dela em edição. No grupo e na máquina, na primeira linha (na máquina, antes do lugar do Olho, que
+     * o "Desvincular?" armado ocupa).
+     */
     private List<RangeRowButtons.Button> targetButtons(Font font, RangeView view, EditTarget target) {
+        if (rename.editing(target)) {
+            return List.of();
+        }
         for (Row row : rows(view)) {
             if (row.target().equals(target)) {
                 int ry = y + 1 + row.top() - scroll;
-                return buttons.place(font, view, target, ry, row.height(), rowRight(rows(view)), x + 16);
+                // no grupo e na máquina, na primeira linha: a segunda fica com a largura toda
+                boolean eye = row.kind() == Kind.MACHINE && !buttons.unlinkArmed(target);
+                int right = rowRight(rows(view)) - (eye ? MachineRow.EYE_W : 0);
+                int rowH = row.kind() == Kind.ATTACHED ? row.height() : RangeRowButtons.SIZE + 2;
+                return buttons.place(font, view, target, ry, rowH, right, x + RowRename.nameX(row));
             }
         }
         return List.of();
@@ -218,6 +252,10 @@ final class RangeList {
             }
             return true;
         }
+        if (rename.doubleClick(row, row.kind() != Kind.ATTACHED && mouseX >= x + RowRename.nameX(row))) {
+            act.accept(row, RangeRowButtons.Action.RENAME);
+            return true;
+        }
         if (row.kind() == Kind.GROUP && (mouseX < x + 1 + ARROW_ZONE || row.target().equals(target))) {
             if (!open.remove(row.group())) {
                 open.add(row.group());
@@ -270,8 +308,20 @@ final class RangeList {
         return n;
     }
 
-    /** "Fornalha #3". */
+    /**
+     * O nome de uma máquina fora da lista (a pílula, as dicas e a lista do alvo): o rótulo dado pelo jogador, ou
+     * "Fornalha #3". A única regra do nome, com o {@link MachineRow#rowName} da linha embaixo do grupo.
+     */
     static Component machineName(RangeView view, int index) {
+        MachineView machine = view.machine(index);
+        if (machine != null && !machine.label().isEmpty()) {
+            return Component.literal(machine.label());
+        }
+        return blockName(view, index);
+    }
+
+    /** O nome de uma máquina sem rótulo: "Fornalha #3" (também a dica da caixa do rótulo vazia). */
+    static Component blockName(RangeView view, int index) {
         MachineView machine = view.machine(index);
         GroupView group = machine == null ? null : view.group(machine.group());
         Component name = group == null ? Component.literal("?") : groupName(group);
@@ -316,22 +366,7 @@ final class RangeList {
                 }
                 yield text.copy().append("\n").append(tr("range.group.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
             }
-            case MACHINE -> {
-                MachineView machine = view.machine(row.machine());
-                if (machine == null) {
-                    yield Component.empty();
-                }
-                Component follows = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
-                Component text = machineName(view, row.machine()).copy()
-                        .append("\n").append(tr("range.machine.detail", distance(machine), follows).copy()
-                                .withColor(GuiPaint.TOOLTIP_MUTED))
-                        .append("\n").append(stateText(machine.state()).copy().withColor(stateColor(machine.state())));
-                if (machine.state() == MachineState.REPLACED) {
-                    text = text.copy().append("\n").append(RangeRowButtons.updateDetail(view, row.target()).copy()
-                            .withColor(GuiPaint.TOOLTIP_MUTED));
-                }
-                yield text.copy().append("\n").append(tr("range.machine.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
-            }
+            case MACHINE -> MachineRow.tooltip(view, row.machine());
         };
     }
 
@@ -359,6 +394,7 @@ final class RangeList {
         int bottom = y + 1 + innerHeight();
         g.enableScissor(x + 1, top, x + width - 1, bottom);
         boolean targetShown = false;
+        rename.beginFrame();
         for (Row row : rows) {
             int ry = top + row.top() - scroll;
             if (ry + row.height() <= top || ry >= bottom) {
@@ -375,8 +411,13 @@ final class RangeList {
             int textRight = placed.isEmpty() ? right : placed.getLast().x() - 1;
             switch (row.kind()) {
                 case ATTACHED -> renderAttached(g, font, attachedIcon, ry, right);
-                case GROUP -> renderGroup(g, font, view, row, ry, textRight);
-                case MACHINE -> renderMachine(g, font, view, row, ry, textRight, placed.isEmpty());
+                case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
+                case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
+                        placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
+                        !selected || !buttons.unlinkArmed(target));
+            }
+            if (ry >= top && ry + row.height() <= bottom) {
+                rename.place(row, x, ry, right);
             }
             if (selected) {
                 targetShown = true;
@@ -399,6 +440,7 @@ final class RangeList {
             g.fill(x + width - 3, top, x + width - 2, bottom, GuiPaint.INSET);
             g.fill(x + width - 3, thumbY, x + width - 2, thumbY + thumb, GuiPaint.LINE);
         }
+        rename.endFrame(view, g, mouseX, mouseY);
     }
 
     private void renderAttached(GuiGraphics g, Font font, ItemStack icon, int ry, int right) {
@@ -413,7 +455,8 @@ final class RangeList {
         GuiText.draw(g, font, tr("range.attached"), textX, ry + 3, right - textX - 2, GuiPaint.FG);
     }
 
-    private void renderGroup(GuiGraphics g, Font font, RangeView view, Row row, int ry, int right) {
+    /** Um grupo; {@code nameRight} é até onde vai a primeira linha (antes dos botões) e {@code right} a segunda. */
+    private void renderGroup(GuiGraphics g, Font font, RangeView view, Row row, int ry, int nameRight, int right) {
         GroupView group = view.group(row.group());
         if (group == null) {
             return;
@@ -427,9 +470,9 @@ final class RangeList {
         if (!icon.isEmpty()) {
             g.renderItem(icon, x + ARROW_ZONE + 1, ry + 2);
         }
-        int textX = x + ARROW_ZONE + 20;
-        int textW = right - textX - 2;
-        GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2, textW,
+        int textX = x + GROUP_TEXT_X;
+        GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2,
+                nameRight - textX - 2,
                 GuiPaint.FG);
         int replaced = RangeRowButtons.replaced(view, group.id());
         Component detail;
@@ -441,29 +484,7 @@ final class RangeList {
             detail = group.exceptions() > 0 ? exceptions(group) : tr("range.group.profile");
             color = group.exceptions() > 0 ? GuiPaint.ACCENT : GuiPaint.MUTED;
         }
-        GuiText.draw(g, font, detail, textX, ry + 11, textW, color);
-    }
-
-    /** Uma máquina; {@code badge} é a marca "exc." (na linha escolhida, o ↺ mostra a exceção). */
-    private void renderMachine(GuiGraphics g, Font font, RangeView view, Row row, int ry, int right, boolean badge) {
-        MachineView machine = view.machine(row.machine());
-        if (machine == null) {
-            return;
-        }
-        GuiPaint.dot(g, x + 8, ry + 3, stateColor(machine.state()));
-        int textX = x + 16;
-        int end = right - 2;
-        if (badge && machine.exception()) {
-            Component exc = tr("range.exception.badge");
-            end -= font.width(exc) + 3;
-            GuiPaint.text(g, font, exc, end + 3, ry + 2, GuiPaint.ACCENT);
-        }
-        boolean replaced = machine.state() == MachineState.REPLACED;
-        boolean counts = machine.state() != MachineState.OUT_OF_RANGE && machine.state() != MachineState.OVER_LIMIT;
-        Component text = tr("range.machine.row", number(view, row.machine()),
-                replaced ? tr("range.machine.replaced") : distance(machine));
-        GuiText.draw(g, font, text, textX, ry + 2, end - textX,
-                replaced ? GuiPaint.BRASS : counts ? GuiPaint.FG : GuiPaint.MUTED);
+        GuiText.draw(g, font, detail, textX, ry + 11, right - textX - 2, color);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento

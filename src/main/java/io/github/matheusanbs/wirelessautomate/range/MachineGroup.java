@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.range;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -65,7 +66,7 @@ public final class MachineGroup {
     }
 
     public void setName(String name) {
-        this.name = name == null ? "" : name;
+        this.name = name == null ? "" : RenameRouterPayload.clean(name);
     }
 
     /** O perfil do grupo. Mude pelos métodos por alvo do roteador, que avisam o motor. */
@@ -163,7 +164,7 @@ public final class MachineGroup {
         if (block == null) {
             return null;
         }
-        MachineGroup group = new MachineGroup(tag.getInt("id"), block, tag.getString("name"),
+        MachineGroup group = new MachineGroup(tag.getInt("id"), block, RenameRouterPayload.clean(tag.getString("name")),
                 MachineConfig.load(tag.getCompound("profile"), registries));
         CompoundTag cardsTag = tag.getCompound("cards");
         for (int t = 0; t < CARD_TYPES.length; t++) {

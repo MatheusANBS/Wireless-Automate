@@ -27,8 +27,10 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -65,6 +67,8 @@ import org.jetbrains.annotations.Nullable;
  *                 {@code faces} são as do alvo no quadro canônico (frente = Norte, ver
  *                 {@link RemoteSide#fromCanonical}) e {@code machine}/{@code machineState} são do bloco
  *                 do alvo, virado para Norte
+ * @param dimension a dimensão do roteador (o destaque no mundo acende as máquinas nela, também com a tela aberta
+ *                  à distância de outra dimensão)
  */
 public record RouterSnapshot(
         BlockPos pos,
@@ -78,10 +82,19 @@ public record RouterSnapshot(
         BlockState machineState,
         List<FaceView> faces,
         ChunkLoadState chunkLoad,
-        RangeView range) {
+        RangeView range,
+        ResourceKey<Level> dimension) {
 
     /** Tamanho máximo dos nomes (do nó e dos grupos) no pacote. */
     public static final int NAME_LENGTH = 64;
+
+    /** No Overworld (prévias e capturas da tela, que não abrem um roteador de verdade). */
+    public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
+            int attachedFront, List<NetworkEntry> networks, boolean powered, ItemStack machine,
+            BlockState machineState, List<FaceView> faces, ChunkLoadState chunkLoad, RangeView range) {
+        this(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState, faces, chunkLoad,
+                range, Level.OVERWORLD);
+    }
 
     /** Sem as máquinas remotas (o snapshot de sempre, sem o Upgrade de Alcance). */
     public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
@@ -117,19 +130,25 @@ public record RouterSnapshot(
     /** O mesmo snapshot com outras redes no seletor. */
     public RouterSnapshot withNetworks(List<NetworkEntry> networks) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range);
+                faces, chunkLoad, range, dimension);
     }
 
     /** O mesmo snapshot com outras faces (prévias da tela). */
     public RouterSnapshot withFaces(List<FaceView> faces) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range);
+                faces, chunkLoad, range, dimension);
     }
 
     /** O mesmo snapshot com outra frente da máquina presa (prévias da tela). */
     public RouterSnapshot withAttachedFront(int attachedFront) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range);
+                faces, chunkLoad, range, dimension);
+    }
+
+    /** O mesmo snapshot com outras máquinas remotas (prévias da tela). */
+    public RouterSnapshot withRange(RangeView range) {
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
+                faces, chunkLoad, range, dimension);
     }
 
     /** O alvo de edição atual ({@link EditTarget#ATTACHED_TARGET} sem o Upgrade de Alcance). */
@@ -142,7 +161,8 @@ public record RouterSnapshot(
         return pos.equals(other.pos) && name.equals(other.name) && tier == other.tier && facing == other.facing
                 && attachedFront == other.attachedFront && powered == other.powered
                 && ItemStack.matches(machine, other.machine) && machineState == other.machineState
-                && faces.equals(other.faces) && chunkLoad == other.chunkLoad && range.equals(other.range);
+                && faces.equals(other.faces) && chunkLoad == other.chunkLoad && range.equals(other.range)
+                && dimension.equals(other.dimension);
     }
 
     /** Igualdade de valor; o {@link ItemStack} da máquina é comparado por {@link ItemStack#matches}. */
@@ -154,7 +174,8 @@ public record RouterSnapshot(
     @Override
     public int hashCode() {
         return java.util.Objects.hash(pos, name, tier, facing, attachedFront, networks, powered,
-                ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad, range);
+                ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad, range,
+                dimension);
     }
 
     /**
@@ -313,7 +334,8 @@ public record RouterSnapshot(
 
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
                 router.attachedFront(), List.copyOf(networks), router.powered(), machine,
-                machineState, List.of(faces), router.chunkLoadState(), range);
+                machineState, List.of(faces), router.chunkLoadState(), range,
+                router.getLevel() == null ? Level.OVERWORLD : router.getLevel().dimension());
     }
 
     /** A visão das remotas, mais a máquina que o visor e os slots mostram (nula se nenhuma carregada) e o grupo do alvo. */
@@ -344,7 +366,7 @@ public record RouterSnapshot(
                 state = RangeView.MachineState.REPLACED;
             }
             machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(), state,
-                    replacedBy));
+                    replacedBy, remote.label()));
         }
         List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
         for (MachineGroup group : remotes.groups()) {
@@ -514,6 +536,7 @@ public record RouterSnapshot(
         }
         buf.writeEnum(s.chunkLoad);
         RangeView.encode(buf, s.range);
+        buf.writeResourceKey(s.dimension);
     }
 
     private static RouterSnapshot decodeBody(RegistryFriendlyByteBuf buf) {
@@ -534,7 +557,8 @@ public record RouterSnapshot(
         }
         ChunkLoadState chunkLoad = buf.readEnum(ChunkLoadState.class);
         RangeView range = RangeView.decode(buf);
+        ResourceKey<Level> dimension = buf.readResourceKey(Registries.DIMENSION);
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, List.of(), powered, machine,
-                machineState, List.copyOf(faces), chunkLoad, range);
+                machineState, List.copyOf(faces), chunkLoad, range, dimension);
     }
 }

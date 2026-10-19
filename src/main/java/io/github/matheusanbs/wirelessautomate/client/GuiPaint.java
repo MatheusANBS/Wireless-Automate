@@ -95,6 +95,8 @@ public final class GuiPaint {
     public static final int SCOPE_BG = 0xFF1B1920;
     public static final int SCOPE_GRID = 0xFF2F2C35;
     public static final int SCOPE_LINE = 0xFF8EE8E1;
+    /** O ciano do destaque no mundo, o do Olho aceso: fora da paleta, igual ao do contorno desenhado no mundo. */
+    public static final int HIGHLIGHT = 0xFF3FC9BE;
 
     static {
         apply(GuiPalette.LIGHT);

@@ -83,6 +83,16 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 | **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
 
+## Remote machines
+
+With the Range Upgrade, the router serves several machines around it, and their list sits next to the viewer. Each row shows the machine's name, its coordinates and its state.
+
+| In the list | What it does |
+| --- | --- |
+| **Name** | Click the ✎ on the row (or double-click the name) to name the machine or the group. **Enter** saves and **Esc** cancels. |
+| **Eye ◉** | Lights the machine up in the world, through the blocks, with a line to the router. It stays lit until you turn it off or leave the world, up to 64 at a time. Click the eye again to turn it off. |
+| **Clear all** | Turns off every lit machine at once. |
+
 ## Face modes
 
 | Mode | What it does | Use it for |

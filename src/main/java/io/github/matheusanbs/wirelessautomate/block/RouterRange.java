@@ -2,7 +2,10 @@ package io.github.matheusanbs.wirelessautomate.block;
 
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
@@ -69,6 +72,35 @@ final class RouterRange {
         pruneCaches();
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /**
+     * Ver {@link RouterBlockEntity#renameTarget}. Só o que a tela mostra muda: sobe o {@code changeVersion} e
+     * avisa o índice, sem {@code changed()}, porque o nome não mexe nas rotas.
+     */
+    boolean rename(EditTarget target, String name) {
+        String clean = RenameRouterPayload.clean(name);
+        switch (target.kind()) {
+            case GROUP -> {
+                MachineGroup group = remotes.group(target.id());
+                if (group == null || group.name().equals(clean)) {
+                    return false;
+                }
+                group.setName(clean);
+            }
+            case MACHINE -> {
+                RemoteMachine machine = remotes.machine(target.id());
+                if (machine == null || machine.label().equals(clean)) {
+                    return false;
+                }
+                machine.setLabel(clean);
+            }
+            default -> {
+                return false;
+            }
+        }
+        router.nameChanged();
         return true;
     }
 

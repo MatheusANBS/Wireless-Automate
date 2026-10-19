@@ -67,6 +67,10 @@ Each machine is a group you collapse and open from its header. Each node's row s
 | **Backspace** | With an empty search, removes the last label. |
 | **Double-click a node** | Opens the router's full screen. |
 
+## Clicking a machine
+
+With the Tablet in hand, right-click a machine with a router (or one linked through the Range Upgrade): the Tablet opens the hub with its node already chosen, before the machine's own interface. In the panel, **In the world** lights the machine up through the blocks, like the Eye on the router screen, and **Clear all (N)**, at the foot of the List, turns off the ones that are lit.
+
 ## The node panel
 
 Click a node in the list: the panel on the right is the same as the [router screen](router.md), with the unfolded face cube, mode, network, filter, priority and redstone, and every change takes effect at once. From the Tablet you edit a node **within the Tablet tier's range**; with the node unloaded, or out of range, the panel shows its last state read-only and says why.

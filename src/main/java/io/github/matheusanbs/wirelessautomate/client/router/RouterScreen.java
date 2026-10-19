@@ -91,10 +91,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         this.preview = preview;
         this.imageWidth = RouterLayout.MIN_W;
         this.imageHeight = RouterLayout.MIN_H;
-        this.panel = new NodePanel(new RouterPanelActions(menu, preview), menu.snapshot(), menu.selectedFace());
+        RouterPanelActions actions = new RouterPanelActions(menu, preview);
+        this.panel = new NodePanel(actions, menu.snapshot(), menu.selectedFace());
         this.layout = new RouterLayout(() -> menu.snapshot().range().present());
         this.header = new RouterHeader(menu, layout, preview, panel::type, this::setFocused, this::refresh);
-        this.column = new MachineColumn(menu::snapshot, panel, layout, preview, () -> menu.containerId);
+        this.column = new MachineColumn(menu::snapshot, panel, layout, actions::send, () -> menu.containerId);
         this.slots = new RouterSlots(menu, layout, panel::type);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
@@ -221,6 +222,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // com um nome em edição, o clique fora (até no tema ou na alça) salva; na caixa, fica nela
+        if (column.labelClick(mouseX, mouseY, button) || panel.labelClick(mouseX, mouseY, button)) {
+            return true;
+        }
         boolean popup = panel.popupOpen();
         if (!popup && ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
@@ -333,7 +338,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
             return true;
         }
-        if (panel.keyPressed(keyCode)) {
+        if (column.keyPressed(keyCode, scanCode, modifiers) || panel.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -343,6 +348,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     public boolean charTyped(char codePoint, int modifiers) {
         if (header.renaming()) {
             return header.renameBox().charTyped(codePoint, modifiers);
+        }
+        if (column.charTyped(codePoint, modifiers) || panel.charTyped(codePoint, modifiers)) {
+            return true;
         }
         return super.charTyped(codePoint, modifiers);
     }
@@ -510,6 +518,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.rangeButtonCenter(action);
     }
 
+    /** Centro do Olho da linha da máquina {@code target} na lista, ou {@code null} (gancho do e2e). */
+    public int @Nullable [] rangeEyeCenter(EditTarget target) {
+        return column.rangeEyeCenter(target);
+    }
+
+    /** Centro do Apagar todas embaixo da lista, ou {@code null} se ele não aparece (gancho do e2e). */
+    public int @Nullable [] litClearCenter() {
+        return column.litClearCenter();
+    }
+
     /** O ✕ da linha do alvo na lista está armado, esperando o segundo clique (gancho do e2e). */
     public boolean rangeUnlinkArmed() {
         return column.rangeUnlinkArmed();
@@ -518,6 +536,11 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     /** Ponto da seta de um grupo na lista, que abre e fecha sem escolher (gancho do e2e). */
     public int @Nullable [] rangeArrowPoint(int group) {
         return column.rangeArrowPoint(group);
+    }
+
+    /** O nome de uma linha da lista das máquinas está em edição (gancho do e2e). */
+    public boolean rangeLabelEditing() {
+        return column.labelEditing();
     }
 
     /** A lista das máquinas está na tela (gancho do e2e). */

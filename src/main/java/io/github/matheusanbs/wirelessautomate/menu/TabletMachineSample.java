@@ -22,14 +22,15 @@ import org.jetbrains.annotations.Nullable;
  * para todos os jogadores. Mede só as máquinas que alguma página pede ({@link #live}), no máximo uma vez por amostra:
  * a primeira página que pede uma máquina numa amostra a mede, as outras leem o que ficou. A vazão é a diferença dos
  * totais das portas da máquina ({@link NodeProbe#machineTotals}) desde a medida da amostra anterior; uma máquina que
- * ninguém pediu na amostra anterior começa de novo, sem vazão. As que ninguém pede numa amostra saem na seguinte.
+ * ninguém pediu na amostra anterior começa de novo, sem vazão, e o estado dela vem do que as portas fazem agora
+ * ({@link NodeProbe#MACHINE_ACTIVE}). As que ninguém pede numa amostra saem na seguinte.
  *
  * <p>Só a thread do servidor mexe.
  */
 final class TabletMachineSample {
     private static final ResourceType[] TYPES = ResourceType.values();
 
-    /** As máquinas medidas de cada nó, por {@code pos.asLong()}. */
+    /** As máquinas medidas de cada nó; dentro dele, por {@code pos.asLong()}. */
     private final Object2ObjectOpenHashMap<NodeKey, NodeSlots> nodes = new Object2ObjectOpenHashMap<>();
     /** A amostra atual, contada por {@link #beginRound}. */
     private int round;
@@ -115,7 +116,7 @@ final class TabletMachineSample {
         }
         Arrays.fill(got, 0);
         Arrays.fill(gave, 0);
-        boolean full = NodeProbe.machineTotals(router, pos, got, gave, now);
+        int flags = NodeProbe.machineTotals(router, pos, got, gave, now);
         long elapsed = Math.max(1, now - slot.tick);
         long[] rates = null;
         boolean moved = false;
@@ -137,7 +138,11 @@ final class TabletMachineSample {
         }
         slot.hasTotals = true;
         slot.tick = now;
-        MachineStatus measured = full ? MachineStatus.FULL : moved ? MachineStatus.MOVING : MachineStatus.SLEEPING;
+        if (!consecutive) {
+            moved = (flags & NodeProbe.MACHINE_ACTIVE) != 0;
+        }
+        MachineStatus measured = moved ? MachineStatus.MOVING
+                : (flags & NodeProbe.MACHINE_FULL) != 0 ? MachineStatus.FULL : MachineStatus.SLEEPING;
         return rates == null ? MachineLive.still(measured) : new MachineLive(measured, rates);
     }
 

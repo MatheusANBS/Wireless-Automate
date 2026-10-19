@@ -319,6 +319,24 @@ final class NodePorts {
         }
     }
 
+    /** O nó saiu do motor: para todas as portas já criadas, da presa e das remotas ({@link Port#stop}). */
+    void stopAll(long now) {
+        for (Port port : ports) {
+            if (port != null) {
+                port.stop(now);
+            }
+        }
+        if (remotes != null) {
+            for (Port[] byFace : remotes.values()) {
+                for (Port port : byFace) {
+                    if (port != null) {
+                        port.stop(now);
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * O sinal de redstone do roteador mudou: trava ou destrava as portas já lidas com controle por redstone, sem
      * remontar ({@link Port#applyRedstone}). A que destrava acorda as origens que esperam por ela; as de um tipo
@@ -365,7 +383,7 @@ final class NodePorts {
     }
 
     private static void wakePort(Port port) {
-        if (port.redstoneOff) {
+        if (port.stopped) {
             return;
         }
         port.sourceBackoff.wake();
@@ -389,7 +407,7 @@ final class NodePorts {
     private static void wakeWaiting(List<Port> sources) {
         for (int i = 0, n = sources.size(); i < n; i++) {
             Port source = sources.get(i);
-            if (source.waitsDestination && !source.redstoneOff) {
+            if (source.waitsDestination && !source.stopped) {
                 source.sourceBackoff.wake();
             }
         }

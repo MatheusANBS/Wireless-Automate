@@ -378,3 +378,23 @@ Ramo `motor-m1-m2` (commit `0eb40a5`): `./scripts/bench.sh sparse:500:3,full:100
 - M2: a face com controle por redstone fica nas rotas, travada (`Port.redstoneOff`): o sinal só a faz dormir sem prazo ou acordar, e nenhum aviso a destrava. O relógio nas faces deixou de remontar 20 vezes por segundo.
 - M1: "todos os destinos dormindo" é decidido e calculado numa varredura só e guardado por lista de destinos no mesmo tick, enquanto nada acordar (`SourceSleep.allAsleep`, invalidado pela contagem de `Backoff.wake`); um destino acorda as alimentadoras no máximo uma vez por tick. O ganho aparece no `full` (o p99 caiu 7×) e no `sparse`; o caso extremo (uma máquina "barulhenta" acordando centenas de origens) não tem cenário próprio.
 - many e redstone ficam iguais, dentro do ruído.
+
+## M3 a M6 da auditoria (17 de outubro de 2026)
+
+Ramo `motor-m3-m6`, sobre o `motor-m1-m2` (base `9327f32`). Primeira rodada (`run/bench/reports/20261017-170759.md` antes, `20261017-171619.md` depois) com `big`, `bigfull`, `mixed`, `idle`, `many` e `full`; como o MSPT base dobrou no meio dela, `bigfull`, `many` e `mixed` foram refeitos um logo depois do outro (`20261017-172514.md` e `20261017-172922.md`), e o `raw` à parte para o M3 (`20261017-173403.md` e `20261017-173704.md`).
+
+| Cenário | mod antes (ms/tick) | mod depois | µs/visita antes → depois | Leitura |
+| --- | --- | --- | --- | --- |
+| idle 500 | 0,0095 ± 0,0004 | **0,0030 ± 0,0002** (−68%) | 3,79 → 1,21 | M6: o laço pula as origens dormindo pelo array |
+| full 100 | 0,0037 ± 0,0004 | **0,0017 ± 0,0003** (−54%) | 7,38 → 3,31 | M6 |
+| bigfull 20 (refeito) | 0,0165 ± 0,0008 | 0,0169 ± 0,0028 | 6,60 → 6,75 | igual |
+| many 500 (refeito) | 0,654 ± 0,004 | 0,656 ± 0,012 | 10,44 → 10,45 | igual |
+| mixed 498 (refeito) | 0,712 ± 0,010 | 0,728 ± 0,015 | 4,49 → 4,57 | dentro do ruído; o M4 não aparece (um grupo de prioridade só) |
+| raw, com o M3 | 0,126 ± 0,002 | 0,140 ± 0,002 (+11%) | 63,1 → 70,2 | **M3 voltado** |
+
+### Leitura
+
+- M6 é o ganho: com a cópia do `wakeAt` das origens num array (`Backoff.mirrorTo`), o laço não toca nas portas que dormem. O custo de existir caiu 68%.
+- M4 (energia e Source param no grupo de prioridade que já cobre o oferecido) não muda o resultado da divisão e só aparece com vários grupos de prioridade, que os cenários não têm.
+- M5 (entrada e saída de nós com a remontagem adiada até 20 ticks e as portas do nó que sai paradas na hora) não tem cenário de carga de chunk; o GameTest `brokenRouterStopsBeforeDeferredRebuild` prova o comportamento.
+- M3 (a dica de inserção) foi voltado: movendo pilhas inteiras, a pilha da dica já está cheia na entrega seguinte, e a dica custava uma inserção simulada recusada antes da varredura de sempre. O mesmo item em pilha parcial já é coberto pela rajada.

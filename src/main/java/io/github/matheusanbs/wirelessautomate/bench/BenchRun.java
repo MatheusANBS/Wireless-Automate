@@ -110,7 +110,7 @@ final class BenchRun {
     private final Samples mod = new Samples();
     /** Tempo do mod no tick logo depois de {@link BenchScene#touch} (cenário de remontagem). */
     private final Samples afterTouch = new Samples();
-    /** Sincronização do Tablet aberto em cada tick medido ({@link BenchScenario#TABLET}), fora do laço do mod. */
+    /** Sincronização do Tablet aberto em cada tick medido ({@link BenchScenario#tablet()}), fora do laço do mod. */
     private final Samples tablet = new Samples();
     private final BenchResonatorStats resonator = new BenchResonatorStats();
     private long tabletNanos;
@@ -226,7 +226,7 @@ final class BenchRun {
                 if (job.scenario().resonator()) {
                     resonator.warmup(tickNanos);
                 }
-                if (job.scenario() == BenchScenario.TABLET) {
+                if (job.scenario().tablet()) {
                     scene.openTablet();
                 }
                 enter(Phase.WARMUP);
@@ -410,7 +410,7 @@ final class BenchRun {
                 stats == null ? 0 : stats.destinationsSleeping() + stats.destinationsAwake(),
                 attachModNanos, rebuilds, rebuilds <= 0 ? Double.NaN : (double) rebuildNanos / rebuilds,
                 afterTouch.max(), scene.slotsPerMachine(), rebuilds / seconds,
-                job.scenario() == BenchScenario.TABLET ? tablet.mean() : Double.NaN, tablet.max(),
+                job.scenario().tablet() ? tablet.mean() : Double.NaN, tablet.max(),
                 flowSamples <= 0 ? Double.NaN : (double) flowNanos / flowSamples, (double) flowNanos / ticks,
                 waEngine, mspt.mean() - baseMspt.mean(), (double) (workerCpuNanos() - workerStart) / ticks,
                 (scene.delivered(ResourceType.ITEM) - neutralItemsStart) / seconds,

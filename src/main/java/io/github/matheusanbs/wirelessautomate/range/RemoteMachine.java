@@ -15,6 +15,8 @@ public final class RemoteMachine {
     private int group;
     private @Nullable MachineConfig exception;
     private int front;
+    /** Rótulo dado pelo jogador; vazio = a tela usa o nome do bloco. Nunca texto traduzido. */
+    private String label = "";
 
     public RemoteMachine(BlockPos pos, int group, @Nullable MachineConfig exception, int front) {
         this.pos = pos.immutable();
@@ -58,7 +60,16 @@ public final class RemoteMachine {
         this.front = front;
     }
 
-    /** NBT com {@code pos} (long), {@code group}, {@code exception} (só se houver) e {@code front}. */
+    public String label() {
+        return label;
+    }
+
+    /** Já limpo por quem chama ({@code RenameRouterPayload.clean}). Mude pelo roteador. */
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    /** NBT com {@code pos} (long), {@code group}, {@code exception} (só se houver), {@code front} e {@code label} (só se não vazio). */
     public CompoundTag save(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putLong("pos", pos.asLong());
@@ -67,6 +78,9 @@ public final class RemoteMachine {
             tag.put("exception", exception.save(registries));
         }
         tag.putInt("front", front);
+        if (!label.isEmpty()) {
+            tag.putString("label", label);
+        }
         return tag;
     }
 
@@ -75,6 +89,8 @@ public final class RemoteMachine {
                 ? MachineConfig.load(tag.getCompound("exception"), registries)
                 : null;
         int front = tag.contains("front", CompoundTag.TAG_INT) ? tag.getInt("front") : -1;
-        return new RemoteMachine(BlockPos.of(tag.getLong("pos")), tag.getInt("group"), exception, front);
+        RemoteMachine machine = new RemoteMachine(BlockPos.of(tag.getLong("pos")), tag.getInt("group"), exception, front);
+        machine.label = tag.getString("label");
+        return machine;
     }
 }

@@ -75,9 +75,10 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
      * @param distance  distância de Chebyshev ao roteador
      * @param exception tem exceção (não segue o perfil)
      * @param replacedBy id do bloco que está no lugar, só em {@link MachineState#REPLACED}; senão {@code null}
+     * @param label     rótulo dado pelo jogador; vazio = a tela usa o nome do bloco
      */
     public record MachineView(BlockPos pos, int group, int distance, boolean exception, MachineState state,
-            @Nullable ResourceLocation replacedBy) {
+            @Nullable ResourceLocation replacedBy, String label) {
     }
 
     /** Há upgrade valendo (a tela mostra a lista). */
@@ -135,6 +136,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             buf.writeBoolean(machine.exception);
             buf.writeEnum(machine.state);
             buf.writeOptional(Optional.ofNullable(machine.replacedBy), FriendlyByteBuf::writeResourceLocation);
+            buf.writeUtf(machine.label, RouterSnapshot.NAME_LENGTH);
         }
     }
 
@@ -156,7 +158,8 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         List<MachineView> machines = new ArrayList<>(machineCount);
         for (int i = 0; i < machineCount; i++) {
             machines.add(new MachineView(buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
-                    buf.readEnum(MachineState.class), buf.readOptional(FriendlyByteBuf::readResourceLocation).orElse(null)));
+                    buf.readEnum(MachineState.class), buf.readOptional(FriendlyByteBuf::readResourceLocation).orElse(null),
+                    buf.readUtf(RouterSnapshot.NAME_LENGTH)));
         }
         return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face);
     }

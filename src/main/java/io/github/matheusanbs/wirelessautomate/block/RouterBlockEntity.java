@@ -41,7 +41,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -269,26 +268,26 @@ public class RouterBlockEntity extends BlockEntity {
         return name;
     }
 
-    /**
-     * Dá nome ao nó: tira caracteres inválidos e espaços das pontas e corta em
-     * {@link RenameRouterPayload#MAX_LENGTH}. Vazio tira o nome. Não muda rotas, então não avisa o motor.
-     */
+    /** Dá nome ao nó (limpo por {@link RenameRouterPayload#clean}); vazio tira o nome. Não muda rotas: não avisa o motor. */
     public void setName(String name) {
-        String clean = sanitizeName(name);
+        String clean = RenameRouterPayload.clean(name);
         if (clean.equals(this.name)) {
             return;
         }
         this.name = clean;
+        nameChanged();
+    }
+
+    /** Um nome novo (do nó, de grupo ou de máquina) muda só a tela e o índice, nunca as rotas. */
+    void nameChanged() {
         changeVersion++;
         setChanged();
         NodeIndex.track(this);
     }
 
-    private static String sanitizeName(String name) {
-        String clean = StringUtil.filterText(name).strip();
-        return clean.length() > RenameRouterPayload.MAX_LENGTH
-                ? clean.substring(0, RenameRouterPayload.MAX_LENGTH).strip()
-                : clean;
+    /** Dá nome ao grupo ou rótulo à máquina remota do alvo ({@link RouterRange#rename}); não muda rotas. */
+    public boolean renameTarget(EditTarget target, String name) {
+        return range.rename(target, name);
     }
 
     /**
@@ -979,7 +978,7 @@ public class RouterBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         UUID[] legacy = RouterNbt.legacyNetworks(tag);
-        name = sanitizeName(tag.getString("name"));
+        name = RenameRouterPayload.clean(tag.getString("name"));
         powered = tag.getBoolean("powered");
         RouterNbt.load(tag, registries, faces, cards, upgrades, remotes, legacy);
         range.pruneCaches();

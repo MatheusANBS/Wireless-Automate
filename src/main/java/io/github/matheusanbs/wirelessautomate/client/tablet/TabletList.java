@@ -33,7 +33,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A aba Lista do Tablet (especificação, "Lista do Tablet"): à esquerda a busca com sugestões e etiquetas, os
- * filtros rápidos, a faixa do perfil copiado e os nós agrupados pela máquina ({@link ListGroups}); à direita o
+ * filtros rápidos, a faixa do perfil copiado e os nós agrupados pela máquina, com os roteadores abertos em árvore
+ * ({@link ListTree}); à direita o
  * painel do nó escolhido ({@link NodePanel}), com Tela completa, Copiar perfil e Colar perfil. Tudo desenhado e
  * respondido por geometria, como a {@link TabletScreen} que a hospeda; os botões fixos do modo Selecionar
  * ficam na tela ({@link SelectBar}).
@@ -41,7 +42,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Esta classe é a anfitriã da aba: guarda a lista (rolagem, nó escolhido, seleção) e repassa o desenho, o
  * mouse, o teclado e as dicas para as partes ({@link ListSearch}, {@link ChosenPanel}, {@link ListLayout},
  * {@link ListPainter}, {@link ListClicks}, {@link ListKeys}, {@link ListTooltips}). As linhas são do
- * {@link ListModel} (o modelo) e do {@link ListRows} (o desenho); as ações do perfil, do {@link ListProfileActions}.
+ * {@link ListModel} (o modelo) e do {@link ListRows} (o desenho); as da árvore, do {@link TreeRows} (o desenho), do
+ * {@link TreeClicks} (o mouse) e do {@link TreeNav} (a escolha e o teclado); as ações do perfil, do
+ * {@link ListProfileActions}.
  */
 public final class TabletList {
     final TabletMenu menu;
@@ -58,8 +61,11 @@ public final class TabletList {
     private final ListKeys keys;
     private final ListTooltips tooltips;
     private final ListClicks clicks;
-    /** As linhas: os nós agrupados e os grupos recolhidos. */
+    /** As linhas: os nós agrupados, a árvore e os grupos recolhidos. */
     final ListModel model;
+    final TreeRows treeRows;
+    final TreeNav treeNav;
+    final TreeClicks treeClicks;
     final ListProfileActions profileActions;
 
     // lista
@@ -85,6 +91,9 @@ public final class TabletList {
         this.revealKey = chosen;
         this.chosenPanel = new ChosenPanel(this, menu, chosen);
         this.texts = new ListTexts(this);
+        this.treeRows = new TreeRows(this);
+        this.treeNav = new TreeNav(this);
+        this.treeClicks = new TreeClicks(this);
         this.layout = new ListLayout(this);
         this.painter = new ListPainter(this, layout);
         this.rows = new ListRows(this, layout);
@@ -235,6 +244,11 @@ public final class TabletList {
         layout.layout(x, y, w, bottomY);
     }
 
+    /** A área do tipo no quadro arranjado, ou {@code null}. */
+    @Nullable Hot layoutHot(Kind kind, int arg) {
+        return layout.hot(kind, arg);
+    }
+
     int listWidth() {
         return layout.listW;
     }
@@ -341,7 +355,7 @@ public final class TabletList {
     /** Rola a lista até o cabeçalho do grupo da máquina. */
     public void previewScrollTo(ResourceLocation machine) {
         layout.arrange();
-        scroll = Math.max(0, model.groups().headerRow(machine));
+        scroll = Math.max(0, model.tree().headerLine(machine));
     }
 
     /** Centro da linha do nó, ou {@code null} se ela não está na vista (grupo recolhido ou rolado). */
@@ -349,6 +363,30 @@ public final class TabletList {
         layout.arrange();
         Hot hot = layout.hot(Kind.ROW, model.indexOf(key));
         return hot == null ? null : new int[] {hot.x() + hot.w() / 2, hot.y() + hot.h() / 2};
+    }
+
+    /**
+     * Centro da linha da árvore do nó {@code node} ({@code kind} e {@code id} como no {@link TreeNav.Key}; num
+     * {@link ListTree.Kind#NODE}, a linha do nó), ou {@code null} fora da vista.
+     */
+    public int @Nullable [] treeLineCenter(NodeKey node, ListTree.Kind kind, int id) {
+        return center(kind == ListTree.Kind.NODE ? Kind.ROW : Kind.TREE, kind == ListTree.Kind.NODE
+                ? model.indexOf(node) : treeNav.lineOf(node, kind, id));
+    }
+
+    /** O ▸/▾ de um nó ({@link ListTree.Kind#NODE}) ou de um grupo da árvore. */
+    public int @Nullable [] treeToggleCenter(NodeKey node, ListTree.Kind kind, int id) {
+        return center(Kind.TREE_TOGGLE, treeNav.lineOf(node, kind, id));
+    }
+
+    /** O Olho da máquina {@code index} do nó. */
+    public int @Nullable [] treeEyeCenter(NodeKey node, int index) {
+        return center(Kind.TREE_EYE, treeNav.lineOf(node, ListTree.Kind.MACHINE, index));
+    }
+
+    /** O "Mostrar menos" do grupo {@code group} do nó. */
+    public int @Nullable [] treeFewCenter(NodeKey node, int group) {
+        return center(Kind.TREE_FEW, treeNav.lineOf(node, ListTree.Kind.GROUP, group));
     }
 
     /** Centro da sugestão do valor {@code id} (máquina, rede ou nome) na lista aberta, ou {@code null}. */
@@ -375,14 +413,14 @@ public final class TabletList {
     /** O "Colar nas N" do grupo da máquina. */
     public int @Nullable [] pasteGroupCenter(ResourceLocation machine) {
         layout.arrange();
-        int row = model.groups().headerRow(machine);
+        int row = model.tree().headerLine(machine);
         Hot hot = row < 0 ? null : layout.hot(Kind.PASTE_GROUP, row);
         return hot == null ? null : hot.center();
     }
 
     int @Nullable [] groupHeaderCenter(ResourceLocation machine) {
         layout.arrange();
-        int row = model.groups().headerRow(machine);
+        int row = model.tree().headerLine(machine);
         Hot hot = row < 0 ? null : layout.hot(Kind.HEADER, row);
         return hot == null ? null : new int[] {hot.x() + 20, hot.y() + hot.h() / 2};
     }

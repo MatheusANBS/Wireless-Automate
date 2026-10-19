@@ -278,10 +278,12 @@ public record TabletSnapshot(
      * @param faceModes      os modos das faces pelos lados, da presa, dos perfis e das exceções ({@link NodeIndex.Entry#faceModes})
      * @param rates          a vazão do nó por {@link ResourceType#ordinal()} na última amostra, na unidade da tela
      * @param profile        a comparação com o perfil copiado no Tablet; vazio sem perfil copiado
+     * @param linked         quantas máquinas o roteador tem vinculadas (o índice as guarda mesmo sem o Upgrade de
+     *                       Alcance); com alguma, a Lista abre o nó em árvore
      */
     public record NodeView(NodeKey key, String name, ResourceLocation machine, RouterTier tier,
             List<List<UUID>> networks, int roles, NodeStatus status, boolean removedNetwork, long faceModes,
-            List<Long> rates, Optional<ProfileMatch> profile) {
+            List<Long> rates, Optional<ProfileMatch> profile, int linked) {
         /** As redes das faces do tipo {@code type}. */
         public List<UUID> networks(ResourceType type) {
             return networks.get(type.ordinal());
@@ -300,7 +302,7 @@ public record TabletSnapshot(
         /** O mesmo nó com outro estado e outra vazão. */
         public NodeView withLive(Live live) {
             return new NodeView(key, name, machine, tier, networks, roles, live.status(), removedNetwork, faceModes,
-                    live.rates(), profile);
+                    live.rates(), profile, linked);
         }
 
         /** Igual a {@code other} fora o estado e a vazão. */
@@ -308,7 +310,7 @@ public record TabletSnapshot(
             return key.equals(other.key) && name.equals(other.name) && machine.equals(other.machine)
                     && tier == other.tier && networks.equals(other.networks) && roles == other.roles
                     && removedNetwork == other.removedNetwork && faceModes == other.faceModes
-                    && profile.equals(other.profile);
+                    && profile.equals(other.profile) && linked == other.linked;
         }
 
         /** Redes distintas somando os tipos carregados (uma rede em dois tipos conta uma vez), como a dica. */

@@ -231,7 +231,8 @@ final class TabletSnapshotBuilder {
                 rateList.add(rates == null ? 0L : rates[type.ordinal()]);
             }
             nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
-                    entry.roles(), match.status, removed, entry.faceModes(), List.copyOf(rateList), comparison));
+                    entry.roles(), match.status, removed, entry.faceModes(), List.copyOf(rateList), comparison,
+                    entry.remotes().total()));
             if (groupCounts.isEmpty() || !groupCounts.getLast().id().equals(entry.machine())) {
                 groupCounts.add(new Facet<>(entry.machine(), groupSizes.get(entry.machine())));
             }

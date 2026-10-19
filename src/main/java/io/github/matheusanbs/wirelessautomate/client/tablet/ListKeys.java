@@ -3,12 +3,11 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * O teclado da Lista do Tablet (especificação, "Teclado"): Ctrl+C, Ctrl+V e Ctrl+Z do perfil, Esc, as setas nas
- * sugestões e nos nós, Enter, recolher e abrir o grupo e apagar a última etiqueta.
+ * sugestões e nas linhas, Enter, abrir e fechar na árvore ({@link TreeNav}) e apagar a última etiqueta.
  */
 final class ListKeys {
     private final TabletList list;
@@ -49,10 +48,7 @@ final class ListKeys {
                 if (suggesting) {
                     search.suggestions.move(direction);
                 } else {
-                    int next = list.model.groups().next(list.model.indexOf(list.chosen), direction);
-                    if (next >= 0) {
-                        list.choose(list.snapshot().nodes().get(next).key());
-                    }
+                    list.treeNav.upDown(direction);
                 }
                 return true;
             }
@@ -62,20 +58,21 @@ final class ListKeys {
                 } else if (suggesting || search.pending()) {
                     search.suggestions.close();
                     search.sendQuery();
-                } else if (list.chosen != null) {
+                } else if (!list.treeNav.enter() && list.chosen != null) {
                     list.actions.openNode(list.chosen);
                 }
                 return true;
             }
             case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT -> {
-                ResourceLocation group = list.model.groups().group(list.model.indexOf(list.chosen));
-                if (!search.text.isEmpty() || group == null) {
+                // com texto na busca focada, as setas andam no texto; com uma linha da árvore marcada, na árvore
+                EditBox box = search.box();
+                if (!search.text.isEmpty() && box != null && box.isFocused() && !list.treeNav.hasCursor()) {
                     return false;
                 }
                 if (keyCode == GLFW.GLFW_KEY_LEFT) {
-                    list.model.collapse(group);
+                    list.treeNav.left();
                 } else {
-                    list.model.expand(group);
+                    list.treeNav.right();
                 }
                 return true;
             }

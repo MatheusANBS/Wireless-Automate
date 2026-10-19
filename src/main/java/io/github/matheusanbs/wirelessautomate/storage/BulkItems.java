@@ -30,7 +30,7 @@ public interface BulkItems {
     /** Quanto há do item com os mesmos componentes da chave. */
     long count(ItemStack key);
 
-    /** Quanto há do item, com quaisquer componentes (O(tipos)). */
+    /** Quanto há do item, com quaisquer componentes (O(1) no Baú: a soma por item é mantida). */
     long countItem(ItemStack key);
 
     /** Guarda até {@code amount} de {@code key}; devolve quanto coube. */

@@ -405,7 +405,7 @@ final class ItemTransfer {
 
     /**
      * Quanto um Baú do mod aceita de {@code amount} da chave, já com o estoque do destino; −1 se o
-     * estoque já foi atingido. A contagem sai do próprio Baú (O(1) com componentes, O(tipos) sem).
+     * estoque já foi atingido. A contagem sai do próprio Baú, O(1) com ou sem componentes.
      */
     static long bulkAccepts(BulkItems target, ItemStack key, long amount, long stock, boolean components) {
         long room = target.insert(key, amount, true);

@@ -3,10 +3,10 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2LongOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
-import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -16,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Conteúdo de um armazenamento do mod por tipo: chaves ({@code K}: item, fluido ou químico) com
  * quantidade {@code long}, numa lista na ordem de chegada mais um índice por chave. Guardar, tirar e
- * contar um tipo são O(1); só tirar o último de um tipo é O(tipos), para a lista não ficar com
+ * contar um tipo são O(1), e contar um item ou fluido com quaisquer componentes também
+ * ({@link #countGroup}); só tirar o último de um tipo é O(tipos), para a lista não ficar com
  * buracos. A capacidade conta o total de todos os tipos ({@link StorageMath}); {@code <= 0} é sem
  * limite, e ela é lida a cada inserção (muda com o tier e com a config, sem copiar nada).
  *
@@ -50,6 +51,8 @@ public abstract class KeyedStorage<K> {
     private final LongSupplier capacity;
     private final String what;
     private long total;
+    /** A soma por grupo ({@link #groupOf}), criada no primeiro tipo com grupo. */
+    private @Nullable Reference2LongOpenHashMap<Object> groupTotals;
     private int version;
     private Admission<K> admission = (key, amount) -> amount;
 
@@ -110,15 +113,49 @@ public abstract class KeyedStorage<K> {
         return entry == null ? 0 : entry.count;
     }
 
-    /** Soma dos tipos que casam com {@code test} (O(tipos)), como o estoque sem componentes. */
-    public long countWhere(Predicate<K> test) {
-        long sum = 0;
-        for (Entry entry : entries) {
-            if (test.test(entry.key)) {
-                sum = StorageMath.add(sum, entry.count);
-            }
+    /**
+     * O grupo da chave para {@link #countGroup}: o item ou o fluido, sem os componentes. {@code null} (o
+     * padrão) é sem grupo: a chave já é o grupo (o químico, que não tem componentes). Comparado por
+     * identidade.
+     */
+    protected @Nullable Object groupOf(K key) {
+        return null;
+    }
+
+    /**
+     * Quanto há do grupo da chave, com quaisquer componentes, como o estoque sem componentes. O(1): a
+     * soma por grupo é mantida a cada inserção, extração e carga.
+     */
+    public long countGroup(K key) {
+        Object group = groupOf(key);
+        if (group == null) {
+            return count(key);
         }
-        return sum;
+        return groupTotals == null ? 0 : groupTotals.getLong(group);
+    }
+
+    private void addToGroup(K key, long amount) {
+        Object group = groupOf(key);
+        if (group == null) {
+            return;
+        }
+        if (groupTotals == null) {
+            groupTotals = new Reference2LongOpenHashMap<>();
+        }
+        groupTotals.put(group, StorageMath.add(groupTotals.getLong(group), amount));
+    }
+
+    private void takeFromGroup(K key, long amount) {
+        Object group = groupOf(key);
+        if (group == null || groupTotals == null) {
+            return;
+        }
+        long left = groupTotals.getLong(group) - amount;
+        if (left > 0) {
+            groupTotals.put(group, left);
+        } else {
+            groupTotals.removeLong(group);
+        }
     }
 
     /** Guarda até {@code amount} de {@code key}; devolve quanto coube (filtro e capacidade). */
@@ -138,6 +175,7 @@ public abstract class KeyedStorage<K> {
         }
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
+        addToGroup(entry.key, accepted);
         changed();
         return accepted;
     }
@@ -157,6 +195,7 @@ public abstract class KeyedStorage<K> {
         }
         entry.count -= taken;
         total -= taken;
+        takeFromGroup(entry.key, taken);
         if (entry.count <= 0) {
             index.remove(entry.key);
             entries.remove(entry);
@@ -174,6 +213,9 @@ public abstract class KeyedStorage<K> {
     public void clear() {
         entries.clear();
         index.clear();
+        if (groupTotals != null) {
+            groupTotals.clear();
+        }
         total = 0;
         version++;
     }
@@ -217,6 +259,7 @@ public abstract class KeyedStorage<K> {
             }
             entry.count = StorageMath.add(entry.count, count);
             total = StorageMath.add(total, count);
+            addToGroup(entry.key, count);
         }
     }
 }

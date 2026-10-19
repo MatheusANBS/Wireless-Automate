@@ -61,7 +61,9 @@ public enum BenchScenario {
             "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois"),
     RANGE("range", 200, RouterTier.ULTIMATE, 100, 0,
             "Alcance: roteadores Ultimate com o Upgrade de Alcance, cada um com 64 barris vazios vinculados num grupo que extrai, nada para mover"),
-    TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 20,
+    // Reenche a cada 30 ticks, e não 20: o Ultimate esvazia a presa num tick, e com o reenchimento no ritmo da
+    // amostra do Tablet (20 ticks) a vazão de cada nó seria a mesma em toda amostra e nada mudaria na Lista.
+    TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 30,
             "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto");
 
     public final String id;

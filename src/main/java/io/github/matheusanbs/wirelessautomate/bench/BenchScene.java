@@ -7,8 +7,10 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -24,11 +26,15 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -36,6 +42,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -116,6 +124,10 @@ final class BenchScene {
     private boolean clockOn;
     private @Nullable TabletMenu tablet;
     private long tabletBytes;
+    /** Pacotes do Tablet aberto desde a abertura, por tipo (a primeira página vai na abertura, fora daqui). */
+    private int tabletHeaders;
+    private int tabletPages;
+    private int tabletLives;
     /** Os barris vinculados que recebem os itens no {@link BenchScenario#TABLET_RANGE}, esvaziados no reenchimento. */
     private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
@@ -474,8 +486,51 @@ final class BenchScene {
         long nanos = System.nanoTime() - start;
         for (CustomPacketPayload payload : payloads) {
             tabletBytes += encodedSize(payload);
+            if (payload instanceof TabletHeaderPayload) {
+                tabletHeaders++;
+            } else if (payload instanceof TabletPagePayload) {
+                tabletPages++;
+            } else if (payload instanceof TabletLivePayload) {
+                tabletLives++;
+            }
         }
         return nanos;
+    }
+
+    /**
+     * O que o Tablet aberto mandou desde a abertura e a página que o jogador falso tem agora (para a linha da
+     * repetição); vazio sem Tablet.
+     */
+    String tabletPayloadLine() {
+        TabletMenu menu = tablet;
+        if (menu == null) {
+            return "";
+        }
+        TabletSnapshot page = menu.snapshot();
+        return String.format(Locale.ROOT,
+                "  Tablet: %d cabeçalho(s), %d página(s), %d pacote(s) de estado e vazão depois da abertura;"
+                        + " página com %d nós (%d casam, %d no índice visível)",
+                tabletHeaders, tabletPages, tabletLives, page.nodes().size(), page.matchingNodes(), page.totalNodes());
+    }
+
+    /**
+     * O tamanho do índice de nós salvo ({@link NodeIndex#save}), comprimido como no {@code wirelessautomate_nodes.dat}
+     * e sem compressão, e as entradas. Medido uma vez, fora do tempo medido; o índice é o do servidor inteiro.
+     */
+    long[] nodeIndexSize() {
+        NodeIndex index = NodeIndex.get(level.getServer());
+        CompoundTag data = index.save(new CompoundTag(), level.registryAccess());
+        CompoundTag file = new CompoundTag();
+        file.put("data", data);
+        try {
+            ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+            NbtIo.writeCompressed(file, compressed);
+            ByteArrayOutputStream raw = new ByteArrayOutputStream();
+            NbtIo.write(file, new DataOutputStream(raw));
+            return new long[] {compressed.size(), raw.size(), index.size()};
+        } catch (IOException e) {
+            return new long[] {-1, -1, index.size()};
+        }
     }
 
     /** Os bytes de um pacote do Tablet pelo codec dele (cabeçalho, página ou o estado e a vazão). */

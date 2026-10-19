@@ -18,7 +18,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 /**
  * O destaque no mundo das máquinas acesas pelo Olho ({@link MachineHighlights}): o contorno ciano, um véu leve
- * nas faces e a linha tracejada até o roteador, desenhados sem teste de profundidade, para aparecerem através dos
+ * nas faces e uma linha contínua até o roteador, desenhados sem teste de profundidade, para aparecerem através dos
  * blocos. Só as da dimensão atual e dentro da distância de visão. As cores são as do mundo, iguais nos dois temas
  * das telas. Sem nada aceso, o quadro volta na primeira linha; aceso, só vértices, sem alocar. As acesas ficam
  * na sessão: saem ao sair do mundo, e nada vai ao servidor nem ao save.
@@ -29,17 +29,16 @@ public final class HighlightRenderer {
     private static final float EDGE_R = 0x3F / 255f;
     private static final float EDGE_G = 0xC9 / 255f;
     private static final float EDGE_B = 0xBE / 255f;
-    /** O véu e a linha tracejada: o ciano claro, o do osciloscópio do Ressonador. */
+    /** O véu e a linha até o roteador: o ciano claro, o do osciloscópio do Ressonador. */
     private static final float LIGHT_R = 0x8E / 255f;
     private static final float LIGHT_G = 0xE8 / 255f;
     private static final float LIGHT_B = 0xE1 / 255f;
     private static final float VEIL_ALPHA = 0.18f;
-    private static final float DASH_ALPHA = 0.85f;
+    private static final float LINK_ALPHA = 0.85f;
     /** O contorno sai um pouco para fora do bloco. */
     private static final float INFLATE = 0.004f;
 
     private static final MachineHighlights LIT = new MachineHighlights();
-    private static final DashedLine DASHES = new DashedLine();
     /** Quais acesas o quadro desenha, conferidas uma vez por quadro. */
     private static final boolean[] VISIBLE = new boolean[MachineHighlights.LIMIT];
 
@@ -149,7 +148,7 @@ public final class HighlightRenderer {
         return dx * dx + dy * dy + dz * dz <= reachSqr;
     }
 
-    /** As 12 arestas da máquina e a linha tracejada do centro do roteador ao centro dela. */
+    /** As 12 arestas da máquina e a linha contínua do centro do roteador ao centro dela. */
     private static void drawLines(VertexConsumer lines, PoseStack.Pose pose, Vec3 camera, long machine, long router) {
         float x0 = (float) (BlockPos.getX(machine) - camera.x) - INFLATE;
         float y0 = (float) (BlockPos.getY(machine) - camera.y) - INFLATE;
@@ -166,25 +165,21 @@ public final class HighlightRenderer {
             float yz = (k & 2) == 0 ? y0 : y1;
             line(lines, pose, x, yz, z0, x, yz, z1, 0, 0, 1, EDGE_R, EDGE_G, EDGE_B, 1f);
         }
-        int n = DASHES.compute(BlockPos.getX(router) + 0.5 - camera.x, BlockPos.getY(router) + 0.5 - camera.y,
-                BlockPos.getZ(router) + 0.5 - camera.z, BlockPos.getX(machine) + 0.5 - camera.x,
-                BlockPos.getY(machine) + 0.5 - camera.y, BlockPos.getZ(machine) + 0.5 - camera.z);
-        if (n == 0) {
+        float ax = (float) (BlockPos.getX(router) + 0.5 - camera.x);
+        float ay = (float) (BlockPos.getY(router) + 0.5 - camera.y);
+        float az = (float) (BlockPos.getZ(router) + 0.5 - camera.z);
+        float bx = (float) (BlockPos.getX(machine) + 0.5 - camera.x);
+        float by = (float) (BlockPos.getY(machine) + 0.5 - camera.y);
+        float bz = (float) (BlockPos.getZ(machine) + 0.5 - camera.z);
+        float nx = bx - ax;
+        float ny = by - ay;
+        float nz = bz - az;
+        float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (length < 1e-3f) {
             return;
         }
-        float[] p = DASHES.points();
-        float nx = p[3] - p[0];
-        float ny = p[4] - p[1];
-        float nz = p[5] - p[2];
-        float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
-        nx /= length;
-        ny /= length;
-        nz /= length;
-        for (int i = 0; i < n; i++) {
-            int o = i * 6;
-            line(lines, pose, p[o], p[o + 1], p[o + 2], p[o + 3], p[o + 4], p[o + 5], nx, ny, nz, LIGHT_R, LIGHT_G,
-                    LIGHT_B, DASH_ALPHA);
-        }
+        line(lines, pose, ax, ay, az, bx, by, bz, nx / length, ny / length, nz / length, LIGHT_R, LIGHT_G, LIGHT_B,
+                LINK_ALPHA);
     }
 
     private static void line(VertexConsumer lines, PoseStack.Pose pose, float ax, float ay, float az, float bx,

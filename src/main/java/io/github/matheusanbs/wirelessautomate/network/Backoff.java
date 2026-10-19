@@ -27,6 +27,12 @@ public final class Backoff {
      * {@link #thaw}. A porta parada pelo redstone usa: nenhuma entrega nem aviso a acorda no meio da visita.
      */
     private boolean frozen;
+    /**
+     * Onde contar as mudanças de estado (o {@link #wakeAt}, o intervalo ou o congelado): {@code changes[0]} sobe a
+     * cada uma. As portas de um nó dividem o mesmo arranjo, e o amostrador dos Fluxos pula o nó em que nada mudou.
+     * Acordar o que já está acordado não conta. {@code null} sem contagem.
+     */
+    private int @Nullable [] changes;
 
     /** {@code maxTicks} menor que 1 vira 1. */
     public Backoff(int maxTicks) {
@@ -42,8 +48,13 @@ public final class Backoff {
         if (frozen) {
             return;
         }
+        long before = wakeAt;
+        int beforeInterval = nextInterval;
         setWakeAt(gameTime + nextInterval);
         nextInterval = (int) Math.min((long) nextInterval * 2, maxTicks);
+        if (wakeAt != before || nextInterval != beforeInterval) {
+            changed();
+        }
     }
 
     /**
@@ -55,7 +66,11 @@ public final class Backoff {
         if (frozen) {
             return;
         }
-        setWakeAt(Math.max(wakeAt, gameTime + 1));
+        long target = Math.max(wakeAt, gameTime + 1);
+        if (target != this.wakeAt) {
+            changed();
+        }
+        setWakeAt(target);
     }
 
     /** Tick em que acorda ({@link Long#MIN_VALUE} se acordado desde sempre). */
@@ -76,6 +91,9 @@ public final class Backoff {
         if (frozen) {
             return;
         }
+        if (wakeAt != Long.MIN_VALUE || nextInterval != 1) {
+            changed();
+        }
         setWakeAt(Long.MIN_VALUE);
         nextInterval = 1;
         wakes++;
@@ -83,12 +101,18 @@ public final class Backoff {
 
     /** Dorme sem prazo e ignora tudo até {@link #thaw} (ver {@link #frozen}). */
     public void freeze() {
+        if (!frozen || wakeAt != Long.MAX_VALUE) {
+            changed();
+        }
         frozen = true;
         setWakeAt(Long.MAX_VALUE);
     }
 
     /** Volta a aceitar {@link #wake} e os sonos; continua dormindo até alguém acordá-lo. */
     public void thaw() {
+        if (frozen) {
+            changed();
+        }
         frozen = false;
     }
 
@@ -102,6 +126,17 @@ public final class Backoff {
         mirrorSlot = slot;
         if (array != null) {
             array[slot] = wakeAt;
+        }
+    }
+
+    /** Passa a contar as mudanças em {@code counter[0]} (ver {@link #changes}); {@code null} para de contar. */
+    void countChangesIn(int @Nullable [] counter) {
+        changes = counter;
+    }
+
+    private void changed() {
+        if (changes != null) {
+            changes[0]++;
         }
     }
 

@@ -189,7 +189,7 @@
   "command.wirelessautomate.profile.network": "  %s: %s nodes · avg %s ms/tick · last %s ms · %s ops/s · sources %s awake, %s sleeping · destinations %s awake, %s sleeping",
   "command.wirelessautomate.profile.no_networks": "  No active networks with loaded routers.",
   "command.wirelessautomate.profile.resonator": "  Resonators: %s cores (%s formed) · batches avg %s ms/tick · last %s ms · revalidation avg %s ms/tick · last %s ms",
-  "command.wirelessautomate.profile.flows": "  Flows: %s watching · %s samples · avg %s ms/sample · last %s ms",
+  "command.wirelessautomate.profile.flows": "  Flows: %s watching · %s samples · avg %s ms/second · last %s ms · peak %s ms/tick",
   "command.wirelessautomate.invalid_value": "Invalid value: %s",
   "command.wirelessautomate.network.list.empty": "No networks yet. Create one with /wa network create <name>.",
   "command.wirelessautomate.network.list.header": "Networks (%s):",

@@ -85,6 +85,8 @@ final class NetworkRoutes {
     final List<Port>[] sourcesOf = newLists();
     /** Destinos ativos de cada tipo (por ordinal). */
     final List<Port>[] destinationsOf = newLists();
+    /** Os números desta rede no amostrador dos Fluxos; o amostrador troca quando a entrada sai. */
+    FlowSampler.@Nullable NetworkFlows flowEntry;
     // Trabalho da montagem, reaproveitado.
     private final DestinationSet everyDestination = new DestinationSet();
     private final DestinationSet insertOnly = new DestinationSet();

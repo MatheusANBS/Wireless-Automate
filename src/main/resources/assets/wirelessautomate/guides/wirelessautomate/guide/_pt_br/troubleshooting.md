@@ -25,5 +25,5 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 | Não consigo pôr na rede | A rede é de outro jogador. | Peça ao dono, ou use uma rede sua. |
 | Vazão menor que a do tier | Muitas máquinas movendo ao mesmo tempo. | Normal: a vazão se divide entre elas, sem travar o jogo. |
 
-Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Estatísticas** mostra o que
-cada rede está movendo e quais destinos estão cheios.
+Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Fluxos** mostra o que
+cada rede está movendo, quais faces esperam destino e quais destinos estão cheios.

@@ -29,13 +29,25 @@ An overview of all your networks, from anywhere.
 | --- | --- |
 | **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
 | **Map** | Top-down view colored by status. Click a point to open the node. |
-| **Statistics** | How much each network moves per type, full destinations and routers in unloaded chunks. |
+| **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
 
-The Statistics tab has one card per type. Click a card to list only the routers of that type; the "Only …" chip in the List removes the filter.
-
 If a network is deleted, the faces that were on it are left without a network and the node shows the warning **faces without network: network removed**: pick another network for them.
+
+## Flows
+
+Each row shows **in → out**, the average of the last 5 seconds in the type's unit (items/s, mB/s or B/s, FE/t, Source/s):
+
+- **in** is what the **Extract** faces deliver: the network's production;
+- **out** is what the **Insert** faces receive: the consumption;
+- on the right, the **balance** of Storage faces: **+N filling** when they receive more than they give, **-N draining** when they give more.
+
+**By type** shows one row per type, adding up the networks; the arrow opens that type's networks, from the one that moves most to the one that moves least. **By network** shows each network with one row per type. A network paused in a group is greyed out and left out of the totals.
+
+Next to it, only what needs attention: **waiting** (Extract faces with something to give and no destination), **full** (destinations with no room), **by redstone** (faces stopped by the signal) and **without network** (faces with a mode and no network). Hover a row for the full count. A network that has just started shows the average of the seconds it has so far.
+
+Click a row to list only the routers of that type, that network or both; the "Only …" chip and the network label in the List remove the filter.
 
 ## Searching the List
 

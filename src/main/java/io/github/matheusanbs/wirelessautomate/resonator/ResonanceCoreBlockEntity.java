@@ -34,6 +34,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     private boolean formed;
     private List<BlockPos> members = List.of();
+    /** O canto mínimo da caixa, refeito só quando os membros mudam ({@link ChamberView#origin}). */
+    private int[] origin = ChamberView.origin(List.of(), worldPosition);
     /** As Portas que este Núcleo pôs no índice; não vai para o NBT (a revalidação do {@code onLoad} refaz). */
     private List<BlockPos> ports = List.of();
     private @Nullable ResonatorLayout.Broken lastProblem;
@@ -77,6 +79,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     }
 
     /** As posições da casca montada (vazia sem estrutura). */
+    /** O canto mínimo da caixa (x, y, z), guardado; quem lê não muda o array. */
+    int[] origin() {
+        return origin;
+    }
+
     public List<BlockPos> members() {
         return members;
     }
@@ -319,9 +326,20 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         long taken = Math.max(0, Math.min(max, energy));
         if (!simulate && taken > 0) {
             energy -= taken;
-            setChanged();
+            markUnsaved();
         }
         return taken;
+    }
+
+    /**
+     * Marca o chunk para gravar sem avisar os vizinhos, como o {@code setChanged} faria: os vizinhos do Núcleo são a
+     * casca, sem capability nem comparador, e quem espera nas Portas é avisado pelo {@link #notifyPorts}. Para o que
+     * muda a cada extração e a cada lote.
+     */
+    void markUnsaved() {
+        if (level != null) {
+            level.blockEntityChanged(worldPosition);
+        }
     }
 
     /** FE por tick agora: os cristais não Opacos das câmaras do tier, na sintonia atual; 0 desmontado. */
@@ -429,6 +447,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         this.formed = formed;
         this.members = List.copyOf(members);
+        origin = ChamberView.origin(this.members, worldPosition);
         setChanged();
         syncIfChanged();
     }
@@ -582,6 +601,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             loaded.add(BlockPos.of(packed));
         }
         members = List.copyOf(loaded);
+        origin = ChamberView.origin(members, worldPosition);
         hasStation = tag.getBoolean("has_station");
         station = tag.getDouble("station");
         velocity = tag.getDouble("velocity");

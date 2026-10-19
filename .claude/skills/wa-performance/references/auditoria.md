@@ -44,11 +44,11 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| S1 | Cada inserção ou extração real avisa os 6 vizinhos; juntar num aviso por tick | `StorageChestBlockEntity:15`, `ScalarStorageBlockEntity:346` | médio | pendente |
-| S2 | Estoque sem componentes em O(tipos), até 3× por entrega; soma por item mantida | `ItemStorage:41`, `KeyedStorage:113` | alto nesse caso | pendente |
-| S3 | Salvar recodifica cada chave a cada gravação do chunk; guardar o `Tag` da chave | `KeyedStorage:181` | médio | pendente |
-| S4 | `getStackInSlot` aloca por chamada (funis, outros mods) | `ItemStorageHandler:29` | baixo-médio | pendente |
-| S5 | `StorageSavedData` guarda conteúdo de armazenamento sumido para sempre | `StorageSavedData:37` | médio | pendente |
+| S1 | Cada inserção ou extração real avisa os 6 vizinhos; juntar num aviso por tick | `StorageChestBlockEntity:15`, `ScalarStorageBlockEntity:346` | médio | feito `c404b28` (`blockEntityChanged` na hora e a fila `StorageNeighbors`, um `updateNeighbourForOutputSignal` por armazenamento por tick; o comparador e o roteador preso veem no mesmo tick ou no seguinte; bench `hub` e `many:500:3:wa` a rodar) |
+| S2 | Estoque sem componentes em O(tipos), até 3× por entrega; soma por item mantida | `ItemStorage:41`, `KeyedStorage:113` | alto nesse caso | feito `4788340` (soma por item ou fluido num `Reference2LongOpenHashMap`, mantida na inserção, extração, carga e limpeza; bench `chesttypes` a rodar) |
+| S3 | Salvar recodifica cada chave a cada gravação do chunk; guardar o `Tag` da chave | `KeyedStorage:181` | médio | feito `7d5d540` (a chave codificada no primeiro salvamento e reusada; o formato antigo `item` ainda carrega; sem cenário de bench, só o salvamento do chunk) |
+| S4 | `getStackInSlot` aloca por chamada (funis, outros mods) | `ItemStorageHandler:29` | baixo-médio | feito `bd13c54` (a visão por tipo, `KeyedStorage.view`, refeita só quando a quantidade muda e nunca alterada; também o `getFluidInTank` do Tanque; sem cenário de bench, o roteador usa o `BulkItems`) |
+| S5 | `StorageSavedData` guarda conteúdo de armazenamento sumido para sempre | `StorageSavedData:37` | médio | feito `a757aa7` (sem drop não guarda; a data em `stored_at` e o prazo `storage.stashExpiryDays`, padrão 90 dias de servidor ligado, renovado pelo item no inventário; risco: o item guardado num baú por mais que o prazo nasce vazio) |
 
 ## C · cliente
 

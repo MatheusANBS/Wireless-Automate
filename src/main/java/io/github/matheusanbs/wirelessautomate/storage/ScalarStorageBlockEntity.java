@@ -11,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Base dos armazenamentos de um valor só ({@link ScalarStore}): a Bateria (energia) e o Tanque de
- * Source. Sem tipos, então sem filtro. Cada mudança real do conteúdo salva o chunk e chama
- * {@link #contentsChanged()}.
+ * Source. Sem tipos, então sem filtro. Cada mudança real do conteúdo marca o chunk, entra no aviso
+ * aos vizinhos do tick ({@link #markContentsChanged()}) e chama {@link #contentsChanged()}.
  */
 public abstract class ScalarStorageBlockEntity extends StorageBlockEntity {
     private final ScalarStore store = new ScalarStore(this::onStoreChanged, this::capacity);
@@ -26,11 +26,11 @@ public abstract class ScalarStorageBlockEntity extends StorageBlockEntity {
     }
 
     private void onStoreChanged() {
-        setChanged();
+        markContentsChanged();
         contentsChanged();
     }
 
-    /** Gancho: o conteúdo mudou de verdade (depois do {@code setChanged}). */
+    /** Gancho: o conteúdo mudou de verdade (depois do {@link #markContentsChanged()}). */
     protected void contentsChanged() {
     }
 

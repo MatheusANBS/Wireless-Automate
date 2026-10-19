@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * ({@link ItemStorageHandler}) e pelo roteador como {@link BulkItems}.
  */
 public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> {
-    private final ItemStorage storage = new ItemStorage(this::setChanged, this::capacity);
+    private final ItemStorage storage = new ItemStorage(this::markContentsChanged, this::capacity);
     private final ItemStorageHandler handler = new ItemStorageHandler(storage);
     private final FilterSet.ItemRule rule = new FilterSet.ItemRule();
 

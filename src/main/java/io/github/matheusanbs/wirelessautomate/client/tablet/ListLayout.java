@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
+import io.github.matheusanbs.wirelessautomate.client.FrameCache;
+import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
@@ -78,6 +80,8 @@ final class ListLayout {
     final List<Component> quickLabels = new ArrayList<>();
     /** Os botões do perfil com o nome curto ("Copiar", "Colar") quando os dois inteiros não cabem. */
     private boolean copyShort;
+    /** O layout do quadro: feito uma vez e reusado no desenho, por cima e na dica. */
+    private final FrameCache arranged = new FrameCache();
 
     ListLayout(TabletList list) {
         this.list = list;
@@ -85,6 +89,7 @@ final class ListLayout {
 
     /** O retângulo da aba (de cima da busca até o fim da tela). */
     void layout(int x, int y, int w, int bottomY) {
+        arranged.invalidate();
         x0 = x;
         y0 = y;
         bottom = bottomY;
@@ -116,8 +121,27 @@ final class ListLayout {
         return bottom - ownNoticeH;
     }
 
-    /** Posições e áreas de clique do quadro atual. */
+    /**
+     * Posições e áreas de clique refeitas agora: para um evento ou um gancho, que podem mudar o estado em
+     * seguida (o próximo {@link #arrangeForFrame} refaz).
+     */
     void arrange() {
+        compute();
+        arranged.invalidate();
+    }
+
+    /**
+     * O layout do quadro, para o desenho, o que vem por cima e a dica: feito na primeira chamada do quadro e
+     * reusado nas outras, enquanto o aviso é o mesmo. O que muda a lista (busca, snapshot, clique, rolagem)
+     * chega por tick ou por evento, entre um quadro e outro.
+     */
+    void arrangeForFrame() {
+        if (!arranged.reuse(FrameClock.frame(), PanelNotices.current())) {
+            compute();
+        }
+    }
+
+    private void compute() {
         Font font = TabletList.font();
         hots.clear();
         PanelNoticePayload notice = PanelNotices.current();
@@ -149,7 +173,7 @@ final class ListLayout {
         }
         arrangePanel(font);
         if (list.revealKey != null && revealNow()) {
-            arrange();
+            compute();
         }
     }
 

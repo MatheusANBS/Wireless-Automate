@@ -15,20 +15,29 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -71,11 +80,19 @@ final class BenchScene {
     static final int FREE_TAIL_SLOTS = 4;
     /** Estoque da lista branca do destino e quanto ele já tem ({@link BenchScenario#STOCK}). */
     static final int STOCK_LIMIT = 1_000;
+    /** Tipos de papel (um nome por tipo) no Baú de destino do {@link BenchScenario#CHEST_TYPES}. */
+    static final int CHEST_TYPES = 2_000;
+    /** Estoque de pedregulho da lista branca do {@link BenchScenario#CHEST_TYPES}: nunca atingido na medição. */
+    static final int CHEST_TYPES_STOCK = 1_000_000;
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+    /** Lado da célula de cada roteador no cenário de alcance: a máquina presa no meio e as remotas em volta. */
+    private static final int RANGE_CELL = 9;
+    /** Máquinas remotas vinculadas a cada roteador no cenário de alcance. */
+    static final int RANGE_MACHINES = 64;
 
     /** {@code RESONATOR} é a Porta de Energia de um Ressonador e {@code BATTERY} a Bateria dele ({@link BenchResonators}). */
-    enum Machine { SMALL, BIG, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
+    enum Machine { SMALL, BIG, CHEST, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
 
     /** Um nó: máquina, roteador em cima, tipo e papel; {@code index} varia o padrão de itens. */
     record Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind) {
@@ -146,13 +163,21 @@ final class BenchScene {
             planResonators(count);
             return;
         }
+        if (scenario == BenchScenario.RANGE) {
+            planRange(count);
+            return;
+        }
         int width = scenario.bigInventories() && storage.bigIsDoubleChest() ? 2 : 1;
         int side = (int) Math.ceil(Math.sqrt(count));
         for (int i = 0; i < count; i++) {
             BlockPos machine = ORIGIN.offset((i % side) * width, 0, i / side);
-            boolean source = i % 2 == 0;
+            // No Baú central, só o nó 1 é destino; nos outros, origens e destinos se alternam.
+            boolean source = scenario == BenchScenario.HUB ? i != 1 : i % 2 == 0;
             ResourceType type = ResourceType.ITEM;
             Machine kind = scenario.bigInventories() ? Machine.BIG : Machine.SMALL;
+            if (scenario.modChestDestination() && !source) {
+                kind = Machine.CHEST;
+            }
             if (scenario == BenchScenario.MIXED) {
                 // Pares vizinhos do mesmo tipo: itens, fluidos, energia, itens...
                 int group = (i / 2) % 3;
@@ -170,6 +195,18 @@ final class BenchScene {
             nodes.add(new Node(i, machine, machine.above(), type, source, kind));
         }
         max = ORIGIN.offset(side * width, scenario.clocked() ? 2 : 1, (count + side - 1) / side);
+        refilled = new long[count];
+    }
+
+    /** {@code count} células de alcance, cada uma com a máquina presa (destino) no meio. */
+    private void planRange(int count) {
+        int side = (int) Math.ceil(Math.sqrt(count));
+        int half = RANGE_CELL / 2;
+        for (int i = 0; i < count; i++) {
+            BlockPos machine = ORIGIN.offset((i % side) * RANGE_CELL + half, 0, (i / side) * RANGE_CELL + half);
+            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, false, Machine.SMALL));
+        }
+        max = ORIGIN.offset(side * RANGE_CELL, 1, ((count + side - 1) / side) * RANGE_CELL);
         refilled = new long[count];
     }
 
@@ -220,6 +257,9 @@ final class BenchScene {
             level.setBlock(node.router(), router, PLACE_FLAGS);
             if (level.getBlockEntity(node.router()) instanceof RouterBlockEntity entity) {
                 configure(node, entity);
+                if (scenario == BenchScenario.RANGE) {
+                    linkRemotes(node, entity);
+                }
             }
         }
     }
@@ -260,7 +300,8 @@ final class BenchScene {
 
     private void placeMachine(Node node) {
         switch (node.kind()) {
-            case SMALL -> level.setBlock(node.machine(), storage.small().defaultBlockState(), PLACE_FLAGS);
+            case SMALL -> level.setBlock(node.machine(), storage.small(), PLACE_FLAGS);
+            case CHEST -> level.setBlock(node.machine(), BenchStorage.chest(), PLACE_FLAGS);
             case BIG -> {
                 if (storage.bigIsDoubleChest()) {
                     // Facing norte: a metade LEFT se liga à de leste (RIGHT).
@@ -270,7 +311,7 @@ final class BenchScene {
                     level.setBlock(right, chest.setValue(ChestBlock.TYPE, ChestType.RIGHT), PLACE_FLAGS);
                     extraBlocks.add(right);
                 } else {
-                    level.setBlock(node.machine(), storage.big().defaultBlockState(), PLACE_FLAGS);
+                    level.setBlock(node.machine(), storage.big(), PLACE_FLAGS);
                 }
             }
             case FLUID_SOURCE -> level.setBlock(node.machine(), BenchCapabilities.FLUID_SOURCE.defaultBlockState(), PLACE_FLAGS);
@@ -295,6 +336,39 @@ final class BenchScene {
         } else if (scenario == BenchScenario.STOCK && !node.source()) {
             router.setFilter(ResourceType.ITEM, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
                     List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), STOCK_LIMIT))));
+        } else if (scenario == BenchScenario.CHEST_TYPES && !node.source()) {
+            router.setFilter(ResourceType.ITEM, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
+                    List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), CHEST_TYPES_STOCK))));
+        }
+    }
+
+    /**
+     * Cenário de alcance: o Upgrade de Alcance e {@link #RANGE_MACHINES} barris vazios em volta da máquina presa,
+     * vinculados (um grupo só, o dos barris) com o lado de cima em Extrair. A rede entra no {@link #attach}.
+     */
+    private void linkRemotes(Node node, RouterBlockEntity router) {
+        router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+        int half = RANGE_CELL / 2;
+        int linked = 0;
+        BlockState barrel = Blocks.BARREL.defaultBlockState();
+        for (int dx = -half; dx <= half && linked < RANGE_MACHINES; dx++) {
+            for (int dz = -half; dz <= half && linked < RANGE_MACHINES; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                BlockPos pos = node.machine().offset(dx, 0, dz);
+                level.setBlock(pos, barrel, PLACE_FLAGS);
+                extraBlocks.add(pos);
+                if (router.linkMachine(pos)) {
+                    linked++;
+                }
+            }
+        }
+        RemoteMachines remotes = router.remoteMachines();
+        if (!remotes.machines().isEmpty()) {
+            int group = remotes.machines().get(0).group();
+            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                    RedstoneMode.IGNORE);
         }
     }
 
@@ -536,6 +610,9 @@ final class BenchScene {
 
     /** Slots do inventário de itens das origens (para o relatório); 0 sem inventário. */
     int slotsPerMachine() {
+        if (storage == BenchStorage.WA) {
+            return BenchStorage.virtualSlots(scenario.bigInventories());
+        }
         for (Node node : nodes) {
             IItemHandler handler = items(node);
             if (handler != null) {
@@ -559,10 +636,16 @@ final class BenchScene {
                 if (activeSource(node)) {
                     refill(node, handler);
                 }
+            } else if (scenario == BenchScenario.CHEST_TYPES) {
+                ItemStorage chest = modChest(node);
+                if (chest != null) {
+                    // Só o pedregulho que chegou: os 2.000 tipos de papel ficam.
+                    destinationCleared += chest.extract(new ItemStack(Items.COBBLESTONE), Long.MAX_VALUE, false);
+                }
             } else if (scenario == BenchScenario.BIG_FULL) {
                 destinationCleared += clear(handler, Math.max(0, handler.getSlots() - FREE_TAIL_SLOTS));
             } else if (scenario != BenchScenario.FULL && scenario != BenchScenario.STOCK) {
-                destinationCleared += clear(handler, 0);
+                destinationCleared += clear(node, handler);
             }
         }
     }
@@ -591,6 +674,11 @@ final class BenchScene {
         if (handler == null) {
             return;
         }
+        ItemStorage chest = modChest(node);
+        if (chest != null && !node.source()) {
+            fillChest(chest);
+            return;
+        }
         if (node.source()) {
             if (activeSource(node)) {
                 refill(node, handler);
@@ -613,6 +701,21 @@ final class BenchScene {
         }
     }
 
+    /** O destino Baú do mod: cheio de pedra no {@code full}, o estoque no {@code stock} e os tipos de papel no {@code chesttypes}. */
+    private void fillChest(ItemStorage chest) {
+        if (scenario == BenchScenario.FULL) {
+            chest.insert(new ItemStack(Items.STONE), chest.capacity(), false);
+        } else if (scenario == BenchScenario.STOCK) {
+            chest.insert(new ItemStack(Items.COBBLESTONE), STOCK_LIMIT, false);
+        } else if (scenario == BenchScenario.CHEST_TYPES) {
+            for (int i = 0; i < CHEST_TYPES; i++) {
+                ItemStack paper = new ItemStack(Items.PAPER);
+                paper.set(DataComponents.CUSTOM_NAME, Component.literal("bench " + i));
+                chest.insert(paper, 1, false);
+            }
+        }
+    }
+
     /** Item que a origem guarda em cada slot: pedregulho, ou um diferente por slot nos inventários grandes. */
     private Item pattern(Node node, int slot) {
         if (scenario == BenchScenario.RAW || scenario == BenchScenario.STOCK || !scenario.bigInventories()) {
@@ -622,9 +725,25 @@ final class BenchScene {
     }
 
     private void refill(Node node, IItemHandler handler) {
+        ItemStorage chest = modChest(node);
         long added = 0;
-        for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
-            added += top(handler, slot, pattern(node, slot));
+        if (chest != null) {
+            // Sem slots: completa cada item até as pilhas de 64 que os slots virtuais pedem.
+            Map<Item, Long> want = new LinkedHashMap<>();
+            for (int slot = 0, n = BenchStorage.virtualSlots(scenario.bigInventories()); slot < n; slot++) {
+                want.merge(pattern(node, slot), (long) Items.COBBLESTONE.getDefaultMaxStackSize(), Long::sum);
+            }
+            for (Map.Entry<Item, Long> entry : want.entrySet()) {
+                ItemStack key = new ItemStack(entry.getKey());
+                long missing = entry.getValue() - chest.count(key);
+                if (missing > 0) {
+                    added += chest.insert(key, missing, false);
+                }
+            }
+        } else {
+            for (int slot = 0, n = handler.getSlots(); slot < n; slot++) {
+                added += top(handler, slot, pattern(node, slot));
+            }
         }
         refilled[node.index()] += added;
     }
@@ -645,6 +764,20 @@ final class BenchScene {
         return want - handler.insertItem(slot, new ItemStack(item, want), false).getCount();
     }
 
+    /** Esvazia a máquina inteira (o Baú do mod pelo conteúdo); devolve quantos itens saíram. */
+    private long clear(Node node, IItemHandler handler) {
+        ItemStorage chest = modChest(node);
+        if (chest == null) {
+            return clear(handler, 0);
+        }
+        long removed = 0;
+        while (chest.types() > 0) {
+            int last = chest.types() - 1;
+            removed += chest.extract(chest.key(last), chest.count(last), false);
+        }
+        return removed;
+    }
+
     /** Esvazia os slots a partir de {@code from}; devolve quantos itens saíram. */
     private static long clear(IItemHandler handler, int from) {
         long removed = 0;
@@ -660,8 +793,13 @@ final class BenchScene {
         return removed;
     }
 
+    /** O conteúdo da máquina, se ela é um Baú do mod. */
+    private @Nullable ItemStorage modChest(Node node) {
+        return level.getBlockEntity(node.machine()) instanceof StorageChestBlockEntity chest ? chest.storage() : null;
+    }
+
     private @Nullable IItemHandler items(Node node) {
-        if (node.kind() != Machine.SMALL && node.kind() != Machine.BIG) {
+        if (node.kind() != Machine.SMALL && node.kind() != Machine.BIG && node.kind() != Machine.CHEST) {
             return null;
         }
         return level.getCapability(Capabilities.ItemHandler.BLOCK, node.machine(), Direction.UP);
@@ -690,7 +828,7 @@ final class BenchScene {
         for (Node node : nodes) {
             IItemHandler handler = items(node);
             if (handler != null) {
-                clear(handler, 0);
+                clear(node, handler);
             }
             level.setBlock(node.router(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }

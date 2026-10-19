@@ -63,7 +63,8 @@ final class BenchRun {
             double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos,
             double flowsNanosPerSample, double flowsNanosPerTick,
             boolean engine, double costNanos, double workerNanos, double neutralItems, double neutralFluid,
-            double neutralEnergy, int neutralMoved, int neutralSources, double tabletBytesPerSecond) {
+            double neutralEnergy, int neutralMoved, int neutralSources, double tabletBytesPerSecond,
+            double sceneHeapBytes) {
         /** Unidades por segundo da contagem neutra (itens, mB e FE somados). */
         double neutralUnits() {
             return neutralItems + neutralFluid + neutralEnergy;
@@ -131,6 +132,10 @@ final class BenchRun {
     private long flowsSamplesStart;
     private long tabletBytesStart;
     private long flowsNanosStart;
+    /** Heap usado depois de um GC completo, antes de montar a cena ({@link BenchScenario#measuresMemory}). */
+    private long heapBefore;
+    /** Heap retido pela cena (o de antes de medir menos {@link #heapBefore}); {@code NaN} sem a medição. */
+    private double sceneHeapBytes = Double.NaN;
     private long opsSum;
     private int opsSeconds;
     private boolean done;
@@ -159,6 +164,10 @@ final class BenchRun {
 
     private void startRep(MinecraftServer server) {
         ServerLevel level = server.overworld();
+        sceneHeapBytes = Double.NaN;
+        if (job.scenario().measuresMemory()) {
+            heapBefore = heapAfterGc();
+        }
         scene = new BenchScene(level, job.scenario(), job.storage(), job.transport(), job.nodes());
         scene.build();
         baseMspt.clear();
@@ -325,6 +334,19 @@ final class BenchRun {
         flowsNanosStart = flows.totalNanos();
         opsSum = 0;
         opsSeconds = 0;
+        if (job.scenario().measuresMemory()) {
+            sceneHeapBytes = heapAfterGc() - heapBefore;
+        }
+    }
+
+    /**
+     * Heap usado depois de dois GCs completos. Aproximado: inclui o que o resto do servidor guardou no meio, por isso
+     * só vale comparar o mesmo cenário antes e depois.
+     */
+    private static long heapAfterGc() {
+        System.gc();
+        System.gc();
+        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
     }
 
     private NetworkStats networkStats(MinecraftServer server) {
@@ -394,7 +416,7 @@ final class BenchRun {
                 (scene.delivered(ResourceType.ITEM) - neutralItemsStart) / seconds,
                 (scene.delivered(ResourceType.FLUID) - neutralFluidStart) / seconds,
                 (scene.delivered(ResourceType.ENERGY) - neutralEnergyStart) / seconds,
-                neutralMoved, neutralSources, (scene.tabletBytes() - tabletBytesStart) / seconds);
+                neutralMoved, neutralSources, (scene.tabletBytes() - tabletBytesStart) / seconds, sceneHeapBytes);
         reps.add(result);
         out.accept(repLine(job, result));
         BenchResonators resonators = scene.resonators();
@@ -430,7 +452,7 @@ final class BenchRun {
                         + " | %.0f itens/s, %.0f mB/s, %.0f FE/s | origens que moveram %d/%d"
                         + " | dormindo: origens %d/%d, destinos %d/%d"
                         + " | 1ª montagem %.3f ms, %s remontagens (%.1f/s, %s ms cada; tick depois da mudança: máx %.3f ms)"
-                        + " | %d slots | Fluxos %s ms/amostra (%.4f ms/tick)%s",
+                        + " | %d slots | Fluxos %s ms/amostra (%.4f ms/tick)%s%s",
                 r.rep(), ms(r.baseMsptMean()), ms(r.baseMsptP99()), ms(r.msptMean()), ms(r.msptP50()), ms(r.msptP99()),
                 ms(r.msptMax()), ms(r.modMean()), ms(r.modP50()), ms(r.modP99()), ms(r.modMax()), ms(r.limitNanos()),
                 r.exhaustedPct(), num(r.visitsPerTick(), 1), num(r.nanosPerVisit() / 1000.0, 2), num(r.nanosPerDelivery() / 1000.0, 2),
@@ -442,7 +464,9 @@ final class BenchRun {
                 num(ms(r.flowsNanosPerSample()), 4), ms(r.flowsNanosPerTick()),
                 Double.isNaN(r.tabletMeanNanos()) ? "" : String.format(Locale.ROOT,
                         " | Tablet aberto %.4f ms/tick (máx %.3f), %.1f KB/s", ms(r.tabletMeanNanos()),
-                        ms(r.tabletMaxNanos()), r.tabletBytesPerSecond() / 1024.0));
+                        ms(r.tabletMaxNanos()), r.tabletBytesPerSecond() / 1024.0),
+                Double.isNaN(r.sceneHeapBytes()) ? "" : String.format(Locale.ROOT,
+                        " | heap retido pela cena ~%.2f MB", r.sceneHeapBytes() / (1024.0 * 1024.0)));
     }
 
     private void summarize() {
@@ -477,6 +501,14 @@ final class BenchRun {
                 engine ? pm(reps, Rep::rebuildsPerSecond, 1) : "—",
                 engine ? pm(reps, r -> ms(r.tabletMeanNanos()), 4) : "—");
     }
+
+    /** Linha da tabela de memória (Markdown), só dos cenários que a medem ({@link BenchScenario#measuresMemory}). */
+    static String memoryLine(Job job, List<Rep> reps) {
+        return String.format(Locale.ROOT, "| %s | %s | %d | %d | %s |", job.scenario().id, job.storage().id, job.nodes(),
+                reps.size(), pm(reps, r -> r.sceneHeapBytes() / (1024.0 * 1024.0), 2));
+    }
+
+    static final String MEMORY_HEADER = "| cenário | armaz. | n | reps | heap retido pela cena (MB) |\n|---|---|---|---|---|";
 
     static final String SUMMARY_HEADER = "| cenário | transporte | armaz. | n | reps | MSPT base (ms) | MSPT com rede (ms)"
             + " | custo (ms/tick) | threads (ms/tick) | unidades/s (neutro) | ns/item | origens que moveram (%)"

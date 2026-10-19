@@ -37,15 +37,19 @@ final class NodePorts {
      * {@code node.networks(type)} até o próximo {@code nodeChanged}.
      */
     private final UUID[][] networks = new UUID[TYPES.length][];
-    /** Portas da máquina presa: [tipo × 6 + face absoluta]. */
-    private final Port[] ports = new Port[ResourceType.values().length * FACES];
+    /**
+     * Portas da máquina presa: [tipo][face absoluta]. O arranjo das faces de um tipo nasce com a primeira porta
+     * dele: o nó paga só pelos tipos que usa.
+     */
+    private final Port[][] ports = new Port[TYPES.length][];
     /**
      * Portas das máquinas remotas, por {@code pos.asLong()} da máquina, cada uma no mesmo arranjo
-     * [tipo × 6 + face absoluta]; {@code null} até a primeira remota (um nó sem remotas não paga nada).
+     * [tipo][face absoluta], com as faces de um tipo criadas na primeira porta dele; {@code null} até a
+     * primeira remota (um nó sem remotas não paga nada).
      * As de máquinas que deixaram de ser porta (desvinculadas, fora do raio ou do limite, sem o
      * upgrade) saem na releitura do tipo ({@link #retainRemotes}).
      */
-    private @Nullable Long2ObjectOpenHashMap<Port[]> remotes;
+    private @Nullable Long2ObjectOpenHashMap<Port[][]> remotes;
     /**
      * Portas ativas de cada tipo, com os campos da configuração da face já preenchidos, da última
      * leitura; {@code null} = ler de novo na próxima montagem. Toda mudança do nó que mexe nas rotas
@@ -57,6 +61,13 @@ final class NodePorts {
     int flowSlot = -1;
     /** A configuração que o amostrador dos Fluxos contou; {@code null} até a primeira leitura. */
     FlowSampler.@Nullable NodeConfig flowConfig;
+    /**
+     * As mudanças das portas do nó para o amostrador dos Fluxos, em {@code [0]}: dividido por todas as portas
+     * ({@link Port#flowChanges}) e subido também quando as rotas ou a leitura das faces do nó mudam.
+     */
+    final int[] flowChanges = new int[1];
+    /** O que a última leitura do amostrador achou nas portas, para pular o nó sem mudança; {@code null} antes. */
+    FlowSampler.@Nullable NodeFlows flowRead;
 
     NodePorts(RouterBlockEntity node) {
         this.node = node;
@@ -64,13 +75,23 @@ final class NodePorts {
     }
 
     Port port(ResourceType type, Direction face) {
-        int index = type.ordinal() * FACES + face.ordinal();
-        Port port = ports[index];
+        Port[] byFace = faces(ports, type);
+        Port port = byFace[face.ordinal()];
         if (port == null) {
-            port = new Port(node, node.attachedCaches(), face, type);
-            ports[index] = port;
+            port = new Port(node, node.attachedCaches(), face, type, flowChanges);
+            byFace[face.ordinal()] = port;
         }
         return port;
+    }
+
+    /** As faces do tipo em {@code byType}, criadas na primeira vez. */
+    private static Port[] faces(Port[][] byType, ResourceType type) {
+        Port[] byFace = byType[type.ordinal()];
+        if (byFace == null) {
+            byFace = new Port[FACES];
+            byType[type.ordinal()] = byFace;
+        }
+        return byFace;
     }
 
     /**
@@ -83,19 +104,24 @@ final class NodePorts {
             remotes = new Long2ObjectOpenHashMap<>();
         }
         long key = machine.pos().asLong();
-        Port[] byFace = remotes.get(key);
-        if (byFace == null) {
-            byFace = new Port[TYPES.length * FACES];
-            remotes.put(key, byFace);
+        Port[][] byType = remotes.get(key);
+        if (byType == null) {
+            byType = new Port[TYPES.length][];
+            remotes.put(key, byType);
         }
-        int index = type.ordinal() * FACES + face.ordinal();
-        Port port = byFace[index];
+        Port[] byFace = faces(byType, type);
+        Port port = byFace[face.ordinal()];
         if (port == null || port.machine != machine) {
             // Uma MachineCaches nova para a mesma posição (desvinculada e vinculada de novo): porta nova.
-            port = new Port(node, machine, face, type);
-            byFace[index] = port;
+            port = new Port(node, machine, face, type, flowChanges);
+            byFace[face.ordinal()] = port;
         }
         return port;
+    }
+
+    /** As portas da máquina presa, [tipo][face absoluta] com os tipos sem porta nulos (não alterar). */
+    Port[][] attachedPorts() {
+        return ports;
     }
 
     /** O nó tem portas de máquinas remotas (de alguma leitura). */
@@ -103,9 +129,19 @@ final class NodePorts {
         return remotes != null;
     }
 
-    /** As portas da máquina remota em {@code machinePos} ({@code pos.asLong()}), ou {@code null}; não cria. */
-    Port @Nullable [] machinePorts(long machinePos) {
+    /**
+     * As portas da máquina remota em {@code machinePos} ({@code pos.asLong()}), [tipo][face absoluta] com os tipos
+     * sem porta nulos, ou {@code null}; não cria.
+     */
+    Port @Nullable [][] machinePorts(long machinePos) {
         return remotes == null ? null : remotes.get(machinePos);
+    }
+
+    /** A porta da máquina remota em {@code machinePos} ({@code pos.asLong()}), se já foi criada; não cria. */
+    @Nullable Port peekRemote(long machinePos, ResourceType type, Direction face) {
+        Port[][] byType = machinePorts(machinePos);
+        Port[] byFace = byType == null ? null : byType[type.ordinal()];
+        return byFace == null ? null : byFace[face.ordinal()];
     }
 
     /**
@@ -116,20 +152,20 @@ final class NodePorts {
         if (remotes == null) {
             return;
         }
-        int first = type.ordinal() * FACES;
-        ObjectIterator<Long2ObjectMap.Entry<Port[]>> iterator = remotes.long2ObjectEntrySet().fastIterator();
+        int t = type.ordinal();
+        ObjectIterator<Long2ObjectMap.Entry<Port[][]>> iterator = remotes.long2ObjectEntrySet().fastIterator();
         while (iterator.hasNext()) {
-            Long2ObjectMap.Entry<Port[]> entry = iterator.next();
+            Long2ObjectMap.Entry<Port[][]> entry = iterator.next();
             if (keep.contains(entry.getLongKey())) {
                 continue;
             }
-            Port[] byFace = entry.getValue();
+            Port[][] byType = entry.getValue();
+            byType[t] = null;
             boolean empty = true;
-            for (int i = 0; i < byFace.length; i++) {
-                if (i >= first && i < first + FACES) {
-                    byFace[i] = null;
-                } else if (byFace[i] != null) {
+            for (Port[] byFace : byType) {
+                if (byFace != null) {
                     empty = false;
+                    break;
                 }
             }
             if (empty) {
@@ -146,10 +182,13 @@ final class NodePorts {
         if (remotes == null) {
             return;
         }
-        int first = type.ordinal() * FACES;
-        for (Port[] byFace : remotes.values()) {
-            for (int i = first; i < first + FACES; i++) {
-                Port port = byFace[i];
+        int t = type.ordinal();
+        for (Port[][] byType : remotes.values()) {
+            Port[] byFace = byType[t];
+            if (byFace == null) {
+                continue;
+            }
+            for (Port port : byFace) {
                 if (port != null) {
                     action.accept(port);
                 }
@@ -159,7 +198,8 @@ final class NodePorts {
 
     /** A porta, se já foi criada; não cria. */
     @Nullable Port peek(ResourceType type, Direction face) {
-        return ports[type.ordinal() * FACES + face.ordinal()];
+        Port[] byFace = ports[type.ordinal()];
+        return byFace == null ? null : byFace[face.ordinal()];
     }
 
     /** As redes distintas do tipo nas rotas (não alterar o arranjo). */
@@ -200,18 +240,21 @@ final class NodePorts {
      * e a ordem, sem descartar a leitura nem tocar nas portas do mesmo tipo que estão noutra rede.
      */
     void clearRoutes(ResourceType type, NetworkRoutes owner) {
-        int first = type.ordinal() * FACES;
-        clearRoutes(ports, first, owner);
+        flowChanges[0]++;
+        int t = type.ordinal();
+        clearRoutes(ports[t], owner);
         if (remotes != null) {
-            for (Port[] byFace : remotes.values()) {
-                clearRoutes(byFace, first, owner);
+            for (Port[][] byType : remotes.values()) {
+                clearRoutes(byType[t], owner);
             }
         }
     }
 
-    private static void clearRoutes(Port[] byFace, int first, NetworkRoutes owner) {
-        for (int i = first; i < first + FACES; i++) {
-            Port port = byFace[i];
+    private static void clearRoutes(Port @Nullable [] byFace, NetworkRoutes owner) {
+        if (byFace == null) {
+            return;
+        }
+        for (Port port : byFace) {
             if (port != null && port.network == owner) {
                 port.network = null;
                 port.clearOrder();
@@ -225,19 +268,22 @@ final class NodePorts {
      * tipo no nó está suja e remonta na mesma passada.
      */
     void clearRoutes(ResourceType type) {
-        collected[type.ordinal()] = null;
-        int first = type.ordinal() * FACES;
-        clearRoutes(ports, first);
+        int t = type.ordinal();
+        flowChanges[0]++;
+        collected[t] = null;
+        clearRoutes(ports[t]);
         if (remotes != null) {
-            for (Port[] byFace : remotes.values()) {
-                clearRoutes(byFace, first);
+            for (Port[][] byType : remotes.values()) {
+                clearRoutes(byType[t]);
             }
         }
     }
 
-    private static void clearRoutes(Port[] byFace, int first) {
-        for (int i = first; i < first + FACES; i++) {
-            Port port = byFace[i];
+    private static void clearRoutes(Port @Nullable [] byFace) {
+        if (byFace == null) {
+            return;
+        }
+        for (Port port : byFace) {
             if (port != null) {
                 port.clearRoute();
             }
@@ -246,6 +292,7 @@ final class NodePorts {
 
     /** A configuração do nó mudou nos tipos de {@code types} (máscara por ordinal): a próxima montagem relê as faces deles. */
     void invalidate(int types) {
+        flowChanges[0]++;
         for (int t = 0; t < TYPES.length; t++) {
             if ((types & (1 << t)) != 0) {
                 collected[t] = null;
@@ -258,18 +305,20 @@ final class NodePorts {
      * limpar as rotas: uma origem cujos destinos não mudaram continua com os mesmos cursores.
      */
     void rememberOrders(ResourceType type) {
-        int first = type.ordinal() * FACES;
-        rememberOrders(ports, first);
+        int t = type.ordinal();
+        rememberOrders(ports[t]);
         if (remotes != null) {
-            for (Port[] byFace : remotes.values()) {
-                rememberOrders(byFace, first);
+            for (Port[][] byType : remotes.values()) {
+                rememberOrders(byType[t]);
             }
         }
     }
 
-    private static void rememberOrders(Port[] byFace, int first) {
-        for (int i = first; i < first + FACES; i++) {
-            Port port = byFace[i];
+    private static void rememberOrders(Port @Nullable [] byFace) {
+        if (byFace == null) {
+            return;
+        }
+        for (Port port : byFace) {
             if (port != null) {
                 port.previousOrder = port.order;
             }
@@ -282,6 +331,7 @@ final class NodePorts {
     }
 
     void setCollected(ResourceType type, Port[] active) {
+        flowChanges[0]++;
         collected[type.ordinal()] = active;
     }
 
@@ -301,37 +351,47 @@ final class NodePorts {
      * ({@code pos.asLong()}); nada se ela não tem porta (fora do raio ou do limite, ou ainda não lida).
      */
     void wakeMachine(long machinePos, boolean feeders) {
-        Port[] byFace = machinePorts(machinePos);
-        if (byFace != null) {
-            wake(byFace, feeders);
+        Port[][] byType = machinePorts(machinePos);
+        if (byType != null) {
+            wake(byType, feeders);
         }
     }
 
-    private static void wake(Port[] byFace, boolean feeders) {
-        for (Port port : byFace) {
-            if (port == null) {
+    private static void wake(Port[][] byType, boolean feeders) {
+        for (Port[] byFace : byType) {
+            if (byFace == null) {
                 continue;
             }
-            wakePort(port);
-            if (feeders && port.destination && !port.stopped) {
-                wakeFeeders(port);
+            for (Port port : byFace) {
+                if (port == null) {
+                    continue;
+                }
+                wakePort(port);
+                if (feeders && port.destination && !port.stopped) {
+                    wakeFeeders(port);
+                }
             }
         }
     }
 
     /** O nó saiu do motor: para todas as portas já criadas, da presa e das remotas ({@link Port#stop}). */
     void stopAll(long now) {
-        for (Port port : ports) {
-            if (port != null) {
-                port.stop(now);
+        stopAll(ports, now);
+        if (remotes != null) {
+            for (Port[][] byType : remotes.values()) {
+                stopAll(byType, now);
             }
         }
-        if (remotes != null) {
-            for (Port[] byFace : remotes.values()) {
-                for (Port port : byFace) {
-                    if (port != null) {
-                        port.stop(now);
-                    }
+    }
+
+    private static void stopAll(Port[][] byType, long now) {
+        for (Port[] byFace : byType) {
+            if (byFace == null) {
+                continue;
+            }
+            for (Port port : byFace) {
+                if (port != null) {
+                    port.stop(now);
                 }
             }
         }
@@ -363,15 +423,12 @@ final class NodePorts {
      * capability, então nada é remontado.
      */
     void capabilityChanged(ResourceType type, Direction face) {
-        capabilityChanged(ports[type.ordinal() * FACES + face.ordinal()]);
+        capabilityChanged(peek(type, face));
     }
 
     /** Como {@link #capabilityChanged(ResourceType, Direction)}, numa máquina remota ({@code pos.asLong()}). */
     void capabilityChanged(long machinePos, ResourceType type, Direction face) {
-        Port[] byFace = machinePorts(machinePos);
-        if (byFace != null) {
-            capabilityChanged(byFace[type.ordinal() * FACES + face.ordinal()]);
-        }
+        capabilityChanged(peekRemote(machinePos, type, face));
     }
 
     private static void capabilityChanged(@Nullable Port port) {

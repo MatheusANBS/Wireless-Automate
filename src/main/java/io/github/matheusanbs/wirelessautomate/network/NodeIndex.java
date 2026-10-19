@@ -3,9 +3,13 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -29,7 +33,9 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,7 +54,12 @@ import org.jetbrains.annotations.Nullable;
  * resumo dos modos das faces por tipo, ver {@link #role}), os modos de cada face (chave {@code face_modes},
  * ver {@link #faceModes}; sem a chave, tudo Nenhum), o bloco da máquina e quem colocou.
  * Uma entrada pode ficar velha se o bloco sumir sem passar pelo {@code onRemove} (região apagada):
- * o Tablet a apaga quando acha o chunk carregado sem roteador ({@link #forget}).
+ * quando o chunk dela carrega, a entrada sem roteador ali sai ({@link #chunkLoaded}, pelo bloco do chunk que
+ * acabou de carregar, sem carregar nenhum outro), e o Tablet também a apaga quando acha o chunk carregado sem
+ * roteador.
+ *
+ * <p>Salvar: cada entrada guarda a própria {@link CompoundTag} até um dado dela mudar, então gravar o índice só
+ * recodifica as entradas que mudaram; o arquivo continua um só (é um {@link SavedData}), no mesmo formato.
  */
 public final class NodeIndex extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_nodes";
@@ -105,6 +116,8 @@ public final class NodeIndex extends SavedData {
         private @Nullable RouterBlockEntity router;
         /** Texto da busca do Tablet, feito na primeira busca e refeito só quando o nó muda; não é salvo. */
         private @Nullable String searchText;
+        /** A entrada já codificada para salvar; {@code null} depois que um dado salvo muda. Não é alterada depois de pronta. */
+        private @Nullable CompoundTag saved;
 
         Entry(NodeKey key) {
             this.key = key;
@@ -244,11 +257,22 @@ public final class NodeIndex extends SavedData {
             }
             if (changed) {
                 searchText = null;
+                saved = null;
             }
             return changed;
         }
 
+        /** A entrada codificada, guardada até um dado salvo mudar. */
         private CompoundTag save() {
+            CompoundTag tag = saved;
+            if (tag == null) {
+                tag = encode();
+                saved = tag;
+            }
+            return tag;
+        }
+
+        private CompoundTag encode() {
             CompoundTag tag = new CompoundTag();
             tag.putString("dim", key.dimension.location().toString());
             tag.putLong("pos", key.pos.asLong());
@@ -268,8 +292,13 @@ public final class NodeIndex extends SavedData {
                 }
             }
             tag.put("face_networks", networksTag);
-            tag.putInt("roles", roles);
-            tag.putLong("face_modes", faceModes);
+            // Zero é o que a leitura dá sem a chave: um nó sem faces configuradas não grava nenhuma das duas.
+            if (roles != 0) {
+                tag.putInt("roles", roles);
+            }
+            if (faceModes != 0) {
+                tag.putLong("face_modes", faceModes);
+            }
             tag.putString("machine", machine.toString());
             if (placedBy != null) {
                 tag.putUUID("placedBy", placedBy);
@@ -323,6 +352,8 @@ public final class NodeIndex extends SavedData {
     }
 
     private final Map<NodeKey, Entry> entries = new LinkedHashMap<>();
+    /** As entradas de cada chunk ({@code ChunkPos.toLong()}), por dimensão, para o {@link #chunkLoaded}. Não é salvo. */
+    private final Map<ResourceKey<Level>, Long2ObjectOpenHashMap<List<Entry>>> byChunk = new HashMap<>();
     /** Muda a cada alteração, salva ou não (inclusive carregar e descarregar). Não é salvo. */
     private int version;
     /** Muda só quando um dado salvo muda (não ao carregar ou descarregar). Não é salvo. */
@@ -409,6 +440,30 @@ public final class NodeIndex extends SavedData {
         }
     }
 
+    /**
+     * O chunk {@code chunk} de {@code level} carregou: as entradas dele sem roteador no lugar (o bloco sumiu sem
+     * {@code onRemove}) saem do índice. Lê só o bloco do próprio chunk; num chunk sem entradas, é uma busca de hash.
+     * Chamado pelo {@code ChunkEvent.Load}.
+     */
+    public static void chunkLoaded(ServerLevel level, ChunkAccess chunk) {
+        get(level.getServer()).checkChunk(level.dimension(), chunk);
+    }
+
+    private void checkChunk(ResourceKey<Level> dimension, ChunkAccess chunk) {
+        Long2ObjectOpenHashMap<List<Entry>> chunks = byChunk.get(dimension);
+        List<Entry> inChunk = chunks == null ? null : chunks.get(chunk.getPos().toLong());
+        if (inChunk == null) {
+            return;
+        }
+        // De trás para a frente: o remove tira a entrada desta mesma lista.
+        for (int i = inChunk.size() - 1; i >= 0; i--) {
+            NodeKey key = inChunk.get(i).key;
+            if (!chunk.getBlockState(key.pos).is(ModBlocks.ROUTER.get())) {
+                remove(key);
+            }
+        }
+    }
+
     /** Quem colocou o roteador, para o Tablet mostrar o nó ao dono mesmo fora das redes dele. */
     public static void placedBy(RouterBlockEntity router, UUID player) {
         if (router.getLevel() instanceof ServerLevel level) {
@@ -416,6 +471,7 @@ public final class NodeIndex extends SavedData {
             Entry entry = index.update(router);
             if (entry != null && !player.equals(entry.placedBy)) {
                 entry.placedBy = player;
+                entry.saved = null;
                 index.setDirty();
             }
         }
@@ -431,7 +487,7 @@ public final class NodeIndex extends SavedData {
         boolean created = entry == null;
         if (created) {
             entry = new Entry(key);
-            entries.put(key, entry);
+            add(entry);
         }
         boolean changed = entry.read(router);
         boolean loadedChanged = entry.router != router;
@@ -458,11 +514,27 @@ public final class NodeIndex extends SavedData {
 
     /** Tira o nó do índice. Devolve se ele estava lá. */
     public boolean remove(NodeKey key) {
-        if (entries.remove(key) == null) {
+        Entry entry = entries.remove(key);
+        if (entry == null) {
             return false;
+        }
+        Long2ObjectOpenHashMap<List<Entry>> chunks = byChunk.get(key.dimension);
+        long chunk = ChunkPos.asLong(key.pos);
+        List<Entry> inChunk = chunks == null ? null : chunks.get(chunk);
+        if (inChunk != null) {
+            inChunk.remove(entry);
+            if (inChunk.isEmpty()) {
+                chunks.remove(chunk);
+            }
         }
         setDirty();
         return true;
+    }
+
+    private void add(Entry entry) {
+        entries.put(entry.key, entry);
+        byChunk.computeIfAbsent(entry.key.dimension, dimension -> new Long2ObjectOpenHashMap<>())
+                .computeIfAbsent(ChunkPos.asLong(entry.key.pos), chunk -> new ArrayList<>(1)).add(entry);
     }
 
     // ------------------------------------------------------------------ consulta
@@ -502,6 +574,10 @@ public final class NodeIndex extends SavedData {
         }
     }
 
+    /**
+     * As entradas vão pelas tags que cada uma guarda ({@link Entry#save}): quem chama não altera as tags dentro de
+     * {@code nodes} (copie antes).
+     */
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
@@ -517,8 +593,8 @@ public final class NodeIndex extends SavedData {
         ListTag list = tag.getList("nodes", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             Entry entry = Entry.load(list.getCompound(i));
-            if (entry != null) {
-                index.entries.put(entry.key, entry);
+            if (entry != null && !index.entries.containsKey(entry.key)) {
+                index.add(entry);
             }
         }
         return index;

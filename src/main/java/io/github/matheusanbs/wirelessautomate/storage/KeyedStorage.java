@@ -3,10 +3,10 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2LongOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
-import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -16,12 +16,14 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Conteúdo de um armazenamento do mod por tipo: chaves ({@code K}: item, fluido ou químico) com
  * quantidade {@code long}, numa lista na ordem de chegada mais um índice por chave. Guardar, tirar e
- * contar um tipo são O(1); só tirar o último de um tipo é O(tipos), para a lista não ficar com
+ * contar um tipo são O(1), e contar um item ou fluido com quaisquer componentes também
+ * ({@link #countGroup}); só tirar o último de um tipo é O(tipos), para a lista não ficar com
  * buracos. A capacidade conta o total de todos os tipos ({@link StorageMath}); {@code <= 0} é sem
  * limite, e ela é lida a cada inserção (muda com o tier e com a config, sem copiar nada).
  *
- * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e avisa os vizinhos,
- * o que acorda os roteadores presos nele) e sobe a {@link #version()}, que a tela aberta compara.
+ * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e põe o aviso aos vizinhos
+ * na fila do tick, o que acorda os roteadores presos nele) e sobe a {@link #version()}, que a tela
+ * aberta compara.
  * A {@link Admission} decide quanto de cada tipo pode entrar (o filtro de entrada), em qualquer
  * caminho: roteador, funil, outro mod ou a tela.
  *
@@ -31,6 +33,13 @@ public abstract class KeyedStorage<K> {
     private final class Entry {
         final K key;
         long count;
+        /**
+         * A chave codificada, feita no primeiro salvamento e reusada nos seguintes (a chave nunca muda).
+         * Compartilhada entre os salvamentos: quem lê o NBT salvo não o altera.
+         */
+        @Nullable Tag tag;
+        /** A pilha com a quantidade que {@link #view} devolveu da última vez; trocada (nunca alterada) quando muda. */
+        @Nullable K view;
 
         Entry(K key) {
             this.key = key;
@@ -49,6 +58,8 @@ public abstract class KeyedStorage<K> {
     private final LongSupplier capacity;
     private final String what;
     private long total;
+    /** A soma por grupo ({@link #groupOf}), criada no primeiro tipo com grupo. */
+    private @Nullable Reference2LongOpenHashMap<Object> groupTotals;
     private int version;
     private Admission<K> admission = (key, amount) -> amount;
 
@@ -104,20 +115,82 @@ public abstract class KeyedStorage<K> {
         return entries.get(index).count;
     }
 
+    /**
+     * A chave do tipo na posição com a quantidade dele (até {@link Integer#MAX_VALUE}), para as visões de
+     * slot ({@code getStackInSlot}, {@code getFluidInTank}), que quem chama não pode alterar. A mesma pilha
+     * volta enquanto a quantidade não muda; quando muda, uma nova toma o lugar e a antiga, que alguém pode
+     * estar guardando para comparar, fica como estava. Sem isso, seria uma pilha nova por chamada (um funil
+     * olha todos os slots a cada transferência).
+     */
+    public K view(int index) {
+        Entry entry = entries.get(index);
+        int amount = (int) Math.min(entry.count, Integer.MAX_VALUE);
+        K view = entry.view;
+        if (view == null || amountOf(view) != amount) {
+            view = withAmount(entry.key, amount);
+            entry.view = view;
+        }
+        return view;
+    }
+
+    /** Uma cópia da chave com a quantidade, para a {@link #view}; só nos que têm visão de slot. */
+    protected K withAmount(K key, int amount) {
+        throw new UnsupportedOperationException(what + " sem visão de slot");
+    }
+
+    /** A quantidade de uma pilha da {@link #view}. */
+    protected int amountOf(K view) {
+        throw new UnsupportedOperationException(what + " sem visão de slot");
+    }
+
     public long count(K key) {
         Entry entry = index.get(key);
         return entry == null ? 0 : entry.count;
     }
 
-    /** Soma dos tipos que casam com {@code test} (O(tipos)), como o estoque sem componentes. */
-    public long countWhere(Predicate<K> test) {
-        long sum = 0;
-        for (Entry entry : entries) {
-            if (test.test(entry.key)) {
-                sum = StorageMath.add(sum, entry.count);
-            }
+    /**
+     * O grupo da chave para {@link #countGroup}: o item ou o fluido, sem os componentes. {@code null} (o
+     * padrão) é sem grupo: a chave já é o grupo (o químico, que não tem componentes). Comparado por
+     * identidade.
+     */
+    protected @Nullable Object groupOf(K key) {
+        return null;
+    }
+
+    /**
+     * Quanto há do grupo da chave, com quaisquer componentes, como o estoque sem componentes. O(1): a
+     * soma por grupo é mantida a cada inserção, extração e carga.
+     */
+    public long countGroup(K key) {
+        Object group = groupOf(key);
+        if (group == null) {
+            return count(key);
         }
-        return sum;
+        return groupTotals == null ? 0 : groupTotals.getLong(group);
+    }
+
+    private void addToGroup(K key, long amount) {
+        Object group = groupOf(key);
+        if (group == null) {
+            return;
+        }
+        if (groupTotals == null) {
+            groupTotals = new Reference2LongOpenHashMap<>();
+        }
+        groupTotals.put(group, StorageMath.add(groupTotals.getLong(group), amount));
+    }
+
+    private void takeFromGroup(K key, long amount) {
+        Object group = groupOf(key);
+        if (group == null || groupTotals == null) {
+            return;
+        }
+        long left = groupTotals.getLong(group) - amount;
+        if (left > 0) {
+            groupTotals.put(group, left);
+        } else {
+            groupTotals.removeLong(group);
+        }
     }
 
     /** Guarda até {@code amount} de {@code key}; devolve quanto coube (filtro e capacidade). */
@@ -137,6 +210,7 @@ public abstract class KeyedStorage<K> {
         }
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
+        addToGroup(entry.key, accepted);
         changed();
         return accepted;
     }
@@ -156,6 +230,7 @@ public abstract class KeyedStorage<K> {
         }
         entry.count -= taken;
         total -= taken;
+        takeFromGroup(entry.key, taken);
         if (entry.count <= 0) {
             index.remove(entry.key);
             entries.remove(entry);
@@ -173,16 +248,25 @@ public abstract class KeyedStorage<K> {
     public void clear() {
         entries.clear();
         index.clear();
+        if (groupTotals != null) {
+            groupTotals.clear();
+        }
         total = 0;
         version++;
     }
 
-    /** Lista de {@code {key, count}}. */
+    /**
+     * Lista de {@code {key, count}}. A chave de cada tipo é codificada uma vez só, no primeiro salvamento
+     * dela ({@link Entry#tag}): salvar o chunk de novo não recodifica milhares de chaves.
+     */
     public ListTag save(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Entry entry : entries) {
+            if (entry.tag == null) {
+                entry.tag = saveKey(entry.key, registries);
+            }
             CompoundTag tag = new CompoundTag();
-            tag.put("key", saveKey(entry.key, registries));
+            tag.put("key", entry.tag);
             tag.putLong("count", entry.count);
             list.add(tag);
         }
@@ -216,6 +300,7 @@ public abstract class KeyedStorage<K> {
             }
             entry.count = StorageMath.add(entry.count, count);
             total = StorageMath.add(total, count);
+            addToGroup(entry.key, count);
         }
     }
 }

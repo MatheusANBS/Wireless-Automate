@@ -43,6 +43,7 @@ import net.minecraft.server.level.ServerPlayer;
 final class TabletSnapshotBuilder {
     private final ServerPlayer viewer;
     private final TabletQuery query;
+    private final TabletTree tree;
     private long sampleTick;
     private long buildTick;
     /** {@link NodeIndex#dataVersion()} e versão das redes lidas na última montagem. */
@@ -51,9 +52,10 @@ final class TabletSnapshotBuilder {
     /** Redes já contadas do nó em {@link #countMembership}, reaproveitado. */
     private final List<Totals> counted = new ArrayList<>();
 
-    TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query) {
+    TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query, TabletTree tree) {
         this.viewer = viewer;
         this.query = query;
+        this.tree = tree;
         this.sampleTick = viewer.server.getTickCount();
     }
 
@@ -118,7 +120,10 @@ final class TabletSnapshotBuilder {
             }
         }
         List<Facet<ResourceLocation>> groupCounts = new ArrayList<>();
-        List<NodeView> nodes = pageNodes(matches, shared, data, profile, groupSizes, groupCounts);
+        tree.prune(index, data, operator, me);
+        List<TabletRows.Row> rows = new ArrayList<>();
+        List<TabletRows.MachineLive> lives = new ArrayList<>();
+        List<NodeView> nodes = pageNodes(matches, shared, data, profile, groupSizes, groupCounts, rows, lives, now);
 
         Map<UUID, String> names = new HashMap<>();
         List<NetworkView> networks = new ArrayList<>();
@@ -141,7 +146,9 @@ final class TabletSnapshotBuilder {
                 query.query(), scan.total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(scan.machineCounts), facets(scan.networkCounts),
                 new QuickCounts(scan.problemCount, scan.noNetworkCount, scan.unloadedCount),
-                TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes), List.copyOf(groupCounts),
+                TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes),
+                rows.isEmpty() ? TabletRows.EMPTY : new TabletRows(List.copyOf(rows), List.copyOf(lives)),
+                List.copyOf(groupCounts),
                 originGroup, notice, noticeId);
     }
 
@@ -187,12 +194,16 @@ final class TabletSnapshotBuilder {
         return scan;
     }
 
-    /** Os nós da página (até {@link TabletSnapshot#MAX_NODES}), e a contagem de cada grupo de máquina que aparece nela. */
+    /**
+     * Os nós da página e, abaixo dos abertos na árvore, as linhas deles em {@code rows} (com o estado e a vazão das
+     * máquinas em {@code lives}), juntos até {@link TabletSnapshot#MAX_NODES}; e a contagem de cada grupo de máquina
+     * que aparece nela.
+     */
     private List<NodeView> pageNodes(List<Match> matches, TabletSample shared, NetworkSavedData data,
-            RouterPreset profile,
-            Map<ResourceLocation, Integer> groupSizes, List<Facet<ResourceLocation>> groupCounts) {
+            RouterPreset profile, Map<ResourceLocation, Integer> groupSizes, List<Facet<ResourceLocation>> groupCounts,
+            List<TabletRows.Row> rows, List<TabletRows.MachineLive> lives, long now) {
         List<NodeView> nodes = new ArrayList<>();
-        for (int i = 0; i < Math.min(matches.size(), TabletSnapshot.MAX_NODES); i++) {
+        for (int i = 0; i < matches.size() && nodes.size() + rows.size() < TabletSnapshot.MAX_NODES; i++) {
             Match match = matches.get(i);
             NodeIndex.Entry entry = match.entry;
             // só as redes que existem, só dos tipos carregados (os outros vão vazios); uma face numa
@@ -223,6 +234,10 @@ final class TabletSnapshotBuilder {
                     entry.roles(), match.status, removed, entry.faceModes(), List.copyOf(rateList), comparison));
             if (groupCounts.isEmpty() || !groupCounts.getLast().id().equals(entry.machine())) {
                 groupCounts.add(new Facet<>(entry.machine(), groupSizes.get(entry.machine())));
+            }
+            if (tree.isOpen(entry.key())) {
+                tree.appendRows(entry, nodes.size() - 1, TabletSnapshot.MAX_NODES - nodes.size() - rows.size(), rows,
+                        lives, shared.machines(), now);
             }
         }
         return nodes;

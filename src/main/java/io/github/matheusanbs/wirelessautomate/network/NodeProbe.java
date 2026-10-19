@@ -46,6 +46,36 @@ public final class NodeProbe {
         return count[0];
     }
 
+    /**
+     * Soma em {@code got} e {@code gave} (por {@link ResourceType#ordinal()}) o total que as portas da máquina remota
+     * em {@code machinePos} ({@code pos.asLong()}) receberam e entregaram desde que existem ({@link Port#gotRead} +
+     * {@link Port#got}, e o mesmo da entrega). Devolve se algum destino dela com rota está cheio agora. Não cria
+     * nenhuma porta nem aloca; uma máquina sem porta (ou um nó fora do motor) não soma nada.
+     */
+    public static boolean machineTotals(RouterBlockEntity node, long machinePos, long[] got, long[] gave, long now) {
+        NodePorts ports = NetworkManager.get().ports(node);
+        Port[][] byType = ports == null ? null : ports.machinePorts(machinePos);
+        if (byType == null) {
+            return false;
+        }
+        boolean full = false;
+        for (int t = 0; t < byType.length; t++) {
+            Port[] byFace = byType[t];
+            if (byFace == null) {
+                continue;
+            }
+            for (Port port : byFace) {
+                if (port == null) {
+                    continue;
+                }
+                got[t] += port.gotRead + port.got;
+                gave[t] += port.gaveRead + port.gave;
+                full |= countsAsFull(port, now);
+            }
+        }
+        return full;
+    }
+
     /** Um destino com rota, cheio agora. */
     private static boolean countsAsFull(Port port, long now) {
         return port.network != null && port.destination && !port.stopped && isFull(port, now);

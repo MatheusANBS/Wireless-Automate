@@ -50,6 +50,16 @@ public final class FluidStorage extends KeyedStorage<FluidStack> implements Bulk
         return FluidStack.parse(registries, tag).orElse(null);
     }
 
+    @Override
+    protected FluidStack withAmount(FluidStack key, int amount) {
+        return key.copyWithAmount(amount);
+    }
+
+    @Override
+    protected int amountOf(FluidStack view) {
+        return view.getAmount();
+    }
+
     /** O grupo do estoque sem componentes: o fluido. */
     @Override
     protected Object groupOf(FluidStack key) {

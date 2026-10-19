@@ -38,6 +38,8 @@ public abstract class KeyedStorage<K> {
          * Compartilhada entre os salvamentos: quem lê o NBT salvo não o altera.
          */
         @Nullable Tag tag;
+        /** A pilha com a quantidade que {@link #view} devolveu da última vez; trocada (nunca alterada) quando muda. */
+        @Nullable K view;
 
         Entry(K key) {
             this.key = key;
@@ -111,6 +113,34 @@ public abstract class KeyedStorage<K> {
 
     public long count(int index) {
         return entries.get(index).count;
+    }
+
+    /**
+     * A chave do tipo na posição com a quantidade dele (até {@link Integer#MAX_VALUE}), para as visões de
+     * slot ({@code getStackInSlot}, {@code getFluidInTank}), que quem chama não pode alterar. A mesma pilha
+     * volta enquanto a quantidade não muda; quando muda, uma nova toma o lugar e a antiga, que alguém pode
+     * estar guardando para comparar, fica como estava. Sem isso, seria uma pilha nova por chamada (um funil
+     * olha todos os slots a cada transferência).
+     */
+    public K view(int index) {
+        Entry entry = entries.get(index);
+        int amount = (int) Math.min(entry.count, Integer.MAX_VALUE);
+        K view = entry.view;
+        if (view == null || amountOf(view) != amount) {
+            view = withAmount(entry.key, amount);
+            entry.view = view;
+        }
+        return view;
+    }
+
+    /** Uma cópia da chave com a quantidade, para a {@link #view}; só nos que têm visão de slot. */
+    protected K withAmount(K key, int amount) {
+        throw new UnsupportedOperationException(what + " sem visão de slot");
+    }
+
+    /** A quantidade de uma pilha da {@link #view}. */
+    protected int amountOf(K view) {
+        throw new UnsupportedOperationException(what + " sem visão de slot");
     }
 
     public long count(K key) {

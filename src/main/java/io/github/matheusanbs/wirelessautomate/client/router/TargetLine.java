@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.router;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Kind;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
@@ -13,13 +14,15 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A linha Editando do painel do nó, com o Upgrade de Alcance e sem a lista das máquinas à vista: a pílula
  * do alvo de edição (a máquina presa, um grupo ou uma máquina), o ✎ do nome com a caixa dele, o "Tirar
- * redes" ({@link IdleNetworks}) ao lado dela, os botões Voltar a igual às outras, Atualizar (máquina trocada)
- * e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o
+ * redes" ({@link IdleNetworks}) ao lado dela, os botões No mundo (o destaque, {@link HighlightRenderer}), Voltar
+ * a igual às outras, Atualizar (máquina trocada) e Desvincular (em dois cliques) de uma máquina, a dica do alvo, as linhas da lista que abre na pílula e o
  * pedido de troca de alvo.
  */
 final class TargetLine {
@@ -31,10 +34,12 @@ final class TargetLine {
     private final PanelModel model;
     private final PanelLayout layout;
     private final LabelEditor label;
+    private final NodePanel.Actions actions;
 
     TargetLine(PanelModel model, PanelLayout layout, NodePanel.Actions actions) {
         this.model = model;
         this.layout = layout;
+        this.actions = actions;
         this.label = new LabelEditor((target, pos, name) ->
                 actions.send(LabelEditor.payload(actions.containerId(), target, pos, name)));
     }
@@ -80,8 +85,18 @@ final class TargetLine {
         } else if (idle != null) {
             clippedButton(g, font, idle, IdleNetworks.label(), idle.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
+        Hot highlight = layout.hot(Kind.HIGHLIGHT);
+        if (highlight != null) {
+            renderHighlight(g, font, highlight, highlight.contains(mx, my));
+        }
         Hot revert = layout.hot(Kind.REVERT);
-        if (revert != null) {
+        if (revert != null && layout.revertIcon) {
+            boolean active = model.readOnly() == null;
+            GuiPaint.box(g, revert.x(), revert.y(), revert.w(), revert.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET,
+                    revert.contains(mx, my) && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+            RangeRowButtons.arrow(g, revert.x() + (revert.w() - 6) / 2, revert.y() + (revert.h() - 6) / 2, true,
+                    active ? GuiPaint.ACCENT : GuiPaint.DISABLED);
+        } else if (revert != null) {
             clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
         Hot update = layout.hot(Kind.UPDATE);
@@ -94,6 +109,38 @@ final class TargetLine {
             centered(g, font, unlink, tr("range.unlink.armed"), GuiPaint.SELECTED_TEXT);
         } else if (unlink != null) {
             clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
+        }
+    }
+
+    /** O "No mundo": o Olho ciano e a borda ciano com a máquina acesa; vale também só para ler (é só do cliente). */
+    private void renderHighlight(GuiGraphics g, Font font, Hot b, boolean hovered) {
+        boolean lit = highlightLit();
+        int border = lit ? GuiPaint.HIGHLIGHT : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, border);
+        int eyeColor = lit ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED;
+        if (layout.highlightIcon) {
+            GuiPaint.eye(g, b.x() + (b.w() - 5) / 2, b.y() + (b.h() - 5) / 2, eyeColor);
+            return;
+        }
+        GuiPaint.eye(g, b.x() + PanelLayout.TARGET_PAD, b.y() + (b.h() - 5) / 2, eyeColor);
+        int textX = b.x() + PanelLayout.TARGET_PAD + PanelLayout.HIGHLIGHT_EYE;
+        GuiText.draw(g, font, LitFooter.tr("show"), textX, b.y() + (b.h() - 8) / 2, b.x() + b.w() - PanelLayout.TARGET_PAD
+                - textX, GuiPaint.FG);
+    }
+
+    /** A máquina do alvo está acesa no mundo. */
+    boolean highlightLit() {
+        RangeView.MachineView machine = model.targetMachine();
+        ResourceKey<Level> dimension = actions.dimension();
+        return machine != null && dimension != null && HighlightRenderer.isLit(dimension, machine.pos());
+    }
+
+    /** O "No mundo": acende ou apaga a máquina do alvo, com a linha até o roteador do painel. */
+    void toggleHighlight() {
+        RangeView.MachineView machine = model.targetMachine();
+        ResourceKey<Level> dimension = actions.dimension();
+        if (machine != null && dimension != null) {
+            HighlightRenderer.toggle(dimension, machine.pos(), model.snapshot().pos());
         }
     }
 

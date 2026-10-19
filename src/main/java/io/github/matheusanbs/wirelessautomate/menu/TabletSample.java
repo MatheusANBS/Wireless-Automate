@@ -66,13 +66,16 @@ final class TabletSample {
     /**
      * Mede de novo se a última amostra tem {@link TabletMenu#SAMPLE_TICKS} ticks ou mais (ou se nunca mediu): a
      * vazão desde a anterior, quem moveu e quem tem destino cheio, dos nós carregados do índice. Um nó visto pela
-     * primeira vez só guarda o que já moveu.
+     * primeira vez só guarda o que já moveu. Depois de mais de duas amostras sem ninguém pedir (todos os Tablets
+     * fechados), a rodada é só a linha de base: guarda o que cada nó já moveu, sem vazão nem ativos, para a primeira
+     * página não mostrar a média do intervalo inteiro.
      */
     void sampleIfDue(NodeIndex index, long now) {
         if (sampleTick != Long.MIN_VALUE && now - sampleTick < TabletMenu.SAMPLE_TICKS) {
             return;
         }
-        long elapsed = sampleTick == Long.MIN_VALUE ? 1 : Math.max(1, now - sampleTick);
+        boolean baseline = sampleTick == Long.MIN_VALUE || now - sampleTick > 2L * TabletMenu.SAMPLE_TICKS;
+        long elapsed = baseline ? 1 : Math.max(1, now - sampleTick);
         sampleTick = now;
         active.clear();
         rates.clear();
@@ -85,7 +88,7 @@ final class TabletSample {
             }
             NodeKey key = entry.key();
             seen.add(key);
-            if (measure(key, router, elapsed)) {
+            if (measure(key, router, elapsed, baseline)) {
                 active.add(key);
             }
             if (TabletNodes.fullDestinations(router, now) > 0) {
@@ -95,15 +98,20 @@ final class TabletSample {
         lastMoved.keySet().retainAll(seen);
     }
 
-    /** Mede a vazão do nó por tipo; devolve se ele moveu algo desde a amostra anterior. */
-    private boolean measure(NodeKey key, RouterBlockEntity router, long elapsed) {
+    /**
+     * Mede a vazão do nó por tipo; devolve se ele moveu algo desde a amostra anterior. Na linha de base (ou num nó
+     * novo), só guarda o que ele já moveu.
+     */
+    private boolean measure(NodeKey key, RouterBlockEntity router, long elapsed, boolean baseline) {
         long[] last = lastMoved.get(key);
-        if (last == null) {
-            last = new long[TYPES.length];
+        if (last == null || baseline) {
+            if (last == null) {
+                last = new long[TYPES.length];
+                lastMoved.put(key, last);
+            }
             for (ResourceType type : TYPES) {
                 last[type.ordinal()] = router.moved(type);
             }
-            lastMoved.put(key, last);
             return false;
         }
         boolean moved = false;

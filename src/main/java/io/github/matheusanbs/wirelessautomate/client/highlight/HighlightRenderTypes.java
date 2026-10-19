@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL11;
 
 /**
  * Os dois tipos de desenho do destaque das máquinas ({@link HighlightRenderer}): as linhas (arestas e a linha
- * tracejada) e as faces do véu, os dois sem teste e sem gravação de profundidade, para aparecerem através dos
+ * até o roteador) e as faces do véu, os dois sem teste e sem gravação de profundidade, para aparecerem através dos
  * blocos e não esconderem nada que venha depois.
  */
 final class HighlightRenderTypes extends RenderType {

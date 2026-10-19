@@ -816,7 +816,7 @@
   "gui.wirelessautomate.router.range.rename.narration": "Name",
   "gui.wirelessautomate.highlight.show": "In world",
   "gui.wirelessautomate.highlight.eye.on": "Show in the world",
-  "gui.wirelessautomate.highlight.eye.on.tooltip": "Outlines this machine through blocks, with a dashed line to the router · stays lit until you turn it off",
+  "gui.wirelessautomate.highlight.eye.on.tooltip": "Outlines this machine through blocks, with a line to the router · stays lit until you turn it off",
   "gui.wirelessautomate.highlight.eye.off": "Lit in the world",
   "gui.wirelessautomate.highlight.eye.off.tooltip": "Click to turn it off",
   "gui.wirelessautomate.highlight.limit": "%s machines lit at most: the oldest was turned off",

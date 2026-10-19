@@ -816,7 +816,7 @@
   "gui.wirelessautomate.router.range.rename.narration": "Nome",
   "gui.wirelessautomate.highlight.show": "No mundo",
   "gui.wirelessautomate.highlight.eye.on": "Mostrar no mundo",
-  "gui.wirelessautomate.highlight.eye.on.tooltip": "Contorna esta máquina através dos blocos, com uma linha tracejada até o roteador · fica acesa até você apagar",
+  "gui.wirelessautomate.highlight.eye.on.tooltip": "Contorna esta máquina através dos blocos, com uma linha até o roteador · fica acesa até você apagar",
   "gui.wirelessautomate.highlight.eye.off": "Acesa no mundo",
   "gui.wirelessautomate.highlight.eye.off.tooltip": "Clique para apagar",
   "gui.wirelessautomate.highlight.limit": "Limite de %s máquinas acesas: a mais antiga foi apagada",

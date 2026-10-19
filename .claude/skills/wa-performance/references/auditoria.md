@@ -22,8 +22,8 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 
 | Id | Achado | Onde | Ganho | Estado |
 | --- | --- | --- | --- | --- |
-| M1 | Acordar em cascata: centenas de origens acordadas, cada uma varre todos os destinos duas vezes. Acordar as alimentadoras uma vez por tick e guardar "algum destino acordado" por `Layout` | `NodePorts:290-365`, `SourceSleep` | alto (0,3–0,5 ms/tick) | pendente |
-| M2 | Face com controle por redstone remonta as rotas a cada pulso; o sinal vira trava na porta | `RouterBlockEntity:716` | alto nesse caso | pendente |
+| M1 | Acordar em cascata: centenas de origens acordadas, cada uma varre todos os destinos duas vezes. Acordar as alimentadoras uma vez por tick e guardar "algum destino acordado" por `Layout` | `NodePorts:290-365`, `SourceSleep` | alto (0,3–0,5 ms/tick) | feito `0eb40a5` (full: p99 0,057 → 0,008 ms, mod −21%; sparse −15%) |
+| M2 | Face com controle por redstone remonta as rotas a cada pulso; o sinal vira trava na porta | `RouterBlockEntity:716` | alto nesse caso | feito `0eb40a5` (redstone-face: mod 0,237 → 0,137 ms/tick, remontagens 20/s → 0) |
 | M3 | A simulação de inserção varre o destino inteiro a cada entrega; a varredura incremental planejada na spec | `ItemInsertPlan:128-203` | 20–35% da visita | pendente |
 | M4 | Energia e Source consultam todos os destinos; parar nos grupos de prioridade menor quando o atual cobre | `ScalarTransfer:51-73` | médio | pendente |
 | M5 | Carregar ou descarregar chunk remonta a rede inteira (O(origens × destinos) com alcance); juntar avisos ou remontar só o membro | `NetworkManager:136-157, 706`, `NetworkRoutes:205` | alto (picos 1–3 ms) | pendente |

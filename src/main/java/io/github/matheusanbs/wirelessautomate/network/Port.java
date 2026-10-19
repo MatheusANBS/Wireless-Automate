@@ -192,17 +192,22 @@ final class Port {
             return false;
         }
         stopped = false;
+        sourceBackoff.thaw();
+        destinationBackoff.thaw();
         sourceBackoff.wake();
         destinationBackoff.wake();
         idleSlots = 0;
         return true;
     }
 
-    /** Para a porta sem prazo (ver {@link #stopped}). */
+    /**
+     * Para a porta sem prazo (ver {@link #stopped}): os dois {@link Backoff} congelam, então nem o {@code wake()}
+     * de uma entrega na mesma visita a acorda.
+     */
     void stop(long now) {
         stopped = true;
-        sourceBackoff.sleepUntil(now, Long.MAX_VALUE);
-        destinationBackoff.sleepUntil(now, Long.MAX_VALUE);
+        sourceBackoff.freeze();
+        destinationBackoff.freeze();
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

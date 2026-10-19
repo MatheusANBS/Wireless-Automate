@@ -611,6 +611,10 @@ public final class NetworkManager {
             int kept = 0;
             for (int i = 0, n = hungry.size(); i < n; i++) {
                 Port source = hungry.get(i);
+                // Travada pelo redstone durante a visita (um bloco de outro mod que muda o sinal na entrega).
+                if (source.stopped) {
+                    continue;
+                }
                 long time = System.nanoTime();
                 if (!budget.fits(time, source.visitNanos)) {
                     continue;

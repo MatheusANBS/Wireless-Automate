@@ -415,3 +415,19 @@ Ramo `tablet-rede` (commit `b315236`), sobre o `motor-m3-m6`: `./scripts/bench.s
 - O tempo do Tablet no servidor fica igual dentro do ruído (a primeira repetição de cada rodada é sempre a mais alta). O T3 (a amostra e a ordem compartilhadas) só aparece com vários jogadores, que o bench não tem.
 - O µs/visita do motor nesse cenário é bimodal nos dois lados: com a máquina mais carregada (MSPT base alto), o orçamento acaba antes de as 500 origens dormirem, e a visita fica 2 a 5× mais cara. Aconteceu também na base (rodada 3), e a rodada 2, com o MSPT base parecido, dá 11,3 → 13,9, dentro do ±; não é efeito do pacote, que não toca no motor. O `many:500` sem Tablet ficou igual (0,537 ± 0,097 antes; 0,459 ± 0,014 e 0,713 ± 0,214 nas duas rodadas depois, a segunda com o MSPT base a 0,30 ± 0,15).
 - T4, T5, T6 e A8 não têm cenário: a distância do painel, o pulso de redstone com a tela do roteador aberta, a área do Vinculador e as alocações da montagem do índice. Os GameTests (`pagePaletteAndLiveUpdate` e os do painel) provam o comportamento.
+
+## Achados baixos da revisão: porta travada e Backoff congelado (19 de outubro de 2026)
+
+Commit `738d99e` contra o main `6e20de7`: `./scripts/bench.sh full:100:3,sparse:500:3,redstone-face:100:3`, máquina local, depois e então antes (`run/bench/reports/20261019-074803.md` e `20261019-075300.md`, fora do git). O `redstone-face` do main teve uma repetição com pico da máquina (MSPT 1390 ± 2406 ms), então o cenário foi repetido intercalado, antes e depois, com a máquina mais carregada nos dois lados (`20261019-083046.md` e `20261019-083744.md`).
+
+| Cenário | MSPT base antes → depois | Mod média (ms/tick) antes → depois | Mod p99 antes → depois | µs/visita antes → depois |
+| --- | --- | --- | --- | --- |
+| full:100 | 0,168 → 0,183 | 0,0025 ± 0,0006 → 0,0021 ± 0,0003 | 0,0055 → 0,0055 | 5,03 → 4,21 |
+| sparse:500 | 0,159 → 0,147 | 0,0110 ± 0,0026 → 0,0100 ± 0,0026 | 0,151 → 0,130 | 2,70 → 2,47 |
+| redstone-face:100 (intercalado) | 0,750 → 0,682 | 0,533 ± 0,055 → 0,521 ± 0,162 | 1,446 → 1,555 | 130,9 → 112,0 |
+| redstone-face:100 (só depois, máquina folgada) | — → 0,137 | — → 0,112 ± 0,009 | — → 1,021 | — → 4,69 |
+
+### Leitura
+
+- Nada fora do ruído: a mudança no caminho quente é um boolean a mais no `Backoff.wake()` e no laço `hungry`.
+- O `redstone-face` sofre com a carga da máquina (o MSPT base foi de 0,14 a 0,75 entre as rodadas); na rodada intercalada, com a mesma carga dos dois lados, antes e depois ficam iguais dentro do ±.

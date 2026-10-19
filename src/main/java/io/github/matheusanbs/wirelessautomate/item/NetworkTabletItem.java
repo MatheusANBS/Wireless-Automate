@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.item;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.TabletClick;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import java.util.List;
@@ -27,14 +28,25 @@ public class NetworkTabletItem extends Item {
     }
 
     /**
-     * Clique numa máquina: abre o nó dela. No cliente devolve {@code PASS} (não sabe se a máquina está
-     * num roteador); o {@link #use} que vem em seguida não reabre se o nó já abriu.
+     * Clique numa máquina, antes da interação do bloco (que abriria o forno ou o baú): abre o nó dela
+     * ({@link TabletClick}). Um roteador segue para a tela dele. No cliente devolve {@code PASS} (não sabe
+     * se há roteador); o {@link #use} que vem em seguida não reabre se o nó já abriu.
      */
     @Override
-    public InteractionResult useOn(UseOnContext context) {
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         if (context.getLevel() instanceof ServerLevel level && context.getPlayer() instanceof ServerPlayer player
+                && !(level.getBlockState(context.getClickedPos()).getBlock() instanceof RouterBlock)
                 && TabletClick.open(player, level, context.getClickedPos())) {
             return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
+    }
+
+    /** Sem roteador, a interação do bloco ou o {@link #use} seguem; o aviso só sai se chegou até aqui. */
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        if (context.getLevel() instanceof ServerLevel level && context.getPlayer() instanceof ServerPlayer player) {
+            TabletClick.notifyNotLinked(player, level, context.getClickedPos());
         }
         return InteractionResult.PASS;
     }

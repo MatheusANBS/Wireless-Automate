@@ -23,9 +23,6 @@ import net.neoforged.neoforge.capabilities.Capabilities;
  * consulta ao índice e aos seis vizinhos, nada por tick.
  */
 public final class TabletClick {
-    /** A posição da aba Lista ({@code TabletScreen.Tab.LIST}). */
-    private static final int LIST_TAB = 0;
-
     private TabletClick() {
     }
 
@@ -34,6 +31,9 @@ public final class TabletClick {
         List<RouterBlockEntity> routers = new ArrayList<>(1);
         for (Direction d : Direction.values()) {
             BlockPos neighbor = pos.relative(d);
+            if (!level.isLoaded(neighbor)) {
+                continue;
+            }
             BlockState state = level.getBlockState(neighbor);
             if (state.getBlock() instanceof RouterBlock && state.getValue(RouterBlock.FACING) == d
                     && RouterBlock.attachedPos(state, neighbor).equals(pos)
@@ -45,13 +45,17 @@ public final class TabletClick {
     }
 
     /**
-     * Abre o Tablet no nó da máquina em {@code pos}, se algum roteador dela o jogador vê. Sem nenhum, e a
-     * máquina tendo item, fluido ou energia, avisa na barra de ação. Devolve se abriu o nó.
+     * Abre o Tablet no nó da máquina em {@code pos}, se algum roteador dela o jogador vê. Sem nenhum, o
+     * aviso fica para o {@link #notifyNotLinked}. Devolve se abriu o nó.
      */
     public static boolean open(ServerPlayer player, ServerLevel level, BlockPos pos) {
         List<RouterBlockEntity> routers = attachedRouters(level, pos);
         int attached = routers.size();
-        routers.addAll(RemoteIndex.get().routersAt(level, pos));
+        for (RouterBlockEntity router : RemoteIndex.get().routersAt(level, pos)) {
+            if (!routers.contains(router)) {
+                routers.add(router);
+            }
+        }
         NodeIndex index = NodeIndex.get(level.getServer());
         NetworkSavedData data = NetworkSavedData.get(level.getServer());
         boolean operator = player.hasPermissions(2);
@@ -73,20 +77,19 @@ public final class TabletClick {
             TabletMenu.open(player, key, target);
             return true;
         }
-        if (hasTransfer(level, pos)) {
+        return false;
+    }
+
+    /** Avisa na barra de ação, se a máquina tem item, fluido ou energia, que ela não está num roteador do jogador. */
+    public static void notifyNotLinked(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        if (level.isLoaded(pos) && hasTransfer(level, pos)) {
             player.displayClientMessage(Component.translatable("item.wirelessautomate.network_tablet.not_linked"), true);
         }
-        return false;
     }
 
     private static boolean hasTransfer(ServerLevel level, BlockPos pos) {
         return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null) != null
                 || level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null) != null
                 || level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, null) != null;
-    }
-
-    /** A aba em que o clique abre o Tablet. */
-    static int listTab() {
-        return LIST_TAB;
     }
 }

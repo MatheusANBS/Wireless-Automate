@@ -41,9 +41,8 @@ public final class MachineNames {
             }
         }
         MachineGroup group = remotes.group(machine.group());
-        Component block = group == null ? Component.literal("?")
-                : RouterBlock.machineName(BuiltInRegistries.BLOCK.get(group.block()));
-        return Component.translatable("gui.wirelessautomate.router.range.machine.name", block, number);
+        return Component.translatable("gui.wirelessautomate.router.range.machine.name",
+                group == null ? Component.literal("?") : group(group), number);
     }
 
     /** O nome do grupo da máquina em {@code pos}; "?" se ela não está na lista. */

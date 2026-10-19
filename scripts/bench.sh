@@ -2,7 +2,7 @@
 # Roda o benchmark do Wireless Automate num servidor dedicado de desenvolvimento, sem jogador.
 #
 #   ./scripts/bench.sh                    todos os cenários (padrão abaixo), 3 repetições cada
-#   ./scripts/bench.sh "many:500:3:soph"  só as tarefas dadas: cenário[:n[:reps[:vanilla|soph]]], separadas por ; ou ,
+#   ./scripts/bench.sh "many:500:3:soph"  só as tarefas dadas: cenário[:n[:reps[:vanilla|soph|wa]]], separadas por ; ou ,
 #
 # Variáveis opcionais (ticks): WA_BENCH_BASELINE (100), WA_BENCH_WARMUP (do cenário), WA_BENCH_MEASURE (200).
 # WA_BENCH_SPRINT=1 roda os ticks sem pausa (/tick sprint): só para perfis, os números de vazão por

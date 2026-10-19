@@ -19,7 +19,7 @@ A rodada completa na máquina local (seção "Máquina local: antes e depois") c
 
 ```bash
 ./scripts/bench.sh                                # todos os cenários, 3 repetições (cerca de 30 min)
-./scripts/bench.sh many:500:3:soph,idle:500:3     # tarefas escolhidas: cenário[:n[:reps[:vanilla|soph]]]
+./scripts/bench.sh many:500:3:soph,idle:500:3     # tarefas escolhidas: cenário[:n[:reps[:vanilla|soph|wa]]]
 WA_BENCH_MEASURE=400 ./scripts/bench.sh rebuild   # mais ticks de medição
 WA_BENCH_JFR=1 WA_BENCH_SPRINT=1 ./scripts/bench.sh many:500:1:soph   # perfil do Java Flight Recorder
 ```
@@ -27,7 +27,7 @@ WA_BENCH_JFR=1 WA_BENCH_SPRINT=1 ./scripts/bench.sh many:500:1:soph   # perfil d
 O script prepara `run/bench` (eula, `server.properties` com um mundo plano novo, porta 25599, sem mobs e sem autosave) e sobe `./gradlew runBenchServer` com a variável `WA_BENCH`. O mod mede o servidor vazio, roda as tarefas uma depois da outra, grava o relatório em `run/bench/reports/<data>.md` (com o log do servidor ao lado) e para o servidor.
 
 - **Run `benchServer`** (`build.gradle`, bloco "Benchmark"): copia o Sophisticated Storage, o Sophisticated Core e o Spark do Maven do Modrinth para `run/bench/mods`. O `runClient` também carrega o Sophisticated Storage e o Sophisticated Core (para testar à mão); só o Spark é exclusivo do benchmark. Os GameTests não carregam nenhum deles. O run usa heap de 2 GB e liga `-Dwirelessautomate.bench=true` (as máquinas de teste do cenário misto).
-- **No jogo:** `/wa bench run <cenário> [n] [reps] [vanilla|soph]`, `/wa bench status` e `/wa bench stop`, com permissão 4. O comando monta a cena em x = z = 20000, y = 200, sobrescreve o que houver ali e desmonta tudo no fim. É para mundo de teste. O relatório sai no chat, no log e em `wirelessautomate-bench/` na pasta do servidor.
+- **No jogo:** `/wa bench run <cenário> [n] [reps] [vanilla|soph|wa]`, `/wa bench status` e `/wa bench stop`, com permissão 4. O comando monta a cena em x = z = 20000, y = 200, sobrescreve o que houver ali e desmonta tudo no fim. É para mundo de teste. O relatório sai no chat, no log e em `wirelessautomate-bench/` na pasta do servidor.
 - **Variáveis:** `WA_BENCH_BASELINE` (100), `WA_BENCH_WARMUP` (padrão do cenário) e `WA_BENCH_MEASURE` (200) dão o tamanho das fases em ticks. `WA_BENCH_SPRINT=1` roda com `/tick sprint`, só para perfis. `WA_BENCH_JFR=1` grava `run/bench/reports/<data>.jfr`. Tudo fica local; nada é enviado para fora (o Spark só imprime o `spark tps` no log).
 
 ## Método
@@ -74,11 +74,13 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `redstone` | Como `many` (padrão 100 nós), com um bloco de redstone em cima de cada roteador que liga e desliga a cada tick (relógio de 2 ticks); nenhuma face usa redstone | Remontagens por segundo causadas por sinal que ninguém usa | 0 remontagens/s |
 | `redstone-face` | Como `redstone`, com as faces das origens em redstone alto: cada pulso liga ou desliga as portas | Custo do sinal numa face com controle por redstone | Sem remontagem por pulso |
 | `tablet` | Como `many` (padrão 1.000 nós), com um Tablet aberto por um jogador falso dono da rede, sincronizado a cada tick | Custo do Tablet aberto, fora do laço do mod (coluna "Tablet") | Bem abaixo do orçamento |
+| `hub` | n nós (padrão 250): o nó 1 é um Baú do mod Elite de destino, com um roteador; todos os outros são origens cheias de pedregulho, na mesma rede | Muitas origens num mesmo Baú: cada inserção marca o Baú e avisa os vizinhos (S1 da auditoria) | Abaixo do orçamento |
+| `chesttypes` | Pares (padrão 20): origem cheia de pedregulho; destino Baú do mod Elite com 2.000 tipos de papel (um nome cada) e lista branca de pedregulho com estoque de 1.000.000, nunca atingido; o reenchimento tira só o pedregulho | Estoque sem componentes num Baú com milhares de tipos, contado a cada entrega (S2 da auditoria) | Abaixo do orçamento |
 | `resonator-gen` | n Ressonadores de Sinal Ultimate (padrão 100), montados, sintonizados e com 8 Lapidados; um roteador Ultimate na Porta de Energia de cada um, para uma Bateria Ultimate, cada par numa rede | Custo do Ressonador gerando, com o transporte da energia | Bem abaixo do orçamento |
 | `resonator-idle` | Os mesmos (padrão 500), sem roteador: o buffer enche em 10 s e para | Custo de existir do Ressonador | Perto de 0 |
 | `resonator-event` | 50 Ressonadores ociosos; no meio da medição, um canto de cada casca sai no mesmo tick e volta 40 ticks depois | Pico de um tick com todas as revalidações juntas | Um pico de poucos ms, nunca por tick |
 
-Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots.
+Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` não roda com `wa` (mede a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
 
 Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack`, `redstone` e `tablet`):
 

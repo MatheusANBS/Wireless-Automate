@@ -15,7 +15,10 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.netty.buffer.Unpooled;
@@ -83,6 +86,10 @@ final class BenchScene {
     static final int CHEST_TYPES_STOCK = 1_000_000;
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+    /** Lado da célula de cada roteador no cenário de alcance: a máquina presa no meio e as remotas em volta. */
+    private static final int RANGE_CELL = 9;
+    /** Máquinas remotas vinculadas a cada roteador no cenário de alcance. */
+    static final int RANGE_MACHINES = 64;
 
     /** {@code RESONATOR} é a Porta de Energia de um Ressonador e {@code BATTERY} a Bateria dele ({@link BenchResonators}). */
     enum Machine { SMALL, BIG, CHEST, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
@@ -156,6 +163,10 @@ final class BenchScene {
             planResonators(count);
             return;
         }
+        if (scenario == BenchScenario.RANGE) {
+            planRange(count);
+            return;
+        }
         int width = scenario.bigInventories() && storage.bigIsDoubleChest() ? 2 : 1;
         int side = (int) Math.ceil(Math.sqrt(count));
         for (int i = 0; i < count; i++) {
@@ -184,6 +195,18 @@ final class BenchScene {
             nodes.add(new Node(i, machine, machine.above(), type, source, kind));
         }
         max = ORIGIN.offset(side * width, scenario.clocked() ? 2 : 1, (count + side - 1) / side);
+        refilled = new long[count];
+    }
+
+    /** {@code count} células de alcance, cada uma com a máquina presa (destino) no meio. */
+    private void planRange(int count) {
+        int side = (int) Math.ceil(Math.sqrt(count));
+        int half = RANGE_CELL / 2;
+        for (int i = 0; i < count; i++) {
+            BlockPos machine = ORIGIN.offset((i % side) * RANGE_CELL + half, 0, (i / side) * RANGE_CELL + half);
+            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, false, Machine.SMALL));
+        }
+        max = ORIGIN.offset(side * RANGE_CELL, 1, ((count + side - 1) / side) * RANGE_CELL);
         refilled = new long[count];
     }
 
@@ -234,6 +257,9 @@ final class BenchScene {
             level.setBlock(node.router(), router, PLACE_FLAGS);
             if (level.getBlockEntity(node.router()) instanceof RouterBlockEntity entity) {
                 configure(node, entity);
+                if (scenario == BenchScenario.RANGE) {
+                    linkRemotes(node, entity);
+                }
             }
         }
     }
@@ -313,6 +339,36 @@ final class BenchScene {
         } else if (scenario == BenchScenario.CHEST_TYPES && !node.source()) {
             router.setFilter(ResourceType.ITEM, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
                     List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), CHEST_TYPES_STOCK))));
+        }
+    }
+
+    /**
+     * Cenário de alcance: o Upgrade de Alcance e {@link #RANGE_MACHINES} barris vazios em volta da máquina presa,
+     * vinculados (um grupo só, o dos barris) com o lado de cima em Extrair. A rede entra no {@link #attach}.
+     */
+    private void linkRemotes(Node node, RouterBlockEntity router) {
+        router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+        int half = RANGE_CELL / 2;
+        int linked = 0;
+        BlockState barrel = Blocks.BARREL.defaultBlockState();
+        for (int dx = -half; dx <= half && linked < RANGE_MACHINES; dx++) {
+            for (int dz = -half; dz <= half && linked < RANGE_MACHINES; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                BlockPos pos = node.machine().offset(dx, 0, dz);
+                level.setBlock(pos, barrel, PLACE_FLAGS);
+                extraBlocks.add(pos);
+                if (router.linkMachine(pos)) {
+                    linked++;
+                }
+            }
+        }
+        RemoteMachines remotes = router.remoteMachines();
+        if (!remotes.machines().isEmpty()) {
+            int group = remotes.machines().get(0).group();
+            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                    RedstoneMode.IGNORE);
         }
     }
 

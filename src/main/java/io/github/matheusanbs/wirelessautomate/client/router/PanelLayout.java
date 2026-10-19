@@ -20,8 +20,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A geometria do painel do nó ({@link NodePanel}): os retângulos das abas, do cubo e do resto, e as
- * áreas que respondem ao mouse ({@link Hot}), recalculadas a cada quadro pelo snapshot, pela aba e pelo
- * espaço ({@link #arrange}). Quem desenha e quem responde ao mouse lê as posições daqui.
+ * áreas que respondem ao mouse ({@link Hot}), recalculadas pelo snapshot, pela aba e pelo espaço
+ * ({@link #arrange}) uma vez por quadro e a cada evento ({@link NodePanel}). Quem desenha e quem responde ao
+ * mouse lê as posições daqui.
  */
 final class PanelLayout {
     static final int TAB_H = 15;
@@ -73,7 +74,7 @@ final class PanelLayout {
     private int noticeH = NoticeBand.LINE_H;
     int bodyH;
 
-    // o que arrange() calcula a cada quadro
+    // o que arrange() calcula
     final List<Hot> hots = new ArrayList<>();
     TabLayout.Mode tabMode = TabLayout.Mode.FULL;
     int cellW;

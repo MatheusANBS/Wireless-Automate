@@ -45,7 +45,7 @@ final class PanelLayout {
     private static final int DROP_TEXT_PAD = 15;
     private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, IDLE_NETWORKS, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT,
+    enum Kind { TAB, SUMMARY, FACE, TARGET, RENAME, IDLE_NETWORKS, REVERT, UPDATE, UNLINK, MODE, NETWORK, FILTER, EDIT,
         PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
@@ -227,7 +227,7 @@ final class PanelLayout {
     }
 
     /**
-     * A linha Editando, com o "Tirar redes" na ponta quando ele vale, e, numa máquina do alcance, os botões
+     * A linha Editando, com o ✎ do nome (grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando ele vale, e, numa máquina do alcance, os botões
      * dela; devolve o topo do que vem depois. Com a lista das máquinas à vista ao lado, a linha não aparece:
      * a lista marca o alvo e tem os botões.
      */
@@ -237,8 +237,18 @@ final class PanelLayout {
             targetY = y;
             int labelW = font.width(PanelModel.panelTr("target")) + 5;
             int pillW = w - labelW;
+            int right = x + w;
+            boolean rename = model.readOnly() == null && !model.snapshot().target().attached();
+            int renameW = rename ? ROW_H + GAP : 0;
             if (model.readOnly() == null && IdleNetworks.shown(model.snapshot())) {
-                pillW -= arrangeIdleNetworks(font, model, x + w, y, pillW);
+                int used = arrangeIdleNetworks(font, model, right, y, pillW - renameW);
+                pillW -= used;
+                right -= used;
+            }
+            if (rename) {
+                // o ✎ do nome do grupo ou da máquina, logo depois da pílula
+                hots.add(new Hot(Kind.RENAME, right - ROW_H, y, ROW_H, ROW_H, 0));
+                pillW -= renameW;
             }
             hots.add(new Hot(Kind.TARGET, x + labelW, y, pillW, ROW_H, 0));
             y += ROW_H + GAP;

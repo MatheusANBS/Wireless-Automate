@@ -333,6 +333,9 @@ public final class TabletList {
     boolean mouseClicked(double mx, double my, int button) {
         layout.arrange();
         NodePanel p = chosenPanel.current();
+        if (p != null && p.labelClick(mx, my, button)) {
+            return true;
+        }
         if (p != null && p.popupOpen()) {
             return p.mouseClicked(mx, my, button);
         }
@@ -435,6 +438,12 @@ public final class TabletList {
     /** O teclado da Lista (especificação, "Teclado"); {@code false} deixa a tecla para a busca ou a tela. */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         return keys.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /** Uma letra para a caixa do nome aberta no painel; {@code false} deixa a letra para a busca. */
+    boolean charTyped(char codePoint, int modifiers) {
+        NodePanel p = chosenPanel.current();
+        return p != null && p.charTyped(codePoint, modifiers);
     }
 
     /**

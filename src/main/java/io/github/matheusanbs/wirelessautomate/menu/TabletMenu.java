@@ -264,6 +264,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 buf -> created[0].writeOpenData(buf));
     }
 
+    /** Abre o Tablet na Lista, com o nó escolhido e o alvo de edição (o clique numa máquina). */
+    public static void open(ServerPlayer player, NodeKey node, EditTargetRef target) {
+        State saved = TabletPlayers.saved(player.getUUID());
+        TabletPlayers.save(player.getUUID(), new State(TabletClick.listTab(),
+                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target));
+        open(player);
+    }
+
     /** O que vai no buffer de abertura: o snapshot, a aba restaurada e o nó escolhido restaurado. */
     public void writeOpenData(RegistryFriendlyByteBuf buf) {
         TabletSnapshot.STREAM_CODEC.encode(buf, snapshot);

@@ -178,6 +178,23 @@ public final class RemoteIndex {
         }
     }
 
+    /**
+     * Os roteadores que têm a máquina em {@code pos} como remota ativa, numa lista nova (só para o clique
+     * do Tablet, nunca no motor). As de fora do raio ou do limite não aparecem: não estão no índice.
+     */
+    public List<RouterBlockEntity> routersAt(Level level, BlockPos pos) {
+        LevelIndex byLevel = levels.get(level);
+        List<Link> links = byLevel == null ? null : byLevel.byPos.get(pos.asLong());
+        if (links == null) {
+            return List.of();
+        }
+        List<RouterBlockEntity> routers = new ArrayList<>(links.size());
+        for (Link link : links) {
+            routers.add(link.router);
+        }
+        return routers;
+    }
+
     /** Para GameTests e diagnóstico: {@code router} está registrado para a máquina em {@code pos}. */
     public boolean isIndexed(RouterBlockEntity router, BlockPos pos) {
         Level level = router.getLevel();

@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.*
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletClick;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -104,24 +105,79 @@ public final class TabletClickGameTests {
                 .thenSucceed();
     }
 
-    /** Sem acesso ao roteador: nada abre, e a barra de ação diz que a máquina não está num roteador do jogador. */
+    private static InteractionResult useTablet(GameTestHelper helper, TestPlayers.MenuPlayer player, BlockPos relative) {
+        BlockPos pos = helper.absolutePos(relative);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        return player.gameMode.useItemOn(player, helper.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+    }
+
+    private static boolean notLinkedNotice(TestPlayers.MenuPlayer player) {
+        return player.actionBar != null && player.actionBar.getContents() instanceof TranslatableContents contents
+                && contents.getKey().equals("item.wirelessautomate.network_tablet.not_linked");
+    }
+
+    /**
+     * Sem roteador que o jogador veja, pelo caminho real do jogo: o forno vinculado a um roteador alheio abre a
+     * interface dele e nunca o Tablet; a composteira (capability e nenhuma interface) mostra o aviso na barra de ação.
+     */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void tabletWithoutAccessOpensNothing(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos composter = new BlockPos(2, 1, 2);
+        helper.setBlock(composter, Blocks.COMPOSTER);
         TestPlayers.MenuPlayer player = tabletPlayer(helper);
         NodeIndex.placedBy(router, UUID.randomUUID());
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     linkTwo(helper, router);
-                    helper.assertFalse(click(helper, player, FURNACE_A), "abriu o nó alheio");
-                    helper.assertFalse(click(helper, player, CHEST), "abriu o nó alheio pela presa");
-                    TabletClick.notifyNotLinked(player, helper.getLevel(), helper.absolutePos(FURNACE_A));
-                    helper.assertTrue(player.containerMenu == player.inventoryMenu, "abriu um menu");
-                    helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
-                            instanceof TranslatableContents contents
-                            && contents.getKey().equals("item.wirelessautomate.network_tablet.not_linked"),
-                            "sem o aviso na barra de ação");
+                    useTablet(helper, player, FURNACE_A);
+                    useTablet(helper, player, CHEST);
+                    helper.assertFalse(player.containerMenu instanceof TabletMenu, "abriu o nó alheio");
+                    TabletMenu.State state = TabletMenu.savedState(player.getUUID());
+                    helper.assertTrue(state == null || state.chosen() == null, "escolheu o nó alheio");
+                    player.actionBar = null;
+                    player.containerMenu = player.inventoryMenu;
+                    useTablet(helper, player, composter);
+                    helper.assertTrue(player.containerMenu == player.inventoryMenu, "a composteira abriu um menu");
+                    helper.assertTrue(notLinkedNotice(player), "sem o aviso na barra de ação");
+                })
+                .thenSucceed();
+    }
+
+    /** O Tablet clicado num roteador abre a tela do roteador, não o Tablet. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void tabletOnRouterOpensRouterScreen(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        TestPlayers.MenuPlayer player = tabletPlayer(helper);
+        NodeIndex.placedBy(router, player.getUUID());
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    useTablet(helper, player, ROUTER);
+                    helper.assertTrue(player.containerMenu instanceof RouterMenu, "não abriu a tela do roteador");
+                })
+                .thenSucceed();
+    }
+
+    /** Depois de o clique numa remota abrir o Tablet, o {@code use()} que o cliente manda em seguida não reabre. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void tabletUseAfterClickDoesNotReopen(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        TestPlayers.MenuPlayer player = tabletPlayer(helper);
+        NodeIndex.placedBy(router, player.getUUID());
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    linkTwo(helper, router);
+                    useTablet(helper, player, FURNACE_B);
+                    helper.assertTrue(player.containerMenu instanceof TabletMenu, "o clique não abriu o Tablet");
+                    int id = player.containerMenu.containerId;
+                    player.gameMode.useItem(player, helper.getLevel(), player.getMainHandItem(),
+                            InteractionHand.MAIN_HAND);
+                    helper.assertTrue(player.containerMenu instanceof TabletMenu
+                            && player.containerMenu.containerId == id, "o use() reabriu o Tablet");
                 })
                 .thenSucceed();
     }

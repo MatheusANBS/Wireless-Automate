@@ -36,6 +36,8 @@ public final class Config {
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
+    /** Prazo, em dias de servidor ligado, do conteúdo de um armazenamento quebrado ({@code StorageSavedData}). */
+    public static final ModConfigSpec.IntValue STORAGE_STASH_EXPIRY_DAYS;
 
     public static final ModConfigSpec.LongValue CRYSTAL_LIFE_TICKS;
     public static final ModConfigSpec.LongValue CUT_CRYSTAL_LIFE_TICKS;
@@ -144,6 +146,12 @@ public final class Config {
             STORAGE_CAPACITY.put(kind, byTier);
             builder.pop();
         }
+        STORAGE_STASH_EXPIRY_DAYS = builder
+                .comment("Dias de servidor ligado que o conteúdo de um armazenamento quebrado fica guardado no servidor "
+                        + "esperando o item ser colocado (0 = para sempre). Vencido, o conteúdo some: o item que ainda "
+                        + "exista nasce vazio ao ser colocado. Carregar o item no inventário renova o prazo uma vez por dia; "
+                        + "num baú ou num disco, não. É também o prazo do /wa storage recover.")
+                .defineInRange("stashExpiryDays", 90, 0, 36_500);
         builder.pop();
 
         builder.push("resonator");

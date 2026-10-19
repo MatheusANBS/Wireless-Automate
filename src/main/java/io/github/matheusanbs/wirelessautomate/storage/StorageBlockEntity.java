@@ -14,6 +14,7 @@ import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -48,6 +49,8 @@ public abstract class StorageBlockEntity extends BlockEntity {
     private int filterVersion;
     /** Já está na fila do {@link StorageNeighbors} neste tick. */
     boolean neighborsQueued;
+    /** Um item com a referência deste conteúdo foi feito ou vai ser feito pela quebra ({@link #stash}). */
+    private boolean dropExpected;
 
     protected StorageBlockEntity(BlockEntityType<?> type, StorageKind kind, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -167,12 +170,30 @@ public abstract class StorageBlockEntity extends BlockEntity {
      * ({@code removeBlock}, que chama isto) <b>antes</b> de a loot table montar o drop
      * ({@code playerDestroy}), lendo este mesmo block entity. Esvaziado, o item cairia sem a
      * referência e o conteúdo ficaria órfão. O block entity é descartado logo depois.
+     *
+     * <p>Só guarda se um item com a referência foi feito ({@link #collectImplicitComponents}: a loot table da
+     * explosão, de {@code destroyBlock} ou da broca de outro mod, que roda antes de tirar o bloco, e o drop do
+     * próprio bloco no criativo) ou vai ser ({@link #expectDrop}: a loot table do sobrevivência, que roda
+     * depois). Sem drop nenhum ({@code /setblock}, {@code /fill}), o conteúdo some com o bloco e o
+     * {@link StorageSavedData} não cresce à toa.
      */
     void stash() {
         if (isEmptyContents() || !(level instanceof ServerLevel server)) {
             return;
         }
-        StorageSavedData.get(server.getServer()).put(storageId(), kind, tier(), saveContents(server.registryAccess()));
+        if (!dropExpected) {
+            WirelessAutomate.LOGGER.info("{} em {} saiu do mundo sem drop: {} unidades em {} tipos descartadas",
+                    kind.getSerializedName(), worldPosition, total(), types());
+            return;
+        }
+        MinecraftServer minecraft = server.getServer();
+        StorageSavedData.get(minecraft).put(storageId(), kind, tier(), saveContents(server.registryAccess()),
+                StorageSavedData.now(minecraft));
+    }
+
+    /** A quebra vai rodar a loot table depois de tirar o bloco (sobrevivência com a ferramenta certa). */
+    void expectDrop() {
+        dropExpected = true;
     }
 
     @Override
@@ -207,6 +228,8 @@ public abstract class StorageBlockEntity extends BlockEntity {
         super.collectImplicitComponents(components);
         if (!isEmptyContents()) {
             components.set(ModDataComponents.STORAGE_CONTENTS.get(), new StorageContents(storageId(), types(), total()));
+            // Um item com a referência existe: se o bloco sair agora, o conteúdo vai para o StorageSavedData.
+            dropExpected = true;
         }
         if (!filter.isEmpty()) {
             components.set(ModDataComponents.STORAGE_FILTER.get(), filter);

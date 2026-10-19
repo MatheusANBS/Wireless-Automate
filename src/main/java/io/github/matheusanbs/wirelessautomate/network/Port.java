@@ -82,10 +82,12 @@ final class Port {
     /** O controle por redstone da face, lido com a configuração. */
     RedstoneMode redstone = RedstoneMode.IGNORE;
     /**
-     * O sinal do roteador desliga a face: a porta fica nas rotas, mas dorme sem prazo como origem e como destino, e
-     * nada a acorda até o sinal voltar ({@link #applyRedstone}). Assim um pulso de redstone não remonta as rotas.
+     * Parada: o sinal do roteador desliga a face ({@link #applyRedstone}), ou o nó saiu do motor e as rotas ainda
+     * não foram remontadas ({@link #stop}). A porta fica nas rotas, mas dorme sem prazo como origem e como destino,
+     * e nenhum aviso a acorda. Assim um pulso de redstone não remonta as rotas, e a saída de um nó pode esperar a
+     * remontagem adiada.
      */
-    boolean redstoneOff;
+    boolean stopped;
 
     // Campos de rota, refeitos pela montagem da rede. Os da configuração da face (rede, modo,
     // prioridade, filtro, tier, máquina) só são relidos quando o nó muda (ver NodePorts#collected).
@@ -182,19 +184,25 @@ final class Port {
      */
     boolean applyRedstone(boolean powered, long now) {
         boolean off = !redstone.allows(powered);
-        if (off == redstoneOff) {
+        if (off == stopped) {
             return false;
         }
-        redstoneOff = off;
         if (off) {
-            sourceBackoff.sleepUntil(now, Long.MAX_VALUE);
-            destinationBackoff.sleepUntil(now, Long.MAX_VALUE);
+            stop(now);
             return false;
         }
+        stopped = false;
         sourceBackoff.wake();
         destinationBackoff.wake();
         idleSlots = 0;
         return true;
+    }
+
+    /** Para a porta sem prazo (ver {@link #stopped}). */
+    void stop(long now) {
+        stopped = true;
+        sourceBackoff.sleepUntil(now, Long.MAX_VALUE);
+        destinationBackoff.sleepUntil(now, Long.MAX_VALUE);
     }
 
     /** Mesma máquina e mesma face: entregar aqui seria devolver o que acabou de sair. */

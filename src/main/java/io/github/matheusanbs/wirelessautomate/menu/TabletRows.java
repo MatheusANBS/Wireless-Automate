@@ -25,7 +25,7 @@ import net.minecraft.resources.ResourceLocation;
  * <p>No pacote, cada linha começa num byte: o tipo nos dois bits de baixo, as marcas nos de cima e, no último, se o
  * nó de cima é o mesmo da linha anterior (senão vem o índice dele). Os blocos dos grupos entram na paleta de
  * máquinas da página, e a posição de uma máquina vai como {@code long}: uma linha de máquina sem rótulo leva 10 a
- * 11 bytes, e o estado e a vazão dela, 2 bytes parada e 4 a 6 movendo um tipo.
+ * 11 bytes, e o estado e a vazão dela, 2 bytes parada e 3 a 6 movendo um tipo.
  *
  * @param rows  as linhas, na ordem da tela
  * @param lives o estado e a vazão de cada {@link Machine}, na ordem delas
@@ -98,10 +98,13 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
         REPLACED,
         /** No lugar há outro bloco, sem capability, ou o do grupo sem o block entity. */
         MISSING,
+        /**
+         * Alguma porta da máquina entregou ou recebeu desde a amostra anterior (na primeira medida, sem amostra
+         * anterior, moveu há menos de um segundo ou tem uma origem acordada).
+         */
+        MOVING,
         /** Algum destino da máquina dorme depois de recusas seguidas. */
         FULL,
-        /** Alguma porta da máquina entregou ou recebeu desde a amostra anterior. */
-        MOVING,
         /** Carregada e no alcance, sem mover nada. */
         SLEEPING
     }

@@ -1,30 +1,22 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
-import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.ByteArrayOutputStream;
@@ -35,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -45,9 +36,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -65,8 +54,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -123,12 +110,7 @@ final class BenchScene {
     /** Blocos de redstone que ligam e desligam ({@link BenchScenario#clocked}), um acima de cada roteador. */
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
-    private @Nullable TabletMenu tablet;
-    private long tabletBytes;
-    /** Pacotes do Tablet aberto desde a abertura, por tipo (a primeira página vai na abertura, fora daqui). */
-    private int tabletHeaders;
-    private int tabletPages;
-    private int tabletLives;
+    private final BenchTablet tablet = new BenchTablet(this);
     /** Os barris vinculados que recebem os itens no {@link BenchScenario#TABLET_RANGE}, esvaziados no reenchimento. */
     private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
@@ -448,88 +430,21 @@ final class BenchScene {
         }
     }
 
-    /**
-     * Abre o Tablet para um jogador falso dono da rede da cena ({@link BenchScenario#tablet()}): ele vê
-     * todos os nós dela. O menu é criado direto (sem pacote de abertura) e sincronizado por
-     * {@link #syncTablet}, como o {@code ServerPlayer} faz a cada tick com a tela aberta.
-     */
     void openTablet() {
-        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(OWNER, "[wa-bench]"));
-        player.setPos(ORIGIN.getX() + 0.5, ORIGIN.getY() + 2, ORIGIN.getZ() + 0.5);
-        TabletMenu menu = new TabletMenu(1, player.getInventory(), player);
-        tablet = menu;
-        if (scenario == BenchScenario.TABLET_RANGE) {
-            openRangeRows(menu);
-        }
+        tablet.open();
     }
 
-    /**
-     * No {@link BenchScenario#TABLET_RANGE}, o que o jogador falso abre na Lista do Tablet logo depois de abri-lo: 4
-     * roteadores e, no primeiro, o grupo dos barris com "Mostrar todas", pelo mesmo caminho do
-     * {@code TabletTreePayload}.
-     */
-    private void openRangeRows(TabletMenu menu) {
-        int opened = 0;
-        for (Node node : nodes) {
-            RouterBlockEntity router = router(node);
-            if (router == null || opened >= RANGE_ROWS_OPENED) {
-                continue;
-            }
-            NodeIndex.NodeKey key = NodeIndex.NodeKey.of(level, router.getBlockPos());
-            menu.tree(TabletTreePayload.Action.OPEN, key, 0);
-            RemoteMachines remotes = router.remoteMachines();
-            if (opened == 0 && remotes.groupCount() > 0) {
-                menu.tree(TabletTreePayload.Action.SHOW_ALL, key, remotes.groupAt(0).id());
-            }
-            opened++;
-        }
-    }
-
-    /** Roteadores abertos na árvore pelo jogador falso do {@link BenchScenario#TABLET_RANGE}. */
-    private static final int RANGE_ROWS_OPENED = 4;
-
-    /**
-     * Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. Os pacotes que sairiam são codificados
-     * depois, fora do tempo medido, para somar os bytes ({@link #tabletBytes}).
-     */
     long syncTablet() {
-        TabletMenu menu = tablet;
-        if (menu == null) {
-            return 0;
-        }
-        // O que o broadcastChanges do menu faz no servidor, menos o envio: o jogador falso não tem
-        // canal de rede (o hasChannel dá NullPointerException) e o menu não tem slots.
-        long start = System.nanoTime();
-        List<CustomPacketPayload> payloads = menu.pollPayloads();
-        long nanos = System.nanoTime() - start;
-        for (CustomPacketPayload payload : payloads) {
-            tabletBytes += encodedSize(payload);
-            if (payload instanceof TabletHeaderPayload) {
-                tabletHeaders++;
-            } else if (payload instanceof TabletPagePayload) {
-                tabletPages++;
-            } else if (payload instanceof TabletLivePayload) {
-                tabletLives++;
-            }
-        }
-        return nanos;
+        return tablet.sync();
     }
 
-    /**
-     * O que o Tablet aberto mandou desde a abertura e a página que o jogador falso tem agora (para a linha da
-     * repetição); vazio sem Tablet.
-     */
     String tabletPayloadLine() {
-        TabletMenu menu = tablet;
-        if (menu == null) {
-            return "";
-        }
-        TabletSnapshot page = menu.snapshot();
-        return String.format(Locale.ROOT,
-                "  Tablet: %d cabeçalho(s), %d página(s), %d pacote(s) de estado e vazão depois da abertura;"
-                        + " página com %d nós e %d linhas da árvore (%d casam, %d no índice visível)",
-                tabletHeaders, tabletPages, tabletLives, page.nodes().size(), page.rows().rows().size(),
-                page.matchingNodes(), page.totalNodes());
+        return tablet.payloadLine();
+    }
+
+    /** Bytes que o Tablet aberto mandaria, somados desde que a cena começou. */
+    long tabletBytes() {
+        return tablet.bytes();
     }
 
     /**
@@ -550,26 +465,6 @@ final class BenchScene {
         } catch (IOException e) {
             return new long[] {-1, -1, index.size()};
         }
-    }
-
-    /** Os bytes de um pacote do Tablet pelo codec dele (cabeçalho, página ou o estado e a vazão). */
-    private int encodedSize(CustomPacketPayload payload) {
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
-        if (payload instanceof TabletHeaderPayload header) {
-            TabletHeaderPayload.STREAM_CODEC.encode(buf, header);
-        } else if (payload instanceof TabletPagePayload page) {
-            TabletPagePayload.STREAM_CODEC.encode(buf, page);
-        } else if (payload instanceof TabletLivePayload live) {
-            TabletLivePayload.STREAM_CODEC.encode(buf, live);
-        }
-        int size = buf.writerIndex();
-        buf.release();
-        return size;
-    }
-
-    /** Bytes que o Tablet aberto mandaria, somados desde que a cena começou. */
-    long tabletBytes() {
-        return tabletBytes;
     }
 
     /** O que a cena faz no fim de cada tick depois de pôr a rede: os relógios de redstone e a sintonia dos Ressonadores. */
@@ -920,7 +815,7 @@ final class BenchScene {
 
     /** Tira a rede, esvazia e remove tudo, solta os chunks. */
     void teardown() {
-        tablet = null;
+        tablet.close();
         for (BlockPos pos : clocks) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }

@@ -478,6 +478,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (tab == Tab.LIST && list.charTyped(codePoint, modifiers)) {
+            return true;
+        }
         if (tab == Tab.LIST && getFocused() != searchBox) {
             focusSearch();
         }

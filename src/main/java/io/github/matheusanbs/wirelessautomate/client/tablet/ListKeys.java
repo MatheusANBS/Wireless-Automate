@@ -20,7 +20,7 @@ final class ListKeys {
     /** {@code false} deixa a tecla para a busca ou a tela. */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         NodePanel p = list.chosenPanel.current();
-        if (p != null && p.keyPressed(keyCode)) {
+        if (p != null && p.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         boolean ctrl = (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;

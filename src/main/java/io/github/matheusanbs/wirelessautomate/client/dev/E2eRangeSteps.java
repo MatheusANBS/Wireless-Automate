@@ -74,7 +74,8 @@ final class E2eRangeSteps {
      * perfil; {@code range-2-grupo}, com os lados relativos), escolhe a fornalha e põe Frente em Inserir
      * (vira exceção; {@code range-3-excecao}, com o ↺ na linha dela) e volta ao perfil pelo ↺. Depois, a
      * fornalha trocada no lugar e o Atualizar ({@link E2eRangeReplaceSteps}). Na volta em português,
-     * desvincula o segundo baú pela tela, em dois cliques. Sem texto cortado nas capturas (no Desvincular
+     * desvincula o segundo baú pela tela, em dois cliques. Em inglês, os nomes das máquinas e dos grupos
+     * ({@link E2eRangeLabelSteps}). Sem texto cortado nas capturas (no Desvincular
      * armado da lista, só o nome da linha abreviado).
      */
     static void rangeSteps(List<Step> list) {
@@ -95,6 +96,9 @@ final class E2eRangeSteps {
             // em inglês o Atualizar sai pelo ⟳ da lista; em português, pelo botão da linha Editando
             E2eRangeReplaceSteps.rangeReplaceSteps(list, label, suffix, !pt);
             rangeIdleNetworkSteps(list, label, suffix, playerId);
+            if (!pt) {
+                E2eRangeLabelSteps.rangeLabelSteps(list, label, playerId);
+            }
             if (pt) {
                 rangeUnlinkSteps(list, label);
             }

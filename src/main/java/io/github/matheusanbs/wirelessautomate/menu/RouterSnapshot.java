@@ -132,6 +132,12 @@ public record RouterSnapshot(
                 faces, chunkLoad, range);
     }
 
+    /** O mesmo snapshot com outras máquinas remotas (prévias da tela). */
+    public RouterSnapshot withRange(RangeView range) {
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
+                faces, chunkLoad, range);
+    }
+
     /** O alvo de edição atual ({@link EditTarget#ATTACHED_TARGET} sem o Upgrade de Alcance). */
     public EditTarget target() {
         return range.target();

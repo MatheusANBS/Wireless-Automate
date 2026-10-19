@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
-import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.RateFormat;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
@@ -23,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os textos das linhas da árvore da Lista do Tablet, com as larguras, montados quando as linhas ou o estado e a
- * vazão das máquinas mudam (a {@link TabletRows} é outro objeto) ou o tema muda, nunca por quadro: o nome de cada linha, a
+ * vazão das máquinas mudam (a {@link TabletRows} é outro objeto), nunca por quadro (as cores do tema vêm no desenho): o nome de cada linha, a
  * segunda linha (o bloco e o lado da presa, as exceções de um grupo, as coordenadas de uma máquina), o estado em
  * palavras e a vazão de cada máquina, na cor do tipo. Por posição na lista de linhas do servidor.
  */
@@ -32,8 +31,6 @@ final class TreeTexts {
 
     private final ListTexts texts;
     private @Nullable TabletRows built;
-    /** O tema dos textos montados: a cor do traço e do "0/s" vem dele. */
-    private int builtTheme = -1;
     Component[] names = new Component[0];
     int[] nameW = new int[0];
     /** A segunda linha: o bloco e o lado da presa, as exceções do grupo ou as coordenadas da máquina. */
@@ -62,11 +59,10 @@ final class TreeTexts {
     /** Monta os textos se as linhas da página mudaram. */
     void prepare(Font font, TabletSnapshot snapshot) {
         TabletRows rows = snapshot.rows();
-        if (rows == built && builtTheme == GuiThemes.version()) {
+        if (rows == built) {
             return;
         }
         built = rows;
-        builtTheme = GuiThemes.version();
         int n = rows.rows().size();
         names = new Component[n];
         nameW = new int[n];
@@ -157,28 +153,17 @@ final class TreeTexts {
         };
     }
 
-    /** O estado em que a máquina não move: sem vazão, um traço. */
-    static boolean stopped(MachineStatus status) {
-        return switch (status) {
-            case MOVING, FULL, SLEEPING -> false;
-            default -> true;
-        };
-    }
-
     /**
      * A vazão curta, "↓8/s ↑8/s", cada parte na cor do tipo: o que recebe (↓) e o que dá (↑) de cada tipo
-     * carregado. Parada, "0/s"; sem mover (descarregada, fora do raio...), um traço.
+     * carregado. Sem movimento, vazia: a linha fica só com o estado em palavras.
      */
     private static Component rateText(MachineLive live) {
-        if (stopped(live.status())) {
-            return Component.literal("—").withColor(GuiPaint.MUTED);
-        }
         MutableComponent text = Component.empty();
         for (ResourceType type : LoadedTypes.LIST) {
             appendRate(text, "↓", type, live.received(type));
             appendRate(text, "↑", type, live.given(type));
         }
-        return text.getSiblings().isEmpty() ? Component.literal("0/s").withColor(GuiPaint.MUTED) : text;
+        return text;
     }
 
     private static void appendRate(MutableComponent text, String arrow, ResourceType type, long value) {

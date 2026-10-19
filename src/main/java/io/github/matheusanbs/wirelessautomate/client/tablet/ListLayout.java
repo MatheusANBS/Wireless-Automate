@@ -181,7 +181,7 @@ final class ListLayout {
             int buttonsW = 62 + (HighlightRenderer.count() > 0 && !list.multi ? SelectBar.clearLitWidth(font) + 2 : 0);
             int room = listW - buttonsW - cw - 8;
             int countW = Math.min(font.width(count), Math.max(0, room));
-            // sem lugar nem para o Limpar ao lado dos botões, ele sai (o Esc e o ✕ da busca também limpam)
+            // sem lugar nem para o Limpar ao lado dos botões, ele sai (o Esc na Lista também limpa a busca)
             if (!list.multi && room >= 0) {
                 hots.add(new Hot(Kind.CLEAR, x0 + countW + 4, barY(), cw + 2, BAR_H, 0));
             }

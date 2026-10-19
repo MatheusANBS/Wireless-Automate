@@ -41,10 +41,12 @@ final class ListModel {
         List<TabletRows.Row> rows = s.rows().rows();
         if (tree == null || treeNodes != nodeViews || treeRows != rows || treeCollapsed != collapsedVersion) {
             List<ResourceLocation> machines = new ArrayList<>(nodeViews.size());
+            boolean[] openable = new boolean[nodeViews.size()];
             anyLinked = false;
-            for (NodeView node : nodeViews) {
-                machines.add(node.machine());
-                anyLinked |= node.linked() > 0;
+            for (int i = 0; i < nodeViews.size(); i++) {
+                machines.add(nodeViews.get(i).machine());
+                openable[i] = nodeViews.get(i).linked() > 0;
+                anyLinked |= openable[i];
             }
             List<TreeRow> treeRowList = new ArrayList<>(rows.size());
             for (TabletRows.Row row : rows) {
@@ -55,7 +57,7 @@ final class ListModel {
                     case TabletRows.More m -> new TreeRow(m.parent(), Kind.MORE, false);
                 });
             }
-            tree = new ListTree<>(machines, treeRowList, Set.copyOf(collapsed));
+            tree = new ListTree<>(machines, treeRowList, Set.copyOf(collapsed), openable);
             treeNodes = nodeViews;
             treeRows = rows;
             treeCollapsed = collapsedVersion;

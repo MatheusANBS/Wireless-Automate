@@ -365,28 +365,21 @@ public final class TabletList {
         return hot == null ? null : new int[] {hot.x() + hot.w() / 2, hot.y() + hot.h() / 2};
     }
 
+    /** As áreas da árvore que os ganchos acham: a linha, o ▸/▾ (de um nó ou de um grupo), o Olho e o "Mostrar menos". */
+    public enum TreePart { LINE, TOGGLE, EYE, FEW }
+
     /**
-     * Centro da linha da árvore do nó {@code node} ({@code kind} e {@code id} como no {@link TreeNav.Key}; num
-     * {@link ListTree.Kind#NODE}, a linha do nó), ou {@code null} fora da vista.
+     * Centro da área {@code part} da linha do nó {@code node} ({@link ListTree.Kind#NODE}) ou de uma linha da árvore
+     * dele ({@code kind} e {@code id} como no {@link TreeNav.Key}), ou {@code null} fora da vista.
      */
-    public int @Nullable [] treeLineCenter(NodeKey node, ListTree.Kind kind, int id) {
-        return center(kind == ListTree.Kind.NODE ? Kind.ROW : Kind.TREE, kind == ListTree.Kind.NODE
-                ? model.indexOf(node) : treeNav.lineOf(node, kind, id));
-    }
-
-    /** O ▸/▾ de um nó ({@link ListTree.Kind#NODE}) ou de um grupo da árvore. */
-    public int @Nullable [] treeToggleCenter(NodeKey node, ListTree.Kind kind, int id) {
-        return center(Kind.TREE_TOGGLE, treeNav.lineOf(node, kind, id));
-    }
-
-    /** O Olho da máquina {@code index} do nó. */
-    public int @Nullable [] treeEyeCenter(NodeKey node, int index) {
-        return center(Kind.TREE_EYE, treeNav.lineOf(node, ListTree.Kind.MACHINE, index));
-    }
-
-    /** O "Mostrar menos" do grupo {@code group} do nó. */
-    public int @Nullable [] treeFewCenter(NodeKey node, int group) {
-        return center(Kind.TREE_FEW, treeNav.lineOf(node, ListTree.Kind.GROUP, group));
+    public int @Nullable [] treeCenter(TreePart part, NodeKey node, ListTree.Kind kind, int id) {
+        int line = treeNav.lineOf(node, kind, id);
+        return switch (part) {
+            case LINE -> kind == ListTree.Kind.NODE ? center(Kind.ROW, model.indexOf(node)) : center(Kind.TREE, line);
+            case TOGGLE -> center(Kind.TREE_TOGGLE, line);
+            case EYE -> center(Kind.TREE_EYE, line);
+            case FEW -> center(Kind.TREE_FEW, line);
+        };
     }
 
     /** Centro da sugestão do valor {@code id} (máquina, rede ou nome) na lista aberta, ou {@code null}. */

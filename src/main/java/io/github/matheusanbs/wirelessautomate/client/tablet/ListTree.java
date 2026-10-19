@@ -68,6 +68,8 @@ public final class ListTree<K> {
     /** A linha de cada linha da árvore do servidor, -1 se ela está escondida. */
     private final int[] rowLines;
     private final boolean[] open;
+    /** O nó tem máquinas vinculadas (o → o abre). */
+    private final boolean[] openable;
 
     /**
      * @param machines  a máquina de cada nó, na ordem do servidor
@@ -75,6 +77,12 @@ public final class ListTree<K> {
      * @param collapsed os grupos de nós recolhidos
      */
     public ListTree(List<K> machines, List<TreeRow> rows, Set<K> collapsed) {
+        this(machines, rows, collapsed, new boolean[machines.size()]);
+    }
+
+    /** @param openable por nó, se ele tem máquinas vinculadas (o → o abre) */
+    public ListTree(List<K> machines, List<TreeRow> rows, Set<K> collapsed, boolean[] openable) {
+        this.openable = openable;
         this.machines = machines;
         this.nodeLines = new int[machines.size()];
         this.rowLines = new int[rows.size()];
@@ -211,5 +219,75 @@ public final class ListTree<K> {
         }
         K group = group(node);
         return group == null ? -1 : headerLine(group);
+    }
+
+    // ------------------------------------------------------------------ ← e →
+
+    /** O que uma seta faz. */
+    public enum Step {
+        NONE,
+        /** Recolhe o grupo de nós do cabeçalho da linha. */
+        COLLAPSE_HEADER,
+        EXPAND_HEADER,
+        /** Fecha o nó da linha na árvore (no servidor). */
+        CLOSE_NODE,
+        OPEN_NODE,
+        COLLAPSE_GROUP,
+        EXPAND_GROUP,
+        /** Mostra todas as máquinas do grupo do "mais N" da linha. */
+        SHOW_ALL,
+        /** Passa as setas para a linha. */
+        MOVE_TO
+    }
+
+    /** O que a seta faz e em que linha (a do cabeçalho, do nó, do grupo ou a de destino). */
+    public record Arrow(Step step, int line) {
+        static final Arrow NONE = new Arrow(Step.NONE, -1);
+    }
+
+    /**
+     * ← na linha {@code line}: no cabeçalho, recolhe; num nó aberto, fecha; num nó fechado, recolhe o grupo de nós
+     * dele; num grupo aberto, recolhe; num grupo recolhido, na presa, na máquina e no "mais N", sobe para a linha
+     * de cima.
+     */
+    public Arrow left(int line) {
+        if (line < 0 || line >= lines.size()) {
+            return Arrow.NONE;
+        }
+        Line<K> at = lines.get(line);
+        return switch (at.kind()) {
+            case HEADER -> new Arrow(Step.COLLAPSE_HEADER, line);
+            case NODE -> open(at.node()) ? new Arrow(Step.CLOSE_NODE, line)
+                    : new Arrow(Step.COLLAPSE_HEADER, headerLine(at.group()));
+            case GROUP -> at.collapsed() ? up(line) : new Arrow(Step.COLLAPSE_GROUP, line);
+            case ATTACHED, MACHINE, MORE -> up(line);
+        };
+    }
+
+    /**
+     * → na linha {@code line}: no cabeçalho, abre; num nó fechado com máquinas, abre; num grupo recolhido, abre;
+     * no "mais N", mostra todas. No resto, nada.
+     */
+    public Arrow right(int line) {
+        if (line < 0 || line >= lines.size()) {
+            return Arrow.NONE;
+        }
+        Line<K> at = lines.get(line);
+        return switch (at.kind()) {
+            case HEADER -> new Arrow(Step.EXPAND_HEADER, line);
+            case NODE -> openable(at.node()) && !open(at.node()) ? new Arrow(Step.OPEN_NODE, line) : Arrow.NONE;
+            case GROUP -> at.collapsed() ? new Arrow(Step.EXPAND_GROUP, line) : Arrow.NONE;
+            case MORE -> new Arrow(Step.SHOW_ALL, line);
+            case ATTACHED, MACHINE -> Arrow.NONE;
+        };
+    }
+
+    private Arrow up(int line) {
+        int parent = parentLine(line);
+        return parent < 0 ? Arrow.NONE : new Arrow(Step.MOVE_TO, parent);
+    }
+
+    private boolean openable(int node) {
+        return node >= 0 && node < openable.length && openable[node];
     }
 }

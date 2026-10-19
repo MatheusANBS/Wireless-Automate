@@ -17,7 +17,8 @@ import org.jetbrains.annotations.Nullable;
  * ({@code TabletSelectNodePayload}) e, logo depois, o alvo do painel ({@link SelectTargetPayload}: a presa, o grupo
  * ou a máquina); o servidor trata os dois na ordem e valida o alvo. O cursor marca a linha da árvore em que as setas
  * estão (num nó, o cursor é o nó escolhido): ↑ ↓ andam pelas linhas, escolhendo os nós como sempre e só marcando as
- * da árvore; Enter escolhe a linha marcada; ← fecha o nó, recolhe o grupo ou sobe para a linha de cima; → abre.
+ * da árvore; Enter escolhe a linha marcada; ← e → fazem o que o {@link ListTree} decide (fechar, recolher, subir,
+ * abrir). O cursor sai quando o jogador volta à busca ({@link #clear}).
  * Abrir e fechar só mandam o {@code TabletTreePayload}: a árvore nova vem na próxima página do servidor.
  */
 final class TreeNav {
@@ -173,63 +174,25 @@ final class TreeNav {
         return true;
     }
 
-    /** ← fecha o nó, recolhe o grupo ou sobe para a linha de cima; num nó fechado, recolhe o grupo de nós. */
-    void left() {
+    /** ← e → ({@link ListTree#left}, {@link ListTree#right}): aqui só se aplica o que o modelo decidiu. */
+    void arrow(boolean left) {
         ListTree<ResourceLocation> tree = list.model.tree();
         int index = current();
-        if (index < 0) {
+        ListTree.Arrow arrow = left ? tree.left(index) : tree.right(index);
+        if (arrow.step() == ListTree.Step.NONE) {
             return;
         }
-        Line<ResourceLocation> line = tree.lines().get(index);
-        switch (line.kind()) {
-            case HEADER -> list.model.collapse(line.group());
-            case NODE -> {
-                NodeView node = list.snapshot().nodes().get(line.node());
-                if (tree.open(line.node())) {
-                    send(Action.CLOSE, node.key(), 0);
-                } else {
-                    list.model.collapse(line.group());
-                }
-            }
-            case GROUP -> {
-                if (!line.collapsed()) {
-                    send(Action.COLLAPSE_GROUP, keyOf(line).node(), keyOf(line).id());
-                } else if (tree.parentLine(index) >= 0) {
-                    moveTo(tree.parentLine(index));
-                }
-            }
-            case ATTACHED, MACHINE, MORE -> {
-                int parent = tree.parentLine(index);
-                if (parent >= 0) {
-                    moveTo(parent);
-                }
-            }
-        }
-    }
-
-    /** → abre o grupo de nós do nó escolhido escondido, o nó com máquinas, o grupo recolhido ou mostra todas. */
-    void right() {
-        ListTree<ResourceLocation> tree = list.model.tree();
-        int index = current();
-        if (index < 0) {
-            return;
-        }
-        Line<ResourceLocation> line = tree.lines().get(index);
-        switch (line.kind()) {
-            case HEADER -> list.model.expand(line.group());
-            case NODE -> {
-                NodeView node = list.snapshot().nodes().get(line.node());
-                if (node.linked() > 0 && !tree.open(line.node())) {
-                    send(Action.OPEN, node.key(), 0);
-                }
-            }
-            case GROUP -> {
-                if (line.collapsed()) {
-                    send(Action.EXPAND_GROUP, keyOf(line).node(), keyOf(line).id());
-                }
-            }
-            case MORE -> send(Action.SHOW_ALL, keyOf(line).node(), keyOf(line).id());
-            case ATTACHED, MACHINE -> {
+        Line<ResourceLocation> line = tree.lines().get(arrow.line());
+        switch (arrow.step()) {
+            case COLLAPSE_HEADER -> list.model.collapse(line.group());
+            case EXPAND_HEADER -> list.model.expand(line.group());
+            case CLOSE_NODE -> send(Action.CLOSE, list.snapshot().nodes().get(line.node()).key(), 0);
+            case OPEN_NODE -> send(Action.OPEN, list.snapshot().nodes().get(line.node()).key(), 0);
+            case COLLAPSE_GROUP -> send(Action.COLLAPSE_GROUP, keyOf(line).node(), keyOf(line).id());
+            case EXPAND_GROUP -> send(Action.EXPAND_GROUP, keyOf(line).node(), keyOf(line).id());
+            case SHOW_ALL -> send(Action.SHOW_ALL, keyOf(line).node(), keyOf(line).id());
+            case MOVE_TO -> moveTo(arrow.line());
+            case NONE -> {
             }
         }
     }

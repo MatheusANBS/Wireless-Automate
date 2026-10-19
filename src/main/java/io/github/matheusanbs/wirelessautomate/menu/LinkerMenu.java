@@ -60,8 +60,9 @@ public class LinkerMenu extends AbstractContainerMenu {
 
     /**
      * O que, além do item e das redes, muda o resultado da varredura da área: roteadores colocados,
-     * removidos, carregados ou com outra rede ({@link NodeIndex#version()}), a dimensão e a posição
-     * do jogador (pelo problema da área), os limites da config e os chunks descarregados da caixa.
+     * removidos ou com outra rede ({@link NodeIndex#dataVersion()}), a dimensão e a posição do jogador
+     * (pelo problema da área), os limites da config e os chunks descarregados da caixa (um roteador que
+     * carrega ou descarrega na área muda essa contagem; um em outro lugar não revarre nada).
      */
     private record ScanContext(int indexVersion, ResourceKey<Level> dimension, LinkerProblem problem,
             long maxVolume, int maxDistance, int unloadedChunks) {
@@ -81,7 +82,7 @@ public class LinkerMenu extends AbstractContainerMenu {
                     }
                 }
             }
-            return new ScanContext(NodeIndex.get(player.server).version(), player.level().dimension(), problem,
+            return new ScanContext(NodeIndex.get(player.server).dataVersion(), player.level().dimension(), problem,
                     LinkerActions.maxVolume(), LinkerActions.maxDistance(), unloaded);
         }
     }

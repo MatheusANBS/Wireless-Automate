@@ -143,7 +143,8 @@ public final class TabletPanelGameTests {
                         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
                                 helper.getLevel().registryAccess());
                         TabletPanelPayload.STREAM_CODEC.encode(buf, panel);
-                        helper.assertTrue(TabletPanelPayload.STREAM_CODEC.decode(buf).equals(panel), "painel pelo codec");
+                        // No fio a distância vira só a dimensão: a tela calcula a distância pela posição do jogador.
+                        helper.assertTrue(TabletPanelPayload.STREAM_CODEC.decode(buf).equals(panel.asSent()), "painel pelo codec");
                         TabletSelectNodePayload select = new TabletSelectNodePayload(80, Optional.of(key(router)));
                         TabletSelectNodePayload.STREAM_CODEC.encode(buf, select);
                         helper.assertTrue(TabletSelectNodePayload.STREAM_CODEC.decode(buf).equals(select), "escolha pelo codec");

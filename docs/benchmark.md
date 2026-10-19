@@ -398,3 +398,20 @@ Ramo `motor-m3-m6`, sobre o `motor-m1-m2` (base `9327f32`). Primeira rodada (`ru
 - M4 (energia e Source param no grupo de prioridade que já cobre o oferecido) não muda o resultado da divisão e só aparece com vários grupos de prioridade, que os cenários não têm.
 - M5 (entrada e saída de nós com a remontagem adiada até 20 ticks e as portas do nó que sai paradas na hora) não tem cenário de carga de chunk; o GameTest `brokenRouterStopsBeforeDeferredRebuild` prova o comportamento.
 - M3 (a dica de inserção) foi voltado: movendo pilhas inteiras, a pilha da dica já está cheia na entrega seguinte, e a dica custava uma inserção simulada recusada antes da varredura de sempre. O mesmo item em pilha parcial já é coberto pela rajada.
+
+## Pacote T da auditoria: o Tablet na rede (19 de outubro de 2026)
+
+Ramo `tablet-rede` (commit `b315236`), sobre o `motor-m3-m6`: `./scripts/bench.sh tablet:1000:3:vanilla`, máquina local, com a coluna nova de bytes do Tablet aberto (os pacotes que o `TabletMenu.pollPayloads` mandaria, codificados fora do tempo medido). Antes: a base `9a7c347` com só essa medição aplicada. Três rodadas de cada lado, as duas últimas intercaladas antes, depois, antes, depois (mais uma depois, repetida logo após a primeira: Tablet 0,181 ± 0,073 ms/tick, 1,7 KB/s, 43,5 µs/visita com o MSPT base a 0,450) (`run/bench/reports/20261019-064944.md` a `20261019-071606.md`, fora do git).
+
+| Rodada | MSPT base antes → depois | Tablet aberto (ms/tick) antes → depois | µs/visita antes → depois | Bytes ao cliente (KB/s, por repetição) antes → depois |
+| --- | --- | --- | --- | --- |
+| 1 | 0,299 → 0,390 | 0,143 ± 0,035 → 0,200 ± 0,058 | 13,2 → 58,9 | 11,8 / 23,6 / 11,8 → **1,6 / 1,7 / 1,7** |
+| 2 (intercalada) | 0,178 → 0,205 | 0,118 ± 0,035 → 0,114 ± 0,041 | 11,3 → 13,9 | 14,7 / 20,7 / 8,9 → **1,2 / 0,4 / 0,9** |
+| 3 (intercalada) | 0,240 → 0,342 | 0,137 ± 0,041 → 0,155 ± 0,072 | 20,5 → 32,0 | 20,6 / 29,5 / 26,5 → **1,7 / 1,0 / 1,1** |
+
+### Leitura
+
+- T1 e T2 são o ganho: com a estrutura igual, sai só o `TabletLivePayload` (estado e vazão dos nós da página), e a página, quando sai, leva a paleta de dimensões, máquinas e redes. De 9 a 30 KB/s por jogador para 0,4 a 1,7 KB/s (−93%).
+- O tempo do Tablet no servidor fica igual dentro do ruído (a primeira repetição de cada rodada é sempre a mais alta). O T3 (a amostra e a ordem compartilhadas) só aparece com vários jogadores, que o bench não tem.
+- O µs/visita do motor nesse cenário é bimodal nos dois lados: com a máquina mais carregada (MSPT base alto), o orçamento acaba antes de as 500 origens dormirem, e a visita fica 2 a 5× mais cara. Aconteceu também na base (rodada 3), e a rodada 2, com o MSPT base parecido, dá 11,3 → 13,9, dentro do ±; não é efeito do pacote, que não toca no motor. O `many:500` sem Tablet ficou igual (0,537 ± 0,097 antes; 0,459 ± 0,014 e 0,713 ± 0,214 nas duas rodadas depois, a segunda com o MSPT base a 0,30 ± 0,15).
+- T4, T5, T6 e A8 não têm cenário: a distância do painel, o pulso de redstone com a tela do roteador aberta, a área do Vinculador e as alocações da montagem do índice. Os GameTests (`pagePaletteAndLiveUpdate` e os do painel) provam o comportamento.

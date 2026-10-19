@@ -63,7 +63,7 @@ final class BenchRun {
             double rebuildsPerSecond, double tabletMeanNanos, long tabletMaxNanos,
             double flowsNanosPerSample, double flowsNanosPerTick,
             boolean engine, double costNanos, double workerNanos, double neutralItems, double neutralFluid,
-            double neutralEnergy, int neutralMoved, int neutralSources) {
+            double neutralEnergy, int neutralMoved, int neutralSources, double tabletBytesPerSecond) {
         /** Unidades por segundo da contagem neutra (itens, mB e FE somados). */
         double neutralUnits() {
             return neutralItems + neutralFluid + neutralEnergy;
@@ -129,6 +129,7 @@ final class BenchRun {
     private long[] extractedStart;
     private long workerStart;
     private long flowsSamplesStart;
+    private long tabletBytesStart;
     private long flowsNanosStart;
     private long opsSum;
     private int opsSeconds;
@@ -320,6 +321,7 @@ final class BenchRun {
         workerStart = workerCpuNanos();
         FlowSampler.Cost flows = engine.flows().cost();
         flowsSamplesStart = flows.samples();
+        tabletBytesStart = scene.tabletBytes();
         flowsNanosStart = flows.totalNanos();
         opsSum = 0;
         opsSeconds = 0;
@@ -392,7 +394,7 @@ final class BenchRun {
                 (scene.delivered(ResourceType.ITEM) - neutralItemsStart) / seconds,
                 (scene.delivered(ResourceType.FLUID) - neutralFluidStart) / seconds,
                 (scene.delivered(ResourceType.ENERGY) - neutralEnergyStart) / seconds,
-                neutralMoved, neutralSources);
+                neutralMoved, neutralSources, (scene.tabletBytes() - tabletBytesStart) / seconds);
         reps.add(result);
         out.accept(repLine(job, result));
         BenchResonators resonators = scene.resonators();
@@ -438,8 +440,9 @@ final class BenchRun {
                 ms(r.attachModNanos()), r.rebuilds() < 0 ? "—" : Long.toString(r.rebuilds()), r.rebuildsPerSecond(),
                 num(ms(r.rebuildMeanNanos()), 3), ms(r.afterTouchMaxNanos()), r.slots(),
                 num(ms(r.flowsNanosPerSample()), 4), ms(r.flowsNanosPerTick()),
-                Double.isNaN(r.tabletMeanNanos()) ? "" : String.format(Locale.ROOT, " | Tablet aberto %.4f ms/tick (máx %.3f)",
-                        ms(r.tabletMeanNanos()), ms(r.tabletMaxNanos())));
+                Double.isNaN(r.tabletMeanNanos()) ? "" : String.format(Locale.ROOT,
+                        " | Tablet aberto %.4f ms/tick (máx %.3f), %.1f KB/s", ms(r.tabletMeanNanos()),
+                        ms(r.tabletMaxNanos()), r.tabletBytesPerSecond() / 1024.0));
     }
 
     private void summarize() {

@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
@@ -17,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -141,6 +143,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
     private boolean headerChanged;
     private boolean pageChanged;
+    /** Na página mudaram só o estado e a vazão dos nós ({@link TabletSnapshot.Page#sameExceptLive}). */
+    private boolean liveOnly;
 
     /** Servidor. */
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
@@ -203,6 +207,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Esquece o estado de todos os jogadores (o servidor parou). */
     public static void resetStates() {
         TabletPlayers.reset();
+        TabletSample.reset();
     }
 
     /** O estado guardado do jogador, ou {@code null}. */
@@ -365,6 +370,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         applySnapshot(snapshot.withPage(page));
     }
 
+    /** Cliente: só o estado e a vazão dos nós da página mudaram ({@code TabletLivePayload}). */
+    public void applyLives(List<TabletSnapshot.Live> lives) {
+        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives)));
+    }
+
     /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
     public void applyPanel(TabletPanelPayload panel) {
         this.panel = panel;
@@ -407,24 +417,37 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     @Override
     public void broadcastChanges() {
         super.broadcastChanges();
+        for (CustomPacketPayload payload : pollPayloads()) {
+            send(payload);
+        }
+    }
+
+    /**
+     * Os pacotes que saem agora, na ordem (o cabeçalho antes da página, porque os nós apontam para as redes dele):
+     * cabeçalho, página ou só o estado e a vazão dela, painel e Fluxos, cada um só se mudou, já marcados como
+     * enviados. Só no servidor; público para o bench, que mede os bytes.
+     */
+    public List<CustomPacketPayload> pollPayloads() {
+        List<CustomPacketPayload> payloads = new ArrayList<>(2);
         TabletSnapshot changed = pollSnapshot();
-        if (changed != null && viewer != null && viewer.connection != null) {
-            // O cabeçalho antes da página: os nós apontam para as redes dele.
+        if (changed != null) {
             if (headerChanged) {
-                send(new TabletHeaderPayload(containerId, changed));
+                payloads.add(new TabletHeaderPayload(containerId, changed));
             }
             if (pageChanged) {
-                send(new TabletPagePayload(containerId, changed.page()));
+                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives())
+                        : new TabletPagePayload(containerId, changed.page()));
             }
         }
         TabletPanelPayload panelNow = pollPanel();
         if (panelNow != null) {
-            send(panelNow);
+            payloads.add(panelNow);
         }
         TabletFlowsPayload flowsNow = pollFlows();
         if (flowsNow != null) {
-            send(flowsNow);
+            payloads.add(flowsNow);
         }
+        return payloads;
     }
 
     /**
@@ -469,6 +492,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         snapshot = built;
         headerChanged = sent == null || !built.sameHeader(sent);
         pageChanged = sent == null || !built.page().equals(sent.page());
+        // Só o estado e a vazão dos nós mudaram (quase toda amostra): vai o pacote pequeno.
+        liveOnly = pageChanged && sent != null && built.page().sameExceptLive(sent.page());
         if (!headerChanged && !pageChanged) {
             return null;
         }

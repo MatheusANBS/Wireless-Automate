@@ -26,6 +26,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -279,5 +280,61 @@ public final class StorageEfficiencyGameTests {
                     helper.assertTrue(NetworkManager.get().contains(from) && NetworkManager.get().contains(to), "registrados");
                 })
                 .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ S3: a chave codificada uma vez só
+
+    /**
+     * Salvar o Baú duas vezes reusa a chave codificada de cada tipo (o mesmo {@code Tag}); o NBT faz a ida e
+     * volta (tipos, componentes e quantidades), e o Baú carregado salva igual ao original.
+     */
+    @GameTest(template = "empty")
+    public static void chestNbtRoundTripsAndReusesTheKeys(GameTestHelper helper) {
+        ItemStorage storage = chest(helper, A, RouterTier.ULTIMATE).storage();
+        storage.insert(new ItemStack(Items.COBBLESTONE), 5_000_000L, false);
+        for (int i = 0; i < 20; i++) {
+            storage.insert(named(Items.PAPER, i), 10 + i, false);
+        }
+        ItemStack damaged = new ItemStack(Items.DIAMOND_PICKAXE);
+        damaged.setDamageValue(17);
+        storage.insert(damaged, 3, false);
+
+        var registries = helper.getLevel().registryAccess();
+        ListTag first = storage.save(registries);
+        ListTag second = storage.save(registries);
+        helper.assertValueEqual(first.size(), storage.types(), "um registro por tipo");
+        for (int i = 0; i < first.size(); i++) {
+            helper.assertTrue(first.getCompound(i).get("key") == second.getCompound(i).get("key"),
+                    "a chave " + i + " foi recodificada");
+        }
+        helper.assertTrue(first.equals(second), "os dois salvamentos são iguais");
+
+        ItemStorage copy = chest(helper, B, RouterTier.ULTIMATE).storage();
+        copy.load(first, registries);
+        helper.assertValueEqual(copy.types(), storage.types(), "tipos");
+        helper.assertValueEqual(copy.total(), storage.total(), "total");
+        for (int i = 0; i < storage.types(); i++) {
+            helper.assertValueEqual(copy.count(storage.key(i)), storage.count(i), "quantidade do tipo " + i);
+        }
+        helper.assertValueEqual(copy.count(damaged), 3L, "a picareta com o dano");
+        helper.assertTrue(copy.save(registries).equals(first), "o carregado salva igual");
+        helper.succeed();
+    }
+
+    /** O formato antigo do Baú (a chave no campo {@code item}) ainda carrega, e salva no formato atual. */
+    @GameTest(template = "empty")
+    public static void chestLoadsTheOldItemField(GameTestHelper helper) {
+        var registries = helper.getLevel().registryAccess();
+        ListTag old = new ListTag();
+        CompoundTag entry = new CompoundTag();
+        entry.put("item", new ItemStack(Items.DIAMOND).save(registries));
+        entry.putLong("count", 1_234L);
+        old.add(entry);
+        ItemStorage storage = chest(helper, A, RouterTier.BASIC).storage();
+        storage.load(old, registries);
+        helper.assertValueEqual(storage.count(new ItemStack(Items.DIAMOND)), 1_234L, "diamantes do formato antigo");
+        CompoundTag saved = storage.save(registries).getCompound(0);
+        helper.assertTrue(saved.contains("key") && !saved.contains("item"), "salva no formato atual");
+        helper.succeed();
     }
 }

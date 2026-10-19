@@ -275,6 +275,47 @@ public final class WakeGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * B só recebe com sinal (redstone HIGH) e está travada; A tem itens e dorme esperando destino. No mesmo tick, a
+     * máquina de B avisa mudança (o que acorda as alimentadoras de B), A volta a dormir como se tivesse visitado e
+     * achado B travada, e o sinal liga B. A destravada tem de acordar A apesar do aviso do mesmo tick: a entrega sai
+     * em poucos ticks, e não depois do sono longo de A.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void redstoneOnInSameTickAsFeedersWakeWakesSource(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-redstone-mesmo-tick");
+        RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity b = chest(helper, B, network, PortMode.INSERT);
+        b.setRedstone(ResourceType.ITEM, Direction.UP, RedstoneMode.HIGH);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
+        BlockPos beside = B.above().east();
+        long[] poweredAt = {0};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, a, b))
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(NetworkManager.get().redstoneOffForTests(b, null, ResourceType.ITEM, Direction.UP),
+                            "sem sinal, B não travou");
+                    helper.assertTrue(NetworkManager.get().waitsDestination(a, null, ResourceType.ITEM, Direction.UP)
+                            && !NetworkManager.get().sourceAwake(a, null, ResourceType.ITEM, Direction.UP,
+                                    helper.getLevel().getGameTime()), "A não dormiu esperando destino");
+                })
+                .thenExecute(() -> {
+                    NetworkManager.get().wake(b);
+                    long now = helper.getLevel().getGameTime();
+                    helper.assertTrue(NetworkManager.get().sleepForTests(a, null, ResourceType.ITEM, Direction.UP, now, 1000),
+                            "A não existe");
+                    helper.setBlock(beside, Blocks.REDSTONE_BLOCK);
+                    helper.assertFalse(NetworkManager.get().redstoneOffForTests(b, null, ResourceType.ITEM, Direction.UP),
+                            "com sinal, B continuou travada");
+                    poweredAt[0] = helper.getTick();
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, B, Items.DIAMOND), 10, "diamantes em B"))
+                .thenExecute(() -> helper.assertTrue(helper.getTick() - poweredAt[0] < 10,
+                        "A demorou " + (helper.getTick() - poweredAt[0]) + " ticks para entregar"))
+                .thenSucceed();
+    }
+
     /** Remontagem por tipo: mudar a aba Itens não suja Fluidos (nem Energia) da mesma rede. */
     @GameTest(template = "empty")
     public static void itemTabChangeDoesNotRebuildFluids(GameTestHelper helper) {

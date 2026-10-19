@@ -110,4 +110,22 @@ class BackoffTest {
         c.wake();
         assertEquals(Long.MIN_VALUE, c.earliestWake(wake));
     }
+
+    @Test
+    void frozenIgnoresWakeAndSleepsUntilThawed() {
+        Backoff backoff = new Backoff(40);
+        backoff.freeze();
+        assertTrue(backoff.isFrozen());
+        assertTrue(backoff.isSleeping(1_000_000L));
+        backoff.wake();
+        backoff.sleep(0L);
+        backoff.sleepUntil(0L, 5L);
+        assertEquals(Long.MAX_VALUE, backoff.wakeAt());
+        backoff.thaw();
+        assertFalse(backoff.isFrozen());
+        // Descongelar não acorda: quem destrava chama o wake.
+        assertTrue(backoff.isSleeping(1_000_000L));
+        backoff.wake();
+        assertTrue(backoff.isAwake(0L));
+    }
 }

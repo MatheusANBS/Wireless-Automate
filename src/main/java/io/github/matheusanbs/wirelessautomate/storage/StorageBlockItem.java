@@ -52,11 +52,12 @@ public class StorageBlockItem extends BlockItem {
 
     /**
      * No inventário de um jogador, o item cheio renova o prazo do conteúdo no {@link StorageSavedData}. Olha
-     * uma vez por minuto ({@link #TOUCH_PERIOD}); fora disso, só a conta do relógio.
+     * uma vez por minuto ({@link #TOUCH_PERIOD}); fora disso, só a conta do relógio. Sem prazo (o padrão), nada.
      */
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
-        if (level.isClientSide || level.getGameTime() % TOUCH_PERIOD != 0 || level.getServer() == null) {
+        if (level.isClientSide || level.getGameTime() % TOUCH_PERIOD != 0 || level.getServer() == null
+                || Config.STORAGE_STASH_EXPIRY_DAYS.get() == 0) {
             return;
         }
         StorageContents contents = stack.get(ModDataComponents.STORAGE_CONTENTS.get());

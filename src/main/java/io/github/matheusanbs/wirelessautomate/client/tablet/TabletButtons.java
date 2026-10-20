@@ -82,14 +82,12 @@ final class TabletButtons {
                 b.active ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
-    /** O "Nova rede" ou "Novo grupo" recolhível: a seta e o rótulo. */
-    static void paintMore(GuiGraphics g, FlatButton b, boolean hovered, Component label, boolean open) {
-        int color = hovered || open ? GuiPaint.FG : GuiPaint.MUTED;
-        if (open) {
-            GuiPaint.arrowDown(g, b.getX() + 1, b.getY() + 3, color);
-        } else {
-            GuiPaint.arrowRight(g, b.getX() + 2, b.getY() + 2, color);
+    /** O "Nova rede" ou "Novo grupo" embaixo da lista de Redes: o rótulo, sublinhado em coral quando aberto. */
+    static void paintNew(GuiGraphics g, FlatButton b, boolean hovered, Component label, boolean open) {
+        int color = open ? GuiPaint.ACCENT : hovered ? GuiPaint.FG : GuiPaint.MUTED;
+        GuiText.draw(g, font(), label, b.getX() + 1, b.getY() + 2, b.getWidth() - 1, color);
+        if (open || hovered) {
+            g.fill(b.getX() + 1, b.getY() + 11, b.getX() + b.getWidth() - 1, b.getY() + 12, color);
         }
-        GuiPaint.text(g, font(), label, b.getX() + 10, b.getY() + 1, color);
     }
 }

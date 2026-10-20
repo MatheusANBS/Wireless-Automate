@@ -23,8 +23,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os nomes das abas Redes e Grupos, divididos pelas duas: a nova rede ou grupo (recolhida embaixo da lista
- * lateral, com Criar), o título da coluna da direita que vira o campo de renomear, e o Remover que pede dois
+ * Os nomes da aba Redes: a nova rede ou o novo grupo (os dois embaixo da lista lateral, um campo só, com Criar), o
+ * título da coluna da direita (a rede ou o grupo escolhido) que vira o campo de renomear, e o Remover que pede dois
  * cliques.
  */
 final class NameFields {
@@ -37,7 +37,9 @@ final class NameFields {
     private final Supplier<@Nullable UUID> group;
     private final Consumer<@Nullable GuiEventListener> focus;
     private final Runnable refresh;
-    private boolean newOpen;
+    private final Consumer<Boolean> created;
+    /** O que o campo da nova está criando ({@link Rename#NONE}: fechado). */
+    private Rename newKind = Rename.NONE;
     private EditBox newBox;
     private EditBox renameBox;
     private Rename renaming = Rename.NONE;
@@ -45,18 +47,21 @@ final class NameFields {
 
     /**
      * @param network a rede escolhida na aba Redes (a que o nome renomeia)
-     * @param group o grupo escolhido na aba Grupos
+     * @param group o grupo escolhido na aba Redes
      * @param focus dá o foco da tela ao campo (ou a nenhum)
      * @param refresh põe a visibilidade dos botões e campos em dia já, sem esperar o próximo quadro
+     * @param created avisa que um grupo ({@code true}) ou uma rede foi pedida ao servidor
      */
     NameFields(TabletLayout layout, TabletActions actions, Supplier<@Nullable UUID> network,
-            Supplier<@Nullable UUID> group, Consumer<@Nullable GuiEventListener> focus, Runnable refresh) {
+            Supplier<@Nullable UUID> group, Consumer<@Nullable GuiEventListener> focus, Runnable refresh,
+            Consumer<Boolean> created) {
         this.layout = layout;
         this.actions = actions;
         this.network = network;
         this.group = group;
         this.focus = focus;
         this.refresh = refresh;
+        this.created = created;
     }
 
     /** Os dois campos, refeitos a cada {@code init}; a tela os põe entre os widgets dela. */
@@ -81,34 +86,44 @@ final class NameFields {
         return renameBox;
     }
 
-    /** O "Nova rede" ou "Novo grupo": abre e fecha o campo. */
-    FlatButton newToggle(Component label) {
-        return new FlatButton(layout.left + X0, layout.top + layout.newY(), SIDE_W, 12, label,
-                (g, b, hovered) -> TabletButtons.paintMore(g, b, hovered, label, newOpen), () -> {
-                    newOpen = !newOpen;
+    /**
+     * O "Nova rede" ({@code kind} {@link Rename#NETWORK}, à esquerda) ou o "Novo grupo" (à direita), lado a lado
+     * embaixo da lista: abre e fecha o campo; o outro aberto passa a este.
+     */
+    FlatButton newToggle(Rename kind, Component label, Font font) {
+        int w = Math.min(SIDE_W / 2 + 4, font.width(label) + 2);
+        int x = kind == Rename.NETWORK ? layout.left + X0 : layout.left + X0 + SIDE_W - w;
+        return new FlatButton(x, layout.top + layout.newY(), w, 12, label,
+                (g, b, hovered) -> TabletButtons.paintNew(g, b, hovered, label, newKind == kind), () -> {
+                    newKind = newKind == kind ? Rename.NONE : kind;
                     newBox.setValue("");
                     // o campo fica visível já, não só no próximo quadro: digitar logo depois funciona
                     refresh.run();
-                    if (newOpen) {
+                    if (newKind != Rename.NONE) {
                         focus.accept(newBox);
                     }
                 }).tooltip(() -> tr("new.tooltip"));
     }
 
     /** O Criar ao lado do campo da nova rede ou grupo. */
-    FlatButton createButton(Action action) {
+    FlatButton createButton() {
         return new FlatButton(layout.left + X0 + SIDE_W - 40, layout.top + layout.newBoxY(), 40, ROW_H, tr("create"),
-                (g, b, hovered) -> TabletButtons.paintPrimary(g, b, hovered, tr("create")), () -> create(action));
+                (g, b, hovered) -> TabletButtons.paintPrimary(g, b, hovered, tr("create")), this::create);
     }
 
-    /** Campos visíveis conforme a aba ({@code manageTab}: Redes ou Grupos). */
-    void refresh(boolean manageTab) {
-        newBox.visible = newOpen && manageTab;
-        renameBox.visible = renaming != Rename.NONE && manageTab;
+    /** Campos visíveis conforme a aba ({@code shown}: Redes). */
+    void refresh(boolean shown) {
+        newBox.visible = newKind != Rename.NONE && shown;
+        renameBox.visible = renaming != Rename.NONE && shown;
     }
 
     boolean newOpen() {
-        return newOpen;
+        return newKind != Rename.NONE;
+    }
+
+    /** O campo da nova está criando um grupo. */
+    boolean creatingGroup() {
+        return newKind == Rename.GROUP;
     }
 
     boolean renaming() {
@@ -123,7 +138,7 @@ final class NameFields {
     /** Outra aba: fecha a nova rede ou grupo, o nome em edição e o Remover armado. */
     void reset() {
         renaming = Rename.NONE;
-        newOpen = false;
+        newKind = Rename.NONE;
         removeArm.disarm();
     }
 
@@ -145,14 +160,17 @@ final class NameFields {
         }
     }
 
-    void create(Action action) {
+    /** Cria a rede ou o grupo com o nome do campo; a lista escolhe o novo quando ele chega ({@code created}). */
+    void create() {
         String name = newBox.getValue().strip();
-        if (name.isEmpty()) {
+        if (name.isEmpty() || newKind == Rename.NONE) {
             return;
         }
-        actions.create(action, name);
+        boolean group = newKind == Rename.GROUP;
+        actions.create(group ? Action.GROUP_CREATE : Action.NETWORK_CREATE, name);
+        created.accept(group);
         newBox.setValue("");
-        newOpen = false;
+        newKind = Rename.NONE;
         focus.accept(null);
     }
 
@@ -183,7 +201,7 @@ final class NameFields {
     }
 
     void previewOpen(String text) {
-        newOpen = true;
+        newKind = Rename.NETWORK;
         newBox.setValue(text);
         focus.accept(newBox);
     }
@@ -216,7 +234,7 @@ final class NameFields {
 
     /** A caixa da nova rede ou grupo, aberta, embaixo da lista lateral. */
     void renderNewFrame(GuiGraphics g) {
-        if (newOpen) {
+        if (newKind != Rename.NONE) {
             GuiPaint.box(g, layout.left + X0, layout.top + layout.newBoxY(), SIDE_W - 44, ROW_H, GuiPaint.INSET,
                     newBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         }

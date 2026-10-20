@@ -7,7 +7,6 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import java.util.function.IntFunction;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -15,14 +14,11 @@ import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A lista lateral das abas Redes e Grupos: linhas com o olho na cor, o nome e uma marca à direita, a escolhida
- * em destaque, e a rolagem (uma só, dividida pelas duas abas).
+ * A lista lateral da aba Redes: o quadro, as linhas visíveis a partir da rolagem, a linha sob o mouse e a seta
+ * de "tem mais embaixo". O conteúdo de cada linha é de quem a usa ({@link NetworkList}).
  */
 final class SideList {
-    /** Uma linha: nome, cor do olho, se é a escolhida e a marca à direita (ou nenhuma). */
-    record Row(Component name, int color, boolean selected, @Nullable Component mark) {
-    }
-
+    private static final Component MORE = Component.literal("▼");
     private final TabletLayout layout;
     private int sideScroll;
 
@@ -38,9 +34,23 @@ final class SideList {
         return (layout.sideBottom() - BODY_Y) / ROW_H;
     }
 
-    /** Linha da lista lateral (redes ou grupos) sob o mouse, ou -1. */
+    int x() {
+        return layout.left + X0;
+    }
+
+    /** O alto da linha {@code index} (contada de cima da lista, não da rolagem). */
+    int rowY(int index) {
+        return layout.top + BODY_Y + (index - sideScroll) * ROW_H;
+    }
+
+    /** A linha está na vista. */
+    boolean shown(int index) {
+        return index >= sideScroll && index < sideScroll + rows();
+    }
+
+    /** Linha sob o mouse, ou -1. */
     int rowAt(double mouseX, double mouseY, int count) {
-        int x = layout.left + X0;
+        int x = x();
         int y = layout.top + BODY_Y;
         if (mouseX < x || mouseX >= x + SIDE_W || mouseY < y || mouseY >= y + rows() * ROW_H) {
             return -1;
@@ -53,35 +63,32 @@ final class SideList {
         sideScroll = Mth.clamp(sideScroll + step, 0, Math.max(0, count - rows()));
     }
 
-    void render(GuiGraphics g, Font font, int mouseX, int mouseY, int count, IntFunction<Row> rowOf, Component empty) {
-        int x = layout.left + X0;
+    /** Põe a linha na vista. */
+    void reveal(int index, int count) {
+        if (index < sideScroll) {
+            sideScroll = index;
+        } else if (index >= sideScroll + rows()) {
+            sideScroll = index - rows() + 1;
+        }
+        mouseScrolled(0, count);
+    }
+
+    /** O fundo e o contorno; sem linhas, o texto {@code empty}. */
+    void renderFrame(GuiGraphics g, Font font, int count, @Nullable Component empty) {
+        int x = x();
         int y = layout.top + BODY_Y;
         g.fill(x, y, x + SIDE_W, layout.top + layout.sideBottom(), GuiPaint.INSET);
         GuiPaint.outline(g, x, y, SIDE_W, layout.sideBottom() - BODY_Y, GuiPaint.LINE);
-        if (count == 0) {
+        if (count == 0 && empty != null) {
             GuiText.draw(g, font, empty, x + 4, y + 5, SIDE_W - 8, GuiPaint.MUTED);
         }
-        int hovered = rowAt(mouseX, mouseY, count);
-        for (int i = 0; i < rows() && i + sideScroll < count; i++) {
-            int index = i + sideScroll;
-            Row row = rowOf.apply(index);
-            int ry = y + i * ROW_H;
-            if (row.selected) {
-                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_SELECTED);
-                g.fill(x + 1, ry + 1, x + 2, ry + ROW_H, GuiPaint.ACCENT);
-            } else if (index == hovered) {
-                g.fill(x + 1, ry + 1, x + SIDE_W - 1, ry + ROW_H, GuiPaint.ROW_HOVER);
-            }
-            GuiPaint.eye(g, x + 5, ry + 5, row.color);
-            int right = x + SIDE_W - 4;
-            if (row.mark != null) {
-                GuiPaint.textRight(g, font, row.mark, right, ry + 4, GuiPaint.MUTED);
-                right -= font.width(row.mark) + 3;
-            }
-            GuiText.draw(g, font, row.name, x + 14, ry + 4, right - (x + 14), GuiPaint.FG);
-        }
+    }
+
+    /** A seta embaixo quando há linhas abaixo da vista. */
+    void renderMore(GuiGraphics g, Font font, int count) {
         if (sideScroll + rows() < count) {
-            GuiPaint.text(g, font, Component.literal("▼"), x + SIDE_W - 9, layout.top + layout.sideBottom() - 10, GuiPaint.MUTED);
+            GuiPaint.text(g, font, MORE, x() + SIDE_W - 9, layout.top + layout.sideBottom() - 10,
+                    GuiPaint.MUTED);
         }
     }
 }

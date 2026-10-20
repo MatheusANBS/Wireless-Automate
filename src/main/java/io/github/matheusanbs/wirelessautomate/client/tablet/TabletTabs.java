@@ -20,14 +20,12 @@ final class TabletTabs {
     private final SelectBar selectBar;
     private final MapTab map;
     private final NetworksTab networks;
-    private final GroupsTab groups;
     private final NameFields names;
 
-    TabletTabs(SelectBar selectBar, MapTab map, NetworksTab networks, GroupsTab groups, NameFields names) {
+    TabletTabs(SelectBar selectBar, MapTab map, NetworksTab networks, NameFields names) {
         this.selectBar = selectBar;
         this.map = map;
         this.networks = networks;
-        this.groups = groups;
         this.names = names;
     }
 
@@ -65,14 +63,12 @@ final class TabletTabs {
         selectBar.refresh(tab == Tab.LIST);
         map.refresh(tab == Tab.MAP);
         networks.refresh(tab == Tab.NETWORKS);
-        groups.refresh(tab == Tab.GROUPS);
-        names.refresh(tab == Tab.NETWORKS || tab == Tab.GROUPS);
+        names.refresh(tab == Tab.NETWORKS);
     }
 
     /** O mouse está no Remover da aba aberta. */
     boolean overRemoveButton(Tab tab, double mouseX, double mouseY) {
-        FlatButton remove = tab == Tab.NETWORKS ? networks.removeButton()
-                : tab == Tab.GROUPS ? groups.removeButton() : null;
+        FlatButton remove = tab == Tab.NETWORKS ? networks.removeButton() : null;
         return remove != null && remove.visible && remove.isMouseOver(mouseX, mouseY);
     }
 }

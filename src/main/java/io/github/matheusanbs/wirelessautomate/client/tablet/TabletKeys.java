@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen.Tab;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -75,7 +74,7 @@ final class TabletKeys {
             if (box == names.renameBox() && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
                 names.finishRename(enter);
             } else if (box == names.newBox() && enter) {
-                names.create(tab.get() == Tab.GROUPS ? Action.GROUP_CREATE : Action.NETWORK_CREATE);
+                names.create();
             } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 screen.setFocused(null);
             } else {

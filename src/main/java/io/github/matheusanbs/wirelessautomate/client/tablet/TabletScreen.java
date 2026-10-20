@@ -31,20 +31,20 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com cinco abas:
+ * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com quatro abas:
  * <ul>
- *   <li><b>Lista:</b> a busca com sugestões e etiquetas, os filtros rápidos, os nós agrupados pela máquina, cada
+ *   <li><b>Lista:</b> a busca com sugestões e etiquetas, o seletor Roteadores · Máquinas, os filtros rápidos, os
+ *       nós agrupados pela máquina (ou, por máquinas, as máquinas pelo tipo de bloco), cada
  *       roteador com máquinas vinculadas aberto em árvore (a presa, os grupos e as máquinas com estado e vazão), e
  *       o painel do nó escolhido, com copiar e colar o perfil ({@link TabletList}); Selecionar para mover ou
  *       colar em vários nós ({@link SelectBar});
- *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
- *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
  *   <li><b>Fluxos:</b> tempo do mod por tick e o que entra e sai de cada tipo, Por tipo ou Por rede, média
  *       dos últimos 5 s ({@link FlowsTab});
- *   <li><b>Redes:</b> lista à esquerda e a rede escolhida à direita (nome, cor, privacidade, usar
- *       como ativa, remover); nova rede fica recolhida ({@link NetworksTab});
- *   <li><b>Grupos:</b> o mesmo para grupos: pausar e retomar o grupo todo e marcar as redes dele
- *       ({@link GroupsTab}).
+ *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
+ *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
+ *   <li><b>Redes:</b> as redes à esquerda, com os grupos de redes como seções, e à direita a rede escolhida
+ *       (nome, cor, privacidade, usar como ativa, remover) ou o grupo (pausar e retomar o grupo todo e marcar as
+ *       redes dele); Nova rede e Novo grupo embaixo da lista ({@link NetworksTab}).
  * </ul>
  *
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
@@ -56,7 +56,7 @@ import org.lwjgl.glfw.GLFW;
  * estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    public enum Tab { LIST, MAP, FLOWS, NETWORKS, GROUPS }
+    public enum Tab { LIST, FLOWS, MAP, NETWORKS }
 
     /** Põe um botão fixo na tela; {@code owner} nulo: visível em todas as abas. */
     @FunctionalInterface
@@ -72,7 +72,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final FlowsTab flows;
     private final NameFields names;
     private final NetworksTab networks;
-    private final GroupsTab groups;
     private final TabletBody body;
     private final TabletTabs tabs;
     private final TabletKeys keys;
@@ -106,13 +105,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);
         });
-        SideList side = new SideList(layout);
-        this.names = new NameFields(layout, actions, () -> networks().selected(), () -> groups().selected(),
-                this::setFocused, this::refresh);
-        this.networks = new NetworksTab(layout, menu::snapshot, actions, side, names);
-        this.groups = new GroupsTab(layout, menu::snapshot, actions, side, names);
-        this.body = new TabletBody(list, map, flows, side, networks, groups, () -> snapshot().networks().size());
-        this.tabs = new TabletTabs(selectBar, map, networks, groups, names);
+        this.names = new NameFields(layout, actions, () -> networks().selected(), () -> networks().selectedGroup(),
+                this::setFocused, this::refresh, group -> networks().created(group));
+        this.networks = new NetworksTab(layout, menu::snapshot, actions, new SideList(layout), names);
+        this.body = new TabletBody(list, map, flows, networks);
+        this.tabs = new TabletTabs(selectBar, map, networks, names);
         this.keys = new TabletKeys(this, list, names, () -> tab);
         this.tips = new TabletTips(resize, tabs.buttons(), body);
         // o aviso de outra tela agiria no alvo errado
@@ -121,10 +118,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private NetworksTab networks() {
         return networks;
-    }
-
-    private GroupsTab groups() {
-        return groups;
     }
 
     private TabletSnapshot snapshot() {
@@ -167,8 +160,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         selectBar.addButtons(this::add, font);
         map.addButtons(this::add);
         flows.addButtons(this::add, font);
-        networks.addButtons(this::add);
-        groups.addButtons(this::add);
+        networks.addButtons(this::add, font);
 
         names.createBoxes(font);
         addRenderableWidget(names.newBox());
@@ -198,7 +190,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         TabletSnapshot s = snapshot();
         header.onSnapshot(s);
         networks.onSnapshot(s);
-        groups.onSnapshot(s);
         selectBar.onSnapshot(s);
         list.onSnapshot();
     }
@@ -438,6 +429,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         networks.preview(index);
     }
 
+    public void previewGroup(int index) {
+        networks.previewGroup(index);
+    }
+
     public void previewNewOpen(String text) {
         names.previewOpen(text);
     }
@@ -471,14 +466,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return list.nodeRowCenter(key);
     }
 
-    /** Centro da linha do grupo na lista lateral, ou {@code null}. */
-    int @Nullable [] groupRowCenter(UUID id) {
-        return groups.groupRowCenter(id);
+    /** Centro do cabeçalho do grupo na lista da aba Redes, ou {@code null}. */
+    public int @Nullable [] groupRowCenter(UUID id) {
+        return networks.groupRowCenter(font, id);
     }
 
-    /** Centro da caixa de marcar da rede na coluna do grupo, ou {@code null}. */
+    /** Centro da caixa de marcar da rede no detalhe do grupo escolhido, ou {@code null}. */
     public int @Nullable [] groupNetworkCenter(UUID id) {
-        return groups.groupNetworkCenter(id);
+        return networks.groupNetworkCenter(font, id);
     }
 
     @Nullable EditBox newBox() {

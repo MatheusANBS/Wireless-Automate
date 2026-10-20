@@ -1,0 +1,427 @@
+<title>Cristal de Sinal em 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: o visor WebGL grande no topo (de perto ou na câmara), os controles numa faixa embaixo e os cartões com forma, estados, custo e o que muda no código. Visual escuro de propósito, como os protótipos da câmara. */
+:root {
+  --bg: #0d0f12; --panel: #161a1f; --ink: #e9e6df; --muted: #8e98a3; --line: #262c33;
+  --casing: #d9d3c7; --glass: #5f8aa0; --accent: #f2917a; --new: #ffd36b;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.wrap > * { min-width: 0; }
+.eyebrow { font-family: var(--font-num); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 46px); margin: 0; line-height: 1.05; text-wrap: balance; }
+p { margin: 0; line-height: 1.6; max-width: 72ch; color: var(--muted); }
+p b { color: var(--ink); font-weight: 600; }
+.frame { background: var(--casing); padding: clamp(10px, 3vw, 26px); box-shadow: inset 0 0 0 4px #b9b2a4; }
+.glass { position: relative; border: 6px solid var(--glass); background: #000; aspect-ratio: 4 / 3; max-width: 100%; touch-action: none; cursor: grab; }
+canvas { display: block; width: 100%; height: 100%; }
+.badge { position: absolute; left: 10px; top: 10px; font-family: var(--font-num); font-size: 11px; color: #e6eef4; background: #000a; padding: 3px 7px; pointer-events: none; }
+.hint { position: absolute; right: 10px; bottom: 10px; font-family: var(--font-num); font-size: 10.5px; color: #e6eef4; background: #000a; padding: 3px 7px; pointer-events: none; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px 22px; background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+.ctl { display: grid; gap: 6px; min-width: 0; font-size: 13px; align-content: start; }
+.ctl > label, .ctl > .cap { color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ctl label span { font-family: var(--font-num); color: var(--ink); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { all: unset; cursor: pointer; padding: 6px 10px; font-size: 13px; border: 1px solid var(--line); color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #15120f; border-color: var(--accent); }
+.seg button:focus-visible, .btn:focus-visible, .sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn { all: unset; cursor: pointer; text-align: center; padding: 8px 10px; font-family: var(--font-display); font-size: 15px; background: var(--accent); color: #15120f; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.sws { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { all: unset; cursor: pointer; width: 22px; height: 22px; border: 2px solid transparent; }
+.sw[aria-pressed="true"] { border-color: var(--ink); }
+.check { display: flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.check input { accent-color: var(--accent); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 8px; align-content: start; }
+.card h2 { font-family: var(--font-display); font-size: 19px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tag { font-family: var(--font-num); font-size: 10px; padding: 1px 6px; border: 1px solid var(--line); color: var(--muted); }
+.tag.new { color: #1a1406; background: var(--new); border-color: var(--new); }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.card .srv { font-family: var(--font-num); font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); color: var(--muted); }
+th { color: var(--ink); font-weight: 600; }
+td.n { font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.tw { overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) { .glass { cursor: default; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Wireless Automate · protótipo 3 · o cristal da câmara</div>
+    <h1>O Cristal de Sinal em 3D</h1>
+    <p>Hoje a câmara desenha o <b>sprite do item</b> (16 px achatado). Aqui o cristal vira uma <b>gema facetada</b> desenhada por shader, como o plasma: corpo coral com veios que correm por dentro, borda acesa da cor do tier, arestas claras e um reflexo. O <b>Opaco</b> fica pedra cinza; na <b>recarga</b> ele enche de luz de baixo para cima e solta um anel ao voltar. Arraste o visor para girar.</p>
+  </header>
+
+  <div class="frame">
+    <div class="glass" id="glass">
+      <canvas id="cv" aria-label="Visor do cristal em 3D"></canvas>
+      <div class="badge" id="badge">de perto · quartzo · novo</div>
+      <div class="hint">arraste para girar</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><div class="cap">Vista</div>
+      <div class="seg" id="view"><button data-v="close" aria-pressed="true">De perto</button><button data-v="chamber" aria-pressed="false">Na câmara</button></div></div>
+    <div class="ctl"><div class="cap">Forma</div>
+      <div class="seg" id="shape"><button data-v="0" aria-pressed="false">Ponta dupla</button><button data-v="1" aria-pressed="true">Quartzo</button><button data-v="2" aria-pressed="false">Aglomerado</button></div></div>
+    <div class="ctl"><div class="cap">Desenho</div>
+      <div class="seg" id="draw"><button data-v="new" aria-pressed="true">Novo (3D)</button><button data-v="old" aria-pressed="false">Hoje (sprite)</button></div></div>
+    <div class="ctl"><label for="tune">Sintonia <span id="tuneV">100%</span></label><input type="range" id="tune" min="0" max="100" value="100"></div>
+    <div class="ctl"><div class="cap">Tier <span id="tierV" style="font-family:var(--font-num);color:var(--ink)">Esmeralda</span></div><div class="sws" id="tiers"></div></div>
+    <div class="ctl"><div class="cap">Estado do cristal de perto</div>
+      <div class="seg" id="state"><button data-v="live" aria-pressed="true">Vivo</button><button data-v="dull" aria-pressed="false">Opaco</button></div></div>
+    <div class="ctl"><div class="cap">Recarga</div><button class="btn" id="rec">Esvaziar e recarregar</button></div>
+    <div class="ctl"><div class="cap">Detalhe</div><label class="check" for="edges"><input type="checkbox" id="edges" checked> Arestas acesas</label><label class="check" for="aura"><input type="checkbox" id="aura" checked> Aura (tarefa 4)</label></div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><h2>Forma <span class="tag new">escolha</span></h2><ul>
+      <li><b style="color:var(--ink)">Ponta dupla:</b> bipirâmide de 6 lados, a mais leve e a mais "joia".</li>
+      <li><b style="color:var(--ink)">Quartzo:</b> prisma sextavado com as duas pontas, como um cristal de quartzo de verdade; lembra o minério de Quartzo de Sinal. Recomendada.</li>
+      <li><b style="color:var(--ink)">Aglomerado:</b> uma ponta grande e duas pequenas inclinadas; mais rico, três vezes a geometria.</li></ul>
+      <div class="srv">a forma é fixa por cristal; o Lapidado pode ganhar a Ponta dupla para se distinguir do comum</div></div>
+    <div class="card"><h2>Estados</h2><ul>
+      <li><b style="color:var(--ink)">Vivo:</b> veios coral correndo para cima, núcleo quente, borda da cor do tier, pulso lento.</li>
+      <li><b style="color:var(--ink)">Fora de sintonia:</b> os veios aceleram e o cristal cintila em saltos.</li>
+      <li><b style="color:var(--ink)">Opaco:</b> pedra cinza, sem brilho nem aura.</li>
+      <li><b style="color:var(--ink)">Recarga:</b> a luz sobe de baixo para cima pelo progresso, com uma frente clara; ao fim, um anel.</li></ul>
+      <div class="srv">tudo pelos dados que o cliente já tem: carga, sintonia, progresso da recarga</div></div>
+    <div class="card"><h2>Custo</h2>
+      <div class="tw"><table><tr><th>Forma</th><th style="text-align:right">triângulos</th><th style="text-align:right">8 cristais</th></tr>
+        <tr><td>Ponta dupla</td><td class="n">12</td><td class="n">96</td></tr>
+        <tr><td>Quartzo</td><td class="n">36</td><td class="n">288</td></tr>
+        <tr><td>Aglomerado</td><td class="n">108</td><td class="n">864</td></tr></table></div>
+      <ul><li>Malha montada uma vez (constantes), escrita direto no buffer por quadro, sem alocar.</li>
+      <li>Um render type só para todos os cristais; servidor e rede: nada.</li></ul></div>
+    <div class="card"><h2>No código</h2><ul>
+      <li>Shader novo <code>resonator_crystal</code>, opaco e com profundidade (os cristais tapam o que está atrás).</li>
+      <li><code>ChamberCrystals</code> desenha a malha em vez do <code>renderStatic</code> do item; a posição e o giro continuam os mesmos.</li>
+      <li>O enchimento da recarga sai da aura e passa para o próprio cristal.</li>
+      <li>Com shaderpack do Iris, volta o sprite do item, como o plasma e as fitas.</li>
+      <li>O item no inventário, no JEI e na tela do Núcleo continua o sprite.</li></ul></div>
+  </div>
+</div>
+
+<script>
+const SPRITE_LIVE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA5UlEQVR4nGNgIALw8wn9J0YdTs3/P7z6T5Qh/GiKYJr/n9zx/9PEKqyGMCEr/vDoBl7n7gqyxJBnQtbMcPMcw+PmDJL8zESsTSQZAANgV1FiABjcPMeADpBdx8RABkAObCZ4AGJRhEszcmAz4XMqVjEGBobPJw4xXD9/kUwv3EQ1lAVE/Dh9gOH3tQtgAZDJB289ZNBcOAFFIVwcajuIjTBAUJzhA68Iw6tDe+ESMCeigxkrN4Hp1ivPGD5+esfICOKAAuPs5qUMd48dZbi4eQNeH4A0ggBIM4gGEzBDiAkCmEYYAAAuqoFtqa+RsgAAAABJRU5ErkJggg==";
+const SPRITE_DULL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA4ElEQVR4nGNgIALw8wn9J0YdTs1fPrz6T5Qh/GiKYJpvXjrxf+vaRVgNYUJW/PTRDbzOrS3PwpBnQtb89NE9hmXzJ5DkZyZibSLJABgAuYoiA0AA5C10gOw6JgYyAHJgM8ECEJsiXJqRA5sJn1NBYlfnz8QQv3P7FsP1G7ewe+Hnkf0ofO3EdBRD0C1iAREH9+6AC9wTkWa4dOUaihi7jSPYRpC4poYanA03AOYcEIBJIIshg5VrNoDpjVsPMHz89I6REcQBBYa/twNWDegApBEEQJpBNJiAGUKMATCNMAAA4EWC0acZ/4cAAAAASUVORK5CYII=";
+const TIERS = [["Básico",0x6E7480],["Avançado",0xD59A1E],["Elite",0x1FA9A0],["Esmeralda",0x22A84E],["Allthemodium",0xE8740A],["Vibranium",0x18B57A],["Unobtainium",0xB23FD0],["Ultimate",0x7B4FE0]];
+const S = { view: "close", shape: 1, draw: "new", tune: 1, tier: 3, state: "live", edges: 1, aura: 1, rec: -1, recStart: 0, ringAt: -10, yaw: 0.6, dragging: false };
+const REC_SECONDS = 4;
+
+// ---------- matemática ----------
+const M = {
+  persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2); return [t / a,0,0,0, 0,t,0,0, 0,0,(fa+n)/(n-fa),-1, 0,0,2*fa*n/(n-fa),0]; },
+  look(e, c, u) { const z = norm(sub(e, c)), x = norm(cross(u, z)), y = cross(z, x);
+    return [x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,e),-dot(y,e),-dot(z,e),1]; },
+  mul(a, b) { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k*4+r] * b[c*4+k]; o[c*4+r] = s; } return o; },
+  id() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; },
+  tr(x, y, z) { const m = M.id(); m[12] = x; m[13] = y; m[14] = z; return m; },
+  sc(s) { return [s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1]; },
+  ry(a) { const c = Math.cos(a), s = Math.sin(a); return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]; },
+  rz(a) { const c = Math.cos(a), s = Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; },
+  rx(a) { const c = Math.cos(a), s = Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; },
+  ap(m, p) { return [m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12], m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13], m[2]*p[0]+m[6]*p[1]+m[10]*p[2]+m[14]]; }
+};
+function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function add(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+function cross(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function dot(a, b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
+
+// ---------- malhas ----------
+// cada vértice: posição (3), normal da faceta (3), baricêntrica (3); a diagonal dos quadriláteros some da aresta
+function Mesh() { this.v = []; }
+Mesh.prototype.tri = function (a, b, c, ba, bb, bc, inside) {
+  let n = norm(cross(sub(b, a), sub(c, a)));
+  const cen = [(a[0]+b[0]+c[0])/3, (a[1]+b[1]+c[1])/3, (a[2]+b[2]+c[2])/3];
+  if (dot(n, sub(cen, inside)) < 0) { [b, c] = [c, b]; [bb, bc] = [bc, bb]; n = [-n[0], -n[1], -n[2]]; }
+  for (const [p, q] of [[a, ba], [b, bb], [c, bc]]) this.v.push(...p, ...n, ...q);
+};
+Mesh.prototype.quad = function (a, b, c, d, inside) {
+  this.tri(a, b, c, [1,1,0], [0,2,0], [0,1,1], inside);
+  this.tri(a, c, d, [1,0,1], [0,1,1], [0,0,2], inside);
+};
+const B3 = [[1,0,0],[0,1,0],[0,0,1]];
+function jitter(i, k) { const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return s - Math.floor(s); }
+
+function bipyramid(mesh, m) {
+  const n = 6, ring = [], top = M.ap(m, [0, .58, 0]), bot = M.ap(m, [0, -.46, 0]), ins = M.ap(m, [0, .05, 0]);
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, r = .3 * (.9 + .2 * jitter(i, 1)); ring.push(M.ap(m, [Math.cos(a) * r, .04 + .05 * (jitter(i, 2) - .5), Math.sin(a) * r])); }
+  for (let i = 0; i < n; i++) { const a = ring[i], b = ring[(i + 1) % n];
+    mesh.tri(a, b, top, ...B3, ins); mesh.tri(b, a, bot, ...B3, ins); }
+}
+function quartz(mesh, m) {
+  const n = 6, lo = [], hi = [], ins = M.ap(m, [0, 0, 0]);
+  const top = M.ap(m, [.02, .58, -.01]), bot = M.ap(m, [0, -.5, 0]);
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + .3, r = .23 * (.92 + .16 * jitter(i, 3));
+    lo.push(M.ap(m, [Math.cos(a) * r, -.3, Math.sin(a) * r]));
+    hi.push(M.ap(m, [Math.cos(a) * r, .2 + .07 * jitter(i, 4), Math.sin(a) * r])); }
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n;
+    mesh.quad(lo[i], lo[j], hi[j], hi[i], ins);
+    mesh.tri(hi[i], hi[j], top, ...B3, ins);
+    mesh.tri(lo[j], lo[i], bot, ...B3, ins); }
+}
+function cluster(mesh) {
+  quartz(mesh, M.id());
+  quartz(mesh, M.mul(M.tr(.2, -.2, .05), M.mul(M.rz(-.55), M.sc(.55))));
+  quartz(mesh, M.mul(M.tr(-.18, -.24, -.06), M.mul(M.rx(.25), M.mul(M.rz(.6), M.sc(.48)))));
+}
+const SHAPES = [
+  { name: "ponta dupla", build: m => bipyramid(m, M.id()), ymin: -.46, ymax: .58 },
+  { name: "quartzo", build: m => quartz(m, M.id()), ymin: -.5, ymax: .6 },
+  { name: "aglomerado", build: m => cluster(m), ymin: -.5, ymax: .6 }
+];
+
+// ---------- GL ----------
+const cv = document.getElementById("cv");
+const gl = cv.getContext("webgl2", { antialias: true });
+function prog(vs, fs) {
+  const p = gl.createProgram();
+  for (const [t, s] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+    const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh));
+    gl.attachShader(p, sh); }
+  gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
+  return { p, u };
+}
+const NOISE = `
+float h1(float n){ return fract(sin(n)*43758.5453); }
+float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1,311.7,74.7)))*43758.5453); }
+float n3(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x), mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x), f.y),
+             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x), mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x), f.y), f.z); }
+float fbm(vec3 p){ float s=0., a=.5; for(int i=0;i<3;i++){ s+=a*n3(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=.5; } return s; }`;
+
+const crystal = prog(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor; layout(location=2) in vec3 aBar;
+uniform mat4 uModel, uVP;
+out vec3 vObj, vW, vN, vB;
+void main(){ vObj=aPos; vec4 w=uModel*vec4(aPos,1.); vW=w.xyz; vN=mat3(uModel)*aNor; vB=aBar; gl_Position=uVP*w; }`,
+`#version 300 es
+precision highp float;
+in vec3 vObj, vW, vN, vB;
+uniform vec3 uCam, uTier; uniform float uT, uTune, uDull, uRec, uSeed, uYmin, uYmax, uEdges;
+out vec4 o;
+${NOISE}
+void main(){
+  vec3 N=normalize(vN), V=normalize(uCam-vW), L=normalize(vec3(.35,.9,.4));
+  float mis=1.-uTune, t=uT;
+  float fres=pow(1.-abs(dot(N,V)),2.2);
+  float h=clamp((vObj.y-uYmin)/(uYmax-uYmin),0.,1.);
+  vec3 q=vObj*4.2 + refract(-V,N,.66)*.4 + vec3(0.,-t*(.35+mis*1.4),0.) + uSeed*3.1;
+  float vein=fbm(q);
+  float lit=1.-uDull;
+  if(uRec>=0.) lit=step(h,uRec);
+  float diff=.42+.58*max(dot(N,L),0.);
+  vec3 deep=vec3(.40,.06,.07), coral=vec3(.95,.57,.48), hot=vec3(1.,.88,.80);
+  float core=exp(-dot(vObj.xz,vObj.xz)*16.)*smoothstep(.6,.0,abs(vObj.y-.02));
+  vec3 live=mix(deep,coral,smoothstep(.28,.72,vein))*(.5+.5*diff);
+  live+=hot*core*(.45+.2*sin(t*2.+uSeed*7.));
+  live+=mix(coral,uTier,.7)*fres*1.1;
+  live*=1.-mis*.6*step(.55,h1(floor(t*16.)+uSeed*13.));
+  vec3 grey=mix(vec3(.15,.145,.14),vec3(.36,.34,.32),smoothstep(.3,.7,vein))*diff + vec3(.5)*fres*.18;
+  vec3 col=mix(grey,live,lit);
+  if(uRec>=0.){ float front=smoothstep(.04,0.,abs(h-uRec))*step(.001,uRec)*step(uRec,.999); col+=vec3(1.,.72,.6)*front*1.8; }
+  vec3 fw=fwidth(vB); vec3 e=smoothstep(vec3(0.),fw*1.6,vB); float edge=1.-min(min(e.x,e.y),e.z);
+  col+=mix(vec3(.55,.53,.5)*.5,mix(hot,uTier,.35),lit)*edge*uEdges*.7;
+  col+=vec3(1.)*pow(max(dot(reflect(-L,N),V),0.),56.)*(.35+.6*lit);
+  col=1.-exp(-col*1.3);
+  o=vec4(col,1.);
+}`);
+
+const quad = prog(`#version 300 es
+layout(location=0) in vec2 aC;
+uniform mat4 uVP; uniform vec3 uCenter, uRight, uUp; uniform float uSize, uScreen;
+out vec2 vC;
+void main(){ vC=aC; if(uScreen>.5){ gl_Position=vec4(aC*2.-1.,.999,1.); return; }
+  vec3 p=uCenter+(uRight*(aC.x-.5)+uUp*(aC.y-.5))*uSize; gl_Position=uVP*vec4(p,1.); }`,
+`#version 300 es
+precision highp float;
+in vec2 vC; uniform int uMode; uniform vec3 uCol, uTier; uniform float uI, uT, uP; uniform sampler2D uTex; uniform vec2 uRes;
+out vec4 o;
+${NOISE}
+void main(){
+  if(uMode==0){ // parede da câmara, pixel de pedra
+    vec2 px=floor(gl_FragCoord.xy/uRes.y*96.);
+    float n=h3(vec3(px,1.)); float g=.30+.05*n+.03*step(.93,n);
+    vec2 uv=gl_FragCoord.xy/uRes; float vig=1.-.35*length(uv-.5);
+    o=vec4(vec3(g*1.0,g*1.01,g*1.05)*vig,1.); return; }
+  vec2 p=vC*2.-1.; float r=length(p);
+  if(uMode==1){ // brilho radial aditivo (aura, plasma)
+    float a=exp(-r*r*4.5)*uI; o=vec4(uCol*a,1.); return; }
+  if(uMode==2){ // núcleo de plasma simplificado
+    float body=smoothstep(.62,.5,r); float n=fbm(vec3(p*3.,uT*.6));
+    vec3 c=mix(vec3(.95,.45,.35),vec3(1.,.85,.75),n)*body*.9;
+    float ring=smoothstep(.06,0.,abs(r-.62))*1.2;
+    c+=uTier*ring+vec3(.95,.5,.4)*exp(-r*r*3.)*.35;
+    o=vec4(1.-exp(-c*1.2),1.); return; }
+  if(uMode==3){ // anel do fim da recarga
+    float rad=.25+.7*uP; float a=smoothstep(.08,0.,abs(r-rad))*(1.-uP)*1.6;
+    o=vec4(mix(vec3(1.,.7,.6),uTier,.4)*a,1.); return; }
+  if(uMode==4){ // sprite do item, como hoje
+    vec4 c=texture(uTex,vec2(vC.x,1.-vC.y)); if(c.a<.1) discard; o=vec4(c.rgb*.92,1.); return; }
+}`);
+
+const quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1, 0,0, 1,1, 0,1]), gl.STATIC_DRAW);
+const quadVao = gl.createVertexArray(); gl.bindVertexArray(quadVao); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+const meshes = SHAPES.map(s => {
+  const m = new Mesh(); s.build(m);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(m.v), gl.STATIC_DRAW);
+  for (let i = 0; i < 3; i++) { gl.enableVertexAttribArray(i); gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 36, i * 12); }
+  return { vao, count: m.v.length / 9 };
+});
+
+function tex(src) { const t = gl.createTexture(); const img = new Image();
+  img.onload = () => { gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); };
+  img.src = src; return t; }
+const texLive = tex(SPRITE_LIVE), texDull = tex(SPRITE_DULL);
+
+// ---------- desenho ----------
+let VP, cam, camRight, camUp;
+function tierRGB() { const c = TIERS[S.tier][1]; return [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255]; }
+function drawQuad(mode, center, size, extra) {
+  gl.useProgram(quad.p); gl.bindVertexArray(quadVao);
+  const u = quad.u; gl.uniformMatrix4fv(u.uVP, false, VP);
+  gl.uniform1i(u.uMode, mode); gl.uniform1f(u.uScreen, mode === 0 ? 1 : 0);
+  gl.uniform3fv(u.uCenter, center || [0, 0, 0]); gl.uniform1f(u.uSize, size || 1);
+  gl.uniform3fv(u.uRight, (extra && extra.right) || camRight); gl.uniform3fv(u.uUp, (extra && extra.up) || camUp);
+  gl.uniform3fv(u.uCol, (extra && extra.col) || [1, 1, 1]); gl.uniform3fv(u.uTier, tierRGB());
+  gl.uniform1f(u.uI, (extra && extra.i) || 1); gl.uniform1f(u.uT, now); gl.uniform1f(u.uP, (extra && extra.p) || 0);
+  gl.uniform2f(u.uRes, cv.width, cv.height);
+  if (extra && extra.tex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, extra.tex); gl.uniform1i(u.uTex, 0); }
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+function drawCrystal(model, st) {
+  const sh = SHAPES[S.shape], mesh = meshes[S.shape];
+  gl.useProgram(crystal.p); gl.bindVertexArray(mesh.vao); const u = crystal.u;
+  gl.uniformMatrix4fv(u.uModel, false, model); gl.uniformMatrix4fv(u.uVP, false, VP);
+  gl.uniform3fv(u.uCam, cam); gl.uniform3fv(u.uTier, tierRGB());
+  gl.uniform1f(u.uT, now); gl.uniform1f(u.uTune, S.tune); gl.uniform1f(u.uDull, st.dull ? 1 : 0);
+  gl.uniform1f(u.uRec, st.rec); gl.uniform1f(u.uSeed, st.seed); gl.uniform1f(u.uYmin, sh.ymin); gl.uniform1f(u.uYmax, sh.ymax);
+  gl.uniform1f(u.uEdges, S.edges);
+  gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+}
+function recState() {
+  if (S.rec < 0) return -1;
+  const p = (now - S.recStart) / REC_SECONDS;
+  if (p >= 1) { S.rec = -1; S.ringAt = now; S.state = "live"; syncSeg("state", "live"); document.getElementById("rec").disabled = false; return -1; }
+  return Math.max(0, p);
+}
+function auraFor(pos, size, seed) {
+  if (!S.aura) return;
+  const tr = tierRGB(), coral = [.95, .57, .48];
+  const mis = 1 - S.tune, trem = 1 - mis * .5 * (Math.sin(now * 23 + seed * 9) * .5 + .5);
+  const i = (.35 + .45 * S.tune) * trem * (.85 + .15 * Math.sin(now * 3 + seed));
+  drawQuad(1, pos, size, { col: coral.map((c, k) => c * .7 + tr[k] * .3), i });
+}
+
+let now = 0;
+function frame(ms) {
+  now = ms / 1000;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  gl.viewport(0, 0, w, h);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!S.dragging && !reduce) S.yaw += 0.0035;
+  const close = S.view === "close";
+  const dist = close ? 2.3 : 4.6, pitch = close ? .18 : .32;
+  cam = [Math.sin(S.yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + (close ? .05 : 0), Math.cos(S.yaw) * Math.cos(pitch) * dist];
+  const target = [0, close ? .04 : 0, 0];
+  const view = M.look(cam, target, [0, 1, 0]);
+  VP = M.mul(M.persp(close ? .7 : .75, w / h, .05, 50), view);
+  const f = norm(sub(target, cam)); camRight = norm(cross(f, [0, 1, 0])); camUp = cross(camRight, f);
+
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
+  drawQuad(0);
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
+  const rec = recState();
+
+  const items = [];
+  if (close) {
+    items.push({ pos: [0, 0, 0], scale: 1.25, spin: 0, dull: S.state === "dull", rec, seed: .37 });
+  } else {
+    const n = 6;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + now * .25 * (reduce ? 0 : 1);
+      const isTarget = i === 2;
+      items.push({ pos: [Math.cos(a) * 1.35, .05 * Math.sin(now + i), Math.sin(a) * 1.35], scale: .55, spin: a * 2,
+        dull: isTarget ? S.state === "dull" : false, rec: isTarget ? rec : -1, seed: i * .73 + .1 });
+    }
+  }
+  // cristais (opacos, com profundidade)
+  for (const it of items) {
+    if (S.draw === "new") {
+      const model = M.mul(M.tr(...it.pos), M.mul(M.ry(it.spin + (close ? 0 : 0)), M.sc(it.scale)));
+      drawCrystal(model, { dull: it.dull, rec: it.rec, seed: it.seed });
+    } else {
+      const dull = it.dull && it.rec < 0;
+      const right = [Math.cos(it.spin + now * .8), 0, Math.sin(it.spin + now * .8)];
+      drawQuad(4, it.pos, it.scale * 1.15, { tex: dull || (it.rec >= 0 && it.rec < 1) ? texDull : texLive, right, up: [0, 1, 0] });
+    }
+  }
+  // brilhos aditivos sem gravar profundidade
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  if (!close) { drawQuad(1, [0, 0, 0], 2.6, { col: [.95, .5, .4], i: .35 }); drawQuad(2, [0, 0, 0], 1.2); }
+  for (const it of items) if (!it.dull && it.rec < 0) auraFor(it.pos, it.scale * 1.7, it.seed);
+  const ringP = (now - S.ringAt) / .7;
+  if (ringP >= 0 && ringP < 1) { const it = close ? items[0] : items[2]; drawQuad(3, it.pos, it.scale * 2.2, { p: ringP }); }
+  gl.disable(gl.BLEND); gl.depthMask(true);
+
+  document.getElementById("badge").textContent =
+    (close ? "de perto" : "na câmara") + " · " + SHAPES[S.shape].name + " · " + (S.draw === "new" ? "novo" : "hoje") +
+    (rec >= 0 ? " · recarga " + Math.round(rec * 100) + "%" : "");
+  requestAnimationFrame(frame);
+}
+
+// ---------- controles ----------
+function syncSeg(id, v) { for (const b of document.querySelectorAll("#" + id + " button")) b.setAttribute("aria-pressed", b.dataset.v === String(v)); }
+function seg(id, key, num) {
+  document.getElementById(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    S[key] = num ? +b.dataset.v : b.dataset.v; syncSeg(id, b.dataset.v);
+  });
+}
+seg("view", "view"); seg("shape", "shape", true); seg("draw", "draw"); seg("state", "state");
+const tune = document.getElementById("tune");
+tune.addEventListener("input", () => { S.tune = tune.value / 100; document.getElementById("tuneV").textContent = tune.value + "%"; });
+const tiers = document.getElementById("tiers");
+TIERS.forEach(([name, c], i) => {
+  const b = document.createElement("button"); b.className = "sw"; b.style.background = "#" + c.toString(16).padStart(6, "0");
+  b.title = name; b.setAttribute("aria-label", name); b.setAttribute("aria-pressed", i === S.tier);
+  b.addEventListener("click", () => { S.tier = i; document.getElementById("tierV").textContent = name;
+    for (const x of tiers.children) x.setAttribute("aria-pressed", x === b); });
+  tiers.appendChild(b);
+});
+document.getElementById("rec").addEventListener("click", e => {
+  S.rec = 0; S.recStart = now + .6; S.state = "dull"; syncSeg("state", "dull"); e.currentTarget.disabled = true;
+});
+document.getElementById("edges").addEventListener("change", e => S.edges = e.target.checked ? 1 : 0);
+document.getElementById("aura").addEventListener("change", e => S.aura = e.target.checked ? 1 : 0);
+const glass = document.getElementById("glass"); let lastX = 0;
+glass.addEventListener("pointerdown", e => { S.dragging = true; lastX = e.clientX; glass.setPointerCapture(e.pointerId); });
+glass.addEventListener("pointermove", e => { if (!S.dragging) return; S.yaw -= (e.clientX - lastX) * .01; lastX = e.clientX; });
+glass.addEventListener("pointerup", () => S.dragging = false);
+glass.addEventListener("pointercancel", () => S.dragging = false);
+
+if (gl) requestAnimationFrame(frame);
+else document.getElementById("badge").textContent = "WebGL 2 indisponível neste navegador";
+</script>

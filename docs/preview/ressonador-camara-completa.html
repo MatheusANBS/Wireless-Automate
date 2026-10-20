@@ -1,0 +1,231 @@
+<title>Câmara do Ressonador · animações</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: o corte lateral da câmara grande no topo, os controles de cada animação embaixo, e um cartão por animação com o que ela mostra e o que o servidor precisa contar. Visual escuro de propósito. */
+:root {
+  --bg: #0d0f12; --panel: #161a1f; --ink: #e9e6df; --muted: #8e98a3; --line: #262c33;
+  --casing: #d9d3c7; --glass: #5f8aa0; --accent: #f2917a; --new: #ffd36b;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.wrap > * { min-width: 0; }
+.eyebrow { font-family: var(--font-num); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 46px); margin: 0; line-height: 1.05; text-wrap: balance; }
+p { margin: 0; line-height: 1.6; max-width: 72ch; color: var(--muted); }
+p b { color: var(--ink); font-weight: 600; }
+.frame { background: var(--casing); padding: clamp(10px, 3vw, 26px); box-shadow: inset 0 0 0 4px #b9b2a4; }
+.glass { position: relative; border: 6px solid var(--glass); background: #000; aspect-ratio: 4 / 3; max-width: 100%; }
+canvas { display: block; width: 100%; height: 100%; }
+.badge { position: absolute; left: 10px; top: 10px; font-family: var(--font-num); font-size: 11px; color: #e6eef4; background: #000a; padding: 3px 7px; }
+.lbl { position: absolute; font-family: var(--font-num); font-size: 10.5px; color: #1b1e22; background: #f2eee6d9; padding: 1px 5px; pointer-events: none; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 22px; background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+.ctl { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
+.ctl label { color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ctl label span { font-family: var(--font-num); color: var(--ink); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.btn { all: unset; cursor: pointer; text-align: center; padding: 8px 10px; font-family: var(--font-display); font-size: 15px; background: var(--accent); color: #15120f; }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.check { display: flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.check input { accent-color: var(--accent); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 8px; align-content: start; }
+.card h2 { font-family: var(--font-display); font-size: 19px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tag { font-family: var(--font-num); font-size: 10px; padding: 1px 6px; border: 1px solid var(--line); color: var(--muted); }
+.tag.new { color: #1a1406; background: var(--new); border-color: var(--new); }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.card .srv { font-family: var(--font-num); font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Wireless Automate · protótipo 2 · todas as animações da câmara</div>
+    <h1>A câmara inteira, em corte</h1>
+    <p>Um corte de lado da câmara, com as paredes claras do jogo atrás (o brilho é somado como no jogo). O <b>plasma</b> fica no centro, os <b>cristais</b> giram em volta, a <b>energia</b> só flui quando sai de verdade pela Porta de Energia, e a <b>recarga</b> leva o catalisador da Porta de Cristais até o Opaco. Use os controles para ligar cada uma.</p>
+  </header>
+
+  <div class="frame"><div class="glass">
+    <canvas id="cv" aria-label="Animação da câmara do Ressonador em corte"></canvas>
+    <span class="badge" id="badge"></span>
+    <span class="lbl" style="right:4px;top:30%">Porta de Energia</span>
+    <span class="lbl" style="left:4px;bottom:22%">Porta de Cristais</span>
+  </div></div>
+
+  <div class="controls">
+    <div class="ctl"><label for="flow">Energia saindo pela porta <span id="flowV">60%</span></label><input type="range" id="flow" min="0" max="100" value="60"></div>
+    <div class="ctl"><label for="tune">Sintonia <span id="tuneV">100%</span></label><input type="range" id="tune" min="0" max="100" value="100"></div>
+    <div class="ctl"><label for="cr">Cristais <span id="crV">6</span></label><input type="range" id="cr" min="1" max="8" value="6"></div>
+    <div class="ctl"><label>Recarga</label><button class="btn" id="rec">Esvaziar um cristal e recarregar</button>
+      <label class="check" for="full"><input type="checkbox" id="full"> Buffer cheio (nada sai, nada gera)</label></div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><h2>Fluxo de energia <span class="tag new">nova</span></h2><ul>
+      <li>Um conduto de luz do plasma até a Porta de Energia, com pacotes que correm para fora.</li>
+      <li>Só aparece com energia saindo de verdade; mais grosso e mais rápido com mais vazão.</li>
+      <li>Parado, o conduto apaga e o anel da porta fica escuro.</li></ul>
+      <div class="srv">Servidor: soma o que sai por cada Porta e manda uma faixa de vazão (0 a 7) por porta na câmara, só quando a faixa muda.</div></div>
+    <div class="card"><h2>Recarga <span class="tag new">nova</span></h2><ul>
+      <li>O Opaco desce e apaga; da Porta de Cristais sobe uma espiral de catalisador até ele.</li>
+      <li>O cristal enche de luz de baixo para cima com o progresso e solta um anel quando volta.</li></ul>
+      <div class="srv">Servidor: nada novo (o início e a duração da recarga já vão na câmara).</div></div>
+    <div class="card"><h2>Cristais <span class="tag new">brilho novo</span></h2><ul>
+      <li>Continuam em anel, mas cada um ganha uma aura do shader e um feixe fino até o plasma quando em sintonia.</li>
+      <li>Fora de sintonia, as auras tremem e os feixes somem.</li></ul>
+      <div class="srv">Servidor: nada novo.</div></div>
+    <div class="card"><h2>Buffer cheio <span class="tag new">nova</span></h2><ul>
+      <li>Sem saída e sem espaço, o plasma pulsa contido, como sob pressão, e o conduto fica apagado.</li></ul>
+      <div class="srv">Servidor: o estado "cheio" vai na câmara só quando muda.</div></div>
+    <div class="card"><h2>Placa de Chladni <span class="tag">igual</span></h2><ul>
+      <li>Fica como está no chão. Pode virar shader depois, se quiser.</li></ul></div>
+  </div>
+</div>
+
+<script>
+const VERT = `attribute vec2 a; void main(){ gl_Position = vec4(a,0.,1.); }`;
+const FRAG = `
+precision highp float;
+uniform vec2 uRes; uniform float uT, uTune, uFlow, uFull, uCr, uDull, uRec, uPing;
+uniform vec3 uTier;
+uniform vec4 uCrys[8];
+const vec3 CORAL = vec3(0.949, 0.569, 0.478);
+const vec3 WHITE = vec3(1.0, 0.94, 0.92);
+const vec3 RED = vec3(0.84, 0.27, 0.23);
+float h21(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
+float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<4;i++){ s+=a*n2(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return s; }
+float segD(vec2 p, vec2 a, vec2 b, out float h){ vec2 pa=p-a, ba=b-a; h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.); return length(pa-ba*h); }
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 p = (uv - .5) * vec2(uRes.x/uRes.y, 1.) * 3.2;   // câmara de 3 blocos: -1.5..1.5
+  float t = uT, tune = uTune, mis = 1. - tune;
+  // fundo: paredes de pedra clara iluminadas (como no jogo)
+  vec2 px = floor((p + 2.) * 16.);
+  float stone = .48 + .10*h21(px) + .05*h21(floor(px/3.));
+  vec3 base = vec3(stone*.92, stone*.95, stone);
+  if (p.y < -1.42) base *= .78;                        // chão
+  if (abs(p.x) > 1.45) base *= .7;                     // paredes laterais
+  vec3 col = vec3(0.);
+
+  // placa de Chladni (de lado: pontos de areia dançando)
+  float plate = smoothstep(.02, .0, abs(p.y + 1.38)) * step(abs(p.x), 1.3);
+  col += WHITE * plate * (.25 + .5*step(.8, abs(sin(p.x*9. + sin(t*1.3)*mis*3.))));
+
+  // núcleo de plasma
+  vec2 c0 = vec2(0., .15);
+  vec2 q = p - c0; float r = length(q);
+  float press = uFull * (.5 + .5*sin(t*7.));
+  float w = fbm(q*3. + vec2(t*.4, -t*.3) + fbm(q*4.5 - t*.2)*1.6);
+  float radius = .32 + .03*sin(t*2.) + mis*.07*(w-.5) - press*.05;
+  float body = smoothstep(radius, radius-.13, r) * (.45 + .8*w);
+  col += CORAL * vec3(1.5,.75,.55) * body * .9;
+  col += uTier * smoothstep(.1, .0, abs(r - radius)) * (.8 + press*1.2);
+  col += WHITE * exp(-r*r*90.) * (.7 + .3*sin(t*3.)) ;
+
+  // fluxo de energia até a porta (só com vazão)
+  vec2 port = vec2(1.45, .45);
+  float h; float d = segD(p, c0 + normalize(port-c0)*radius, port, h);
+  float flow = uFlow * (1. - uFull);
+  float width = .02 + .06*flow;
+  float tube = smoothstep(width*2.2, 0., d);
+  float packets = pow(.5 + .5*sin(h*28. - t*(6. + 14.*flow)), 6.);
+  col += mix(CORAL, uTier, h) * tube * (.6 + 2.6*packets) * step(.001, flow) * (.4 + .6*tune);
+  col += WHITE * smoothstep(width*.5, 0., d) * packets * flow;
+  float pr = length(p - port);
+  col += mix(vec3(.05), uTier, step(.001, flow)) * smoothstep(.16, .1, pr) * smoothstep(.06, .1, pr) * (.6 + .6*flow);
+
+  // cristais: aura e feixe ao plasma; o Opaco desce e apaga; a recarga enche
+  vec2 cport = vec2(-1.45, -1.05);
+  for (int i = 0; i < 8; i++) {
+    if (float(i) >= uCr) break;
+    vec4 c = uCrys[i];           // xy posição, z = opaco (1) ou vivo (0), w = profundidade (frente 1)
+    vec2 cp = c.xy;
+    float dc = length(p - cp);
+    float isDull = c.z;
+    float shape = smoothstep(.1, .085, abs(p.x - cp.x)*1.2 + abs(p.y - cp.y)*.8);
+    vec3 crystalCol = mix(CORAL, vec3(.28, .27, .26), isDull);
+    // enche de baixo para cima na recarga
+    float fill = step(p.y, cp.y - .08 + uRec*.16);
+    if (isDull > .5) crystalCol = mix(vec3(.28, .27, .26), CORAL * 1.1, fill * step(.001, uRec));
+    base = mix(base, crystalCol * (.7 + .3*c.w), shape);
+    float aura = exp(-dc*dc*120.) * (1. - isDull) * (.6 + .4*sin(t*4. + float(i))) ;
+    col += mix(CORAL, uTier, .3) * aura * .55 * (1. + mis*.6*(n2(vec2(t*9., float(i)))-.5));
+    float hh; float db = segD(p, cp, c0, hh);
+    col += uTier * (.0009/(db + .002)) * (1. - isDull) * smoothstep(.5, 1., tune) * .7;
+    if (isDull > .5 && uRec > 0.) {
+      // espiral de catalisador da Porta de Cristais até o Opaco
+      for (int k = 0; k < 10; k++) {
+        float s = fract(float(k)/10. + t*.45);
+        vec2 path = mix(cport, cp, s) + vec2(sin(s*18. + t*3.), cos(s*18. + t*3.)) * .09 * (1. - s);
+        col += mix(RED, CORAL, s) * (.0016/(dot(p-path, p-path) + .0012)) * .6;
+      }
+      col += CORAL * smoothstep(.04, 0., abs(dc - .14 - uPing*.5)) * uPing * (1. - uPing) * 3.;
+    }
+  }
+  // porta de cristais
+  float cpr = length(p - cport);
+  col += mix(vec3(.05), RED, step(.001, uRec)) * smoothstep(.15, .09, cpr) * smoothstep(.05, .09, cpr);
+
+  // chiado fora de sintonia
+  col += vec3(h21(floor(gl_FragCoord.xy/2.) + floor(t*24.))) * mis*mis*.12;
+  // soma aditiva sobre as paredes, como no jogo
+  vec3 glow = 1. - exp(-col * 1.1);
+  gl_FragColor = vec4(min(base + glow, 1.), 1.);
+}`;
+
+const cv = document.getElementById('cv');
+const gl = cv.getContext('webgl', { antialias: false });
+const $ = id => document.getElementById(id);
+function sh(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+let prog, U = {};
+try {
+  prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  ['uRes','uT','uTune','uFlow','uFull','uCr','uDull','uRec','uPing','uTier','uCrys'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+} catch (e) { $('badge').textContent = 'WebGL indisponível: ' + e.message; }
+
+function resize(){ const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); cv.width = Math.max(1, r.width*d|0); cv.height = Math.max(1, r.height*d|0); }
+addEventListener('resize', resize); resize();
+let rec = -1, dull = -1, ping = 0;
+$('rec').onclick = () => { dull = 0; rec = 0; ping = 0; };
+function label(){ $('flowV').textContent = $('flow').value + '%'; $('tuneV').textContent = $('tune').value + '%'; $('crV').textContent = $('cr').value;
+  const f = +$('flow').value, full = $('full').checked;
+  $('badge').textContent = full ? 'buffer cheio · nada sai' : f ? `energia saindo · ${f}%` : 'nada saindo · conduto apagado'; }
+['flow','tune','cr','full'].forEach(id => $(id).addEventListener('input', label)); label();
+const crys = new Float32Array(32);
+let t = 0, last = performance.now(), tuneS = 1, flowS = .6;
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; t += dt;
+  tuneS += (+$('tune').value/100 - tuneS) * Math.min(1, dt*4);
+  flowS += (+$('flow').value/100 - flowS) * Math.min(1, dt*3);
+  const n = +$('cr').value;
+  if (rec >= 0) { rec += dt / 6; if (rec >= 1) { rec = -1; ping = .001; dull = -1; } }
+  if (ping > 0) { ping += dt * 1.5; if (ping >= 1) ping = 0; }
+  for (let i = 0; i < 8; i++) {
+    const a = t*.5 + i*Math.PI*2/n;
+    const isDull = (i === dull) ? 1 : 0;
+    const drop = isDull ? .35 * (1 - (rec > 0 ? Math.min(1, rec*1.2) : 0)) : 0;
+    const bob = Math.sin(t*1.6 + i) * (.05 + (1 - tuneS)*.08);
+    crys[i*4] = Math.cos(a) * 1.0; crys[i*4+1] = .15 + Math.sin(a)*.12 + bob - drop; crys[i*4+2] = isDull; crys[i*4+3] = (Math.sin(a) + 1) / 2;
+  }
+  if (prog) {
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform1f(U.uT, t); gl.uniform1f(U.uTune, tuneS);
+    gl.uniform1f(U.uFlow, $('full').checked ? 0 : flowS); gl.uniform1f(U.uFull, $('full').checked ? 1 : 0);
+    gl.uniform1f(U.uCr, n); gl.uniform1f(U.uDull, dull); gl.uniform1f(U.uRec, rec > 0 ? rec : 0); gl.uniform1f(U.uPing, ping);
+    gl.uniform3f(U.uTier, .48, .31, .88); gl.uniform4fv(U.uCrys, crys);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>

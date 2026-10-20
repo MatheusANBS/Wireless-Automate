@@ -38,6 +38,9 @@ public final class ResonatorBatch {
         if (energy || crystals) {
             core.notifyPorts(energy, crystals);
         }
+        // A vazão real do lote vira faixa (o "cheio" é o buffer no teto agora) e zera as somas das Portas.
+        long maxOutput = CoreMath.maxOutput(core.chambers(), Config.resonatorFePerCrystal(core.tier()));
+        core.flow().closeBatch(ticks, maxOutput, core.energy() >= core.capacity());
         // A carga que baixa não muda a câmara: só cristal Opaco, recarga, faixa ou lâmpada mandam o update tag.
         core.syncIfChanged();
     }

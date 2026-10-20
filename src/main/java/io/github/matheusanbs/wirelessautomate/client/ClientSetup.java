@@ -28,6 +28,9 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
 import java.util.List;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
@@ -38,6 +41,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 /** Registros só do cliente. As classes de tela nunca são carregadas no servidor dedicado. */
 // bus explícito: o FML já o deduz do evento e marcou o atributo para remoção, mas aqui ele deixa claro
@@ -96,5 +100,13 @@ public final class ClientSetup {
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
+    }
+
+    /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
+    @SubscribeEvent
+    static void registerShaders(RegisterShadersEvent event) {
+        PlasmaShader.register(event);
+        RibbonShader.register(event);
+        CrystalShader.register(event);
     }
 }

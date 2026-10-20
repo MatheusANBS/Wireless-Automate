@@ -51,4 +51,15 @@ class CoreMathTest {
         assertEquals(Long.MAX_VALUE, CoreMath.buffer(8, Long.MAX_VALUE / 4));
         assertEquals(6, CoreMath.mulSat(2, 3));
     }
+
+    @Test
+    void faixaDeVazaoPelaRaiz() {
+        assertEquals(0, CoreMath.flowBand(0, 20, 1_000));
+        assertEquals(0, CoreMath.flowBand(5, 20, 0));
+        assertEquals(7, CoreMath.flowBand(20_000, 20, 1_000));
+        assertEquals(1 + (int) Math.floor(7 * Math.sqrt(0.01)), CoreMath.flowBand(20 * 1_000 / 100, 20, 1_000));
+        assertEquals(1, CoreMath.flowBand(20 * 1_000 / 100, 20, 1_000));
+        assertEquals(4, CoreMath.flowBand(20 * 250, 20, 1_000));
+        assertEquals(7, CoreMath.flowBand(Long.MAX_VALUE, 20, 1));
+    }
 }

@@ -8,6 +8,7 @@ Na aba Lista do Tablet, a linha de um roteador sem nome mostra o nome do bloco e
 
 ## O que muda
 
+0. **A visão Roteadores deixa de agrupar pelo bloco preso.** Hoje os roteadores ficam embaixo de um cabeçalho do bloco em que estão presos ("Baú", "Fornalha"…). Agora cada roteador é uma linha de primeiro nível, e abaixo dele, quando aberto, ficam a presa, os grupos e as máquinas. A visão Máquinas continua agrupada por bloco. (Correção do dono durante a Tarefa 2.)
 1. **A linha do roteador (visão Roteadores da Lista)** mostra o roteador:
    - ícone do item do roteador do tier (`RouterBlockItem.withTier`, um `ItemStack` por tier criado uma vez no cliente);
    - o nome dado ao roteador ou, sem nome, **"Roteador &lt;tier&gt;"** (decisão 1);

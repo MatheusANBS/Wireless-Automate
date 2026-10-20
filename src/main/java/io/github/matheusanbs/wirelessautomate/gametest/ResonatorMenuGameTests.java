@@ -166,6 +166,7 @@ public final class ResonatorMenuGameTests {
                 helper.assertValueEqual(menu.inventoryStart(), 4, "início do inventário");
                 ItemStack crystal = crystal(true, CrystalCharge.FULL);
                 ItemStack redstone = new ItemStack(Items.REDSTONE);
+                ItemStack dust = new ItemStack(ModItems.RESONANCE_DUST.get());
                 for (int i = 0; i < 3; i++) {
                     Slot slot = menu.slots.get(i);
                     helper.assertTrue(slot.mayPlace(crystal), "a câmara " + i + " recusou o cristal");
@@ -173,7 +174,9 @@ public final class ResonatorMenuGameTests {
                     helper.assertValueEqual(slot.getMaxStackSize(), 1, "pilha da câmara " + i);
                 }
                 Slot slot = menu.slots.get(3);
-                helper.assertTrue(slot.mayPlace(redstone), "o slot da redstone recusou a redstone");
+                // No Elite o catalisador é só o Pó de Ressonância.
+                helper.assertTrue(slot.mayPlace(dust), "o slot do catalisador recusou o Pó");
+                helper.assertTrue(!slot.mayPlace(redstone), "o slot do catalisador do Elite aceitou redstone");
                 helper.assertTrue(!slot.mayPlace(crystal), "o slot da redstone aceitou cristal");
             } finally {
                 close(player);
@@ -193,14 +196,15 @@ public final class ResonatorMenuGameTests {
                         "o Lapidado não foi para a câmara 0");
                 helper.assertTrue(player.getInventory().getItem(9).isEmpty(), "o Lapidado ficou no inventário");
 
-                player.getInventory().setItem(0, new ItemStack(Items.REDSTONE, 10));
+                // No Elite o catalisador é o Pó de Ressonância.
+                player.getInventory().setItem(0, new ItemStack(ModItems.RESONANCE_DUST.get(), 10));
                 menu.quickMoveStack(player, menu.inventoryStart() + 27);
-                helper.assertValueEqual(core.redstone(), 10, "redstone no Núcleo");
-                helper.assertTrue(player.getInventory().getItem(0).isEmpty(), "a redstone ficou na barra");
+                helper.assertValueEqual(core.redstone(), 10, "Pó no Núcleo");
+                helper.assertTrue(player.getInventory().getItem(0).isEmpty(), "o Pó ficou na barra");
 
-                player.getInventory().setItem(0, new ItemStack(Items.REDSTONE, 5));
+                player.getInventory().setItem(0, new ItemStack(ModItems.RESONANCE_DUST.get(), 5));
                 menu.quickMoveStack(player, menu.inventoryStart() + 27);
-                helper.assertValueEqual(core.redstone(), 15, "redstone somada no Núcleo");
+                helper.assertValueEqual(core.redstone(), 15, "Pó somado no Núcleo");
 
                 menu.quickMoveStack(player, 0);
                 helper.assertTrue(core.crystals().get(0).isEmpty(), "a câmara 0 não esvaziou");

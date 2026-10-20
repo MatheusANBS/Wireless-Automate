@@ -4,19 +4,20 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 /**
- * O Núcleo visto como {@link Container} pelo menu: as câmaras do tier e, por último, o slot da redstone. Tudo passa
- * pelos mutadores do Núcleo ({@code setCrystalAt}, {@code setRedstone}), que gravam e mandam a câmara aos clientes.
+ * O Núcleo visto como {@link Container} pelo menu: as câmaras do tier e, por último, o slot do catalisador. Tudo
+ * passa pelos mutadores do Núcleo ({@code setCrystalAt}, {@code setCatalyst}), que gravam e mandam a câmara aos
+ * clientes.
  *
  * <p>{@link #getItem} devolve sempre uma pilha nova: nenhuma pilha do Núcleo sai daqui, e uma mudança feita no lugar
- * na pilha devolvida não vale nada (o slot da redstone do menu leva a inserção ao {@link #setItem}). O
- * {@link #setItem} não tem como recusar: o que não cabe (mais de um cristal numa câmara, item que não é cristal, redstone
- * com componentes ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}) cai no mundo à frente do Núcleo, em vez
- * de sumir.
+ * na pilha devolvida não vale nada (o slot do catalisador do menu leva a inserção ao {@link #setItem}). O
+ * {@link #setItem} não tem como recusar: o que não cabe (mais de um cristal numa câmara, item que não é cristal,
+ * cristal rachado, catalisador que o tier não aceita ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}) cai
+ * no mundo à frente do Núcleo, em vez de sumir.
  */
 public final class CoreInventory implements Container {
     private final ResonanceCoreBlockEntity core;
@@ -25,12 +26,7 @@ public final class CoreInventory implements Container {
         this.core = core;
     }
 
-    /** Só a redstone comum: os componentes de uma redstone renomeada não cabem no inteiro do Núcleo. */
-    public static boolean isPlainRedstone(ItemStack stack) {
-        return stack.is(Items.REDSTONE) && stack.getComponentsPatch().isEmpty();
-    }
-
-    private boolean isRedstone(int slot) {
+    private boolean isCatalyst(int slot) {
         return slot == core.chambers();
     }
 
@@ -61,8 +57,8 @@ public final class CoreInventory implements Container {
         if (!inRange(slot)) {
             return ItemStack.EMPTY;
         }
-        if (isRedstone(slot)) {
-            return core.redstone() > 0 ? new ItemStack(Items.REDSTONE, core.redstone()) : ItemStack.EMPTY;
+        if (isCatalyst(slot)) {
+            return core.catalyst().stack();
         }
         return core.crystals().get(slot).copy();
     }
@@ -72,13 +68,14 @@ public final class CoreInventory implements Container {
         if (count <= 0 || !inRange(slot)) {
             return ItemStack.EMPTY;
         }
-        if (isRedstone(slot)) {
+        if (isCatalyst(slot)) {
             int taken = Math.min(count, core.redstone());
             if (taken <= 0) {
                 return ItemStack.EMPTY;
             }
-            core.setRedstone(core.redstone() - taken);
-            return new ItemStack(Items.REDSTONE, taken);
+            Item item = core.catalyst().item();
+            core.setCatalyst(item, core.redstone() - taken);
+            return new ItemStack(item, taken);
         }
         return removeItemNoUpdate(slot);
     }
@@ -88,13 +85,12 @@ public final class CoreInventory implements Container {
         if (!inRange(slot)) {
             return ItemStack.EMPTY;
         }
-        if (isRedstone(slot)) {
-            int taken = core.redstone();
-            if (taken <= 0) {
-                return ItemStack.EMPTY;
+        if (isCatalyst(slot)) {
+            ItemStack taken = core.catalyst().stack();
+            if (!taken.isEmpty()) {
+                core.setCatalyst(taken.getItem(), 0);
             }
-            core.setRedstone(0);
-            return new ItemStack(Items.REDSTONE, taken);
+            return taken;
         }
         ItemStack stack = core.crystals().get(slot).copy();
         if (!stack.isEmpty()) {
@@ -109,21 +105,21 @@ public final class CoreInventory implements Container {
             drop(stack);
             return;
         }
-        if (isRedstone(slot)) {
+        if (isCatalyst(slot)) {
             if (stack.isEmpty()) {
-                core.setRedstone(0);
-            } else if (!isPlainRedstone(stack)) {
+                core.setCatalyst(core.catalyst().item(), 0);
+            } else if (!CoreCatalyst.accepts(core.tier(), stack)) {
                 drop(stack);
             } else {
                 int kept = Math.min(stack.getCount(), ResonanceCoreBlockEntity.MAX_REDSTONE);
-                core.setRedstone(kept);
+                core.setCatalyst(stack.getItem(), kept);
                 drop(stack.copyWithCount(stack.getCount() - kept));
             }
             return;
         }
         if (stack.isEmpty()) {
             core.setCrystalAt(slot, ItemStack.EMPTY);
-        } else if (stack.getItem() instanceof SignalCrystalItem) {
+        } else if (stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack)) {
             core.setCrystalAt(slot, stack.copyWithCount(1));
             drop(stack.copyWithCount(stack.getCount() - 1));
         } else {
@@ -131,7 +127,7 @@ public final class CoreInventory implements Container {
         }
     }
 
-    /** O limite das câmaras; o slot da redstone do menu tem o dele. */
+    /** O limite das câmaras; o slot do catalisador do menu tem o dele. */
     @Override
     public int getMaxStackSize() {
         return 1;
@@ -139,7 +135,10 @@ public final class CoreInventory implements Container {
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        return isRedstone(slot) ? isPlainRedstone(stack) : stack.getItem() instanceof SignalCrystalItem;
+        if (isCatalyst(slot)) {
+            return core.catalyst().canAdd(core.tier(), stack);
+        }
+        return stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack);
     }
 
     @Override
@@ -157,7 +156,7 @@ public final class CoreInventory implements Container {
         for (int i = 0; i < core.chambers(); i++) {
             core.setCrystalAt(i, ItemStack.EMPTY);
         }
-        core.setRedstone(0);
+        core.setCatalyst(core.catalyst().item(), 0);
     }
 
     /** Joga no mundo, à frente do Núcleo (para fora da casca), o que um {@code setItem} não pôde guardar. */

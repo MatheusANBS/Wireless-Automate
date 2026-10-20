@@ -15,22 +15,25 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O estado do Núcleo de Ressonância (sem ticker: o gerenciador trabalha em lote). Guarda se a estrutura está
- * montada, as 98 posições da casca, a sintonia, os cristais, a redstone e a energia; quem monta e desmonta é a
- * {@link ResonatorFormation} e quem gera, gasta e recarrega é o {@link ResonatorBatch}.
+ * montada, as 98 posições da casca, a sintonia, os cristais, o catalisador da recarga ({@link CoreCatalyst}) e a
+ * energia; quem monta e desmonta é a {@link ResonatorFormation} e quem gera, gasta e recarrega é o
+ * {@link ResonatorBatch}.
  */
 public class ResonanceCoreBlockEntity extends BlockEntity {
     /** O dial começa no meio da faixa até o jogador mexer. */
     static final double DEFAULT_DIAL = 98.0;
     /** As câmaras do último tier; as do tier do Núcleo são as primeiras. */
     public static final int MAX_CHAMBERS = CoreMath.chambers(RouterTier.values().length - 1);
-    public static final int MAX_REDSTONE = 64;
+    public static final int MAX_REDSTONE = CoreCatalyst.MAX;
 
     private boolean formed;
     private List<BlockPos> members = List.of();
@@ -46,7 +49,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private double velocity;
     private double dial = DEFAULT_DIAL;
     private final NonNullList<ItemStack> crystals = NonNullList.withSize(MAX_CHAMBERS, ItemStack.EMPTY);
-    private int redstone;
+    private final CoreCatalyst catalyst = new CoreCatalyst();
     /** Ticks já andados da recarga do próximo Opaco. */
     private int recharge;
     private long energy;
@@ -80,12 +83,12 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return formed;
     }
 
-    /** As posições da casca montada (vazia sem estrutura). */
     /** O canto mínimo da caixa (x, y, z), guardado; quem lê não muda o array. */
     int[] origin() {
         return origin;
     }
 
+    /** As posições da casca montada (vazia sem estrutura). */
     public List<BlockPos> members() {
         return members;
     }
@@ -199,7 +202,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return CoreMath.chambers(tier().ordinal());
     }
 
-    /** As câmaras do tier e a redstone como {@link net.minecraft.world.Container}, para o menu. */
+    /** As câmaras do tier e o catalisador como {@link net.minecraft.world.Container}, para o menu. */
     public CoreInventory inventory() {
         return inventory;
     }
@@ -230,9 +233,9 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         syncIfChanged();
     }
 
-    /** Põe um cristal na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
+    /** Põe um cristal não rachado na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
     public ItemStack insertCrystal(ItemStack stack) {
-        if (stack.isEmpty() || !(stack.getItem() instanceof SignalCrystalItem)) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof SignalCrystalItem) || SignalCrystalItem.isCracked(stack)) {
             return stack.copy();
         }
         for (int i = 0; i < chambers(); i++) {
@@ -247,12 +250,13 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     }
 
     /**
-     * Põe uma unidade do cristal na câmara {@code chamber}, se ela é do tier e está vazia; devolve se pôs. A Porta
+     * Põe uma unidade do cristal na câmara {@code chamber}, se ela é do tier e está vazia e o cristal não está rachado;
+     * devolve se pôs. A Porta
      * de Cristais entra por aqui, slot a slot.
      */
     public boolean insertCrystalAt(int chamber, ItemStack stack) {
         if (chamber < 0 || chamber >= chambers() || !crystals.get(chamber).isEmpty()
-                || !(stack.getItem() instanceof SignalCrystalItem)) {
+                || !(stack.getItem() instanceof SignalCrystalItem) || SignalCrystalItem.isCracked(stack)) {
             return false;
         }
         crystals.set(chamber, stack.copyWithCount(1));
@@ -289,26 +293,44 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return ItemStack.EMPTY;
     }
 
+    /** A contagem do catalisador da recarga (redstone ou Pó de Ressonância; o nome vem de antes do Pó). */
     public int redstone() {
-        return redstone;
+        return catalyst.count();
     }
 
-    /** Soma até {@code count} de redstone sem passar de {@link #MAX_REDSTONE} e devolve quanto entrou. */
+    /** O catalisador guardado e a regra do slot; os mutadores dele são do pacote. */
+    public CoreCatalyst catalyst() {
+        return catalyst;
+    }
+
+    /** Soma o que cabe da pilha, se o slot a aceita ({@link CoreCatalyst#canAdd}); devolve quanto entrou, sem mexer nela. */
+    public int addCatalyst(ItemStack stack) {
+        return catalyst.canAdd(tier(), stack) ? catalystAdded(catalyst.add(stack.getItem(), stack.getCount())) : 0;
+    }
+
+    /** Soma até {@code count} de redstone, sem a regra do tier (testes, bench e e2e), e devolve quanto entrou. */
     public int addRedstone(int count) {
-        int added = Math.max(0, Math.min(count, MAX_REDSTONE - redstone));
+        return catalystAdded(catalyst.add(Items.REDSTONE, count));
+    }
+
+    private int catalystAdded(int added) {
         if (added > 0) {
-            redstone += added;
             setChanged();
             syncIfChanged();
         }
         return added;
     }
 
-    /** Põe a redstone em {@code count}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
-    public void setRedstone(int count) {
-        redstone = Math.max(0, Math.min(MAX_REDSTONE, count));
+    /** Põe o catalisador em {@code count} de {@code item}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
+    public void setCatalyst(Item item, int count) {
+        catalyst.set(item, count);
         setChanged();
         syncIfChanged();
+    }
+
+    /** Põe a redstone em {@code count}, sem a regra do tier (testes e e2e). */
+    public void setRedstone(int count) {
+        setCatalyst(Items.REDSTONE, count);
     }
 
     /** Só para os GameTests: põe a redstone num valor conhecido. */
@@ -374,7 +396,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         energy += Math.max(0, Math.min(amount, capacity() - energy));
     }
 
-    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco ou sem redstone). */
+    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco recarregável ou sem catalisador). */
     public int rechargeProgress() {
         return recharge;
     }
@@ -383,8 +405,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         recharge = ticks;
     }
 
-    void spendRedstone() {
-        redstone = Math.max(0, redstone - 1);
+    void spendCatalyst() {
+        catalyst.spend();
     }
 
     boolean hasStation() {
@@ -401,8 +423,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     /**
      * Avisa os vizinhos das Portas do tipo dado, para acordar quem dorme nelas: o {@code setChanged} do Núcleo
-     * só avisa os vizinhos dele. Só nas transições (energia que aparece, câmara que esvazia, redstone que baixa,
-     * Opaco novo), nunca a cada lote.
+     * só avisa os vizinhos dele. Só nas transições (energia que aparece, câmara que esvazia, catalisador que baixa,
+     * Opaco ou rachado novo), nunca a cada lote.
      */
     void notifyPorts(boolean energyPorts, boolean crystalPorts) {
         if (level == null || level.isClientSide) {
@@ -567,7 +589,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             }
         }
         tag.put("crystals", list);
-        tag.putInt("redstone", redstone);
+        catalyst.save(tag);
         tag.putInt("recharge", recharge);
         tag.putLong("energy", energy);
         tag.putInt("batches", batches);
@@ -614,7 +636,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
                 crystals.set(slot, ItemStack.parse(registries, entry).orElse(ItemStack.EMPTY));
             }
         }
-        redstone = Math.max(0, Math.min(MAX_REDSTONE, tag.getInt("redstone")));
+        catalyst.load(tag);
         recharge = Math.max(0, tag.getInt("recharge"));
         energy = Math.max(0, tag.getLong("energy"));
         batches = Math.max(0, tag.getInt("batches"));

@@ -637,18 +637,17 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
      * {@link PresetApplier}. Colar deixa a origem do perfil de fora. Devolve quantos nós a ação atingiu (1 para
      * copiar e esquecer), ou -1 se recusou.
      */
-    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys) {
-        return profile(action, key, machine, keys, TabletMarks.EMPTY);
+    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, List<NodeKey> keys) {
+        return profile(action, key, keys, TabletMarks.EMPTY);
     }
 
-    /** Como {@link #profile(TabletProfilePayload.Action, NodeKey, ResourceLocation, List)}, com os marcados além dos nós. */
-    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys, TabletMarks marks) {
+    /** Como {@link #profile(TabletProfilePayload.Action, NodeKey, List)}, com os marcados além dos nós. */
+    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, List<NodeKey> keys,
+            TabletMarks marks) {
         if (viewer == null || keys.size() > TabletProfilePayload.MAX_KEYS || !stillValid(viewer)) {
             return -1;
         }
-        int result = profile.run(action, key, machine, keys, marks);
+        int result = profile.run(action, key, keys, marks);
         if (result >= 0) {
             forced = true;
         }

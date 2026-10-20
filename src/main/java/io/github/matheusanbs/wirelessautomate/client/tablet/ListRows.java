@@ -20,16 +20,15 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * As linhas da Lista do Tablet: o cabeçalho de cada grupo de máquina (recolher, contagem, diferenças do perfil e
- * o "Colar nas N"), a linha de cada nó (status, nome, segunda linha e os quadradinhos das faces), a linha do
- * limite, a barra de rolagem e a lista vazia.
+ * As linhas da Lista do Tablet: a linha de cada roteador (ícone do tier com o estado, nome, pílula do tier, a presa
+ * na segunda linha e os quadradinhos das faces), a linha do limite, a barra de rolagem e a lista vazia.
  */
 final class ListRows {
     /** Abaixo desta largura da lista, os quadradinhos das faces somem. */
     private static final int CHIPS_MIN_LIST = 150;
     private static final int CHIP = 4;
-    private static final float ICON_SCALE = 0.625f;
-    private static final int ICON_W = 10;
+    /** O ícone do item, no tamanho natural dele. */
+    private static final int ICON_W = 16;
 
     private final TabletList list;
     private final ListLayout layout;
@@ -149,13 +148,9 @@ final class ListRows {
             list.treeRows.renderNodeChevron(g, cx, y, node, line, toggle != null && toggle.contains(mx, my));
             cx += chevron;
         }
-        g.pose().pushPose();
-        g.pose().translate(cx, y + 1, 0);
-        g.pose().scale(ICON_SCALE, ICON_SCALE, 1f);
-        g.renderItem(RouterIcons.of(node.tier()), 0, 0);
-        g.pose().popPose();
+        g.renderItem(RouterIcons.of(node.tier()), cx, y + 2);
         // o estado vai na pontinha do ícone, para a linha não perder largura
-        GuiPaint.dot(g, cx + 7, y + 7, TabletText.statusColor(node.status()));
+        GuiPaint.dot(g, cx + 11, y + 12, TabletText.statusColor(node.status()));
         int textX = cx + ICON_W + 3;
         int right = x + hot.w() - 3;
         if (chips) {

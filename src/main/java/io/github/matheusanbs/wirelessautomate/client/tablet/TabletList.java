@@ -375,7 +375,7 @@ public final class TabletList {
         search.previewText(value);
     }
 
-    /** Centro da linha do nó, ou {@code null} se ela não está na vista (grupo recolhido ou rolado). */
+    /** Centro da linha do nó, ou {@code null} se ela não está na vista (rolada para fora). */
     int @Nullable [] nodeRowCenter(NodeKey key) {
         layout.arrange();
         Hot hot = layout.hot(Kind.ROW, model.indexOf(key));

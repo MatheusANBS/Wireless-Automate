@@ -36,7 +36,6 @@ final class ListLayout {
     private static final int PANEL_MAX = 260;
     private static final int LABEL_H = 10;
     private static final int SUGGEST_MAX_W = 230;
-    /** Espaço que o nome do grupo guarda ao lado do "Colar nas N" (o botão encurta antes). */
     /** Altura do cubo do painel: menor nas telas baixas. */
     private static final int NET_SMALL = 3 * 12 + 2 * 2;
     private static final int TALL = 300;

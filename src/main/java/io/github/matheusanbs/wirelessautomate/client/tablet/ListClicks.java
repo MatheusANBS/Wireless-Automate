@@ -15,7 +15,7 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * O mouse da Lista do Tablet: o clique (painel e listas abertas primeiro, depois as sugestões, depois as áreas
- * do {@link ListLayout}: etiquetas, filtros, cabeçalhos, linhas e botões do painel, com o duplo clique que abre
+ * do {@link ListLayout}: etiquetas, filtros, linhas e botões do painel, com o duplo clique que abre
  * o nó, e as da árvore, que vão ao {@link TreeClicks}) e a roda (o painel, ou a rolagem da lista).
  */
 final class ListClicks {

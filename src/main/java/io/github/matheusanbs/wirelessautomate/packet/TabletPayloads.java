@@ -129,8 +129,8 @@ public final class TabletPayloads {
      */
     public static int handleProfile(@Nullable ServerPlayer player, TabletProfilePayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
-        return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null),
-                payload.machine().orElse(null), payload.keys(), payload.marks());
+        return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null), payload.keys(),
+                payload.marks());
     }
 
     /** Abre ou fecha um roteador na árvore da Lista, ou muda um grupo dele; recusa um nó que o jogador não vê. */

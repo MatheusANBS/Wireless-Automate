@@ -129,7 +129,7 @@ public final class ResonatorFormation {
             }
             released |= ResonatorMembers.release(level.dimension(), pos, at);
         }
-        updatePorts(level, core, List.of());
+        updatePorts(level, core, List.of(), List.of());
         core.setFormed(false, List.of());
         if (released) {
             ResonatorManager.wakeBlockedBy(level, at);
@@ -182,12 +182,16 @@ public final class ResonatorFormation {
         BlockPos at = core.getBlockPos();
         List<BlockPos> members = new ArrayList<>(formed.members().size());
         List<BlockPos> ports = new ArrayList<>();
+        List<BlockPos> energyPorts = new ArrayList<>();
         for (ResonatorLayout.Member member : formed.members()) {
             BlockPos pos = new BlockPos(member.x(), member.y(), member.z());
             members.add(pos);
             ResonatorMembers.claim(level.dimension(), pos, at);
             if (member.part() == Part.ENERGY_PORT || member.part() == Part.CRYSTAL_PORT) {
                 ports.add(pos);
+                if (member.part() == Part.ENERGY_PORT) {
+                    energyPorts.add(pos);
+                }
             }
             BlockState state = level.getBlockState(pos);
             BlockState next = formedState(state, member);
@@ -203,7 +207,7 @@ public final class ResonatorFormation {
                 released |= ResonatorMembers.release(level.dimension(), old, at);
             }
         }
-        updatePorts(level, core, ports);
+        updatePorts(level, core, ports, PortOrder.sort(ChamberView.origin(members, at), energyPorts));
         structure(level, core, formed);
         core.setFormed(true, members);
         core.syncIfChanged();
@@ -301,8 +305,13 @@ public final class ResonatorFormation {
         return state;
     }
 
-    /** Põe no índice as Portas novas e tira as que saíram; a capability de cada uma que mudou é invalidada. */
-    private static void updatePorts(ServerLevel level, ResonanceCoreBlockEntity core, List<BlockPos> ports) {
+    /**
+     * Põe no índice as Portas novas e tira as que saíram; a capability de cada uma que mudou é invalidada. As Portas
+     * de Energia vêm em ordem ({@link PortOrder}): o índice delas está nas visões, então, se a lista mudou, as
+     * capabilities de todas são invalidadas.
+     */
+    private static void updatePorts(ServerLevel level, ResonanceCoreBlockEntity core, List<BlockPos> ports,
+            List<BlockPos> energyPorts) {
         Set<BlockPos> next = new HashSet<>(ports);
         for (BlockPos old : core.ports()) {
             if (!next.contains(old)) {
@@ -316,6 +325,11 @@ public final class ResonatorFormation {
             }
         }
         core.setPorts(ports);
+        if (core.flow().setPorts(energyPorts)) {
+            for (BlockPos port : energyPorts) {
+                level.invalidateCapabilities(port);
+            }
+        }
     }
 
     /** Primeira montagem desta vez: estação (se ainda não tem), som e aviso aos jogadores perto. */

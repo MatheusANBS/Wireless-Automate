@@ -69,8 +69,11 @@ public final class ResonatorPorts {
         return !core.isRemoved() && core.formed();
     }
 
-    /** A Porta de Energia para o roteador do mod, em {@code long}: só tira. */
-    public record CoreEnergy(ResonanceCoreBlockEntity core) implements BulkEnergy {
+    /**
+     * A Porta de Energia para o roteador do mod, em {@code long}: só tira. {@code port} é o índice dela entre as
+     * Portas de Energia do Núcleo ({@link PortOrder}), ou -1 sem registro; o que sai de verdade soma na vazão.
+     */
+    public record CoreEnergy(ResonanceCoreBlockEntity core, int port) implements BulkEnergy {
         @Override
         public long insert(long amount, boolean simulate) {
             return 0;
@@ -78,7 +81,14 @@ public final class ResonatorPorts {
 
         @Override
         public long extract(long amount, boolean simulate) {
-            return amount <= 0 || !alive(core) ? 0 : core.extractEnergy(amount, simulate);
+            if (amount <= 0 || !alive(core)) {
+                return 0;
+            }
+            long taken = core.extractEnergy(amount, simulate);
+            if (!simulate && taken > 0) {
+                core.flow().add(port, taken);
+            }
+            return taken;
         }
     }
 
@@ -86,7 +96,7 @@ public final class ResonatorPorts {
      * A Porta de Energia como {@link IEnergyStorage} comum: só tira. Como o {@code EnergyStoreHandler}, cada
      * chamada passa até {@link Integer#MAX_VALUE} FE, e o guardado e a capacidade aparecem cortados nesse teto.
      */
-    public record CoreEnergyHandler(ResonanceCoreBlockEntity core) implements IEnergyStorage {
+    public record CoreEnergyHandler(ResonanceCoreBlockEntity core, int port) implements IEnergyStorage {
         @Override
         public int receiveEnergy(int toReceive, boolean simulate) {
             return 0;
@@ -94,7 +104,14 @@ public final class ResonatorPorts {
 
         @Override
         public int extractEnergy(int toExtract, boolean simulate) {
-            return toExtract <= 0 || !alive(core) ? 0 : (int) core.extractEnergy(toExtract, simulate);
+            if (toExtract <= 0 || !alive(core)) {
+                return 0;
+            }
+            int taken = (int) core.extractEnergy(toExtract, simulate);
+            if (!simulate && taken > 0) {
+                core.flow().add(port, taken);
+            }
+            return taken;
         }
 
         @Override

@@ -110,11 +110,13 @@ public final class ModItems {
     public static final DeferredItem<CascadeItem> PHASE_MATRIX = cascade("phase_matrix");
     public static final DeferredItem<CascadeItem> FIELD_STABILIZER = cascade("field_stabilizer");
     public static final DeferredItem<CascadeItem> CONDENSED_CORE = cascade("condensed_core");
+    /** A peça do Coração Ultimate que leva os blocos de liga (ou de netherite, sem o Allthemodium) e uma Nether Star. */
+    public static final DeferredItem<CascadeItem> ALLOY_FRAME = cascade("alloy_frame");
 
     /** A cascata na ordem da fabricação (a da aba criativa). */
     public static final List<DeferredItem<CascadeItem>> CASCADE = List.of(SIGNAL_ALLOY_RAW, SIGNAL_ALLOY_INGOT,
             RESONANCE_PLATE, RESONANCE_WIRE, RESONANCE_COIL, HARMONIC_LENS, PHASE_CIRCUIT, PHASE_MATRIX,
-            FIELD_STABILIZER, CONDENSED_CORE);
+            FIELD_STABILIZER, CONDENSED_CORE, ALLOY_FRAME);
 
     private static DeferredItem<CascadeItem> cascade(String name) {
         return ITEMS.registerItem(name, CascadeItem::new, new Item.Properties());

@@ -264,7 +264,7 @@ public final class AtmGameTests {
         helper.succeed();
     }
 
-    /** Os Corações do Allthemodium ao Ultimate, com os blocos do mod; o Ultimate sem o mod não carrega aqui. */
+    /** Os Corações do Allthemodium ao Ultimate e a Moldura de Liga; as receitas sem o mod não carregam. */
     @GameTest(template = "empty")
     public static void resonatorHeartRecipes(GameTestHelper helper) {
         Item stab = ModItems.FIELD_STABILIZER.get();
@@ -274,11 +274,15 @@ public final class AtmGameTests {
         assertHeart(helper, RouterTier.VIBRANIUM, "allthemodium:vibranium_block", 4, condensed, star, star);
         assertHeart(helper, RouterTier.UNOBTAINIUM, "allthemodium:unobtainium_block", 4, condensed, condensed,
                 star, star, star);
-        assertHeart(helper, RouterTier.ULTIMATE, "allthemodium:unobtainium_vibranium_alloy_block", 4, condensed,
-                condensed, condensed, star, star);
-        helper.assertTrue(helper.getLevel().getRecipeManager()
-                .byKey(WirelessAutomate.id("resonator_heart_ultimate_no_atm")).isEmpty(),
-                "a receita do Coração Ultimate sem o ATM carregou com ele");
+        assertAlloyFrame(helper);
+        Item frame = ModItems.ALLOY_FRAME.get();
+        assertHeart(helper, RouterTier.ULTIMATE, "allthemodium:unobtainium_vibranium_alloy_block", 0, condensed,
+                condensed, condensed, frame, star, star, star, star, star);
+        var recipes = helper.getLevel().getRecipeManager();
+        for (String id : List.of("resonator_heart_ultimate_no_atm", "alloy_frame_no_atm")) {
+            helper.assertTrue(recipes.byKey(WirelessAutomate.id(id)).isEmpty(), "a receita " + id
+                    + " sem o ATM carregou com ele");
+        }
         helper.succeed();
     }
 
@@ -298,6 +302,19 @@ public final class AtmGameTests {
                 helper.getLevel().registryAccess())).orElse(ItemStack.EMPTY);
         helper.assertTrue(out.is(ModItems.RESONATOR_HEARTS.get(tier).get()) && out.getCount() == 1,
                 "Coração " + tier + ": saiu " + out);
+    }
+
+    /** A Moldura de Liga: 8 blocos de liga Unobtainium-Vibranium em volta de 1 Nether Star. */
+    private static void assertAlloyFrame(GameTestHelper helper) {
+        List<ItemStack> grade = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            grade.add(new ItemStack(item(helper, "allthemodium:unobtainium_vibranium_alloy_block")));
+        }
+        grade.add(4, new ItemStack(Items.NETHER_STAR));
+        CraftingInput input = CraftingInput.of(3, 3, grade);
+        ItemStack out = find(helper, input).map(holder -> holder.value().assemble(input,
+                helper.getLevel().registryAccess())).orElse(ItemStack.EMPTY);
+        helper.assertTrue(out.is(ModItems.ALLOY_FRAME.get()) && out.getCount() == 1, "Moldura de Liga: saiu " + out);
     }
 
     private static void assertChargedDust(GameTestHelper helper, RouterTier tier, String ingot) {

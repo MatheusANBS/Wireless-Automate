@@ -308,7 +308,8 @@ public record TabletSnapshot(
 
         /** O mesmo nó com outro estado e outra vazão. */
         public NodeView withLive(Live live) {
-            return new NodeView(key, name, attachedLabel, machine, tier, networks, roles, live.status(), removedNetwork, faceModes,
+            return new NodeView(key, name, attachedLabel, machine, tier, networks, roles, live.status(), removedNetwork,
+                    faceModes,
                     live.rates(), profile, linked);
         }
 

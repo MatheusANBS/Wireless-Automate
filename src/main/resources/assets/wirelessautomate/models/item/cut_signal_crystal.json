@@ -9,6 +9,12 @@
         "wirelessautomate:dull": 1
       },
       "model": "wirelessautomate:item/cut_signal_crystal_dull"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:cracked": 1
+      },
+      "model": "wirelessautomate:item/cut_signal_crystal_cracked"
     }
   ]
 }

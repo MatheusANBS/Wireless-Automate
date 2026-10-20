@@ -63,12 +63,13 @@ public final class ResonatorLifeGameTests {
             helper.assertValueEqual(batchesUntilDull(helper, core, 1_000), 180, "lotes até o Opaco");
             ItemStack stack = core.crystals().get(0);
             helper.assertValueEqual(SignalCrystalItem.integrity(stack), Config.crystalIntegrity(), "a vida gastou integridade");
-            helper.assertValueEqual(core.addCatalyst(new ItemStack(ModItems.RESONANCE_DUST.get())), 1, "Pó que entrou");
+            helper.assertValueEqual(core.addCatalyst(new ItemStack(ModItems.CHARGED_DUSTS.get(RouterTier.ULTIMATE).get())),
+                    1, "Pó Carregado que entrou");
             ResonatorBatch.run(helper.getLevel(), core, (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE));
             helper.assertTrue(SignalCrystalItem.isFull(core.crystals().get(0)), "a recarga não encheu o Afinado");
             helper.assertValueEqual(SignalCrystalItem.integrity(core.crystals().get(0)), Config.crystalIntegrity() - 1,
                     "integridade depois da recarga");
-            helper.assertValueEqual(core.redstone(), 0, "a recarga não gastou o Pó");
+            helper.assertValueEqual(core.redstone(), 0, "a recarga não gastou o Pó Carregado");
         });
     }
 

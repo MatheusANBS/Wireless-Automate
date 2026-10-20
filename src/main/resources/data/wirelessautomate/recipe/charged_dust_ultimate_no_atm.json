@@ -1,0 +1,46 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:mod_loaded",
+        "modid": "allthemodium"
+      }
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "wirelessautomate:resonance_dust"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:charged_dust_ultimate",
+    "count": 8
+  }
+}

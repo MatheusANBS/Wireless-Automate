@@ -64,6 +64,11 @@ public final class ModCreativeTabs {
                             }
                         }
                         output.accept(ModItems.RESONANCE_DUST.get());
+                        for (var dust : ModItems.CHARGED_DUSTS.entrySet()) {
+                            if (dust.getKey().loaded()) {
+                                output.accept(dust.getValue().get());
+                            }
+                        }
                         output.accept(ModItems.RESONATOR_CASING.get());
                         output.accept(ModItems.RESONATOR_GLASS.get());
                         for (RouterTier tier : RouterTier.values()) {

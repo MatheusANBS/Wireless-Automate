@@ -251,6 +251,32 @@ public final class AtmGameTests {
         helper.succeed();
     }
 
+    /** O Pó Carregado do Allthemodium ao Ultimate: 8 Pós de Ressonância + 1 lingote do tier rendem 8. */
+    @GameTest(template = "empty")
+    public static void chargedDustRecipes(GameTestHelper helper) {
+        assertChargedDust(helper, RouterTier.ALLTHEMODIUM, "allthemodium:allthemodium_ingot");
+        assertChargedDust(helper, RouterTier.VIBRANIUM, "allthemodium:vibranium_ingot");
+        assertChargedDust(helper, RouterTier.UNOBTAINIUM, "allthemodium:unobtainium_ingot");
+        assertChargedDust(helper, RouterTier.ULTIMATE, "allthemodium:unobtainium_vibranium_alloy_ingot");
+        helper.assertTrue(helper.getLevel().getRecipeManager()
+                .byKey(WirelessAutomate.id("charged_dust_ultimate_no_atm")).isEmpty(),
+                "a receita do Pó Carregado Ultimate sem o ATM carregou com ele");
+        helper.succeed();
+    }
+
+    private static void assertChargedDust(GameTestHelper helper, RouterTier tier, String ingot) {
+        List<ItemStack> grade = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            grade.add(new ItemStack(ModItems.RESONANCE_DUST.get()));
+        }
+        grade.add(4, new ItemStack(item(helper, ingot)));
+        CraftingInput input = CraftingInput.of(3, 3, grade);
+        ItemStack out = find(helper, input).map(holder -> holder.value().assemble(input,
+                helper.getLevel().registryAccess())).orElse(ItemStack.EMPTY);
+        helper.assertTrue(out.is(ModItems.CHARGED_DUSTS.get(tier).get()) && out.getCount() == 8,
+                "Pó Carregado " + tier + ": saiu " + out);
+    }
+
     private static ItemStack tuned(RouterTier tier) {
         return new ItemStack(ModItems.TUNED_CRYSTALS.get(tier).get());
     }

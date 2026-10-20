@@ -78,9 +78,9 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Cristal: vai para a primeira câmara vazia (o rachado não entra). Catalisador (redstone ou Pó de Ressonância):
-     * entra o que cabe, pela regra do tier e sem misturar com o que já está lá. Recusado ou sem lugar, a action bar
-     * diz por quê. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
+     * Cristal: vai para a primeira câmara vazia (o rachado não entra). Catalisador (redstone, Pó de Ressonância ou
+     * Pó Carregado): entra o que cabe, pela regra do tier e sem misturar com o que já está lá. Recusado ou sem lugar,
+     * a action bar diz por quê. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -111,7 +111,7 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
                     : "block.wirelessautomate.resonance_core.chambers_full");
         }
         if (!CoreCatalyst.accepts(core.tier(), stack.getItem())) {
-            return Component.translatable("block.wirelessautomate.resonance_core.needs_dust");
+            return CoreCatalyst.refusal(core.tier());
         }
         if (core.redstone() > 0 && !stack.is(core.catalyst().item())) {
             return Component.translatable("block.wirelessautomate.resonance_core.catalyst_mixed",

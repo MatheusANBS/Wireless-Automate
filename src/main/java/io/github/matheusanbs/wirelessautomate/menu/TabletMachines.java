@@ -356,10 +356,26 @@ public final class TabletMachines {
         if (m == MachineOrder.ATTACHED) {
             RouterBlockEntity router = entry.router();
             long pos = router != null ? router.machinePos().asLong() : key.pos().asLong();
-            return new Machine(ref, true, -1, pos, "", false);
+            return new Machine(ref, true, -1, 0, pos, "", false);
         }
         IndexRemotes remotes = entry.remotes();
-        return new Machine(ref, false, m, remotes.pos(m), clip(remotes.label(m)), remotes.hasException(m));
+        return new Machine(ref, false, m, numberInGroup(remotes, m), remotes.pos(m), clip(remotes.label(m)),
+                remotes.hasException(m));
+    }
+
+    /**
+     * O "#N" da máquina {@code m}: a posição dela entre as do mesmo grupo do roteador, a partir de 1, a mesma conta
+     * da árvore e da tela do roteador. Só ao montar a página, para as linhas dela.
+     */
+    private static int numberInGroup(IndexRemotes remotes, int m) {
+        int group = remotes.group(m);
+        int number = 0;
+        for (int i = 0; i <= m; i++) {
+            if (remotes.group(i) == group) {
+                number++;
+            }
+        }
+        return number;
     }
 
     /**

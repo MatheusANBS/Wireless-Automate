@@ -236,7 +236,7 @@ public final class RangeRowButtons {
     }
 
     /** O ✕ em 6 × 6 px, as duas diagonais: com a borda de 1 px, sobra 1 px nos quatro lados do botão. */
-    private static void cross(GuiGraphics g, int x, int y, int color) {
+    static void cross(GuiGraphics g, int x, int y, int color) {
         for (int i = 0; i < 6; i++) {
             g.fill(x + i, y + i, x + i + 1, y + i + 1, color);
             g.fill(x + 5 - i, y + i, x + 6 - i, y + i + 1, color);

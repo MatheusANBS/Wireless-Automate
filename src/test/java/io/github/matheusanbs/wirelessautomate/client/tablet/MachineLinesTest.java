@@ -18,23 +18,7 @@ class MachineLinesTest {
                 Kind.MORE, Kind.BLOCK, Kind.BLOCK, Kind.MACHINE);
         boolean[] collapsed = new boolean[10];
         collapsed[7] = true;
-        int[] routers = {-1, 0, 0, 0, 1, 1, -1, -1, -1, 1};
-        boolean[] attached = new boolean[10];
-        attached[1] = true;
-        return new MachineLines(kinds, collapsed, routers, attached);
-    }
-
-    @Test
-    void numbersCountPerRouterInsideTheBlock() {
-        MachineLines lines = sample();
-        assertEquals(0, lines.number(1));
-        assertEquals(1, lines.number(2));
-        assertEquals(2, lines.number(3));
-        assertEquals(1, lines.number(4));
-        assertEquals(2, lines.number(5));
-        // o mesmo roteador noutro bloco recomeça
-        assertEquals(1, lines.number(9));
-        assertEquals(0, lines.number(0));
+        return new MachineLines(kinds, collapsed);
     }
 
     @Test
@@ -46,7 +30,7 @@ class MachineLinesTest {
         assertEquals(8, lines.next(7, 1));
         assertEquals(9, lines.next(9, 1));
         assertEquals(0, lines.next(0, -1));
-        assertEquals(-1, new MachineLines(List.of(), new boolean[0], new int[0], new boolean[0]).next(-1, 1));
+        assertEquals(-1, new MachineLines(List.of(), new boolean[0]).next(-1, 1));
     }
 
     @Test

@@ -135,12 +135,15 @@ public final class ResonatorPortGameTests {
                     1, "cristal no slot da redstone");
             helper.assertValueEqual(items.insertItem(2, new ItemStack(Items.REDSTONE), false).getCount(), 1,
                     "redstone numa câmara");
-            helper.assertValueEqual(items.insertItem(chambers, new ItemStack(Items.REDSTONE, 70), false).getCount(), 6,
-                    "70 de redstone: entram 64");
-            helper.assertValueEqual(core.redstone(), 64, "redstone no Núcleo");
-            helper.assertValueEqual(items.getStackInSlot(chambers).getCount(), 64, "a redstone no slot");
-            helper.assertTrue(items.extractItem(chambers, 64, false).isEmpty(), "a redstone nunca sai");
-            helper.assertValueEqual(core.redstone(), 64, "a redstone ficou");
+            // O Elite recarrega só com o Pó de Ressonância: a redstone fica de fora.
+            helper.assertValueEqual(items.insertItem(chambers, new ItemStack(Items.REDSTONE, 5), false).getCount(), 5,
+                    "redstone no Elite");
+            helper.assertValueEqual(items.insertItem(chambers, new ItemStack(ModItems.RESONANCE_DUST.get(), 70), false)
+                    .getCount(), 6, "70 de Pó: entram 64");
+            helper.assertValueEqual(core.redstone(), 64, "Pó no Núcleo");
+            helper.assertValueEqual(items.getStackInSlot(chambers).getCount(), 64, "o Pó no slot");
+            helper.assertTrue(items.extractItem(chambers, 64, false).isEmpty(), "o catalisador nunca sai");
+            helper.assertValueEqual(core.redstone(), 64, "o Pó ficou");
         });
     }
 

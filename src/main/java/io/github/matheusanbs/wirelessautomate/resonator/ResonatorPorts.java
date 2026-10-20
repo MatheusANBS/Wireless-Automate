@@ -6,7 +6,6 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -136,10 +135,11 @@ public final class ResonatorPorts {
     }
 
     /**
-     * A Porta de Cristais: um slot por câmara do tier e o último para a redstone. Cristal de Sinal (cheio, gasto
-     * ou Opaco) entra uma unidade por câmara vazia; redstone, até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}.
-     * Só sai o Opaco, e só com o Núcleo sem redstone (com redstone ele ainda vai recarregar); a redstone nunca
-     * sai. Tudo passa pelos métodos do Núcleo, que marcam a mudança.
+     * A Porta de Cristais: um slot por câmara do tier e o último para o catalisador. Cristal não rachado (cheio,
+     * gasto ou Opaco) entra uma unidade por câmara vazia; o catalisador, pela regra do {@link CoreCatalyst#canAdd},
+     * até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. Sai o rachado, sempre (o Núcleo nunca o recarrega), e o
+     * Opaco só com o Núcleo sem catalisador (com ele, o Opaco ainda vai recarregar); o catalisador nunca sai. Tudo
+     * passa pelos métodos do Núcleo, que marcam a mudança.
      */
     public record CoreItems(ResonanceCoreBlockEntity core) implements IItemHandler {
         @Override
@@ -153,7 +153,7 @@ public final class ResonatorPorts {
                 return ItemStack.EMPTY;
             }
             if (slot == core.chambers()) {
-                return core.redstone() > 0 ? new ItemStack(Items.REDSTONE, core.redstone()) : ItemStack.EMPTY;
+                return core.catalyst().stack();
             }
             return core.crystals().get(slot).copy();
         }
@@ -165,12 +165,9 @@ public final class ResonatorPorts {
             }
             if (slot == core.chambers()) {
                 int room = ResonanceCoreBlockEntity.MAX_REDSTONE - core.redstone();
-                int moved = Math.max(0, Math.min(stack.getCount(), room));
+                int moved = simulate ? Math.max(0, Math.min(stack.getCount(), room)) : core.addCatalyst(stack);
                 if (moved == 0) {
                     return stack;
-                }
-                if (!simulate) {
-                    core.addRedstone(moved);
                 }
                 return stack.copyWithCount(stack.getCount() - moved);
             }
@@ -185,11 +182,11 @@ public final class ResonatorPorts {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (amount <= 0 || !alive(core) || slot < 0 || slot >= core.chambers() || core.redstone() > 0) {
+            if (amount <= 0 || !alive(core) || slot < 0 || slot >= core.chambers()) {
                 return ItemStack.EMPTY;
             }
             ItemStack stack = core.crystals().get(slot);
-            if (!SignalCrystalItem.isDull(stack)) {
+            if (!SignalCrystalItem.isCracked(stack) && (!SignalCrystalItem.isDull(stack) || core.redstone() > 0)) {
                 return ItemStack.EMPTY;
             }
             return simulate ? stack.copy() : core.takeCrystalAt(slot);
@@ -205,7 +202,10 @@ public final class ResonatorPorts {
             if (!alive(core) || slot < 0 || slot > core.chambers()) {
                 return false;
             }
-            return slot == core.chambers() ? stack.is(Items.REDSTONE) : stack.getItem() instanceof SignalCrystalItem;
+            if (slot == core.chambers()) {
+                return core.catalyst().canAdd(core.tier(), stack);
+            }
+            return stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack);
         }
     }
 }

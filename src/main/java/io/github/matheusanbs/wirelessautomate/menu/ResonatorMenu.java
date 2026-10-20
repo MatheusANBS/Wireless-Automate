@@ -4,7 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
-import io.github.matheusanbs.wirelessautomate.resonator.CoreInventory;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreCatalyst;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreYield;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
@@ -28,13 +28,13 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu da tela do Núcleo de Ressonância: um slot por câmara do tier (um cristal cada), o da redstone e o inventário
+ * Menu da tela do Núcleo de Ressonância: um slot por câmara do tier (um cristal cada), o do catalisador e o inventário
  * do jogador. Os slots viajam pelo próprio menu; o resto vai pelo {@link ResonatorStatePayload}, montado no servidor
  * e mandado só com a tela aberta, quando muda, no máximo a cada {@link StorageListMenu#SYNC_INTERVAL} ticks (o
  * primeiro na hora). A estação nunca sai do servidor.
  *
  * <p>As câmaras ficam fixas na abertura: se o tier muda com a tela aberta (Cartão de Upgrade de outro jogador), o
- * {@link #stillValid} deixa de valer, porque o slot da redstone do {@code CoreInventory} muda de índice. Com o jogador
+ * {@link #stillValid} deixa de valer, porque o slot do catalisador do {@code CoreInventory} muda de índice. Com o jogador
  * ainda ao alcance e o Núcleo montado, o {@link #broadcastChanges} reabre a tela com as câmaras novas; senão o vanilla
  * a fecha.
  */
@@ -85,7 +85,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
         for (int i = 0; i < this.chambers; i++) {
             addSlot(new ChamberSlot(container, i, CHAMBER_X + 18 * i, CHAMBER_Y));
         }
-        addSlot(new RedstoneSlot(container, this.chambers, REDSTONE_X, REDSTONE_Y));
+        addSlot(new RedstoneSlot(container, this.chambers, REDSTONE_X, REDSTONE_Y, this.tier));
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(inventory, col + row * 9 + 9, INVENTORY_X + 18 * col, INVENTORY_Y + 18 * row));
@@ -173,11 +173,11 @@ public class ResonatorMenu extends AbstractContainerMenu {
         long fePerCrystal = Config.resonatorFePerCrystal(core.tier());
         List<ItemStack> crystals = core.crystals();
         int quarters = CoreYield.quarters(crystals, core.chambers(), core.tier(), false);
-        boolean dull = false;
+        boolean rechargeable = false;
         for (int i = 0; i < core.chambers(); i++) {
-            dull |= SignalCrystalItem.isDull(crystals.get(i));
+            rechargeable |= SignalCrystalItem.isRechargeable(crystals.get(i));
         }
-        int recharge = dull && core.redstone() > 0 ? core.rechargeProgress() : 0;
+        int recharge = rechargeable && core.redstone() > 0 ? core.rechargeProgress() : 0;
         int layout = core.layout() == null ? 0 : core.layout().ordinal() + 1;
         return new ResonatorStatePayload(containerId, core.energy(), core.capacity(), core.generationPerTick(),
                 CoreMath.perTick(fePerCrystal, quarters, 1.0), core.dial(),
@@ -190,9 +190,9 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
     /**
      * Shift + clique: de um slot do Núcleo para o inventário (barra primeiro); do inventário, cristal para as
-     * câmaras livres e redstone para o slot dela; o resto troca entre mochila e barra. Os slots do Núcleo dão uma
-     * cópia (o {@code CoreInventory} não deixa sair pilha dele): a sobra volta pelo {@code setByPlayer}, e a redstone
-     * entra pelo {@code safeInsert}, nunca pela soma no lugar do {@code moveItemStackTo}.
+     * câmaras livres e o catalisador para o slot dele; o resto troca entre mochila e barra. Os slots do Núcleo dão
+     * uma cópia (o {@code CoreInventory} não deixa sair pilha dele): a sobra volta pelo {@code setByPlayer}, e o
+     * catalisador entra pelo {@code safeInsert}, nunca pela soma no lugar do {@code moveItemStackTo}.
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -217,7 +217,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
             return original;
         }
         if (stack.getItem() instanceof SignalCrystalItem && fillChambers(stack)
-                || CoreInventory.isPlainRedstone(stack) && slots.get(chambers).safeInsert(stack).getCount()
+                || slots.get(chambers).mayPlace(stack) && slots.get(chambers).safeInsert(stack).getCount()
                         < original.getCount()) {
             // O que sobrou com o Núcleo cheio fica onde está: o vanilla repete o Shift + clique enquanto devolvemos
             // algo, e a repetição levaria a sobra para a barra.
@@ -292,7 +292,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Uma câmara: só Cristal de Sinal ou Lapidado, um por vez. */
+    /** Uma câmara: só cristal não rachado, um por vez (o rachado só sai). */
     private static final class ChamberSlot extends Slot {
         ChamberSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
@@ -300,7 +300,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof SignalCrystalItem;
+            return stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack);
         }
 
         @Override
@@ -309,15 +309,23 @@ public class ResonatorMenu extends AbstractContainerMenu {
         }
     }
 
-    /** A redstone da recarga: só pó de redstone comum (sem componentes), até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. */
+    /**
+     * O catalisador da recarga, até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}: a regra do tier
+     * ({@link CoreCatalyst#accepts}) e, com o slot ocupado, só o mesmo item. Vale nos dois lados, pelo tier da tela e
+     * pelo conteúdo do slot.
+     */
     private static final class RedstoneSlot extends Slot {
-        RedstoneSlot(Container container, int index, int x, int y) {
+        private final RouterTier tier;
+
+        RedstoneSlot(Container container, int index, int x, int y, RouterTier tier) {
             super(container, index, x, y);
+            this.tier = tier;
         }
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return CoreInventory.isPlainRedstone(stack);
+            ItemStack held = getItem();
+            return CoreCatalyst.accepts(tier, stack) && (held.isEmpty() || held.is(stack.getItem()));
         }
 
         @Override

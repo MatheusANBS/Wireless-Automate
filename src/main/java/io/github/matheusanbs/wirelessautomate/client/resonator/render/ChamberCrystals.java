@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
@@ -42,7 +43,8 @@ final class ChamberCrystals {
     private static final double PLASMA_EDGE = 0.35;
     private static final byte EMPTY = 0;
     private static final byte DULL_SIGNAL = 3;
-    /** Uma pilha por código da câmara: vazia, Cristal, Lapidado e os dois Opacos. */
+    private static final byte CRACKED_SIGNAL = 5;
+    /** Uma pilha por código da câmara: vazia, Cristal, Lapidado, os dois Opacos e os dois rachados. */
     private static ItemStack[] stacks;
     /** Rascunhos do desenho, que é só na thread de render: nada alocado por quadro. */
     private static final double[] AT = new double[3];
@@ -160,13 +162,13 @@ final class ChamberCrystals {
         return out;
     }
 
-    /** A câmara do Opaco que recarrega agora (o primeiro, como no servidor), ou -1. */
+    /** A câmara do Opaco que recarrega agora (o primeiro não rachado, como no servidor), ou -1. */
     static int recharging(byte[] chambers, ChamberView view) {
         if (view.rechargeStart() < 0) {
             return -1;
         }
         for (int i = 0; i < chambers.length; i++) {
-            if (isDull(chambers[i])) {
+            if (isDull(chambers[i]) && chambers[i] < CRACKED_SIGNAL) {
                 return i;
             }
         }
@@ -181,6 +183,7 @@ final class ChamberCrystals {
         return Math.clamp((ticks - view.rechargeStart()) / view.rechargeTicks(), 0.0, 1.0);
     }
 
+    /** Opaco ou rachado: os dois sem carga. */
     static boolean isDull(byte code) {
         return code >= DULL_SIGNAL;
     }
@@ -203,8 +206,15 @@ final class ChamberCrystals {
             SignalCrystalItem.setCharge(dullSignal, 0);
             ItemStack dullCut = cut.copy();
             SignalCrystalItem.setCharge(dullCut, 0);
-            stacks = new ItemStack[] {ItemStack.EMPTY, signal, cut, dullSignal, dullCut};
+            stacks = new ItemStack[] {ItemStack.EMPTY, signal, cut, dullSignal, dullCut, cracked(dullSignal),
+                cracked(dullCut)};
         }
         return stacks;
+    }
+
+    private static ItemStack cracked(ItemStack dull) {
+        ItemStack stack = dull.copy();
+        stack.set(ModDataComponents.CRYSTAL_INTEGRITY.get(), 0);
+        return stack;
     }
 }

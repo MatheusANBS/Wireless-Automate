@@ -13,7 +13,8 @@ import net.minecraft.world.item.ItemStack;
  * cada Porta de Energia e o buffer cheio. A estação não vai.
  *
  * @param chambers uma posição por câmara do tier: {@code 0} vazia, {@code 1} Cristal de Sinal, {@code 2} Lapidado,
- *     {@code 3} Cristal Opaco, {@code 4} Lapidado Opaco
+ *     {@code 3} Cristal Opaco, {@code 4} Lapidado Opaco, {@code 5} Cristal rachado, {@code 6} Lapidado rachado (os
+ *     Afinados contam como Lapidado)
  * @param rechargeStart o tempo de jogo em que a recarga em curso começou, ou -1 sem recarga
  * @param rechargeTicks a duração da recarga, pelo menos 1
  * @param formedAt o {@link ResonanceCoreBlockEntity#formedAt()}: -1 nunca montou, 0 já montado de antes
@@ -33,6 +34,7 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
     private static final byte SIGNAL = 1;
     private static final byte CUT = 2;
     private static final byte DULL_OFFSET = 2;
+    private static final byte CRACKED_OFFSET = 4;
 
     /** Os arrays são copiados na entrada e na saída: uma view nunca muda depois de criada. */
     public ChamberView {
@@ -96,20 +98,21 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
 
     private static byte chamber(ItemStack stack) {
         if (stack.getItem() instanceof SignalCrystalItem item) {
-            boolean dull = SignalCrystalItem.isDull(stack);
-            return (byte) ((item.isCut() ? CUT : SIGNAL) + (dull ? DULL_OFFSET : 0));
+            int offset = SignalCrystalItem.isCracked(stack) ? CRACKED_OFFSET
+                    : SignalCrystalItem.isDull(stack) ? DULL_OFFSET : 0;
+            return (byte) ((item.isCut() ? CUT : SIGNAL) + offset);
         }
         return EMPTY_CHAMBER;
     }
 
-    /** Se há recarga em curso: um Opaco numa câmara do tier e redstone no Núcleo. */
+    /** Se há recarga em curso: um Opaco não rachado numa câmara do tier e catalisador no Núcleo. */
     static boolean recharging(ResonanceCoreBlockEntity core) {
         if (core.redstone() <= 0) {
             return false;
         }
         for (int i = 0; i < core.chambers(); i++) {
             ItemStack stack = core.crystals().get(i);
-            if (stack.getItem() instanceof SignalCrystalItem && SignalCrystalItem.isDull(stack)) {
+            if (SignalCrystalItem.isRechargeable(stack)) {
                 return true;
             }
         }

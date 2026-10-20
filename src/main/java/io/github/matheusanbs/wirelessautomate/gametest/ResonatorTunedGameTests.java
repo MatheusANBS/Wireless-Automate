@@ -186,11 +186,21 @@ public final class ResonatorTunedGameTests {
         ItemStack netherite = new ItemStack(Items.NETHERITE_INGOT);
         assertNew(helper, craft(helper, crystal(true, CrystalCharge.FULL), netherite, netherite),
                 tuned(RouterTier.ELITE), "Lapidado + 2 netherite");
-        // A integridade gasta do Lapidado não passa para o Afinado: ele sai como um novo.
+        // A integridade gasta passa para o Afinado: afinar não renova a fadiga (só refazer o rachado renova).
         ItemStack gasto = crystal(true, CrystalCharge.FULL);
         SignalCrystalItem.setIntegrity(gasto, 2);
-        assertNew(helper, craft(helper, netherite, gasto, netherite), tuned(RouterTier.ELITE), "Lapidado com integridade 2");
+        assertTunedWith(helper, craft(helper, netherite, gasto, netherite), RouterTier.ELITE, 2, "Lapidado com integridade 2");
         helper.succeed();
+    }
+
+    /** Sai o Afinado do tier, cheio e com a integridade dada (a cheia sem o componente). */
+    private static void assertTunedWith(GameTestHelper helper, Optional<ItemStack> out, RouterTier tier, int integrity,
+            String what) {
+        ItemStack expected = tuned(tier);
+        SignalCrystalItem.setIntegrity(expected, integrity);
+        assertNew(helper, out, expected, what);
+        helper.assertTrue(SignalCrystalItem.isFull(out.get()), what + ": não saiu cheio");
+        helper.assertValueEqual(SignalCrystalItem.integrity(out.get()), integrity, what + ": integridade");
     }
 
     @GameTest(template = "empty")
@@ -214,6 +224,10 @@ public final class ResonatorTunedGameTests {
         ItemStack estrela = new ItemStack(Items.NETHER_STAR);
         assertNew(helper, craft(helper, tuned(RouterTier.ELITE), esmeralda, estrela, esmeralda),
                 tuned(RouterTier.EMERALD), "Afinado Elite → Esmeralda");
+        ItemStack eliteGasto = tuned(RouterTier.ELITE);
+        SignalCrystalItem.setIntegrity(eliteGasto, 5);
+        assertTunedWith(helper, craft(helper, esmeralda, eliteGasto, estrela, esmeralda), RouterTier.EMERALD, 5,
+                "Afinado Elite com integridade 5 → Esmeralda");
         assertNew(helper, craft(helper, esmeralda, esmeralda, estrela, crystal(true, CrystalCharge.FULL)),
                 tuned(RouterTier.EMERALD), "Lapidado → Esmeralda");
         helper.assertTrue(craft(helper, tuned(RouterTier.EMERALD), esmeralda, estrela, esmeralda).isEmpty(),

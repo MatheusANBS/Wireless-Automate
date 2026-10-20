@@ -1592,6 +1592,92 @@ def coracao(tier: str) -> Sprite:
 
 
 # ---------------------------------------------------------------------------
+# A Moldura de Liga: a peça do Coração Ultimate, a receita em anel vista de frente
+# ---------------------------------------------------------------------------
+#
+# Oito blocos de liga Unobtainium-Vibranium em volta do vão de 5 × 5 (a mesma receita: oito blocos e uma
+# Nether Star no meio): os dos cantos com 4 × 4, os do meio de cada lado esticados sobre o vão (4 × 5). Cada
+# bloco tem o chanfro próprio (a aresta de cima e da esquerda clara, a de baixo e da direita na sombra), e os
+# de baixo à direita ficam um tom mais fundos, pela luz de cima à esquerda. O lado de dentro do anel é o
+# chanfro em Vibranium, como na moldura do Coração Ultimate. O vão é a câmara de grafite com a Nether Star no
+# meio. Corpo de 13 px (1 a 13), com o contorno em 0 e 14.
+FAIXAS_MOLDURA = ((1, 4), (5, 9), (10, 13))
+MOLDURA_VAO = range(5, 10)
+# A volta do brilho pelo miolo dos blocos (um pixel para dentro da aresta de fora, onde um ponto claro não vira
+# ruído sobre a sombra), pixel a pixel, de cima à esquerda no sentido horário.
+VOLTA_MOLDURA = tuple([(x, 2) for x in range(2, 13)] + [(12, y) for y in range(3, 13)]
+                      + [(x, 12) for x in range(11, 1, -1)] + [(2, y) for y in range(11, 2, -1)])
+assert len(VOLTA_MOLDURA) == 40 and len(set(VOLTA_MOLDURA)) == 40, "a volta do brilho da moldura não fecha"
+# A Nether Star no vão: o miolo, os quatro braços a 1 px, as pontas a 2 px e as diagonais.
+BRACOS_ESTRELA = ((1, 0), (-1, 0), (0, 1), (0, -1))
+DIAGONAIS_ESTRELA = ((1, 1), (-1, 1), (1, -1), (-1, -1))
+
+
+def _bloco_liga(img: Image.Image, bx: int, by: int, tons: list[Cor]) -> None:
+    """Um bloco de liga na posição (bx, by) da grade de 3 × 3: o miolo no tom cheio, a aresta de cima e a da
+    esquerda que dão para fora do anel na luz, as de baixo e da direita um tom abaixo (a junta com o bloco
+    seguinte), o canto de baixo à direita dois; os blocos de baixo à direita da grade começam um tom mais
+    fundos."""
+    base = 0 if bx + by < 2 else 1
+    (x0, x1), (y0, y1) = FAIXAS_MOLDURA[bx], FAIXAS_MOLDURA[by]
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if x == x1 and y == y1:
+                tom = 3
+            elif x == x1 or y == y1:
+                tom = 2
+            elif (x == x0 and bx == 0) or (y == y0 and by == 0):
+                tom = 0
+            else:
+                tom = 1
+            put(img, x, y, tons[base + tom])
+
+
+def moldura_liga() -> Sprite:
+    """Moldura de Liga: um brilho dá a volta no anel, no sentido horário, e a Nether Star do vão cintila
+    (o miolo respira, as pontas aparecem no auge e as diagonais apagam) (12 × 2 ticks)."""
+    liga = MOLDURA_CORACAO["ultimate"]
+    vibranio = REBITE_CORACAO["ultimate"]
+    aro_hi = cor(LENTE["ultimate"][0])
+    camara = {(x, y) for y in MOLDURA_VAO for x in MOLDURA_VAO}
+    q = []
+    for k in range(12):
+        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        t = (1 + math.cos(2 * math.pi * k / 12)) / 2
+        for by in range(3):
+            for bx in range(3):
+                if (bx, by) != (1, 1):
+                    _bloco_liga(img, bx, by, liga)
+        # O chanfro de Vibranium no lado de dentro do anel: claro em cima e à esquerda, na sombra embaixo e à
+        # direita, os cantos no meio-termo.
+        for x in range(4, 11):
+            for y in range(4, 11):
+                if (x, y) not in camara:
+                    put(img, x, y, vibranio[_luz(x, y) + 1])
+        # A câmara de grafite, com um halo violeta que respira em volta da estrela.
+        for x, y in camara:
+            d = max(abs(x - 7), abs(y - 7))
+            fundo = cor("grafite.2") if _luz(x, y) < 2 else cor("grafite.1")
+            put(img, x, y, mistura(fundo, aro_hi, .35 * t * (1 - d / 3)))
+        # A Nether Star: o miolo branco respirando, os braços pálidos, as pontas no auge e as diagonais apagando.
+        put(img, 7, 7, BRANCO)
+        for dx, dy in BRACOS_ESTRELA:
+            put(img, 7 + dx, 7 + dy, mistura(aro_hi, BRANCO, .35 + .5 * t))
+            if t > .6:
+                put(img, 7 + 2 * dx, 7 + 2 * dy, aro_hi)
+        for dx, dy in DIAGONAIS_ESTRELA:
+            put(img, 7 + dx, 7 + dy, mistura(img.getpixel((7 + dx, 7 + dy)), aro_hi, .45 - .3 * t))
+        # O brilho que dá a volta no anel, no sentido horário.
+        n = (k * len(VOLTA_MOLDURA)) // 12
+        for i, (x, y) in enumerate(VOLTA_MOLDURA):
+            fase = (n - i) % len(VOLTA_MOLDURA)
+            if fase <= 4:
+                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, (.7, .55, .4, .25, .12)[fase]))
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 2)
+
+
+# ---------------------------------------------------------------------------
 # Montagem, modelos e folha
 # ---------------------------------------------------------------------------
 
@@ -1624,6 +1710,7 @@ def gerar_itens() -> dict[str, Sprite]:
         sprites[f"item/{nome}"] = desenho()
     for tier in TIERS:
         sprites[f"item/resonator_heart_{tier}"] = coracao(tier)
+    sprites["item/alloy_frame"] = moldura_liga()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -1676,6 +1763,10 @@ def modelos_itens() -> None:
             "parent": "minecraft:item/generated",
             "textures": {"layer0": f"wirelessautomate:item/resonator_heart_{tier}"},
         })
+    grava_json(MODELOS / "models/item/alloy_frame.json", {
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": "wirelessautomate:item/alloy_frame"},
+    })
 
 
 def limpar(gerados: set[str], pastas: list[str]) -> int:
@@ -1746,7 +1837,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \
                   [f"charged_dust_{t}" for t in TIERS_PO_CARREGADO] + CASCATA + \
-                  [f"resonator_heart_{t}" for t in TIERS] + \
+                  [f"resonator_heart_{t}" for t in TIERS] + ["alloy_frame"] + \
                   [f"tuned_signal_crystal_{t}{v}" for t in TIERS_AFINADO for v in ("", "_dull", "_cracked")]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]

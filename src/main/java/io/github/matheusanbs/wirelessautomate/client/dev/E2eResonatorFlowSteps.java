@@ -130,8 +130,8 @@ final class E2eResonatorFlowSteps {
         list.add(capture("ressonador-camara-recarga"));
         // a medida com a espiral e a aura em curso
         for (int i = 0; i < 2; i++) {
-            list.add(E2eResonatorSteps.frameTime(true, " com espiral", null));
-            list.add(E2eResonatorSteps.frameTime(false, " com espiral", null));
+            list.add(E2eResonatorSteps.frameTime(true, " com espiral", () -> recharging(origin)));
+            list.add(E2eResonatorSteps.frameTime(false, " com espiral", () -> recharging(origin)));
         }
         list.add(E2eResonatorSteps.camera("Ressonador: câmera perto da recarga", playerId, () -> origin[0],
                 E2eResonatorSteps.CLOSE_VIEW));
@@ -153,6 +153,13 @@ final class E2eResonatorFlowSteps {
         }), () -> view(origin).rechargeStart() < 0, () -> "recarga parada no cliente"));
         list.add(DevEndToEnd.wait("o Opaco cair", 40));
         list.add(capture("ressonador-camara-cristais"));
+    }
+
+    /** Falha a medida se a recarga acabou antes dos quadros medidos: a espiral não estaria no desenho. */
+    private static void recharging(BlockPos[] origin) {
+        if (view(origin).rechargeStart() < 0) {
+            throw new IllegalStateException("a recarga acabou durante a medida com espiral");
+        }
     }
 
     private static ItemStack dull() {

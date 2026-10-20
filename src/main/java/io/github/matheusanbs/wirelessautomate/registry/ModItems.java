@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.CascadeItem;
 import io.github.matheusanbs.wirelessautomate.resonator.CatalystRule;
 import io.github.matheusanbs.wirelessautomate.resonator.ChargedDustItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorHeartItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -117,6 +118,17 @@ public final class ModItems {
 
     private static DeferredItem<CascadeItem> cascade(String name) {
         return ITEMS.registerItem(name, CascadeItem::new, new Item.Properties());
+    }
+
+    /** O Coração do Ressonador, um por tier (sempre registrados): pedido pela receita e pelo upgrade do Núcleo. */
+    public static final Map<RouterTier, DeferredItem<ResonatorHeartItem>> RESONATOR_HEARTS =
+            new EnumMap<>(RouterTier.class);
+
+    static {
+        for (RouterTier tier : RouterTier.values()) {
+            RESONATOR_HEARTS.put(tier, ITEMS.registerItem("resonator_heart_" + tier.getSerializedName(),
+                    props -> new ResonatorHeartItem(tier, props), new Item.Properties()));
+        }
     }
 
     /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */

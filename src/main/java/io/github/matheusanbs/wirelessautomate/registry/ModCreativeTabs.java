@@ -72,6 +72,11 @@ public final class ModCreativeTabs {
                         for (var part : ModItems.CASCADE) {
                             output.accept(part.get());
                         }
+                        for (var heart : ModItems.RESONATOR_HEARTS.entrySet()) {
+                            if (heart.getKey().loaded()) {
+                                output.accept(heart.getValue().get());
+                            }
+                        }
                         output.accept(ModItems.RESONATOR_CASING.get());
                         output.accept(ModItems.RESONATOR_GLASS.get());
                         for (RouterTier tier : RouterTier.values()) {

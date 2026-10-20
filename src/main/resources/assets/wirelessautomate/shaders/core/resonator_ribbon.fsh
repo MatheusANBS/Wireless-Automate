@@ -27,14 +27,14 @@ void main() {
     vec3 col = vec3(0.0);
 
     if (mode == 0) {
-        // conduto: pacotes correndo de u = 0 para u = 1, mais largos e rápidos com a faixa de vazão
+        // conduto: um núcleo contínuo de luz da cor do tier que cresce com a faixa, com os pacotes correndo por cima
         float flow = clamp(arg / 7.0, 0.0, 1.0);
         float d = abs(quad.y - 0.5) * 2.0;
-        float width = 0.18 + 0.5 * flow;
-        float tube = smoothstep(width, 0.0, d);
+        float core = 0.3 + 0.55 * flow;
+        float tube = smoothstep(1.0, core, d);
         float packets = pow(0.5 + 0.5 * sin(quad.x * 28.0 - t * (6.0 + 2.0 * arg)), 6.0);
-        col += mix(CORAL, tier, quad.x) * tube * (0.6 + 2.6 * packets);
-        col += WHITE * smoothstep(width * 0.5, 0.0, d) * packets * flow;
+        col += mix(CORAL, tier, quad.x) * tube * (0.7 + 2.0 * packets);
+        col += WHITE * smoothstep(core * 0.6, 0.0, d) * (0.2 + 0.8 * packets) * flow;
         col *= smoothstep(0.0, 0.04, quad.x) * smoothstep(1.0, 0.96, quad.x);
     } else if (mode == 1) {
         // espiral de catalisador: dez grãos sobem de u = 0 a u = 1, girando em v

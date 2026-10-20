@@ -548,7 +548,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /**
      * Escolhe o nó do painel ({@code null}: nenhum). Recusa um nó que não está no índice ou que o jogador
-     * não vê. O alvo de edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
+     * não vê, e larga a escolha que havia, para o alvo pedido logo depois não valer no nó anterior. O alvo de
+     * edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
      */
     public boolean chooseNode(@Nullable NodeKey key) {
         return viewer != null && node.choose(key);

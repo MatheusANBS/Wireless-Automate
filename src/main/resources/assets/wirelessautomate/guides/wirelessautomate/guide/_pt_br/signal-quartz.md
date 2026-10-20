@@ -40,6 +40,9 @@ O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia 
 | <ItemImage id="wirelessautomate:signal_crystal" /> **Cristal de Sinal** | 1× | 10 minutos |
 | <ItemImage id="wirelessautomate:cut_signal_crystal" /> **Cristal Lapidado** | 2× | 20 minutos |
 
+A duração da tabela vale no Núcleo Básico e no Avançado. Quanto maior o tier do Núcleo, menos a carga dura: no
+Ultimate, o que duraria 20 minutos dura 3.
+
 O Cristal de Sinal só vem do minério. O **Cristal Lapidado** sai da bancada com quatro Cristais de Sinal em
 cruz em volta de um Fragmento de Ametista, e só aceita cristais **cheios**: cristais gastos não valem.
 

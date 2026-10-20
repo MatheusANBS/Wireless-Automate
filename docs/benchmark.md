@@ -474,3 +474,22 @@ Ramo `central-etapa-2`. `./scripts/bench.sh tablet:1000:3,many:500:3,range:200:3
 - Nada muda no servidor, como pedia a etapa. O rótulo só vai no snapshot da tela aberta, e renomear não remonta as rotas.
 - O rótulo e a dimensão no snapshot não aparecem nos bytes do Tablet: o painel só manda o snapshot do nó escolhido, e só quando ele muda.
 - O destaque é só do cliente. Medido com `System.nanoTime` no `onRender`: cerca de 0,5 µs por quadro sem nada aceso e cerca de 90 µs com 64 acesas, o limite. O contorno, o véu e a linha até o roteador vão em dois lotes, sem alocar.
+
+## Etapa 3a da central da rede: a Lista com as máquinas (19 de outubro de 2026)
+
+Ramo `central-etapa-3a`. Antes: `1da0681` (a base da Tarefa 1, já com o cenário `tablet-range` e a linha do Tablet, antes das mudanças de jogo), num worktree à parte. Depois: `10a9be6`. Rodada 1 com `./scripts/bench.sh tablet:1000:3,tablet-range:100:3,range:200:3,many:500:3` (antes, depois); rodada 2, intercalada, só `tablet-range:100:3,range:200:3` (antes, depois). Máquina local; relatórios em `run/bench/reports/20261019-212753-antes.md`, `20261019-213332.md`, `20261019-213928-antes.md` e `20261019-214241.md`, fora do git. Na base, o `tablet-range` abre o Tablet sem nenhum roteador aberto (a árvore não existe); depois, abre 4 roteadores e um grupo com "Mostrar todas": 51 linhas da árvore na página, com o estado e a vazão das máquinas à vista.
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| tablet 1000 | 1,036 ± 0,007 | 1,035 ± 0,008 | Tablet aberto 0,130 ± 0,043 → 0,128 ± 0,035 ms/tick; 1,7 → 1,7 KB/s |
+| tablet-range 100, rodada 1 | 0,179 ± 0,009 | 0,175 ± 0,001 | Tablet aberto 0,0345 ± 0,0008 → **0,0516 ± 0,0020** ms/tick; 0,5 → 0,8 KB/s |
+| tablet-range 100, rodada 2 | 0,173 ± 0,002 | 0,171 ± 0,008 | Tablet aberto 0,0562 ± 0,0102 → 0,0629 ± 0,0136 ms/tick; 0,5 → 0,8 KB/s |
+| range 200 (12.800 máquinas), rodada 1 | 0,050 ± 0,002 | 0,041 ± 0,000 | heap retido 23,4 ± 4,4 → 23,6 ± 4,3 MB; 1ª montagem 14,5 ± 2,6 → 31,7 ± 13,5 ms; **índice de nós 1,0 → 29,7 KB no disco (59,8 → 228,0 KB sem compressão)** |
+| range 200, rodada 2 | 0,045 ± 0,005 | 0,043 ± 0,003 | heap retido 23,2 ± 4,0 → 24,0 ± 4,3 MB; 1ª montagem 14,0 ± 3,0 → 15,6 ± 3,2 ms; índice igual à rodada 1 |
+| many 500 | 0,660 ± 0,019 | 0,657 ± 0,027 | µs/visita 10,60 → 10,87 |
+
+### Leitura
+
+- O motor não muda, como pedia a etapa: `tablet`, `many` e `range` ficam iguais dentro do ruído no tempo do mod.
+- O tempo do Tablet no `tablet-range` subiu além do ± na rodada 1 (+0,017 ms/tick) e ficou dentro dele na rodada 2, com a base oscilando de 0,035 a 0,056 entre as rodadas. O que entra de novo é o trabalho que a base não fazia: as 51 linhas da árvore na página e a amostra das máquinas à vista, uma vez por amostra. Os bytes sobem de 0,5 para 0,8 KB/s pelas mesmas linhas (a página uma vez e o "live" das máquinas).
+- O índice de nós cresce com as máquinas, como previsto na spec: 12.800 máquinas somam ~168 KB sem compressão (~13 B por máquina) e ~29 KB no disco. O save só regrava as entradas que mudaram. A 1ª montagem do `range` teve duas repetições altas na rodada 1 (44,7 e 32,7 ms) e voltou ao nível da base na rodada 2; a leitura das máquinas no índice é uma passada pelos arrays do roteador, no aviso de mudança.

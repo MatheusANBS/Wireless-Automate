@@ -24,7 +24,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais e
  * os feixes, as faíscas e o Núcleo de plasma, ou a figura de Lissajous e a lente sem o shader (os cristais são
- * opacos e vão antes dos aditivos). O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
+ * opacos e vão antes dos aditivos). Com um shaderpack do Iris em uso, o plasma também sai e a figura de Lissajous volta.
+ * O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
  * que achou na primeira vez, para o quadro não criar uma chave nova; a cena por posição sobrevive à recarga do
  * chunk.
@@ -73,7 +74,7 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
         ChamberSparks.render(poseStack, buffer, scene, partialTick);
-        if (PlasmaShader.get() != null) {
+        if (PlasmaShader.get() != null && !ShaderPackCheck.active()) {
             Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
             Vec3 world = scene.worldCenter();
             double dx = eye.x - world.x;

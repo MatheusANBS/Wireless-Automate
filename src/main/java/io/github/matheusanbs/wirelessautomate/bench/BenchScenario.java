@@ -66,7 +66,7 @@ public enum BenchScenario {
     TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 30,
             "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto"),
     TABLET_MACHINES("tablet-machines", 100, RouterTier.ULTIMATE, 60, 30,
-            "Tablet por máquinas: a cena do tablet-range, com o jogador falso na visão por máquinas da Lista, os blocos recolhidos e um aberto");
+            "Tablet por máquinas: a cena do tablet-range com as máquinas vinculadas alternando barril, baú, fornalha e alto-forno (um grupo por bloco), e o jogador falso na visão por máquinas da Lista, os blocos recolhidos e o dos barris aberto");
 
     public final String id;
     public final int defaultNodes;

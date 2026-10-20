@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -45,9 +46,14 @@ final class SelectBar {
     private final List<FlatButton> buttons = new ArrayList<>();
     /** A versão das acesas que o texto do Apagar todas mostra. */
     private int litVersion = Integer.MIN_VALUE;
-    /** O texto do Colar nos marcados e a versão dos marcados dele. */
+    /** O texto do Colar nos marcados, a versão dos marcados e a largura do botão em que ele foi escolhido. */
     private Component pasteText = Component.empty();
     private int pasteVersion = -1;
+    private int pasteWidth = -1;
+    /** A borda direita do Selecionar e as larguras dele fora e dentro da seleção. */
+    private int selectRight;
+    private int selectWidth;
+    private int doneWidth;
 
     SelectBar(TabletLayout layout, Supplier<TabletSnapshot> snapshot, NodeText nodes, TabletActions actions,
             TabletList list) {
@@ -67,6 +73,11 @@ final class SelectBar {
         int x = layout.left;
         int lw = list.listWidth();
         int selectW = Math.max(56, font.width(tr("select")) + 10);
+        // selecionando, o botão encolhe ao "Concluir" e a sobra vai para o Colar nos marcados
+        int doneW = Math.min(selectW, font.width(tr("select.done")) + 8);
+        selectRight = x + X0 + lw;
+        selectWidth = selectW;
+        doneWidth = doneW;
         add(adder, new FlatButton(x + X0 + lw - selectW, list.barY(), selectW, ROW_H, tr("select"),
                 (g, b, hovered) -> TabletButtons.paintToggle(g, b, hovered, list.multi() ? tr("select.done") : tr("select"),
                         list.multi()),
@@ -83,13 +94,13 @@ final class SelectBar {
         add(adder, new FlatButton(x + X0 + 2 * cycleW + 4, list.multiBarY(), lw - 2 * cycleW - 4, ROW_H, tr("move"),
                 (g, b, hovered) -> TabletButtons.paintPrimary(g, b, hovered, tr("move")), this::moveSelected)
                 .tooltip(() -> tr("move.marked.tooltip", list.markRows.what())));
-        int allW = font.width(tr("select.all")) + 10;
+        int allW = font.width(tr("select.all")) + 8;
         add(adder, new FlatButton(x + X0, list.barY(), allW, ROW_H, tr("select.all"),
                 (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, tr("select.all")), list::selectAll)
                 .tooltip(() -> tr(list.machineView() ? "select.all.machines.tooltip" : "select.all.tooltip")));
         // colar o perfil nos marcados (só com perfil copiado)
-        add(adder, new FlatButton(x + X0 + allW + 2, list.barY(), lw - allW - selectW - 4, ROW_H, Component.empty(),
-                (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, pasteText()),
+        add(adder, new FlatButton(x + X0 + allW + 2, list.barY(), lw - allW - doneW - 4, ROW_H, Component.empty(),
+                (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, pasteText(b.getWidth() - 8)),
                 list.profileActions::pasteSelected).tooltip(() -> snapshot().profile()
                         .map(p -> tr("list.paste_marked.tooltip", p.sourceName(), list.markRows.what())).orElse(null)));
         int clearW = clearLitWidth(font);
@@ -114,6 +125,12 @@ final class SelectBar {
     }
 
     void refresh(boolean shown) {
+        FlatButton select = buttons.get(0);
+        int selectW = list.multi() ? doneWidth : selectWidth;
+        if (select.getWidth() != selectW) {
+            select.setWidth(selectW);
+            select.setX(selectRight - selectW);
+        }
         for (int i = 1; i <= 4; i++) {
             buttons.get(i).visible = shown && list.multi();
         }
@@ -143,12 +160,19 @@ final class SelectBar {
         }
     }
 
-    /** "Colar nos marcados (2 roteadores, 3 máquinas)", refeito só quando os marcados mudam. */
-    private Component pasteText() {
+    /**
+     * O texto do Colar nos marcados que cabe em {@code room}: "Colar nos marcados (2 roteadores, 3 máquinas)",
+     * "Colar (5)" ou "Colar" (a dica diz tudo); escolhido de novo só quando os marcados ou a largura mudam.
+     */
+    private Component pasteText(int room) {
         int version = list.marks.version();
-        if (version != pasteVersion) {
+        if (version != pasteVersion || room != pasteWidth) {
             pasteVersion = version;
-            pasteText = tr("list.paste_marked", list.markRows.what());
+            pasteWidth = room;
+            Font font = Minecraft.getInstance().font;
+            Component full = tr("list.paste_marked", list.markRows.what());
+            Component count = tr("list.paste_marked.short", list.marks.routers() + list.marks.machineCount());
+            pasteText = font.width(full) <= room ? full : font.width(count) <= room ? count : tr("list.paste.short");
         }
         return pasteText;
     }

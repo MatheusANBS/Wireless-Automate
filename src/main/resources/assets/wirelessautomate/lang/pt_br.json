@@ -626,6 +626,7 @@
   "gui.wirelessautomate.tablet.list.paste_selected": "Colar nos %s marcados",
   "gui.wirelessautomate.tablet.list.paste_selected.tooltip": "Colar o perfil de %s nos %s nós marcados · a origem fica de fora · dá para desfazer",
   "gui.wirelessautomate.tablet.list.paste_marked": "Colar nos marcados (%s)",
+  "gui.wirelessautomate.tablet.list.paste_marked.short": "Colar (%s)",
   "gui.wirelessautomate.tablet.list.paste_marked.tooltip": "Colar o perfil de %s em %s · no roteador, na presa; na máquina, a exceção dela; no grupo inteiro, o perfil do grupo · a origem fica de fora · dá para desfazer",
   "gui.wirelessautomate.tablet.marks.routers": "%s roteadores",
   "gui.wirelessautomate.tablet.marks.routers.one": "%s roteador",

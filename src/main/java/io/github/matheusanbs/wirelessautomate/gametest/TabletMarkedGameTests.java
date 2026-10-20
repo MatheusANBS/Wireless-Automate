@@ -309,6 +309,49 @@ public final class TabletMarkedGameTests {
         });
     }
 
+    /**
+     * A página montou o bloco das fornalhas com A e B nos índices 0 e 1; desvincular A antes do colar põe o barril
+     * no índice 1. O colar refaz a passada pelo índice novo: só B recebe, nada estoura e o barril fica como estava.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void markedBlockWithAStalePageSkipsTheMachinesThatChanged(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            helper.assertTrue(TabletPayloads.handleMachines(scene.player(), new TabletMachinesPayload(CONTAINER,
+                    TabletMachinesPayload.Action.MACHINES, Optional.empty())), "não entrou em Máquinas");
+            scene.menu().setQuery(scene.menu().query());
+            scene.menu().pollSnapshot();
+            int barrelGroup = groupOf(target, helper.absolutePos(BARREL));
+            eq(helper, index(helper, target, FURNACE_A), 0, "índice de A");
+            helper.assertTrue(target.unlinkMachine(helper.absolutePos(FURNACE_A)), "não desvinculou");
+            eq(helper, NodeIndex.get(helper.getLevel().getServer()).entry(scene.targetKey()).remotes().size(), 2,
+                    "o índice não viu o desvincular");
+            eq(helper, index(helper, target, BARREL), 1, "o barril no índice antigo de B");
+            TabletMarks marks = new TabletMarks(List.of(), List.of(), List.of(FURNACE_ID));
+            helper.assertTrue(paste(scene, List.of(), marks) == 1, "o bloco: " + text(scene.menu()));
+            int group = groupOf(target, helper.absolutePos(FURNACE_B));
+            eq(helper, target.remoteMachines().group(group).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(),
+                    PortMode.INSERT, "a fornalha B não recebeu");
+            helper.assertFalse(remote(helper, target, BARREL).hasException(), "o barril ganhou exceção");
+            eq(helper, target.remoteMachines().group(barrelGroup).profile().face(ResourceType.ITEM, RemoteSide.LEFT)
+                    .mode(), PortMode.NONE, "o perfil do barril mudou");
+        });
+    }
+
+    /** Colar de novo na mesma máquina não muda nada: o Desfazer do colar anterior some com ele. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pasteWithoutChangesForgetsThePreviousUndo(GameTestHelper helper) {
+        run(helper, scene -> {
+            TabletMarks marks = machines(machine(helper, scene, FURNACE_A));
+            helper.assertTrue(paste(scene, List.of(), marks) == 1, "o primeiro colar: " + text(scene.menu()));
+            helper.assertTrue(scene.menu().canUndo(), "sem Desfazer depois de mudar");
+            helper.assertTrue(paste(scene, List.of(), marks) == 1, "o segundo colar: " + text(scene.menu()));
+            helper.assertFalse(scene.menu().canUndo(), "o Desfazer do colar anterior ficou");
+            eq(helper, profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY), -1, "desfez");
+            helper.assertTrue(remote(helper, scene.target(), FURNACE_A).hasException(), "a exceção de A sumiu");
+        });
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void profileWithoutTheFrameOnlyPastesOnTheAttached(GameTestHelper helper) {
         run(helper, scene -> {
@@ -350,6 +393,10 @@ public final class TabletMarkedGameTests {
             eq(helper, moved, 1, "grupos movidos");
             eq(helper, target.remoteMachines().group(group).profile().face(ResourceType.ITEM, RemoteSide.FRONT).network(),
                     net, "o perfil do grupo");
+            // A já está na rede: nada muda e nada é contado
+            moved = TabletPayloads.handleMoveNodes(scene.player(), new TabletMoveNodesPayload(CONTAINER, List.of(),
+                    machines(machine(helper, scene, FURNACE_A)), Optional.of(ResourceType.ITEM), Optional.of(net)));
+            eq(helper, moved, 0, "contou a máquina que não mudou");
 
             // o roteador marcado leva tudo; a máquina dele marcada não conta de novo
             moved = TabletPayloads.handleMoveNodes(scene.player(), new TabletMoveNodesPayload(CONTAINER,

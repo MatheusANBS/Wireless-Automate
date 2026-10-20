@@ -52,6 +52,10 @@ final class E2eResonatorSteps {
     private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, ResonatorBlueprint.Layout.VITRINE);
     /** A terra fica na aresta vertical entre as faces leste e sul, de frente para a câmera. */
     private static final int[] DIRT = {4, 1, 4};
+    /** O vsync e o limite de FPS de antes da medida do tempo de quadro. */
+    private static boolean measuring;
+    private static boolean savedVsync;
+    private static int savedLimit;
     private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
     /** Os dois vidros da janela que ficam faltando. */
     private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
@@ -251,13 +255,15 @@ final class E2eResonatorSteps {
      */
     private static Step frameTime(boolean legacy) {
         long[] start = new long[2];
-        int[] saved = new int[2];
         String label = legacy ? "camara antiga" : "camara plasma";
         double[] result = new double[1];
         return new Step("Ressonador: " + label + " (tempo de quadro)", 60_000, () -> {
             var options = Minecraft.getInstance().options;
-            saved[0] = options.enableVsync().get() ? 1 : 0;
-            saved[1] = options.framerateLimit().get();
+            if (!measuring) {
+                measuring = true;
+                savedVsync = options.enableVsync().get();
+                savedLimit = options.framerateLimit().get();
+            }
             options.enableVsync().set(false);
             options.framerateLimit().set(260);
             ResonatorRenderer.forceLegacyForTests = legacy;
@@ -277,12 +283,24 @@ final class E2eResonatorSteps {
                 return false;
             }
             result[0] = (System.nanoTime() - start[1]) / (double) (frame - start[0]) / 1_000_000.0;
-            var options = Minecraft.getInstance().options;
-            options.enableVsync().set(saved[0] == 1);
-            options.framerateLimit().set(saved[1]);
-            ResonatorRenderer.forceLegacyForTests = false;
+            restoreFrameSettings();
             return true;
         }, () -> String.format(java.util.Locale.ROOT, "%s: %.3f ms/quadro", label, result[0]));
+    }
+
+    /**
+     * Devolve o vsync, o limite de FPS e o desenho da câmara. Idempotente; o motor chama em qualquer saída
+     * (sucesso, falha ou tempo esgotado), sem gravar o options.txt.
+     */
+    static void restoreFrameSettings() {
+        ResonatorRenderer.forceLegacyForTests = false;
+        if (!measuring) {
+            return;
+        }
+        measuring = false;
+        var options = Minecraft.getInstance().options;
+        options.enableVsync().set(savedVsync);
+        options.framerateLimit().set(savedLimit);
     }
 
     /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */

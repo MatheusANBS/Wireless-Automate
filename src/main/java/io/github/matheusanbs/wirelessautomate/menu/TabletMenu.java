@@ -246,9 +246,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     /** Quantas abas a tela tem ({@code TabletScreen.Tab}); o servidor só guarda uma posição dentro delas. */
-    public static final int TAB_COUNT = 5;
+    public static final int TAB_COUNT = 4;
     /** A posição da aba Fluxos ({@code TabletScreen.Tab.FLOWS}): só com ela aberta o jogador olha o amostrador. */
-    public static final int FLOWS_TAB = 2;
+    public static final int FLOWS_TAB = 1;
     /** A posição da aba Lista ({@code TabletScreen.Tab.LIST}), a que o clique numa máquina abre. */
     static final int LIST_TAB = 0;
 

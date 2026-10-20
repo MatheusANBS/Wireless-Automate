@@ -119,7 +119,7 @@ final class ScreenshotTablet {
                     tabletScreen.previewNetwork(2);
                     tabletScreen.previewNewOpen("Utilidades");
                 }, "t7-tablet-redes-alheia-nova"),
-                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
+                new Step(() -> tabletScreen.previewGroup(0), "t8-tablet-grupos"));
     }
 
     /** Escolhe a "Fornalha 3" na Lista e põe o painel dela, com o acesso dado (a 18 blocos, alcance de 128). */

@@ -6,7 +6,10 @@ import java.io.IOException;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
-/** O core shader do cristal facetado da câmara, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou se não compilou. */
+/**
+ * O core shader do cristal facetado da câmara, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou
+ * se não compilou.
+ */
 public final class CrystalShader {
     private static ShaderInstance shader;
 

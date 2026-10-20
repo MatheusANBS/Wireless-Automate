@@ -24,6 +24,7 @@ const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 HOT = vec3(1.0, 0.878, 0.8);
 const vec3 STONE_DARK = vec3(0.149, 0.145, 0.141);
 const vec3 STONE_LIGHT = vec3(0.361, 0.341, 0.322);
+const vec3 STONE_EDGE = vec3(0.275, 0.265, 0.25);
 
 // hashes sem seno: o tempo cresce até 1200 s e o seno do GPU perde a precisão com argumentos grandes
 float h1(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
@@ -71,7 +72,8 @@ void main() {
     float core = exp(-dot(obj.xz, obj.xz) * 16.0) * smoothstep(0.6, 0.0, abs(obj.y - 0.02));
     vec3 live = mix(DEEP, CORAL, smoothstep(0.28, 0.72, vein)) * (0.5 + 0.5 * diff);
     live += HOT * core * (0.45 + 0.2 * sin(t * 2.0 + seed * 7.0));
-    live += mix(CORAL, tier, 0.7) * fres * 1.1;
+    // a borda leva só um pouco do tier: um tier frio (verde-água) somado ao coral puxaria a gema para o cinza
+    live += mix(CORAL, tier, 0.35) * fres * 0.9;
     live *= 1.0 - mis * 0.6 * step(0.55, h1(floor(t * 16.0) + seed * 13.0));
     vec3 grey = mix(STONE_DARK, STONE_LIGHT, smoothstep(0.3, 0.7, vein)) * diff + vec3(0.5) * fres * 0.18;
     vec3 col = mix(grey, live, lit);
@@ -81,10 +83,16 @@ void main() {
     }
 
     vec3 bary = vec3(1.0 - facet.x - facet.y, facet.x, facet.y);
-    vec3 e = smoothstep(vec3(0.0), fwidth(bary) * 1.3, bary);
+    vec3 fw = fwidth(bary);
+    vec3 e = smoothstep(vec3(0.0), fw * 1.3, bary);
     float edge = 1.0 - min(min(e.x, e.y), e.z);
-    col += mix(vec3(0.275, 0.265, 0.25), mix(HOT, tier, 0.35), lit) * edge * 0.55;
-    col += vec3(1.0) * pow(max(dot(reflect(-L, N), V), 0.0), 56.0) * (0.35 + 0.6 * lit);
-    col = 1.0 - exp(-col * 1.3);
+    // a aresta tem largura em pixels: na gema pequena na tela ela cobriria a faceta inteira, então enfraquece
+    float small = clamp(1.0 - 12.0 * max(max(fw.x, fw.y), fw.z), 0.35, 1.0);
+    vec3 warmEdge = mix(CORAL, HOT, 0.5) * mix(vec3(1.0), tier * 1.6, 0.15);
+    col += mix(STONE_EDGE, warmEdge, lit) * edge * 0.45 * small;
+    col += HOT * pow(max(dot(reflect(-L, N), V), 0.0), 56.0) * (0.25 + 0.45 * lit);
+    // a curva no maior canal e a cor escalada junto: a matiz do coral não desbota quando a luz soma
+    float m = max(max(col.r, col.g), col.b);
+    col *= (1.0 - exp(-1.3 * m)) / max(m, 1e-4);
     fragColor = vec4(col, 1.0);
 }

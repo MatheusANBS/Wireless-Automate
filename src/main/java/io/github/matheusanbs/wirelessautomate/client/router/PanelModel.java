@@ -305,9 +305,9 @@ final class PanelModel {
             case ATTACHED -> panelTr("target.attached");
             case GROUP -> {
                 RangeView.GroupView group = range().group(target.id());
-                yield panelTr("target.group", group == null ? Component.literal("?") : RangeList.groupName(group));
+                yield panelTr("target.group", group == null ? Component.literal("?") : MachineTexts.groupName(group));
             }
-            case MACHINE -> RangeList.machineName(range(), target.id());
+            case MACHINE -> MachineTexts.machineName(range(), target.id());
         };
     }
 

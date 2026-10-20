@@ -11,21 +11,15 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -56,7 +50,8 @@ import org.lwjgl.glfw.GLFW;
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
  * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
  * ({@link TabletResize}), o cabeçalho e o aviso ({@link TabletHeader}), o corpo da aba aberta ({@link TabletBody}:
- * desenho, cliques, roda e dicas) e a dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
+ * desenho, cliques, roda e dicas), os botões de cada aba ({@link TabletTabs}), o teclado ({@link TabletKeys}) e a
+ * dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
  * são desenhados e clicados por geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o
  * estado a cada quadro.
  */
@@ -69,8 +64,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         FlatButton add(@Nullable Tab owner, FlatButton button);
     }
 
-    private final List<FlatButton> buttons = new ArrayList<>();
-    private final Map<Tab, List<FlatButton>> tabWidgets = new EnumMap<>(Tab.class);
     private final TabletLayout layout = new TabletLayout();
     private final TabletActions actions;
     private final TabletList list;
@@ -81,6 +74,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final NetworksTab networks;
     private final GroupsTab groups;
     private final TabletBody body;
+    private final TabletTabs tabs;
+    private final TabletKeys keys;
     private final TabletTips tips;
     private final TabletHeader header;
     private final TabletResize resize = new TabletResize(layout);
@@ -88,8 +83,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private Tab tab = Tab.LIST;
     private int lastVersion = -1;
     private EditBox searchBox;
-    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
-    private int inkVersion = -1;
 
     public TabletScreen(TabletMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -119,7 +112,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.networks = new NetworksTab(layout, menu::snapshot, actions, side, names);
         this.groups = new GroupsTab(layout, menu::snapshot, actions, side, names);
         this.body = new TabletBody(list, map, flows, side, networks, groups, () -> snapshot().networks().size());
-        this.tips = new TabletTips(resize, buttons, body);
+        this.tabs = new TabletTabs(selectBar, map, networks, groups, names);
+        this.keys = new TabletKeys(this, list, names, () -> tab);
+        this.tips = new TabletTips(resize, tabs.buttons(), body);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
     }
@@ -146,11 +141,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         imageHeight = h;
         super.init();
         layout.place(leftPos, topPos, w, h);
-        buttons.clear();
-        tabWidgets.clear();
-        for (Tab t : Tab.values()) {
-            tabWidgets.put(t, new ArrayList<>());
-        }
+        tabs.clear();
         int x = leftPos;
         int y = topPos;
 
@@ -170,7 +161,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_TEXT);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        inkVersion = -1;
+        keys.searchBox(searchBox);
         list.attach(searchBox);
         addRenderableWidget(searchBox);
         selectBar.addButtons(this::add, font);
@@ -184,17 +175,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         addRenderableWidget(names.renameBox());
         refresh();
         if (tab == Tab.LIST) {
-            focusSearch();
+            keys.focusSearch();
         }
     }
 
     /** {@code owner} nulo: visível em todas as abas. */
     private FlatButton add(@Nullable Tab owner, FlatButton button) {
-        buttons.add(button);
-        if (owner != null) {
-            tabWidgets.get(owner).add(button);
-        }
-        return addRenderableWidget(button);
+        return addRenderableWidget(tabs.register(owner, button));
     }
 
     /** Visibilidade e estado que dependem da aba e do snapshot. */
@@ -203,17 +190,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             lastVersion = menu.version();
             onSnapshot();
         }
-        for (Map.Entry<Tab, List<FlatButton>> entry : tabWidgets.entrySet()) {
-            for (FlatButton button : entry.getValue()) {
-                button.visible = entry.getKey() == tab;
-            }
-        }
-        searchBox.visible = tab == Tab.LIST;
-        selectBar.refresh(tab == Tab.LIST);
-        map.refresh(tab == Tab.MAP);
-        networks.refresh(tab == Tab.NETWORKS);
-        groups.refresh(tab == Tab.GROUPS);
-        names.refresh(tab == Tab.NETWORKS || tab == Tab.GROUPS);
+        tabs.refresh(tab, searchBox);
     }
 
     /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
@@ -239,16 +216,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             names.reset();
             setFocused(null);
             if (t == Tab.LIST) {
-                focusSearch();
+                keys.focusSearch();
             }
-        }
-    }
-
-    /** A busca com o cursor: digitar na Lista procura. */
-    private void focusSearch() {
-        if (searchBox != null) {
-            searchBox.visible = true;
-            setFocused(searchBox);
         }
     }
 
@@ -309,7 +278,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (names.renaming() && !names.renameBox().isMouseOver(mouseX, mouseY)) {
             names.finishRename(true);
         }
-        if (names.removeArmed() && !overRemoveButton(mouseX, mouseY)) {
+        if (names.removeArmed() && !tabs.overRemoveButton(tab, mouseX, mouseY)) {
             names.disarm();
         }
         if (tab == Tab.LIST && list.mouseClicked(mouseX, mouseY, button)) {
@@ -325,12 +294,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             setFocused(names.newBox());
         }
         return handled;
-    }
-
-    private boolean overRemoveButton(double mouseX, double mouseY) {
-        FlatButton remove = tab == Tab.NETWORKS ? networks.removeButton()
-                : tab == Tab.GROUPS ? groups.removeButton() : null;
-        return remove != null && remove.visible && remove.isMouseOver(mouseX, mouseY);
     }
 
     @Override
@@ -380,65 +343,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (tab == Tab.LIST) {
-            if (list.keyPressed(keyCode, scanCode, modifiers)) {
-                return true;
-            }
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                // sem busca nem filtro, Esc fecha o Tablet
-                return super.keyPressed(keyCode, scanCode, modifiers);
-            }
-            if (getFocused() != searchBox) {
-                focusSearch();
-            }
-        }
-        if (getFocused() instanceof EditBox box && box.isFocused()) {
-            boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
-            if (box == names.renameBox() && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
-                names.finishRename(enter);
-            } else if (box == names.newBox() && enter) {
-                names.create(tab == Tab.GROUPS ? Action.GROUP_CREATE : Action.NETWORK_CREATE);
-            } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                setFocused(null);
-            } else {
-                box.keyPressed(keyCode, scanCode, modifiers);
-            }
-            // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return keys.keyPressed(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (tab == Tab.LIST && list.charTyped(codePoint, modifiers)) {
-            return true;
-        }
-        if (tab == Tab.LIST && getFocused() != searchBox) {
-            focusSearch();
-        }
-        if (getFocused() instanceof EditBox box && box.isFocused()) {
-            return box.charTyped(codePoint, modifiers);
-        }
-        return super.charTyped(codePoint, modifiers);
+        return keys.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
     }
 
     // ------------------------------------------------------------------ desenho
 
-    /** Cor do texto e da dica dos campos: o EditBox guarda a cor, então segue o tema por aqui. */
-    private void inkBoxes() {
-        inkVersion = GuiThemes.version();
-        // a dica da busca é desenhada pela lista, que a corta e a mostra também com o cursor na caixa
-        GuiPaint.ink(searchBox);
-        GuiPaint.ink(names.newBox());
-        GuiPaint.ink(names.renameBox());
-    }
-
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        if (inkVersion != GuiThemes.version()) {
-            inkBoxes();
-        }
+        keys.ink();
         refresh();
         GuiText.beginFrame();
         boolean popup = tab == Tab.LIST && list.panel() != null && list.panel().popupOpen();

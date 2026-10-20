@@ -5,7 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
-import io.github.matheusanbs.wirelessautomate.client.router.RangeList;
+import io.github.matheusanbs.wirelessautomate.client.router.MachineTexts;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
@@ -230,7 +230,7 @@ final class MapMachines {
 
     /** A cor do quadradinho: a neutra na que está bem, a do estado nas outras. */
     private static int fill(MachineState state) {
-        return state == MachineState.LOADED ? GuiPaint.MUTED : RangeList.stateColor(state);
+        return state == MachineState.LOADED ? GuiPaint.MUTED : MachineTexts.stateColor(state);
     }
 
     private static void ring(VertexConsumer buffer, Matrix4f pose, int x0, int y0, int x1, int y1, int color) {
@@ -280,8 +280,8 @@ final class MapMachines {
                     + state.name().toLowerCase(Locale.ROOT));
         };
         infoStateW = font.width(infoState);
-        infoStateColor = RangeList.stateColor(state);
-        infoText = RangeList.machineName(view, machine).copy()
+        infoStateColor = MachineTexts.stateColor(state);
+        infoText = MachineTexts.machineName(view, machine).copy()
                 .append(Component.literal("  ").append(coords(machine)).withColor(GuiPaint.MUTED));
     }
 
@@ -301,9 +301,9 @@ final class MapMachines {
             return tip;
         }
         MachineView machine = view.machines().get(i);
-        MutableComponent text = RangeList.machineName(view, i).copy();
+        MutableComponent text = MachineTexts.machineName(view, i).copy();
         text.append("\n").append(coords(i).copy().withColor(GuiPaint.TOOLTIP_MUTED));
-        text.append("\n").append(RangeList.stateText(machine.state()).copy().withColor(RangeList.stateColor(machine.state())));
+        text.append("\n").append(MachineTexts.stateText(machine.state()).copy().withColor(MachineTexts.stateColor(machine.state())));
         text.append("\n").append(Component.translatable("gui.wirelessautomate.router.range.machine.tooltip")
                 .copy().withColor(GuiPaint.TOOLTIP_MUTED));
         tipBuilt = built;

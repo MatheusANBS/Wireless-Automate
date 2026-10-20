@@ -158,7 +158,7 @@ final class ListRows {
         }
         ListTexts.TierPill pill = list.texts.pill(font, node.tier());
         ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX, pill.width());
-        if (texts.pill()) {
+        if (texts.pill() && !list.rename.editing(ListRename.Kind.ROUTER, node.key())) {
             GuiPaint.outline(g, right - pill.width(), y + 1, pill.width(), 10, pill.color());
             GuiPaint.text(g, font, pill.name(), right - pill.width() + ListTexts.PILL_PAD + 1, y + 2, pill.color());
         }

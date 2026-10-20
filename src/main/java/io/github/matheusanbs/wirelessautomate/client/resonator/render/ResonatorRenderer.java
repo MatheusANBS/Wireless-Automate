@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -22,8 +23,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais e
- * os feixes, as faíscas, a figura de Lissajous e a lente (os cristais são opacos e vão antes dos aditivos). O
- * estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
+ * os feixes, as faíscas e o Núcleo de plasma, ou a figura de Lissajous e a lente sem o shader (os cristais são
+ * opacos e vão antes dos aditivos). O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
  * que achou na primeira vez, para o quadro não criar uma chave nova; a cena por posição sobrevive à recarga do
  * chunk.
@@ -72,9 +73,18 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
         ChamberSparks.render(poseStack, buffer, scene, partialTick);
-        LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
-        ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
-                state.getValue(ResonatorPartBlock.FACING));
+        if (PlasmaShader.get() != null) {
+            Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Vec3 world = scene.worldCenter();
+            double dx = eye.x - world.x;
+            double dy = eye.y - world.y;
+            double dz = eye.z - world.z;
+            PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, dx * dx + dy * dy + dz * dz);
+        } else {
+            LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
+            ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
+                    state.getValue(ResonatorPartBlock.FACING));
+        }
         poseStack.popPose();
     }
 

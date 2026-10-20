@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FlowStats;
 import io.github.matheusanbs.wirelessautomate.network.FlowWindow;
@@ -263,7 +264,7 @@ final class ScreenshotTablet {
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"),
                 Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
-                List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
+                TabletRows.EMPTY, List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
@@ -286,6 +287,6 @@ final class ScreenshotTablet {
         }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
                 new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
-                false, faceModes, List.copyOf(rates), Optional.ofNullable(match));
+                false, faceModes, List.copyOf(rates), Optional.ofNullable(match), 0);
     }
 }

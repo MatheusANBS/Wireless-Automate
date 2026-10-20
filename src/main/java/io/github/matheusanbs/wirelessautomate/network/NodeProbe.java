@@ -16,6 +16,10 @@ public final class NodeProbe {
      */
     static final int FULL_INTERVAL = 8;
     private static final Direction[] DIRECTIONS = Direction.values();
+    /** {@link #machineTotals}: algum destino da máquina com rota está cheio agora. */
+    public static final int MACHINE_FULL = 1;
+    /** {@link #machineTotals}: alguma porta da máquina moveu há menos de um segundo, ou uma origem dela está acordada. */
+    public static final int MACHINE_ACTIVE = 2;
 
     private NodeProbe() {
     }
@@ -44,6 +48,50 @@ public final class NodeProbe {
             }
         });
         return count[0];
+    }
+
+    /**
+     * Soma em {@code got} e {@code gave} (por {@link ResourceType#ordinal()}) o total que as portas da máquina remota
+     * em {@code machinePos} ({@code pos.asLong()}) receberam e entregaram desde que existem ({@link Port#gotRead} +
+     * {@link Port#got}, e o mesmo da entrega). Devolve as marcas {@link #MACHINE_FULL} e {@link #MACHINE_ACTIVE}.
+     * Não cria nenhuma porta nem aloca; uma máquina sem porta (ou um nó fora do motor) não soma nada.
+     */
+    public static int machineTotals(RouterBlockEntity node, long machinePos, long[] got, long[] gave, long now) {
+        NodePorts ports = NetworkManager.get().ports(node);
+        Port[][] byType = ports == null ? null : ports.machinePorts(machinePos);
+        if (byType == null) {
+            return 0;
+        }
+        int flags = 0;
+        for (int t = 0; t < byType.length; t++) {
+            Port[] byFace = byType[t];
+            if (byFace == null) {
+                continue;
+            }
+            for (Port port : byFace) {
+                if (port == null) {
+                    continue;
+                }
+                got[t] += port.gotRead + port.got;
+                gave[t] += port.gaveRead + port.gave;
+                if (countsAsFull(port, now)) {
+                    flags |= MACHINE_FULL;
+                }
+                if (activeNow(port, now)) {
+                    flags |= MACHINE_ACTIVE;
+                }
+            }
+        }
+        return flags;
+    }
+
+    /**
+     * Uma porta com rota que moveu desde a última leitura do amostrador (menos de um segundo) ou uma origem acordada:
+     * dá o estado de uma máquina sem medida anterior, sem esperar a vazão.
+     */
+    private static boolean activeNow(Port port, long now) {
+        return port.network != null && !port.stopped
+                && (port.got > 0 || port.gave > 0 || port.source && !port.sourceBackoff.isSleeping(now));
     }
 
     /** Um destino com rota, cheio agora. */

@@ -188,7 +188,7 @@ final class ListPainter {
         }
         TabletPanelPayload payload = list.chosenPanel.payload();
         RouterSnapshot snap = payload == null ? null : payload.snapshot().orElse(null);
-        NodeView node = list.node(list.chosen);
+        NodeView node = list.model.node(list.chosen);
         Hot full = layout.hot(Kind.FULL_SCREEN, 0);
         int nameRoom = (full == null ? panelX + panelW : full.x() - 4) - panelX;
         Component name = snap != null && !snap.name().isEmpty() ? Component.literal(snap.name())

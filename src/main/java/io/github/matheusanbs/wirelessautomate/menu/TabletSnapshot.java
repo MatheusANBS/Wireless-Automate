@@ -7,24 +7,19 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
-import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.What;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.netty.handler.codec.DecoderException;
-import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -46,6 +41,8 @@ import net.minecraft.resources.ResourceLocation;
  * @param networkFacets as redes visíveis das faces dos nós visíveis, com quantos nós cada uma tem
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
  * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
+ * @param rows          as linhas da árvore abaixo dos nós abertos ({@link TabletRows}); elas e os nós dividem o
+ *                      teto de {@link #MAX_NODES}
  * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
  * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)
@@ -65,12 +62,13 @@ public record TabletSnapshot(
         QuickCounts quickCounts,
         Optional<ProfileSummary> profile,
         List<NodeView> nodes,
+        TabletRows rows,
         List<Facet<ResourceLocation>> groupCounts,
         Optional<ResourceLocation> originGroup,
         Component notice,
         int noticeId) {
 
-    /** Nós enviados por consulta. */
+    /** Linhas enviadas por consulta: os nós e as linhas da árvore deles. */
     public static final int MAX_NODES = 256;
     /** Tamanho máximo do texto da busca. */
     public static final int MAX_TEXT = 64;
@@ -277,13 +275,15 @@ public record TabletSnapshot(
      * @param roles          papéis em bits ({@code NodeIndex.role})
      * @param machine        bloco da máquina, para o ícone e o nome
      * @param removedNetwork alguma face aponta para uma rede que não existe mais
-     * @param faceModes      os modos das faces da máquina presa, pelos lados dela ({@link NodeIndex#faceModes})
+     * @param faceModes      os modos das faces pelos lados, da presa, dos perfis e das exceções ({@link NodeIndex.Entry#faceModes})
      * @param rates          a vazão do nó por {@link ResourceType#ordinal()} na última amostra, na unidade da tela
      * @param profile        a comparação com o perfil copiado no Tablet; vazio sem perfil copiado
+     * @param linked         quantas máquinas o roteador tem vinculadas (o índice as guarda mesmo sem o Upgrade de
+     *                       Alcance); com alguma, a Lista abre o nó em árvore
      */
     public record NodeView(NodeKey key, String name, ResourceLocation machine, RouterTier tier,
             List<List<UUID>> networks, int roles, NodeStatus status, boolean removedNetwork, long faceModes,
-            List<Long> rates, Optional<ProfileMatch> profile) {
+            List<Long> rates, Optional<ProfileMatch> profile, int linked) {
         /** As redes das faces do tipo {@code type}. */
         public List<UUID> networks(ResourceType type) {
             return networks.get(type.ordinal());
@@ -302,7 +302,7 @@ public record TabletSnapshot(
         /** O mesmo nó com outro estado e outra vazão. */
         public NodeView withLive(Live live) {
             return new NodeView(key, name, machine, tier, networks, roles, live.status(), removedNetwork, faceModes,
-                    live.rates(), profile);
+                    live.rates(), profile, linked);
         }
 
         /** Igual a {@code other} fora o estado e a vazão. */
@@ -310,7 +310,7 @@ public record TabletSnapshot(
             return key.equals(other.key) && name.equals(other.name) && machine.equals(other.machine)
                     && tier == other.tier && networks.equals(other.networks) && roles == other.roles
                     && removedNetwork == other.removedNetwork && faceModes == other.faceModes
-                    && profile.equals(other.profile);
+                    && profile.equals(other.profile) && linked == other.linked;
         }
 
         /** Redes distintas somando os tipos carregados (uma rede em dois tipos conta uma vez), como a dica. */
@@ -320,25 +320,30 @@ public record TabletSnapshot(
     }
 
     /**
-     * A página de nós: a consulta que ela responde, os totais e os nós (no máximo {@link #MAX_NODES}).
+     * A página de nós: a consulta que ela responde, os totais, os nós e as linhas da árvore (juntos, no máximo
+     * {@link #MAX_NODES}).
      *
      * @param totalNodes    nós visíveis ao jogador, sem filtro
      * @param matchingNodes nós que passam na consulta
      * @param groupCounts   quantos nós de cada máquina passam na consulta
      * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
      */
-    public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes,
+    public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes, TabletRows rows,
             List<Facet<ResourceLocation>> groupCounts, Optional<ResourceLocation> originGroup) {
         /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
-        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), List.of(), Optional.empty());
+        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), TabletRows.EMPTY, List.of(),
+                Optional.empty());
         public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
-                StreamCodec.of(TabletSnapshot::encodePage, TabletSnapshot::decodePage);
+                StreamCodec.of(TabletPageCodec::encodePage, TabletPageCodec::decodePage);
 
-        /** Igual a {@code other} fora o estado e a vazão dos nós: a mudança cabe no pacote pequeno ({@link Live}). */
+        /**
+         * Igual a {@code other} fora o estado e a vazão dos nós e das linhas de máquina: a mudança cabe no pacote
+         * pequeno ({@link Live}).
+         */
         public boolean sameExceptLive(Page other) {
             if (totalNodes != other.totalNodes || matchingNodes != other.matchingNodes || nodes.size() != other.nodes.size()
                     || !query.equals(other.query) || !groupCounts.equals(other.groupCounts)
-                    || !originGroup.equals(other.originGroup)) {
+                    || !originGroup.equals(other.originGroup) || !rows.sameExceptLive(other.rows)) {
                 return false;
             }
             for (int i = 0; i < nodes.size(); i++) {
@@ -360,6 +365,14 @@ public record TabletSnapshot(
 
         /** A mesma página com o estado e a vazão de {@code lives}; ela mesma se o número de nós não bate. */
         public Page withLives(List<Live> lives) {
+            return withLives(lives, rows.lives());
+        }
+
+        /**
+         * A mesma página com o estado e a vazão dos nós ({@code lives}) e das linhas de máquina ({@code machines});
+         * ela mesma se o número de nós não bate.
+         */
+        public Page withLives(List<Live> lives, List<TabletRows.MachineLive> machines) {
             if (lives.size() != nodes.size()) {
                 return this;
             }
@@ -367,19 +380,20 @@ public record TabletSnapshot(
             for (int i = 0; i < nodes.size(); i++) {
                 updated.add(nodes.get(i).withLive(lives.get(i)));
             }
-            return new Page(query, totalNodes, matchingNodes, List.copyOf(updated), groupCounts, originGroup);
+            return new Page(query, totalNodes, matchingNodes, List.copyOf(updated), rows.withLives(machines), groupCounts,
+                    originGroup);
         }
     }
 
     public Page page() {
-        return new Page(query, totalNodes, matchingNodes, nodes, groupCounts, originGroup);
+        return new Page(query, totalNodes, matchingNodes, nodes, rows, groupCounts, originGroup);
     }
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, activeNetwork, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
-                page.nodes(), page.groupCounts(), page.originGroup(), notice, noticeId);
+                page.nodes(), page.rows(), page.groupCounts(), page.originGroup(), notice, noticeId);
     }
 
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
@@ -410,9 +424,9 @@ public record TabletSnapshot(
     public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> STREAM_CODEC = StreamCodec.of(
             (buf, s) -> {
                 encodeHeader(buf, s);
-                encodePage(buf, s.page());
+                TabletPageCodec.encodePage(buf, s.page());
             },
-            buf -> decodeHeader(buf).withPage(decodePage(buf)));
+            buf -> decodeHeader(buf).withPage(TabletPageCodec.decodePage(buf)));
     /** Só o cabeçalho; decodificado com {@link Page#EMPTY} no lugar da página. */
     public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> HEADER_CODEC =
             StreamCodec.of(TabletSnapshot::encodeHeader, TabletSnapshot::decodeHeader);
@@ -469,118 +483,6 @@ public record TabletSnapshot(
         });
         ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
         buf.writeVarInt(s.noticeId);
-    }
-
-    /**
-     * A página com paletas: as dimensões, as máquinas e as redes vão uma vez cada, e os nós levam o índice delas (num
-     * Tablet com centenas de nós, os mesmos ids se repetiam em cada nó).
-     */
-    private static void encodePage(RegistryFriendlyByteBuf buf, Page page) {
-        Query.STREAM_CODEC.encode(buf, page.query);
-        buf.writeVarInt(page.totalNodes);
-        buf.writeVarInt(page.matchingNodes);
-        Object2IntLinkedOpenHashMap<ResourceLocation> dimensions = new Object2IntLinkedOpenHashMap<>();
-        Object2IntLinkedOpenHashMap<ResourceLocation> machines = new Object2IntLinkedOpenHashMap<>();
-        Object2IntLinkedOpenHashMap<UUID> networkIds = new Object2IntLinkedOpenHashMap<>();
-        for (NodeView n : page.nodes) {
-            dimensions.putIfAbsent(n.key.dimension().location(), dimensions.size());
-            machines.putIfAbsent(n.machine, machines.size());
-            for (List<UUID> networks : n.networks) {
-                for (UUID id : networks) {
-                    networkIds.putIfAbsent(id, networkIds.size());
-                }
-            }
-        }
-        for (Facet<ResourceLocation> facet : page.groupCounts) {
-            machines.putIfAbsent(facet.id(), machines.size());
-        }
-        page.originGroup.ifPresent(id -> machines.putIfAbsent(id, machines.size()));
-        writeLocations(buf, dimensions);
-        writeLocations(buf, machines);
-        buf.writeVarInt(networkIds.size());
-        for (UUID id : networkIds.keySet()) {
-            buf.writeUUID(id);
-        }
-        buf.writeVarInt(page.nodes.size());
-        for (NodeView n : page.nodes) {
-            buf.writeVarInt(dimensions.getInt(n.key.dimension().location()));
-            buf.writeLong(n.key.pos().asLong());
-            buf.writeUtf(n.name, 64);
-            buf.writeVarInt(machines.getInt(n.machine));
-            buf.writeEnum(n.tier);
-            for (List<UUID> networks : n.networks) {
-                buf.writeVarInt(networks.size());
-                for (UUID id : networks) {
-                    buf.writeVarInt(networkIds.getInt(id));
-                }
-            }
-            buf.writeVarInt(n.roles);
-            buf.writeBoolean(n.removedNetwork);
-            buf.writeLong(n.faceModes);
-            writeLive(buf, n);
-            buf.writeOptional(n.profile, (b, match) -> {
-                b.writeBoolean(match.equal());
-                if (!match.equal()) {
-                    b.writeEnum(match.type());
-                    b.writeEnum(match.side());
-                    b.writeEnum(match.what());
-                }
-            });
-        }
-        buf.writeVarInt(page.groupCounts.size());
-        for (Facet<ResourceLocation> facet : page.groupCounts) {
-            buf.writeVarInt(machines.getInt(facet.id()));
-            buf.writeVarInt(facet.count());
-        }
-        buf.writeOptional(page.originGroup, (b, id) -> b.writeVarInt(machines.getInt(id)));
-    }
-
-    private static void writeLocations(RegistryFriendlyByteBuf buf, Object2IntLinkedOpenHashMap<ResourceLocation> palette) {
-        buf.writeVarInt(palette.size());
-        for (ResourceLocation id : palette.keySet()) {
-            buf.writeResourceLocation(id);
-        }
-    }
-
-    private static List<ResourceLocation> readLocations(RegistryFriendlyByteBuf buf) {
-        int count = readCount(buf, MAX_NODES * 2);
-        List<ResourceLocation> palette = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            palette.add(buf.readResourceLocation());
-        }
-        return palette;
-    }
-
-    private static int readCount(RegistryFriendlyByteBuf buf, int max) {
-        int count = buf.readVarInt();
-        if (count < 0 || count > max) {
-            throw new DecoderException("count " + count + " > " + max);
-        }
-        return count;
-    }
-
-    private static <T> T at(List<T> palette, int index) {
-        if (index < 0 || index >= palette.size()) {
-            throw new DecoderException("palette index " + index + " of " + palette.size());
-        }
-        return palette.get(index);
-    }
-
-    /** O que muda a cada amostra num nó: o estado e a vazão de cada tipo (ver {@link Live}). */
-    private static void writeLive(RegistryFriendlyByteBuf buf, NodeView n) {
-        buf.writeEnum(n.status);
-        for (ResourceType type : ResourceType.values()) {
-            buf.writeVarLong(n.rate(type));
-        }
-    }
-
-    private static Live readLive(RegistryFriendlyByteBuf buf) {
-        NodeStatus status = buf.readEnum(NodeStatus.class);
-        List<Long> rates = new ArrayList<>(ResourceType.values().length);
-        for (int t = 0; t < ResourceType.values().length; t++) {
-            rates.add(buf.readVarLong());
-        }
-        return new Live(status, List.copyOf(rates));
     }
 
     private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
@@ -644,54 +546,8 @@ public record TabletSnapshot(
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, active, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
-                List.copyOf(networkFacets), quickCounts, profile, List.of(), List.of(), Optional.empty(), notice, noticeId);
-    }
-
-    private static Page decodePage(RegistryFriendlyByteBuf buf) {
-        Query query = Query.STREAM_CODEC.decode(buf);
-        int total = buf.readVarInt();
-        int matching = buf.readVarInt();
-        List<ResourceLocation> dimensions = readLocations(buf);
-        List<ResourceLocation> machines = readLocations(buf);
-        int networkCount = readCount(buf, MAX_NODES * ResourceType.values().length * 8);
-        List<UUID> networkIds = new ArrayList<>(networkCount);
-        for (int i = 0; i < networkCount; i++) {
-            networkIds.add(buf.readUUID());
-        }
-        int nodeCount = readCount(buf, MAX_NODES);
-        List<NodeView> nodes = new ArrayList<>(nodeCount);
-        for (int i = 0; i < nodeCount; i++) {
-            NodeKey key = new NodeKey(ResourceKey.create(Registries.DIMENSION, at(dimensions, buf.readVarInt())),
-                    BlockPos.of(buf.readLong()));
-            String name = buf.readUtf(64);
-            ResourceLocation machine = at(machines, buf.readVarInt());
-            RouterTier tier = buf.readEnum(RouterTier.class);
-            List<List<UUID>> typeNetworks = new ArrayList<>(ResourceType.values().length);
-            for (int t = 0; t < ResourceType.values().length; t++) {
-                int count = readCount(buf, networkCount);
-                List<UUID> ids = new ArrayList<>(count);
-                for (int k = 0; k < count; k++) {
-                    ids.add(at(networkIds, buf.readVarInt()));
-                }
-                typeNetworks.add(List.copyOf(ids));
-            }
-            int roles = buf.readVarInt();
-            boolean removed = buf.readBoolean();
-            long faceModes = buf.readLong();
-            Live live = readLive(buf);
-            Optional<ProfileMatch> profile = buf.readOptional(b -> b.readBoolean() ? ProfileMatch.EQUAL
-                    : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
-                            b.readEnum(What.class)));
-            nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
-                    faceModes, live.rates(), profile));
-        }
-        int groupCount = readCount(buf, MAX_NODES);
-        List<Facet<ResourceLocation>> groupCounts = new ArrayList<>(groupCount);
-        for (int i = 0; i < groupCount; i++) {
-            groupCounts.add(new Facet<>(at(machines, buf.readVarInt()), buf.readVarInt()));
-        }
-        return new Page(query, total, matching, List.copyOf(nodes), List.copyOf(groupCounts),
-                buf.readOptional(b -> at(machines, b.readVarInt())));
+                List.copyOf(networkFacets), quickCounts, profile, List.of(), TabletRows.EMPTY, List.of(), Optional.empty(),
+                notice, noticeId);
     }
 
     /**
@@ -713,10 +569,10 @@ public record TabletSnapshot(
                 }
             },
             buf -> {
-                int count = readCount(buf, MAX_NODES);
+                int count = TabletPageCodec.readCount(buf, MAX_NODES);
                 List<Live> lives = new ArrayList<>(count);
                 for (int i = 0; i < count; i++) {
-                    lives.add(readLive(buf));
+                    lives.add(TabletPageCodec.readLive(buf));
                 }
                 return List.copyOf(lives);
             });

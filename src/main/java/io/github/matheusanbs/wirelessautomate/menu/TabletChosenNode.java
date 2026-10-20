@@ -76,17 +76,25 @@ final class TabletChosenNode {
             NodeIndex.Entry entry = NodeIndex.get(server).entry(key);
             if (entry == null || !TabletNodes.visible(entry, NetworkSavedData.get(server), viewer.hasPermissions(2),
                     viewer.getUUID())) {
+                // Larga a escolha: o alvo que o cliente manda logo depois do nó não pode cair no nó anterior.
+                switchTo(null);
                 return false;
             }
         }
         if (!java.util.Objects.equals(key, chosen)) {
-            chosen = key;
-            targetRef = EditTargetRef.ATTACHED;
-            lastKnown = null;
-            sentPanel = null;
+            switchTo(key);
         }
         panelForced = true;
         return true;
+    }
+
+    /** Troca o nó escolhido ({@code null}: nenhum), com o alvo de volta na presa e o painel a reenviar. */
+    private void switchTo(@Nullable NodeKey key) {
+        chosen = key;
+        targetRef = EditTargetRef.ATTACHED;
+        lastKnown = null;
+        sentPanel = null;
+        panelForced = true;
     }
 
     /** Confere o alvo no roteador: uma máquina que mudou de índice segue pela posição; um alvo que sumiu volta à presa. */

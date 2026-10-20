@@ -23,9 +23,12 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload.Action;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -35,6 +38,7 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.core.BlockPos;
@@ -436,6 +440,49 @@ public final class TabletTreeGameTests {
                                 "a máquina descarregada");
                     } finally {
                         NodeIndex.track(router);
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A Lista escolhe o nó e, logo depois, o alvo. Com A escolhido, a escolha recusada de um B que o jogador não vê
+     * larga A, e o grupo de A pedido em seguida não muda o alvo de A.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void refusedChoiceDropsPreviousNode(GameTestHelper helper) {
+        RouterBlockEntity a = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(new BlockPos(0, 1, 0), Blocks.CHEST);
+        helper.setBlock(new BlockPos(0, 2, 0), ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        RouterBlockEntity b = helper.getBlockEntity(new BlockPos(0, 2, 0));
+        ServerPlayer player = playerWithTablet(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, a);
+                    waitLoaded(helper, b);
+                })
+                .thenExecute(() -> {
+                    NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+                    a.setNetworkId(data.create(player.getUUID(), "escolhida").id());
+                    b.setNetworkId(data.create(UUID.randomUUID(), "alheia").id());
+                    a.setRangeUpgrade(rangeUpgrade());
+                    fakeLinks(a, helper, 2, CHEST_ID, 0);
+                    NodeIndex.placedBy(a, player.getUUID());
+                    NodeIndex.track(b);
+                    int group = a.remoteMachines().machine(0).group();
+                    TabletMenu menu = openTablet(player, 148, uniqueName(helper, "arve"));
+                    try {
+                        helper.assertTrue(TabletPayloads.handleSelectNode(player,
+                                new TabletSelectNodePayload(148, Optional.of(key(a)))), "não escolheu A");
+                        helper.assertFalse(TabletPayloads.handleSelectNode(player,
+                                new TabletSelectNodePayload(148, Optional.of(key(b)))), "escolheu um nó que não vê");
+                        eq(helper, menu.chosenNode(), null, "a recusa não largou A");
+                        helper.assertFalse(ModPayloads.handleSelectTarget(player,
+                                SelectTargetPayload.group(148, group, CHEST_ID)), "o grupo de A valeu sem nó escolhido");
+                        helper.assertTrue(menu.targetRef().target().attached(), "o alvo de A mudou");
+                    } finally {
                         player.containerMenu = player.inventoryMenu;
                     }
                 })

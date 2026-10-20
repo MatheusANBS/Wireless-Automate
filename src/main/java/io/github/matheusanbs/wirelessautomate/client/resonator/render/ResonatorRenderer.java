@@ -23,8 +23,9 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais e
- * os feixes, as faíscas e o Núcleo de plasma, ou a figura de Lissajous e a lente sem o shader (os cristais são
- * opacos e vão antes dos aditivos). Com um shaderpack do Iris em uso, o plasma também sai e a figura de Lissajous volta.
+ * os feixes, a aura dos cristais, o Núcleo de plasma, o conduto de energia e a recarga em espiral, ou as faíscas, a
+ * figura de Lissajous e a lente sem o shader (os cristais são opacos e vão antes dos aditivos). Com um shaderpack do
+ * Iris em uso, o desenho é o sem o shader.
  * O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
  * que achou na primeira vez, para o quadro não criar uma chave nova; a cena por posição sobrevive à recarga do
@@ -85,9 +86,13 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
             double dy = eye.y - world.y;
             double dz = eye.z - world.z;
             double distanceSq = dx * dx + dy * dy + dz * dz;
+            if (distanceSq < FlowConduit.RANGE_SQ) {
+                CrystalAura.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
+            }
             PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, distanceSq);
             if (distanceSq < FlowConduit.RANGE_SQ) {
                 FlowConduit.render(poseStack, buffer, scene, partialTick, tierColor);
+                RechargeSpiral.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
             }
         } else {
             ChamberSparks.render(poseStack, buffer, scene, partialTick);

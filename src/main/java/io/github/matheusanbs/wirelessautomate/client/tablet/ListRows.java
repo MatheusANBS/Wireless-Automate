@@ -152,9 +152,8 @@ final class ListRows {
         // o estado vai na pontinha do ícone, para a linha não perder largura
         GuiPaint.dot(g, cx + 11, y + 12, TabletText.statusColor(node.status()));
         int textX = cx + ICON_W + 3;
-        int right = x + hot.w() - 3;
+        int right = textRight(list, hot);
         if (chips) {
-            right -= 3 * CHIP + 2 + 4;
             renderChips(g, right + 4, y + 5, node);
         }
         ListTexts.TierPill pill = list.texts.pill(font, node.tier());
@@ -163,8 +162,24 @@ final class ListRows {
             GuiPaint.outline(g, right - pill.width(), y + 1, pill.width(), 10, pill.color());
             GuiPaint.text(g, font, pill.name(), right - pill.width() + ListTexts.PILL_PAD + 1, y + 2, pill.color());
         }
-        GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
+        if (list.rename.editing(ListRename.Kind.ROUTER, node.key())) {
+            list.rename.place(textX, y + 1, right - textX);
+        } else {
+            GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
+            list.rename.paintPencil(g, ListRename.Kind.ROUTER, node.key(), hot, right, mx, my);
+        }
         GuiText.draw(g, font, texts.state(), textX, y + 11, GuiPaint.MUTED);
+    }
+
+    /** Onde o nome do nó começa: depois da caixa do Selecionar, do ▸/▾ e do ícone. */
+    static int nameX(TabletList list, Hot hot) {
+        return hot.x() + 5 + (list.multi ? 12 : 0) + list.treeRows.chevronWidth() + ICON_W + 3;
+    }
+
+    /** Até onde vai o texto da linha do nó: antes dos quadradinhos das faces, quando cabem. */
+    static int textRight(TabletList list, Hot hot) {
+        int right = hot.x() + hot.w() - 3;
+        return list.listWidth() >= CHIPS_MIN_LIST ? right - (3 * CHIP + 2 + 4) : right;
     }
 
     /** Os seis quadradinhos das faces na aba do painel: Cima, Frente, Esquerda / Baixo, Trás, Direita. */

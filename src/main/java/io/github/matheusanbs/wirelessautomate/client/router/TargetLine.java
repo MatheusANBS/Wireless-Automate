@@ -5,7 +5,9 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Kind;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.ArrayList;
@@ -201,7 +203,8 @@ final class TargetLine {
 
     List<TargetRow> rows() {
         List<TargetRow> rows = new ArrayList<>();
-        rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, panelTr("target.attached"), null, 0, false));
+        rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, model.targetName(EditTarget.ATTACHED_TARGET), null, 0,
+                false));
         RangeView view = model.range();
         for (RangeView.GroupView group : view.groups()) {
             rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", MachineTexts.groupName(group)),
@@ -259,6 +262,12 @@ final class TargetLine {
         RangeView.MachineView machine = model.targetMachine();
         if (machine != null) {
             label.start(target, machine.pos(), machine.label(), MachineTexts.blockName(model.range(), target.id()));
+            return;
+        }
+        if (target.kind() == EditTarget.Kind.ATTACHED) {
+            RouterSnapshot snapshot = model.snapshot();
+            label.start(target, null, snapshot.attachedLabel(),
+                    RouterBlock.machineName(snapshot.machineState().getBlock()));
             return;
         }
         RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? model.range().group(target.id()) : null;

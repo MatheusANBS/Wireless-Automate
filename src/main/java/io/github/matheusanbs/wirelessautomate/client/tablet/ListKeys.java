@@ -18,6 +18,9 @@ final class ListKeys {
 
     /** {@code false} deixa a tecla para a busca ou a tela. */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (list.rename.editor().keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
         NodePanel p = list.chosenPanel.current();
         if (p != null && p.keyPressed(keyCode, scanCode, modifiers)) {
             return true;

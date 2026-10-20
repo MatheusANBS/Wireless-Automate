@@ -27,14 +27,14 @@ import org.lwjgl.glfw.GLFW;
  * <p>O campo não é um widget da tela: a dona repassa teclas, letras, cliques e o desenho, e o põe no lugar a cada
  * quadro pelo {@link #place}. Fechada, não desenha nem responde. Só cliente.
  */
-final class LabelEditor {
+public final class LabelEditor {
     /** O nome novo de {@code target}; {@code machinePos} é a máquina da edição, para o servidor conferir. */
-    interface Commit {
+    public interface Commit {
         void rename(EditTarget target, @Nullable BlockPos machinePos, String name);
     }
 
     /** Altura da moldura: uma linha de texto com 1 px em cima e embaixo. */
-    static final int H = 10;
+    public static final int H = 10;
 
     private final Commit commit;
     private @Nullable EditBox box;
@@ -48,7 +48,7 @@ final class LabelEditor {
     private int y;
     private int w;
 
-    LabelEditor(Commit commit) {
+    public LabelEditor(Commit commit) {
         this.commit = commit;
     }
 
@@ -56,7 +56,7 @@ final class LabelEditor {
         return Component.translatable("gui.wirelessautomate.router." + key);
     }
 
-    boolean editing() {
+    public boolean editing() {
         return target != null;
     }
 
@@ -66,7 +66,7 @@ final class LabelEditor {
     }
 
     /** O alvo em edição, ou {@code null} com a caixa fechada. */
-    @Nullable EditTarget target() {
+    public @Nullable EditTarget target() {
         return target;
     }
 
@@ -74,7 +74,7 @@ final class LabelEditor {
      * Abre a caixa para {@code target} com {@code current} dentro (vazio = sem nome dado) e {@code hint}, o nome de
      * quando ele está vazio, na cor apagada.
      */
-    void start(EditTarget target, @Nullable BlockPos machinePos, String current, Component hint) {
+    public void start(EditTarget target, @Nullable BlockPos machinePos, String current, Component hint) {
         if (box == null) {
             box = new EditBox(Minecraft.getInstance().font, 0, 0, 10, 9, tr("range.rename.narration"));
             box.setBordered(false);
@@ -92,7 +92,7 @@ final class LabelEditor {
     }
 
     /** A moldura no retângulo {@code x}, {@code y}, {@code w} × {@link #H} (a dona chama a cada quadro). */
-    void place(int x, int y, int w) {
+    public void place(int x, int y, int w) {
         this.x = x;
         this.y = y;
         this.w = Math.max(12, w);
@@ -104,7 +104,7 @@ final class LabelEditor {
     }
 
     /** Fecha a caixa; com {@code save}, manda o nome se ele mudou (vazio tira o nome). */
-    void finish(boolean save) {
+    public void finish(boolean save) {
         if (target == null || box == null) {
             return;
         }
@@ -122,7 +122,7 @@ final class LabelEditor {
     }
 
     /** Uma tecla com a caixa aberta: Esc desiste, Enter salva, o resto vai para o campo. Aberta, engole todas. */
-    boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (!editing() || box == null) {
             return false;
         }
@@ -137,7 +137,7 @@ final class LabelEditor {
         return true;
     }
 
-    boolean charTyped(char codePoint, int modifiers) {
+    public boolean charTyped(char codePoint, int modifiers) {
         if (!editing() || box == null) {
             return false;
         }
@@ -149,7 +149,7 @@ final class LabelEditor {
      * Um clique com a caixa aberta: dentro dela, move o cursor e é engolido ({@code true}); fora, salva e
      * deixa o clique seguir ({@code false}).
      */
-    boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(double mx, double my, int button) {
         if (!editing() || box == null) {
             return false;
         }
@@ -161,7 +161,7 @@ final class LabelEditor {
         return false;
     }
 
-    void render(GuiGraphics g, int mouseX, int mouseY) {
+    public void render(GuiGraphics g, int mouseX, int mouseY) {
         if (!editing() || box == null) {
             return;
         }
@@ -175,19 +175,22 @@ final class LabelEditor {
     }
 
     /** A dica da caixa aberta sob o mouse: como salvar e desistir. */
-    @Nullable Component tooltip(double mx, double my) {
+    public @Nullable Component tooltip(double mx, double my) {
         return editing() && inside(mx, my) ? tr("range.rename.hint") : null;
     }
 
     // ------------------------------------------------------------------ o pedido
 
     /** O pedido ao servidor para dar {@code name} ao alvo {@code target} da tela {@code containerId}. */
-    static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos, String name) {
+    public static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos, String name) {
         return new RenameTargetPayload(containerId, target.kind(), target.id(), Optional.ofNullable(machinePos), name);
     }
 
     /** Captura sem servidor: o snapshot com o nome do pedido no grupo ou na máquina dele. */
     static RouterSnapshot renamed(RouterSnapshot snapshot, RenameTargetPayload p) {
+        if (p.kind() == EditTarget.Kind.ATTACHED) {
+            return snapshot.withAttachedLabel(p.name());
+        }
         RangeView range = snapshot.range();
         List<RangeView.GroupView> groups = new ArrayList<>(range.groups());
         List<RangeView.MachineView> machines = new ArrayList<>(range.machines());

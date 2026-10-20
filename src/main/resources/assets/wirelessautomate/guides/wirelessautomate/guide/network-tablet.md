@@ -27,7 +27,7 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, with search, quick filters and the panel of the chosen node (see below). The **Routers · Machines** switch, below the search, shows the list by router (grouped by attached machine, each opening as a tree with its machines) or by every machine, grouped by block. **Select** marks routers, groups and machines to paste a profile or change networks at once. A node with faces on several networks shows "faces in N networks"; hover to see which. |
+| **List** | Every node, with search, quick filters and the panel of the chosen node (see below). The **Routers · Machines** switch, below the search, shows the list by router (one row each, with the attached machine under the name, opening as a tree with its machines) or by every machine, grouped by block. **Select** marks routers, groups and machines to paste a profile or change networks at once. A node with faces on several networks shows "faces in N networks"; hover to see which. To name a router or its attached machine, click the ✎ on its row (with the mouse over it) or double-click the name; Enter saves and Esc cancels. |
 | **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
 | **Map** | Top-down view colored by status. Click a point to choose the node. The chosen router shows the machines linked to it, each joined to it by a line (see below). |
 | **Networks** | Create networks, color, members and privacy, and the network groups, which pause and resume a whole system at once (see below). |
@@ -130,7 +130,6 @@ With a node chosen, **Copy profile** saves its face settings in the Tablet (the 
 | To | How |
 | --- | --- |
 | **One node** | Choose it and click **Paste profile**. |
-| **A whole group** | On the group's header, **Paste on N** (the source is left out). |
 | **Several routers and machines** | In **Select**, mark what you want and click **Paste on marked**; the button says what it will reach ("2 routers, 3 machines") or, without room, just how many, and the tooltip says it all. |
 
 Nodes already equal to the profile say "same as the profile"; the others show "N different from the profile" and the first setting that is missing. The notice after pasting has an **Undo** button. Shortcuts: **Ctrl+C** copies the chosen node's profile, **Ctrl+V** pastes and **Ctrl+Z** undoes. Networks follow the usual rule: only the ones you can use are applied.

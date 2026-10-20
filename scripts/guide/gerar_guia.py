@@ -1426,8 +1426,8 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, agrupados pela máquina, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
-| **Mapa** | Vista de cima com cores por status. Clique num ponto para abrir o nó. |
+| **Lista** | Todos os nós, agrupados pela máquina, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). Um roteador com máquinas vinculadas abre em árvore, com as máquinas dele. **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
+| **Mapa** | Vista de cima com cores por status. Clique num ponto para escolher o nó. O roteador escolhido mostra as máquinas vinculadas a ele, cada uma ligada a ele por uma linha (veja abaixo). |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, o saldo dos Armazéns e o que precisa de atenção (veja abaixo). |
 | **Redes** | Criar redes, cor, membros e privacidade. |
 | **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
@@ -1459,12 +1459,32 @@ Cada máquina é um grupo que você recolhe e abre pelo cabeçalho. A linha de c
 | Tecla | O que faz |
 | --- | --- |
 | **Digitar** | Procura. |
-| **↑ ↓** | Anda pelas sugestões abertas ou pelos nós. |
-| **Enter** | Aceita a sugestão, procura, ou abre a tela completa do nó escolhido. |
-| **← →** | Recolhe e abre o grupo do nó escolhido (com a busca vazia). |
+| **↑ ↓** | Anda pelas sugestões abertas ou pelas linhas da lista: os nós e, num roteador aberto, as máquinas. |
+| **Enter** | Aceita a sugestão, procura, escolhe a máquina marcada pelas setas, ou abre a tela completa do nó escolhido. |
+| **← →** | Com a busca vazia: na linha de um nó, → abre o roteador em árvore e ← o fecha (ou recolhe o grupo dele); num grupo de máquinas, recolhe e abre; numa máquina, ← sobe para o grupo; no "… mais N", → mostra todas. |
 | **Esc** | Fecha as sugestões; de novo, limpa a busca. |
 | **Backspace** | Com a busca vazia, tira a última etiqueta. |
 | **Duplo clique num nó** | Abre a tela completa do roteador. |
+
+## As máquinas de um roteador
+
+Um roteador com o Upgrade de Alcance e máquinas vinculadas tem um **▸** na frente do nome, e a linha diz quantas máquinas ele atende. Clique no **▸** para abrir o roteador em árvore; o **▾** fecha. Embaixo dele aparecem:
+
+| Linha | O que mostra |
+| --- | --- |
+| **Máquina presa** | A máquina onde o roteador está preso, com o bloco e o lado do roteador. |
+| **Grupo** | O nome do grupo e quantas máquinas tem (**×N**), e quantas exceções, se houver. O **▸**/**▾** do grupo esconde e mostra as máquinas dele. |
+| **Máquina** | O nome (ou **#N**), as coordenadas e o estado em palavras: **movendo**, **dormindo**, **dormindo: entrada cheia**, **descarregada**, **fora do raio**, **acima do limite** ou **trocada**. À direita, a vazão (**↓** recebe, **↑** dá), a marca **exceção** e o Olho **◉**. |
+
+Cada grupo mostra as 8 primeiras máquinas; **… mais N · Mostrar todas** mostra o resto, e **Mostrar menos** volta às 8.
+
+Clique numa máquina para editá-la no painel: ela vira o alvo da linha **Editando**, como na lista da [tela do roteador](router.md). Clique na máquina presa ou num grupo para editar a presa ou o perfil do grupo. O Olho **◉** acende a máquina no mundo, como na tela do roteador.
+
+O Tablet lembra, ao reabrir, os roteadores abertos, os grupos escondidos e os que mostram todas.
+
+## As máquinas no Mapa
+
+No Mapa, o nó escolhido é o mesmo da Lista. Se ele tiver máquinas vinculadas, elas aparecem como quadradinhos ligados ao roteador por uma linha; as acesas pelo Olho ficam em ciano. Clique numa máquina para escolhê-la como alvo do painel do nó, o mesmo da Lista.
 
 ## Clicar numa máquina
 
@@ -1510,8 +1530,8 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
-| **Map** | Top-down view colored by status. Click a point to open the node. |
+| **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). A router with linked machines opens as a tree, with its machines. **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
+| **Map** | Top-down view colored by status. Click a point to choose the node. The chosen router shows the machines linked to it, each joined to it by a line (see below). |
 | **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
 | **Networks** | Create networks, color, members and privacy. |
 | **Groups** | Bundle the networks of one system to pause and resume them all at once. |
@@ -1543,12 +1563,32 @@ Each machine is a group you collapse and open from its header. Each node's row s
 | Key | What it does |
 | --- | --- |
 | **Type** | Searches. |
-| **↑ ↓** | Moves through the open suggestions or the nodes. |
-| **Enter** | Accepts the suggestion, searches, or opens the chosen node's full screen. |
-| **← →** | Collapses and opens the chosen node's group (with an empty search). |
+| **↑ ↓** | Moves through the open suggestions or the rows of the list: the nodes and, in an open router, its machines. |
+| **Enter** | Accepts the suggestion, searches, chooses the machine marked by the arrows, or opens the chosen node's full screen. |
+| **← →** | With an empty search: on a node's row, → opens the router as a tree and ← closes it (or collapses its group); on a machine group, collapses and opens it; on a machine, ← goes up to the group; on "… N more", → shows them all. |
 | **Esc** | Closes the suggestions; again, clears the search. |
 | **Backspace** | With an empty search, removes the last label. |
 | **Double-click a node** | Opens the router's full screen. |
+
+## A router's machines
+
+A router with the Range Upgrade and linked machines has a **▸** in front of its name, and its row says how many machines it serves. Click the **▸** to open the router as a tree; the **▾** closes it. Below it you see:
+
+| Row | What it shows |
+| --- | --- |
+| **Attached machine** | The machine the router is attached to, with the block and the side of the router. |
+| **Group** | The group's name and how many machines it has (**×N**), and how many exceptions, if any. The group's **▸**/**▾** hides and shows its machines. |
+| **Machine** | The name (or **#N**), the coordinates and the state in words: **moving**, **asleep**, **asleep: input full**, **unloaded**, **out of range**, **over the limit** or **replaced**. On the right, the rate (**↓** receives, **↑** gives), the **exception** mark and the Eye **◉**. |
+
+Each group shows its first 8 machines; **… N more · Show all** shows the rest, and **Show fewer** goes back to 8.
+
+Click a machine to edit it in the panel: it becomes the target of the **Editing** row, as in the list of the [router screen](router.md). Click the attached machine or a group to edit the attached machine or the group's profile. The Eye **◉** lights the machine up in the world, as on the router screen.
+
+When you reopen it, the Tablet remembers the open routers, the hidden groups and the ones showing all.
+
+## Machines on the Map
+
+On the Map, the chosen node is the same as in the List. If it has linked machines, they show up as small squares joined to the router by a line; the ones lit by the Eye are cyan. Click a machine to choose it as the target of the node's panel, the same one as in the List.
 
 ## Clicking a machine
 

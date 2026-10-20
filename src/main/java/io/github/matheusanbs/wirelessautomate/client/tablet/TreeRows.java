@@ -30,8 +30,8 @@ final class TreeRows {
     /** O recuo de cada nível da árvore. */
     static final int INDENT = 8;
     static final int EYE_W = 10;
-    private static final float ICON_SCALE = 0.625f;
-    private static final int ICON_W = 10;
+    /** O ícone do bloco, no tamanho natural dele. */
+    private static final int ICON_W = 16;
     private static final int LINE1_Y = 2;
     private static final int LINE2_Y = 11;
     /** A primeira linha de uma linha de duas: onde ficam o ▸/▾ e o Olho. */
@@ -139,11 +139,7 @@ final class TreeRows {
         switch (row) {
             case TabletRows.Attached attached -> {
                 int ax = tx + 8 + ICON_W + 2;
-                g.pose().pushPose();
-                g.pose().translate(tx + 8, y + 1, 0);
-                g.pose().scale(ICON_SCALE, ICON_SCALE, 1f);
-                g.renderItem(texts.icons[r], 0, 0);
-                g.pose().popPose();
+                g.renderItem(texts.icons[r], tx + 8, y + 2);
                 GuiText.draw(g, font, texts.names[r], ax, y + LINE1_Y, right - ax, GuiPaint.FG);
                 GuiText.draw(g, font, texts.seconds[r], ax, y + LINE2_Y, right - ax, GuiPaint.MUTED);
             }

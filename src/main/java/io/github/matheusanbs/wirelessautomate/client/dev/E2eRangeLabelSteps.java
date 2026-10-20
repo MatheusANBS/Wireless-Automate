@@ -153,9 +153,8 @@ final class E2eRangeLabelSteps {
                 FURNACE_LABEL.equals(serverLabel(server, rangeFurnace)))
                 && FURNACE_LABEL.equals(tabletLabel()) && stepTicks >= 4,
                 () -> "rótulo no painel " + tabletLabel()));
-        list.add(new Step(l + "Tablet: nenhum texto cortado", 1500, () -> moveMouse(0, 0),
-                () -> stepTicks >= 4 && io.github.matheusanbs.wirelessautomate.client.GuiText.clipCount() == 0,
-                () -> clippedTexts().toString()));
+        // a Lista corta a segunda linha dos roteadores com "…" e a dica da linha traz o texto inteiro
+        list.add(clipCheck(l + "Tablet"));
         list.add(capture("7j-tablet-painel-rotulo"));
         list.add(close(l + "fechar o Tablet"));
         list.add(new Step(l + "os nomes saem", STEP_TIMEOUT_MS, () -> onServer(server -> {

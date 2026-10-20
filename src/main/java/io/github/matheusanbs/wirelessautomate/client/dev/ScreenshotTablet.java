@@ -261,7 +261,7 @@ final class ScreenshotTablet {
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"),
                 Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), 63, summary, nodes,
-                TabletRows.EMPTY, TabletMachineRows.EMPTY, List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
+                TabletRows.EMPTY, TabletMachineRows.EMPTY, Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,

@@ -13,8 +13,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O modelo das linhas da Lista do Tablet: os nós (roteadores) do snapshot, com as linhas da árvore dos nós abertos
- * ({@link ListTree}) e a busca de um nó pela chave. As linhas são refeitas só quando a página muda, nunca por quadro. O desenho delas é do {@link ListRows} e do
- * {@link TreeRows}, a geometria do {@link ListLayout}.
+ * ({@link ListTree}) e a busca de um nó pela chave. As linhas são refeitas só quando a página muda, nunca por
+ * quadro. O desenho delas é do {@link ListRows} e do {@link TreeRows}, a geometria do {@link ListLayout}.
  */
 final class ListModel {
     private final Supplier<TabletSnapshot> snapshot;

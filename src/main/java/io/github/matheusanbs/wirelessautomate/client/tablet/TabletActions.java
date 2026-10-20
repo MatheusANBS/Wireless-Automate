@@ -76,15 +76,12 @@ final class TabletActions {
         send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys), marks, type, network));
     }
 
-    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys) {
-        profile(action, key, machine, keys, TabletMarks.EMPTY);
+    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, List<NodeKey> keys) {
+        profile(action, key, keys, TabletMarks.EMPTY);
     }
 
-    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys, TabletMarks marks) {
-        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine),
-                keys, marks));
+    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, List<NodeKey> keys, TabletMarks marks) {
+        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), keys, marks));
     }
 
     void clearIdleNetworks(boolean undo) {

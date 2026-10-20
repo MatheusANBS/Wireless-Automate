@@ -157,7 +157,7 @@ public final class TabletMarkedGameTests {
     private static int profile(ServerPlayer player, Action action, @Nullable NodeKey key, List<NodeKey> keys,
             TabletMarks marks) {
         return TabletPayloads.handleProfile(player, new TabletProfilePayload(CONTAINER, action, Optional.ofNullable(key),
-                Optional.empty(), keys, marks));
+                keys, marks));
     }
 
     private static int paste(Scene scene, List<NodeKey> keys, TabletMarks marks) {

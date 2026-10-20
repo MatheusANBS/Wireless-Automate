@@ -40,6 +40,9 @@ harder to mine). It sits in small veins, most common near **y = −16**. Mine it
 | <ItemImage id="wirelessautomate:signal_crystal" /> **Signal Crystal** | 1× | 10 minutes |
 | <ItemImage id="wirelessautomate:cut_signal_crystal" /> **Cut Crystal** | 2× | 20 minutes |
 
+These times are for a Basic or Advanced Core. The higher the Core's tier, the shorter the charge lasts: in an
+Ultimate Core, what would last 20 minutes lasts 3.
+
 The Signal Crystal only comes from the ore. The **Cut Crystal** is crafted from four Signal Crystals in a
 cross around an Amethyst Shard, and only accepts **full** crystals: spent ones don't count.
 

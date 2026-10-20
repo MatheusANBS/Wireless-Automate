@@ -75,4 +75,28 @@ class CoreMathTest {
         assertEquals(4, CoreMath.flowBand(20 * 250, 20, 1_000));
         assertEquals(7, CoreMath.flowBand(Long.MAX_VALUE, 20, 1));
     }
+    @Test
+    void vidaPadraoPorTier() {
+        int[] esperado = {20, 20, 15, 10, 5, 5, 4, 3};
+        for (int i = 0; i < esperado.length; i++) {
+            assertEquals(esperado[i], CoreMath.defaultLifeMinutes(i), "tier " + i);
+        }
+        assertEquals(3, CoreMath.defaultLifeMinutes(99));
+    }
+
+    @Test
+    void vidaNaEscalaDoTier() {
+        long minuto = CoreMath.TICKS_PER_MINUTE;
+        // No Básico e no Avançado (20 min) a vida da config fica como está: os mundos antigos não mudam.
+        assertEquals(24_000L, CoreMath.crystalLife(24_000L, 20 * minuto));
+        assertEquals(12_000L, CoreMath.crystalLife(12_000L, 20 * minuto));
+        // O Afinado (base do Lapidado, 20 min) no Ultimate (3 min) e o Cristal de Sinal (10 min) no Elite (15 min).
+        assertEquals(3_600L, CoreMath.crystalLife(24_000L, 3 * minuto));
+        assertEquals(9_000L, CoreMath.crystalLife(12_000L, 15 * minuto));
+        assertEquals(1L, CoreMath.crystalLife(1L, minuto), "nunca menos de 1 tick");
+        assertEquals(0L, CoreMath.crystalLife(0L, minuto), "sem vida não gasta");
+        assertEquals(0L, CoreMath.crystalLife(24_000L, 0L));
+        assertEquals(Long.MAX_VALUE, CoreMath.crystalLife(Long.MAX_VALUE, 240 * minuto), "satura");
+        assertEquals(Long.MAX_VALUE / 24_000L * 1_200L, CoreMath.crystalLife(Long.MAX_VALUE, minuto));
+    }
 }

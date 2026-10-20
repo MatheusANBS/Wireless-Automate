@@ -76,6 +76,7 @@ public final class ResonatorBatch {
     /**
      * O desgaste só vem com a geração, na proporção do que foi gerado: buffer cheio ou eficiência 0 não gastam os
      * cristais, e com espaço para só parte do lote cada cristal gasta a mesma parte dos ticks (arredondada para cima).
+     * A vida do cristal é a da config na escala da vida do tier do Núcleo ({@link CoreMath#crystalLife}).
      */
     private static boolean generate(ResonanceCoreBlockEntity core, int ticks) {
         if (!core.formed()) {
@@ -89,11 +90,12 @@ public final class ResonatorBatch {
         }
         core.addEnergy(generated);
         long spent = generated == full ? ticks : (long) Math.ceil((double) ticks * generated / full);
+        long tierLife = Config.crystalLifeTicks(core.tier().ordinal());
         for (int i = 0; i < core.chambers(); i++) {
             ItemStack stack = core.crystals().get(i);
             if (stack.getItem() instanceof SignalCrystalItem item && !SignalCrystalItem.isDull(stack)
                     && !SignalCrystalItem.isCracked(stack)) {
-                long life = Config.crystalLifeTicks(item.isCut());
+                long life = CoreMath.crystalLife(Config.crystalLifeTicks(item.isCut()), tierLife);
                 SignalCrystalItem.setCharge(stack, CrystalCharge.drain(SignalCrystalItem.charge(stack), spent, life));
             }
         }

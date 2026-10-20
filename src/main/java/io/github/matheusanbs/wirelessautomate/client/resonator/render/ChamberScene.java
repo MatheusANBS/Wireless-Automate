@@ -16,7 +16,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * O estado da câmara de um Núcleo no cliente, atualizado uma vez por tick novo no desenho: a sintonia suavizada, a
  * cabeça da figura, os pontos do tick atual e do anterior (interpolados por {@code partialTick}), o giro dos cristais,
- * as partículas e as Portas da casca.
+ * as partículas e as Portas da casca. Guarda também o que as animações novas leem: a faixa de vazão de cada Porta de
+ * Energia (suavizada por tick, para o conduto acender e apagar em cerca de 1 s e as faíscas seguirem a vazão real), a
+ * pressão do plasma quando o buffer está cheio e o anel do fim da recarga (o tick em que cada cristal terminou).
  * Os arrays da {@link ChamberView} são lidos aqui, uma vez por tick, e nunca por quadro.
  */
 final class ChamberScene {

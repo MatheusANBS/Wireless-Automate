@@ -41,8 +41,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
  * A projeção do Ressonador no e2e: uma Vitrine pela metade (o Núcleo virado para o leste, as duas camadas de baixo
@@ -69,7 +67,7 @@ final class E2eResonatorSteps {
      * Os pés do jogador na foto de perto dos cristais: dentro da câmara, junto da janela e com a cabeça perto do teto,
      * olhando o anel de cima. A Vitrine montada não tem vão no vidro, e de fora o vidro lavaria a foto.
      */
-    private static final double[] CLOSE_VIEW = {2.5, 2.18, 3.65};
+    static final double[] CLOSE_VIEW = {2.5, 2.18, 3.65};
 
     private E2eResonatorSteps() {
     }
@@ -236,10 +234,10 @@ final class E2eResonatorSteps {
         list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
         list.add(DevEndToEnd.wait("a câmara acender", 30));
         list.add(capture("ressonador-camara"));
-        list.add(frameTime(true));
-        list.add(frameTime(false));
-        list.add(frameTime(true));
-        list.add(frameTime(false));
+        list.add(frameTime(true, "", null));
+        list.add(frameTime(false, "", null));
+        list.add(frameTime(true, "", null));
+        list.add(frameTime(false, "", null));
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
             return null;
@@ -254,79 +252,17 @@ final class E2eResonatorSteps {
                 return null;
             });
         }, () -> true, () -> "dial"));
-        flowSteps(list, playerId, origin);
+        E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
     }
 
-    /**
-     * A energia saindo pela Porta de Energia: o teste tira da Porta a cada tick (a capability de energia do
-     * mundo, como um consumidor) até a faixa chegar ao cliente e o conduto acender, e fotografa.
-     */
-    private static void flowSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
-        long[] seen = new long[1];
-        list.add(new Step("Ressonador: energia saindo pela Porta", STEP_TIMEOUT_MS, () -> {
-            Minecraft.getInstance().options.hideGui = true;
-            seen[0] = 0;
-        }, () -> {
-            onServer(server -> {
-                BlockPos port = energyPort(origin[0]);
-                IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK, port, null);
-                if (energy != null) {
-                    energy.extractEnergy(Integer.MAX_VALUE, false);
-                }
-                return null;
-            });
-            var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                    .clientView();
-            if (seen[0] == 0 && view.flows().length > 0 && view.flows()[0] > 0) {
-                seen[0] = stepTicks;
-            }
-            return seen[0] != 0 && stepTicks >= seen[0] + 30;
-        }, () -> "faixa de vazão no cliente"));
-        list.add(capture("ressonador-camara-fluxo"));
-        rechargeSteps(list, playerId, origin);
-        list.add(new Step("Ressonador: a mão de volta", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
-                () -> true, () -> "mão"));
-    }
-
-    /**
-     * A recarga no meio: o teste põe um Opaco na última câmara e redstone, espera a recarga chegar ao cliente e
-     * andar um pouco e fotografa a espiral e o cristal enchendo. Depois tira a redstone, para a recarga parar, e
-     * fotografa de perto os cristais vivos e o Opaco.
-     */
-    private static void rechargeSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
-        long[] seen = new long[1];
-        list.add(new Step("Ressonador: Opaco em recarga", 2 * STEP_TIMEOUT_MS, () -> {
-            seen[0] = 0;
-            onServer(server -> {
-                ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
-                        .getBlockEntity(core(origin[0]));
-                ItemStack dull = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
-                SignalCrystalItem.setCharge(dull, 0);
-                core.setCrystalAt(core.chambers() - 1, dull);
-                core.setRedstone(14);
-                return null;
-            });
-        }, () -> {
-            var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                    .clientView();
-            if (seen[0] == 0 && view.rechargeStart() >= 0) {
-                seen[0] = stepTicks;
-            }
-            return seen[0] != 0 && stepTicks >= seen[0] + 200;
-        }, () -> "recarga no cliente"));
-        list.add(capture("ressonador-camara-recarga"));
-        list.add(new Step("Ressonador: a recarga para", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setRedstone(0);
-            return null;
-        }), () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                .clientView().rechargeStart() < 0, () -> "recarga parada no cliente"));
-        list.add(camera("Ressonador: câmera perto dos cristais", playerId, () -> origin[0], CLOSE_VIEW));
-        list.add(DevEndToEnd.wait("o Opaco cair", 30));
-        list.add(capture("ressonador-camara-cristais"));
+    /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
+    @FunctionalInterface
+    interface Tick {
+        void run() throws Exception;
     }
 
     /** A única Porta de Energia da Vitrine. */
-    private static BlockPos energyPort(BlockPos origin) {
+    static BlockPos energyPort(BlockPos origin) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
@@ -343,9 +279,9 @@ final class E2eResonatorSteps {
      * O tempo médio de quadro em 120 quadros com a câmara ocupando a tela, sem o limite de FPS e sem o vsync (o
      * que valia volta ao fim), com o desenho antigo forçado ou com o plasma; a linha vai para o result.txt.
      */
-    private static Step frameTime(boolean legacy) {
+    static Step frameTime(boolean legacy, String situation, Tick perTick) {
         long[] start = new long[2];
-        String label = legacy ? "camara antiga" : "camara plasma";
+        String label = (legacy ? "camara antiga" : "camara plasma") + situation;
         double[] result = new double[1];
         return new Step("Ressonador: " + label + " (tempo de quadro)", 60_000, () -> {
             var options = Minecraft.getInstance().options;
@@ -359,6 +295,9 @@ final class E2eResonatorSteps {
             ResonatorRenderer.forceLegacyForTests = legacy;
             start[0] = FrameClock.frame() + 30;
         }, () -> {
+            if (perTick != null) {
+                perTick.run();
+            }
             long frame = FrameClock.frame();
             if (frame < start[0]) {
                 return false;
@@ -497,7 +436,7 @@ final class E2eResonatorSteps {
     }
 
     /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da caixa. */
-    private static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
+    static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
             double[] feet) {
         double[] cam = new double[3];
         float[] ang = new float[2];

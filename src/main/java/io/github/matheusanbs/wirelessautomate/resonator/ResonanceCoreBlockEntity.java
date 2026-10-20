@@ -344,19 +344,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** FE por tick agora: os cristais não Opacos das câmaras do tier, na sintonia atual; 0 desmontado. */
+    /** FE por tick agora: os quartos dos cristais que geram ({@link CoreYield}), na sintonia atual; 0 desmontado. */
     public long generationPerTick() {
-        if (!formed) {
-            return 0;
-        }
-        int yieldSum = 0;
-        for (int i = 0; i < chambers(); i++) {
-            ItemStack stack = crystals.get(i);
-            if (stack.getItem() instanceof SignalCrystalItem item && !SignalCrystalItem.isDull(stack)) {
-                yieldSum += item.yield();
-            }
-        }
-        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), yieldSum * 4, efficiency());
+        int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
+        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), quarters, efficiency());
     }
 
     double velocity() {

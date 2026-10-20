@@ -131,8 +131,9 @@ final class CrystalSlots {
         }
         lines.add(ResonatorText.muted(ResonatorText.key("chamber.charge",
                 CrystalCharge.percent(SignalCrystalItem.charge(stack)))));
-        lines.add(ResonatorText.muted(ResonatorText.key("chamber.yield", crystal.yield(),
-                ResonatorText.fe(share(state.generation(), crystal.yield())))));
+        int quarters = crystal.yieldQuarters(menu.tier());
+        lines.add(ResonatorText.muted(ResonatorText.key("chamber.yield", multiplier(quarters),
+                ResonatorText.fe(share(state.generation(), quarters)))));
         return lines;
     }
 
@@ -147,16 +148,25 @@ final class CrystalSlots {
         return -1;
     }
 
-    /** A parte da geração de um cristal: {@code fePerCrystal} não chega ao cliente, então pela soma dos rendimentos. */
-    private long share(long generation, int yield) {
+    /**
+     * A parte da geração de um cristal: {@code fePerCrystal} não chega ao cliente, então pela soma dos rendimentos em
+     * quartos, pela mesma regra do servidor.
+     */
+    private long share(long generation, int quarters) {
         int sum = 0;
         for (int i = 0; i < menu.chambers(); i++) {
             ItemStack stack = menu.getSlot(i).getItem();
-            if (stack.getItem() instanceof SignalCrystalItem crystal && !SignalCrystalItem.isDull(stack)) {
-                sum += crystal.yield();
+            if (stack.getItem() instanceof SignalCrystalItem crystal && !SignalCrystalItem.isDull(stack)
+                    && !SignalCrystalItem.isCracked(stack)) {
+                sum += crystal.yieldQuarters(menu.tier());
             }
         }
-        return sum <= 0 ? 0 : Math.round((double) generation * yield / sum);
+        return sum <= 0 ? 0 : Math.round((double) generation * quarters / sum);
+    }
+
+    /** O rendimento em quartos como multiplicador: 4 é "1", 2 é "0.5" e 1 é "0.25". */
+    private static String multiplier(int quarters) {
+        return quarters % 4 == 0 ? Integer.toString(quarters / 4) : Double.toString(quarters / 4.0);
     }
 
     private static String seconds(int ticks) {

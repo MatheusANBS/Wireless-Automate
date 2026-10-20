@@ -71,6 +71,10 @@ final class ChamberScene {
     private long[] ringAt = new long[0];
     /** A câmara que recarregava na view anterior, ou -1, e se o anel dela já saiu. */
     private int rechargingPrev = -1;
+    /** O índice, em {@link #crystalInner}, da Porta de Cristais mais perto de cada câmara Opaca, ou -1. */
+    private int[] nearPort = new int[0];
+    private boolean pickPorts;
+    private final double[] pickAt = new double[3];
     private boolean ringFired;
     long lastUsed;
 
@@ -93,7 +97,9 @@ final class ChamberScene {
                 ringAt = new long[chambers.length];
                 Arrays.fill(ringAt, NEVER);
                 rechargingPrev = -1;
+                nearPort = new int[chambers.length];
             }
+            pickPorts = true;
             trackRecharge(gameTime);
             charged = 0;
             for (byte chamber : chambers) {
@@ -132,14 +138,25 @@ final class ChamberScene {
                 || gameTime < portsReadAt)) {
             readPorts(level);
             portsReadAt = gameTime;
+            pickPorts = true;
+        }
+        if (pickPorts) {
+            pickNearestPorts(gameTime);
+            pickPorts = false;
         }
         for (int i = 0; i < flowNow.length; i++) {
             flowPrev[i] = flowNow[i];
             flowNow[i] += (flowTarget[i] - flowNow[i]) * FLOW_RATE;
         }
-        if (rechargingPrev >= 0 && !ringFired && ChamberCrystals.recharge(rechargingPrev, chambers, gameTime, view) >= 1) {
+        if (rechargingPrev >= 0 && !ringFired
+                && ChamberCrystals.recharge(rechargingPrev, chambers, gameTime, view) >= 1) {
             ringAt[rechargingPrev] = gameTime;
             ringFired = true;
+        }
+        for (int i = 0; i < ringAt.length; i++) {
+            if (ringAt[i] != NEVER && gameTime - ringAt[i] >= RING_TICKS) {
+                ringAt[i] = NEVER;
+            }
         }
         particles.tick(this, view, level, gameTime, !conduit);
         lastUsed = gameTime;
@@ -161,9 +178,41 @@ final class ChamberScene {
         ringFired = false;
     }
 
-    /** O quanto o anel da câmara {@code i} andou, de 0 a 1 em 0,7 s; fora de 0 a 1 (negativo ou 1 ou mais), não há anel. */
+    /** O quanto o anel da câmara {@code i} andou, de 0 a 1 em 0,7 s; negativo quando não há anel em curso. */
     float ring(int i, long gameTime, float partialTick) {
-        return i < ringAt.length && ringAt[i] != NEVER ? (gameTime - ringAt[i] + partialTick) / RING_TICKS : -1f;
+        return i < ringAt.length && ringAt[i] != NEVER
+                ? (gameTime - ringAt[i] + partialTick) / RING_TICKS : -1f;
+    }
+
+    /**
+     * A face de dentro da Porta de Cristais mais perto do Opaco da câmara {@code i}, guardada até as Portas ou as
+     * câmaras mudarem; {@code null} sem Porta ou se a câmara não é Opaca.
+     */
+    Vec3 nearestCrystalPort(int i) {
+        int at = i < nearPort.length ? nearPort[i] : -1;
+        return at >= 0 && at < crystalInner.size() ? crystalInner.get(at) : null;
+    }
+
+    private void pickNearestPorts(long gameTime) {
+        for (int i = 0; i < nearPort.length; i++) {
+            nearPort[i] = -1;
+            if (!ChamberCrystals.isDull(chambers[i]) || crystalInner.isEmpty()) {
+                continue;
+            }
+            ChamberCrystals.crystalPos(i, chambers, q, gameTime, view, pickAt);
+            double best = Double.MAX_VALUE;
+            for (int k = 0; k < crystalInner.size(); k++) {
+                Vec3 port = crystalInner.get(k);
+                double dx = port.x - worldCenter.x - pickAt[0];
+                double dy = port.y - worldCenter.y - pickAt[1];
+                double dz = port.z - worldCenter.z - pickAt[2];
+                double distance = dx * dx + dy * dy + dz * dz;
+                if (distance < best) {
+                    best = distance;
+                    nearPort[i] = k;
+                }
+            }
+        }
     }
 
     /** As faces de dentro das Portas montadas nas 98 posições da casca. */

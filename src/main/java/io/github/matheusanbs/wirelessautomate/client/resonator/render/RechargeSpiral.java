@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.Vec3;
@@ -45,8 +44,8 @@ final class RechargeSpiral {
 
     private static void spiral(PoseStack.Pose pose, MultiBufferSource buffer, ChamberScene scene, int chamber,
             double ticks, int tierColor) {
-        List<Vec3> ports = scene.crystalInner();
-        if (ports.isEmpty()) {
+        Vec3 port = scene.nearestCrystalPort(chamber);
+        if (port == null) {
             return;
         }
         ChamberCrystals.crystalPos(chamber, scene.chambers(), scene.q(), ticks, scene.view(), AT);
@@ -54,23 +53,9 @@ final class RechargeSpiral {
         float by = (float) AT[1];
         float bz = (float) AT[2];
         Vec3 center = scene.worldCenter();
-        float ax = 0;
-        float ay = 0;
-        float az = 0;
-        float best = Float.MAX_VALUE;
-        for (int i = 0; i < ports.size(); i++) {
-            Vec3 port = ports.get(i);
-            float px = (float) (port.x - center.x);
-            float py = (float) (port.y - center.y);
-            float pz = (float) (port.z - center.z);
-            float distance = (px - bx) * (px - bx) + (py - by) * (py - by) + (pz - bz) * (pz - bz);
-            if (distance < best) {
-                best = distance;
-                ax = px;
-                ay = py;
-                az = pz;
-            }
-        }
+        float ax = (float) (port.x - center.x);
+        float ay = (float) (port.y - center.y);
+        float az = (float) (port.z - center.z);
         Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, (float) (eye.x - center.x), (float) (eye.y - center.y),
                 (float) (eye.z - center.z), WIDTH, tierColor, FULL, MODE_SPIRAL, 0);

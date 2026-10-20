@@ -10,7 +10,6 @@ out vec4 fragColor;
 
 const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 RED = vec3(0.839, 0.271, 0.231);
-const vec3 GRAY = vec3(0.55, 0.58, 0.62);
 const vec3 WHITE = vec3(1.0, 0.94, 0.92);
 
 float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -47,16 +46,10 @@ void main() {
         }
         col *= smoothstep(0.0, 0.03, quad.x) * smoothstep(1.0, 0.97, quad.x);
     } else if (mode == 2) {
-        // aura do cristal: o parâmetro leva a sintonia (7 bits), a semente do cristal (4 bits) e, de 2048 em diante, o
-        // enchimento da recarga (0 = cristal vivo; 1 + progresso de 0 a 100 = Opaco enchendo, do cinza ao coral)
-        float fillCode = floor(arg / 2048.0);
-        float rest = arg - fillCode * 2048.0;
-        float seed = floor(rest / 128.0);
-        float mis = 1.0 - clamp((rest - seed * 128.0) / 100.0, 0.0, 1.0);
+        // aura do cristal: o parâmetro leva a sintonia (7 bits) e a semente do cristal (4 bits)
+        float seed = floor(arg / 128.0);
+        float mis = 1.0 - clamp((arg - seed * 128.0) / 100.0, 0.0, 1.0);
         vec3 base = mix(CORAL, tier, 0.3);
-        if (fillCode > 0.5) {
-            base = mix(GRAY, CORAL, clamp((fillCode - 1.0) / 100.0, 0.0, 1.0));
-        }
         float r = length(quad * 2.0 - 1.0);
         float aura = exp(-r * r * 6.0) * (0.6 + 0.4 * sin(t * 4.0 + seed * 2.4));
         col += base * aura * 0.55 * (1.0 + mis * 0.6 * (n2(vec2(t * 9.0, seed * 3.7)) - 0.5));

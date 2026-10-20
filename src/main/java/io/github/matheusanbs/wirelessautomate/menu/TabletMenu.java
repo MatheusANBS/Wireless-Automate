@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
@@ -73,7 +74,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>As partes do servidor: a consulta ({@link TabletQuery}), a montagem ({@link TabletSnapshotBuilder}),
  * as regras de um nó ({@link TabletNodes}), o nó escolhido ({@link TabletChosenNode}), o perfil
  * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}), a árvore da Lista
- * ({@link TabletTree}) e o estado por jogador ({@link TabletPlayers}).
+ * ({@link TabletTree}), a visão por máquinas ({@link TabletMachines}) e o estado por jogador ({@link TabletPlayers}).
  */
 public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
@@ -91,9 +92,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /**
      * O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição
-     * dele, e a árvore da Lista.
+     * dele, a árvore da Lista e a visão por máquinas.
      */
-    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target, TabletTree.Saved tree) {
+    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target, TabletTree.Saved tree,
+            TabletMachines.Saved machines) {
     }
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
@@ -142,6 +144,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable TabletMenuActions actions;
     private final @Nullable TabletFlows flows;
     private final @Nullable TabletTree tree;
+    private final @Nullable TabletMachines machines;
     private int tab;
     private boolean forced;
     private @Nullable TabletSnapshot sent;
@@ -156,7 +159,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = viewer;
         this.tree = new TabletTree(viewer);
-        this.builder = new TabletSnapshotBuilder(viewer, query, tree);
+        this.machines = new TabletMachines(viewer.server);
+        this.builder = new TabletSnapshotBuilder(viewer, query, tree, machines);
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder);
         this.actions = new TabletMenuActions(this, viewer);
@@ -188,6 +192,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.actions = null;
         this.flows = null;
         this.tree = null;
+        this.machines = null;
         this.snapshot = snapshot;
         this.restoredTab = restoredTab;
         this.restoredNode = restoredNode;
@@ -210,6 +215,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             node.restoreTarget(saved.target());
         }
         tree.restore(saved.tree());
+        machines.restore(saved.machines());
     }
 
     /** Esquece o estado de todos os jogadores (o servidor parou). */
@@ -230,9 +236,12 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (flows != null) {
             flows.stop();
         }
+        if (machines != null) {
+            machines.stop();
+        }
         if (viewer != null && !viewer.hasDisconnected()) {
             TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef(),
-                    tree.save()));
+                    tree.save(), machines.save()));
         }
     }
 
@@ -280,7 +289,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         State saved = TabletPlayers.saved(player.getUUID());
         TabletPlayers.save(player.getUUID(), new State(LIST_TAB,
                 saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target,
-                saved == null ? TabletTree.Saved.EMPTY : saved.tree()));
+                saved == null ? TabletTree.Saved.EMPTY : saved.tree(),
+                saved == null ? TabletMachines.Saved.EMPTY : saved.machines()));
         open(player);
     }
 
@@ -455,7 +465,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 payloads.add(new TabletHeaderPayload(containerId, changed));
             }
             if (pageChanged) {
-                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives(), changed.rows().lives())
+                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives(), changed.page().rowLives())
                         : new TabletPagePayload(containerId, changed.page()));
             }
         }
@@ -637,6 +647,21 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         boolean done = tree != null && tree.apply(action, key, group);
         forced |= done;
         return done;
+    }
+
+    /**
+     * Troca a visão da Lista ou muda um bloco na visão por máquinas ({@link TabletMachines#apply}); a que vale refaz a
+     * página.
+     */
+    public boolean machines(TabletMachinesPayload.Action action, Optional<ResourceLocation> block) {
+        boolean done = machines != null && machines.apply(action, block);
+        forced |= done;
+        return done;
+    }
+
+    /** A visão por máquinas; {@code null} no cliente. Público para os GameTests. */
+    public @Nullable TabletMachines machinesState() {
+        return machines;
     }
 
     /** A árvore da Lista; {@code null} no cliente. Público para os GameTests. */

@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.network.RateMath;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -20,7 +21,9 @@ import org.jetbrains.annotations.Nullable;
  * moveram algo e os que têm destino cheio, medidos no máximo uma vez a cada {@link TabletMenu#SAMPLE_TICKS} ticks
  * por quem pedir primeiro ({@link #sampleIfDue}); e os nós do índice na ordem da Lista (máquina, nome, dimensão,
  * posição), refeita só quando o índice muda ({@link #sorted}). Com vários Tablets abertos, cada montagem só lê
- * daqui, sem medir nem ordenar de novo.
+ * daqui, sem medir nem ordenar de novo. Só enquanto algum Tablet está na visão por máquinas, também a ordem das
+ * máquinas por bloco ({@link MachineOrder}), solta duas amostras depois de o último sair dela (na hora, se ele
+ * fechou o Tablet).
  *
  * <p>Só a thread do servidor mexe.
  */
@@ -46,6 +49,13 @@ final class TabletSample {
     private int sortedVersion = -1;
     /** O estado e a vazão das linhas de máquina à vista, medidos sob demanda. */
     private final TabletMachineSample machines = new TabletMachineSample();
+    /** A ordem por bloco da visão por máquinas; {@code null} sem ninguém nela. */
+    private @Nullable MachineOrder machineOrder;
+    /** Os Tablets abertos na visão por máquinas. */
+    private final Set<Object> machineWatchers = new ReferenceOpenHashSet<>();
+    /** Amostras feitas, e a amostra em que alguém olhou a ordem por bloco pela última vez. */
+    private int rounds;
+    private int machineOrderRound;
 
     private TabletSample(MinecraftServer server) {
         this.server = server;
@@ -79,6 +89,10 @@ final class TabletSample {
         boolean baseline = sampleTick == Long.MIN_VALUE || now - sampleTick > 2L * TabletMenu.SAMPLE_TICKS;
         long elapsed = baseline ? 1 : Math.max(1, now - sampleTick);
         sampleTick = now;
+        rounds++;
+        if (machineOrder != null && machineWatchers.isEmpty() && rounds - machineOrderRound > 2) {
+            machineOrder = null;
+        }
         machines.beginRound(baseline);
         active.clear();
         rates.clear();
@@ -153,6 +167,45 @@ final class TabletSample {
     /** O estado e a vazão das linhas de máquina, medidos só para as que alguma página pede. */
     TabletMachineSample machines() {
         return machines;
+    }
+
+    /**
+     * A ordem por bloco da visão por máquinas, sobre a ordem de {@link #sorted}; montada na primeira vez e refeita só
+     * quando um dado salvo do índice muda. Só para quem está em Máquinas ({@link #watchMachines}).
+     */
+    MachineOrder machineOrder(NodeIndex index) {
+        List<NodeIndex.Entry> nodes = sorted(index);
+        MachineOrder order = machineOrder;
+        if (order == null || order.version != sortedVersion || order.routerCount() != nodes.size()) {
+            order = MachineOrder.build(nodes, sortedVersion);
+            machineOrder = order;
+        }
+        machineOrderRound = rounds;
+        return order;
+    }
+
+    /** O Tablet {@code who} entrou na visão por máquinas. */
+    void watchMachines(Object who) {
+        machineWatchers.add(who);
+    }
+
+    /**
+     * O Tablet {@code who} saiu da visão por máquinas; {@code closed}, porque fechou. Sem ninguém mais nela, a ordem
+     * por bloco sai na hora se ele fechou, ou duas amostras depois se só trocou de visão.
+     */
+    void unwatchMachines(Object who, boolean closed) {
+        if (machineWatchers.remove(who) && machineWatchers.isEmpty()) {
+            if (closed) {
+                machineOrder = null;
+            } else {
+                machineOrderRound = rounds;
+            }
+        }
+    }
+
+    /** A ordem por bloco existe agora; para os GameTests. */
+    boolean hasMachineOrder() {
+        return machineOrder != null;
     }
 
     /** Os nós do índice na ordem da Lista, refeita só quando um dado salvo do índice muda. Só leitura. */

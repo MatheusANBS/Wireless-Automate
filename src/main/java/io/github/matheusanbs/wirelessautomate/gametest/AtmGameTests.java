@@ -1,5 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -7,7 +10,10 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,12 +24,15 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Blocks;
@@ -165,6 +174,7 @@ public final class AtmGameTests {
                 shard, Items.DRAGON_EGG, shard, alloyBlock, alloyBlock, shard, alloyBlock, shard)).isEmpty(),
                 "o anel do Ultimate subiu um roteador Esmeralda");
 
+        ultimateWithoutTweaks(helper, redstone);
         for (String id : List.of("tier_core_ultimate", "tier_core_ultimate_atm")) {
             helper.assertTrue(helper.getLevel().getRecipeManager().byKey(WirelessAutomate.id(id)).isEmpty(),
                     "outra versão do Ultimate carregou: " + id);
@@ -180,6 +190,80 @@ public final class AtmGameTests {
         TierUpgradeGameTests.sameRing(helper);
         TierUpgradeGameTests.sameCost(helper);
         helper.succeed();
+    }
+
+    /**
+     * O Ultimate com o Allthemodium e sem o All The Tweaks ({@code tier_core_ultimate_atm}) não carrega aqui, porque
+     * esta run tem o All The Tweaks: o anel é lido do recurso do jar e casado direto. Quatro Nether Stars nos cantos,
+     * o ovo do dragão em cima e três blocos de liga Unobtainium-Vibranium; o anel antigo, de fragmentos de eco e
+     * netherite, não casa.
+     */
+    private static void ultimateWithoutTweaks(GameTestHelper helper, ItemStack redstone) {
+        var server = helper.getLevel().getServer();
+        ResourceLocation file = WirelessAutomate.id("recipe/tier_core_ultimate_atm.json");
+        Resource resource = server.getResourceManager().getResource(file)
+                .orElseThrow(() -> new GameTestAssertException("o jar deve ter o recurso " + file));
+        JsonObject json;
+        try (Reader reader = resource.openAsReader()) {
+            json = JsonParser.parseReader(reader).getAsJsonObject();
+        } catch (IOException e) {
+            throw new GameTestAssertException("erro lendo o recurso: " + e);
+        }
+        json.remove("neoforge:conditions");
+        Recipe<?> recipe = Recipe.CODEC.parse(RegistryOps.create(JsonOps.INSTANCE, server.registryAccess()), json)
+                .getOrThrow(msg -> new GameTestAssertException("o anel não decodifica: " + msg));
+        if (!(recipe instanceof TierUpgradeRecipe ring)) {
+            throw new GameTestAssertException("o anel não é tier_upgrade: " + recipe);
+        }
+        Item star = Items.NETHER_STAR;
+        Item alloyBlock = item(helper, "allthemodium:unobtainium_vibranium_alloy_block");
+        CraftingInput novo = grid(redstone, star, Items.DRAGON_EGG, star, alloyBlock, alloyBlock, star, alloyBlock, star);
+        helper.assertTrue(ring.matches(novo, helper.getLevel()), "o anel novo do Ultimate não casa");
+        TierUpgradeGameTests.assertCard(helper, ring.assemble(novo, server.registryAccess()), RouterTier.UNOBTAINIUM,
+                RouterTier.ULTIMATE, "Ultimate com o ATM, sem o All The Tweaks");
+        Item echo = Items.ECHO_SHARD;
+        Item netherite = Items.NETHERITE_BLOCK;
+        helper.assertFalse(ring.matches(grid(redstone, echo, Items.DRAGON_EGG, echo, netherite, netherite, echo,
+                netherite, echo), helper.getLevel()), "o anel antigo do Ultimate ainda casa");
+    }
+
+    /**
+     * Os Cristais Afinados do Allthemodium carregam e casam com os itens do mod; a receita do Ultimate sem o
+     * Allthemodium não carrega.
+     */
+    @GameTest(template = "empty")
+    public static void tunedCrystalRecipes(GameTestHelper helper) {
+        ItemStack star = new ItemStack(Items.NETHER_STAR);
+        ItemStack atm = new ItemStack(item(helper, "allthemodium:allthemodium_ingot"));
+        assertTuned(helper, RouterTier.ALLTHEMODIUM, tuned(RouterTier.EMERALD), atm, atm, star);
+        ItemStack vib = new ItemStack(item(helper, "allthemodium:vibranium_ingot"));
+        ItemStack vibAlloy = new ItemStack(item(helper, "allthemodium:vibranium_allthemodium_alloy_ingot"));
+        assertTuned(helper, RouterTier.VIBRANIUM, tuned(RouterTier.ALLTHEMODIUM), vib, vibAlloy, vib);
+        ItemStack unob = new ItemStack(item(helper, "allthemodium:unobtainium_ingot"));
+        ItemStack unobAlloy = new ItemStack(item(helper, "allthemodium:unobtainium_vibranium_alloy_ingot"));
+        assertTuned(helper, RouterTier.UNOBTAINIUM, unob, tuned(RouterTier.VIBRANIUM), unob, unobAlloy);
+        assertTuned(helper, RouterTier.ULTIMATE, unobAlloy, star, unobAlloy, tuned(RouterTier.UNOBTAINIUM));
+        assertTuned(helper, RouterTier.ULTIMATE, new ItemStack(ModItems.CUT_SIGNAL_CRYSTAL.get()), unobAlloy, star,
+                unobAlloy);
+        helper.assertTrue(helper.getLevel().getRecipeManager()
+                .byKey(WirelessAutomate.id("tuned_signal_crystal_ultimate_no_atm")).isEmpty(),
+                "a receita do Afinado Ultimate sem o ATM carregou com ele");
+        helper.succeed();
+    }
+
+    private static ItemStack tuned(RouterTier tier) {
+        return new ItemStack(ModItems.TUNED_CRYSTALS.get(tier).get());
+    }
+
+    private static void assertTuned(GameTestHelper helper, RouterTier tier, ItemStack... items) {
+        List<ItemStack> grade = new ArrayList<>(List.of(items));
+        while (grade.size() < 9) {
+            grade.add(ItemStack.EMPTY);
+        }
+        CraftingInput input = CraftingInput.of(3, 3, grade);
+        ItemStack out = find(helper, input).map(holder -> holder.value().assemble(input,
+                helper.getLevel().registryAccess())).orElse(ItemStack.EMPTY);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(out, tuned(tier)), "Afinado " + tier + ": saiu " + out);
     }
 
     private static Item item(GameTestHelper helper, String id) {

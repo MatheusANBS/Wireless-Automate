@@ -57,11 +57,14 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
      *
      * @param router   a posição do roteador em {@link #routers()}
      * @param attached a máquina presa do roteador ({@code index} −1)
-     * @param index    o índice da máquina vinculada no roteador (o do {@code EditTarget.machine}, o "#N" menos 1)
+     * @param index    o índice da máquina vinculada no roteador (o do {@code EditTarget.machine}); −1 na presa
+     * @param number   o "#N" da vinculada: a posição dela no grupo do roteador, a partir de 1, como na árvore e na tela
+     *                 do roteador; 0 na presa
      * @param pos      a posição ({@code BlockPos.asLong}); a do roteador numa presa de roteador descarregado
      * @param label    rótulo dado pelo jogador; vazio = a tela usa "#N" (ou o nome do roteador na presa)
      */
-    public record Machine(int router, boolean attached, int index, long pos, String label, boolean exception)
+    public record Machine(int router, boolean attached, int index, int number, long pos, String label,
+            boolean exception)
             implements Row {
     }
 
@@ -101,7 +104,7 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
 
     /**
      * Cada linha começa num byte (o tipo nos dois bits de baixo e as marcas nos de cima); uma máquina vinculada sem
-     * rótulo leva 11 a 13 bytes, e a presa, 10 a 11.
+     * rótulo leva 12 a 14 bytes, e a presa, 10 a 11.
      */
     static void encode(RegistryFriendlyByteBuf buf, TabletMachineRows rows,
             Object2IntLinkedOpenHashMap<ResourceLocation> palette) {
@@ -130,6 +133,7 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
                     buf.writeVarInt(machine.router);
                     if (!machine.attached) {
                         buf.writeVarInt(machine.index);
+                        buf.writeVarInt(machine.number);
                     }
                     buf.writeLong(machine.pos);
                     if (!machine.label.isEmpty()) {
@@ -175,9 +179,10 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
                     }
                     boolean attached = (header & FLAG_A) != 0;
                     int index = attached ? -1 : buf.readVarInt();
+                    int number = attached ? 0 : buf.readVarInt();
                     long pos = buf.readLong();
                     String label = (header & FLAG_C) == 0 ? "" : buf.readUtf(RouterSnapshot.NAME_LENGTH);
-                    yield new Machine(router, attached, index, pos, label, (header & FLAG_B) != 0);
+                    yield new Machine(router, attached, index, number, pos, label, (header & FLAG_B) != 0);
                 }
                 case KIND_MORE -> new More(block(palette, buf.readVarInt()), buf.readVarInt());
                 default -> throw new DecoderException("linha de máquina " + header);

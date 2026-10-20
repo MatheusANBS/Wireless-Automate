@@ -40,7 +40,7 @@ final class ListLayout {
     /** Espaço que o nome do grupo guarda ao lado do "Colar nas N" (o botão encurta antes). */
     private static final int GROUP_NAME_MIN = 60;
     /** Altura do cubo do painel: menor nas telas baixas. */
-    private static final int NET_SMALL = 3 * 13 + 2 * 2;
+    private static final int NET_SMALL = 3 * 12 + 2 * 2;
     private static final int TALL = 300;
 
     /**

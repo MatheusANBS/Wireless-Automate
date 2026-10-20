@@ -38,7 +38,7 @@ final class MachineRowTexts {
     private final ListTexts texts;
     private @Nullable TabletMachineRows built;
     private int builtTheme = -1;
-    MachineLines lines = new MachineLines(List.of(), new boolean[0], new int[0], new boolean[0]);
+    MachineLines lines = new MachineLines(List.of(), new boolean[0]);
     Component[] names = new Component[0];
     int[] nameW = new int[0];
     /** No cabeçalho, "N roteadores"; na máquina, a segunda linha inteira; no "mais N", vazio. */
@@ -120,7 +120,7 @@ final class MachineRowTexts {
         RouterRef router = page.routers().get(machine.router());
         Component routerName = routerName(router, presaBlocks[machine.router()]);
         names[r] = !machine.label().isEmpty() ? Component.literal(machine.label())
-                : machine.attached() ? routerName : Component.literal("#" + lines.number(r));
+                : machine.attached() ? routerName : Component.literal("#" + machine.number());
         MachineStatus status = state == null ? MachineStatus.UNLOADED : state.status();
         MutableComponent second = (machine.attached() ? tr("machines.attached") : tr("machines.via", routerName))
                 .copy().withColor(GuiPaint.MUTED).append(SEPARATOR.copy().withColor(GuiPaint.MUTED));
@@ -175,23 +175,17 @@ final class MachineRowTexts {
         List<TabletMachineRows.Row> rows = page.rows();
         List<MachineLines.Kind> kinds = new ArrayList<>(rows.size());
         boolean[] collapsed = new boolean[rows.size()];
-        int[] routers = new int[rows.size()];
-        boolean[] attached = new boolean[rows.size()];
         for (int r = 0; r < rows.size(); r++) {
             switch (rows.get(r)) {
                 case TabletMachineRows.Block block -> {
                     kinds.add(MachineLines.Kind.BLOCK);
                     collapsed[r] = block.collapsed();
                 }
-                case TabletMachineRows.Machine machine -> {
-                    kinds.add(MachineLines.Kind.MACHINE);
-                    routers[r] = machine.router();
-                    attached[r] = machine.attached();
-                }
+                case TabletMachineRows.Machine machine -> kinds.add(MachineLines.Kind.MACHINE);
                 case TabletMachineRows.More more -> kinds.add(MachineLines.Kind.MORE);
             }
         }
-        return new MachineLines(kinds, collapsed, routers, attached);
+        return new MachineLines(kinds, collapsed);
     }
 
     /**

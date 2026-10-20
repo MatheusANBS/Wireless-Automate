@@ -57,7 +57,9 @@ final class TargetLine {
 
     /** A pílula do alvo e os botões da máquina; {@code open} é a lista do alvo aberta. */
     void render(GuiGraphics g, Font font, int mx, int my, boolean open) {
-        GuiText.draw(g, font, panelTr("target"), layout.bodyX, layout.targetY + 2, layout.bodyW, GuiPaint.MUTED);
+        if (!layout.compactTarget) {
+            GuiText.draw(g, font, panelTr("target"), layout.bodyX, layout.targetY + 2, layout.bodyW, GuiPaint.MUTED);
+        }
         Hot pill = layout.hot(Kind.TARGET);
         if (pill != null) {
             RangeView.MachineView machine = model.targetMachine();
@@ -96,16 +98,28 @@ final class TargetLine {
             clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
         Hot update = layout.hot(Kind.UPDATE);
-        if (update != null) {
+        if (update != null && layout.compactTarget) {
+            iconButton(g, update, update.contains(mx, my), GuiPaint.OK);
+            RangeRowButtons.arrow(g, update.x() + (update.w() - 6) / 2, update.y() + (update.h() - 6) / 2, false,
+                    GuiPaint.OK);
+        } else if (update != null) {
             clippedButton(g, font, update, tr("range.update"), update.contains(mx, my), GuiPaint.OK);
         }
         Hot unlink = layout.hot(Kind.UNLINK);
         if (unlink != null && model.unlinkArmed()) {
             GuiPaint.box(g, unlink.x(), unlink.y(), unlink.w(), unlink.h(), GuiPaint.DANGER, GuiPaint.DANGER);
             centered(g, font, unlink, tr("range.unlink.armed"), GuiPaint.SELECTED_TEXT);
+        } else if (unlink != null && layout.compactTarget) {
+            iconButton(g, unlink, unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
+            RangeRowButtons.cross(g, unlink.x() + (unlink.w() - 6) / 2, unlink.y() + (unlink.h() - 6) / 2, GuiPaint.FG);
         } else if (unlink != null) {
             clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
+    }
+
+    /** O fundo de um botão só com o ícone, na linha Editando apertada. */
+    private static void iconButton(GuiGraphics g, Hot b, boolean hovered, int border) {
+        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, hovered ? GuiPaint.BUTTON_HOVER_BORDER : border);
     }
 
     /** O "No mundo": o Olho e a borda ciano com a máquina acesa; vale também só para ler (é só do cliente). */

@@ -26,12 +26,18 @@ import org.jetbrains.annotations.Nullable;
  * {@code remote_exception} (os índices das exceções), {@code remote_labels} (índice → rótulo, só os com rótulo),
  * {@code remote_groups} ({@code id}, {@code block}, {@code name}) e, só acima do teto, {@code remote_total} e o
  * {@code count} de cada grupo (abaixo dele, as contagens saem das máquinas).
+ *
+ * <p>Por grupo e por exceção guardada, os papéis ({@link NodeIndex#role}) e a máscara de redes ({@link NetworkOrder}),
+ * do {@link FaceSummary}: {@code remote_group_roles} e {@code remote_group_nets} na ordem do {@code remote_groups},
+ * {@code remote_exception_roles} e {@code remote_exception_nets} na do {@code remote_exception}, cada par só com algum
+ * valor diferente de zero. Sem as chaves (o formato da etapa 3a), tudo zero até o próximo aviso do roteador.
  */
 public final class IndexRemotes {
     /** O teto de máquinas por roteador no índice. */
     public static final int CAP = 512;
     public static final IndexRemotes EMPTY = new IndexRemotes(new long[0], new int[0], new int[0], null, 0,
-            new int[0], new ResourceLocation[0], new String[0], new int[0]);
+            new int[0], new ResourceLocation[0], new String[0], new int[0], new int[0], new long[0], new int[0],
+            new long[0]);
 
     private final long[] pos;
     private final int[] group;
@@ -44,9 +50,15 @@ public final class IndexRemotes {
     private final ResourceLocation[] groupBlocks;
     private final String[] groupNames;
     private final int[] groupCounts;
+    private final int[] groupRoles;
+    private final long[] groupNets;
+    /** Paralelos a {@link #exceptions}. */
+    private final int[] exceptionRoles;
+    private final long[] exceptionNets;
 
     private IndexRemotes(long[] pos, int[] group, int[] exceptions, String @Nullable [] labels, int total,
-            int[] groupIds, ResourceLocation[] groupBlocks, String[] groupNames, int[] groupCounts) {
+            int[] groupIds, ResourceLocation[] groupBlocks, String[] groupNames, int[] groupCounts, int[] groupRoles,
+            long[] groupNets, int[] exceptionRoles, long[] exceptionNets) {
         this.pos = pos;
         this.group = group;
         this.exceptions = exceptions;
@@ -56,6 +68,10 @@ public final class IndexRemotes {
         this.groupBlocks = groupBlocks;
         this.groupNames = groupNames;
         this.groupCounts = groupCounts;
+        this.groupRoles = groupRoles;
+        this.groupNets = groupNets;
+        this.exceptionRoles = exceptionRoles;
+        this.exceptionNets = exceptionNets;
     }
 
     // ------------------------------------------------------------------ leitura
@@ -127,6 +143,46 @@ public final class IndexRemotes {
         return groupCounts[g];
     }
 
+    /** Os papéis do perfil do grupo na posição {@code g} ({@link NodeIndex#role}); zero sem o Upgrade de Alcance. */
+    public int groupRoles(int g) {
+        return groupRoles[g];
+    }
+
+    /** A máscara das redes do perfil do grupo na posição {@code g} ({@link NetworkOrder}). */
+    public long groupNets(int g) {
+        return groupNets[g];
+    }
+
+    /** Os papéis da {@code k}-ésima exceção ({@link #exception}); zero sem o Upgrade de Alcance. */
+    public int exceptionRoles(int k) {
+        return exceptionRoles[k];
+    }
+
+    /** A máscara das redes da {@code k}-ésima exceção ({@link #exception}). */
+    public long exceptionNets(int k) {
+        return exceptionNets[k];
+    }
+
+    /** Os papéis que valem para a máquina {@code i}: os da exceção dela ou os do perfil do grupo. */
+    public int machineRoles(int i) {
+        int k = Arrays.binarySearch(exceptions, i);
+        if (k >= 0) {
+            return exceptionRoles[k];
+        }
+        int g = groupIndex(group[i]);
+        return g < 0 ? 0 : groupRoles[g];
+    }
+
+    /** A máscara de redes que vale para a máquina {@code i}: a da exceção dela ou a do perfil do grupo. */
+    public long machineNets(int i) {
+        int k = Arrays.binarySearch(exceptions, i);
+        if (k >= 0) {
+            return exceptionNets[k];
+        }
+        int g = groupIndex(group[i]);
+        return g < 0 ? 0 : groupNets[g];
+    }
+
     /** A posição do grupo de id {@code id} em {@link #groupId}, ou −1. */
     public int groupIndex(int id) {
         for (int g = 0; g < groupIds.length; g++) {
@@ -139,8 +195,11 @@ public final class IndexRemotes {
 
     // ------------------------------------------------------------------ do roteador
 
-    /** Estas são as máquinas e os grupos de {@code remotes}. Sem alocar. */
-    boolean matches(RemoteMachines remotes) {
+    /**
+     * Estas são as máquinas e os grupos de {@code remotes}, com os papéis e as redes do {@code summary} (já lido do
+     * mesmo roteador; {@code null} não compara papéis nem redes). Sem alocar.
+     */
+    boolean matches(RemoteMachines remotes, @Nullable FaceSummary summary) {
         if (remotes.size() != total || remotes.groupCount() != groupIds.length) {
             return false;
         }
@@ -164,7 +223,28 @@ public final class IndexRemotes {
                 return false;
             }
         }
+        if (summary != null && !rolesMatch(summary)) {
+            return false;
+        }
         return total <= CAP || countsMatch(remotes);
+    }
+
+    /** Chamado depois de as máquinas baterem: as exceções guardadas são as mesmas que o resumo leu. */
+    private boolean rolesMatch(FaceSummary summary) {
+        for (int g = 0; g < groupIds.length; g++) {
+            if (groupRoles[g] != summary.groupRoles[g] || groupNets[g] != summary.groupNets[g]) {
+                return false;
+            }
+        }
+        if (summary.exceptionCount != exceptions.length) {
+            return false;
+        }
+        for (int k = 0; k < exceptions.length; k++) {
+            if (exceptionRoles[k] != summary.exceptionRoles[k] || exceptionNets[k] != summary.exceptionNets[k]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -188,7 +268,8 @@ public final class IndexRemotes {
         return true;
     }
 
-    static IndexRemotes of(RemoteMachines remotes) {
+    /** {@code summary}: o resumo já lido do mesmo roteador; {@code null} deixa papéis e redes em zero. */
+    static IndexRemotes of(RemoteMachines remotes, @Nullable FaceSummary summary) {
         int machines = remotes.size();
         int groups = remotes.groupCount();
         if (machines == 0 && groups == 0) {
@@ -230,8 +311,13 @@ public final class IndexRemotes {
                 groupCounts[g]++;
             }
         }
+        boolean read = summary != null && summary.exceptionCount == exceptionCount;
         return new IndexRemotes(pos, group, Arrays.copyOf(exceptions, exceptionCount), labels, machines,
-                groupIds, groupBlocks, groupNames, groupCounts);
+                groupIds, groupBlocks, groupNames, groupCounts,
+                read ? Arrays.copyOf(summary.groupRoles, groups) : new int[groups],
+                read ? Arrays.copyOf(summary.groupNets, groups) : new long[groups],
+                read ? Arrays.copyOf(summary.exceptionRoles, exceptionCount) : new int[exceptionCount],
+                read ? Arrays.copyOf(summary.exceptionNets, exceptionCount) : new long[exceptionCount]);
     }
 
     private static int indexOf(int[] ids, int id) {
@@ -283,6 +369,23 @@ public final class IndexRemotes {
         if (capped) {
             tag.putInt("remote_total", total);
         }
+        if (anyRole(groupRoles, groupNets)) {
+            tag.put("remote_group_roles", new IntArrayTag(groupRoles));
+            tag.put("remote_group_nets", new LongArrayTag(groupNets));
+        }
+        if (anyRole(exceptionRoles, exceptionNets)) {
+            tag.put("remote_exception_roles", new IntArrayTag(exceptionRoles));
+            tag.put("remote_exception_nets", new LongArrayTag(exceptionNets));
+        }
+    }
+
+    private static boolean anyRole(int[] roles, long[] nets) {
+        for (int i = 0; i < roles.length; i++) {
+            if (roles[i] != 0 || nets[i] != 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Lê o formato de {@link #save}; sem as chaves (o formato antigo), sem máquinas. */
@@ -295,8 +398,13 @@ public final class IndexRemotes {
         int size = Math.min(Math.min(pos.length, readGroup.length), CAP);
         pos = Arrays.copyOf(pos, size);
         int[] group = Arrays.copyOf(readGroup, size);
-        int[] exceptions = Arrays.stream(tag.getIntArray("remote_exception"))
+        int[] savedExceptions = tag.getIntArray("remote_exception");
+        int[] exceptions = Arrays.stream(savedExceptions)
                 .filter(i -> i >= 0 && i < size).sorted().distinct().toArray();
+        // Os papéis das exceções só valem na ordem gravada; com a lista mexida (arquivo estragado), ficam zero.
+        boolean exceptionsKept = Arrays.equals(exceptions, savedExceptions);
+        int[] exceptionRoles = aligned(tag.getIntArray("remote_exception_roles"), exceptions.length, exceptionsKept);
+        long[] exceptionNets = aligned(tag.getLongArray("remote_exception_nets"), exceptions.length, exceptionsKept);
         String[] labels = null;
         CompoundTag labelsTag = tag.getCompound("remote_labels");
         for (String key : labelsTag.getAllKeys()) {
@@ -321,6 +429,10 @@ public final class IndexRemotes {
         ResourceLocation[] groupBlocks = new ResourceLocation[groupsTag.size()];
         String[] groupNames = new String[groupsTag.size()];
         int[] groupCounts = new int[groupsTag.size()];
+        int[] savedGroupRoles = tag.getIntArray("remote_group_roles");
+        long[] savedGroupNets = tag.getLongArray("remote_group_nets");
+        int[] groupRoles = new int[groupsTag.size()];
+        long[] groupNets = new long[groupsTag.size()];
         int groups = 0;
         for (int g = 0; g < groupsTag.size(); g++) {
             CompoundTag groupTag = groupsTag.getCompound(g);
@@ -332,12 +444,18 @@ public final class IndexRemotes {
             groupBlocks[groups] = block;
             groupNames[groups] = RenameRouterPayload.clean(groupTag.getString("name"));
             groupCounts[groups] = capped ? groupTag.getInt("count") : 0;
+            if (g < savedGroupRoles.length && g < savedGroupNets.length) {
+                groupRoles[groups] = savedGroupRoles[g];
+                groupNets[groups] = savedGroupNets[g];
+            }
             groups++;
         }
         groupIds = Arrays.copyOf(groupIds, groups);
         groupBlocks = Arrays.copyOf(groupBlocks, groups);
         groupNames = Arrays.copyOf(groupNames, groups);
         groupCounts = Arrays.copyOf(groupCounts, groups);
+        groupRoles = Arrays.copyOf(groupRoles, groups);
+        groupNets = Arrays.copyOf(groupNets, groups);
         if (!capped) {
             for (int id : group) {
                 int g = indexOf(groupIds, id);
@@ -346,19 +464,29 @@ public final class IndexRemotes {
                 }
             }
         }
-        return new IndexRemotes(pos, group, exceptions, labels, total, groupIds, groupBlocks, groupNames, groupCounts);
+        return new IndexRemotes(pos, group, exceptions, labels, total, groupIds, groupBlocks, groupNames, groupCounts,
+                groupRoles, groupNets, exceptionRoles, exceptionNets);
+    }
+
+    /** {@code saved}, se vale e tem exatamente {@code size} posições; senão, zeros. */
+    private static int[] aligned(int[] saved, int size, boolean valid) {
+        return valid && saved.length == size ? saved : new int[size];
+    }
+
+    private static long[] aligned(long[] saved, int size, boolean valid) {
+        return valid && saved.length == size ? saved : new long[size];
     }
 
     // ------------------------------------------------------------------ só para os GameTests
 
     /** {@link #of} para os GameTests. */
     public static IndexRemotes ofForTests(RemoteMachines remotes) {
-        return of(remotes);
+        return of(remotes, null);
     }
 
-    /** {@link #matches} para os GameTests. */
+    /** {@link #matches} para os GameTests, sem comparar papéis nem redes. */
     public boolean matchesForTests(RemoteMachines remotes) {
-        return matches(remotes);
+        return matches(remotes, null);
     }
 
     /** {@link #save} numa tag nova e {@link #load} de volta, para os GameTests. */

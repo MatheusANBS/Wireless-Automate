@@ -1,0 +1,31 @@
+{
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:cut_signal_crystal"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "wirelessautomate:resonator_glass"
+    },
+    {
+      "item": "wirelessautomate:resonator_glass"
+    },
+    {
+      "item": "wirelessautomate:resonator_glass"
+    },
+    {
+      "item": "wirelessautomate:resonator_glass"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:harmonic_lens",
+    "count": 1
+  }
+}

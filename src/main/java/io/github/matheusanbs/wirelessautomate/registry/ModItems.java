@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.CascadeItem;
 import io.github.matheusanbs.wirelessautomate.resonator.CatalystRule;
 import io.github.matheusanbs.wirelessautomate.resonator.ChargedDustItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
@@ -17,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -94,6 +96,27 @@ public final class ModItems {
                         props -> new ChargedDustItem(tier, props), new Item.Properties()));
             }
         }
+    }
+
+    /** A cascata do Ressonador, na ordem da fabricação: cada peça entra na seguinte, até o Núcleo Condensado. */
+    public static final DeferredItem<CascadeItem> SIGNAL_ALLOY_RAW = cascade("signal_alloy_raw");
+    public static final DeferredItem<CascadeItem> SIGNAL_ALLOY_INGOT = cascade("signal_alloy_ingot");
+    public static final DeferredItem<CascadeItem> RESONANCE_PLATE = cascade("resonance_plate");
+    public static final DeferredItem<CascadeItem> RESONANCE_WIRE = cascade("resonance_wire");
+    public static final DeferredItem<CascadeItem> RESONANCE_COIL = cascade("resonance_coil");
+    public static final DeferredItem<CascadeItem> HARMONIC_LENS = cascade("harmonic_lens");
+    public static final DeferredItem<CascadeItem> PHASE_CIRCUIT = cascade("phase_circuit");
+    public static final DeferredItem<CascadeItem> PHASE_MATRIX = cascade("phase_matrix");
+    public static final DeferredItem<CascadeItem> FIELD_STABILIZER = cascade("field_stabilizer");
+    public static final DeferredItem<CascadeItem> CONDENSED_CORE = cascade("condensed_core");
+
+    /** A cascata na ordem da fabricação (a da aba criativa). */
+    public static final List<DeferredItem<CascadeItem>> CASCADE = List.of(SIGNAL_ALLOY_RAW, SIGNAL_ALLOY_INGOT,
+            RESONANCE_PLATE, RESONANCE_WIRE, RESONANCE_COIL, HARMONIC_LENS, PHASE_CIRCUIT, PHASE_MATRIX,
+            FIELD_STABILIZER, CONDENSED_CORE);
+
+    private static DeferredItem<CascadeItem> cascade(String name) {
+        return ITEMS.registerItem(name, CascadeItem::new, new Item.Properties());
     }
 
     /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */

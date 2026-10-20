@@ -43,7 +43,7 @@ public final class ModRecipes {
 
     /**
      * {@code {"type": "wirelessautomate:tune_crystal"}}: sem forma, só com cristais cheios e sem rachadura (os
-     * Cristais Afinados e o Pó de Ressonância).
+     * Cristais Afinados, o Pó de Ressonância, a Liga de Sinal crua e a Lente Harmônica).
      */
     public static final Supplier<RecipeSerializer<TuneCrystalRecipe>> TUNE_CRYSTAL =
             RECIPE_SERIALIZERS.register("tune_crystal", TuneCrystalRecipe.Serializer::new);

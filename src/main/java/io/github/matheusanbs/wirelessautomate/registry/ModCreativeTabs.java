@@ -69,6 +69,9 @@ public final class ModCreativeTabs {
                                 output.accept(dust.getValue().get());
                             }
                         }
+                        for (var part : ModItems.CASCADE) {
+                            output.accept(part.get());
+                        }
                         output.accept(ModItems.RESONATOR_CASING.get());
                         output.accept(ModItems.RESONATOR_GLASS.get());
                         for (RouterTier tier : RouterTier.values()) {

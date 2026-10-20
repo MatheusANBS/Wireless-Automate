@@ -20,8 +20,8 @@ import net.minecraft.world.level.Level;
 
 /**
  * {@code {"type": "wirelessautomate:tune_crystal"}}: receita sem forma que só aceita cristais cheios e sem
- * rachadura, para os Cristais Afinados e o Pó de Ressonância. Com a receita comum, um Opaco ou um cristal gasto
- * entraria como se fosse cheio. O resultado sai cheio, com a integridade do cristal de entrada ({@link #assemble}).
+ * rachadura, para os Cristais Afinados, o Pó de Ressonância e as peças da cascata feitas com cristal (a Liga de
+ * Sinal crua e a Lente Harmônica). Com a receita comum, um Opaco ou um cristal gasto entraria como se fosse cheio. O resultado sai cheio, com a integridade do cristal de entrada ({@link #assemble}).
  * Por ser tipo próprio, fica fora do editor de receitas, como o {@link CutCrystalRecipe}.
  */
 public class TuneCrystalRecipe extends ShapelessRecipe {

@@ -1,0 +1,25 @@
+{
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:signal_crystal"
+    },
+    {
+      "item": "wirelessautomate:signal_crystal"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:redstone"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:signal_alloy_raw",
+    "count": 2
+  }
+}

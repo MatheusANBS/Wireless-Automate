@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "ingredient": {
+    "item": "wirelessautomate:signal_alloy_raw"
+  },
+  "result": {
+    "id": "wirelessautomate:signal_alloy_ingot",
+    "count": 1
+  },
+  "experience": 0.7,
+  "cookingtime": 100
+}

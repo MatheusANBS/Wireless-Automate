@@ -902,6 +902,318 @@ def po_carregado(tier: str) -> Sprite:
 
 
 # ---------------------------------------------------------------------------
+# A cascata do Ressonador: da liga ao Núcleo Condensado, cada peça maior e mais acesa que a anterior
+# ---------------------------------------------------------------------------
+
+FERRO = {"4": "#F2F1EC", "3": "#D3D1CA", "2": "#A9A69E", "1": "#7A776F", "0": "#4F4C46"}
+COBRE = {"4": "#FFD3B0", "3": "#F2A26E", "2": "#D27542", "1": "#9F4E27", "0": "#6A3218"}
+VERDE_PLACA = {"4": "#A6E6A0", "3": "#58BC62", "2": "#2F8E45", "1": "#1E6431", "0": "#12401F"}
+OBSIDIANA = {"3": "#C08BF0", "2": "#7F43C6", "1": "#4C1F82", "0": "#271040"}
+DIAMANTE = {"3": "#E8FFFB", "2": "#93F1E3", "1": "#3FC8B9", "0": "#1F7E74"}
+NETHERITA = {"3": "#6E6468", "2": "#4D4549", "1": "#352F33", "0": "#211D20"}
+
+CASCATA = ["signal_alloy_raw", "signal_alloy_ingot", "resonance_plate", "resonance_wire", "resonance_coil",
+           "harmonic_lens", "phase_circuit", "phase_matrix", "field_stabilizer", "condensed_core"]
+
+
+def _vazio() -> Image.Image:
+    return Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+
+
+def _tom(pal: dict[str, str], k: str) -> Cor:
+    return cor(pal[k])
+
+
+def _luz(x: float, y: float, cx: float, cy: float, r: float) -> float:
+    """De 0 (sombra, embaixo à direita) a 1 (luz, em cima à esquerda) num disco de raio `r`."""
+    return max(0.0, min(1.0, 0.5 - ((x - cx) + (y - cy)) / (2.6 * r)))
+
+
+def _degrau(pal: dict[str, str], t: float) -> Cor:
+    """O tom da paleta pela luz `t`, em degraus (sem degradê: 3 a 5 tons por material)."""
+    tons = sorted(pal, reverse=True)
+    return cor(pal[tons[min(len(tons) - 1, int((1 - t) * len(tons)))]])
+
+
+LIGA_CRUA = ["................", "................", "................", ".....AAAB.......", "....AAkABBB.....",
+             "...AAAABBkBB....", "...AkcABBBBBC...", "..AAAcBBBkBBC...", "..ABBBBBccBCCD..", "..BBkBBBBBCCcD..",
+             "...BccBBCCCCDD..", "...CCCCCcCCDD...", "....DDDDDDDD....", "................", "................",
+             "................"]
+
+
+def liga_crua() -> Sprite:
+    """Liga de Sinal crua: um torrão de ferro salpicado de coral, como os minérios crus do vanilla."""
+    leg = {"A": _tom(FERRO, "3"), "B": _tom(FERRO, "2"), "C": _tom(FERRO, "1"), "D": _tom(FERRO, "0"),
+           "k": cor("coral.3"), "c": cor("coral.1")}
+    return parado(contorno(pinta(LIGA_CRUA, leg), CONTORNO))
+
+
+LINGOTE = ["................", "................", "................", "................", ".....AAAAAAA....",
+           "....AaaWWaaaB...", "...AaaWaaaaaaB..", "..AaaaaaaaaaaaB.", "..bbbbbbbbbbbbc.", "..bfbbbbbbffbbd.",
+           "..ccccccccccccd.", "................", "................", "................", "................",
+           "................"]
+
+
+def lingote() -> Sprite:
+    """Lingote de Liga de Sinal: o lingote do vanilla em coral com veio de ferro; um brilho corre pelo topo."""
+    leg = {"A": cor("coral.4"), "a": mistura(cor("coral.3"), _tom(FERRO, "3"), .3), "W": BRANCO,
+           "B": cor("coral.2"), "b": mistura(cor("coral.2"), _tom(FERRO, "2"), .35), "f": _tom(FERRO, "3"),
+           "c": mistura(cor("coral.1"), _tom(FERRO, "1"), .35), "d": cor("coral.0")}
+    q = []
+    for k in range(8):
+        img = contorno(pinta(LINGOTE, leg), CONTORNO)
+        x = 3 + k * 10 // 7
+        for dx in (0, 1):
+            if img.getpixel((x + dx, 6)) == leg["a"]:
+                put(img, x + dx, 6, mistura(leg["a"], BRANCO, .6))
+        q.append(img)
+    return animacao(q, 4)
+
+
+def placa() -> Sprite:
+    """Placa de Ressonância: chapa de ferro com borda coral, quatro rebites e o anel de ressonância gravado."""
+    img = _vazio()
+    for y in range(2, 12):
+        for x in range(2, 14):
+            c = _tom(FERRO, "2")
+            if y == 2 or x == 2:
+                c = _tom(FERRO, "3")
+            elif y == 11 or x == 13:
+                c = _tom(FERRO, "1")
+            put(img, x, y, c)
+    for x in range(2, 14):
+        put(img, x, 12, cor("coral.2"))
+        put(img, x, 13, cor("coral.0"))
+    for y in range(3, 12):
+        put(img, 13, y, cor("coral.1"))
+    cx, cy = 7.5, 6.5
+    for y in range(3, 11):
+        for x in range(3, 13):
+            d = math.hypot(x - cx, y - cy)
+            if 2.3 <= d < 3.4:
+                put(img, x, y, cor("coral.3") if (x - cx) + (y - cy) < 0 else cor("coral.1"))
+    for p in ((3, 3), (11, 3), (3, 10), (11, 10)):
+        put(img, *p, _tom(FERRO, "4"))
+    return parado(contorno(img, CONTORNO))
+
+
+def _anel(img: Image.Image, cx: float, cy: float, r_fora: float, r_dentro: float, pal: dict[str, str]) -> None:
+    for y in range(16):
+        for x in range(16):
+            if r_dentro <= math.hypot(x - cx, y - cy) < r_fora:
+                put(img, x, y, _degrau(pal, _luz(x, y, cx, cy, r_fora)))
+
+
+def fio() -> Sprite:
+    """Fio de Ressonância: um rolo de fio de cobre com as voltas marcadas e duas presilhas coral."""
+    img = _vazio()
+    cx, cy = 7.5, 7.5
+    _anel(img, cx, cy, 6.6, 3.4, COBRE)
+    for y in range(16):
+        for x in range(16):
+            if not 3.4 <= math.hypot(x - cx, y - cy) < 6.6:
+                continue
+            a = math.atan2(y - cy, x - cx)
+            if abs(a + 3 * math.pi / 4) < .3:
+                put(img, x, y, cor("coral.3"))
+            elif abs(a - math.pi / 4) < .3:
+                put(img, x, y, cor("coral.1"))
+            elif (x + y) % 3 == 0:
+                put(img, x, y, mistura(img.getpixel((x, y)), _tom(COBRE, "0"), .45))
+    return parado(contorno(img, CONTORNO))
+
+
+def bobina() -> Sprite:
+    """Bobina de Ressonância: carretel de ferro deitado, enrolado em cobre, com as tampas coral."""
+    img = _vazio()
+    for y in range(2, 14):
+        for x in (1, 2, 13, 14):
+            t = 1 - (y - 2) / 11
+            put(img, x, y, cor("coral.3") if t > .66 else cor("coral.2") if t > .33 else cor("coral.1"))
+    for y in range(7, 9):
+        for x in (1, 2, 13, 14):
+            put(img, x, y, _tom(FERRO, "3") if y == 7 else _tom(FERRO, "1"))
+    for y in range(3, 13):
+        t = 1 - (y - 3) / 9
+        for x in range(3, 13):
+            c = _degrau(COBRE, t)
+            if x % 2:
+                c = mistura(c, _tom(COBRE, "0"), .35)
+            put(img, x, y, c)
+    for x in range(3, 13):
+        if x % 2 == 0:
+            put(img, x, 4, _tom(COBRE, "4"))
+    return parado(contorno(img, CONTORNO))
+
+
+def lente_harmonica() -> Sprite:
+    """Lente Harmônica: aro de latão com dois diamantes, vidro do Ressonador e o Lapidado no centro, que cintila."""
+    q = []
+    cx, cy = 7.5, 7.5
+    latao = {"3": PALETA["latao"]["3"], "2": PALETA["latao"]["2"], "1": PALETA["latao"]["1"],
+             "0": PALETA["latao"]["0"]}
+    for k in range(8):
+        img = _vazio()
+        _anel(img, cx, cy, 7.0, 5.0, latao)
+        for y in range(16):
+            for x in range(16):
+                d = math.hypot(x - cx, y - cy)
+                if d < 5.0:
+                    c = _degrau(PALETA["vidro"], _luz(x, y, cx, cy, 5))
+                    if (x - y) in (-3, -2):
+                        c = BRANCO
+                    put(img, x, y, c)
+        for x, y in ((1, 7), (1, 8), (14, 7), (14, 8)):
+            put(img, x, y, _tom(DIAMANTE, "2") if y == 7 else _tom(DIAMANTE, "1"))
+        for y, (x0, x1) in zip(range(5, 11), ((7, 8), (6, 9), (5, 10), (5, 10), (6, 9), (7, 8))):
+            for x in range(x0, x1 + 1):
+                tom = "3" if y < 7 and x < 8 else "2" if y < 7 or x < 8 else "1" if y < 10 else "0"
+                put(img, x, y, cor(CRISTAL_SINAL[tom]))
+        for x in range(5, 11):
+            put(img, x, 7, cor("latao.2"))
+        if k in (5, 6):
+            put(img, 8, 6, BRANCO)
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 4)
+
+
+def _placa_verde(img: Image.Image, x0: int, y0: int, x1: int, y1: int) -> None:
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            c = _tom(VERDE_PLACA, "2")
+            if y == y0 or x == x0:
+                c = _tom(VERDE_PLACA, "3")
+            elif y == y1 or x == x1:
+                c = _tom(VERDE_PLACA, "1")
+            put(img, x, y, c)
+
+
+def circuito() -> Sprite:
+    """Circuito de Fase: placa verde com trilhas de ouro, quartzo nos cantos e o chip coral (a Placa) no meio."""
+    img = _vazio()
+    _placa_verde(img, 1, 2, 14, 13)
+    ouro = cor("latao.2")
+    for x in range(3, 13):
+        put(img, x, 4, ouro)
+        put(img, x, 11, ouro)
+    for y in range(4, 12):
+        put(img, 3, y, ouro)
+        put(img, 12, y, ouro)
+    for x, y in ((2, 3), (13, 3), (2, 12), (13, 12)):
+        put(img, x, y, _tom(FERRO, "4"))
+    for y in range(6, 10):
+        for x in range(6, 10):
+            put(img, x, y, cor("grafite.2"))
+    for x in range(6, 10):
+        put(img, x, 5, _tom(FERRO, "3"))
+        put(img, x, 10, _tom(FERRO, "3"))
+    put(img, 7, 7, cor("coral.3"))
+    put(img, 8, 7, cor("coral.2"))
+    put(img, 7, 8, cor("coral.2"))
+    put(img, 8, 8, cor("coral.1"))
+    return parado(contorno(img, CONTORNO))
+
+
+def matriz() -> Sprite:
+    """Matriz de Fase: placa verde maior, quatro bobinas nos cantos, trilhas acesas e a Lente no centro, pulsando."""
+    q = []
+    cx, cy = 7.5, 7.5
+    for k in range(8):
+        img = _vazio()
+        _placa_verde(img, 1, 1, 14, 14)
+        t = (1 + math.cos(2 * math.pi * k / 8)) / 2
+        trilha = mistura(cor("latao.2"), cor("latao.3"), t)
+        for i in range(5, 11):
+            put(img, i, 2, trilha)
+            put(img, i, 13, trilha)
+            put(img, 2, i, trilha)
+            put(img, 13, i, trilha)
+        for x0, y0 in ((2, 2), (11, 2), (2, 11), (11, 11)):
+            for y in range(y0, y0 + 3):
+                for x in range(x0, x0 + 3):
+                    put(img, x, y, _degrau(COBRE, 1 - ((x - x0) + (y - y0)) / 4))
+        for y in range(16):
+            for x in range(16):
+                d = math.hypot(x - cx, y - cy)
+                if 2.0 <= d < 3.2:
+                    put(img, x, y, cor("latao.3") if (x - cx) + (y - cy) < 0 else cor("latao.1"))
+                elif d < 2.0:
+                    put(img, x, y, mistura(_degrau(PALETA["vidro"], _luz(x, y, cx, cy, 2)), cor("coral.3"), .5 * t))
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 3)
+
+
+def estabilizador() -> Sprite:
+    """Estabilizador de Campo: octógono de obsidiana chorosa com aro de latão, o diamante no centro e um anel
+    coral que respira (maior e mais aceso que a Matriz)."""
+    q = []
+    cx, cy = 7.5, 7.5
+    for k in range(10):
+        img = _vazio()
+        t = (1 + math.cos(2 * math.pi * k / 10)) / 2
+        for y in range(16):
+            for x in range(16):
+                dx, dy = abs(x - cx), abs(y - cy)
+                oct_ = max(dx, dy) + .42 * min(dx, dy)
+                if oct_ >= 8.0:
+                    continue
+                luz = _luz(x, y, cx, cy, 7)
+                if oct_ >= 6.6:
+                    c = _degrau({"3": PALETA["latao"]["3"], "2": PALETA["latao"]["2"], "1": PALETA["latao"]["1"]}, luz)
+                elif oct_ >= 4.2:
+                    c = _degrau(OBSIDIANA, luz)
+                elif oct_ >= 3.2:
+                    c = mistura(cor("coral.2"), cor("coral.4"), t)
+                else:
+                    c = _degrau(DIAMANTE, _luz(x, y, cx, cy, 3))
+                put(img, x, y, c)
+        put(img, 6, 6, BRANCO)
+        if k in (2, 3):
+            for p in ((7, 1), (1, 7), (14, 8), (8, 14)):
+                put(img, *p, mistura(cor("latao.3"), BRANCO, .7))
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 3)
+
+
+def condensado() -> Sprite:
+    """Núcleo Condensado: esfera de plasma coral no tamanho todo, cinta de netherita, estrela branca no meio e
+    um clarão que gira em volta (o mais aceso da cascata)."""
+    q = []
+    cx, cy = 7.5, 7.5
+    for k in range(12):
+        img = _vazio()
+        t = (1 + math.cos(2 * math.pi * k / 12)) / 2
+        for y in range(16):
+            for x in range(16):
+                d = math.hypot(x - cx, y - cy)
+                if d >= 7.2:
+                    continue
+                luz = _luz(x, y, cx, cy, 7)
+                if abs((y - cy) - .35 * (x - cx)) < 1.0 and d >= 2.6:
+                    c = _degrau(NETHERITA, luz)
+                elif d < 1.6:
+                    c = BRANCO
+                elif d < 3.0:
+                    c = mistura(cor("coral.4"), BRANCO, .35 + .4 * t)
+                else:
+                    c = _degrau({"4": PALETA["coral"]["4"], "3": PALETA["coral"]["3"], "2": PALETA["coral"]["2"],
+                                 "1": PALETA["coral"]["1"]}, luz)
+                put(img, x, y, c)
+        a = 2 * math.pi * k / 12
+        for r in (5.2, 4.4):
+            put(img, int(round(cx + r * math.cos(a))), int(round(cy + r * math.sin(a))), cor("latao.3"))
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 2)
+
+
+SPRITES_CASCATA = {"signal_alloy_raw": liga_crua, "signal_alloy_ingot": lingote, "resonance_plate": placa,
+                   "resonance_wire": fio, "resonance_coil": bobina, "harmonic_lens": lente_harmonica,
+                   "phase_circuit": circuito, "phase_matrix": matriz, "field_stabilizer": estabilizador,
+                   "condensed_core": condensado}
+assert list(SPRITES_CASCATA) == CASCATA, "a ordem da cascata e a dos sprites diferem"
+
+
+# ---------------------------------------------------------------------------
 # Montagem, modelos e folha
 # ---------------------------------------------------------------------------
 
@@ -930,6 +1242,8 @@ def gerar_itens() -> dict[str, Sprite]:
     sprites["item/resonance_dust"] = po()
     for tier in TIERS_PO_CARREGADO:
         sprites[f"item/charged_dust_{tier}"] = po_carregado(tier)
+    for nome, desenho in SPRITES_CASCATA.items():
+        sprites[f"item/{nome}"] = desenho()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -962,6 +1276,11 @@ def modelos_itens() -> None:
         grava_json(MODELOS / f"models/item/charged_dust_{tier}.json", {
             "parent": "minecraft:item/generated",
             "textures": {"layer0": f"wirelessautomate:item/charged_dust_{tier}"},
+        })
+    for nome in CASCATA:
+        grava_json(MODELOS / f"models/item/{nome}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/{nome}"},
         })
     grava_json(MODELOS / "models/item/range_upgrade.json", {
         "parent": "minecraft:item/generated",
@@ -1041,10 +1360,15 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                                                 "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \
-                  [f"charged_dust_{t}" for t in TIERS_PO_CARREGADO] + \
+                  [f"charged_dust_{t}" for t in TIERS_PO_CARREGADO] + CASCATA + \
                   [f"tuned_signal_crystal_{t}{v}" for t in TIERS_AFINADO for v in ("", "_dull", "_cracked")]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]
+        if out.height < y + 3 * (celula + gap) + 40:
+            novo = Image.new("RGBA", (largura, out.height + 2000), fundo)
+            novo.paste(out, (0, 0))
+            out = novo
+            d = ImageDraw.Draw(out)
         d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)
         y += 18
         x = margem

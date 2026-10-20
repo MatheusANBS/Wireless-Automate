@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SNS",
+    "NXN",
+    "SNS"
+  ],
+  "key": {
+    "S": {
+      "item": "wirelessautomate:field_stabilizer"
+    },
+    "N": {
+      "item": "minecraft:netherite_block"
+    },
+    "X": {
+      "item": "minecraft:nether_star"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:condensed_core",
+    "count": 1
+  }
+}

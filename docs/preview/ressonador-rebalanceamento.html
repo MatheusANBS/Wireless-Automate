@@ -1,0 +1,348 @@
+<title>Ressonador · Rebalanceamento</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: proposta em seções numeradas por mecânica; cada uma com o porquê, o número e o protótipo; no fim a tela do Núcleo, o custo de performance e as decisões */
+:root {
+  --bg: #ece8de; --panel: #f7f5ef; --ink: #22201c; --muted: #6b665c; --line: #d3cdbf;
+  --accent: #2f8a55; --rival: #4a7fd4; --mine: #2f9e5a; --grid: #dcd6c8;
+  --scr-bg: #f1ede4; --scr-ink: #3b3b3b; --scr-dim: #8a857b; --scr-teal: #1f9a92; --scr-line: #c9c2b4; --scr-slot: #c6c6c6;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17181b; --panel: #1f2024; --ink: #ecebe6; --muted: #9a978f; --line: #34353b;
+  --accent: #6cc68a; --rival: #5a8be0; --mine: #35a062; --grid: #2c2d32;
+  --scr-bg: #2a2b30; --scr-ink: #e6e3dc; --scr-dim: #9a968e; --scr-teal: #3cc4b9; --scr-line: #44454c; --scr-slot: #3a3b40; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17181b; --panel: #1f2024; --ink: #ecebe6; --muted: #9a978f; --line: #34353b;
+  --accent: #6cc68a; --rival: #5a8be0; --mine: #35a062; --grid: #2c2d32;
+  --scr-bg: #2a2b30; --scr-ink: #e6e3dc; --scr-dim: #9a968e; --scr-teal: #3cc4b9; --scr-line: #44454c; --scr-slot: #3a3b40; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--font-num); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-size: clamp(32px, 5vw, 52px); line-height: 1.02; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 26px; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-size: 18px; margin: 0; }
+p { margin: 0; line-height: 1.6; max-width: 72ch; }
+.muted { color: var(--muted); }
+section { display: grid; gap: 14px; }
+.tag { font-family: var(--font-num); font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; line-height: 1.55; }
+li { max-width: 70ch; }
+b { font-weight: 600; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+td.n { font-family: var(--font-num); text-align: right; white-space: nowrap; }
+.sprites { display: flex; flex-wrap: wrap; gap: 14px; }
+.sprite { display: grid; justify-items: center; gap: 6px; width: 112px; }
+.sprite .bx { width: 104px; height: 104px; background: var(--scr-slot); display: grid; place-items: center; box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #fff; }
+.sprite img { width: 96px; height: 96px; image-rendering: pixelated; }
+.sprite span { font-size: 12px; text-align: center; color: var(--muted); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.legend i.dash { width: 18px; height: 0; border-top: 2px dashed var(--rival); border-radius: 0; }
+svg text { fill: var(--muted); font-family: var(--font-num); font-size: 11px; }
+svg { display: block; width: 100%; height: auto; }
+
+/* barras do objetivo */
+.bars { display: grid; gap: 10px; }
+.brow { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+.brow .tn { font-family: var(--font-display); font-size: 15px; }
+.bpair { display: grid; gap: 3px; min-width: 0; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; position: relative; }
+.bar.r { background: var(--rival); } .bar.m { background: var(--mine); }
+.blab { font-family: var(--font-num); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* tela do Núcleo, 2× do tamanho do jogo */
+.screen-wrap { overflow-x: auto; }
+.screen { width: 704px; background: var(--scr-bg); color: var(--scr-ink); border-top: 6px solid var(--scr-teal); box-shadow: 0 0 0 2px #00000033; font-family: var(--font-display); font-size: 17px; padding: 18px 22px 22px; display: grid; grid-template-columns: 344px 1fr; gap: 20px; position: relative; }
+.screen .hd { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; }
+.pill { border: 2px solid var(--scr-teal); color: var(--scr-teal); border-radius: 10px; padding: 0 8px; font-size: 15px; }
+.scope { height: 104px; background: #101418; border: 2px solid #2b3238; display: grid; place-items: center; color: #6fe3dc; }
+.dial { margin-top: 8px; height: 26px; border: 2px solid var(--scr-line); position: relative; background: var(--scr-bg); }
+.dial .ok { position: absolute; left: 152px; width: 36px; top: 0; bottom: 0; background: #2f9e5a33; }
+.dial .needle { position: absolute; left: 170px; width: 4px; top: 2px; bottom: 2px; background: #e0583e; }
+.lamp { margin-top: 6px; color: #2f9e5a; font-size: 16px; }
+.mode { margin-top: 8px; display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; }
+.mode div { border: 2px solid var(--scr-ink); text-align: center; padding: 2px; }
+.mode .on { background: var(--scr-ink); color: var(--scr-bg); }
+.inv { margin-top: 14px; display: grid; grid-template-columns: repeat(9, 36px); gap: 0; }
+.inv i { width: 36px; height: 36px; background: var(--scr-slot); box-shadow: inset 2px 2px 0 #373737aa, inset -2px -2px 0 #ffffffaa; }
+.rc { display: grid; gap: 7px; align-content: start; }
+.lbl { color: var(--scr-dim); }
+.kv { display: flex; justify-content: space-between; gap: 8px; }
+.cham { display: grid; grid-template-columns: repeat(8, 38px); gap: 4px; }
+.cs { display: grid; gap: 3px; justify-items: center; }
+.cs .sl { width: 36px; height: 36px; background: var(--scr-slot); display: grid; place-items: center; box-shadow: inset 2px 2px 0 #373737aa, inset -2px -2px 0 #ffffffaa; }
+.cs .sl img { width: 32px; height: 32px; image-rendering: pixelated; }
+.pips { display: flex; gap: 1px; }
+.pips b { width: 3px; height: 5px; background: var(--scr-teal); }
+.pips b.x { background: var(--scr-line); }
+.meter { height: 10px; border: 2px solid var(--scr-line); position: relative; }
+.meter span { position: absolute; left: 0; top: 0; bottom: 0; background: #d98a1e; }
+.meter .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--scr-ink); }
+.catal { display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center; }
+.catal .sl, .ecoslot .sl { width: 36px; height: 36px; background: var(--scr-slot); display: grid; place-items: center; box-shadow: inset 2px 2px 0 #373737aa, inset -2px -2px 0 #ffffffaa; }
+.catal img, .ecoslot img { width: 32px; height: 32px; image-rendering: pixelated; }
+.ecobox { border: 2px solid #7b4fe0; padding: 6px 8px; display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center; }
+.ecobox .big { color: #7b4fe0; }
+.warnline { color: #c2571a; }
+.new { outline: 2px dashed #e0583e; outline-offset: 3px; }
+.callout { font-family: var(--font-body); font-size: 12.5px; color: var(--muted); }
+
+.dec { display: grid; gap: 12px; }
+.dec .card { gap: 6px; }
+.dec .rec { font-size: 13px; }
+.dec .rec b { color: var(--accent); }
+.opt { font-size: 13.5px; color: var(--muted); }
+.opt b { color: var(--ink); }
+@media (max-width: 560px) { .brow { grid-template-columns: 74px 1fr; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Wireless Automate · proposta para aprovar · 20/10/2026</div>
+    <h1>Ressonador: o melhor gerador de cada tier</h1>
+    <p class="muted">Hoje o Ressonador é barato de montar e quase não pede manutenção, então os tiers altos geram muito mais do que custam e os baixos perdem para geradores comuns. A proposta sobe o custo e a manutenção com mecânicas próprias do mod e, em troca, coloca cada tier acima do melhor rival do pack. No Ultimate, o Eco Ressonante dá um crescimento sem teto que custa material, para ficar à frente da Pandora Box.</p>
+  </header>
+
+  <section>
+    <span class="tag">1 · O objetivo</span>
+    <h2>Acima do melhor rival em cada tier</h2>
+    <p class="muted">Rival é o gerador mais forte do pack com esforço igual ou menor, medido na tier list. Escala de 10 em 10: cada marca é 10× a anterior.</p>
+    <div class="legend"><span><i style="background:var(--rival)"></i>Melhor rival do tier</span><span><i style="background:var(--mine)"></i>Ressonador proposto</span></div>
+    <div class="card bars" id="bars"></div>
+    <div class="scroll"><table id="ladder"></table></div>
+  </section>
+
+  <section>
+    <span class="tag">2 · Custo</span>
+    <h2>Cristais Afinados</h2>
+    <div class="grid2">
+      <div class="card">
+        <p>A partir do Elite, cada câmara pede um <b>Cristal Afinado</b> do tier: um Lapidado com o material do tier na cinta. O material entra uma vez por câmara; quando o cristal racha, ele é refeito com Cristais de Sinal e mantém o material.</p>
+        <ul>
+          <li>Elite: 2 lingotes de netherite</li>
+          <li>Esmeralda: 2 blocos de esmeralda + 1 Nether Star</li>
+          <li>Allthemodium, Vibranium, Unobtainium: 2 lingotes do metal + 1 da liga do degrau anterior</li>
+          <li>Ultimate: 1 lingote de liga Unobtainium-Vibranium + 1 Nether Star</li>
+        </ul>
+        <p class="muted">E o cartão do Ultimate com o Allthemodium (hoje ovo de dragão, netherite e echo shards) passa a pedir bloco de liga Unobtainium-Vibranium, ovo do dragão e Nether Star, para não sair mais barato que o do Unobtainium.</p>
+      </div>
+      <div class="card">
+        <h3>Protótipos (16 px, gerados pelo gerador de texturas do mod)</h3>
+        <div class="sprites" id="sprites"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">3 · Manutenção</span>
+    <h2>Fadiga do cristal</h2>
+    <div class="grid2">
+      <div class="card">
+        <ul>
+          <li>Cada recarga tira 1 de <b>integridade</b>. O Lapidado nasce com 8.</li>
+          <li>Com integridade 0 ele vira <b>Cristal Rachado</b> e sai da câmara pela Porta de Cristais.</li>
+          <li>Refazer: Rachado + 4 Cristais de Sinal na bancada devolve um Afinado novo do mesmo tier.</li>
+          <li>O catalisador da recarga sobe com o tier: redstone no Básico e no Avançado, <b>Pó de Ressonância</b> (redstone, glowstone e 1 Cristal de Sinal, rende 4) do Elite para cima.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Quanto pede por hora, no máximo</h3>
+        <div class="scroll"><table>
+          <tr><th>Tier</th><th>Cristais de Sinal/h</th><th>Catalisador/h</th></tr>
+          <tr><td>Básico</td><td class="n">1,5</td><td class="n">3 redstone</td></tr>
+          <tr><td>Esmeralda</td><td class="n">6</td><td class="n">12 pós</td></tr>
+          <tr><td>Ultimate</td><td class="n">12</td><td class="n">24 pós</td></tr>
+        </table></div>
+        <p class="muted">Conta: o Lapidado gera 20 min por carga, 8 recargas por vida (2 h 40 min), 4 cristais para refazer. Tudo entra e sai pela Porta de Cristais, então uma fábrica simples dá conta.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">4 · Contra o spam de Básicos</span>
+    <h2>Interferência</h2>
+    <div class="grid2">
+      <div class="card">
+        <ul>
+          <li>Cada outro Núcleo <b>montado</b> a até 32 blocos tira 15% da eficiência, até no máximo −60%.</li>
+          <li>Empurra o jogador a subir de tier em vez de multiplicar estruturas baratas.</li>
+          <li>A tela mostra a perda e a distância do vizinho mais perto.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 320 170" role="img" aria-label="Núcleo com dois vizinhos dentro do raio de 32 blocos">
+          <circle cx="110" cy="85" r="70" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="4 4"/>
+          <rect x="100" y="75" width="20" height="20" fill="var(--mine)"/>
+          <rect x="150" y="40" width="14" height="14" fill="var(--rival)"/>
+          <rect x="62" y="118" width="14" height="14" fill="var(--rival)"/>
+          <rect x="230" y="70" width="14" height="14" fill="var(--line)"/>
+          <text x="110" y="168" text-anchor="middle">raio de 32 blocos</text>
+          <text x="170" y="38">vizinho: −15%</text>
+          <text x="80" y="146">vizinho: −15%</text>
+          <text x="250" y="66">fora do raio</text>
+          <text x="110" y="70" text-anchor="middle" style="fill:var(--ink)">−30%</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">5 · Só no Ultimate</span>
+    <h2>Eco Ressonante</h2>
+    <div class="grid2">
+      <div class="card">
+        <ul>
+          <li>O Núcleo Ultimate ganha um slot <b>Eco</b>. Um Afinado Ultimate rachado posto ali é consumido e soma Eco.</li>
+          <li>Cada Eco vale <b>+5% da geração base</b>, para sempre, sem teto.</li>
+          <li>O Eco fica no item quando o Núcleo é quebrado.</li>
+          <li>A escolha é do jogador: refazer o cristal (barato) ou queimá-lo para crescer (custa um Afinado Ultimate inteiro).</li>
+        </ul>
+        <p class="muted">Com as 8 câmaras e queimando tudo o que racha, são ~3 Ecos por hora: +15% por hora, ou +1,3B FE/t a cada hora.</p>
+      </div>
+      <div class="card">
+        <h3>Ressonador Ultimate contra a Pandora Box</h3>
+        <div class="legend"><span><i style="background:var(--mine)"></i>Ressonador Ultimate, queimando tudo</span><span><i style="background:var(--rival)"></i>Pandora, 1 gerador Ultimate Speed</span><span><i class="dash"></i>Pandora, 4 geradores</span></div>
+        <svg id="eco" viewBox="0 0 460 240" role="img" aria-label="FE/t ao longo de 12 horas"></svg>
+        <p class="muted">Pandora pela fórmula do código (overload × log10(nível + 10)), nível 1000. O Ressonador sai na frente desde o primeiro minuto e cresce mais rápido enquanto houver cristais para queimar.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">6 · Tela</span>
+    <h2>A tela do Núcleo com as mecânicas novas</h2>
+    <p class="muted">No tamanho de hoje (352 × 244, aqui em 2×). O que é novo está com contorno tracejado.</p>
+    <div class="screen-wrap"><div class="screen">
+      <div class="hd">Núcleo de Ressonância <span class="pill">Ultimate</span></div>
+      <div>
+        <div class="scope">ESTAÇÃO · osciloscópio</div>
+        <div class="dial"><div class="ok"></div><div class="needle"></div></div>
+        <div class="lamp">● EM SINTONIA</div>
+        <div class="mode"><div>Manual</div><div class="on">Sintonizador</div></div>
+        <div class="inv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="rc">
+        <div class="lbl">Cristais · 8 câmaras</div>
+        <div class="cham new" id="cham"></div>
+        <div class="catal new"><div class="sl"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAABlklEQVR4nO3bO0rEUBgF4CgWIr5wAdZipaUbsLET7O1cgiCWlhYuQTdgN42dNoLNYKW1CxAfMKW6gXuLQMLJjN9X/oGbwJkbDkmmaQAAAAAAAAAAgFkz1wzM2urGb2n++fU+uGvtwnz6Av47AYQJIEwAYQIIm0u1mpqPt9fifH1zq+miHQ2tZdkBYQIIE0CYAMIEELbQ1UK1dlFrNd83V+WFJtdt21FXLSvSjuyAMAGECSBMAGECmLYW1FnbqXg6u68cKc9r562qtKy7w73ifP/2sdd2ZAeECSBMAGECCBPAUFtQ321n5Wi9fGDcapnmcnunOD85PS7OX8bPrdY/X14szi+abt6s2QFhAggTQJgAwgQwbc+Cam2nbbuotZ2Hu5Y1qKLt9XR13rbsgDABhAkgTABhAghr/Van9oyo9kap73YxnkyK892lpV7XH/2Uf7ueBU0Zt6AwAYQJIEwAYZ19+VtrRwfzP80sGmlBs8EtKEwAYQIIE0DY4P4pPy18HT0j3ILCBBAmgDABAAAAAAAAAE1//gAa2Wzr3zPyeQAAAABJRU5ErkJggg==" alt=""></div><div><div>Pó de Ressonância</div><div class="lbl">recarrega o Opaco · 37</div></div></div>
+        <div class="kv"><span>Eficiência</span><span>98%</span></div>
+        <div class="meter"><span style="width:98%"></span><i class="cap" style="left:98%"></i></div>
+        <div class="kv warnline new"><span>Interferência</span><span>nenhuma</span></div>
+        <div class="kv"><span>Geração</span><span>12,6B FE/t</span></div>
+        <div class="ecobox new"><div class="ecoslot"><div class="sl"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACEUlEQVR4nO3dPy9DURjH8XPFJiGxSiwWb8CNoSabTSzSCaPJIiwSSRclMdY7wCINwloDSxOL0DbakJTGJlgMhpolz5HcpPU7V7+f8UlT5Jtz8+T2D+cAAAB6UeRSYmhwuJ3k8e8fr6n42/rUv0CvI4AYAcQIIEYAsSgt206rWUv0PCOj46nYjjgBYgQQI4AYAcQIIBalZds53P4y51PzT+a8Ub8359nFlaC2I06AGAHECCBGADECiEWhbTvxxKQ5Lx7tJ/q5vi3IR7UdcQLECCBGADECiBFALArtlaxW88Gcz85lE21HSbegas1+fC5f6Op2xAkQI4AYAcQIIEYAsf7Qtp3QbKwtm/NcvtDuxHbECRAjgBgBxAggRgCxqFNb0MFu1SlcnX529fnvnk/Meam+ac7ZglKGS5AYAcQIIEaAtN0L8hmLH103NTyvcBUr9jays2XPk74ilontx5fyriM4AWIEECOAGAHECJC2Lch3ryPOzJj3iMqX5y4kVc+248P7gv45LkFiBBAjgBgBevUzYkm3o0bCdzuvrtv3gpYWspJtx4cTIEYAMQKIEUCMAGLBfV9Q2bMd+bagl+tpc/42sBfUtuPDCRAjgBgBxAggRgCxoL5H+bftyPdZrZvbijk/Prsw53x3NH7gEiRGADECiBFALLgtyIf/I4au4BIkRgAxAogRAAAAAAAAAHB/4xsk05ZOlxoEtAAAAABJRU5ErkJggg==" alt=""></div></div><div><div class="kv"><span class="big">Eco 10</span><span>+50%</span></div><div class="lbl">queime um Afinado Ultimate rachado</div></div></div>
+        <div class="kv"><span>Energia</span><span>1,1T de 1,7T FE</span></div>
+      </div>
+    </div></div>
+    <p class="callout">As bolinhas sob cada cristal são a integridade (8). A linha Interferência fica laranja quando há vizinho: "−15% · Núcleo a 24 blocos". A caixa Eco só aparece no Ultimate.</p>
+  </section>
+
+  <section>
+    <span class="tag">7 · Performance</span>
+    <h2>O que custa</h2>
+    <div class="scroll"><table>
+      <tr><th>Mecânica</th><th>Por tick</th><th>Quando trabalha</th><th>Memória e rede</th></tr>
+      <tr><td>Escada nova</td><td>nada novo</td><td>no lote de 20 ticks que já existe</td><td>só valores de config</td></tr>
+      <tr><td>Cristais Afinados</td><td>nada</td><td>receita e o rendimento lido ao pôr o cristal</td><td>nenhuma chave nova no Núcleo</td></tr>
+      <tr><td>Fadiga</td><td>nada</td><td>só no evento da recarga (1 a cada 30 s por câmara)</td><td>1 int por cristal (componente novo); a câmara manda update só quando um cristal racha</td></tr>
+      <tr><td>Interferência</td><td>nada</td><td>ao montar, desmontar, carregar e descarregar um Núcleo: busca no índice dos Núcleos montados da dimensão</td><td>1 int no Núcleo; um fator guardado, não recalculado</td></tr>
+      <tr><td>Eco</td><td>nada</td><td>quando um cristal é queimado</td><td>1 long no NBT do Núcleo</td></tr>
+      <tr><td>Tela</td><td>nada com a tela fechada</td><td>o pacote de estado de hoje, a cada 5 ticks e só se mudou</td><td>+integridade (1 byte por câmara), interferência e Eco no pacote</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <span class="tag">8 · Decisões para você</span>
+    <h2>Antes da spec</h2>
+    <div class="dec" id="dec"></div>
+  </section>
+
+  <section>
+    <span class="tag">9 · Fora desta proposta</span>
+    <ul class="muted">
+      <li>Comparador, redstone de controle e Tablet no Ressonador (decisões anteriores seguem valendo).</li>
+      <li>Mexer nos outros geradores do pack ou na config do Infinity Legacy II.</li>
+      <li>Risco de explosão: a manutenção sobe por suprimento, não por perigo.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const LADDER = [
+  ['Básico', 'Alternator', 360, 256, 512, 1024],
+  ['Avançado', 'Painel Eclipse', 23040, 4096, 8192, 32768],
+  ['Elite', 'Painel Nitro e Rainbow', 50000, 49152, 16384, 98304],
+  ['Esmeralda', 'Painel Chaotic', 1048576, 262144, 262144, 2097152],
+  ['Allthemodium', 'Turbina do Mekanism', 53485714, 2621440, 8388608, 83886080],
+  ['Vibranium', 'Turbina do Mekanism', 53485714, 25165824, 16777216, 201326592],
+  ['Unobtainium', 'Painel Infinity', 2147483647, 1879048192, 268435456, 3758096384],
+  ['Ultimate', 'Painel Infinity / Pandora', 2147483647, 17179869184, 536870912, 8589934592],
+];
+function fmt(n) {
+  for (const [d, s] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']]) if (n >= d) { const v = n / d; return (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)).replace(/\.?0+$/, '').replace('.', ',') + s; }
+  return String(n);
+}
+const full = n => n.toLocaleString('pt-BR');
+const maxLog = 10.2, minLog = 2;
+const pct = v => Math.max(2, (Math.log10(v) - minLog) / (maxLog - minLog) * 100);
+document.getElementById('bars').innerHTML = LADDER.map(([t, rn, rv, , , nv]) =>
+  `<div class="brow"><span class="tn">${t}</span><div class="bpair">
+    <div class="bar r" style="width:${pct(rv)}%" title="${rn}: ${full(rv)} FE/t"></div><span class="blab">${rn} · ${fmt(rv)} FE/t</span>
+    <div class="bar m" style="width:${pct(nv)}%" title="Ressonador ${t}: ${full(nv)} FE/t"></div><span class="blab">Ressonador · ${fmt(nv)} FE/t</span>
+  </div></div>`).join('');
+document.getElementById('ladder').innerHTML = '<tr><th>Tier</th><th>Câmaras</th><th>FE por cristal hoje</th><th>Proposto</th><th>FE/t hoje</th><th>Proposto</th></tr>' +
+  LADDER.map(([t, , , now, fe, nv], i) => `<tr><td>${t}</td><td class="n">${i + 1}</td><td class="n">${full(Math.round(now / (2 * (i + 1))))}</td><td class="n">${full(fe)}</td><td class="n">${fmt(now)}</td><td class="n">${fmt(nv)}${i === 7 ? ' + Eco' : ''}</td></tr>`).join('');
+
+const SPR = {"Lapidado (hoje)": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB1ElEQVR4nO3dPUoDQRxA8VmxsPILRRBMLeQEXiAH8D6W3sETpEwrmEqbWCkGIcZOkZSibmMXa2FGGNj4dpL3K0d3E3nM8kc3awiSJEmrqAqF2Nrcned8/+fXexE/2xr9BladAWAGgBkAZgBYVcq08/H6lHWe7c5xEdOROwBmAJgBYAaAGQBWlT7thOlddLm+vYmuH51dtGo6cgfADAAzAMwAMAPAqtKnnZTUFJRCTUfuAJgBYAaAGQBmANh66dNOU65OT6LrvcFovsjpyB0AMwDMADADwAxQ2hRU+rTTtunIHQAzAMwAMAPADLAsvwv6ri/zDjhs5nVn02H8C9288+x1d6Lrk/E4fsAgNMIdADMAzAAwA8AMsCxT0MbsICxSnbjPZz90Gjn/5P4hcf6jxBFvjbyuOwBmAJgBYAaAGQDW2J2/yb+UDfuNnL/OvNs5d9pJ6Q1G0XXvC1oSXoJgBoAZAGaAlf2MWOZ0VGdOQW2bdlLcATADwAwAMwDMALD2PS9o2M+agkqZdlLcATADwAwAMwDMALBWPUf5r+ko9Vmt6+eX6Pr54yy67rOj9YuXIJgBYAaAGQDWuikoxf8jpoXwEgQzAMwAMANIkiRJkiRJ4X/8AHIfgVjbJMgZAAAAAElFTkSuQmCC", "Afinado elite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB7ElEQVR4nO3du0oDQRhA4Y2XSrxgZaOl2PgAYq1gayX2tha2Yuk7CPZi5QNopSARBEUQvIGghaWoi5WF1sKMMDDx7CTnK4fNxnCY8LPZxKqSJEnqRa2qEKMj498px79/vBbx2vroP6DXGQBmAJgBYAaAtUqZdt6eb5POMzY1U8R05A6AGQBmAJgBYAaAtUqZdlYuzoPr+0P9wfX67CS4Prm106jpyB0AMwDMADADwAwAa5Vybae6u0g6PDYFxVDTkTsAZgCYAWAGgBkANlD6tJPL4fJccH3xoP3dyenIHQAzAMwAMAPADFDaFFT6tNO06cgdADMAzAAwA8AM0C3XgrYfH9IeMDic5Xl3HyLPOzGddqKl8PGfp2eRB7SrHNwBMAPADAAzAMwA3TIFbX7VVSfVkft81jOd/+byKun4xUzP6w6AGQBmAJgBYAaAZbvzN/pJ2dFelvPXiXc7Z5t2DsLXfLwvqEv4FgQzAMwAMAP07HfEEqejOnEKatq0E+MOgBkAZgCYAWAG6JZPxGJiU8TYwmqW6Whtdj64vhGZgqhpJ8YdADMAzAAwA8AMAGvU7yj/de0o9l2t4/un4Pr29Utw3d+O1i++BcEMADMAzACwxk1BMf4fMXWEb0EwA8AMADOAJEmSJEmSVP2PH+CChCT7IQMIAAAAAElFTkSuQmCC", "Afinado emerald": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB60lEQVR4nO3dPS9DURyA8VOMglhYiNHgCxgNGrOxX8AkMUuMbHaL1djRwEQiLIhE4i0iJIyCGknNknMkN7n13NM+v/G0udU8OTf/3N5WCJIkSb2oFjIxPDTaLvL894/XLN5bH/0H9DoDwAwAMwDMALBaLtPO29N1oeOMTE5nMR25A2AGgBkAZgCYAWC1XKadxulmdH1ncC663jo5jK5PrG1VajpyB8AMADMAzAAwA8BquVzbCTdnhZ6emoJSqOnIHQAzAMwAMAPADAAbyH3aKcve4mx0vd48bndyOnIHwAwAMwDMADAD5DYF5T7tVG06cgfADAAzAMwAMAN0y7Wgjfsm8srbd7vxB8YKHmihP7r8efQcOskdADMAzAAwA8AM0C1T0OrXVOikVuI+n+UwU8rxr84vEo+MR1fr4aGU13UHwAwAMwDMADADwEq78zf5Sdn+TinHbxW827n4tBNXbx5H170vqEt4CoIZAGYAmAF69jtiBaejVsEpqGrTToo7AGYAmAFgBoAZoFs+EUtJTREj841SpqOlme/o+sp5taadFHcAzAAwA8AMADMArFK/o/zXtaPUd7UObh+j6+uXL9F1fztav3gKghkAZgCYAWCVm4JS/D9i6ghPQTADwAwAM4AkSZIkSZIU/scPyLWDDx99FKkAAAAASUVORK5CYII=", "Afinado allthemodium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB6klEQVR4nO3dvS4EURxA8VkhEvGxhESztGoqD7AeQOkpFFqlwhPwBFvSUy0FURCJZNFRKH1NopKsWnKvZJJZZ+7s+ZXX7iw5uZN/ZmdXlkmSJA2jRpaImem5fpHHf3y+JvG3jdC/wLAzAMwAMAPADABrpDLtvD/fFzpOc2klienIHQAzAMwAMAPADABrpDLtvHW2guuzazvB9fzyLLje2j2s1HTkDoAZAGYAmAFgBoA1Urm2kz1cF3p4bAqKoaYjdwDMADADwAwAMwBsNPVppywnm+vB9Y2ji/4gpyN3AMwAMAPADAAzQGpTUOrTTtWmI3cAzAAwA8AMADNAXa4F5d39jPB1flDKcZbnw+vHve/IMyZLeV13AMwAMAPADAAzQF2moKnFdjZIeeQ+n4nWdinH793cBtdXF2LPuCjldd0BMAPADAAzAMwAsNLu/I2+U3baKeX4ecG7nYtOOzEbR+Fpx/uCasJTEMwAMAPADDC0nxErOB3lBaegqk07Me4AmAFgBoAZAGaAurwjFhObIprtrVKmo++xq8hPxis17cS4A2AGgBkAZgCYAWCV+h7lv64dxT6r1X18Cq7v3b0E1/3uaP3iKQhmAJgBYAaAVW4KivH/iGkgPAXBDAAzAMwAkiRJkiRJUvY/fgDPkYDAqiJV6QAAAABJRU5ErkJggg==", "Afinado vibranium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB6UlEQVR4nO3dvy5DURzA8VsMEgmNnRgMNpPBA+gDsJk8g8UkYvAOfQKbPgBTDSoGIvF/q4hR0EhsNUvOkZzk1vee9vsZj+u28s25+aW9raKQJEkaRbUiEzPTs/2U4z8+37L428boJzDqDAAzAMwAMAPAarlMO+/PD0nnqc8vZTEduQNgBoAZAGYAmAFgtVymnY27VnD9aHwhuN47Pw2uz+02KzUduQNgBoAZAGYAmAFgtVxe2ykeL5MOj01BMdR05A6AGQBmAJgBYAaATeQ+7ZTleH01uN5odfqDnI7cATADwAwAMwDMALlNQblPO1WbjtwBMAPADAAzAMwAw/Ja0P7LWdovTJXzuM3uRfgHi4knWlwOLn+3b4tBcgfADAAzAMwAMAMMyxS09zVZDFIvcp/Pdknnv7+6Tjq+UdLjugNgBoAZAGYAmAFgpd35G32n7OSwlPP3Eu92Lm3aaXWC694XNCS8BMEMADMAzAAj+xmxxOmolzgFVW3aiXEHwAwAMwDMADADDMs7YjGxKaK+tlnKdLS1Mh9c34lMQdS0E+MOgBkAZgCYAWAGgFXqe5T/eu0o9lmt9lM3uH5w8xpc97uj9YuXIJgBYAaAGQBWuSkoxv8jpoHwEgQzAMwAMANIkiRJkiRJxf/4Acmfgg1yu92GAAAAAElFTkSuQmCC", "Afinado unobtainium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB2UlEQVR4nO3dPUoDQRxA8V1JrWKvtVfQA+QAFjYW3sFeO+/gASSNkFYwlSmMlSKKXxBECwsLjQnYxlqYEQZ2fTvm/crJGiKPWf4sm01RSJIkzaKyyMTC/NI05fjP8XsW/9sc/QFmnQFgBoAZAGYAWJnLtDN6uU96n8WV1SymI3cAzAAwA8AMADMArMxl2jnb+wiur289Bdcn5/3g+vLuQaOmI3cAzAAwA8AMADMArMzl2k7xcJF0eGwKiqGmI3cAzAAwA8AMADMArJX7tFOVk4214Hq7O5jWOR25A2AGgBkAZgCYAXKbgnKfdpo2HbkDYAaAGQBmAJgB/su1oNvDr8S/CN+9nGp4NIq8spn4TuHj+2/HkeMHRRXcATADwAwAMwDMALCysmtBvU5Rp0nifT6p7i6vko5vd8NTkNeCMuMpCGYAmAFgBoBVdudv3dPRpKIpiJp2YtwBMAPADAAzAMwAM/sdscTpaJI4BTVt2olxB8AMADMAzAAwA8Ca97ygXidpCroebgfXW+OdRk07Me4AmAFgBoAZAGYAWKOeo/zbdBT7rtbp43Nwff/mNbjus6P1g6cgmAFgBoAZANa4KSjG3xFTLTwFwQwAMwDMAJIkSZIkSVLxN74BdheKH5wbca8AAAAASUVORK5CYII=", "Afinado ultimate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAB3ElEQVR4nO3dvy4EQRzA8VlRI3pqjULpBbQSryDReAalxhNotFeIXEEhcRWJnIoI4k9H5BKN4AqF4tSSGckke7477vsp5zaHfDObXza7KwRJkqRRVIVCTE5MD3KOf/94LeJvG6N/gVFnAJgBYAaAGQBWlTLtvD3dZX3P1OxcEdOROwBmAJgBYAaAGQBWlTLt7Gx9RddXl6+i6/2zk+j6zMZ2o6YjdwDMADADwAwAMwCsKuXaTrg/zzo8NQWlUNOROwBmAJgBYAaAGQA2Xvq0U5ejlcXo+lK7OxjmdOQOgBkAZgCYAWAGKG0KKn3aadp05A6AGQBmAJgBYAb4L9eCDveyHuEKISzU8nNPDz4Tn8Tvjs5187yf+KRby/e7A2AGgBkAZgCYAWBVbdeCOq0wTP3M+3xy3V5cZh2/1I5PQV4LKoynIJgBYAaAGQBW252/w56O+jVNQdS0k+IOgBkAZgCYAWAGGNlnxDKno37mFNS0aSfFHQAzAMwAMAPADABr3vuCOq2sKWj3ZT26Pt9ba9S0k+IOgBkAZgCYAWAGgDXqPcq/TUepZ7WOHx6j65vXvei6747WD56CYAaAGQBmAFjjpqAU/4+YhsJTEMwAMAPADCBJkiRJkiSFv/ENJ56JlYlIE+EAAAAASUVORK5CYII=", "Afinado rachado (Ultimate)": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACEUlEQVR4nO3dPy9DURjH8XPFJiGxSiwWb8CNoSabTSzSCaPJIiwSSRclMdY7wCINwloDSxOL0DbakJTGJlgMhpolz5HcpPU7V7+f8UlT5Jtz8+T2D+cAAAB6UeRSYmhwuJ3k8e8fr6n42/rUv0CvI4AYAcQIIEYAsSgt206rWUv0PCOj46nYjjgBYgQQI4AYAcQIIBalZds53P4y51PzT+a8Ub8359nFlaC2I06AGAHECCBGADECiEWhbTvxxKQ5Lx7tJ/q5vi3IR7UdcQLECCBGADECiBFALArtlaxW88Gcz85lE21HSbegas1+fC5f6Op2xAkQI4AYAcQIIEYAsf7Qtp3QbKwtm/NcvtDuxHbECRAjgBgBxAggRgCxqFNb0MFu1SlcnX529fnvnk/Meam+ac7ZglKGS5AYAcQIIEaAtN0L8hmLH103NTyvcBUr9jays2XPk74ilontx5fyriM4AWIEECOAGAHECJC2Lch3ryPOzJj3iMqX5y4kVc+248P7gv45LkFiBBAjgBgBevUzYkm3o0bCdzuvrtv3gpYWspJtx4cTIEYAMQKIEUCMAGLBfV9Q2bMd+bagl+tpc/42sBfUtuPDCRAjgBgBxAggRgCxoL5H+bftyPdZrZvbijk/Prsw53x3NH7gEiRGADECiBFALLgtyIf/I4au4BIkRgAxAogRAAAAAAAAAHB/4xsk05ZOlxoEtAAAAABJRU5ErkJggg==", "Pó de Ressonância": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAABlklEQVR4nO3bO0rEUBgF4CgWIr5wAdZipaUbsLET7O1cgiCWlhYuQTdgN42dNoLNYKW1CxAfMKW6gXuLQMLJjN9X/oGbwJkbDkmmaQAAAAAAAAAAgFkz1wzM2urGb2n++fU+uGvtwnz6Av47AYQJIEwAYQIIm0u1mpqPt9fifH1zq+miHQ2tZdkBYQIIE0CYAMIEELbQ1UK1dlFrNd83V+WFJtdt21FXLSvSjuyAMAGECSBMAGECmLYW1FnbqXg6u68cKc9r562qtKy7w73ifP/2sdd2ZAeECSBMAGECCBPAUFtQ321n5Wi9fGDcapnmcnunOD85PS7OX8bPrdY/X14szi+abt6s2QFhAggTQJgAwgQwbc+Cam2nbbuotZ2Hu5Y1qKLt9XR13rbsgDABhAkgTABhAghr/Van9oyo9kap73YxnkyK892lpV7XH/2Uf7ueBU0Zt6AwAYQJIEwAYZ19+VtrRwfzP80sGmlBs8EtKEwAYQIIE0DY4P4pPy18HT0j3ILCBBAmgDABAAAAAAAAAE1//gAa2Wzr3zPyeQAAAABJRU5ErkJggg=="};
+document.getElementById('sprites').innerHTML = Object.entries(SPR).map(([n, src]) => `<div class="sprite"><div class="bx"><img src="${src}" alt=""></div><span>${n}</span></div>`).join('');
+const pips = (k) => `<div class="pips">${Array.from({ length: 8 }, (_, i) => `<b class="${i < k ? '' : 'x'}"></b>`).join('')}</div>`;
+const integ = [8, 7, 7, 5, 4, 3, 2, 1];
+document.getElementById('cham').innerHTML = integ.map(k => `<div class="cs"><div class="sl"><img src="${SPR['Afinado ultimate']}" alt=""></div>${pips(k)}</div>`).join('');
+
+(function eco() {
+  const svg = document.getElementById('eco'), W = 460, H = 240, L = 48, R = 12, T = 12, B = 34;
+  const x = h => L + h / 12 * (W - L - R), y = v => T + (1 - v / 25e9) * (H - T - B);
+  let s = '';
+  for (let v = 0; v <= 25e9; v += 5e9) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v ? fmt(v) : '0'}</text>`;
+  for (let h = 0; h <= 12; h += 2) s += `<text x="${x(h)}" y="${H - 14}" text-anchor="middle">${h} h</text>`;
+  const line = (f, c, dash) => `<polyline fill="none" stroke="${c}" stroke-width="2" ${dash ? 'stroke-dasharray="6 4"' : ''} points="${Array.from({ length: 49 }, (_, i) => { const h = i / 4; return `${x(h)},${y(f(h))}`; }).join(' ')}"/>`;
+  const res = h => 8.59e9 * (1 + 0.15 * h), p1 = h => 277e6 * h, p4 = h => 4 * 277e6 * h;
+  s += line(p4, 'var(--rival)', true) + line(p1, 'var(--rival)') + line(res, 'var(--mine)');
+  s += `<text x="${x(12) - 4}" y="${y(res(12)) - 6}" text-anchor="end" style="fill:var(--ink)">Ressonador ${fmt(res(12))}</text>`;
+  s += `<text x="${x(12) - 4}" y="${y(p4(12)) - 6}" text-anchor="end">Pandora ×4 ${fmt(p4(12))}</text>`;
+  s += `<text x="${x(12) - 4}" y="${y(p1(12)) - 6}" text-anchor="end">Pandora ${fmt(p1(12))}</text>`;
+  svg.innerHTML = s;
+})();
+
+const DEC = [
+  ['Roteador para escoar a energia', 'Com a escada nova o Ressonador gera mais do que o roteador do mesmo tier transporta (no Allthemodium, 84M contra 4M).',
+   'Subir a energia do roteador de cada tier para a geração do Ressonador do mesmo tier. Custo de performance zero: é só o número da vazão.',
+   'Ou deixar o roteador como está e o jogador usar várias Portas de Energia, um roteador em cada.'],
+  ['Mundos que já têm Ressonador', 'Câmaras de Elite para cima com Lapidado comum.',
+   'O Lapidado comum continua aceito em qualquer tier, mas rende 1/4 acima do Avançado. Nada some nem quebra.',
+   'Ou devolver os cristais comuns ao jogador na primeira carga.'],
+  ['Números da fadiga', 'Integridade 8, 4 Cristais de Sinal para refazer.',
+   'Esses valores, na config, para cada pack ajustar.',
+   'Ou integridade 16 para um ciclo mais leve.'],
+  ['Interferência', 'Raio 32, −15% por vizinho, até −60%.',
+   'Esses valores, na config, com 0 desligando a mecânica.',
+   'Ou contar só Núcleos do mesmo tier.'],
+  ['Eco', '+5% por Afinado Ultimate queimado, sem teto.',
+   'Sem teto, na config, para ficar à frente da Pandora.',
+   'Ou um teto de config (padrão sem teto) para packs que não têm Pandora.'],
+  ['Visual dos Afinados', 'Hoje só a cinta muda de cor.',
+   'Cinta da cor do tier mais duas gemas do material, como nos protótipos.',
+   'Ou mudar também o tom da pedra para o tier.'],
+];
+document.getElementById('dec').innerHTML = DEC.map(([t, q, r, a], i) => `<div class="card"><h3>${i + 1}. ${t}</h3><p class="opt">${q}</p><p class="rec"><b>Recomendo:</b> ${r}</p><p class="opt">${a}</p></div>`).join('');
+</script>

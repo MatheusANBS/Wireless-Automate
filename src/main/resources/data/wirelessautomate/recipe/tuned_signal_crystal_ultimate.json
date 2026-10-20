@@ -1,0 +1,45 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    [
+      {
+        "item": "wirelessautomate:cut_signal_crystal"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_elite"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_emerald"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_allthemodium"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_vibranium"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_unobtainium"
+      }
+    ],
+    {
+      "tag": "c:ingots/unobtainium_vibranium_alloy"
+    },
+    {
+      "tag": "c:ingots/unobtainium_vibranium_alloy"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:tuned_signal_crystal_ultimate",
+    "count": 1
+  }
+}

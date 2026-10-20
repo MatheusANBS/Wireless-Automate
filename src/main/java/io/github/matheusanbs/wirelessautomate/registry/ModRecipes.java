@@ -5,6 +5,8 @@ import io.github.matheusanbs.wirelessautomate.recipe.FilterCardCopyRecipe;
 import io.github.matheusanbs.wirelessautomate.recipe.RouterUpgradeRecipe;
 import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
 import io.github.matheusanbs.wirelessautomate.resonator.CutCrystalRecipe;
+import io.github.matheusanbs.wirelessautomate.resonator.RecastCrystalRecipe;
+import io.github.matheusanbs.wirelessautomate.resonator.TuneCrystalRecipe;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -38,6 +40,18 @@ public final class ModRecipes {
     /** {@code {"type": "wirelessautomate:cut_crystal"}}: o Cristal Lapidado, só com Cristais de Sinal cheios. */
     public static final Supplier<RecipeSerializer<CutCrystalRecipe>> CUT_CRYSTAL =
             RECIPE_SERIALIZERS.register("cut_crystal", CutCrystalRecipe.Serializer::new);
+
+    /**
+     * {@code {"type": "wirelessautomate:tune_crystal"}}: sem forma, só com cristais cheios e sem rachadura (os
+     * Cristais Afinados e o Pó de Ressonância).
+     */
+    public static final Supplier<RecipeSerializer<TuneCrystalRecipe>> TUNE_CRYSTAL =
+            RECIPE_SERIALIZERS.register("tune_crystal", TuneCrystalRecipe.Serializer::new);
+
+    /** {@code {"type": "wirelessautomate:recast_crystal"}}: um cristal rachado + Cristais de Sinal cheios. */
+    public static final Supplier<RecipeSerializer<RecastCrystalRecipe>> RECAST_CRYSTAL =
+            RECIPE_SERIALIZERS.register("recast_crystal",
+                    () -> new SimpleCraftingRecipeSerializer<>(RecastCrystalRecipe::new));
 
     private ModRecipes() {
     }

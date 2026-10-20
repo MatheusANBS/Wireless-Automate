@@ -1,0 +1,27 @@
+{
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    [
+      {
+        "item": "wirelessautomate:cut_signal_crystal"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_elite"
+      }
+    ],
+    {
+      "item": "minecraft:emerald_block"
+    },
+    {
+      "item": "minecraft:emerald_block"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:tuned_signal_crystal_emerald",
+    "count": 1
+  }
+}

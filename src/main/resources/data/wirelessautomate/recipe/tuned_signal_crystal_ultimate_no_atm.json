@@ -1,0 +1,39 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:mod_loaded",
+        "modid": "allthemodium"
+      }
+    }
+  ],
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    [
+      {
+        "item": "wirelessautomate:cut_signal_crystal"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_elite"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_emerald"
+      }
+    ],
+    {
+      "item": "minecraft:netherite_block"
+    },
+    {
+      "item": "minecraft:nether_star"
+    },
+    {
+      "item": "minecraft:echo_shard"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:tuned_signal_crystal_ultimate",
+    "count": 1
+  }
+}

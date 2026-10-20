@@ -1,0 +1,36 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    [
+      {
+        "item": "wirelessautomate:cut_signal_crystal"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_elite"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_emerald"
+      }
+    ],
+    {
+      "tag": "c:ingots/allthemodium"
+    },
+    {
+      "tag": "c:ingots/allthemodium"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:tuned_signal_crystal_allthemodium",
+    "count": 1
+  }
+}

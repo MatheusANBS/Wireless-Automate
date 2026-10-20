@@ -17,7 +17,6 @@ import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -77,7 +76,10 @@ public final class TabletList {
     /** Nó a pôr na vista no próximo arranjo (o restaurado ao abrir, o escolhido pelas setas). */
     @Nullable NodeKey revealKey;
     boolean multi;
-    final Set<NodeKey> selected = new LinkedHashSet<>();
+    /** O que o Selecionar marcou; {@link #selected} são os roteadores. */
+    final ListMarks marks = new ListMarks();
+    final Set<NodeKey> selected = marks.nodes();
+    final MarkRows markRows;
     ResourceType chipType = LoadedTypes.LIST.isEmpty() ? ResourceType.ITEM : LoadedTypes.LIST.getFirst();
 
     TabletList(TabletMenu menu, TabletActions actions, NodeText nodes, IntSupplier screenHeight) {
@@ -87,6 +89,7 @@ public final class TabletList {
         this.screenHeight = screenHeight;
         this.model = new ListModel(menu::snapshot);
         this.profileActions = new ListProfileActions(this);
+        this.markRows = new MarkRows(this);
         Query query = menu.snapshot().query();
         this.search = new ListSearch(this, query);
         search.typeFilter.ifPresent(t -> chipType = t);
@@ -188,7 +191,7 @@ public final class TabletList {
         }
         Set<NodeKey> present = new HashSet<>();
         snapshot().nodes().forEach(n -> present.add(n.key()));
-        selected.retainAll(present);
+        marks.retainNodes(present);
     }
 
     // ------------------------------------------------------------------ ações
@@ -243,18 +246,13 @@ public final class TabletList {
     void toggleMulti() {
         multi = !multi;
         if (!multi) {
-            selected.clear();
+            marks.clear();
         }
     }
 
-    /** Todos: marca todos os nós da lista; se já estavam, desmarca. */
+    /** Todos: marca o que a visão aberta mostra (os nós, ou os blocos na visão por máquinas); se já estavam, desmarca. */
     void selectAll() {
-        List<NodeKey> all = snapshot().nodes().stream().map(NodeView::key).toList();
-        if (selected.containsAll(all)) {
-            all.forEach(selected::remove);
-        } else {
-            selected.addAll(all);
-        }
+        markRows.selectAll();
     }
 
     // ------------------------------------------------------------------ geometria
@@ -358,9 +356,9 @@ public final class TabletList {
 
     void previewMulti(boolean on, int count) {
         multi = on;
-        selected.clear();
+        marks.clear();
         if (on) {
-            snapshot().nodes().stream().limit(count).forEach(node -> selected.add(node.key()));
+            marks.addNodes(snapshot().nodes().stream().limit(count).map(NodeView::key).toList());
         }
     }
 
@@ -380,6 +378,11 @@ public final class TabletList {
 
     public void previewCollapse(ResourceLocation machine) {
         model.collapse(machine);
+    }
+
+    /** Abre o grupo da máquina na lista (gancho do e2e). */
+    public void previewExpand(ResourceLocation machine) {
+        model.expand(machine);
     }
 
     /** Rola a lista até o cabeçalho do grupo da máquina. */

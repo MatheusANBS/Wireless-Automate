@@ -122,11 +122,16 @@ final class TreeRows {
         int w = hot.w();
         int h = hot.h();
         int tx = contentX(x) + line.depth() * INDENT;
-        if (isTarget(line, row)) {
+        ListMarks.Box box = list.multi && !(row instanceof TabletRows.More) ? list.markRows.treeBox(hot.arg())
+                : ListMarks.Box.NONE;
+        if (isTarget(line, row) || box == ListMarks.Box.ALL) {
             g.fill(x, y, x + w, y + h - 1, GuiPaint.ROW_SELECTED);
             g.fill(x, y, x + 2, y + h - 1, GuiPaint.ACCENT);
         } else if (hot.contains(mx, my) || list.treeNav.isCursor(hot.arg())) {
             g.fill(x, y, x + w, y + h - 1, GuiPaint.ROW_HOVER);
+        }
+        if (list.multi && !(row instanceof TabletRows.More)) {
+            MarkRows.paint(g, tx - 12, y + (h > ListLayout.HEADER_ROW ? 5 : 2), box);
         }
         g.fill(tx, y + h - 1, x + w - 2, y + h, GuiPaint.LINE);
         int r = line.row();

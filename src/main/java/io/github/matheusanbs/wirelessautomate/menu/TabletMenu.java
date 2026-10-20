@@ -162,7 +162,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.machines = new TabletMachines(viewer.server);
         this.builder = new TabletSnapshotBuilder(viewer, query, tree, machines);
         this.node = new TabletChosenNode(viewer, containerId);
-        this.profile = new TabletProfile(viewer, containerId, query, builder);
+        this.profile = new TabletProfile(viewer, containerId, query, builder, machines);
         this.actions = new TabletMenuActions(this, viewer);
         this.flows = new TabletFlows(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
@@ -630,10 +630,16 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
      */
     public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
             List<NodeKey> keys) {
+        return profile(action, key, machine, keys, TabletMarks.EMPTY);
+    }
+
+    /** Como {@link #profile(TabletProfilePayload.Action, NodeKey, ResourceLocation, List)}, com os marcados além dos nós. */
+    public int profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
+            List<NodeKey> keys, TabletMarks marks) {
         if (viewer == null || keys.size() > TabletProfilePayload.MAX_KEYS || !stillValid(viewer)) {
             return -1;
         }
-        int result = profile.run(action, key, machine, keys);
+        int result = profile.run(action, key, machine, keys, marks);
         if (result >= 0) {
             forced = true;
         }
@@ -689,7 +695,15 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
      * apagada vão. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
-        return viewer == null ? -1 : actions.moveNodes(keys, type, network);
+        return moveNodes(keys, TabletMarks.EMPTY, type, network);
+    }
+
+    /**
+     * Como {@link #moveNodes(List, Optional, Optional)}, com os marcados além dos nós: a máquina marcada muda a rede
+     * só nas faces com modo, gravadas como exceção (D1); o grupo inteiro, no perfil (D2).
+     */
+    public int moveNodes(List<NodeKey> keys, TabletMarks marks, Optional<ResourceType> type, Optional<UUID> network) {
+        return viewer == null ? -1 : actions.moveNodes(keys, marks, type, network, machines);
     }
 
     /**

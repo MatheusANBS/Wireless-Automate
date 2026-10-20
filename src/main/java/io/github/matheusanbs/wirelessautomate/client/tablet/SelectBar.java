@@ -12,7 +12,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
-import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +21,7 @@ import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Os botões fixos da aba Lista: Selecionar e, selecionando, o tipo, a rede e o Mover, o Todos e o Colar nos
@@ -45,6 +45,9 @@ final class SelectBar {
     private final List<FlatButton> buttons = new ArrayList<>();
     /** A versão das acesas que o texto do Apagar todas mostra. */
     private int litVersion = Integer.MIN_VALUE;
+    /** O texto do Colar nos marcados e a versão dos marcados dele. */
+    private Component pasteText = Component.empty();
+    private int pasteVersion = -1;
 
     SelectBar(TabletLayout layout, Supplier<TabletSnapshot> snapshot, NodeText nodes, TabletActions actions,
             TabletList list) {
@@ -79,16 +82,16 @@ final class SelectBar {
                 () -> cycleMoveNetwork(Screen.hasShiftDown() ? -1 : 1)).tooltip(() -> tr("move.network.tooltip")));
         add(adder, new FlatButton(x + X0 + 2 * cycleW + 4, list.multiBarY(), lw - 2 * cycleW - 4, ROW_H, tr("move"),
                 (g, b, hovered) -> TabletButtons.paintPrimary(g, b, hovered, tr("move")), this::moveSelected)
-                .tooltip(() -> tr("move.tooltip", list.selected().size())));
+                .tooltip(() -> tr("move.marked.tooltip", list.markRows.what())));
         int allW = font.width(tr("select.all")) + 10;
         add(adder, new FlatButton(x + X0, list.barY(), allW, ROW_H, tr("select.all"),
                 (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, tr("select.all")), list::selectAll)
-                .tooltip(() -> tr("select.all.tooltip")));
+                .tooltip(() -> tr(list.machineView() ? "select.all.machines.tooltip" : "select.all.tooltip")));
         // colar o perfil nos marcados (só com perfil copiado)
         add(adder, new FlatButton(x + X0 + allW + 2, list.barY(), lw - allW - selectW - 4, ROW_H, Component.empty(),
-                (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, tr("list.paste_selected", list.selected().size())),
+                (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, pasteText()),
                 list.profileActions::pasteSelected).tooltip(() -> snapshot().profile()
-                        .map(p -> tr("list.paste_selected.tooltip", p.sourceName(), list.selected().size())).orElse(null)));
+                        .map(p -> tr("list.paste_marked.tooltip", p.sourceName(), list.markRows.what())).orElse(null)));
         int clearW = clearLitWidth(font);
         add(adder, new FlatButton(x + X0 + lw - selectW - 2 - clearW, list.barY(), clearW, ROW_H, clearLitText(),
                 (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, b.getMessage()), HighlightRenderer::clear)
@@ -114,10 +117,10 @@ final class SelectBar {
         for (int i = 1; i <= 4; i++) {
             buttons.get(i).visible = shown && list.multi();
         }
-        buttons.get(3).active = !list.selected().isEmpty();
+        buttons.get(3).active = !list.marks.isEmpty();
         FlatButton pasteSelected = buttons.get(5);
         pasteSelected.visible = shown && list.multi() && snapshot().profile().isPresent();
-        pasteSelected.active = !list.selected().isEmpty();
+        pasteSelected.active = !list.marks.isEmpty();
         FlatButton clearLit = buttons.get(6);
         clearLit.visible = shown && !list.multi() && HighlightRenderer.count() > 0;
         if (litVersion != HighlightRenderer.version()) {
@@ -126,11 +129,28 @@ final class SelectBar {
         }
     }
 
+    /** Centro do "Colar nos marcados", ou {@code null} se ele não aparece. */
+    int @Nullable [] pasteCenter() {
+        FlatButton paste = buttons.size() > 5 ? buttons.get(5) : null;
+        return paste == null || !paste.visible ? null
+                : new int[] {paste.getX() + paste.getWidth() / 2, paste.getY() + paste.getHeight() / 2};
+    }
+
     /** Snapshot novo: sem rede escolhida no Mover, vale a ativa. */
     void onSnapshot(TabletSnapshot s) {
         if (!moveNetworkChosen) {
             moveNetwork = s.activeNetwork();
         }
+    }
+
+    /** "Colar nos marcados (2 roteadores, 3 máquinas)", refeito só quando os marcados mudam. */
+    private Component pasteText() {
+        int version = list.marks.version();
+        if (version != pasteVersion) {
+            pasteVersion = version;
+            pasteText = tr("list.paste_marked", list.markRows.what());
+        }
+        return pasteText;
     }
 
     private Component moveTypeText() {
@@ -158,15 +178,11 @@ final class SelectBar {
     }
 
     private void moveSelected() {
-        if (list.selected().isEmpty()) {
+        if (list.marks.isEmpty()) {
             return;
         }
-        List<NodeKey> keys = new ArrayList<>(list.selected());
-        if (keys.size() > TabletMenu.MAX_MOVE) {
-            keys = keys.subList(0, TabletMenu.MAX_MOVE);
-        }
-        actions.moveNodes(keys, moveType < 0 ? Optional.empty() : Optional.of(MOVE_TYPES.get(moveType)),
-                effectiveMoveNetwork());
+        actions.moveNodes(list.marks.nodeList(TabletMenu.MAX_MOVE), list.marks.payload(),
+                moveType < 0 ? Optional.empty() : Optional.of(MOVE_TYPES.get(moveType)), effectiveMoveNetwork());
         list.toggleMulti();
     }
 }

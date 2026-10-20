@@ -114,7 +114,7 @@ public final class TabletPayloads {
     /** Devolve quantos nós mudaram de rede, ou -1 se recusou. */
     public static int handleMoveNodes(@Nullable ServerPlayer player, TabletMoveNodesPayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
-        return menu == null ? -1 : menu.moveNodes(payload.nodes(), payload.resource(), payload.network());
+        return menu == null ? -1 : menu.moveNodes(payload.nodes(), payload.marks(), payload.resource(), payload.network());
     }
 
     /** Escolhe (ou, vazio, larga) o nó do painel; recusa um nó que o jogador não vê. */
@@ -130,7 +130,7 @@ public final class TabletPayloads {
     public static int handleProfile(@Nullable ServerPlayer player, TabletProfilePayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
         return menu == null ? -1 : menu.profile(payload.action(), payload.key().orElse(null),
-                payload.machine().orElse(null), payload.keys());
+                payload.machine().orElse(null), payload.keys(), payload.marks());
     }
 
     /** Abre ou fecha um roteador na árvore da Lista, ou muda um grupo dele; recusa um nó que o jogador não vê. */

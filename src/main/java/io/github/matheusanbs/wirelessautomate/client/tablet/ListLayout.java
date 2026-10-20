@@ -50,12 +50,12 @@ final class ListLayout {
      * "Mostrar menos" do bloco.
      */
     enum Kind { LABEL, VIEW, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
-        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW;
+        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN;
 
         /** Fica por cima da linha onde está. */
         boolean onTop() {
             return this == PASTE_GROUP || this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW
-                    || this == MACHINE_EYE || this == MACHINE_FEW;
+                    || this == MACHINE_EYE || this == MACHINE_FEW || this == MACHINE_OPEN;
         }
     }
 

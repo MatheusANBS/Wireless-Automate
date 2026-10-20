@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
  * O mouse nas linhas da árvore da Lista do Tablet e as dicas delas: o ▸/▾ abre e fecha o nó ou recolhe o grupo, o
  * "mais N" mostra todas e o "Mostrar menos" volta a poucas (só o {@code TabletTreePayload}; a árvore nova vem na
  * próxima página), o Olho acende a máquina no mundo e o resto da linha a escolhe ({@link TreeNav#choose}). No modo
- * Selecionar, que marca só nós, o clique no corpo de uma linha da árvore não faz nada.
+ * Selecionar, o clique no corpo da presa, do grupo ou da máquina marca ou desmarca ({@link MarkRows}).
  */
 final class TreeClicks {
     private final TabletList list;
@@ -57,6 +57,8 @@ final class TreeClicks {
             case TREE -> {
                 if (line.kind() == Kind.MORE || !list.multi) {
                     list.treeNav.choose(hot.arg());
+                } else {
+                    list.markRows.clickTree(hot.arg());
                 }
             }
             default -> {

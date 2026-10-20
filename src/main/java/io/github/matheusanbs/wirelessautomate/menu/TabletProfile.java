@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileSides;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
@@ -45,23 +46,23 @@ import org.jetbrains.annotations.Nullable;
  * mandado ao jogador.
  */
 final class TabletProfile {
-    /** Um nó do último colar: como era antes e como ficou logo depois (o desfazer só volta se ainda está assim). */
-    private record Pasted(RouterPreset before, RouterPreset after) {
-    }
-
     private final ServerPlayer viewer;
     private final int containerId;
     private final TabletQuery query;
     private final TabletSnapshotBuilder builder;
-    /** O último colar do Tablet: o que cada nó era antes e logo depois; some ao fechar o menu. */
-    private final Map<NodeKey, Pasted> undo = new LinkedHashMap<>();
+    /** A visão por máquinas, que reavalia o bloco marcado. */
+    private final TabletMachines machines;
+    /** O último colar do Tablet: o que cada roteador mudou; some ao fechar o menu. */
+    private final Map<NodeKey, PasteUndo> undo = new LinkedHashMap<>();
     private @Nullable Component lastNotice;
 
-    TabletProfile(ServerPlayer viewer, int containerId, TabletQuery query, TabletSnapshotBuilder builder) {
+    TabletProfile(ServerPlayer viewer, int containerId, TabletQuery query, TabletSnapshotBuilder builder,
+            TabletMachines machines) {
         this.viewer = viewer;
         this.containerId = containerId;
         this.query = query;
         this.builder = builder;
+        this.machines = machines;
     }
 
     boolean canUndo() {
@@ -74,10 +75,10 @@ final class TabletProfile {
 
     /** A ação já validada quanto ao menu; ver {@link TabletMenu#profile}. Devolve quantos nós ela atingiu, ou -1. */
     int run(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys) {
+            List<NodeKey> keys, TabletMarks marks) {
         boolean bulk = switch (action) {
             case PASTE_GROUP -> machine != null;
-            case PASTE_SELECTED -> !keys.isEmpty();
+            case PASTE_SELECTED -> !keys.isEmpty() || !marks.isEmpty();
             case UNDO -> !undo.isEmpty();
             default -> false;
         };
@@ -95,7 +96,8 @@ final class TabletProfile {
             }
             case PASTE_ONE -> key == null ? -1 : pasteProfile(tablet, List.of(key), true);
             case PASTE_GROUP -> machine == null ? -1 : pasteProfile(tablet, groupKeys(machine), false);
-            case PASTE_SELECTED -> keys.isEmpty() ? -1 : pasteProfile(tablet, keys, false);
+            case PASTE_SELECTED -> !marks.isEmpty() ? pasteMarked(tablet, keys, marks)
+                    : keys.isEmpty() ? -1 : pasteProfile(tablet, keys, false);
             case UNDO -> undoPaste();
         };
     }
@@ -131,15 +133,27 @@ final class TabletProfile {
                 List.copyOf(types), faces));
     }
 
-    /** Guarda no Tablet o perfil do nó: o preset das faces e a origem. */
+    /** Guarda no Tablet o perfil do nó: o preset das faces, a origem e o quadro da presa. */
     private int copyProfile(ItemStack tablet, @Nullable NodeKey key) {
         RouterBlockEntity router = key == null ? null : TabletNodes.reachableRouter(viewer, key);
         if (router == null) {
             return -1;
         }
         tablet.set(ModDataComponents.PRESET.get(), PresetPaste.copy(viewer, router));
-        tablet.set(ModDataComponents.PROFILE_SOURCE.get(), new ProfileSource(router.name(), machineOf(router, key), key));
+        tablet.set(ModDataComponents.PROFILE_SOURCE.get(),
+                new ProfileSource(router.name(), machineOf(router, key), key, frameOf(router)));
         return 1;
+    }
+
+    /**
+     * A frente da presa e o cima do mundo nos lados do roteador ({@link ProfileSides#frame}); sem frente, a presa vale
+     * Norte.
+     */
+    private static int frameOf(RouterBlockEntity router) {
+        int front = router.attachedFront();
+        Direction absolute = front < 0 ? Direction.NORTH : Direction.values()[front];
+        return ProfileSides.frame(RelativeSide.fromAbsolute(router.facing(), router.spin(), absolute).ordinal(),
+                RelativeSide.fromAbsolute(router.facing(), router.spin(), Direction.UP).ordinal());
     }
 
     /**
@@ -192,7 +206,7 @@ final class TabletProfile {
         NodeIndex index = NodeIndex.get(server);
         NetworkSavedData data = NetworkSavedData.get(server);
         boolean operator = viewer.hasPermissions(2);
-        Map<NodeKey, Pasted> before = new LinkedHashMap<>();
+        Map<NodeKey, PasteUndo> before = new LinkedHashMap<>();
         PresetApplier.Checked rule = null;
         Component lastName = Component.empty();
         int skipped = 0;
@@ -212,9 +226,9 @@ final class TabletProfile {
                 skipped++;
                 continue;
             }
-            RouterPreset was = RouterPreset.copyOf(router);
+            PasteUndo.State was = PasteUndo.State.of(router, false);
             rule = PresetPaste.paste(viewer, router, profile, null);
-            before.put(key, new Pasted(was, RouterPreset.copyOf(router)));
+            before.put(key, PasteUndo.between(was, PasteUndo.State.of(router, false), true));
             lastName = nodeName(entry);
         }
         if (!before.isEmpty()) {
@@ -224,6 +238,30 @@ final class TabletProfile {
         int pasted = before.size();
         sendPasteNotice(pasted, skipped, lastName, rule == null ? 0 : keptFaces(profile, rule));
         return pasted;
+    }
+
+    /**
+     * Cola o perfil guardado nos roteadores {@code keys} (na presa) e nos marcados {@code marks} (máquinas, grupos e
+     * blocos; {@link MarkedPaste}), menos a presa da origem. Devolve quantos alvos receberam.
+     */
+    private int pasteMarked(ItemStack tablet, List<NodeKey> keys, TabletMarks marks) {
+        RouterPreset profile = storedProfile(viewer);
+        ProfileSource source = tablet.get(ModDataComponents.PROFILE_SOURCE.get());
+        if (profile == null || source == null) {
+            return -1;
+        }
+        PresetApplier.Checked rule = PresetApplier.check(viewer, profile, null);
+        Map<NodeKey, PasteUndo> changes = new LinkedHashMap<>();
+        MarkedPaste.Result result = MarkedPaste.paste(viewer, MarkedTargets.collect(viewer, keys, marks, machines), rule,
+                source, changes);
+        if (!changes.isEmpty()) {
+            undo.clear();
+            undo.putAll(changes);
+        }
+        announce(new PanelNoticePayload(MarkedNotice.paste(result, result.pastedAny() ? keptFaces(profile, rule) : 0),
+                result.pastedAny() ? PanelNoticePayload.Undo.UNDO_PASTE : PanelNoticePayload.Undo.NONE, containerId,
+                ResourceType.ITEM, Direction.UP));
+        return result.routers() + result.groups() + result.machines();
     }
 
     /** Quantas faces do perfil ficaram com a rede de antes, porque o jogador não pode usar a rede delas. */
@@ -267,25 +305,24 @@ final class TabletProfile {
     }
 
     /**
-     * Devolve cada nó do último colar ao que era ({@link RouterPreset#restoreTo}), se ainda é visível, está
-     * carregado e ao alcance e se ninguém o mudou depois do colar (senão o desfazer apagaria a mudança), e esquece
-     * o colar. Devolve quantos voltaram, ou -1 sem nada para desfazer.
+     * Devolve cada roteador do último colar ao que era ({@link PasteUndo#restore}: a presa, os perfis e as exceções),
+     * se ainda é visível, está carregado e ao alcance, e só no que ninguém mudou depois do colar (senão o desfazer
+     * apagaria a mudança), e esquece o colar. Devolve quantos voltaram, ou -1 sem nada para desfazer.
      */
     private int undoPaste() {
         if (undo.isEmpty()) {
             return -1;
         }
-        Map<NodeKey, Pasted> pending = new LinkedHashMap<>(undo);
+        Map<NodeKey, PasteUndo> pending = new LinkedHashMap<>(undo);
         undo.clear();
         int restored = 0;
         int skipped = 0;
-        for (Map.Entry<NodeKey, Pasted> entry : pending.entrySet()) {
+        for (Map.Entry<NodeKey, PasteUndo> entry : pending.entrySet()) {
             RouterBlockEntity router = TabletNodes.reachableRouter(viewer, entry.getKey());
-            if (router == null || !RouterPreset.copyOf(router).equals(entry.getValue().after())) {
+            if (router == null || entry.getValue().restore(router) == 0) {
                 skipped++;
                 continue;
             }
-            entry.getValue().before().restoreTo(router);
             restored++;
         }
         String base = "gui.wirelessautomate.panel.notice.";

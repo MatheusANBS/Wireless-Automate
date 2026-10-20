@@ -91,9 +91,14 @@ final class MachineRows {
             switch (rows.get(r)) {
                 case TabletMachineRows.Machine machine -> layout.hots.add(new Hot(Kind.MACHINE_EYE,
                         x + w - 3 - EYE_W, y, EYE_W, FIRST_H, r));
-                case TabletMachineRows.Block block when block.showAll() -> {
-                    int lw = Math.min(texts.lessW + 2, w / 2);
-                    layout.hots.add(new Hot(Kind.MACHINE_FEW, x + w - 3 - lw, y, lw, h, r));
+                case TabletMachineRows.Block block -> {
+                    if (list.multi) {
+                        layout.hots.add(new Hot(Kind.MACHINE_OPEN, x + 14, y, CHEV_W + 2, h, r));
+                    }
+                    if (block.showAll()) {
+                        int lw = Math.min(texts.lessW + 2, w / 2);
+                        layout.hots.add(new Hot(Kind.MACHINE_FEW, x + w - 3 - lw, y, lw, h, r));
+                    }
                 }
                 default -> {
                 }
@@ -123,9 +128,14 @@ final class MachineRows {
             int mx, int my) {
         int r = hot.arg();
         boolean hovered = hot.contains(mx, my) || list.machineNav.isCursor(r);
-        g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
+        ListMarks.Box box = list.multi ? list.markRows.machineBox(r) : ListMarks.Box.NONE;
+        g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), box == ListMarks.Box.ALL ? GuiPaint.ROW_SELECTED
+                : hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
         g.fill(hot.x(), hot.y() + hot.h() - 1, hot.x() + hot.w(), hot.y() + hot.h(), GuiPaint.LINE);
         int color = hovered ? GuiPaint.FG : GuiPaint.MUTED;
+        if (list.multi) {
+            MarkRows.paint(g, hot.x() + 3, hot.y() + 2, box);
+        }
         int x = hot.x() + (list.multi ? 12 : 0);
         if (block.collapsed()) {
             GuiPaint.arrowRight(g, x + 4, hot.y() + 3, color);
@@ -162,11 +172,15 @@ final class MachineRows {
         int y = hot.y();
         int w = hot.w();
         int h = hot.h();
-        if (isTarget(machine)) {
+        ListMarks.Box box = list.multi ? list.markRows.machineBox(r) : ListMarks.Box.NONE;
+        if (isTarget(machine) || box == ListMarks.Box.ALL) {
             g.fill(x, y, x + w, y + h - 1, GuiPaint.ROW_SELECTED);
             g.fill(x, y, x + 2, y + h - 1, GuiPaint.ACCENT);
         } else if (hot.contains(mx, my) || list.machineNav.isCursor(r)) {
             g.fill(x, y, x + w, y + h - 1, GuiPaint.ROW_HOVER);
+        }
+        if (list.multi) {
+            MarkRows.paint(g, x + 5, y + 5, box);
         }
         int tx = contentX(x);
         g.fill(tx, y + h - 1, x + w - 2, y + h, GuiPaint.LINE);

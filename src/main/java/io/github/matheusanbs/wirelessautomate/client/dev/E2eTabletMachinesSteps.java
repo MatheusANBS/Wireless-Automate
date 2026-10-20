@@ -61,12 +61,12 @@ final class E2eTabletMachinesSteps {
 
     private static final String NAME = "E2E Maquinas";
     private static final int FURNACES = 10;
-    private static final int FIRST_FURNACE = 2;
-    private static final int EXCEPTION = FIRST_FURNACE;
+    static final int FIRST_FURNACE = 2;
+    static final int EXCEPTION = FIRST_FURNACE;
     private static final ResourceLocation FURNACE = BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE);
     private static final ResourceLocation CHEST = BuiltInRegistries.BLOCK.getKey(Blocks.CHEST);
     private static BlockPos chest = BlockPos.ZERO;
-    private static BlockPos router = BlockPos.ZERO;
+    static BlockPos router = BlockPos.ZERO;
     private static BlockPos source = BlockPos.ZERO;
     private static BlockPos sink = BlockPos.ZERO;
     private static final List<BlockPos> furnaces = new ArrayList<>();
@@ -117,7 +117,9 @@ final class E2eTabletMachinesSteps {
         list.add(new Step("máquinas: volta em Máquinas, com os baús recolhidos", STEP_TIMEOUT_MS, () -> {
         }, () -> page().active() && block(CHEST) != null && block(CHEST).collapsed() && furnaceRows() == 8,
                 () -> "linhas " + page().rows().size()));
+        E2eTabletMarkSteps.markSteps(list);
         portugueseSteps(list);
+        list.add(E2eTabletMarkSteps.forget());
         list.add(tearDown());
     }
 
@@ -172,6 +174,7 @@ final class E2eTabletMachinesSteps {
         list.add(flowingCapture("7o-tablet-maquinas-pt"));
         list.add(clipCheck("pt: Tablet: máquinas"));
         list.add(listClipTooltip("pt: Tablet: máquinas"));
+        E2eTabletMarkSteps.portugueseSteps(list);
         list.add(E2eNetworkSectionSteps.chooseNetwork("pt: redes: "));
         list.add(capture("7p-tablet-redes-grupos-pt"));
         list.add(clipCheck("pt: Tablet: Redes com grupos"));
@@ -184,7 +187,7 @@ final class E2eTabletMachinesSteps {
     }
 
     /** Acha o roteador pela busca: os baús (a presa e os dois) e as fornalhas (8 e o "mais 2"). */
-    private static Step search(String label) {
+    static Step search(String label) {
         return new Step(label + "achar o roteador pela busca", STEP_TIMEOUT_MS, () -> {
             TabletScreen screen = tabletScreen();
             screen.list().clearAll();
@@ -203,7 +206,7 @@ final class E2eTabletMachinesSteps {
     }
 
     /** Clicar na máquina escolhe o roteador e põe a máquina como alvo do painel. */
-    private static Step chooseMachine(String label, int index) {
+    static Step chooseMachine(String label, int index) {
         return new Step(label + "escolher a máquina " + index, STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().list().machines().machineCenter(node(), index);
             if (c == null) {
@@ -355,15 +358,15 @@ final class E2eTabletMachinesSteps {
                 && tabletScreen().getMenu().snapshot().query().text().isEmpty(), () -> "ainda em Máquinas ou no índice");
     }
 
-    private static NodeIndex.NodeKey node() {
+    static NodeIndex.NodeKey node() {
         return new NodeIndex.NodeKey(Level.OVERWORLD, router);
     }
 
-    private static TabletMachineRows page() throws StepFailure {
+    static TabletMachineRows page() throws StepFailure {
         return tabletScreen().getMenu().snapshot().machineRows();
     }
 
-    private static TabletMachineRows.@Nullable Block block(ResourceLocation id) throws StepFailure {
+    static TabletMachineRows.@Nullable Block block(ResourceLocation id) throws StepFailure {
         for (TabletMachineRows.Row row : page().rows()) {
             if (row instanceof TabletMachineRows.Block block && block.block().equals(id)) {
                 return block;

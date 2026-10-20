@@ -173,12 +173,12 @@ final class TargetLine {
         Component scope;
         if (machine != null) {
             Component state = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
-            scope = tr("range.scope.machine", RangeList.machineName(model.range(), model.snapshot().target().id()),
+            scope = tr("range.scope.machine", MachineTexts.machineName(model.range(), model.snapshot().target().id()),
                     state);
         } else {
             RangeView.GroupView group = model.targetGroup();
             scope = group == null ? panelTr("target.attached")
-                    : tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(), group.count());
+                    : tr("range.scope.group", MachineTexts.groupName(group), group.count() - group.exceptions(), group.count());
         }
         return scope.copy().append("\n").append(panelTr("target.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
@@ -190,12 +190,12 @@ final class TargetLine {
         rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, panelTr("target.attached"), null, 0, false));
         RangeView view = model.range();
         for (RangeView.GroupView group : view.groups()) {
-            rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", RangeList.groupName(group)),
+            rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", MachineTexts.groupName(group)),
                     Component.literal(Integer.toString(group.count())), GuiPaint.MUTED, false));
             for (int i = 0; i < view.machines().size(); i++) {
                 RangeView.MachineView machine = view.machines().get(i);
                 if (machine.group() == group.id()) {
-                    rows.add(new TargetRow(EditTarget.machine(i), RangeList.machineName(view, i),
+                    rows.add(new TargetRow(EditTarget.machine(i), MachineTexts.machineName(view, i),
                             machine.exception() ? panelTr("target.exception") : null, GuiPaint.WARN, true));
                 }
             }
@@ -244,12 +244,12 @@ final class TargetLine {
         EditTarget target = model.snapshot().target();
         RangeView.MachineView machine = model.targetMachine();
         if (machine != null) {
-            label.start(target, machine.pos(), machine.label(), RangeList.blockName(model.range(), target.id()));
+            label.start(target, machine.pos(), machine.label(), MachineTexts.blockName(model.range(), target.id()));
             return;
         }
         RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? model.range().group(target.id()) : null;
         if (group != null) {
-            label.start(target, null, group.name(), RangeList.groupName(group));
+            label.start(target, null, group.name(), MachineTexts.groupName(group));
         }
     }
 

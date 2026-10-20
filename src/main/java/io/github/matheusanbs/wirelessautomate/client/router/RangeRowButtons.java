@@ -100,7 +100,7 @@ public final class RangeRowButtons {
             RangeView.GroupView g = view.group(group);
             widthView = view;
             widthGroup = group;
-            groupNameW = g == null ? 0 : font.width(tr("range.group.count", RangeList.groupName(g), g.count()));
+            groupNameW = g == null ? 0 : font.width(tr("range.group.count", MachineTexts.groupName(g), g.count()));
         }
         return groupNameW;
     }

@@ -23,6 +23,13 @@ public final class GuiText {
         }
     }
 
+    /**
+     * Uma linha já medida e abreviada em {@code width} por {@link #fit}, para a tela guardar e desenhar por
+     * {@link #draw(GuiGraphics, Font, Fitted, int, int, int)} sem medir de novo a cada quadro.
+     */
+    public record Fitted(Component full, FormattedCharSequence shown, int width, boolean cut) {
+    }
+
     private static final List<Clip> CLIPS = new ArrayList<>();
 
     private GuiText() {
@@ -43,6 +50,24 @@ public final class GuiText {
         }
         GuiPaint.text(g, font, GuiPaint.ellipsize(font, text, width), x, y, color);
         CLIPS.add(new Clip(x, y - 1, width, font.lineHeight + 1, text));
+    }
+
+    /** Mede e abrevia {@code text} em {@code width}, como o {@link #draw} faria. */
+    public static Fitted fit(Font font, Component text, int width) {
+        boolean cut = width > 0 && font.width(text) > width;
+        FormattedCharSequence shown = cut ? GuiPaint.ellipsize(font, text, width) : text.getVisualOrderText();
+        return new Fitted(text, shown, width, cut);
+    }
+
+    /** Desenha uma linha medida pelo {@link #fit}; cortada, guarda o texto inteiro para o tooltip. */
+    public static void draw(GuiGraphics g, Font font, Fitted text, int x, int y, int color) {
+        if (text.width() <= 0) {
+            return;
+        }
+        GuiPaint.text(g, font, text.shown(), x, y, color);
+        if (text.cut()) {
+            CLIPS.add(new Clip(x, y - 1, text.width(), font.lineHeight + 1, text.full()));
+        }
     }
 
     /** Até {@code maxLines} linhas de 10 px; a última é abreviada se sobrar texto. Devolve a altura usada. */

@@ -5,7 +5,9 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -223,6 +225,10 @@ final class E2eResonatorSteps {
         list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
         list.add(DevEndToEnd.wait("a câmara acender", 30));
         list.add(capture("ressonador-camara"));
+        list.add(frameTime(true));
+        list.add(frameTime(false));
+        list.add(frameTime(true));
+        list.add(frameTime(false));
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
             return null;
@@ -237,6 +243,46 @@ final class E2eResonatorSteps {
                 return null;
             });
         }, () -> true, () -> "dial"));
+    }
+
+    /**
+     * O tempo médio de quadro em 120 quadros com a câmara ocupando a tela, sem o limite de FPS e sem o vsync (o
+     * que valia volta ao fim), com o desenho antigo forçado ou com o plasma; a linha vai para o result.txt.
+     */
+    private static Step frameTime(boolean legacy) {
+        long[] start = new long[2];
+        int[] saved = new int[2];
+        String label = legacy ? "camara antiga" : "camara plasma";
+        double[] result = new double[1];
+        return new Step("Ressonador: " + label + " (tempo de quadro)", 60_000, () -> {
+            var options = Minecraft.getInstance().options;
+            saved[0] = options.enableVsync().get() ? 1 : 0;
+            saved[1] = options.framerateLimit().get();
+            options.enableVsync().set(false);
+            options.framerateLimit().set(260);
+            ResonatorRenderer.forceLegacyForTests = legacy;
+            start[0] = FrameClock.frame() + 30;
+        }, () -> {
+            long frame = FrameClock.frame();
+            if (frame < start[0]) {
+                return false;
+            }
+            if (start[1] == 0) {
+                // o check roda por tick: o primeiro depois do aquecimento marca o quadro e a hora de partida
+                start[0] = frame;
+                start[1] = System.nanoTime();
+                return false;
+            }
+            if (frame < start[0] + 120) {
+                return false;
+            }
+            result[0] = (System.nanoTime() - start[1]) / (double) (frame - start[0]) / 1_000_000.0;
+            var options = Minecraft.getInstance().options;
+            options.enableVsync().set(saved[0] == 1);
+            options.framerateLimit().set(saved[1]);
+            ResonatorRenderer.forceLegacyForTests = false;
+            return true;
+        }, () -> String.format(java.util.Locale.ROOT, "%s: %.3f ms/quadro", label, result[0]));
     }
 
     /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */

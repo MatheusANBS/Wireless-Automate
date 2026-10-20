@@ -8,8 +8,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
 /**
- * Uma peça da cascata do Ressonador (da Liga de Sinal crua ao Núcleo Condensado): item comum com uma linha de dica,
- * a chave {@code <nome do item>.tooltip}.
+ * Uma peça da cascata do Ressonador (da Liga de Sinal crua ao Núcleo Condensado, mais a Moldura de Liga do Coração
+ * Ultimate): item comum com uma linha de dica, a chave {@code <nome do item>.tooltip}.
  */
 public class CascadeItem extends Item {
     private Component tip;

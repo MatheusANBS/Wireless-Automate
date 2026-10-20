@@ -1,13 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload.Action;
 import java.util.List;
-import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,29 +43,11 @@ final class ListProfileActions {
         send(Action.FORGET, null, null, List.of());
     }
 
-    void pasteGroup(ResourceLocation machine) {
-        send(Action.PASTE_GROUP, null, machine, List.of());
-    }
-
     /** Cola nos marcados: os roteadores (na presa) e as máquinas, os grupos e os blocos. */
     void pasteSelected() {
         if (list.profile().isPresent() && !list.marks.isEmpty()) {
             list.actions.profile(Action.PASTE_SELECTED, null, null, list.marks.nodeList(TabletProfilePayload.MAX_KEYS),
                     list.marks.payload());
         }
-    }
-
-    /** Quantos nós do grupo o "Colar nas N" atinge: os da consulta, menos a origem do perfil. */
-    int pasteCount(ResourceLocation machine) {
-        ProfileSummary summary = list.profile().orElse(null);
-        if (summary == null) {
-            return 0;
-        }
-        TabletSnapshot s = list.snapshot();
-        int count = s.groupCount(machine);
-        if (s.originGroup().equals(Optional.of(machine))) {
-            count--;
-        }
-        return Math.min(count, TabletMenu.MAX_MOVE);
     }
 }

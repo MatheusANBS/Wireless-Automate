@@ -12,7 +12,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /** As dicas da Lista do Tablet: as do painel, da faixa do perfil e de cada área, com o texto cortado inteiro. */
@@ -64,9 +63,6 @@ final class ListTooltips {
             case QUICK -> tr("list.quick." + QuickFilter.values()[hot.arg()].name().toLowerCase(Locale.ROOT) + ".tooltip");
             case TYPE_CHIP -> tr("list.type.tooltip");
             case FORGET -> tr("list.profile.forget.tooltip");
-            case HEADER -> list.model.collapsed(list.model.tree().lines().get(hot.arg()).group()) ? tr("list.group.open")
-                    : tr("list.group.close");
-            case PASTE_GROUP -> pasteGroupTooltip(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> list.nodes.nodeTooltip(list.snapshot().nodes().get(hot.arg()), !list.multi);
             case FULL_SCREEN -> tr("open.tooltip");
             case COPY -> list.chosenPanel.canEdit() ? tr("list.copy.tooltip") : readOnlyTip();
@@ -82,11 +78,6 @@ final class ListTooltips {
         TabletPanelPayload payload = list.chosenPanel.payload();
         Component reason = payload == null ? null : ChosenPanel.readOnlyReason(payload);
         return reason == null ? tr("list.copy.tooltip") : reason;
-    }
-
-    private Component pasteGroupTooltip(ResourceLocation machine) {
-        ProfileSummary s = list.profile().orElseThrow();
-        return tr("list.paste_group.tooltip", s.sourceName(), list.profileActions.pasteCount(machine), list.texts.machineName(machine));
     }
 
     /** A dica da faixa: de onde veio o perfil, a máquina e o que ele tem. */

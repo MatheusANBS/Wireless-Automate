@@ -28,12 +28,22 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
  * passos e das capturas são o contrato do {@code result.txt}.
  */
 final class E2eScript {
+    /** Opcional ({@code WA_E2E_ONLY=tablet}): só a abertura, o nome e as redes de B, a transferência entre redes e os passos do Tablet. */
+    private static final String ONLY = System.getenv("WA_E2E_ONLY");
+
     private E2eScript() {
     }
 
     static List<Step> script() {
         List<Step> list = new ArrayList<>();
         openingSteps(list);
+        if ("tablet".equals(ONLY)) {
+            networkSteps(list);
+            list.add(close("fechar B"));
+            typeNetworkTransferSteps(list);
+            tabletSteps(list);
+            return list;
+        }
         filterSteps(list);
         networkSteps(list);
         layoutSteps(list);

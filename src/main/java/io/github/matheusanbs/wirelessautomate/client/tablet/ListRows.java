@@ -17,7 +17,6 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -29,6 +28,8 @@ final class ListRows {
     /** Abaixo desta largura da lista, os quadradinhos das faces somem. */
     private static final int CHIPS_MIN_LIST = 150;
     private static final int CHIP = 4;
+    private static final float ICON_SCALE = 0.625f;
+    private static final int ICON_W = 10;
 
     private final TabletList list;
     private final ListLayout layout;
@@ -51,10 +52,9 @@ final class ListRows {
         }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
         ProfileSummary profile = s.profile().orElse(null);
-        List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
+        List<ListTree.Line> rows = list.model.tree().lines();
         for (Hot hot : layout.hots) {
             switch (hot.kind()) {
-                case HEADER -> renderHeader(g, font, hot, rows, profile, mx, my);
                 case ROW -> renderNode(g, font, hot, nodes.get(hot.arg()), profile, chips, mx, my);
                 case TREE -> list.treeRows.render(g, font, hot, rows.get(hot.arg()), mx, my);
                 default -> {
@@ -118,33 +118,6 @@ final class ListRows {
         }
     }
 
-    private void renderHeader(GuiGraphics g, Font font, Hot hot, List<ListTree.Line<ResourceLocation>> rows,
-            @Nullable ProfileSummary profile, int mx, int my) {
-        ListTree.Line<ResourceLocation> row = rows.get(hot.arg());
-        boolean hovered = hot.contains(mx, my);
-        g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
-        g.fill(hot.x(), hot.y() + hot.h() - 1, hot.x() + hot.w(), hot.y() + hot.h(), GuiPaint.LINE);
-        int color = hovered ? GuiPaint.FG : GuiPaint.MUTED;
-        if (row.collapsed()) {
-            GuiPaint.arrowRight(g, hot.x() + 4, hot.y() + 3, color);
-        } else {
-            GuiPaint.arrowDown(g, hot.x() + 3, hot.y() + 4, color);
-        }
-        Hot paste = layout.hot(Kind.PASTE_GROUP, hot.arg());
-        int right = paste != null ? paste.x() - 3 : hot.x() + hot.w() - 3;
-        GuiText.draw(g, font, list.texts.header(font, list.model.tree(), rows.size(), hot.arg(), row, profile,
-                right - hot.x() - 11), hot.x() + 11, hot.y() + 2, GuiPaint.FG);
-        if (paste != null && profile != null) {
-            boolean same = profile.machine().equals(row.group());
-            boolean over = paste.contains(mx, my);
-            int fill = same ? (over ? GuiPaint.mix(GuiPaint.OK, GuiPaint.FG, 0.2f) : GuiPaint.OK)
-                    : over ? GuiPaint.BUTTON : GuiPaint.PANEL;
-            GuiPaint.box(g, paste.x(), paste.y(), paste.w(), paste.h(), fill, same ? fill : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.profileActions.pasteCount(row.group())),
-                    paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
-        }
-    }
-
     /**
      * A linha do nó. Escolhido e aberto na árvore, o alvo do painel é uma das linhas de baixo, que leva a marca: o
      * nó fica só com o fundo.
@@ -176,14 +149,25 @@ final class ListRows {
             list.treeRows.renderNodeChevron(g, cx, y, node, line, toggle != null && toggle.contains(mx, my));
             cx += chevron;
         }
-        GuiPaint.dot(g, cx, y + 7, TabletText.statusColor(node.status()));
-        int textX = cx + 8;
+        g.pose().pushPose();
+        g.pose().translate(cx, y + 1, 0);
+        g.pose().scale(ICON_SCALE, ICON_SCALE, 1f);
+        g.renderItem(RouterIcons.of(node.tier()), 0, 0);
+        g.pose().popPose();
+        // o estado vai na pontinha do ícone, para a linha não perder largura
+        GuiPaint.dot(g, cx + 7, y + 7, TabletText.statusColor(node.status()));
+        int textX = cx + ICON_W + 3;
         int right = x + hot.w() - 3;
         if (chips) {
             right -= 3 * CHIP + 2 + 4;
             renderChips(g, right + 4, y + 5, node);
         }
-        ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX);
+        ListTexts.TierPill pill = list.texts.pill(font, node.tier());
+        ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX, pill.width());
+        if (texts.pill()) {
+            GuiPaint.outline(g, right - pill.width(), y + 1, pill.width(), 10, pill.color());
+            GuiPaint.text(g, font, pill.name(), right - pill.width() + ListTexts.PILL_PAD + 1, y + 2, pill.color());
+        }
         GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
         GuiText.draw(g, font, texts.state(), textX, y + 11, GuiPaint.MUTED);
     }

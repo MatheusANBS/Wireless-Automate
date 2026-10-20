@@ -121,12 +121,32 @@ Base `B/` = `src/main/java/io/github/matheusanbs/wirelessautomate/`, `T/` = `src
 
 ---
 
+### Task 6: O cristal em 3D (Ponta dupla)
+
+Acrescentada depois da Task 4, pelo protótipo `docs/preview/ressonador-cristal-3d.html` (aprovado na forma Ponta dupla; a seção "O cristal em 3D" da spec tem os valores). Roda antes da Task 5.
+
+**Files:** `assets/wirelessautomate/shaders/core/resonator_crystal.{json,vsh,fsh}` (novos), `B/client/resonator/render/CrystalShader.java`, `CrystalMesh.java` (novos), `ChamberRenderTypes.java`, `ChamberCrystals.java`, `CrystalAura.java`, `ResonatorRenderer.java`, `ClientSetup.java` (registro do shader), `B/client/dev/E2eResonatorSteps.java` (captura).
+
+**Interfaces:**
+- Consumes: `ChamberCrystals.crystalPos`, o estado do Opaco e o progresso da recarga que a `CrystalAura` já lê, a sintonia suavizada do `ChamberScene`, `GuiPaint.tierColor`, `ShaderPackCheck`.
+- Produces: `CrystalShader.get()`, `ChamberRenderTypes.crystal()` e `CrystalMesh` (os 12 triângulos em constantes e a escrita no `VertexConsumer` sem alocar).
+
+- [ ] **Step 1: Malha:** `CrystalMesh` com os vértices da spec, montados uma vez num `float[]` estático; escreve os 12 triângulos com a pose do cristal, a normal plana de cada faceta e as coordenadas da faceta (cada triângulo com os cantos (0,0), (1,0), (0,1) no UV0, para a aresta) e a altura relativa no cristal (0 na ponta de baixo, 1 na de cima). JUnit da malha: 12 triângulos, normais para fora, alturas de 0 a 1.
+- [ ] **Step 2: Shader e render type:** `resonator_crystal` no formato que couber (o `BLOCK` do vanilla tem a normal; a escolha e o empacotamento dos parâmetros ficam no relatório). Opaco, com profundidade, sem blend, luz cheia. Parâmetros por cristal nos vértices: cor do tier, sintonia, vivo/Opaco, progresso da recarga (ou nenhum), semente. Os veios presos ao cristal: o ruído em coordenadas do cristal (faceta, coordenadas da faceta, altura), nunca na posição relativa à câmera. Registro no `ClientSetup` como os outros dois.
+- [ ] **Step 3: `ChamberCrystals`:** no modo shader (`CrystalShader.get() != null`, `!ShaderPackCheck.active()`, `!forceLegacyForTests`), desenha a malha no lugar do `renderStatic`, com a mesma posição, giro e escala; no modo antigo, o sprite como hoje. A `CrystalAura` deixa de fazer o enchimento no modo shader (o cristal enche); a aura dos vivos e o anel continuam.
+- [ ] **Step 4: Verificar:** build, GameTests e o e2e filtrado; captura nova `ressonador-camara-cristais.png` com a câmara mais perto dos cristais (vivo e Opaco à vista), e as de antes (`ressonador-camara`, `-fluxo`, `-recarga`). Abra e descreva: facetas visíveis, borda acesa, Opaco cinza, a recarga enchendo.
+- [ ] **Step 5: Commit:** `Câmara do Ressonador: cristal em 3D facetado`.
+
+**Custo:** 12 triângulos por cristal, até 96 por Núcleo, um render type; nada alocado por quadro; servidor e rede sem mudança.
+
+---
+
 ### Task 5: Medida, docs e fechamento
 
 **Files:** `B/client/dev/E2eResonatorSteps.java` (só se a medida precisar incluir o conduto e a recarga), `CLAUDE.md`, `docs/progresso.md`.
 
 - [ ] **Step 1:** a medida do e2e (`camara antiga` × `camara plasma`) roda com o conduto e uma aura ligados; anote os números com o ruído (duas rodadas). Regressão acima do ruído e de ~0,5 ms pede cortar o detalhe nos modos novos pela distância (como o plasma).
-- [ ] **Step 2:** `CLAUDE.md`: a linha do `client/resonator/render/` com `RibbonShader`, `FlowConduit`, `RechargeSpiral`, `CrystalAura` e o modo antigo; a linha do `resonator/` com `PortOrder`, `CoreFlow` e os campos novos da `ChamberView`. `docs/progresso.md`: estado, histórico com as medidas.
+- [ ] **Step 2:** `CLAUDE.md`: a linha do `client/resonator/render/` com `RibbonShader`, `FlowConduit`, `RechargeSpiral`, `CrystalAura`, `CrystalShader`, `CrystalMesh` e o modo antigo; a linha do `resonator/` com `PortOrder`, `CoreFlow` e os campos novos da `ChamberView`. `docs/progresso.md`: estado, histórico com as medidas.
 - [ ] **Step 3: Commit:** `Câmara do Ressonador: medida e docs da parte 2`.
 
 ## Revisão final (partes 1 e 2)

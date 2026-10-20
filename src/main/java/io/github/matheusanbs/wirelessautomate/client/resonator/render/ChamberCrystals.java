@@ -16,9 +16,10 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Os cristais em anel na câmara, pelo modelo do item, e os feixes de cada cristal vivo até a cabeça da figura. Em
- * sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e balançando. O Opaco fica caído e cinza (o
- * modelo Opaco do item) e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor.
+ * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
+ * a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou com shaderpack do
+ * Iris), o modelo do item. Em sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e balançando. O Opaco
+ * fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor.
  */
 final class ChamberCrystals {
     private static final double RADIUS = 0.95;
@@ -48,18 +49,19 @@ final class ChamberCrystals {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource buffer, ChamberScene scene, long gameTime,
-            float partialTick, ClientLevel level) {
+            float partialTick, ClientLevel level, boolean gem, int tierColor) {
         byte[] chambers = scene.chambers();
         double since = scene.sinceFormed(gameTime, partialTick);
         float scale = (float) (SCALE * ChamberScene.on(since, CRYSTAL_DELAY));
         if (scale <= 0) {
             return;
         }
-        ItemStack[] items = stacks();
         double ticks = gameTime + partialTick;
         double t = ticks * TICK_SECONDS;
         double q = scene.q();
         ChamberView view = scene.view();
+        int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * 255);
+        int recharging = recharging(chambers, view);
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
                 continue;
@@ -74,8 +76,14 @@ final class ChamberCrystals {
             poseStack.mulPose(Axis.ZP.rotation((float) (dull ? DULL_TILT * fallen
                     : Math.sin(3 * t + seed) * SWAY * (1 - q))));
             poseStack.scale(scale, scale, scale);
-            Minecraft.getInstance().getItemRenderer().renderStatic(items[chambers[i]], ItemDisplayContext.FIXED,
-                    LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, buffer, level, 0);
+            if (gem) {
+                int state = !dull ? CrystalGem.LIVE
+                        : recharging == i ? CrystalGem.recharging(recharge(i, chambers, ticks, view)) : CrystalGem.DULL;
+                CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i);
+            } else {
+                Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,
+                        LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, buffer, level, 0);
+            }
             poseStack.popPose();
         }
         beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick);

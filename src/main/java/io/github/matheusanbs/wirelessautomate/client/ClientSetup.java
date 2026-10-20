@@ -28,6 +28,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
 import java.io.IOException;
@@ -102,10 +103,11 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
     }
 
-    /** Os core shaders da câmara: o Núcleo de plasma e as fitas. */
+    /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
     @SubscribeEvent
     static void registerShaders(RegisterShadersEvent event) throws IOException {
         PlasmaShader.register(event);
         RibbonShader.register(event);
+        CrystalShader.register(event);
     }
 }

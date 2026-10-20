@@ -6,9 +6,10 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * Os tipos de desenho da câmara: os sprites aditivos (o halo e a placa de Chladni) e o billboard do Núcleo de plasma. As texturas guardam a intensidade
- * no alfa, com cor nos pixels transparentes; o {@code eyes} soma ONE, ONE e acenderia o quadrado inteiro. Aqui a
- * soma é SRC_ALPHA, ONE (a do {@code lightning}), sem gravar profundidade e nas duas faces; o plasma usa a mesma soma.
+ * Os tipos de desenho da câmara: os sprites aditivos (o halo e a placa de Chladni), o billboard do Núcleo de plasma,
+ * as fitas e o cristal facetado, este o único opaco. As texturas guardam a intensidade no alfa, com cor nos pixels
+ * transparentes; o {@code eyes} soma ONE, ONE e acenderia o quadrado inteiro. Aqui a soma é SRC_ALPHA, ONE (a do
+ * {@code lightning}), sem gravar profundidade e nas duas faces; o plasma e as fitas usam a mesma soma.
  */
 final class ChamberRenderTypes extends RenderType {
     private static final RenderType GLOW = create(WirelessAutomate.MODID + "_chamber_glow",
@@ -39,6 +40,12 @@ final class ChamberRenderTypes extends RenderType {
                     .setWriteMaskState(COLOR_WRITE)
                     .createCompositeState(false));
 
+    private static final RenderType CRYSTAL = create(WirelessAutomate.MODID + "_chamber_crystal",
+            DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.TRIANGLES, 1536, false, false,
+            CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(CrystalShader::get))
+                    .createCompositeState(false));
+
     private ChamberRenderTypes(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
             boolean crumbling, boolean sort, Runnable setup, Runnable clear) {
         super(name, format, mode, bufferSize, crumbling, sort, setup, clear);
@@ -57,5 +64,10 @@ final class ChamberRenderTypes extends RenderType {
     /** As fitas e os brilhos (conduto, espiral, aura e anel): aditivo, sem gravar profundidade, nas duas faces. */
     static RenderType ribbon() {
         return RIBBON;
+    }
+
+    /** O cristal facetado: opaco, com profundidade e sem blend, só as faces de fora. */
+    static RenderType crystal() {
+        return CRYSTAL;
     }
 }

@@ -39,6 +39,7 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | T4 | O painel do nó manda o snapshot inteiro quando só a distância muda | `TabletChosenNode:152` | médio-baixo | feito `b315236` (a tela calcula a distância pela posição local) |
 | T5 | Pulso de redstone recaptura a tela do roteador aberta | `RouterMenu:889` | baixo | feito `b315236` (o sinal não sobe o `changeVersion`; a tela do roteador confere uma vez por segundo) |
 | T6 | A área do Vinculador é revarrida quando qualquer roteador carrega | `LinkerMenu:84` | baixo-médio | feito `b315236` (o Vinculador revarre pela `dataVersion` do índice) |
+| T7 | A segunda linha do nó na Lista (`ListTexts.stateLine`) e o cabeçalho de grupo são montados a cada quadro; um `Component[]` por índice de nó em `ListTexts`, refeito quando mudam os nós da página, o perfil, o `chipType` ou o `GuiThemes.version()` (as cores dentro do `Component`) | `ListTexts:90` (chamada em `ListRows:190`), `ListRows:121-126` | baixo (só cliente, só com a Lista aberta) | aberto (achado da revisão final da etapa 3a) |
 
 ## S · armazenamentos
 

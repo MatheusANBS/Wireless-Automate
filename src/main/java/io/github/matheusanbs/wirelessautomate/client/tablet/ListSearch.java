@@ -81,6 +81,8 @@ final class ListSearch {
             if (!value.equals(text)) {
                 text = value;
                 textTicks = DEBOUNCE;
+                // o jogador voltou ao texto: as setas são da caixa, não da árvore
+                list.treeNav.clear();
                 refreshSuggestions();
                 suggestions.reopen();
             }

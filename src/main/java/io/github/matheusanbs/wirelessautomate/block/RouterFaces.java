@@ -180,6 +180,16 @@ final class RouterFaces {
         return found.toArray(UUID[]::new);
     }
 
+    /** Alguma face (presa, perfil ou exceção) de algum tipo está numa rede. */
+    boolean hasNetwork(RemoteMachines remotes) {
+        for (ResourceType type : TYPES) {
+            if (networks(remotes, type).length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void addNetworks(Set<UUID> found, MachineConfig config, ResourceType type) {
         for (RemoteSide side : RemoteSide.values()) {
             addNetwork(found, config.face(type, side));

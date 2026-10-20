@@ -79,7 +79,8 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `resonator-gen` | n Ressonadores de Sinal Ultimate (padrão 100), montados, sintonizados e com 8 Lapidados; um roteador Ultimate na Porta de Energia de cada um, para uma Bateria Ultimate, cada par numa rede | Custo do Ressonador gerando, com o transporte da energia | Bem abaixo do orçamento |
 | `resonator-idle` | Os mesmos (padrão 500), sem roteador: o buffer enche em 10 s e para | Custo de existir do Ressonador | Perto de 0 |
 | `resonator-event` | 50 Ressonadores ociosos; no meio da medição, um canto de cada casca sai no mesmo tick e volta 40 ticks depois | Pico de um tick com todas as revalidações juntas | Um pico de poucos ms, nunca por tick |
-| `range` | n roteadores Ultimate (padrão 200) com o Upgrade de Alcance, cada um num barril (Inserir) com 64 barris vazios em volta, vinculados num grupo com o lado de cima em Extrair; tudo numa rede, nada para mover. Mede também o heap retido pela cena (dois GCs completos antes de montar e antes de medir, fora do tempo medido; seção "Memória" do relatório) | Custo de existir e memória das máquinas vinculadas | Perto de 0 em tempo; memória proporcional às faces usadas |
+| `range` | n roteadores Ultimate (padrão 200) com o Upgrade de Alcance, cada um num barril (Inserir) com 64 barris vazios em volta, vinculados num grupo com o lado de cima em Extrair; tudo numa rede, nada para mover. Mede também o heap retido pela cena (dois GCs completos antes de montar e antes de medir, fora do tempo medido; seção "Memória" do relatório) e o tamanho do índice de nós salvo (o `NodeIndex.save` codificado uma vez com a cena montada, comprimido como o `wirelessautomate_nodes.dat` e sem compressão) | Custo de existir e memória das máquinas vinculadas | Perto de 0 em tempo; memória proporcional às faces usadas |
+| `tablet-range` | n roteadores Ultimate (padrão 100) com o Upgrade de Alcance, cada um num barril cheio de pedregulho (Extrair) com 16 barris vinculados em volta, num grupo com o lado de cima em Inserir; tudo numa rede, com o reenchimento a cada 30 ticks (enche a presa e esvazia os vinculados; a cada 20, no ritmo da amostra do Tablet, a vazão de cada nó seria a mesma em toda amostra e a Lista não mudaria). A linha "Tablet:" da repetição conta os pacotes depois da abertura e os nós da página. Um jogador falso tem o Tablet aberto, como no `tablet`; quando a Lista mostrar as máquinas, ele abre 4 roteadores e um grupo com "Mostrar todas" (`BenchScene.openRangeRows`) | Custo do Tablet aberto e bytes por segundo com nós de alcance movendo (colunas "Tablet" e KB/s) | Bem abaixo do orçamento; bytes só das linhas à vista |
 
 Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` não roda com `wa` (mede a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
 
@@ -91,7 +92,7 @@ Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack
 - **`redstone`:** o benchmark troca os blocos de redstone no fim do tick, fora do tempo medido (como o reenchimento); a remontagem que isso provoca cai no tick seguinte, dentro do tempo do mod. A coluna "remontagens/s" vem de `rebuildCount()`; com o relógio, chega a 20 por segundo.
 - **`tablet`:** o menu é criado direto (`new TabletMenu`) para um `FakePlayer` com o UUID do dono da rede da cena, e o benchmark chama `pollSnapshot()` (o que o `broadcastChanges()` do menu faz no servidor, menos o envio) no começo de cada tick, dentro do MSPT medido, como o `ServerPlayer` faz com a tela aberta. O tempo dessa chamada sai na coluna "Tablet (ms/tick)" e na linha da repetição (média e máximo), à parte do "mod", porque roda fora do orçamento. O pacote não é enviado (o jogador falso não tem canal de rede), então o custo medido é o de montar e comparar o snapshot, sem a serialização.
 
-As colunas "visitas/tick", "remontagens/s" e "Tablet (ms/tick)" valem para todos os cenários; "Tablet" mostra "—" fora do `tablet`.
+As colunas "visitas/tick", "remontagens/s" e "Tablet (ms/tick)" valem para todos os cenários; "Tablet" mostra "—" fora do `tablet` e do `tablet-range`.
 
 ## Resultados (rodada base, motor 48c7232)
 
@@ -473,3 +474,22 @@ Ramo `central-etapa-2`. `./scripts/bench.sh tablet:1000:3,many:500:3,range:200:3
 - Nada muda no servidor, como pedia a etapa. O rótulo só vai no snapshot da tela aberta, e renomear não remonta as rotas.
 - O rótulo e a dimensão no snapshot não aparecem nos bytes do Tablet: o painel só manda o snapshot do nó escolhido, e só quando ele muda.
 - O destaque é só do cliente. Medido com `System.nanoTime` no `onRender`: cerca de 0,5 µs por quadro sem nada aceso e cerca de 90 µs com 64 acesas, o limite. O contorno, o véu e a linha até o roteador vão em dois lotes, sem alocar.
+
+## Etapa 3a da central da rede: a Lista com as máquinas (19 de outubro de 2026)
+
+Ramo `central-etapa-3a`. Antes: `1da0681` (a base da Tarefa 1, já com o cenário `tablet-range` e a linha do Tablet, antes das mudanças de jogo), num worktree à parte. Depois: `10a9be6`. Rodada 1 com `./scripts/bench.sh tablet:1000:3,tablet-range:100:3,range:200:3,many:500:3` (antes, depois); rodada 2, intercalada, só `tablet-range:100:3,range:200:3` (antes, depois). Máquina local; relatórios em `run/bench/reports/20261019-212753-antes.md`, `20261019-213332.md`, `20261019-213928-antes.md` e `20261019-214241.md`, fora do git. Na base, o `tablet-range` abre o Tablet sem nenhum roteador aberto (a árvore não existe); depois, abre 4 roteadores e um grupo com "Mostrar todas": 51 linhas da árvore na página, com o estado e a vazão das máquinas à vista.
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| tablet 1000 | 1,036 ± 0,007 | 1,035 ± 0,008 | Tablet aberto 0,130 ± 0,043 → 0,128 ± 0,035 ms/tick; 1,7 → 1,7 KB/s |
+| tablet-range 100, rodada 1 | 0,179 ± 0,009 | 0,175 ± 0,001 | Tablet aberto 0,0345 ± 0,0008 → **0,0516 ± 0,0020** ms/tick; 0,5 → 0,8 KB/s |
+| tablet-range 100, rodada 2 | 0,173 ± 0,002 | 0,171 ± 0,008 | Tablet aberto 0,0562 ± 0,0102 → 0,0629 ± 0,0136 ms/tick; 0,5 → 0,8 KB/s |
+| range 200 (12.800 máquinas), rodada 1 | 0,050 ± 0,002 | 0,041 ± 0,000 | heap retido 23,4 ± 4,4 → 23,6 ± 4,3 MB; 1ª montagem 14,5 ± 2,6 → 31,7 ± 13,5 ms; **índice de nós 1,0 → 29,7 KB no disco (59,8 → 228,0 KB sem compressão)** |
+| range 200, rodada 2 | 0,045 ± 0,005 | 0,043 ± 0,003 | heap retido 23,2 ± 4,0 → 24,0 ± 4,3 MB; 1ª montagem 14,0 ± 3,0 → 15,6 ± 3,2 ms; índice igual à rodada 1 |
+| many 500 | 0,660 ± 0,019 | 0,657 ± 0,027 | µs/visita 10,60 → 10,87 |
+
+### Leitura
+
+- O motor não muda, como pedia a etapa: `tablet`, `many` e `range` ficam iguais dentro do ruído no tempo do mod.
+- O tempo do Tablet no `tablet-range` subiu além do ± na rodada 1 (+0,017 ms/tick) e ficou dentro dele na rodada 2, com a base oscilando de 0,035 a 0,056 entre as rodadas. O que entra de novo é o trabalho que a base não fazia: as 51 linhas da árvore na página e a amostra das máquinas à vista, uma vez por amostra. Os bytes sobem de 0,5 para 0,8 KB/s pelas mesmas linhas (a página uma vez e o "live" das máquinas).
+- O índice de nós cresce com as máquinas, como previsto na spec: 12.800 máquinas somam ~168 KB sem compressão (~13 B por máquina) e ~29 KB no disco. O save só regrava as entradas que mudaram. A 1ª montagem do `range` teve duas repetições altas na rodada 1 (44,7 e 32,7 ms) e voltou ao nível da base na rodada 2; a leitura das máquinas no índice é uma passada pelos arrays do roteador, no aviso de mudança.

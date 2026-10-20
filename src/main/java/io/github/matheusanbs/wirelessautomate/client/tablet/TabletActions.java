@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletQueryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTabPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +55,10 @@ final class TabletActions {
 
     void selectNode(@Nullable NodeKey key) {
         send(new TabletSelectNodePayload(menu.containerId, Optional.ofNullable(key)));
+    }
+
+    void tree(TabletTreePayload.Action action, NodeKey node, int group) {
+        send(new TabletTreePayload(menu.containerId, action, node, group));
     }
 
     void openNode(NodeKey key) {

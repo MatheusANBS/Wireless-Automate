@@ -1,29 +1,27 @@
 package io.github.matheusanbs.wirelessautomate.bench;
 
-import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,9 +34,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -56,8 +54,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -86,10 +82,8 @@ final class BenchScene {
     static final int CHEST_TYPES_STOCK = 1_000_000;
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
-    /** Lado da célula de cada roteador no cenário de alcance: a máquina presa no meio e as remotas em volta. */
+    /** Lado da célula de cada roteador nos cenários de alcance: a máquina presa no meio e as remotas em volta. */
     private static final int RANGE_CELL = 9;
-    /** Máquinas remotas vinculadas a cada roteador no cenário de alcance. */
-    static final int RANGE_MACHINES = 64;
 
     /** {@code RESONATOR} é a Porta de Energia de um Ressonador e {@code BATTERY} a Bateria dele ({@link BenchResonators}). */
     enum Machine { SMALL, BIG, CHEST, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
@@ -116,8 +110,9 @@ final class BenchScene {
     /** Blocos de redstone que ligam e desligam ({@link BenchScenario#clocked}), um acima de cada roteador. */
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
-    private @Nullable TabletMenu tablet;
-    private long tabletBytes;
+    private final BenchTablet tablet = new BenchTablet(this);
+    /** Os barris vinculados que recebem os itens no {@link BenchScenario#TABLET_RANGE}, esvaziados no reenchimento. */
+    private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
     private final LongSet forcedChunks = new LongOpenHashSet();
@@ -163,7 +158,7 @@ final class BenchScene {
             planResonators(count);
             return;
         }
-        if (scenario == BenchScenario.RANGE) {
+        if (scenario.range()) {
             planRange(count);
             return;
         }
@@ -198,13 +193,17 @@ final class BenchScene {
         refilled = new long[count];
     }
 
-    /** {@code count} células de alcance, cada uma com a máquina presa (destino) no meio. */
+    /**
+     * {@code count} células de alcance, cada uma com a máquina presa no meio: destino no {@link BenchScenario#RANGE},
+     * origem no {@link BenchScenario#TABLET_RANGE}.
+     */
     private void planRange(int count) {
         int side = (int) Math.ceil(Math.sqrt(count));
         int half = RANGE_CELL / 2;
         for (int i = 0; i < count; i++) {
             BlockPos machine = ORIGIN.offset((i % side) * RANGE_CELL + half, 0, (i / side) * RANGE_CELL + half);
-            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, false, Machine.SMALL));
+            nodes.add(new Node(i, machine, machine.above(), ResourceType.ITEM, scenario == BenchScenario.TABLET_RANGE,
+                    Machine.SMALL));
         }
         max = ORIGIN.offset(side * RANGE_CELL, 1, ((count + side - 1) / side) * RANGE_CELL);
         refilled = new long[count];
@@ -257,7 +256,7 @@ final class BenchScene {
             level.setBlock(node.router(), router, PLACE_FLAGS);
             if (level.getBlockEntity(node.router()) instanceof RouterBlockEntity entity) {
                 configure(node, entity);
-                if (scenario == BenchScenario.RANGE) {
+                if (scenario.range()) {
                     linkRemotes(node, entity);
                 }
             }
@@ -343,16 +342,19 @@ final class BenchScene {
     }
 
     /**
-     * Cenário de alcance: o Upgrade de Alcance e {@link #RANGE_MACHINES} barris vazios em volta da máquina presa,
-     * vinculados (um grupo só, o dos barris) com o lado de cima em Extrair. A rede entra no {@link #attach}.
+     * Cenários de alcance: o Upgrade de Alcance e {@link BenchScenario#rangeMachines()} barris vazios em volta da
+     * máquina presa, vinculados (um grupo só, o dos barris) com o lado de cima em Extrair ({@link BenchScenario#RANGE})
+     * ou em Inserir ({@link BenchScenario#TABLET_RANGE}, que recebem os itens da presa). A rede entra no
+     * {@link #attach}.
      */
     private void linkRemotes(Node node, RouterBlockEntity router) {
         router.setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
         int half = RANGE_CELL / 2;
+        int wanted = scenario.rangeMachines();
         int linked = 0;
         BlockState barrel = Blocks.BARREL.defaultBlockState();
-        for (int dx = -half; dx <= half && linked < RANGE_MACHINES; dx++) {
-            for (int dz = -half; dz <= half && linked < RANGE_MACHINES; dz++) {
+        for (int dx = -half; dx <= half && linked < wanted; dx++) {
+            for (int dz = -half; dz <= half && linked < wanted; dz++) {
                 if (dx == 0 && dz == 0) {
                     continue;
                 }
@@ -361,14 +363,17 @@ final class BenchScene {
                 extraBlocks.add(pos);
                 if (router.linkMachine(pos)) {
                     linked++;
+                    if (scenario == BenchScenario.TABLET_RANGE) {
+                        remoteSinks.add(pos);
+                    }
                 }
             }
         }
         RemoteMachines remotes = router.remoteMachines();
         if (!remotes.machines().isEmpty()) {
             int group = remotes.machines().get(0).group();
-            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
-                    RedstoneMode.IGNORE);
+            PortMode mode = scenario == BenchScenario.TABLET_RANGE ? PortMode.INSERT : PortMode.EXTRACT;
+            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, mode, 0, RedstoneMode.IGNORE);
         }
     }
 
@@ -425,55 +430,41 @@ final class BenchScene {
         }
     }
 
-    /**
-     * Abre o Tablet para um jogador falso dono da rede da cena ({@link BenchScenario#TABLET}): ele vê
-     * todos os nós dela. O menu é criado direto (sem pacote de abertura) e sincronizado por
-     * {@link #syncTablet}, como o {@code ServerPlayer} faz a cada tick com a tela aberta.
-     */
     void openTablet() {
-        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(OWNER, "[wa-bench]"));
-        player.setPos(ORIGIN.getX() + 0.5, ORIGIN.getY() + 2, ORIGIN.getZ() + 0.5);
-        tablet = new TabletMenu(1, player.getInventory(), player);
+        tablet.open();
     }
 
-    /**
-     * Sincroniza o Tablet aberto, se houver; devolve quanto levou, em ns. Os pacotes que sairiam são codificados
-     * depois, fora do tempo medido, para somar os bytes ({@link #tabletBytes}).
-     */
     long syncTablet() {
-        TabletMenu menu = tablet;
-        if (menu == null) {
-            return 0;
-        }
-        // O que o broadcastChanges do menu faz no servidor, menos o envio: o jogador falso não tem
-        // canal de rede (o hasChannel dá NullPointerException) e o menu não tem slots.
-        long start = System.nanoTime();
-        List<CustomPacketPayload> payloads = menu.pollPayloads();
-        long nanos = System.nanoTime() - start;
-        for (CustomPacketPayload payload : payloads) {
-            tabletBytes += encodedSize(payload);
-        }
-        return nanos;
+        return tablet.sync();
     }
 
-    /** Os bytes de um pacote do Tablet pelo codec dele (cabeçalho, página ou o estado e a vazão). */
-    private int encodedSize(CustomPacketPayload payload) {
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
-        if (payload instanceof TabletHeaderPayload header) {
-            TabletHeaderPayload.STREAM_CODEC.encode(buf, header);
-        } else if (payload instanceof TabletPagePayload page) {
-            TabletPagePayload.STREAM_CODEC.encode(buf, page);
-        } else if (payload instanceof TabletLivePayload live) {
-            TabletLivePayload.STREAM_CODEC.encode(buf, live);
-        }
-        int size = buf.writerIndex();
-        buf.release();
-        return size;
+    String tabletPayloadLine() {
+        return tablet.payloadLine();
     }
 
     /** Bytes que o Tablet aberto mandaria, somados desde que a cena começou. */
     long tabletBytes() {
-        return tabletBytes;
+        return tablet.bytes();
+    }
+
+    /**
+     * O tamanho do índice de nós salvo ({@link NodeIndex#save}), comprimido como no {@code wirelessautomate_nodes.dat}
+     * e sem compressão, e as entradas. Medido uma vez, fora do tempo medido; o índice é o do servidor inteiro.
+     */
+    long[] nodeIndexSize() {
+        NodeIndex index = NodeIndex.get(level.getServer());
+        CompoundTag data = index.save(new CompoundTag(), level.registryAccess());
+        CompoundTag file = new CompoundTag();
+        file.put("data", data);
+        try {
+            ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+            NbtIo.writeCompressed(file, compressed);
+            ByteArrayOutputStream raw = new ByteArrayOutputStream();
+            NbtIo.write(file, new DataOutputStream(raw));
+            return new long[] {compressed.size(), raw.size(), index.size()};
+        } catch (IOException e) {
+            return new long[] {-1, -1, index.size()};
+        }
     }
 
     /** O que a cena faz no fim de cada tick depois de pôr a rede: os relógios de redstone e a sintonia dos Ressonadores. */
@@ -572,6 +563,12 @@ final class BenchScene {
                 total += count(handler);
             }
         }
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                total += count(handler);
+            }
+        }
         return total;
     }
 
@@ -624,6 +621,12 @@ final class BenchScene {
 
     /** Reenche as origens e esvazia os destinos (ou só a cauda livre, no quase cheio). */
     void recycle() {
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                destinationCleared += clear(handler, 0);
+            }
+        }
         for (Node node : nodes) {
             if (node.type() != ResourceType.ITEM || scenario == BenchScenario.IDLE) {
                 continue;
@@ -798,6 +801,11 @@ final class BenchScene {
         return level.getBlockEntity(node.machine()) instanceof StorageChestBlockEntity chest ? chest.storage() : null;
     }
 
+    /** O inventário de um barril vinculado ({@link #remoteSinks}). */
+    private @Nullable IItemHandler remoteItems(BlockPos pos) {
+        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, Direction.UP);
+    }
+
     private @Nullable IItemHandler items(Node node) {
         if (node.kind() != Machine.SMALL && node.kind() != Machine.BIG && node.kind() != Machine.CHEST) {
             return null;
@@ -807,7 +815,7 @@ final class BenchScene {
 
     /** Tira a rede, esvazia e remove tudo, solta os chunks. */
     void teardown() {
-        tablet = null;
+        tablet.close();
         for (BlockPos pos : clocks) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }
@@ -832,6 +840,13 @@ final class BenchScene {
             }
             level.setBlock(node.router(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }
+        for (BlockPos pos : remoteSinks) {
+            IItemHandler handler = remoteItems(pos);
+            if (handler != null) {
+                clear(handler, 0);
+            }
+        }
+        remoteSinks.clear();
         for (Node node : nodes) {
             level.setBlock(node.machine(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }

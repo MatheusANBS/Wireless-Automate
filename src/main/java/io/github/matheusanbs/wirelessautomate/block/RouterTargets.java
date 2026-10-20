@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -30,11 +31,35 @@ import org.jetbrains.annotations.Nullable;
  */
 final class RouterTargets {
     private final RouterBlockEntity router;
+    private final RouterFaces faces;
     private final RemoteMachines remotes;
 
-    RouterTargets(RouterBlockEntity router, RemoteMachines remotes) {
+    RouterTargets(RouterBlockEntity router, RouterFaces faces, RemoteMachines remotes) {
         this.router = router;
+        this.faces = faces;
         this.remotes = remotes;
+    }
+
+    /** Ver {@link RouterBlockEntity#setAttachedFacesNetwork}. */
+    int setAttachedNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
+        int[] count = new int[1];
+        router.batchChanges(() -> router.changed(
+                faces.setAttachedNetwork(types, router.facing(), router.spin(), absoluteFaceMask, network, count)));
+        return count[0];
+    }
+
+    /** Ver {@link RouterBlockEntity#setNetworkAllFaces(Collection, UUID, Predicate)}. */
+    int setNetworkAll(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
+        int[] kept = new int[1];
+        router.batchChanges(() -> {
+            for (ResourceType type : types) {
+                if (faces.setNetworkAll(remotes, type, network, canLeave, kept)) {
+                    router.changed(NetworkManager.typeBit(type));
+                }
+            }
+            RouterFaces.dropExceptionsLikeProfile(remotes);
+        });
+        return kept[0];
     }
 
     /** O grupo de um alvo remoto (o próprio grupo, ou o da máquina); {@code null} na presa ou num alvo que não existe. */

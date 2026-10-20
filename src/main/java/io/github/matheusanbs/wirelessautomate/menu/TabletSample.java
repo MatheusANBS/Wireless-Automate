@@ -44,6 +44,8 @@ final class TabletSample {
     private final Set<NodeKey> seen = new ObjectOpenHashSet<>();
     private final List<NodeIndex.Entry> sorted = new ArrayList<>();
     private int sortedVersion = -1;
+    /** O estado e a vazão das linhas de máquina à vista, medidos sob demanda. */
+    private final TabletMachineSample machines = new TabletMachineSample();
 
     private TabletSample(MinecraftServer server) {
         this.server = server;
@@ -77,6 +79,7 @@ final class TabletSample {
         boolean baseline = sampleTick == Long.MIN_VALUE || now - sampleTick > 2L * TabletMenu.SAMPLE_TICKS;
         long elapsed = baseline ? 1 : Math.max(1, now - sampleTick);
         sampleTick = now;
+        machines.beginRound(baseline);
         active.clear();
         rates.clear();
         full.clear();
@@ -145,6 +148,11 @@ final class TabletSample {
     /** A vazão do nó por tipo na última amostra, ou {@code null} se ele não moveu nada. Só leitura. */
     long @Nullable [] rates(NodeKey key) {
         return rates.get(key);
+    }
+
+    /** O estado e a vazão das linhas de máquina, medidos só para as que alguma página pede. */
+    TabletMachineSample machines() {
+        return machines;
     }
 
     /** Os nós do índice na ordem da Lista, refeita só quando um dado salvo do índice muda. Só leitura. */

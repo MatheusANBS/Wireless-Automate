@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -71,8 +72,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>As partes do servidor: a consulta ({@link TabletQuery}), a montagem ({@link TabletSnapshotBuilder}),
  * as regras de um nó ({@link TabletNodes}), o nó escolhido ({@link TabletChosenNode}), o perfil
- * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}) e o estado por
- * jogador ({@link TabletPlayers}).
+ * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}), a árvore da Lista
+ * ({@link TabletTree}) e o estado por jogador ({@link TabletPlayers}).
  */
 public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
     /** Janela da amostra de vazão e estado, em ticks. */
@@ -88,8 +89,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
     public static final int BULK_PER_SECOND = 4;
 
-    /** O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição dele. */
-    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target) {
+    /**
+     * O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição
+     * dele, e a árvore da Lista.
+     */
+    public record State(int tab, Query query, @Nullable NodeKey chosen, EditTargetRef target, TabletTree.Saved tree) {
     }
     /** Teto de nós movidos por pacote. */
     public static final int MAX_MOVE = 1024;
@@ -137,20 +141,22 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
     private final @Nullable TabletFlows flows;
+    private final @Nullable TabletTree tree;
     private int tab;
     private boolean forced;
     private @Nullable TabletSnapshot sent;
     /** Partes do último snapshot novo de {@link #pollSnapshot()} que mudaram, para o envio. */
     private boolean headerChanged;
     private boolean pageChanged;
-    /** Na página mudaram só o estado e a vazão dos nós ({@link TabletSnapshot.Page#sameExceptLive}). */
+    /** Na página mudaram só o estado e a vazão dos nós e das linhas de máquina ({@link TabletSnapshot.Page#sameExceptLive}). */
     private boolean liveOnly;
 
     /** Servidor. */
     public TabletMenu(int containerId, Inventory inventory, ServerPlayer viewer) {
         super(ModMenus.NETWORK_TABLET.get(), containerId);
         this.viewer = viewer;
-        this.builder = new TabletSnapshotBuilder(viewer, query);
+        this.tree = new TabletTree(viewer);
+        this.builder = new TabletSnapshotBuilder(viewer, query, tree);
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder);
         this.actions = new TabletMenuActions(this, viewer);
@@ -181,6 +187,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.profile = null;
         this.actions = null;
         this.flows = null;
+        this.tree = null;
         this.snapshot = snapshot;
         this.restoredTab = restoredTab;
         this.restoredNode = restoredNode;
@@ -202,6 +209,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (saved.chosen() != null && chooseNode(saved.chosen())) {
             node.restoreTarget(saved.target());
         }
+        tree.restore(saved.tree());
     }
 
     /** Esquece o estado de todos os jogadores (o servidor parou). */
@@ -223,7 +231,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
             flows.stop();
         }
         if (viewer != null && !viewer.hasDisconnected()) {
-            TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef()));
+            TabletPlayers.save(viewer.getUUID(), new State(tab, query.query(), node.chosen(), node.targetRef(),
+                    tree.save()));
         }
     }
 
@@ -270,7 +279,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static void open(ServerPlayer player, NodeKey node, EditTargetRef target) {
         State saved = TabletPlayers.saved(player.getUUID());
         TabletPlayers.save(player.getUUID(), new State(LIST_TAB,
-                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target));
+                saved == null ? TabletSnapshot.Query.DEFAULT : saved.query(), node, target,
+                saved == null ? TabletTree.Saved.EMPTY : saved.tree()));
         open(player);
     }
 
@@ -380,9 +390,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         applySnapshot(snapshot.withPage(page));
     }
 
-    /** Cliente: só o estado e a vazão dos nós da página mudaram ({@code TabletLivePayload}). */
-    public void applyLives(List<TabletSnapshot.Live> lives) {
-        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives)));
+    /** Cliente: só o estado e a vazão dos nós e das linhas de máquina da página mudaram ({@code TabletLivePayload}). */
+    public void applyLives(List<TabletSnapshot.Live> lives, List<TabletRows.MachineLive> machines) {
+        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives, machines)));
     }
 
     /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
@@ -445,7 +455,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
                 payloads.add(new TabletHeaderPayload(containerId, changed));
             }
             if (pageChanged) {
-                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives())
+                payloads.add(liveOnly ? new TabletLivePayload(containerId, changed.page().lives(), changed.rows().lives())
                         : new TabletPagePayload(containerId, changed.page()));
             }
         }
@@ -538,7 +548,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
 
     /**
      * Escolhe o nó do painel ({@code null}: nenhum). Recusa um nó que não está no índice ou que o jogador
-     * não vê. O alvo de edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
+     * não vê, e larga a escolha que havia, para o alvo pedido logo depois não valer no nó anterior. O alvo de
+     * edição volta para a presa e o painel é enviado de novo. Devolve se escolheu.
      */
     public boolean chooseNode(@Nullable NodeKey key) {
         return viewer != null && node.choose(key);
@@ -620,6 +631,18 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     // ------------------------------------------------------------------ ações (servidor)
+
+    /** Uma ação na árvore da Lista ({@link TabletTree#apply}); a que vale refaz a página. Devolve se valeu. */
+    public boolean tree(TabletTreePayload.Action action, NodeKey key, int group) {
+        boolean done = tree != null && tree.apply(action, key, group);
+        forced |= done;
+        return done;
+    }
+
+    /** A árvore da Lista; {@code null} no cliente. Público para os GameTests. */
+    public @Nullable TabletTree treeState() {
+        return tree;
+    }
 
     /** A tela mudou a busca, as etiquetas, os filtros ou o tipo. */
     public void setQuery(Query query) {

@@ -422,6 +422,16 @@ public record RouterSnapshot(
         return new Captured(view, viewed, group);
     }
 
+    /**
+     * O estado da máquina remota pela regra da tela ({@link #state}), com a trocada: só numa que já não bate a
+     * capability do bloco novo é consultada. Também para as linhas de máquina do Tablet ({@link TabletMachineSample}).
+     */
+    static RangeView.MachineState remoteState(RouterBlockEntity router, RemoteMachine remote, RangeRules.Reach reach) {
+        RangeView.MachineState state = state(router.getLevel(), router.remoteMachines(), remote, reach);
+        return state == RangeView.MachineState.MISSING && router.replacedBy(remote, reach) != null
+                ? RangeView.MachineState.REPLACED : state;
+    }
+
     private static RangeView.MachineState state(@Nullable Level level, RemoteMachines remotes,
             RemoteMachine remote, RangeRules.Reach reach) {
         return switch (reach) {

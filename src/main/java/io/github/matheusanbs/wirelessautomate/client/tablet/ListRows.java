@@ -49,12 +49,14 @@ final class ListRows {
         }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
         ProfileSummary profile = s.profile().orElse(null);
-        List<ListGroups.Row<ResourceLocation>> rows = list.groups().rows();
+        List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
         for (Hot hot : layout.hots) {
-            if (hot.kind() == Kind.HEADER) {
-                renderHeader(g, font, hot, rows.get(hot.arg()), profile, mx, my);
-            } else if (hot.kind() == Kind.ROW) {
-                renderNode(g, font, hot, nodes.get(hot.arg()), profile, chips, hot.contains(mx, my));
+            switch (hot.kind()) {
+                case HEADER -> renderHeader(g, font, hot, rows.get(hot.arg()), profile, mx, my);
+                case ROW -> renderNode(g, font, hot, nodes.get(hot.arg()), profile, chips, mx, my);
+                case TREE -> list.treeRows.render(g, font, hot, rows.get(hot.arg()), mx, my);
+                default -> {
+                }
             }
         }
         // o resultado cortado pelo servidor: a última linha diz quantos casaram
@@ -102,7 +104,7 @@ final class ListRows {
         }
     }
 
-    private void renderHeader(GuiGraphics g, Font font, Hot hot, ListGroups.Row<ResourceLocation> row,
+    private void renderHeader(GuiGraphics g, Font font, Hot hot, ListTree.Line<ResourceLocation> row,
             @Nullable ProfileSummary profile, int mx, int my) {
         boolean hovered = hot.contains(mx, my);
         g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
@@ -130,7 +132,7 @@ final class ListRows {
             int fill = same ? (over ? GuiPaint.mix(GuiPaint.OK, GuiPaint.FG, 0.2f) : GuiPaint.OK)
                     : over ? GuiPaint.BUTTON : GuiPaint.PANEL;
             GuiPaint.box(g, paste.x(), paste.y(), paste.w(), paste.h(), fill, same ? fill : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.pasteCount(row.group())),
+            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.profileActions.pasteCount(row.group())),
                     paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         }
     }
@@ -146,16 +148,23 @@ final class ListRows {
         return count;
     }
 
+    /**
+     * A linha do nó. Escolhido e aberto na árvore, o alvo do painel é uma das linhas de baixo, que leva a marca: o
+     * nó fica só com o fundo.
+     */
     private void renderNode(GuiGraphics g, Font font, Hot hot, NodeView node, @Nullable ProfileSummary profile,
-            boolean chips, boolean hovered) {
+            boolean chips, int mx, int my) {
         boolean isChosen = node.key().equals(list.chosen);
         boolean picked = list.selected.contains(node.key());
         int x = hot.x();
         int y = hot.y();
+        int line = list.model.tree().lineOfNode(hot.arg());
         if (isChosen || picked) {
             g.fill(x, y, x + hot.w(), y + hot.h() - 1, GuiPaint.ROW_SELECTED);
-            g.fill(x, y, x + 2, y + hot.h() - 1, GuiPaint.ACCENT);
-        } else if (hovered) {
+            if (picked || !list.model.tree().open(hot.arg())) {
+                g.fill(x, y, x + 2, y + hot.h() - 1, GuiPaint.ACCENT);
+            }
+        } else if (hot.contains(mx, my)) {
             g.fill(x, y, x + hot.w(), y + hot.h() - 1, GuiPaint.ROW_HOVER);
         }
         g.fill(x + 2, y + hot.h() - 1, x + hot.w() - 2, y + hot.h(), GuiPaint.LINE);
@@ -163,6 +172,12 @@ final class ListRows {
         if (list.multi) {
             GuiPaint.checkbox(g, cx, y + 5, picked, GuiPaint.ACCENT);
             cx += 12;
+        }
+        int chevron = list.treeRows.chevronWidth();
+        if (chevron > 0) {
+            Hot toggle = layout.hot(Kind.TREE_TOGGLE, line);
+            list.treeRows.renderNodeChevron(g, cx, y, node, line, toggle != null && toggle.contains(mx, my));
+            cx += chevron;
         }
         GuiPaint.dot(g, cx, y + 7, TabletText.statusColor(node.status()));
         int textX = cx + 8;
@@ -172,8 +187,8 @@ final class ListRows {
             renderChips(g, right + 4, y + 5, node);
         }
         GuiText.draw(g, font, list.texts.nodeName(node), textX, y + 2, right - textX, GuiPaint.FG);
-        Component line = list.texts.stateLine(node, profile);
-        GuiText.draw(g, font, line, textX, y + 11, right - textX, GuiPaint.MUTED);
+        Component state = list.texts.stateLine(node, profile);
+        GuiText.draw(g, font, state, textX, y + 11, right - textX, GuiPaint.MUTED);
     }
 
     /** Os seis quadradinhos das faces na aba do painel: Cima, Frente, Esquerda / Baixo, Trás, Direita. */

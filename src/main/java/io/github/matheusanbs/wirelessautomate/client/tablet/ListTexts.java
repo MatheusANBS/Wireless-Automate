@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Group;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Suggestion;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
@@ -82,11 +83,27 @@ final class ListTexts {
     }
 
     /**
-     * A segunda linha do nó: com perfil copiado, num nó carregado, "igual ao perfil" ou a primeira diferença (a
-     * origem diz que é a origem); senão o estado em palavras ("destino cheio", "sem rede", "descarregada",
-     * "pausada") ou, tudo bem, a rede e a vazão na aba do painel.
+     * A segunda linha do nó: o {@link #stateText} e, com máquinas vinculadas, quantas. Num nó sem nada a dizer (a
+     * rede e a vazão), "10 máquinas" vem antes, como no mockup; num problema ou numa diferença do perfil, que pedem
+     * atenção, vem depois.
      */
     Component stateLine(NodeView node, @Nullable ProfileSummary profile) {
+        Component state = stateText(node, profile);
+        if (node.linked() <= 0) {
+            return state;
+        }
+        Component machines = plural("list.machines", node.linked()).copy().withColor(GuiPaint.MUTED);
+        Component dot = Component.literal(" · ").withColor(GuiPaint.MUTED);
+        boolean calm = profile == null && (node.status() == NodeStatus.ACTIVE || node.status() == NodeStatus.IDLE);
+        return calm ? machines.copy().append(dot).append(state) : state.copy().append(dot).append(machines);
+    }
+
+    /**
+     * O estado do nó: com perfil copiado, num nó carregado, "igual ao perfil" ou a primeira diferença (a origem diz
+     * que é a origem); senão o estado em palavras ("destino cheio", "sem rede", "descarregada", "pausada") ou,
+     * tudo bem, a rede e a vazão na aba do painel.
+     */
+    private Component stateText(NodeView node, @Nullable ProfileSummary profile) {
         if (profile != null && node.key().equals(profile.origin())) {
             return tr("list.profile.origin").copy().withColor(GuiPaint.ACCENT);
         }

@@ -87,7 +87,7 @@ final class SelectBar {
         // colar o perfil nos marcados (só com perfil copiado)
         add(adder, new FlatButton(x + X0 + allW + 2, list.barY(), lw - allW - selectW - 4, ROW_H, Component.empty(),
                 (g, b, hovered) -> TabletButtons.paintClipped(g, b, hovered, tr("list.paste_selected", list.selected().size())),
-                list::pasteSelected).tooltip(() -> snapshot().profile()
+                list.profileActions::pasteSelected).tooltip(() -> snapshot().profile()
                         .map(p -> tr("list.paste_selected.tooltip", p.sourceName(), list.selected().size())).orElse(null)));
         int clearW = clearLitWidth(font);
         add(adder, new FlatButton(x + X0 + lw - selectW - 2 - clearW, list.barY(), clearW, ROW_H, clearLitText(),

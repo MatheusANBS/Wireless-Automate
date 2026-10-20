@@ -256,6 +256,21 @@ public final class RemoteMachines {
         return RangeRules.reach(distances, radius, max);
     }
 
+    /** Quantas máquinas há; com {@link #machine(int)}, percorre sem a lista de {@link #machines()}. */
+    public int size() {
+        return machines.size();
+    }
+
+    /** Quantos grupos há; com {@link #groupAt(int)}, percorre sem a lista de {@link #groups()}. */
+    public int groupCount() {
+        return groups.size();
+    }
+
+    /** O grupo na posição {@code index}, na ordem de criação (não é o id). */
+    public MachineGroup groupAt(int index) {
+        return groups.get(index);
+    }
+
     /** As máquinas, na ordem de vínculo. Só leitura. */
     public List<RemoteMachine> machines() {
         return Collections.unmodifiableList(machines);

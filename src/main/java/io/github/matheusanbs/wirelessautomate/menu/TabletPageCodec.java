@@ -28,8 +28,9 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * O codec binário da página de nós do Tablet ({@link Page}) e do estado e vazão por nó ({@link Live}): a paleta de
- * dimensões, máquinas e redes, os nós e as linhas da árvore, com os tetos de tamanho que a leitura confere. Fica
- * fora do {@link TabletSnapshot} só para ele não crescer; o formato dos bytes é o do {@code Page.STREAM_CODEC}.
+ * dimensões, máquinas e redes, os nós, as linhas da árvore e as da visão por máquinas, com os tetos de tamanho que a
+ * leitura confere. Fica fora do {@link TabletSnapshot} só para ele não crescer; o formato dos bytes é o do
+ * {@code Page.STREAM_CODEC}.
  */
 final class TabletPageCodec {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -62,6 +63,7 @@ final class TabletPageCodec {
         }
         page.originGroup().ifPresent(id -> machines.putIfAbsent(id, machines.size()));
         TabletRows.addBlocks(page.rows(), machines);
+        TabletMachineRows.addBlocks(page.machineRows(), machines);
         writeLocations(buf, dimensions);
         writeLocations(buf, machines);
         buf.writeVarInt(networkIds.size());
@@ -96,6 +98,7 @@ final class TabletPageCodec {
             buf.writeVarInt(n.linked());
         }
         TabletRows.encode(buf, page.rows(), machines);
+        TabletMachineRows.encode(buf, page.machineRows(), machines);
         buf.writeVarInt(page.groupCounts().size());
         for (Facet<ResourceLocation> facet : page.groupCounts()) {
             buf.writeVarInt(machines.getInt(facet.id()));
@@ -192,12 +195,13 @@ final class TabletPageCodec {
                     faceModes, live.rates(), profile, linked));
         }
         TabletRows rows = TabletRows.decode(buf, machines, nodeCount);
+        TabletMachineRows machineRows = TabletMachineRows.decode(buf, machines);
         int groupCount = readCount(buf, MAX_NODES);
         List<Facet<ResourceLocation>> groupCounts = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
             groupCounts.add(new Facet<>(at(machines, buf.readVarInt()), buf.readVarInt()));
         }
         return new Page(query, total, matching, List.copyOf(nodes), rows, List.copyOf(groupCounts),
-                buf.readOptional(b -> at(machines, b.readVarInt())));
+                buf.readOptional(b -> at(machines, b.readVarInt())), machineRows);
     }
 }

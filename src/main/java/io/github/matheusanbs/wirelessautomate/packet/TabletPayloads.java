@@ -39,6 +39,8 @@ public final class TabletPayloads {
                 (payload, context) -> handleProfile(serverPlayer(context), payload));
         registrar.playToServer(TabletTreePayload.TYPE, TabletTreePayload.STREAM_CODEC,
                 (payload, context) -> handleTree(serverPlayer(context), payload));
+        registrar.playToServer(TabletMachinesPayload.TYPE, TabletMachinesPayload.STREAM_CODEC,
+                (payload, context) -> handleMachines(serverPlayer(context), payload));
         registrar.playToServer(TabletOpenNodePayload.TYPE, TabletOpenNodePayload.STREAM_CODEC,
                 (payload, context) -> handleOpenNode(serverPlayer(context), payload));
         registrar.playToServer(TabletActionPayload.TYPE, TabletActionPayload.STREAM_CODEC,
@@ -135,6 +137,12 @@ public final class TabletPayloads {
     public static boolean handleTree(@Nullable ServerPlayer player, TabletTreePayload payload) {
         TabletMenu menu = menu(player, payload.containerId());
         return menu != null && menu.tree(payload.action(), payload.node(), payload.group());
+    }
+
+    /** Troca a visão da Lista ou muda um bloco na visão por máquinas; recusa um bloco fora dela ou acima do teto. */
+    public static boolean handleMachines(@Nullable ServerPlayer player, TabletMachinesPayload payload) {
+        TabletMenu menu = menu(player, payload.containerId());
+        return menu != null && menu.machines(payload.action(), payload.block());
     }
 
     public static boolean handleOpenNode(@Nullable ServerPlayer player, TabletOpenNodePayload payload) {

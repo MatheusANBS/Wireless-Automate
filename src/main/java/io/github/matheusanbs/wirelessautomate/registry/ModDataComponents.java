@@ -145,6 +145,15 @@ public final class ModDataComponents {
                     .persistent(ExtraCodecs.intRange(0, CrystalCharge.FULL))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
 
+    /**
+     * Integridade de um cristal do Ressonador (de 0 até {@code resonator.crystalIntegrity}); sem o componente, cheia.
+     * Cada recarga gasta 1, e com 0 o cristal está rachado.
+     */
+    public static final Supplier<DataComponentType<Integer>> CRYSTAL_INTEGRITY =
+            DATA_COMPONENTS.registerComponentType("crystal_integrity", builder -> builder
+                    .persistent(ExtraCodecs.intRange(0, 64))
+                    .networkSynchronized(ByteBufCodecs.VAR_INT));
+
     /** Tipo (aba) que o Configurador cola; sem o componente, todos. */
     public static final Supplier<DataComponentType<ResourceType>> CONFIGURATOR_TYPE =
             DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder

@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreInventory;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreYield;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
@@ -171,19 +172,15 @@ public class ResonatorMenu extends AbstractContainerMenu {
     private ResonatorStatePayload capture(ResonanceCoreBlockEntity core) {
         long fePerCrystal = Config.resonatorFePerCrystal(core.tier());
         List<ItemStack> crystals = core.crystals();
-        int yieldSum = 0;
+        int quarters = CoreYield.quarters(crystals, core.chambers(), core.tier(), false);
         boolean dull = false;
         for (int i = 0; i < core.chambers(); i++) {
-            ItemStack stack = crystals.get(i);
-            if (stack.getItem() instanceof SignalCrystalItem item) {
-                yieldSum += item.yield();
-                dull |= SignalCrystalItem.isDull(stack);
-            }
+            dull |= SignalCrystalItem.isDull(crystals.get(i));
         }
         int recharge = dull && core.redstone() > 0 ? core.rechargeProgress() : 0;
         int layout = core.layout() == null ? 0 : core.layout().ordinal() + 1;
         return new ResonatorStatePayload(containerId, core.energy(), core.capacity(), core.generationPerTick(),
-                CoreMath.perTick(fePerCrystal, yieldSum * 4, 1.0), core.dial(),
+                CoreMath.perTick(fePerCrystal, quarters, 1.0), core.dial(),
                 (int) Math.round(core.efficiency() * 1000), (int) Math.round(Tuning.ceiling(core.tier().ordinal()) * 1000),
                 core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()),
                 TuneSignal.tuned(core.station(), core.dial()), recharge,

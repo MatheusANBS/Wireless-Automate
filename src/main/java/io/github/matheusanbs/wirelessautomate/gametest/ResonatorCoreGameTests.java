@@ -68,7 +68,8 @@ public final class ResonatorCoreGameTests {
                 assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             }
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), 3L * 10_000 * 20, "energia de um lote");
+            // No Elite o Cristal de Sinal comum rende 1/4: três deles dão 3/4 do FE por cristal.
+            helper.assertValueEqual(core.energy(), 3L * 10_000 / 4 * 20, "energia de um lote");
         });
     }
 

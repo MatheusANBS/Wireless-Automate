@@ -15,8 +15,6 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,6 +30,8 @@ final class TreeRows {
     /** O recuo de cada nível da árvore. */
     static final int INDENT = 8;
     static final int EYE_W = 10;
+    private static final float ICON_SCALE = 0.625f;
+    private static final int ICON_W = 10;
     private static final int LINE1_Y = 2;
     private static final int LINE2_Y = 11;
     /** A primeira linha de uma linha de duas: onde ficam o ▸/▾ e o Olho. */
@@ -49,10 +49,10 @@ final class TreeRows {
 
     // ------------------------------------------------------------------ geometria
 
-    /** Altura de uma linha da lista: o cabeçalho e o "mais N" numa linha, o grupo numa ou duas, o resto em duas. */
-    static int height(Line<ResourceLocation> line, @Nullable TabletRows.Row row) {
+    /** Altura de uma linha da lista: o "mais N" numa linha, o grupo numa ou duas, o resto em duas. */
+    static int height(Line line, @Nullable TabletRows.Row row) {
         return switch (line.kind()) {
-            case HEADER, MORE -> ListLayout.HEADER_ROW;
+            case MORE -> ListLayout.HEADER_ROW;
             case GROUP -> row instanceof TabletRows.Group group && (group.exceptions() > 0 || group.showAll())
                     ? ListLayout.NODE_ROW : ListLayout.HEADER_ROW;
             case NODE, ATTACHED, MACHINE -> ListLayout.NODE_ROW;
@@ -77,7 +77,7 @@ final class TreeRows {
     }
 
     /** A linha da árvore e, dentro dela, o ▸/▾ do grupo, o "Mostrar menos" e o Olho da máquina. */
-    void arrange(Font font, List<Hot> hots, Line<ResourceLocation> line, int index, int x, int y, int w, int h) {
+    void arrange(Font font, List<Hot> hots, Line line, int index, int x, int y, int w, int h) {
         texts.prepare(font, list.snapshot());
         hots.add(new Hot(Kind.TREE, x, y, w, h, index));
         int tx = contentX(x) + line.depth() * INDENT;
@@ -114,7 +114,7 @@ final class TreeRows {
         }
     }
 
-    void render(GuiGraphics g, Font font, Hot hot, Line<ResourceLocation> line, int mx, int my) {
+    void render(GuiGraphics g, Font font, Hot hot, Line line, int mx, int my) {
         texts.prepare(font, list.snapshot());
         TabletRows.Row row = list.model.row(line);
         int x = hot.x();
@@ -138,8 +138,14 @@ final class TreeRows {
         int right = x + w - 3;
         switch (row) {
             case TabletRows.Attached attached -> {
-                GuiText.draw(g, font, texts.names[r], tx + 8, y + LINE1_Y, right - tx - 8, GuiPaint.FG);
-                GuiText.draw(g, font, texts.seconds[r], tx + 8, y + LINE2_Y, right - tx - 8, GuiPaint.MUTED);
+                int ax = tx + 8 + ICON_W + 2;
+                g.pose().pushPose();
+                g.pose().translate(tx + 8, y + 1, 0);
+                g.pose().scale(ICON_SCALE, ICON_SCALE, 1f);
+                g.renderItem(texts.icons[r], 0, 0);
+                g.pose().popPose();
+                GuiText.draw(g, font, texts.names[r], ax, y + LINE1_Y, right - ax, GuiPaint.FG);
+                GuiText.draw(g, font, texts.seconds[r], ax, y + LINE2_Y, right - ax, GuiPaint.MUTED);
             }
             case TabletRows.Group group -> renderGroup(g, font, hot, group, r, tx, right, mx, my);
             case TabletRows.Machine machine -> renderMachine(g, font, hot, line, machine, r, tx, right);
@@ -182,7 +188,7 @@ final class TreeRows {
         }
     }
 
-    private void renderMachine(GuiGraphics g, Font font, Hot hot, Line<ResourceLocation> line,
+    private void renderMachine(GuiGraphics g, Font font, Hot hot, Line line,
             TabletRows.Machine machine, int r, int tx, int right) {
         int y = hot.y();
         MachineLive live = texts.lives[r];
@@ -232,7 +238,7 @@ final class TreeRows {
     }
 
     /** A linha é o alvo do painel do nó escolhido. */
-    boolean isTarget(Line<ResourceLocation> line, TabletRows.Row row) {
+    boolean isTarget(Line line, TabletRows.Row row) {
         NodeView node = list.snapshot().nodes().get(line.node());
         if (!node.key().equals(list.chosen)) {
             return false;

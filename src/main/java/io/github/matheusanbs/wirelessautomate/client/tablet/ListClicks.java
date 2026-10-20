@@ -80,8 +80,6 @@ final class ListClicks {
             case TYPE_CHIP -> list.search.clearType();
             case CLEAR -> list.clearAll();
             case FORGET -> profile.forget();
-            case HEADER -> list.model.toggle(list.model.tree().lines().get(hot.arg()).group());
-            case PASTE_GROUP -> profile.pasteGroup(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> clickRow(nodeViews.get(hot.arg()).key());
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
             case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.click(hot);

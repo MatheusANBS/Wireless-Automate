@@ -4,26 +4,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * As linhas da Lista do Tablet em árvore (lógica pura): os nós chegam do servidor já ordenados pela máquina, e
- * cada sequência de nós da mesma máquina vira um grupo com um cabeçalho e a contagem (um grupo recolhido fica só
- * com o cabeçalho). Abaixo de um nó aberto vêm as linhas da árvore que o servidor mandou para ele, na ordem dele:
- * a máquina presa, os grupos de alcance, as máquinas de cada grupo aberto e o "mais N". O nó está aberto quando
- * tem linhas; quem abre e fecha é o servidor.
+ * As linhas da Lista do Tablet em árvore (lógica pura): cada nó (roteador) é uma linha de topo, na ordem do
+ * servidor. Abaixo de um nó aberto vêm as linhas da árvore que o servidor mandou para ele, na ordem dele: a máquina
+ * presa, os grupos de alcance, as máquinas de cada grupo aberto e o "mais N". O nó está aberto quando tem linhas;
+ * quem abre e fecha é o servidor.
  *
- * <p>As setas andam pelas linhas que não são cabeçalho, pulando os grupos recolhidos e parando nas bordas.
- *
- * @param <K> o id da máquina de cada nó
+ * <p>As setas andam por todas as linhas e param nas bordas.
  */
-public final class ListTree<K> {
+public final class ListTree {
     /** O tipo de uma linha. */
     public enum Kind {
-        /** O cabeçalho de um grupo de nós da mesma máquina. */
-        HEADER,
         NODE,
         ATTACHED,
         /** Um grupo de alcance de um nó aberto. */
@@ -51,51 +43,45 @@ public final class ListTree<K> {
     /**
      * Uma linha a desenhar.
      *
-     * @param group     a máquina do grupo de nós em que a linha está
-     * @param count     num cabeçalho, quantos nós o grupo tem
-     * @param collapsed num cabeçalho ou num grupo de alcance, se está recolhido; num nó, se ele não está aberto
-     * @param node      a posição do nó (o da linha, ou o de cima numa linha da árvore); -1 num cabeçalho
+     * @param collapsed num grupo de alcance, se está recolhido; num nó, se ele não está aberto
+     * @param node      a posição do nó (o da linha, ou o de cima numa linha da árvore)
      * @param row       numa linha da árvore, a posição dela nas linhas do servidor; senão -1
-     * @param depth     o recuo: 0 no cabeçalho e no nó, 1 na presa e no grupo, 2 na máquina e no "mais N"
+     * @param depth     o recuo: 0 no nó, 1 na presa e no grupo, 2 na máquina e no "mais N"
      */
-    public record Line<K>(Kind kind, K group, int count, boolean collapsed, int node, int row, int depth) {
+    public record Line(Kind kind, boolean collapsed, int node, int row, int depth) {
     }
 
-    private final List<K> machines;
-    private final List<Line<K>> lines = new ArrayList<>();
-    /** A linha de cada nó, -1 se ele está num grupo recolhido. */
+    private final List<Line> lines = new ArrayList<>();
+    /** A linha de cada nó. */
     private final int[] nodeLines;
-    /** A linha de cada linha da árvore do servidor, -1 se ela está escondida. */
+    /** A linha de cada linha da árvore do servidor. */
     private final int[] rowLines;
     private final boolean[] open;
     /** O nó tem máquinas vinculadas (o → o abre). */
     private final boolean[] openable;
 
-    /**
-     * @param machines  a máquina de cada nó, na ordem do servidor
-     * @param rows      as linhas da árvore, na ordem do servidor: as de um nó juntas, logo depois dele
-     * @param collapsed os grupos de nós recolhidos
-     */
-    public ListTree(List<K> machines, List<TreeRow> rows, Set<K> collapsed) {
-        this(machines, rows, collapsed, new boolean[machines.size()]);
+    public ListTree(int nodes, List<TreeRow> rows) {
+        this(nodes, rows, new boolean[nodes]);
     }
 
-    /** @param openable por nó, se ele tem máquinas vinculadas (o → o abre) */
-    public ListTree(List<K> machines, List<TreeRow> rows, Set<K> collapsed, boolean[] openable) {
+    /**
+     * @param nodes    quantos nós a página tem, na ordem do servidor
+     * @param rows     as linhas da árvore, na ordem do servidor: as de um nó juntas, logo depois dele
+     * @param openable por nó, se ele tem máquinas vinculadas (o → o abre)
+     */
+    public ListTree(int nodes, List<TreeRow> rows, boolean[] openable) {
         this.openable = openable;
-        this.machines = machines;
-        this.nodeLines = new int[machines.size()];
+        this.nodeLines = new int[nodes];
         this.rowLines = new int[rows.size()];
-        this.open = new boolean[machines.size()];
-        Arrays.fill(nodeLines, -1);
+        this.open = new boolean[nodes];
         Arrays.fill(rowLines, -1);
         // onde começam as linhas de cada nó (as do servidor vêm em ordem de nó)
-        int[] firstRow = new int[machines.size()];
-        int[] rowCount = new int[machines.size()];
+        int[] firstRow = new int[nodes];
+        int[] rowCount = new int[nodes];
         Arrays.fill(firstRow, -1);
         for (int r = 0; r < rows.size(); r++) {
             int parent = rows.get(r).parent();
-            if (parent >= 0 && parent < machines.size()) {
+            if (parent >= 0 && parent < nodes) {
                 if (firstRow[parent] < 0) {
                     firstRow[parent] = r;
                 }
@@ -103,27 +89,14 @@ public final class ListTree<K> {
                 open[parent] = true;
             }
         }
-        int i = 0;
-        while (i < machines.size()) {
-            K group = machines.get(i);
-            int end = i;
-            while (end < machines.size() && Objects.equals(machines.get(end), group)) {
-                end++;
-            }
-            boolean closed = collapsed.contains(group);
-            lines.add(new Line<>(Kind.HEADER, group, end - i, closed, -1, -1, 0));
-            if (!closed) {
-                for (int node = i; node < end; node++) {
-                    nodeLines[node] = lines.size();
-                    lines.add(new Line<>(Kind.NODE, group, 0, !open[node], node, -1, 0));
-                    addTree(rows, group, node, firstRow[node], rowCount[node]);
-                }
-            }
-            i = end;
+        for (int node = 0; node < nodes; node++) {
+            nodeLines[node] = lines.size();
+            lines.add(new Line(Kind.NODE, !open[node], node, -1, 0));
+            addTree(rows, node, firstRow[node], rowCount[node]);
         }
     }
 
-    private void addTree(List<TreeRow> rows, K group, int node, int first, int count) {
+    private void addTree(List<TreeRow> rows, int node, int first, int count) {
         if (first < 0) {
             return;
         }
@@ -135,12 +108,12 @@ public final class ListTree<K> {
             seen++;
             int depth = row.kind() == Kind.MACHINE || row.kind() == Kind.MORE ? 2 : 1;
             rowLines[r] = lines.size();
-            lines.add(new Line<>(row.kind(), group, 0, row.collapsed(), node, r, depth));
+            lines.add(new Line(row.kind(), row.collapsed(), node, r, depth));
         }
     }
 
     /** As linhas a desenhar, de cima para baixo. */
-    public List<Line<K>> lines() {
+    public List<Line> lines() {
         return Collections.unmodifiableList(lines);
     }
 
@@ -149,12 +122,7 @@ public final class ListTree<K> {
         return node >= 0 && node < open.length && open[node];
     }
 
-    /** A máquina do nó, ou {@code null} fora da lista. */
-    public @Nullable K group(int node) {
-        return node >= 0 && node < machines.size() ? machines.get(node) : null;
-    }
-
-    /** A linha do nó, ou -1 se ele está num grupo recolhido ou fora da lista. */
+    /** A linha do nó, ou -1 fora da lista. */
     public int lineOfNode(int node) {
         return node >= 0 && node < nodeLines.length ? nodeLines[node] : -1;
     }
@@ -164,27 +132,17 @@ public final class ListTree<K> {
         return row >= 0 && row < rowLines.length ? rowLines[row] : -1;
     }
 
-    /** A linha do cabeçalho do grupo, ou -1. */
-    public int headerLine(K group) {
-        for (int line = 0; line < lines.size(); line++) {
-            if (lines.get(line).kind() == Kind.HEADER && Objects.equals(lines.get(line).group(), group)) {
-                return line;
-            }
-        }
-        return -1;
-    }
-
     /**
      * A linha de cima de uma linha da árvore: o grupo de alcance de uma máquina ou de um "mais N", o nó de uma presa
-     * ou de um grupo. -1 num nó, num cabeçalho ou fora da lista.
+     * ou de um grupo. -1 num nó ou fora da lista.
      */
     public int parentLine(int line) {
         if (line < 0 || line >= lines.size() || !lines.get(line).kind().tree()) {
             return -1;
         }
-        Line<K> child = lines.get(line);
+        Line child = lines.get(line);
         for (int up = line - 1; up >= 0; up--) {
-            Line<K> above = lines.get(up);
+            Line above = lines.get(up);
             if (above.depth() < child.depth()) {
                 return above.node() == child.node() ? up : -1;
             }
@@ -193,32 +151,18 @@ public final class ListTree<K> {
     }
 
     /**
-     * A linha seguinte ({@code direction > 0}) ou anterior que não é cabeçalho, a partir da linha {@code line};
-     * sem linha ({@code -1}), a primeira ou a última. Na borda, fica na mesma ({@code -1} se não havia nenhuma).
+     * A linha seguinte ({@code direction > 0}) ou anterior, a partir da linha {@code line}; sem linha ({@code -1}),
+     * a primeira ou a última. Na borda, fica na mesma ({@code -1} se não havia nenhuma).
      */
     public int next(int line, int direction) {
         int step = direction > 0 ? 1 : -1;
         boolean none = line < 0 || line >= lines.size();
         int from = none ? (step > 0 ? -1 : lines.size()) : line;
-        for (int at = from + step; at >= 0 && at < lines.size(); at += step) {
-            if (lines.get(at).kind() != Kind.HEADER) {
-                return at;
-            }
+        int at = from + step;
+        if (at >= 0 && at < lines.size()) {
+            return at;
         }
         return none ? -1 : line;
-    }
-
-    /**
-     * A linha de onde as setas partem para um nó escondido num grupo recolhido: o cabeçalho dele. -1 fora da
-     * lista.
-     */
-    public int anchorOfNode(int node) {
-        int line = lineOfNode(node);
-        if (line >= 0) {
-            return line;
-        }
-        K group = group(node);
-        return group == null ? -1 : headerLine(group);
     }
 
     // ------------------------------------------------------------------ ← e →
@@ -226,9 +170,6 @@ public final class ListTree<K> {
     /** O que uma seta faz. */
     public enum Step {
         NONE,
-        /** Recolhe o grupo de nós do cabeçalho da linha. */
-        COLLAPSE_HEADER,
-        EXPAND_HEADER,
         /** Fecha o nó da linha na árvore (no servidor). */
         CLOSE_NODE,
         OPEN_NODE,
@@ -240,41 +181,37 @@ public final class ListTree<K> {
         MOVE_TO
     }
 
-    /** O que a seta faz e em que linha (a do cabeçalho, do nó, do grupo ou a de destino). */
+    /** O que a seta faz e em que linha (a do nó, do grupo ou a de destino). */
     public record Arrow(Step step, int line) {
         static final Arrow NONE = new Arrow(Step.NONE, -1);
     }
 
     /**
-     * ← na linha {@code line}: no cabeçalho, recolhe; num nó aberto, fecha; num nó fechado, recolhe o grupo de nós
-     * dele; num grupo aberto, recolhe; num grupo recolhido, na presa, na máquina e no "mais N", sobe para a linha
-     * de cima.
+     * ← na linha {@code line}: num nó aberto, fecha; num grupo aberto, recolhe; num grupo recolhido, na presa, na
+     * máquina e no "mais N", sobe para a linha de cima.
      */
     public Arrow left(int line) {
         if (line < 0 || line >= lines.size()) {
             return Arrow.NONE;
         }
-        Line<K> at = lines.get(line);
+        Line at = lines.get(line);
         return switch (at.kind()) {
-            case HEADER -> new Arrow(Step.COLLAPSE_HEADER, line);
-            case NODE -> open(at.node()) ? new Arrow(Step.CLOSE_NODE, line)
-                    : new Arrow(Step.COLLAPSE_HEADER, headerLine(at.group()));
+            case NODE -> open(at.node()) ? new Arrow(Step.CLOSE_NODE, line) : Arrow.NONE;
             case GROUP -> at.collapsed() ? up(line) : new Arrow(Step.COLLAPSE_GROUP, line);
             case ATTACHED, MACHINE, MORE -> up(line);
         };
     }
 
     /**
-     * → na linha {@code line}: no cabeçalho, abre; num nó fechado com máquinas, abre; num grupo recolhido, abre;
-     * no "mais N", mostra todas. No resto, nada.
+     * → na linha {@code line}: num nó fechado com máquinas, abre; num grupo recolhido, abre; no "mais N", mostra
+     * todas. No resto, nada.
      */
     public Arrow right(int line) {
         if (line < 0 || line >= lines.size()) {
             return Arrow.NONE;
         }
-        Line<K> at = lines.get(line);
+        Line at = lines.get(line);
         return switch (at.kind()) {
-            case HEADER -> new Arrow(Step.EXPAND_HEADER, line);
             case NODE -> openable(at.node()) && !open(at.node()) ? new Arrow(Step.OPEN_NODE, line) : Arrow.NONE;
             case GROUP -> at.collapsed() ? new Arrow(Step.EXPAND_GROUP, line) : Arrow.NONE;
             case MORE -> new Arrow(Step.SHOW_ALL, line);

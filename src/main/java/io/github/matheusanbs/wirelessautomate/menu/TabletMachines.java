@@ -407,7 +407,7 @@ public final class TabletMachines {
         if (ref < 0) {
             ref = refs.size();
             palette.put(key, ref);
-            refs.add(new RouterRef(key, clip(entry.name())));
+            refs.add(new RouterRef(key, clip(entry.name()), entry.tier()));
         }
         int m = order.machine(k);
         if (m == MachineOrder.ATTACHED) {

@@ -102,7 +102,8 @@ final class E2eTabletMachinesSteps {
                 () -> stepTicks >= 2 && tabletScreen().mapMachinesDrawn() > 0, () -> "o Mapa sem as máquinas"));
         list.add(new Step("máquinas: de volta à Lista", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.LIST),
-                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST, () -> "aba " + tabletScreen().currentTab()));
+                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST && !page().rows().isEmpty(),
+                () -> "aba " + tabletScreen().currentTab() + ", linhas " + page().rows().size()));
         showAllSteps(list);
         keySteps(list);
         list.add(new Step("máquinas: o cabeçalho recolhe os baús", STEP_TIMEOUT_MS, () -> {

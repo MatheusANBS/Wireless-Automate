@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +21,8 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ChamberScene {
     private static final double Q_RATE = 1.6;
+    /** O quanto a sintonia do plasma anda por tick em direção ao alvo. */
+    private static final float TUNE_RATE = 0.25f;
     private static final double TICK_SECONDS = 0.05;
     private static final int PORT_REFRESH_TICKS = 200;
     private static final double FADE_SECONDS = 0.9;
@@ -46,6 +49,9 @@ final class ChamberScene {
     private List<Vec3> energyInner = List.of();
     private List<Vec3> crystalInner = List.of();
     private final ChamberParticles particles = new ChamberParticles();
+    private float tunePrev;
+    private float tuneNow;
+    private int charged;
     private double q;
     private double head;
     private double liveSpin;
@@ -62,6 +68,12 @@ final class ChamberScene {
         if (view != this.view) {
             this.view = view;
             chambers = view.chambers();
+            charged = 0;
+            for (byte chamber : chambers) {
+                if (chamber == 1 || chamber == 2) {
+                    charged++;
+                }
+            }
             int[] next = view.origin();
             if (!Arrays.equals(next, origin)) {
                 origin = next;
@@ -72,6 +84,8 @@ final class ChamberScene {
             }
         }
         this.tunedAt = tunedAt;
+        tunePrev = tuneNow;
+        tuneNow += ((view.tuned() ? 1f : view.band() / (float) (TuneSignal.BANDS - 1)) - tuneNow) * TUNE_RATE;
         double target = view.band() / (double) (TuneSignal.BANDS - 1);
         if (started) {
             q += (target - q) * Math.min(1, Q_RATE * TICK_SECONDS);
@@ -138,6 +152,16 @@ final class ChamberScene {
     /** O que há em cada câmara, lido da view uma vez por view nova; não altere. */
     byte[] chambers() {
         return chambers;
+    }
+
+    /** A sintonia suavizada do plasma, de 0 a 1, interpolada entre o tick anterior e o de agora. */
+    float tune(float partialTick) {
+        return Mth.lerp(partialTick, tunePrev, tuneNow);
+    }
+
+    /** Os cristais não Opacos nas câmaras (Sinal e Lapidado com carga), de 0 a 8. */
+    int charged() {
+        return charged;
     }
 
     double q() {

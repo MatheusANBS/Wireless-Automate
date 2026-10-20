@@ -63,6 +63,9 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
                     key -> new ChamberScene(key.pos()));
             BY_CORE.put(core, scene);
         }
+        boolean shader = !forceLegacyForTests && PlasmaShader.get() != null && RibbonShader.get() != null
+                && !ShaderPackCheck.active();
+        scene.useConduit(shader);
         if (scene.lastUsed != gameTime) {
             scene.update(view, core.tunedAt(), gameTime, level);
         }
@@ -75,15 +78,19 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         poseStack.translate(center.x, center.y, center.z);
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
-        ChamberSparks.render(poseStack, buffer, scene, partialTick);
-        if (!forceLegacyForTests && PlasmaShader.get() != null && !ShaderPackCheck.active()) {
+        if (shader) {
             Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
             Vec3 world = scene.worldCenter();
             double dx = eye.x - world.x;
             double dy = eye.y - world.y;
             double dz = eye.z - world.z;
-            PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, dx * dx + dy * dy + dz * dz);
+            double distanceSq = dx * dx + dy * dy + dz * dz;
+            PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, distanceSq);
+            if (distanceSq < FlowConduit.RANGE_SQ) {
+                FlowConduit.render(poseStack, buffer, scene, partialTick, tierColor);
+            }
         } else {
+            ChamberSparks.render(poseStack, buffer, scene, partialTick);
             LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
             ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
                     state.getValue(ResonatorPartBlock.FACING));

@@ -257,7 +257,7 @@ final class PanelLayout {
     }
 
     /**
-     * A linha Editando, com o ✎ do nome (grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando
+     * A linha Editando, com o ✎ do nome (presa, grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando
      * ele vale, e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a lista das
      * máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
      */
@@ -275,7 +275,7 @@ final class PanelLayout {
                 pillW -= used;
                 right -= used;
             }
-            boolean rename = model.readOnly() == null && !model.snapshot().target().attached();
+            boolean rename = model.readOnly() == null;
             int renameW = rename ? ROW_H + GAP : 0;
             if (model.readOnly() == null && IdleNetworks.shown(model.snapshot())) {
                 int used = arrangeIdleNetworks(font, model, right, y, pillW - renameW);
@@ -283,7 +283,7 @@ final class PanelLayout {
                 right -= used;
             }
             if (rename) {
-                // o ✎ do nome do grupo ou da máquina, logo depois da pílula
+                // o ✎ do nome da presa, do grupo ou da máquina, logo depois da pílula
                 hots.add(new Hot(Kind.RENAME, right - ROW_H, y, ROW_H, ROW_H, 0));
                 pillW -= renameW;
             }

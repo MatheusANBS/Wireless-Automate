@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineLive;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
@@ -140,7 +141,13 @@ final class TreeRows {
             case TabletRows.Attached attached -> {
                 int ax = tx + 8 + ICON_W + 2;
                 g.renderItem(texts.icons[r], tx + 8, y + 2);
-                GuiText.draw(g, font, texts.names[r], ax, y + LINE1_Y, right - ax, GuiPaint.FG);
+                NodeKey key = list.snapshot().nodes().get(line.node()).key();
+                if (list.rename.editing(ListRename.Kind.ATTACHED, key)) {
+                    list.rename.place(ax, y + 1, right - ax);
+                } else {
+                    GuiText.draw(g, font, texts.names[r], ax, y + LINE1_Y, right - ax, GuiPaint.FG);
+                    list.rename.paintPencil(g, ListRename.Kind.ATTACHED, key, hot, right, mx, my);
+                }
                 GuiText.draw(g, font, texts.seconds[r], ax, y + LINE2_Y, right - ax, GuiPaint.MUTED);
             }
             case TabletRows.Group group -> renderGroup(g, font, hot, group, r, tx, right, mx, my);
@@ -231,6 +238,11 @@ final class TreeRows {
     @Nullable EditTarget panelTarget() {
         TabletPanelPayload payload = list.panelPayload();
         return payload == null || payload.snapshot().isEmpty() ? null : payload.snapshot().get().target();
+    }
+
+    /** Onde o nome da presa começa na linha da árvore. */
+    int attachedNameX(Hot hot, Line line) {
+        return contentX(hot.x()) + line.depth() * INDENT + 8 + ICON_W + 2;
     }
 
     /** A linha é o alvo do painel do nó escolhido. */

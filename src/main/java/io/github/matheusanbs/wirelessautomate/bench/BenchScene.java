@@ -111,7 +111,7 @@ final class BenchScene {
     private final List<BlockPos> clocks = new ArrayList<>();
     private boolean clockOn;
     private final BenchTablet tablet = new BenchTablet(this);
-    /** Os barris vinculados que recebem os itens ({@link BenchScenario#feedsRemotes()}), esvaziados no reenchimento. */
+    /** As máquinas vinculadas que recebem os itens ({@link BenchScenario#feedsRemotes()}), esvaziadas no reenchimento. */
     private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
@@ -352,14 +352,13 @@ final class BenchScene {
         int half = RANGE_CELL / 2;
         int wanted = scenario.rangeMachines();
         int linked = 0;
-        BlockState barrel = Blocks.BARREL.defaultBlockState();
         for (int dx = -half; dx <= half && linked < wanted; dx++) {
             for (int dz = -half; dz <= half && linked < wanted; dz++) {
                 if (dx == 0 && dz == 0) {
                     continue;
                 }
                 BlockPos pos = node.machine().offset(dx, 0, dz);
-                level.setBlock(pos, barrel, PLACE_FLAGS);
+                level.setBlock(pos, remoteBlock(linked), PLACE_FLAGS);
                 extraBlocks.add(pos);
                 if (router.linkMachine(pos)) {
                     linked++;
@@ -370,12 +369,26 @@ final class BenchScene {
             }
         }
         RemoteMachines remotes = router.remoteMachines();
-        if (!remotes.machines().isEmpty()) {
-            int group = remotes.machines().get(0).group();
-            PortMode mode = scenario.feedsRemotes() ? PortMode.INSERT : PortMode.EXTRACT;
-            router.configureFace(EditTarget.group(group), ResourceType.ITEM, Direction.UP, mode, 0, RedstoneMode.IGNORE);
+        PortMode mode = scenario.feedsRemotes() ? PortMode.INSERT : PortMode.EXTRACT;
+        for (int g = 0; g < remotes.groupCount(); g++) {
+            router.configureFace(EditTarget.group(remotes.groupAt(g).id()), ResourceType.ITEM, Direction.UP, mode, 0,
+                    RedstoneMode.IGNORE);
         }
     }
+
+    /**
+     * O bloco da máquina vinculada número {@code linked}: barris em todos os cenários de alcance, menos no
+     * {@link BenchScenario#TABLET_MACHINES}, que alterna barril, baú, fornalha e alto-forno (um grupo por bloco), para a
+     * visão por máquinas ter vários blocos.
+     */
+    private BlockState remoteBlock(int linked) {
+        if (scenario != BenchScenario.TABLET_MACHINES) {
+            return Blocks.BARREL.defaultBlockState();
+        }
+        return REMOTE_MIX[linked % REMOTE_MIX.length].defaultBlockState();
+    }
+
+    private static final Block[] REMOTE_MIX = {Blocks.BARREL, Blocks.CHEST, Blocks.FURNACE, Blocks.BLAST_FURNACE};
 
     /** Lista negra com os itens de "lixo" (nenhum está na origem): tudo passa, depois de consultar. */
     private Filter sourceFilter() {
@@ -801,7 +814,7 @@ final class BenchScene {
         return level.getBlockEntity(node.machine()) instanceof StorageChestBlockEntity chest ? chest.storage() : null;
     }
 
-    /** O inventário de um barril vinculado ({@link #remoteSinks}). */
+    /** O inventário de uma máquina vinculada ({@link #remoteSinks}). */
     private @Nullable IItemHandler remoteItems(BlockPos pos) {
         return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, Direction.UP);
     }

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
@@ -111,6 +112,33 @@ final class RouterRange {
             return false;
         }
         machine.setException(null);
+        router.changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#setGroupProfile}. */
+    boolean setGroupProfile(int groupId, MachineConfig config) {
+        MachineGroup group = remotes.group(groupId);
+        if (group == null || !group.profile().copyFrom(config)) {
+            return false;
+        }
+        RouterFaces.dropExceptionsLikeProfile(remotes);
+        router.changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#setMachineException}. */
+    boolean setMachineException(int index, @Nullable MachineConfig config) {
+        RemoteMachine machine = remotes.machine(index);
+        if (machine == null) {
+            return false;
+        }
+        MachineConfig next = config == null || config.sameAs(remotes.groupOf(machine).profile()) ? null : config.copy();
+        MachineConfig now = machine.exception();
+        if (now == null ? next == null : next != null && now.sameAs(next)) {
+            return false;
+        }
+        machine.setException(next);
         router.changed(NetworkManager.ALL_TYPES);
         return true;
     }

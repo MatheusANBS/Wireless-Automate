@@ -73,7 +73,7 @@ final class ListTooltips {
             case PASTE -> !list.chosenPanel.canEdit() ? readOnlyTip()
                     : list.profile().map(s -> tr("list.paste.tooltip", s.sourceName())).orElse(null);
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.tooltip(hot);
-            case MACHINE, MACHINE_EYE, MACHINE_FEW -> list.machineNav.tooltip(hot);
+            case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.tooltip(hot);
             case CLEAR, UNDO -> null;
         };
     }

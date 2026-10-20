@@ -318,6 +318,35 @@ public final class TabletMachines {
         return machines;
     }
 
+    /** Uma máquina da última página: o roteador e o índice dela ({@link MachineOrder#ATTACHED} na presa). */
+    interface MachineSink {
+        void accept(NodeIndex.Entry router, int machine);
+    }
+
+    /**
+     * As máquinas do bloco que passaram na consulta da última página montada, até {@code max}: o bloco marcado no
+     * Selecionar, que o cliente não conhece inteiro (um bloco recolhido não manda as linhas). Nenhuma fora da visão
+     * por máquinas. Devolve quantas.
+     */
+    int forEachInBlock(ResourceLocation block, int max, MachineSink sink) {
+        MachineOrder order = builtOrder;
+        if (!active || order == null) {
+            return 0;
+        }
+        for (int b = 0, n = Math.min(order.blockCount(), count.length); b < n; b++) {
+            if (count[b] == 0 || !order.block(b).equals(block)) {
+                continue;
+            }
+            int sent = 0;
+            for (int k = pass.nextSetBit(first[b]); k >= 0 && k <= last[b] && sent < max; k = pass.nextSetBit(k + 1)) {
+                sink.accept(order.router(k), order.machine(k));
+                sent++;
+            }
+            return sent;
+        }
+        return 0;
+    }
+
     private int limit(ResourceLocation block, int machines) {
         return showAll.contains(block) ? machines : Math.min(machines, FEW);
     }

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
+import io.github.matheusanbs.wirelessautomate.menu.TabletMarks;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
@@ -71,13 +72,19 @@ final class TabletActions {
         send(new TabletOpenNodePayload(menu.containerId, key));
     }
 
-    void moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
-        send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys), type, network));
+    void moveNodes(List<NodeKey> keys, TabletMarks marks, Optional<ResourceType> type, Optional<UUID> network) {
+        send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys), marks, type, network));
     }
 
     void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
             List<NodeKey> keys) {
-        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine), keys));
+        profile(action, key, machine, keys, TabletMarks.EMPTY);
+    }
+
+    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
+            List<NodeKey> keys, TabletMarks marks) {
+        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine),
+                keys, marks));
     }
 
     void clearIdleNetworks(boolean undo) {

@@ -154,7 +154,10 @@ public final class MachineNav {
         list.actions.machines(action, Optional.of(block));
     }
 
-    /** As áreas da visão por máquinas. No modo Selecionar, que marca só nós, o clique numa máquina não faz nada. */
+    /**
+     * As áreas da visão por máquinas. No modo Selecionar, o clique no cabeçalho ou na máquina marca ou desmarca
+     * ({@link MarkRows}); o ▸/▾ do cabeçalho continua abrindo e recolhendo.
+     */
     void click(Hot hot) {
         TabletMachineRows.Row row = page().rows().get(hot.arg());
         switch (hot.kind()) {
@@ -170,10 +173,13 @@ public final class MachineNav {
                 }
             }
             case MACHINE -> {
-                if (!(row instanceof TabletMachineRows.Machine) || !list.multi) {
+                if (list.multi && !(row instanceof TabletMachineRows.More)) {
+                    list.markRows.clickMachine(hot.arg());
+                } else {
                     activate(hot.arg());
                 }
             }
+            case MACHINE_OPEN -> activate(hot.arg());
             default -> {
             }
         }
@@ -236,6 +242,8 @@ public final class MachineNav {
                     ? Component.translatable("gui.wirelessautomate.highlight.eye.off.tooltip")
                     : Component.translatable("gui.wirelessautomate.highlight.eye.on.tooltip");
             case MACHINE_FEW -> tr("machines.show_few.tooltip", TreeOrder.FEW);
+            case MACHINE_OPEN -> row instanceof TabletMachineRows.Block block
+                    ? tr(block.collapsed() ? "machines.block.open" : "machines.block.close") : null;
             case MACHINE -> switch (row) {
                 case TabletMachineRows.Block block -> blockTooltip(block, hot.arg());
                 case TabletMachineRows.Machine machine -> machineTooltip(machine, hot.arg());

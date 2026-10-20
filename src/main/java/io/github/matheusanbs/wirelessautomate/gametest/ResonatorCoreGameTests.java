@@ -68,7 +68,7 @@ public final class ResonatorCoreGameTests {
                 assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             }
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), 3L * 8_192 * 20, "energia de um lote");
+            helper.assertValueEqual(core.energy(), 3L * 10_000 * 20, "energia de um lote");
         });
     }
 
@@ -92,7 +92,7 @@ public final class ResonatorCoreGameTests {
             tuned(core);
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), 128L * 2 * 20, "energia do lapidado");
+            helper.assertValueEqual(core.energy(), 216L * 2 * 20, "energia do lapidado");
         });
     }
 
@@ -246,8 +246,8 @@ public final class ResonatorCoreGameTests {
             assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             ResonatorBatch.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.extractEnergy(1_000L, true), 1_000L, "simulado");
-            helper.assertValueEqual(core.energy(), 2_560L, "a simulação não tira");
-            helper.assertValueEqual(core.extractEnergy(5_000L, false), 2_560L, "só o que tem");
+            helper.assertValueEqual(core.energy(), 4_320L, "a simulação não tira");
+            helper.assertValueEqual(core.extractEnergy(5_000L, false), 4_320L, "só o que tem");
             helper.assertValueEqual(core.energy(), 0L, "vazio");
         });
     }

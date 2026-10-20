@@ -356,7 +356,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
                 yieldSum += item.yield();
             }
         }
-        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), yieldSum, efficiency());
+        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), yieldSum * 4, efficiency());
     }
 
     double velocity() {

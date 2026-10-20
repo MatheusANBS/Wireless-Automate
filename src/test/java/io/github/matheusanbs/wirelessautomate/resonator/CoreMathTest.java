@@ -13,36 +13,49 @@ class CoreMathTest {
     }
 
     @Test
-    void fePorCristalPadraoDaTabela() {
-        long[] expected = {128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728L, 1_073_741_824L};
-        for (int tier = 0; tier < expected.length; tier++) {
-            assertEquals(expected[tier], CoreMath.defaultFePerCrystal(tier), "tier " + tier);
+    void escadaNova() {
+        long[] esperado = {216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000L, 268_435_456L};
+        for (int i = 0; i < esperado.length; i++) {
+            assertEquals(esperado[i], CoreMath.defaultFePerCrystal(i), "tier " + i);
         }
     }
 
     @Test
+    void quartosPorTier() {
+        assertEquals(4, CoreMath.yieldQuarters(CoreMath.KIND_SIGNAL, -1, 0));
+        assertEquals(8, CoreMath.yieldQuarters(CoreMath.KIND_CUT, -1, 1));
+        assertEquals(1, CoreMath.yieldQuarters(CoreMath.KIND_SIGNAL, -1, 2));
+        assertEquals(2, CoreMath.yieldQuarters(CoreMath.KIND_CUT, -1, 7));
+        assertEquals(8, CoreMath.yieldQuarters(CoreMath.KIND_TUNED, 3, 3));
+        assertEquals(8, CoreMath.yieldQuarters(CoreMath.KIND_TUNED, 7, 4));
+        assertEquals(2, CoreMath.yieldQuarters(CoreMath.KIND_TUNED, 2, 3));
+        assertEquals(8, CoreMath.yieldQuarters(CoreMath.KIND_TUNED, 2, 0));
+    }
+
+    @Test
+    void perTickEmQuartos() {
+        assertEquals(432, CoreMath.perTick(216, 8, 1.0));
+        assertEquals(54, CoreMath.perTick(216, 1, 1.0));
+        assertEquals(388, CoreMath.perTick(216, 8, 0.9));
+        assertEquals(0, CoreMath.perTick(216, 0, 1.0));
+        assertEquals(4_294_967_296L, CoreMath.maxOutput(8, 268_435_456L));
+        assertEquals(64_000_000L, CoreMath.maxOutput(5, 6_400_000L));
+    }
+
+    @Test
     void maximoEBufferDaSpec() {
-        assertEquals(256, CoreMath.maxOutput(1, 128));
-        assertEquals(49_152, CoreMath.maxOutput(3, 8_192));
-        assertEquals(1_879_048_192L, CoreMath.maxOutput(7, 134_217_728L));
-        assertEquals(17_179_869_184L, CoreMath.maxOutput(8, 1_073_741_824L));
-        assertEquals(51_200, CoreMath.buffer(1, 128));
-        assertEquals(9_830_400, CoreMath.buffer(3, 8_192));
-        assertEquals(3_435_973_836_800L, CoreMath.buffer(8, 1_073_741_824L));
+        assertEquals(432, CoreMath.maxOutput(1, 216));
+        assertEquals(60_000, CoreMath.maxOutput(3, 10_000));
+        assertEquals(2_576_000_000L, CoreMath.maxOutput(7, 184_000_000L));
+        assertEquals(86_400, CoreMath.buffer(1, 216));
+        assertEquals(12_000_000, CoreMath.buffer(3, 10_000));
     }
 
     @Test
     void geracaoDoUltimateCabeNoLong() {
-        assertEquals(17_179_869_184L, CoreMath.perTick(1_073_741_824L, 16, 1.0));
-        assertEquals(17_179_869_184L * 20, CoreMath.mulSat(CoreMath.perTick(1_073_741_824L, 16, 1.0), 20));
-    }
-
-    @Test
-    void geracaoPorTickArredondaParaBaixo() {
-        assertEquals(4_096 * 4, CoreMath.perTick(4_096, 4, 1.0));
-        assertEquals(11_796, CoreMath.perTick(4_096, 4, 0.72));
-        assertEquals(0, CoreMath.perTick(4_096, 4, 0.0));
-        assertEquals(0, CoreMath.perTick(4_096, 0, 1.0));
+        long max = CoreMath.perTick(268_435_456L, 64, 1.0);
+        assertEquals(4_294_967_296L, max);
+        assertEquals(max * 20, CoreMath.mulSat(max, 20));
     }
 
     @Test

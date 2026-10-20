@@ -70,7 +70,7 @@ public final class ResonatorTunerGameTests {
             assertNear(helper, core.efficiency(), 0.90, "eficiência no automático");
             assertNear(helper, core.rawEfficiency(), 1.0, "eficiência sem o teto");
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), CoreMath.perTick(8_192, 6, 0.9) * 20, "energia de um lote");
+            helper.assertValueEqual(core.energy(), CoreMath.perTick(10_000, 6 * 4, 0.9) * 20, "energia de um lote");
         });
     }
 

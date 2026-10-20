@@ -38,6 +38,8 @@ final class ChamberCrystals {
     private static final double PULSE_SECONDS = 1.6;
     private static final float BEAM_HALF = 0.009f;
     private static final double TICK_SECONDS = 0.05;
+    /** O raio do plasma, onde terminam os feixes (o mesmo em que começa o conduto). */
+    private static final double PLASMA_EDGE = 0.35;
     private static final byte EMPTY = 0;
     private static final byte DULL_SIGNAL = 3;
     /** Uma pilha por código da câmara: vazia, Cristal, Lapidado e os dois Opacos. */
@@ -51,7 +53,7 @@ final class ChamberCrystals {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource buffer, ChamberScene scene, long gameTime,
-            float partialTick, ClientLevel level, boolean gem, int tierColor) {
+            float partialTick, ClientLevel level, boolean gem, boolean plasma, int tierColor) {
         byte[] chambers = scene.chambers();
         double since = scene.sinceFormed(gameTime, partialTick);
         float scale = (float) (SCALE * ChamberScene.on(since, CRYSTAL_DELAY));
@@ -89,22 +91,27 @@ final class ChamberCrystals {
             }
             poseStack.popPose();
         }
-        beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick);
+        beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick, plasma);
     }
 
-    /** Os feixes dos cristais vivos até a cabeça, só com a sintonia acima da metade. */
+    /**
+     * Os feixes dos cristais vivos, só com a sintonia acima da metade: até a cabeça da figura no desenho antigo e, com
+     * o plasma, até a borda dele, na direção de cada cristal (a câmara está na origem).
+     */
     private static void beams(PoseStack.Pose pose, MultiBufferSource buffer, ChamberScene scene, byte[] chambers,
-            double since, double ticks, float partialTick) {
+            double since, double ticks, float partialTick, boolean plasma) {
         double q = scene.q();
         double strength = ChamberScene.on(since, BEAM_DELAY) * Math.max(0, q - 0.5) * 2;
         if (strength <= 0) {
             return;
         }
         double t = ticks * TICK_SECONDS;
-        double[] head = scene.headPoint(partialTick);
-        TO[0] = (float) head[0];
-        TO[1] = (float) head[1];
-        TO[2] = (float) head[2];
+        if (!plasma) {
+            double[] head = scene.headPoint(partialTick);
+            TO[0] = (float) head[0];
+            TO[1] = (float) head[1];
+            TO[2] = (float) head[2];
+        }
         VertexConsumer out = null;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY || isDull(chambers[i])) {
@@ -119,6 +126,16 @@ final class ChamberCrystals {
             FROM[0] = (float) at[0];
             FROM[1] = (float) at[1];
             FROM[2] = (float) at[2];
+            if (plasma) {
+                double length = Math.sqrt(at[0] * at[0] + at[1] * at[1] + at[2] * at[2]);
+                if (length < 1e-4) {
+                    continue;
+                }
+                float k = (float) (PLASMA_EDGE / length);
+                TO[0] = FROM[0] * k;
+                TO[1] = FROM[1] * k;
+                TO[2] = FROM[2] * k;
+            }
             if (out == null) {
                 out = buffer.getBuffer(RenderType.lightning());
             }

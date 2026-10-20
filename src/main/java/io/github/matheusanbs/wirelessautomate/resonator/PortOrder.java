@@ -19,21 +19,6 @@ public final class PortOrder {
         return sorted;
     }
 
-    /** A posição de {@code port} na ordem das {@code energyPorts}, ou -1 se ela não está na lista. Não aloca. */
-    public static int energyIndex(int[] origin, List<BlockPos> energyPorts, BlockPos port) {
-        boolean found = false;
-        int before = 0;
-        for (int i = 0; i < energyPorts.size(); i++) {
-            BlockPos other = energyPorts.get(i);
-            if (other.equals(port)) {
-                found = true;
-            } else if (compare(origin, other, port) < 0) {
-                before++;
-            }
-        }
-        return found ? before : -1;
-    }
-
     private static int compare(int[] origin, BlockPos a, BlockPos b) {
         int x = Integer.compare(a.getX() - origin[0], b.getX() - origin[0]);
         if (x != 0) {

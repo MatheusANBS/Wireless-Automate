@@ -13,10 +13,15 @@ public final class PlasmaShader {
     private PlasmaShader() {
     }
 
-    /** Pede ao vanilla que compile o shader no carregamento dos recursos. */
-    public static void register(RegisterShadersEvent event) throws IOException {
-        event.registerShader(new ShaderInstance(event.getResourceProvider(), WirelessAutomate.id("resonator_plasma"),
+    /** Pede ao vanilla que compile o shader no carregamento dos recursos; se não compilar, fica {@code null} e a câmara cai no desenho antigo. */
+    public static void register(RegisterShadersEvent event) {
+        try {
+            event.registerShader(new ShaderInstance(event.getResourceProvider(), WirelessAutomate.id("resonator_plasma"),
                 DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP), loaded -> shader = loaded);
+        } catch (IOException | RuntimeException e) {
+            shader = null;
+            WirelessAutomate.LOGGER.warn("O shader resonator_plasma não compilou; a câmara do Ressonador volta ao desenho antigo", e);
+        }
     }
 
     public static ShaderInstance get() {

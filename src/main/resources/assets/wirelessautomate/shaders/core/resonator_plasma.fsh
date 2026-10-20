@@ -45,7 +45,7 @@ void main() {
     vec2 q = p * 3.0;
     float w = fbm(q + vec2(t * 0.4, -t * 0.3) + fbm(q * 1.5 - t * 0.2, octaves) * 1.6, octaves);
     float radius = 0.26 + 0.03 * sin(t * 2.0) + mis * 0.08 * (w - 0.5) - press * 0.05;
-    float body = smoothstep(radius, radius - 0.12, r) * (0.55 + 0.9 * w);
+    float body = (1.0 - smoothstep(radius - 0.12, radius, r)) * (0.55 + 0.9 * w);
     col += mix(CORAL * 0.8, CORAL, smoothstep(0.0, radius, radius - r + 0.1)) * vec3(1.5, 0.75, 0.55) * body;
     float ring = (r - radius) / 0.07;
     col += tier * 1.3 * exp(-ring * ring) * (1.0 + press * 0.9);
@@ -74,6 +74,6 @@ void main() {
     float st = h21(floor(gl_FragCoord.xy / 2.0) + floor(t * 24.0));
     col += vec3(st) * mis * mis * 0.22 * (1.0 - r);
     col = 1.0 - exp(-col * 0.9);
-    float edge = smoothstep(1.0, 0.7, r);
+    float edge = (1.0 - smoothstep(0.7, 1.0, r));
     fragColor = vec4(col * edge, 1.0);
 }

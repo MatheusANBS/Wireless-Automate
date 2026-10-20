@@ -69,7 +69,7 @@ void main() {
         lit = step(h, rec);
     }
     float diff = 0.42 + 0.58 * max(dot(N, L), 0.0);
-    float core = exp(-dot(obj.xz, obj.xz) * 16.0) * smoothstep(0.6, 0.0, abs(obj.y - 0.02));
+    float core = exp(-dot(obj.xz, obj.xz) * 16.0) * (1.0 - smoothstep(0.0, 0.6, abs(obj.y - 0.02)));
     vec3 live = mix(DEEP, CORAL, smoothstep(0.28, 0.72, vein)) * (0.5 + 0.5 * diff);
     live += HOT * core * (0.45 + 0.2 * sin(t * 2.0 + seed * 7.0));
     // a borda leva só um pouco do tier: um tier frio (verde-água) somado ao coral puxaria a gema para o cinza
@@ -78,7 +78,7 @@ void main() {
     vec3 grey = mix(STONE_DARK, STONE_LIGHT, smoothstep(0.3, 0.7, vein)) * diff + vec3(0.5) * fres * 0.18;
     vec3 col = mix(grey, live, lit);
     if (rec >= 0.0) {
-        float front = smoothstep(0.04, 0.0, abs(h - rec)) * step(0.001, rec) * step(rec, 0.999);
+        float front = (1.0 - smoothstep(0.0, 0.04, abs(h - rec))) * step(0.001, rec) * step(rec, 0.999);
         col += vec3(1.0, 0.72, 0.6) * front * 1.8;
     }
 

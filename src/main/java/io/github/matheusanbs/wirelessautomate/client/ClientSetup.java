@@ -31,7 +31,6 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
-import java.io.IOException;
 import java.util.List;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
@@ -105,7 +104,7 @@ public final class ClientSetup {
 
     /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
     @SubscribeEvent
-    static void registerShaders(RegisterShadersEvent event) throws IOException {
+    static void registerShaders(RegisterShadersEvent event) {
         PlasmaShader.register(event);
         RibbonShader.register(event);
         CrystalShader.register(event);

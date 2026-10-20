@@ -16,7 +16,7 @@ O dono pediu para trocar todas as animações da câmara, não só o centro. Dua
 | Fluxo de energia | faíscas pela geração | **conduto** de luz do plasma até cada Porta de Energia **que está entregando energia**, com pacotes correndo para fora; mais grosso e mais rápido com mais vazão; apagado sem vazão |
 | Recarga | grãos de redstone e pó | **espiral** de catalisador da Porta de Cristais até o Opaco; o cristal **enche de luz** com o progresso e solta um **anel** ao terminar |
 | Cristais | modelo do item em anel, feixe até a cabeça | igual, mais uma **aura** do shader em cada cristal vivo, que treme fora de sintonia |
-| Buffer cheio | nada | o plasma **pulsa contido** (pressão), e nenhum conduto acende |
+| Buffer cheio | nada | o plasma **pulsa contido** (pressão), e o conduto segue a vazão real (acende só se algum roteador ainda tira energia) |
 | Placa de Chladni | igual | igual |
 
 Tudo novo é desenhado por shader, como o plasma: um segundo core shader, `wirelessautomate:resonator_ribbon`, para fitas e auras (conduto, espiral, aura e anel), com os parâmetros nos vértices. Com shaderpack do Iris ativo, a câmara usa o desenho antigo, mas as faíscas antigas passam a seguir a vazão real (correção que vale nos dois modos).

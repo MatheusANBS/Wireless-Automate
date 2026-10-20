@@ -1426,13 +1426,24 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, agrupados pela máquina, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). Um roteador com máquinas vinculadas abre em árvore, com as máquinas dele. **Selecionar** move vários nós de rede de uma vez: todas as faces deles no tipo escolhido (ou em todos). Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
-| **Mapa** | Vista de cima com cores por status. Clique num ponto para escolher o nó. O roteador escolhido mostra as máquinas vinculadas a ele, cada uma ligada a ele por uma linha (veja abaixo). |
+| **Lista** | Todos os nós, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). O seletor **Roteadores · Máquinas**, embaixo da busca, mostra a lista pelos roteadores (agrupados pela máquina presa, cada um abrindo em árvore com as máquinas dele) ou por todas as máquinas, agrupadas pelo bloco. **Selecionar** marca roteadores, grupos e máquinas para colar um perfil ou mudar de rede de uma vez. Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, o saldo dos Armazéns e o que precisa de atenção (veja abaixo). |
-| **Redes** | Criar redes, cor, membros e privacidade. |
-| **Grupos** | Juntam as redes de um sistema para pausar e retomar tudo de uma vez. |
+| **Mapa** | Vista de cima com cores por status. Clique num ponto para escolher o nó. O roteador escolhido mostra as máquinas vinculadas a ele, cada uma ligada a ele por uma linha (veja abaixo). |
+| **Redes** | Criar redes, cor, membros e privacidade, e os grupos de redes, que pausam e retomam um sistema inteiro de uma vez (veja abaixo). |
+
+O cabeçalho do Tablet conta a sua base: nós, máquinas e redes.
 
 Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra o aviso **faces sem rede: rede removida**: escolha outra rede para elas.
+
+## Redes e grupos
+
+A aba **Redes** é uma lista só. Cada grupo de redes é uma seção, com **▾** para recolher e **Pausar** no cabeçalho (**pausado** quando está); as redes fora de grupo vêm no fim, em **Sem grupo**. Uma rede em dois grupos aparece nas duas seções, e a dica diz **Também em …**.
+
+- Clique numa rede para ver à direita a cor, se é pública ou privada, usá-la e removê-la.
+- Clique no cabeçalho de um grupo para ver o grupo à direita: o nome, pausar, as redes dele (marque ou desmarque cada uma; **em …** avisa a rede que já está noutro grupo) e remover.
+- **Nova rede** e **Novo grupo**, embaixo da lista, criam uma rede ou um grupo: digite o nome e confirme (ou Enter).
+
+Um grupo pausado para todas as redes dele de uma vez; retomar as solta.
 
 ## Fluxos
 
@@ -1482,9 +1493,24 @@ Clique numa máquina para editá-la no painel: ela vira o alvo da linha **Editan
 
 O Tablet lembra, ao reabrir, os roteadores abertos, os grupos escondidos e os que mostram todas.
 
+## A Lista por máquinas
+
+No seletor embaixo da busca, **Máquinas** mostra todas as máquinas da base, as presas e as vinculadas, agrupadas pelo tipo de bloco; **Roteadores** volta à lista de sempre. Os filtros rápidos ficam à direita do seletor.
+
+| Linha | O que mostra |
+| --- | --- |
+| **Bloco** | O **▸**/**▾**, o ícone, o nome e quantas máquinas (por exemplo "Fornalha · 23") e, apagado à direita, de quantos roteadores. Clique para abrir ou recolher o bloco. |
+| **Máquina** | O nome (ou **#N**, o mesmo número da árvore e da tela do roteador) e, embaixo, **via** o roteador que a atende, ou **presa** na máquina onde o roteador está preso, com as coordenadas ou o estado em palavras. À direita, a vazão quando ela move, a marca **exceção** e o Olho **◉**. |
+
+Cada bloco mostra as 8 primeiras máquinas; **… mais N · Mostrar todas** mostra o resto e **Mostrar menos** volta às 8. Com uma base grande, os blocos começam recolhidos: abra o que quiser ver. O pé da lista conta os blocos e as máquinas.
+
+A busca acha a máquina pelo nome, pelo bloco e pelo nome do roteador. Os filtros por tipo e por rede valem por máquina: em **Só Fluidos**, uma fornalha não aparece, mesmo que o roteador dela também mova fluidos.
+
+Clique numa máquina: o Tablet escolhe o roteador dela e põe a máquina como alvo do painel, para configurá-la ali; na presa, o alvo é a presa. As setas **↑ ↓** andam nas linhas, **← →** recolhem e abrem o bloco, e **Enter** escolhe. O Tablet lembra, ao reabrir, a visão e os blocos abertos.
+
 ## As máquinas no Mapa
 
-No Mapa, o nó escolhido é o mesmo da Lista. Se ele tiver máquinas vinculadas, elas aparecem como quadradinhos ligados ao roteador por uma linha; as acesas pelo Olho ficam em ciano. Clique numa máquina para escolhê-la como alvo do painel do nó, o mesmo da Lista.
+No Mapa, o nó escolhido é o mesmo da Lista. Se ele tiver máquinas vinculadas, elas aparecem como quadradinhos ligados ao roteador por uma linha; as acesas pelo Olho ficam em ciano. Clique numa máquina para escolhê-la como alvo do painel do nó, o mesmo da Lista. Na Lista por máquinas, o Mapa mostra o roteador da máquina escolhida e as máquinas dele.
 
 ## Clicar numa máquina
 
@@ -1504,9 +1530,23 @@ Com um nó escolhido, **Copiar perfil** guarda a configuração das faces dele n
 | --- | --- |
 | **Um nó** | Escolha-o e clique em **Colar perfil**. |
 | **Todo um grupo** | No cabeçalho do grupo, **Colar nas N** (a origem fica de fora). |
-| **Vários nós** | Em **Selecionar**, marque os nós e clique em **Colar nos N marcados**. |
+| **Vários roteadores e máquinas** | Em **Selecionar**, marque o que quiser e clique em **Colar nos marcados**; o botão diz o que vai atingir ("2 roteadores, 3 máquinas"). |
 
 Os nós já iguais ao perfil dizem "igual ao perfil"; os outros mostram "N diferentes do perfil" e o primeiro ajuste que falta. O aviso depois de colar traz **Desfazer**. Atalhos: **Ctrl+C** copia o perfil do nó escolhido, **Ctrl+V** cola e **Ctrl+Z** desfaz. As redes valem pela regra de sempre: só entram as que você pode usar.
+
+## Marcar roteadores e máquinas
+
+Em **Selecionar**, toda linha tem uma caixa, nas duas visões: o roteador, a máquina presa, o grupo, a máquina e o cabeçalho do bloco. Marcar um grupo ou um bloco marca as máquinas dele; com só uma parte marcada, a caixa fica pela metade. **Todos** marca o que a busca mostra: os roteadores em **Roteadores**, os blocos em **Máquinas**.
+
+**Colar nos marcados** cola o perfil copiado:
+
+- no **roteador**, na máquina presa, como no colar de sempre;
+- na **máquina**, como uma exceção dela, com os lados virados pela frente da máquina: cada face vai para o mesmo lado da máquina, mesmo que ela esteja virada para outra direção. Se ficar igual ao perfil do grupo, a exceção some;
+- no **grupo inteiro** (o grupo marcado, o bloco marcado ou todas as máquinas do grupo uma a uma), no perfil do grupo; as exceções que já existem ficam, e o aviso diz quantas.
+
+O roteador de onde o perfil veio fica de fora (as máquinas vinculadas a ele recebem); roteadores descarregados ou fora do alcance ficam de fora com as máquinas deles, e o aviso conta. Um perfil copiado numa versão anterior só cola em roteadores: copie-o de novo para colar em máquinas e grupos. O aviso ("Colado em 3 grupos e 1 máquina · 2 exceções mantidas") traz **Desfazer**, que volta o que ainda está como ficou.
+
+**Mover** põe os marcados na rede escolhida: os roteadores inteiros, como sempre; numa máquina marcada, só as faces com modo dela (vira uma exceção); num grupo inteiro, o perfil do grupo. Uma máquina de um roteador também marcado já vai junto com ele.
 
 ## Receita
 
@@ -1530,13 +1570,24 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, grouped by machine, with search, quick filters and the panel of the chosen node (see below). A router with linked machines opens as a tree, with its machines. **Select** moves many nodes between networks at once: all their faces of the chosen type (or of every type). A node with faces on several networks shows "faces in N networks"; hover to see which. |
-| **Map** | Top-down view colored by status. Click a point to choose the node. The chosen router shows the machines linked to it, each joined to it by a line (see below). |
+| **List** | Every node, with search, quick filters and the panel of the chosen node (see below). The **Routers · Machines** switch, below the search, shows the list by router (grouped by attached machine, each opening as a tree with its machines) or by every machine, grouped by block. **Select** marks routers, groups and machines to paste a profile or change networks at once. A node with faces on several networks shows "faces in N networks"; hover to see which. |
 | **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
-| **Networks** | Create networks, color, members and privacy. |
-| **Groups** | Bundle the networks of one system to pause and resume them all at once. |
+| **Map** | Top-down view colored by status. Click a point to choose the node. The chosen router shows the machines linked to it, each joined to it by a line (see below). |
+| **Networks** | Create networks, color, members and privacy, and the network groups, which pause and resume a whole system at once (see below). |
+
+The Tablet's header counts your base: nodes, machines and networks.
 
 If a network is deleted, the faces that were on it are left without a network and the node shows the warning **faces without network: network removed**: pick another network for them.
+
+## Networks and groups
+
+The **Networks** tab is a single list. Each network group is a section, with **▾** to collapse it and **Pause** on its header (**paused** when it is); networks outside any group come last, under **No group**. A network in two groups shows up in both sections, and the tooltip says **Also in …**.
+
+- Click a network to see its color and whether it is public or private on the right, use it or remove it.
+- Click a group's header to see the group on the right: its name, pause, its networks (check or uncheck each one; **in …** flags a network that is already in another group) and remove.
+- **New network** and **New group**, below the list, create a network or a group: type the name and confirm (or Enter).
+
+A paused group stops all its networks at once; resuming lets them go.
 
 ## Flows
 
@@ -1586,9 +1637,24 @@ Click a machine to edit it in the panel: it becomes the target of the **Editing*
 
 When you reopen it, the Tablet remembers the open routers, the hidden groups and the ones showing all.
 
+## The List by machine
+
+In the switch below the search, **Machines** shows every machine of your base, attached and linked, grouped by block type; **Routers** goes back to the usual list. The quick filters sit to the right of the switch.
+
+| Row | What it shows |
+| --- | --- |
+| **Block** | The **▸**/**▾**, the icon, the name and how many machines (for example "Furnace · 23") and, dimmed on the right, from how many routers. Click it to open or collapse the block. |
+| **Machine** | The name (or **#N**, the same number as in the tree and on the router screen) and, below, **via** the router that serves it, or **attached** on the machine the router is attached to, with the coordinates or the state in words. On the right, the rate when it moves, the **exception** mark and the Eye **◉**. |
+
+Each block shows its first 8 machines; **… N more · Show all** shows the rest and **Show fewer** goes back to 8. With a large base, the blocks start collapsed: open the one you want to see. The foot of the list counts the blocks and machines.
+
+The search finds a machine by its name, its block and its router's name. The type and network filters apply per machine: under **Only Fluids**, a furnace does not show up, even if its router also moves fluids.
+
+Click a machine: the Tablet chooses its router and makes the machine the panel's target, to set it up there; on the attached machine, the target is the attached machine. **↑ ↓** walk the rows, **← →** collapse and open the block, and **Enter** chooses. When you reopen it, the Tablet remembers the view and the open blocks.
+
 ## Machines on the Map
 
-On the Map, the chosen node is the same as in the List. If it has linked machines, they show up as small squares joined to the router by a line; the ones lit by the Eye are cyan. Click a machine to choose it as the target of the node's panel, the same one as in the List.
+On the Map, the chosen node is the same as in the List. If it has linked machines, they show up as small squares joined to the router by a line; the ones lit by the Eye are cyan. Click a machine to choose it as the target of the node's panel, the same one as in the List. In the List by machine, the Map shows the chosen machine's router and its machines.
 
 ## Clicking a machine
 
@@ -1608,9 +1674,23 @@ With a node chosen, **Copy profile** saves its face settings in the Tablet (the 
 | --- | --- |
 | **One node** | Choose it and click **Paste profile**. |
 | **A whole group** | On the group's header, **Paste on N** (the source is left out). |
-| **Several nodes** | In **Select**, check the nodes and click **Paste on N marked**. |
+| **Several routers and machines** | In **Select**, mark what you want and click **Paste on marked**; the button says what it will reach ("2 routers, 3 machines"). |
 
 Nodes already equal to the profile say "same as the profile"; the others show "N different from the profile" and the first setting that is missing. The notice after pasting has an **Undo** button. Shortcuts: **Ctrl+C** copies the chosen node's profile, **Ctrl+V** pastes and **Ctrl+Z** undoes. Networks follow the usual rule: only the ones you can use are applied.
+
+## Marking routers and machines
+
+In **Select**, every row has a box, in both views: the router, the attached machine, the group, the machine and the block header. Marking a group or a block marks its machines; with only part of it marked, the box is half filled. **All** marks what the search shows: the routers under **Routers**, the blocks under **Machines**.
+
+**Paste on marked** pastes the copied profile:
+
+- on a **router**, on its attached machine, like the usual paste;
+- on a **machine**, as an exception of its own, with the sides turned by the machine's front: each face goes to the same side of the machine, even if it faces another direction. If it ends up equal to the group's profile, the exception goes away;
+- on a **whole group** (the marked group, the marked block or every machine of the group one by one), on the group's profile; the exceptions already there stay, and the notice says how many.
+
+The router the profile came from is left out (the machines linked to it do receive); unloaded or out-of-range routers are left out with their machines, and the notice counts them. A profile copied in an earlier version only pastes on routers: copy it again to paste on machines and groups. The notice ("Pasted on 3 groups and 1 machine · 2 exceptions kept") has **Undo**, which brings back what is still as it was left.
+
+**Move** puts the marked ones in the chosen network: whole routers, as always; on a marked machine, only its faces with a mode (it becomes an exception); on a whole group, the group's profile. A machine of a router that is also marked already goes along with it.
 
 ## Recipe
 

@@ -212,10 +212,9 @@ final class MapTab {
         return machines.center(machine);
     }
 
-    /** Põe as máquinas do nó escolhido em dia com o painel e a vista; sem painel dele ou noutra dimensão, nenhuma. */
     /**
-     * As máquinas do roteador escolhido, pelo painel dele; também na visão por máquinas, em que a página não traz o
-     * nó (o ponto do roteador vem do {@link #chosenOffPage}).
+     * As máquinas do roteador escolhido, pelo painel dele, e nenhuma sem o painel ou noutra dimensão; o ponto do
+     * roteador fora da página vem do {@link #chosenOffPage}.
      */
     private void prepareMachines(double scale) {
         NodeKey key = chosenKey();
@@ -237,7 +236,7 @@ final class MapTab {
         return key;
     }
 
-    /** O ponto do roteador escolhido quando a página não o traz (a visão por máquinas), contornado como escolhido. */
+    /** O ponto do roteador escolhido quando a página não o traz (fora do teto ou da consulta), contornado. */
     private void chosenOffPage(GuiGraphics g, double scale) {
         NodeKey key = chosenKey();
         if (key == null || mapNode() != null) {

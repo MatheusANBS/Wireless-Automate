@@ -80,7 +80,7 @@ final class MarkedPaste {
             if (!attached && !remote) {
                 continue;
             }
-            PasteUndo.State before = PasteUndo.State.of(router, remote);
+            PasteUndo.State before = PasteUndo.State.of(router, attached, remote);
             boolean onMachines = remote;
             router.batchChanges(() -> {
                 if (attached) {
@@ -98,7 +98,7 @@ final class MarkedPaste {
                 machines += targets.machines().size();
                 kept += exceptionsIn(router.remoteMachines(), targets);
             }
-            PasteUndo change = PasteUndo.between(before, PasteUndo.State.of(router, remote), attached);
+            PasteUndo change = PasteUndo.between(before, PasteUndo.State.of(router, attached, remote), attached);
             if (change != null) {
                 undo.put(key, change);
             }

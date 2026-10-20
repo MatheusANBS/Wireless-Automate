@@ -1510,7 +1510,7 @@ Clique numa máquina: o Tablet escolhe o roteador dela e põe a máquina como al
 
 ## As máquinas no Mapa
 
-No Mapa, o nó escolhido é o mesmo da Lista. Se ele tiver máquinas vinculadas, elas aparecem como quadradinhos ligados ao roteador por uma linha; as acesas pelo Olho ficam em ciano. Clique numa máquina para escolhê-la como alvo do painel do nó, o mesmo da Lista. Na Lista por máquinas, o Mapa mostra o roteador da máquina escolhida e as máquinas dele.
+No Mapa, o nó escolhido é o mesmo da Lista. Se ele tiver máquinas vinculadas, elas aparecem como quadradinhos ligados ao roteador por uma linha; as acesas pelo Olho ficam em ciano. Clique numa máquina para escolhê-la como alvo do painel do nó, o mesmo da Lista. Com a Lista por máquinas, o Mapa continua com todos os roteadores; o escolhido é o da máquina escolhida, com as máquinas dele.
 
 ## Clicar numa máquina
 
@@ -1530,7 +1530,7 @@ Com um nó escolhido, **Copiar perfil** guarda a configuração das faces dele n
 | --- | --- |
 | **Um nó** | Escolha-o e clique em **Colar perfil**. |
 | **Todo um grupo** | No cabeçalho do grupo, **Colar nas N** (a origem fica de fora). |
-| **Vários roteadores e máquinas** | Em **Selecionar**, marque o que quiser e clique em **Colar nos marcados**; o botão diz o que vai atingir ("2 roteadores, 3 máquinas"). |
+| **Vários roteadores e máquinas** | Em **Selecionar**, marque o que quiser e clique em **Colar nos marcados**; o botão diz o que vai atingir ("2 roteadores, 3 máquinas") ou, sem espaço, só quantos, e a dica diz tudo. |
 
 Os nós já iguais ao perfil dizem "igual ao perfil"; os outros mostram "N diferentes do perfil" e o primeiro ajuste que falta. O aviso depois de colar traz **Desfazer**. Atalhos: **Ctrl+C** copia o perfil do nó escolhido, **Ctrl+V** cola e **Ctrl+Z** desfaz. As redes valem pela regra de sempre: só entram as que você pode usar.
 
@@ -1654,7 +1654,7 @@ Click a machine: the Tablet chooses its router and makes the machine the panel's
 
 ## Machines on the Map
 
-On the Map, the chosen node is the same as in the List. If it has linked machines, they show up as small squares joined to the router by a line; the ones lit by the Eye are cyan. Click a machine to choose it as the target of the node's panel, the same one as in the List. In the List by machine, the Map shows the chosen machine's router and its machines.
+On the Map, the chosen node is the same as in the List. If it has linked machines, they show up as small squares joined to the router by a line; the ones lit by the Eye are cyan. Click a machine to choose it as the target of the node's panel, the same one as in the List. With the List by machine, the Map still shows every router; the chosen one is the chosen machine's router, with its machines.
 
 ## Clicking a machine
 
@@ -1674,7 +1674,7 @@ With a node chosen, **Copy profile** saves its face settings in the Tablet (the 
 | --- | --- |
 | **One node** | Choose it and click **Paste profile**. |
 | **A whole group** | On the group's header, **Paste on N** (the source is left out). |
-| **Several routers and machines** | In **Select**, mark what you want and click **Paste on marked**; the button says what it will reach ("2 routers, 3 machines"). |
+| **Several routers and machines** | In **Select**, mark what you want and click **Paste on marked**; the button says what it will reach ("2 routers, 3 machines") or, without room, just how many, and the tooltip says it all. |
 
 Nodes already equal to the profile say "same as the profile"; the others show "N different from the profile" and the first setting that is missing. The notice after pasting has an **Undo** button. Shortcuts: **Ctrl+C** copies the chosen node's profile, **Ctrl+V** pastes and **Ctrl+Z** undoes. Networks follow the usual rule: only the ones you can use are applied.
 

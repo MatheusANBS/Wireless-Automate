@@ -10,7 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
@@ -77,7 +77,7 @@ final class MapMachines {
      * Põe os pontos em dia com o painel e a vista. {@code router} é o nó do painel, já na dimensão do mapa (ou
      * {@code null}: nada a mostrar).
      */
-    void prepare(@Nullable TabletPanelPayload payload, @Nullable NodeView router, BlockPos center, double scale,
+    void prepare(@Nullable TabletPanelPayload payload, @Nullable NodeKey router, BlockPos center, double scale,
             int x0, int y0, int w, int h) {
         if (payload == null || router == null) {
             built = null;
@@ -100,7 +100,7 @@ final class MapMachines {
         builtY0 = y0;
         builtW = w;
         builtH = h;
-        rebuild(payload, router.key().pos(), center, scale, x0, y0, w, h);
+        rebuild(payload, router.pos(), center, scale, x0, y0, w, h);
         litVersion = -1;
         refreshLit(router);
     }
@@ -158,7 +158,7 @@ final class MapMachines {
         return (int) Math.round(Math.clamp(middle + (coord - centerCoord) / scale, -FAR, FAR));
     }
 
-    private void refreshLit(NodeView router) {
+    private void refreshLit(NodeKey router) {
         int version = HighlightRenderer.version();
         if (version == litVersion) {
             return;
@@ -166,7 +166,7 @@ final class MapMachines {
         litVersion = version;
         Arrays.fill(lit, false);
         for (int k = 0; k < count; k++) {
-            lit[k] = HighlightRenderer.isLit(router.key().dimension(), view.machines().get(index[k]).pos().asLong());
+            lit[k] = HighlightRenderer.isLit(router.dimension(), view.machines().get(index[k]).pos().asLong());
         }
     }
 

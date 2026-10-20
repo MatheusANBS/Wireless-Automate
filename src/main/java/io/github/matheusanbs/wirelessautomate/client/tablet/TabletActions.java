@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
@@ -59,6 +60,11 @@ final class TabletActions {
 
     void tree(TabletTreePayload.Action action, NodeKey node, int group) {
         send(new TabletTreePayload(menu.containerId, action, node, group));
+    }
+
+    /** Troca a visão da Lista ou abre, recolhe, mostra todas ou poucas máquinas do bloco. */
+    void machines(TabletMachinesPayload.Action action, Optional<ResourceLocation> block) {
+        send(new TabletMachinesPayload(menu.containerId, action, block));
     }
 
     void openNode(NodeKey key) {

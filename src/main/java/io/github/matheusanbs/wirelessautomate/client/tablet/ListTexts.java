@@ -205,8 +205,18 @@ final class ListTexts {
         return tr("list.state.ok", network, ResourceStyle.rate(type, node.rate(type))).copy().withColor(GuiPaint.MUTED);
     }
 
+    /**
+     * A contagem embaixo da lista. Por máquinas: "13 de 46 linhas" com linhas recolhidas ou cortadas, senão "5 blocos ·
+     * 1.204 máquinas".
+     */
     Component countText() {
         TabletSnapshot s = snapshot();
+        if (list.machineView()) {
+            var page = s.machineRows();
+            return page.totalRows() > page.rows().size() ? tr("machines.count.rows", page.rows().size(), page.totalRows())
+                    : plural("machines.count.blocks", page.blocks()).copy().append(" · ")
+                            .append(plural("list.machines", page.machines()));
+        }
         return s.matchingNodes() > s.nodes().size() ? tr("list.limit", s.nodes().size(), s.matchingNodes())
                 : tr("list.count", s.matchingNodes(), s.totalNodes());
     }

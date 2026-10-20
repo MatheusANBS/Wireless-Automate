@@ -30,9 +30,10 @@ public final class Config {
     public static final ModConfigSpec.IntValue BALANCE_VERSION;
     /**
      * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
-     * por cristal do Ressonador (15/10/2026).
+     * por cristal do Ressonador (15/10/2026); 3 = a escada nova do Ressonador e a energia do roteador por tier
+     * (21/10/2026).
      */
-    public static final int CURRENT_BALANCE = 2;
+    public static final int CURRENT_BALANCE = 3;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -42,6 +43,8 @@ public final class Config {
     public static final ModConfigSpec.LongValue CRYSTAL_LIFE_TICKS;
     public static final ModConfigSpec.LongValue CUT_CRYSTAL_LIFE_TICKS;
     public static final ModConfigSpec.LongValue RECHARGE_TICKS;
+    public static final ModConfigSpec.IntValue CRYSTAL_INTEGRITY;
+    public static final ModConfigSpec.IntValue RECAST_CRYSTALS;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -164,10 +167,16 @@ public final class Config {
         RECHARGE_TICKS = builder
                 .comment("Ticks que o Núcleo leva para recarregar um cristal Opaco (gasta redstone).")
                 .defineInRange("rechargeTicks", 600L, 1L, Long.MAX_VALUE);
+        CRYSTAL_INTEGRITY = builder
+                .comment("Cargas de um cristal até rachar: cada recarga gasta 1; com 0 ele racha e precisa ser refeito.")
+                .defineInRange("crystalIntegrity", 8, 1, 64);
+        RECAST_CRYSTALS = builder
+                .comment("Cristais de Sinal cheios que refazem um cristal rachado na bancada.")
+                .defineInRange("recastCrystals", 4, 1, 9);
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
             RESONATOR_FE_PER_CRYSTAL.put(tier, builder
-                    .comment("FE por tick de um cristal de rendimento 1 (o Lapidado rende 2) a 100% de sintonia.")
+                    .comment("FE por tick de um cristal de rendimento 1 a 100% de sintonia (Lapidado e Afinado rendem 2; do Elite para cima, o cristal comum rende 1/4).")
                     .defineInRange("fePerCrystal", CoreMath.defaultFePerCrystal(tier.ordinal()), 0L, Long.MAX_VALUE));
             builder.pop();
         }
@@ -210,6 +219,16 @@ public final class Config {
     private static final long[] OLD_FE_PER_CRYSTAL = {
         64, 512, 4_096, 32_768, 262_144, 2_097_152, 16_777_216L, 134_217_728L
     };
+    /** O FE por cristal do Ressonador no balanceamento 2 (o destino do passo 2 e a origem do 3), pela posição do tier. */
+    private static final long[] BALANCE2_FE_PER_CRYSTAL = {
+        128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728L, 1_073_741_824L
+    };
+    /** A energia do roteador Unobtainium no balanceamento 2 (FE/t). */
+    private static final long BALANCE2_UNOBTAINIUM_ENERGY = 2_097_152_000L;
+    /** A energia do roteador por tier no balanceamento 2 (FE/t), pela posição do tier. */
+    private static final long[] BALANCE2_ENERGY = {
+        1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000L, 0
+    };
 
     /**
      * Na primeira carga depois de um balanceamento novo, troca os valores que ainda estão no padrão antigo pelo
@@ -223,7 +242,8 @@ public final class Config {
             return 0;
         }
         int changed = version < 1 ? migrateBalance1() : 0;
-        changed += migrateBalance2();
+        changed += version < 2 ? migrateBalance2() : 0;
+        changed += migrateBalance3();
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
@@ -233,15 +253,34 @@ public final class Config {
         int changed = 0;
         ModConfigSpec.LongValue energy = TIERS.get(RouterTier.UNOBTAINIUM).rates().get(ResourceType.ENERGY.rateKey());
         if (energy.get() == OLD_UNOBTAINIUM_ENERGY) {
-            energy.set(ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()));
+            energy.set(BALANCE2_UNOBTAINIUM_ENERGY);
             changed++;
         }
         for (RouterTier tier : RouterTier.values()) {
             ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(tier);
-            long target = CoreMath.defaultFePerCrystal(tier.ordinal());
-            if (tier.ordinal() < OLD_FE_PER_CRYSTAL.length && fe.get() == OLD_FE_PER_CRYSTAL[tier.ordinal()]
-                    && fe.get() != target) {
+            long target = BALANCE2_FE_PER_CRYSTAL[tier.ordinal()];
+            if (fe.get() == OLD_FE_PER_CRYSTAL[tier.ordinal()] && fe.get() != target) {
                 fe.set(target);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
+    private static int migrateBalance3() {
+        int changed = 0;
+        for (RouterTier tier : RouterTier.values()) {
+            int i = tier.ordinal();
+            ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(tier);
+            long feTarget = CoreMath.defaultFePerCrystal(i);
+            if (fe.get() == BALANCE2_FE_PER_CRYSTAL[i] && fe.get() != feTarget) {
+                fe.set(feTarget);
+                changed++;
+            }
+            ModConfigSpec.LongValue energy = TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey());
+            long energyTarget = ResourceType.ENERGY.defaultRate(i);
+            if (energy.get() == BALANCE2_ENERGY[i] && energy.get() != energyTarget) {
+                energy.set(energyTarget);
                 changed++;
             }
         }
@@ -285,6 +324,16 @@ public final class Config {
     /** Ticks de geração de um cristal cheio, até ficar Opaco (o Lapidado, {@code cut}, dura o dobro por padrão). */
     public static long crystalLifeTicks(boolean cut) {
         return read(cut ? CUT_CRYSTAL_LIFE_TICKS : CRYSTAL_LIFE_TICKS);
+    }
+
+    /** Cargas de um cristal até rachar (cada recarga gasta uma). */
+    public static int crystalIntegrity() {
+        return read(CRYSTAL_INTEGRITY);
+    }
+
+    /** Cristais de Sinal cheios que refazem um cristal rachado na bancada. */
+    public static int recastCrystals() {
+        return read(RECAST_CRYSTALS);
     }
 
     /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */

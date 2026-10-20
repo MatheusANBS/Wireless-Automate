@@ -643,7 +643,7 @@
   "gui.wirelessautomate.tablet.list.suggest.networks": "NETWORKS",
   "gui.wirelessautomate.tablet.list.suggest.names": "NAMES",
   "gui.wirelessautomate.tablet.list.suggest.footer": "Enter: search \"%s\" everywhere · ↑↓ choose",
-  "gui.wirelessautomate.tablet.tree.attached.detail": "%s · %s of the router",
+  "gui.wirelessautomate.tablet.tree.attached.detail": "%s · %s side of the router",
   "gui.wirelessautomate.tablet.tree.state.moving": "moving",
   "gui.wirelessautomate.tablet.tree.state.full": "asleep: input full",
   "gui.wirelessautomate.tablet.tree.state.sleeping": "asleep",

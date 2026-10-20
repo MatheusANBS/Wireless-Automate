@@ -39,11 +39,12 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com cinco abas:
  * <ul>
- *   <li><b>Lista:</b> a busca com sugestões e etiquetas, os filtros rápidos, os nós agrupados pela máquina e
+ *   <li><b>Lista:</b> a busca com sugestões e etiquetas, os filtros rápidos, os nós agrupados pela máquina, cada
+ *       roteador com máquinas vinculadas aberto em árvore (a presa, os grupos e as máquinas com estado e vazão), e
  *       o painel do nó escolhido, com copiar e colar o perfil ({@link TabletList}); Selecionar para mover ou
  *       colar em vários nós ({@link SelectBar});
- *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar
- *       seleciona e mostra o nó, com Abrir ({@link MapTab});
+ *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
+ *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
  *   <li><b>Fluxos:</b> tempo do mod por tick e o que entra e sai de cada tipo, Por tipo ou Por rede, média
  *       dos últimos 5 s ({@link FlowsTab});
  *   <li><b>Redes:</b> lista à esquerda e a rede escolhida à direita (nome, cor, privacidade, usar
@@ -55,8 +56,9 @@ import org.lwjgl.glfw.GLFW;
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
  * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
  * ({@link TabletResize}), o cabeçalho e o aviso ({@link TabletHeader}), o corpo da aba aberta ({@link TabletBody}:
- * desenho, cliques, roda e dicas) e a dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores são desenhados e clicados por
- * geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o estado a cada quadro.
+ * desenho, cliques, roda e dicas) e a dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
+ * são desenhados e clicados por geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o
+ * estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public enum Tab { LIST, MAP, FLOWS, NETWORKS, GROUPS }

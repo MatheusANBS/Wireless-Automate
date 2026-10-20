@@ -195,6 +195,11 @@ public final class TabletTree {
         open.add(node);
     }
 
+    /** O {@link #restore} de um estado guardado, para conferir os tetos e os grupos de nó fechado. */
+    public void restoreForTests(Saved saved) {
+        restore(saved);
+    }
+
     public boolean isOpenForTests(NodeKey node) {
         return open.contains(node);
     }

@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload.Action;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -98,9 +99,9 @@ public final class TabletTreeRememberGameTests {
                 .thenSucceed();
     }
 
-    /** O logout esquece a árvore com o resto do estado, e o que voltou respeita os tetos. */
+    /** O logout esquece a árvore guardada com o resto do estado, e o Tablet seguinte abre sem ela. */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void logoutForgetsAndLimitsHold(GameTestHelper helper) {
+    public static void logoutForgetsTree(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper);
         TabletMenu menu = new TabletMenu(153, player.getInventory(), player);
         player.containerMenu = menu;
@@ -119,6 +120,48 @@ public final class TabletTreeRememberGameTests {
         TabletMenu fresh = new TabletMenu(154, player.getInventory(), player);
         helper.assertTrue(fresh.treeState().openCountForTests() == 0, "abriu com a árvore de antes do logout");
         player.containerMenu = player.inventoryMenu;
+        helper.succeed();
+    }
+
+    /**
+     * O {@code restore} corta acima dos tetos ({@link TabletTree#MAX_OPEN} abertos, {@link TabletTree#MAX_GROUPS} grupos
+     * por conjunto) e descarta os grupos de nó que não ficou aberto, inclusive o de um nó cortado pelo teto.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void restoreKeepsLimitsAndDropsClosedGroups(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper);
+        TabletMenu menu = new TabletMenu(155, player.getInventory(), player);
+        player.containerMenu = menu;
+        try {
+            List<NodeKey> open = new ArrayList<>();
+            for (int i = 0; i < TabletTree.MAX_OPEN + 6; i++) {
+                open.add(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, -50, 11)));
+            }
+            NodeKey first = open.get(0);
+            NodeKey cut = open.get(TabletTree.MAX_OPEN);
+            NodeKey never = new NodeKey(helper.getLevel().dimension(), new BlockPos(-1, -50, 11));
+            List<TabletTree.GroupKey> collapsed = new ArrayList<>();
+            collapsed.add(new TabletTree.GroupKey(cut, 1));
+            collapsed.add(new TabletTree.GroupKey(never, 1));
+            for (int g = 0; g < 10; g++) {
+                collapsed.add(new TabletTree.GroupKey(first, g));
+            }
+            List<TabletTree.GroupKey> showAll = new ArrayList<>();
+            for (int g = 0; g < TabletTree.MAX_GROUPS + 40; g++) {
+                showAll.add(new TabletTree.GroupKey(first, g));
+            }
+            TabletTree tree = menu.treeState();
+            tree.restoreForTests(new TabletTree.Saved(open, collapsed, showAll));
+            helper.assertTrue(tree.openCountForTests() == TabletTree.MAX_OPEN,
+                    "abertos acima do teto: " + tree.openCountForTests());
+            helper.assertTrue(tree.isOpenForTests(open.get(TabletTree.MAX_OPEN - 1)) && !tree.isOpenForTests(cut),
+                    "o corte não ficou nos primeiros");
+            helper.assertTrue(tree.groupCountForTests() == 10 + TabletTree.MAX_GROUPS,
+                    "grupos de nó fechado ou acima do teto: " + tree.groupCountForTests());
+        } finally {
+            TabletMenu.forget(player.getUUID());
+            player.containerMenu = player.inventoryMenu;
+        }
         helper.succeed();
     }
 }

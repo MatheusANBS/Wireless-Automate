@@ -1468,13 +1468,13 @@ Cada máquina é um grupo que você recolhe e abre pelo cabeçalho. A linha de c
 
 ## As máquinas de um roteador
 
-Um roteador com o Upgrade de Alcance e máquinas vinculadas tem um **▸** na frente do nome, e a linha diz quantas máquinas ele atende. Clique no **▸** para abrir o roteador em árvore; o **▾** fecha. Embaixo dele aparecem:
+Um roteador com máquinas vinculadas tem um **▸** na frente do nome, e a linha diz quantas máquinas ele atende. Clique no **▸** para abrir o roteador em árvore; o **▾** fecha. Embaixo dele aparecem:
 
 | Linha | O que mostra |
 | --- | --- |
 | **Máquina presa** | A máquina onde o roteador está preso, com o bloco e o lado do roteador. |
 | **Grupo** | O nome do grupo e quantas máquinas tem (**×N**), e quantas exceções, se houver. O **▸**/**▾** do grupo esconde e mostra as máquinas dele. |
-| **Máquina** | O nome (ou **#N**), as coordenadas e o estado em palavras: **movendo**, **dormindo**, **dormindo: entrada cheia**, **descarregada**, **fora do raio**, **acima do limite** ou **trocada**. À direita, a vazão (**↓** recebe, **↑** dá), a marca **exceção** e o Olho **◉**. |
+| **Máquina** | O nome (ou **#N**), as coordenadas e o estado em palavras: **movendo**, **dormindo**, **dormindo: entrada cheia**, **descarregada**, **sem o Upgrade de Alcance** (o roteador sem o upgrade não move de nenhuma), **fora do raio**, **acima do limite**, **trocada** ou **sumiu** (o bloco foi quebrado ou não tem mais o que mover). À direita, a vazão (**↓** recebe, **↑** dá), a marca **exceção** e o Olho **◉**. |
 
 Cada grupo mostra as 8 primeiras máquinas; **… mais N · Mostrar todas** mostra o resto, e **Mostrar menos** volta às 8.
 
@@ -1572,13 +1572,13 @@ Each machine is a group you collapse and open from its header. Each node's row s
 
 ## A router's machines
 
-A router with the Range Upgrade and linked machines has a **▸** in front of its name, and its row says how many machines it serves. Click the **▸** to open the router as a tree; the **▾** closes it. Below it you see:
+A router with linked machines has a **▸** in front of its name, and its row says how many machines it serves. Click the **▸** to open the router as a tree; the **▾** closes it. Below it you see:
 
 | Row | What it shows |
 | --- | --- |
 | **Attached machine** | The machine the router is attached to, with the block and the side of the router. |
 | **Group** | The group's name and how many machines it has (**×N**), and how many exceptions, if any. The group's **▸**/**▾** hides and shows its machines. |
-| **Machine** | The name (or **#N**), the coordinates and the state in words: **moving**, **asleep**, **asleep: input full**, **unloaded**, **out of range**, **over the limit** or **replaced**. On the right, the rate (**↓** receives, **↑** gives), the **exception** mark and the Eye **◉**. |
+| **Machine** | The name (or **#N**), the coordinates and the state in words: **moving**, **asleep**, **asleep: input full**, **unloaded**, **no Range Upgrade** (without the upgrade the router moves from none of them), **out of range**, **over the limit**, **replaced** or **missing** (the block was broken or has nothing left to move). On the right, the rate (**↓** receives, **↑** gives), the **exception** mark and the Eye **◉**. |
 
 Each group shows its first 8 machines; **… N more · Show all** shows the rest, and **Show fewer** goes back to 8.
 

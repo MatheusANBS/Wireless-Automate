@@ -116,6 +116,9 @@ final class CrystalSlots {
         }
         List<Component> lines = new ArrayList<>();
         lines.add(stack.getHoverName());
+        if (SignalCrystalItem.isCracked(stack)) {
+            return lines;
+        }
         if (SignalCrystalItem.isDull(stack)) {
             if (index != recharging()) {
                 lines.add(ResonatorText.muted(ResonatorText.key("chamber.waiting")));
@@ -137,11 +140,11 @@ final class CrystalSlots {
         return lines;
     }
 
-    /** A câmara do Opaco que recarrega: o primeiro, a mesma regra do servidor e da câmara; -1 sem Opaco. */
+    /** A câmara do Opaco que recarrega: o primeiro não rachado, a mesma regra do servidor e da câmara; -1 sem ele. */
     private int recharging() {
         for (int i = 0; i < menu.chambers(); i++) {
             ItemStack stack = menu.getSlot(i).getItem();
-            if (stack.getItem() instanceof SignalCrystalItem && SignalCrystalItem.isDull(stack)) {
+            if (SignalCrystalItem.isRechargeable(stack)) {
                 return i;
             }
         }

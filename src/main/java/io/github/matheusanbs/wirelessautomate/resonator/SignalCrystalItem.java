@@ -103,6 +103,11 @@ public class SignalCrystalItem extends Item {
         return stack.getItem() instanceof SignalCrystalItem && CrystalCharge.isDull(charge(stack));
     }
 
+    /** O Opaco que o Núcleo recarrega: carga 0 e sem rachadura. */
+    public static boolean isRechargeable(ItemStack stack) {
+        return isDull(stack) && !isCracked(stack);
+    }
+
     public static boolean isFull(ItemStack stack) {
         return stack.getItem() instanceof SignalCrystalItem && charge(stack) == CrystalCharge.FULL;
     }

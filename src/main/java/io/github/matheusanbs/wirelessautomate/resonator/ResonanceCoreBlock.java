@@ -18,7 +18,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -79,8 +78,9 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Cristal de Sinal ou Lapidado: vai para a primeira câmara vazia. Pó de redstone: entra o que cabe. Sem lugar, a
-     * action bar avisa. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
+     * Cristal: vai para a primeira câmara vazia (o rachado não entra). Catalisador (redstone ou Pó de Ressonância):
+     * entra o que cabe, pela regra do tier e sem misturar com o que já está lá. Recusado ou sem lugar, a action bar
+     * diz por quê. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -89,22 +89,36 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         boolean crystal = stack.getItem() instanceof SignalCrystalItem;
-        if (!crystal && !stack.is(Items.REDSTONE)) {
+        if (!crystal && !CoreCatalyst.isCatalyst(stack.getItem())) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof ResonanceCoreBlockEntity core) {
-            int used = crystal ? stack.getCount() - core.insertCrystal(stack).getCount()
-                    : core.addRedstone(stack.getCount());
+            int used = crystal ? stack.getCount() - core.insertCrystal(stack).getCount() : core.addCatalyst(stack);
             if (used == 0) {
-                player.displayClientMessage(crystal
-                        ? Component.translatable("block.wirelessautomate.resonance_core.chambers_full")
-                        : Component.translatable("block.wirelessautomate.resonance_core.redstone_full",
-                                ResonanceCoreBlockEntity.MAX_REDSTONE), true);
+                player.displayClientMessage(refusal(core, stack, crystal), true);
             } else if (!player.hasInfiniteMaterials()) {
                 stack.shrink(used);
             }
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Por que o clique com o item não pôs nada no Núcleo. */
+    private static Component refusal(ResonanceCoreBlockEntity core, ItemStack stack, boolean crystal) {
+        if (crystal) {
+            return Component.translatable(SignalCrystalItem.isCracked(stack)
+                    ? "block.wirelessautomate.resonance_core.cracked_crystal"
+                    : "block.wirelessautomate.resonance_core.chambers_full");
+        }
+        if (!CoreCatalyst.accepts(core.tier(), stack.getItem())) {
+            return Component.translatable("block.wirelessautomate.resonance_core.needs_dust");
+        }
+        if (core.redstone() > 0 && !stack.is(core.catalyst().item())) {
+            return Component.translatable("block.wirelessautomate.resonance_core.catalyst_mixed",
+                    core.catalyst().stack().getHoverName());
+        }
+        return Component.translatable("block.wirelessautomate.resonance_core.redstone_full",
+                ResonanceCoreBlockEntity.MAX_REDSTONE);
     }
 
     /**
@@ -176,7 +190,7 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
 
     /**
      * Quebrar o Núcleo desmonta na hora (o block entity, que sabe quais são os membros, vai embora junto) e derruba
-     * os cristais e a redstone; a energia se perde.
+     * os cristais e o catalisador; a energia se perde.
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
@@ -192,7 +206,7 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
                 }
             }
             if (core.redstone() > 0) {
-                Block.popResource(server, pos, new ItemStack(Items.REDSTONE, core.redstone()));
+                Block.popResource(server, pos, core.catalyst().stack());
             }
         }
         ResonatorManager.blockChanged(level, pos, state, newState);

@@ -19,7 +19,9 @@ import net.minecraft.world.item.ItemStack;
  * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
  * a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou com shaderpack do
  * Iris), o modelo do item. Em sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e balançando. O Opaco
- * fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor.
+ * fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e
+ * as fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga, que não
+ * fica mais na aura.
  */
 final class ChamberCrystals {
     private static final double RADIUS = 0.95;
@@ -69,7 +71,8 @@ final class ChamberCrystals {
             boolean dull = isDull(chambers[i]);
             double[] at = crystalPos(i, chambers, q, ticks, view, AT);
             double seed = seed(i);
-            double fallen = 1 - smoothstep(recharge(i, chambers, ticks, view));
+            double progress = recharge(i, chambers, ticks, view);
+            double fallen = 1 - smoothstep(progress);
             poseStack.pushPose();
             poseStack.translate(at[0], at[1], at[2]);
             poseStack.mulPose(Axis.YP.rotation((float) (scene.spin(dull, partialTick) + seed)));
@@ -78,7 +81,7 @@ final class ChamberCrystals {
             poseStack.scale(scale, scale, scale);
             if (gem) {
                 int state = !dull ? CrystalGem.LIVE
-                        : recharging == i ? CrystalGem.recharging(recharge(i, chambers, ticks, view)) : CrystalGem.DULL;
+                        : recharging == i ? CrystalGem.recharging(progress) : CrystalGem.DULL;
                 CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i);
             } else {
                 Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,

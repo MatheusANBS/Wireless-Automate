@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * As linhas da Lista do Tablet na visão por máquinas (lógica pura): o cabeçalho de cada bloco, as máquinas dele e o
- * "mais N", na ordem do servidor, com o número de cada máquina e o que as setas fazem. ↑ ↓ andam por todas as linhas,
+ * "mais N", na ordem do servidor, e o que as setas fazem. ↑ ↓ andam por todas as linhas,
  * cabeçalhos inclusive (um bloco recolhido é só o cabeçalho); ← fecha o bloco aberto ou sobe da máquina para o
  * cabeçalho; → abre o bloco recolhido, desce do cabeçalho aberto para a primeira máquina e, no "mais N", mostra todas.
  */
@@ -30,33 +30,14 @@ public final class MachineLines {
 
     private final Kind[] kinds;
     private final boolean[] collapsed;
-    private final int[] numbers;
 
     /**
      * @param kinds     o tipo de cada linha
      * @param collapsed num cabeçalho, se o bloco está recolhido
-     * @param routers   numa máquina, o roteador dela (qualquer número que o identifique na página)
-     * @param attached  numa máquina, se é a presa do roteador
      */
-    public MachineLines(List<Kind> kinds, boolean[] collapsed, int[] routers, boolean[] attached) {
+    public MachineLines(List<Kind> kinds, boolean[] collapsed) {
         this.kinds = kinds.toArray(new Kind[0]);
         this.collapsed = collapsed;
-        this.numbers = new int[this.kinds.length];
-        int router = -1;
-        int number = 0;
-        for (int i = 0; i < this.kinds.length; i++) {
-            if (this.kinds[i] != Kind.MACHINE) {
-                router = -1;
-                continue;
-            }
-            if (routers[i] != router) {
-                router = routers[i];
-                number = 0;
-            }
-            if (!attached[i]) {
-                numbers[i] = ++number;
-            }
-        }
     }
 
     public int size() {
@@ -65,14 +46,6 @@ public final class MachineLines {
 
     public Kind kind(int line) {
         return kinds[line];
-    }
-
-    /**
-     * O "#N" da máquina vinculada: a posição dela entre as do mesmo roteador no bloco, a partir de 1, como a
-     * numeração do grupo na tela do roteador; 0 na presa e nas outras linhas.
-     */
-    public int number(int line) {
-        return line >= 0 && line < numbers.length ? numbers[line] : 0;
     }
 
     /** O cabeçalho do bloco da linha, ou -1. */

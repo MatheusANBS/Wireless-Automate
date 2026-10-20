@@ -213,6 +213,8 @@ public final class TabletMachinesGameTests {
                     helper.assertTrue(block(list.get(0), BARREL_ID, 3, 2, false), "o cabeçalho dos barris: " + list.get(0));
                     helper.assertTrue(machine(list.get(1), 0, 10) && machine(list.get(2), 0, 11)
                             && machine(list.get(3), 1, 0), "os barris por roteador e #N");
+                    helper.assertTrue(((Machine) list.get(1)).number() == 1 && ((Machine) list.get(2)).number() == 2
+                            && ((Machine) list.get(3)).number() == 1, "o #N é a posição no grupo, como na árvore");
                     helper.assertTrue(block(list.get(4), CHEST_ID, 12, 2, false), "o cabeçalho dos baús: " + list.get(4));
                     helper.assertTrue(attached(list.get(5), 0), "a presa antes das vinculadas");
                     for (int i = 0; i < 7; i++) {

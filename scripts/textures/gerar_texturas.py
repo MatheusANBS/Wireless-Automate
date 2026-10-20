@@ -29,7 +29,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from identidade import (  # noqa: E402
-    ASSETS, LENTE, MARCAS, MODELOS, PALETA, PREVIEW, RAIZ, MODO, RECURSO, TIERS_ATM, TIERS_CARTAO,
+    ASSETS, LENTE, MARCAS, MODELOS, PALETA, PREVIEW, RAIZ, MODO, RECURSO, TIERS, TIERS_ATM, TIERS_CARTAO,
     Cor, Sprite, animacao, contorno, cor, escurece, grava_json, legenda, mistura, olho, parado, pinta,
     salvar,
 )
@@ -1442,6 +1442,156 @@ assert list(SPRITES_CASCATA) == CASCATA, "a ordem da cascata e a dos sprites dif
 
 
 # ---------------------------------------------------------------------------
+# O Coração do Ressonador: o reator do Núcleo, um por tier, a mesma silhueta subindo de material
+# ---------------------------------------------------------------------------
+#
+# Todos têm a mesma peça: a moldura octogonal de 2 px no material do tier, o aro da cor do tier (a lente do
+# Olho, `LENTE`), a câmara de grafite e, no meio, o losango facetado de plasma coral que respira. O que sobe de
+# tier em tier é o material da moldura e dos rebites, e o que mora na câmara: as gemas, a estrela do Nether
+# Star e as centelhas; o Ultimate leva a moldura na liga Unobtainium-Vibranium (o chanfro em Vibranium) e as
+# quatro estrelas. 'F' moldura, 'B' aro, 'h' câmara, 'K' núcleo.
+
+CORACAO = [
+    "................",
+    ".....FFFFFF.....",
+    "...FFFFFFFFFF...",
+    "..FFBBBBBBBBFF..",
+    "..FBhhhKKhhhBF..",
+    ".FFBhhKKKKhhBFF.",
+    ".FFBhKKKKKKhBFF.",
+    ".FFBKKKKKKKKBFF.",
+    ".FFBKKKKKKKKBFF.",
+    ".FFBhKKKKKKhBFF.",
+    ".FFBhhKKKKhhBFF.",
+    "..FBhhhKKhhhBF..",
+    "..FFBBBBBBBBFF..",
+    "...FFFFFFFFFF...",
+    ".....FFFFFF.....",
+    "................",
+]
+REBITES_CORACAO = ((3, 3), (12, 3), (3, 12), (12, 12))
+# Os cantos da câmara: as gemas do Esmeralda e as centelhas dos tiers do Allthemodium.
+CANTOS_CORACAO = ((5, 5), (10, 5), (5, 10), (10, 10))
+# A volta do brilho pela moldura, de cima à esquerda no sentido horário.
+VOLTA_CORACAO = ((5, 1), (8, 1), (11, 2), (13, 3), (14, 5), (14, 8), (13, 11), (11, 13), (8, 14), (5, 14),
+                 (3, 13), (1, 10), (1, 8), (2, 5), (3, 3))
+assert all(CORACAO[y][x] == "F" for x, y in VOLTA_CORACAO), "a volta do brilho sai da moldura"
+ESMERALDA = {"4": "#C6FFD6", "3": "#5CE48A", "2": "#1FB657", "1": "#12833C", "0": "#0B5226"}
+REDSTONE = {"3": "#FF8A78", "2": "#F23D2A", "1": "#B8241A", "0": "#6E140E"}
+PRETO = cor("#000000")
+
+
+def _tons5(hi: str, mid: str, lo: str) -> list[Cor]:
+    """Cinco tons de um material a partir da lente do tier: da luz à sombra."""
+    return [mistura(cor(hi), BRANCO, .45), cor(hi), cor(mid), cor(lo), mistura(cor(lo), PRETO, .35)]
+
+
+def _tons_pal(pal: dict[str, str]) -> list[Cor]:
+    tons = [cor(pal[t]) for t in ("4", "3", "2", "1", "0") if t in pal]
+    return tons if len(tons) == 5 else [mistura(tons[0], BRANCO, .45)] + tons
+
+
+# Por tier: os tons da moldura, dos rebites e, quando difere do plasma coral, do núcleo.
+MOLDURA_CORACAO: dict[str, list[Cor]] = {
+    "basic": _tons_pal(FERRO),
+    "advanced": _tons_pal(PALETA["latao"]),
+    "elite": _tons_pal(NETHERITA),
+    "emerald": _tons_pal(NETHERITA),
+    "allthemodium": _tons5(*LENTE["allthemodium"]),
+    "vibranium": _tons5(*LENTE["vibranium"]),
+    "unobtainium": _tons5(*LENTE["unobtainium"]),
+    "ultimate": _tons5(*LENTE["ultimate"]),
+}
+REBITE_CORACAO: dict[str, list[Cor]] = {
+    "basic": _tons_pal(FERRO), "advanced": _tons_pal(FERRO), "elite": _tons_pal(PALETA["latao"]),
+    "emerald": _tons_pal(ESMERALDA), "allthemodium": _tons_pal(NETHERITA), "vibranium": _tons_pal(NETHERITA),
+    "unobtainium": _tons_pal(NETHERITA), "ultimate": _tons5(*LENTE["vibranium"]),
+}
+NUCLEO_CORACAO: dict[str, list[Cor]] = {
+    "basic": [cor(REDSTONE[t]) for t in ("3", "2", "1", "0")],
+}
+PLASMA_CORACAO = [cor(CRISTAL_SINAL[t]) for t in ("3", "2", "1", "0")]
+ESCADA_CORACAO = {t: n for n, t in enumerate(TIERS)}
+
+
+def _luz(x: int, y: int) -> int:
+    """O tom (0 = luz, 3 = sombra) de um ponto da peça pela luz de cima à esquerda; o lado de dentro da
+    moldura (o chanfro) soma um."""
+    d = (x - 7.5) + (y - 7.5)
+    return 0 if d < -6 else 1 if d < 0 else 2 if d < 6 else 3
+
+
+def _sombreia(img: Image.Image, pontos: set[tuple[int, int]], tons: list[Cor], relevo: int = 0) -> None:
+    for x, y in pontos:
+        put(img, x, y, tons[_luz(x, y) + relevo])
+
+
+def _estrela(img: Image.Image, x: int, y: int, braco: Cor | None) -> None:
+    """A estrela do Nether Star sobre o núcleo: o miolo branco e, no auge, as quatro pontas a 2 px."""
+    put(img, x, y, BRANCO)
+    if braco is not None:
+        for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2)):
+            put(img, x + dx, y + dy, braco)
+
+
+def coracao(tier: str) -> Sprite:
+    """Coração do Ressonador: o núcleo respira (clareia do miolo para fora); do Avançado em diante um brilho dá a
+    volta na moldura; do Elite o aro pulsa junto; do Esmeralda a estrela do miolo cintila; do Allthemodium as
+    centelhas dos cantos pulsam; no Ultimate as pontas da coroa acendem uma a uma (12 × 2 ticks)."""
+    degrau = ESCADA_CORACAO[tier]
+    moldura = MOLDURA_CORACAO[tier]
+    aro_hi, aro_mid, aro_lo = (cor(c) for c in LENTE[tier])
+    nucleo = NUCLEO_CORACAO.get(tier, PLASMA_CORACAO)
+    base = pinta(CORACAO, {"F": PRETO, "B": PRETO, "h": PRETO, "K": PRETO})
+    pontos = {c: {(x, y) for y in range(16) for x in range(16) if CORACAO[y][x] == c} for c in "FBhK"}
+    q = []
+    for k in range(12):
+        img = base.copy()
+        t = (1 + math.cos(2 * math.pi * k / 12)) / 2
+        # A moldura, com o lado de dentro um tom mais fundo (o chanfro), e os rebites.
+        _sombreia(img, pontos["F"], moldura)
+        chanfro = {(x, y) for (x, y) in pontos["F"] if 2 <= x <= 13 and 2 <= y <= 13}
+        _sombreia(img, chanfro, REBITE_CORACAO[tier] if tier == "ultimate" else moldura, 1)
+        for x, y in REBITES_CORACAO:
+            put(img, x, y, REBITE_CORACAO[tier][1 if _luz(x, y) < 2 else 3])
+        # O aro da cor do tier: luz em cima à esquerda; do Elite em diante pulsa com o núcleo.
+        pulsa = .35 * t if degrau >= 2 else 0.0
+        for x, y in pontos["B"]:
+            put(img, x, y, mistura(aro_mid if _luz(x, y) < 2 else aro_lo, aro_hi, pulsa))
+        for x, y in pontos["h"]:
+            put(img, x, y, cor("grafite.2") if _luz(x, y) < 2 else cor("grafite.1"))
+        # O núcleo facetado: a faceta de cima à esquerda clara, a de baixo à direita na sombra, o miolo
+        # respirando (o brilho sai do centro para as bordas).
+        for x, y in pontos["K"]:
+            faceta = (0 if y < 8 else 1) + (0 if x < 8 else 1) + (1 if x >= 8 and y >= 8 else 0)
+            put(img, x, y, mistura(nucleo[faceta], BRANCO, .3 * t * (1 - faceta / 4)))
+        put(img, 6, 6, mistura(nucleo[0], BRANCO, .55 + .35 * t))
+        if degrau >= 3:
+            # A estrela do Nether Star no miolo: as pontas aparecem no auge da respiração.
+            _estrela(img, 7, 7, mistura(nucleo[0], BRANCO, .8) if t > .6 else None)
+        if tier == "ultimate":
+            # As quatro estrelas dos cantos: uma de cada vez cintila branca, no sentido horário.
+            for i, (x, y) in enumerate(CANTOS_CORACAO):
+                put(img, x, y, BRANCO if (k // 3) % 4 == (0, 1, 3, 2)[i] else mistura(aro_hi, BRANCO, .4))
+        elif degrau >= 4:
+            # As centelhas dos cantos da câmara, na cor do tier, pulsando em contratempo com o núcleo.
+            for x, y in CANTOS_CORACAO:
+                put(img, x, y, mistura(aro_mid, aro_hi, 1 - t))
+        elif tier == "emerald":
+            for x, y in CANTOS_CORACAO:
+                put(img, x, y, cor(ESMERALDA["3"]) if _luz(x, y) < 2 else cor(ESMERALDA["1"]))
+        if degrau >= 1:
+            # O brilho que dá a volta na moldura, no sentido horário.
+            n = (k * len(VOLTA_CORACAO)) // 12
+            for i, (x, y) in enumerate(VOLTA_CORACAO):
+                fase = (n - i) % len(VOLTA_CORACAO)
+                if fase <= 1:
+                    put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .7 if fase == 0 else .35))
+        q.append(contorno(img, CONTORNO))
+    return animacao(q, 2)
+
+
+# ---------------------------------------------------------------------------
 # Montagem, modelos e folha
 # ---------------------------------------------------------------------------
 
@@ -1472,6 +1622,8 @@ def gerar_itens() -> dict[str, Sprite]:
         sprites[f"item/charged_dust_{tier}"] = po_carregado(tier)
     for nome, desenho in SPRITES_CASCATA.items():
         sprites[f"item/{nome}"] = desenho()
+    for tier in TIERS:
+        sprites[f"item/resonator_heart_{tier}"] = coracao(tier)
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -1518,6 +1670,11 @@ def modelos_itens() -> None:
         grava_json(MODELOS / f"models/item/tier_core_{tier}.json", {
             "parent": "minecraft:item/generated",
             "textures": {"layer0": f"wirelessautomate:item/tier_core_{tier}"},
+        })
+    for tier in TIERS:
+        grava_json(MODELOS / f"models/item/resonator_heart_{tier}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/resonator_heart_{tier}"},
         })
 
 
@@ -1589,6 +1746,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \
                   [f"charged_dust_{t}" for t in TIERS_PO_CARREGADO] + CASCATA + \
+                  [f"resonator_heart_{t}" for t in TIERS] + \
                   [f"tuned_signal_crystal_{t}{v}" for t in TIERS_AFINADO for v in ("", "_dull", "_cracked")]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]

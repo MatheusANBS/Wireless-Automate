@@ -13,7 +13,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
-import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.Locale;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
@@ -28,7 +28,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A aba Mapa do Tablet: vista de cima centrada no jogador, com a grade, os pontos coloridos pelo status, o zoom
- * pela roda, o nó escolhido com Abrir e a legenda.
+ * pela roda, o nó escolhido com Abrir e a legenda. O nó escolhido é o da Lista (o painel vem dele), e as máquinas
+ * dele aparecem pelo {@link MapMachines}.
  */
 final class MapTab {
     private static final BlockPos PREVIEW_CENTER = new BlockPos(0, 64, 0);
@@ -38,15 +39,18 @@ final class MapTab {
     private final Supplier<TabletSnapshot> snapshot;
     private final NodeText nodes;
     private final TabletActions actions;
-    private @Nullable NodeKey mapSelected;
+    private final TabletList list;
+    private final MapMachines machines = new MapMachines();
     private float mapZoom = 1f;
     private FlatButton open;
 
-    MapTab(TabletLayout layout, Supplier<TabletSnapshot> snapshot, NodeText nodes, TabletActions actions) {
+    MapTab(TabletLayout layout, Supplier<TabletSnapshot> snapshot, NodeText nodes, TabletActions actions,
+            TabletList list) {
         this.layout = layout;
         this.snapshot = snapshot;
         this.nodes = nodes;
         this.actions = actions;
+        this.list = list;
     }
 
     private TabletSnapshot snapshot() {
@@ -64,8 +68,8 @@ final class MapTab {
         int y = layout.top;
         open = buttons.add(TabletScreen.Tab.MAP, new FlatButton(x + layout.x1() - 46, y + mapInfoY(), 46, 16, tr("open"),
                 (g, b, hovered) -> TabletButtons.paintPrimary(g, b, hovered, tr("open")), () -> {
-                    if (mapSelected != null) {
-                        actions.openNode(mapSelected);
+                    if (list.chosen != null) {
+                        actions.openNode(list.chosen);
                     }
                 }).tooltip(() -> tr("open.tooltip")));
     }
@@ -153,11 +157,11 @@ final class MapTab {
     }
 
     private @Nullable NodeView mapNode() {
-        if (mapSelected == null) {
+        if (list.chosen == null) {
             return null;
         }
         for (NodeView node : snapshot().nodes()) {
-            if (node.key().equals(mapSelected)) {
+            if (node.key().equals(list.chosen)) {
                 return node;
             }
         }
@@ -166,11 +170,14 @@ final class MapTab {
 
     // ------------------------------------------------------------------ entrada
 
-    /** Clicar no mapa escolhe o nó sob o mouse (ou nenhum). Devolve se tratou. */
+    /** Clicar no mapa escolhe a máquina sob o mouse como alvo do painel, ou o nó (ou nenhum). Devolve se tratou. */
     boolean mouseClicked(double mouseX, double mouseY) {
         if (overMap(mouseX, mouseY)) {
+            if (machines.click(mouseX, mouseY, actions)) {
+                return true;
+            }
             NodeView node = mapNodeAt(mouseX, mouseY);
-            mapSelected = node == null ? null : node.key();
+            list.choose(node == null ? null : node.key());
             return true;
         }
         return false;
@@ -183,6 +190,10 @@ final class MapTab {
     }
 
     @Nullable Component tooltip(int mouseX, int mouseY) {
+        Component machine = machines.tooltip(mouseX, mouseY);
+        if (machine != null) {
+            return machine;
+        }
         NodeView node = mapNodeAt(mouseX, mouseY);
         if (node != null) {
             return nodes.nodeTooltip(node, false);
@@ -191,7 +202,24 @@ final class MapTab {
     }
 
     void previewSelect(int index) {
-        mapSelected = snapshot().nodes().get(index).key();
+        list.previewChoose(snapshot().nodes().get(index).key());
+    }
+
+    /** O centro da máquina {@code machine} do roteador escolhido no mapa, ou {@code null} (gancho do e2e). */
+    int @Nullable [] machineCenter(int machine) {
+        return machines.center(machine);
+    }
+
+    /** Põe as máquinas do nó escolhido em dia com o painel e a vista; sem painel dele ou noutra dimensão, nenhuma. */
+    private void prepareMachines(double scale) {
+        NodeView node = mapNode();
+        TabletPanelPayload payload = list.panelPayload();
+        if (node == null || payload == null || !nodes.sameDimension(node)) {
+            machines.prepare(null, null, center(), scale, 0, 0, 0, 0, 0, 0);
+            return;
+        }
+        int[] p = mapPoint(node, scale);
+        machines.prepare(payload, node, center(), scale, mapX0(), mapY0(), mapW(), mapH(), p[0], p[1]);
     }
 
     // ------------------------------------------------------------------ desenho
@@ -204,6 +232,8 @@ final class MapTab {
         GuiPaint.outline(g, x0, y0, w, mapH(), GuiPaint.LINE);
         double scale = mapScale();
         int step = renderGrid(g, x0, y0, w, scale);
+        prepareMachines(scale);
+        machines.render(g, mouseX, mouseY);
         renderPoints(g, mouseX, mouseY, scale);
         GuiPaint.textRight(g, font, tr("map.north"), x0 + w - 4, y0 + 4, GuiPaint.DISABLED);
         GuiText.draw(g, font, tr("map.scale", step), x0 + 4, y0 + mapH() - 11, w - 8, GuiPaint.DISABLED);
@@ -250,7 +280,7 @@ final class MapTab {
             }
             int[] p = mapPoint(node, scale);
             int color = statusColor(node.status());
-            boolean chosen = node.key().equals(mapSelected);
+            boolean chosen = node.key().equals(list.chosen);
             if (chosen || node == hovered) {
                 GuiPaint.outline(g, p[0] - 4, p[1] - 4, 9, 9, chosen ? GuiPaint.FG : GuiPaint.MUTED);
             }
@@ -265,7 +295,7 @@ final class MapTab {
         }
     }
 
-    /** O nó escolhido ou a dica. */
+    /** A máquina-alvo do painel, o nó escolhido ou a dica. */
     private void renderInfo(GuiGraphics g, Font font, int x0, int w) {
         int otherDimension = 0;
         for (NodeView node : snapshot().nodes()) {
@@ -274,6 +304,9 @@ final class MapTab {
             }
         }
         int infoY = layout.top + mapInfoY();
+        if (machines.renderInfo(g, font, x0, infoY, w)) {
+            return;
+        }
         NodeView chosen = mapNode();
         if (chosen != null) {
             GuiPaint.box(g, x0, infoY, w - 50, 16, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);

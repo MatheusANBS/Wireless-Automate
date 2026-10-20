@@ -53,7 +53,8 @@ import org.lwjgl.glfw.GLFW;
  * máquina põe ela como alvo do painel; o Olho a acende no mundo; ↓ e Enter escolhem a seguinte; "Mostrar todas" e
  * "Mostrar menos"; ← e → recolhem e abrem o grupo; voltar à busca devolve as setas ao texto; e as capturas em
  * inglês, no tema escuro e em português ({@code 7l-tablet-arvore*}, {@code 7m-tablet-mostrar-todas}), com a vazão
- * dos baús na cor do tipo.
+ * dos baús na cor do tipo. No Mapa, o roteador escolhido mostra as máquinas dele, e clicar numa fornalha a põe como
+ * alvo do painel ({@code 7n-tablet-mapa-maquinas}, também no tema escuro).
  */
 final class E2eTabletTreeSteps {
     private E2eTabletTreeSteps() {
@@ -107,8 +108,42 @@ final class E2eTabletTreeSteps {
             int[] c = center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0);
             click(tabletScreen(), c[0], c[1]);
         }, () -> rows().isEmpty(), () -> "linhas " + rows().size()));
+        mapSteps(list);
         portugueseSteps(list);
         list.add(tearDown());
+    }
+
+    /**
+     * O Mapa com o roteador escolhido: as máquinas aparecem (a roda aproxima um passo, para as fornalhas vizinhas não
+     * se encostarem), o clique numa fornalha a põe como alvo do painel, e as capturas, com a dica dela, nos dois temas.
+     */
+    private static void mapSteps(List<Step> list) {
+        int machine = FIRST_FURNACE + 5;
+        list.add(new Step("mapa: abrir a aba com as máquinas do roteador", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            screen.previewTab(TabletScreen.Tab.MAP);
+        }, () -> node().equals(tabletScreen().list().chosen()) && tabletScreen().mapMachineCenter(EXCEPTION) != null,
+                () -> "sem as máquinas no mapa"));
+        list.add(new Step("mapa: aproximar", STEP_TIMEOUT_MS, () -> {
+            int[] c = tabletScreen().mapMachineCenter(EXCEPTION);
+            tabletScreen().mouseScrolled(c[0], c[1], 0, 1);
+        }, () -> stepTicks >= 2 && tabletScreen().mapMachineCenter(machine) != null, () -> "sem a fornalha no mapa"));
+        list.add(new Step("mapa: clicar na fornalha a põe como alvo", STEP_TIMEOUT_MS, () -> {
+            int[] c = tabletScreen().mapMachineCenter(machine);
+            click(tabletScreen(), c[0], c[1]);
+        }, () -> EditTarget.machine(machine).equals(panelTarget()) && stepTicks >= 4, () -> "alvo " + panelTarget()));
+        list.add(capture("7n-tablet-mapa-maquinas"));
+        list.add(clipCheck("Tablet: mapa com as máquinas"));
+        list.add(new Step("mapa: tema escuro", STEP_TIMEOUT_MS, () -> {
+            themeBefore = GuiThemes.current();
+            GuiThemes.preview(GuiTheme.DARK);
+        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+        list.add(capture("7n-tablet-mapa-maquinas-escuro"));
+        list.add(new Step("mapa: tema de volta e a Lista", STEP_TIMEOUT_MS, () -> {
+            GuiThemes.preview(themeBefore);
+            tabletScreen().previewTab(TabletScreen.Tab.LIST);
+        }, () -> GuiThemes.current() == themeBefore && tabletScreen().currentTab() == TabletScreen.Tab.LIST,
+                () -> "tema " + GuiThemes.current()));
     }
 
     /** "Mostrar todas" no fim do grupo das fornalhas, a captura com o "Mostrar menos" à vista e o "Mostrar menos". */

@@ -278,8 +278,37 @@ final class E2eResonatorSteps {
             return seen[0] != 0 && stepTicks >= seen[0] + 30;
         }, () -> "faixa de vazão no cliente"));
         list.add(capture("ressonador-camara-fluxo"));
+        rechargeSteps(list, origin);
         list.add(new Step("Ressonador: a mão de volta", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
                 () -> true, () -> "mão"));
+    }
+
+    /**
+     * A recarga no meio: o teste põe um Opaco na última câmara e redstone, espera a recarga chegar ao cliente e
+     * andar um pouco e fotografa a espiral e o cristal enchendo.
+     */
+    private static void rechargeSteps(List<Step> list, BlockPos[] origin) {
+        long[] seen = new long[1];
+        list.add(new Step("Ressonador: Opaco em recarga", 2 * STEP_TIMEOUT_MS, () -> {
+            seen[0] = 0;
+            onServer(server -> {
+                ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
+                        .getBlockEntity(core(origin[0]));
+                ItemStack dull = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
+                SignalCrystalItem.setCharge(dull, 0);
+                core.setCrystalAt(core.chambers() - 1, dull);
+                core.setRedstone(14);
+                return null;
+            });
+        }, () -> {
+            var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
+                    .clientView();
+            if (seen[0] == 0 && view.rechargeStart() >= 0) {
+                seen[0] = stepTicks;
+            }
+            return seen[0] != 0 && stepTicks >= seen[0] + 200;
+        }, () -> "recarga no cliente"));
+        list.add(capture("ressonador-camara-recarga"));
     }
 
     /** A única Porta de Energia da Vitrine. */

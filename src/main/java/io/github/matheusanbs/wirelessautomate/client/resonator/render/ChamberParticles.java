@@ -11,8 +11,9 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
- * Os viajantes da câmara, uma vez por tick e só com o jogador perto: faíscas do centro até uma Porta de Energia com
- * vazão, mais frequentes com a faixa dela (só no desenho antigo, o do Iris), e grãos de redstone da Porta de Cristais até o Opaco em recarga. Cada
+ * Os viajantes da câmara do desenho antigo (sem o shader ou com o Iris), uma vez por tick e só com o jogador perto:
+ * faíscas do centro até uma Porta de Energia com vazão, mais frequentes com a faixa dela, e grãos de redstone da Porta
+ * de Cristais até o Opaco em recarga. No modo shader não há nenhum dos dois: o conduto e a espiral os substituem. Cada
  * viajante anda por um {@code smoothstep} entre os dois pontos. As faíscas não são partículas: o
  * {@link ChamberSparks} as desenha no passe do renderer, com o tempo do tick anterior e o de agora interpolados,
  * porque as partículas translúcidas do vanilla saem depois do terreno translúcido e o Vidro, que grava
@@ -110,7 +111,7 @@ final class ChamberParticles {
         return sparks;
     }
 
-    void tick(ChamberScene scene, ChamberView view, ClientLevel level, long gameTime, boolean withSparks) {
+    void tick(ChamberScene scene, ChamberView view, ClientLevel level, long gameTime, boolean legacy) {
         Player player = Minecraft.getInstance().player;
         Vec3 center = scene.worldCenter();
         if (player == null || player.distanceToSqr(center) >= NEAR) {
@@ -125,13 +126,13 @@ final class ChamberParticles {
             if (spark.alive) {
                 spark.previousT = spark.t;
                 spark.t += 1.0 / SPARK_TICKS;
-                spark.alive = spark.t < 1 && withSparks;
+                spark.alive = spark.t < 1 && legacy;
             }
         }
         List<Vec3> ports = scene.energyInner();
         int flowing = 0;
         double rate = 0;
-        for (int i = 0; withSparks && i < ports.size(); i++) {
+        for (int i = 0; legacy && i < ports.size(); i++) {
             int band = scene.flowBand(i);
             if (band > 0) {
                 flowing++;
@@ -141,7 +142,7 @@ final class ChamberParticles {
         sparkClock = flowing == 0 ? 0 : sparkClock + rate;
         if (sparkClock > 1) {
             sparkClock -= 1;
-            Vec3 port = flowingPort(scene, ports, born % flowing);
+            Vec3 port = flowingPort(scene, ports, Math.floorMod(born, flowing));
             Spark spark = freeSpark();
             if (port != null && spark != null) {
                 Vec3 start = new Vec3(0, (random.nextDouble() * 2 - 1) * JITTER,
@@ -150,7 +151,7 @@ final class ChamberParticles {
             }
         }
         int target = ChamberCrystals.recharging(chambers, view);
-        redClock += 2.0 * (target < 0 ? 0 : 1) / 20;
+        redClock += 2.0 * (target < 0 || !legacy ? 0 : 1) / 20;
         if (redClock > 1) {
             redClock -= 1;
             Vec3 port = nearest(scene.crystalInner(), center);
@@ -163,7 +164,7 @@ final class ChamberParticles {
             }
         }
         for (Grain grain : redstone) {
-            if (grain.alive && grain.chamber >= chambers.length) {
+            if (grain.alive && (!legacy || grain.chamber >= chambers.length)) {
                 grain.alive = false;
             }
             if (advance(grain)) {

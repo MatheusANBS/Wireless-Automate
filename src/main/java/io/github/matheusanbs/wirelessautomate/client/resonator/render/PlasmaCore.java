@@ -8,7 +8,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 /**
  * O Núcleo de plasma: um quad virado para a câmera no centro da câmara, desenhado pelo core shader do mod. Cada
  * vértice leva a cor do tier no RGB e a sintonia no alfa, o canto do quad no UV0 e, no UV2 (inteiros, os mesmos nos
- * quatro), os cristais carregados e o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o bit 4 com o buffer cheio.
+ * quatro), os cristais carregados e o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o bit 4
+ * com o buffer cheio.
  */
 final class PlasmaCore {
     /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */

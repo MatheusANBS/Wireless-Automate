@@ -63,6 +63,25 @@ public final class ModItems {
     public static final DeferredItem<SignalCrystalItem> CUT_SIGNAL_CRYSTAL = ITEMS.registerItem("cut_signal_crystal",
             props -> new SignalCrystalItem(true, props), new Item.Properties());
 
+    /**
+     * Cristais Afinados, um por tier do Elite ao Ultimate (os do Allthemodium sempre registrados): Lapidados com o
+     * tier gravado, que rendem cheio no Núcleo do tier ou abaixo.
+     */
+    public static final Map<RouterTier, DeferredItem<SignalCrystalItem>> TUNED_CRYSTALS = new EnumMap<>(RouterTier.class);
+
+    static {
+        for (RouterTier tier : RouterTier.values()) {
+            if (tier.ordinal() < RouterTier.ELITE.ordinal()) {
+                continue;
+            }
+            TUNED_CRYSTALS.put(tier, ITEMS.registerItem("tuned_signal_crystal_" + tier.getSerializedName(),
+                    props -> new SignalCrystalItem(true, tier, props), new Item.Properties()));
+        }
+    }
+
+    /** O catalisador da recarga do Núcleo do Elite para cima. */
+    public static final DeferredItem<Item> RESONANCE_DUST = ITEMS.registerSimpleItem("resonance_dust");
+
     /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */
     public static final DeferredItem<BlockItem> RESONATOR_CASING = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CASING);
     public static final DeferredItem<BlockItem> RESONATOR_GLASS = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_GLASS);

@@ -70,7 +70,8 @@ public final class ResonatorTunerGameTests {
             assertNear(helper, core.efficiency(), 0.90, "eficiência no automático");
             assertNear(helper, core.rawEfficiency(), 1.0, "eficiência sem o teto");
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), CoreMath.perTick(10_000, 6 * 4, 0.9) * 20, "energia de um lote");
+            // Três Lapidados comuns no Elite rendem 1/2 cada (2 quartos): 6 quartos.
+            helper.assertValueEqual(core.energy(), CoreMath.perTick(10_000, 6, 0.9) * 20, "energia de um lote");
         });
     }
 

@@ -32,6 +32,18 @@ public final class CoreMath {
         return mulSat(mulSat(chambers, fePerCrystal), 2);
     }
 
+    /**
+     * A faixa de vazão de uma Porta no lote: 0 sem nada saindo, e de 1 a 7 pela fração da geração máxima que saiu
+     * ({@code f = extraído / (ticks × máxima)}, saturada em 1), em escala de raiz: {@code min(7, 1 + floor(7 × √f))}.
+     */
+    public static int flowBand(long extracted, int ticks, long maxOutput) {
+        if (extracted <= 0 || maxOutput <= 0 || ticks <= 0) {
+            return 0;
+        }
+        double fraction = Math.min(1.0, (double) extracted / ((double) ticks * (double) maxOutput));
+        return Math.min(7, 1 + (int) Math.floor(7 * Math.sqrt(fraction)));
+    }
+
     public static long buffer(int chambers, long fePerCrystal) {
         return mulSat(maxOutput(chambers, fePerCrystal), BUFFER_TICKS);
     }

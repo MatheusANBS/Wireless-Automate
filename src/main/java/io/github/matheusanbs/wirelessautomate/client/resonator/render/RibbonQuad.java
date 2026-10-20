@@ -20,9 +20,9 @@ final class RibbonQuad {
     }
 
     /**
-     * A fita de {@code a} a {@code b} (relativos ao centro da câmara) com {@code width} de largura, u de 0 a 1 ao longo
-     * dela. {@code cx, cy, cz} é a câmera relativa ao mesmo centro. O lado é a direção × (meio − câmera); sem lado
-     * (de frente para a câmera) não desenha e devolve {@code false}.
+     * A fita de {@code a} a {@code b} (relativos ao centro da câmara) com {@code width} de largura, u de 0 a 1 ao
+     * longo dela. {@code cx, cy, cz} é a câmera relativa ao mesmo centro. O lado é a direção × (meio − câmera); sem
+     * lado (de frente para a câmera) não desenha e devolve {@code false}.
      */
     static boolean strip(PoseStack.Pose pose, MultiBufferSource buffer, float ax, float ay, float az, float bx,
             float by, float bz, float cx, float cy, float cz, float width, int rgb, int alpha, int mode, int param) {

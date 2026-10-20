@@ -33,6 +33,9 @@ final class ListClicks {
 
     boolean mouseClicked(double mx, double my, int button) {
         layout.arrange();
+        if (list.rename.editor().mouseClicked(mx, my, button)) {
+            return true;
+        }
         NodePanel p = list.chosenPanel.current();
         if (p != null && p.labelClick(mx, my, button)) {
             return true;
@@ -66,11 +69,11 @@ final class ListClicks {
         if (hot == null) {
             return clickEmpty(mx, my);
         }
-        clickHot(hot);
+        clickHot(hot, mx, my);
         return true;
     }
 
-    private void clickHot(Hot hot) {
+    private void clickHot(Hot hot, double mx, double my) {
         List<NodeView> nodeViews = list.snapshot().nodes();
         ListProfileActions profile = list.profileActions;
         switch (hot.kind()) {
@@ -80,8 +83,19 @@ final class ListClicks {
             case TYPE_CHIP -> list.search.clearType();
             case CLEAR -> list.clearAll();
             case FORGET -> profile.forget();
-            case ROW -> clickRow(nodeViews.get(hot.arg()).key());
-            case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
+            case ROW -> {
+                NodeKey key = nodeViews.get(hot.arg()).key();
+                if (!list.rename.click(ListRename.Kind.ROUTER, key, hot, ListRows.nameX(list, hot),
+                        ListRows.textRight(list, hot), mx, my)) {
+                    clickRow(key);
+                }
+            }
+            case TREE -> {
+                if (!list.treeClicks.rename(hot, mx, my)) {
+                    list.treeClicks.click(hot);
+                }
+            }
+            case TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
             case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.click(hot);
             case FULL_SCREEN -> {
                 if (list.chosen != null) {

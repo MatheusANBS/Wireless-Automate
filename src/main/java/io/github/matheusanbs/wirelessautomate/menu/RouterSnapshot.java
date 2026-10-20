@@ -157,6 +157,12 @@ public record RouterSnapshot(
                 faces, chunkLoad, range, dimension, attachedLabel);
     }
 
+    /** O mesmo snapshot com outro nome da máquina presa (prévias da tela). */
+    public RouterSnapshot withAttachedLabel(String attachedLabel) {
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
+                faces, chunkLoad, range, dimension, attachedLabel);
+    }
+
     /** O mesmo snapshot com outras máquinas remotas (prévias da tela). */
     public RouterSnapshot withRange(RangeView range) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,

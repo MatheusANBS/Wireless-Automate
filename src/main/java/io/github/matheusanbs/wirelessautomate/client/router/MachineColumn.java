@@ -200,7 +200,8 @@ final class MachineColumn {
     /** Um botão da linha escolhida: o servidor confere o que a tela viu e age; o snapshot seguinte mostra. */
     private void rowAction(RangeList.Row row, RangeRowButtons.Action action) {
         if (action == RangeRowButtons.Action.RENAME) {
-            rowRename.start(row, range());
+            RouterSnapshot s = snapshot.get();
+            rowRename.start(row, range(), s.attachedLabel(), attachedName());
             return;
         }
         int id = containerId.getAsInt();
@@ -348,7 +349,8 @@ final class MachineColumn {
     void render(GuiGraphics g, Font font, int left, int top, int pointerX, int pointerY) {
         RouterSnapshot s = snapshot.get();
         if (listShown()) {
-            rangeList.render(g, font, range(), s.target(), attachedIcon(), pointerX, pointerY);
+            rangeList.render(g, font, range(), s.target(), attachedIcon(), s.attachedLabel(), pointerX,
+                    pointerY);
             litFooter.render(g, font, true, pointerX, pointerY);
         } else {
             labelEditor.finish(true);

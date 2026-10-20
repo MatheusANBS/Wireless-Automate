@@ -30,6 +30,17 @@ final class TreeClicks {
         this.list = list;
     }
 
+    /** O ✎ ou os dois cliques no nome da presa abrem a caixa do nome; {@code false} segue como clique comum. */
+    boolean rename(Hot hot, double mx, double my) {
+        Line line = list.model.tree().lines().get(hot.arg());
+        if (line.kind() != Kind.ATTACHED || list.multi) {
+            return false;
+        }
+        NodeView node = list.snapshot().nodes().get(line.node());
+        return list.rename.click(ListRename.Kind.ATTACHED, node.key(), hot, list.treeRows.attachedNameX(hot, line),
+                hot.x() + hot.w() - 3, mx, my);
+    }
+
     void click(Hot hot) {
         ListTree tree = list.model.tree();
         Line line = tree.lines().get(hot.arg());

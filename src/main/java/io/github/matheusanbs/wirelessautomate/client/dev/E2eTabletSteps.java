@@ -73,7 +73,7 @@ final class E2eTabletSteps {
      * lista (o painel aparece e muda o modo de uma face no servidor), copia o perfil de B (a faixa aparece), cola
      * no grupo dos baús (o aviso aparece e A fica "igual ao perfil"), desfaz, e repete com Ctrl+C, Ctrl+V e Ctrl+Z.
      * Depois cria um grupo de redes, pausa e retoma, edita o filtro de B a 20 blocos pelo painel e volta ao
-     * Tablet com B escolhido, e abre B à distância com duplo clique na linha.
+     * Tablet com B escolhido, e abre B à distância com duplo clique na segunda linha dela.
      */
     static void tabletSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -172,7 +172,8 @@ final class E2eTabletSteps {
             int[] row = tabletScreen().nodeRowCenter(nodeB());
             click(tabletScreen(), row[0], row[1]);
         }, () -> tabletScreen().nodePanel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB()))
-                && tabletScreen().panel().access() == PanelAccess.EDIT,
+                && tabletScreen().panel().access() == PanelAccess.EDIT
+                && tabletScreen().nodePanel().tabCenter(ResourceType.ITEM) != null,
                 () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
         list.add(new Step("painel: aba Itens", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().nodePanel().tabCenter(ResourceType.ITEM);
@@ -347,7 +348,8 @@ final class E2eTabletSteps {
             }
             click(tabletScreen(), row[0], row[1]);
         }, () -> tabletScreen().nodePanel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB()))
-                && tabletScreen().panel().access() == PanelAccess.EDIT,
+                && tabletScreen().panel().access() == PanelAccess.EDIT
+                && tabletScreen().nodePanel().tabCenter(ResourceType.ITEM) != null,
                 () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().access())));
         // o cartão de energia deixou o painel na aba Energia, que não tem filtro
         list.add(new Step("painel de B na aba Itens", STEP_TIMEOUT_MS, () -> {
@@ -371,8 +373,9 @@ final class E2eTabletSteps {
             if (row == null) {
                 throw new StepFailure("B não está na lista");
             }
-            click(screen, row[0], row[1]);
-            click(screen, row[0], row[1]);
+            // na segunda linha: na primeira, o duplo clique no nome renomeia
+            click(screen, row[0], row[1] + 5);
+            click(screen, row[0], row[1] + 5);
         }, () -> {
             // passa alguns ticks aberta: a tela comum fecharia a mais de 8 blocos
             return stepTicks >= 20 && Minecraft.getInstance().screen instanceof RouterScreen screen

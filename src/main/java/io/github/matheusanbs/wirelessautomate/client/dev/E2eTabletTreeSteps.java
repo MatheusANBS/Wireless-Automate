@@ -104,6 +104,7 @@ final class E2eTabletTreeSteps {
         showAllSteps(list);
         arrowSteps(list);
         reopenSteps(list);
+        renameSteps(list);
         list.add(new Step("árvore: o ▸ fecha o roteador", STEP_TIMEOUT_MS, () -> {
             int[] c = center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0);
             click(tabletScreen(), c[0], c[1]);
@@ -111,6 +112,47 @@ final class E2eTabletTreeSteps {
         mapSteps(list);
         portugueseSteps(list);
         list.add(tearDown());
+    }
+
+    /**
+     * Renomear na Lista: dois cliques no nome do roteador abrem a caixa, o texto e o Enter dão o nome (conferido no
+     * servidor); o mesmo na linha da presa da árvore ({@code 7s-tablet-renomear-roteador} e
+     * {@code 7s-tablet-renomear-presa}, com a caixa aberta). Depois, os dois nomes voltam a vazio.
+     */
+    private static void renameSteps(List<Step> list) {
+        renameStep(list, "roteador", NAME + " Casa", ListTree.Kind.NODE, 0, 6);
+        renameStep(list, "presa", "Fornalha Mestra", ListTree.Kind.ATTACHED, 0, 6);
+        list.add(new Step("renomear: os nomes voltam", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            router(server, router).setName(NAME);
+            router(server, router).setAttachedLabel("");
+            return null;
+        }), () -> tabletScreen().getMenu().snapshot().nodes().stream().anyMatch(n -> n.key().equals(node())
+                && NAME.equals(n.name()) && n.attachedLabel().isEmpty()), () -> "nomes não voltaram"));
+    }
+
+    private static void renameStep(List<Step> list, String what, String name, ListTree.Kind kind, int id, int dy) {
+        boolean router = kind == ListTree.Kind.NODE;
+        list.add(new Step("renomear: dois cliques no nome (" + what + ")", STEP_TIMEOUT_MS, () -> {
+            int[] c = center(TabletList.TreePart.LINE, kind, id);
+            if (c == null) {
+                throw new StepFailure("sem a linha do " + what);
+            }
+            click(tabletScreen(), c[0], c[1] - dy);
+            click(tabletScreen(), c[0], c[1] - dy);
+        }, () -> tabletScreen().list().renaming() && stepTicks >= 3, () -> "a caixa do nome não abriu"));
+        list.add(new Step("renomear: digitar o nome (" + what + ")", STEP_TIMEOUT_MS, () -> {
+            for (int i = 0; i < 40; i++) {
+                tabletScreen().keyPressed(GLFW.GLFW_KEY_BACKSPACE, 0, 0);
+            }
+            type(name);
+        }, () -> stepTicks >= 3, () -> ""));
+        list.add(capture("7s-tablet-renomear-" + what));
+        list.add(new Step("renomear: Enter salva (" + what + ")", STEP_TIMEOUT_MS,
+                () -> tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
+                () -> !tabletScreen().list().renaming() && onServer(server -> {
+                    var be = router(server, E2eTabletTreeSteps.router);
+                    return name.equals(router ? be.name() : be.attachedLabel());
+                }), () -> "o servidor não recebeu o nome"));
     }
 
     /**

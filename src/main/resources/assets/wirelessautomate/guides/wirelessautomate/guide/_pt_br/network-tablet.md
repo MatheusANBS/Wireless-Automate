@@ -27,7 +27,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). O seletor **Roteadores · Máquinas**, embaixo da busca, mostra a lista pelos roteadores (agrupados pela máquina presa, cada um abrindo em árvore com as máquinas dele) ou por todas as máquinas, agrupadas pelo bloco. **Selecionar** marca roteadores, grupos e máquinas para colar um perfil ou mudar de rede de uma vez. Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. |
+| **Lista** | Todos os nós, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). O seletor **Roteadores · Máquinas**, embaixo da busca, mostra a lista pelos roteadores (uma linha para cada um, com a máquina presa embaixo do nome, abrindo em árvore com as máquinas dele) ou por todas as máquinas, agrupadas pelo bloco. **Selecionar** marca roteadores, grupos e máquinas para colar um perfil ou mudar de rede de uma vez. Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. Para dar nome a um roteador ou à máquina presa, clique no ✎ da linha (com o mouse em cima) ou dê dois cliques no nome; Enter salva e Esc desiste. |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, o saldo dos Armazéns e o que precisa de atenção (veja abaixo). |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para escolher o nó. O roteador escolhido mostra as máquinas vinculadas a ele, cada uma ligada a ele por uma linha (veja abaixo). |
 | **Redes** | Criar redes, cor, membros e privacidade, e os grupos de redes, que pausam e retomam um sistema inteiro de uma vez (veja abaixo). |
@@ -130,7 +130,6 @@ Com um nó escolhido, **Copiar perfil** guarda a configuração das faces dele n
 | Para | Como |
 | --- | --- |
 | **Um nó** | Escolha-o e clique em **Colar perfil**. |
-| **Todo um grupo** | No cabeçalho do grupo, **Colar nas N** (a origem fica de fora). |
 | **Vários roteadores e máquinas** | Em **Selecionar**, marque o que quiser e clique em **Colar nos marcados**; o botão diz o que vai atingir ("2 roteadores, 3 máquinas") ou, sem espaço, só quantos, e a dica diz tudo. |
 
 Os nós já iguais ao perfil dizem "igual ao perfil"; os outros mostram "N diferentes do perfil" e o primeiro ajuste que falta. O aviso depois de colar traz **Desfazer**. Atalhos: **Ctrl+C** copia o perfil do nó escolhido, **Ctrl+V** cola e **Ctrl+Z** desfaz. As redes valem pela regra de sempre: só entram as que você pode usar.

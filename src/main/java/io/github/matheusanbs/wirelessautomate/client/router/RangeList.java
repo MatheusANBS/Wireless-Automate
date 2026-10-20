@@ -40,6 +40,8 @@ final class RangeList {
     private static final int ARROW_ZONE = 9;
     /** Onde o nome do grupo começa, depois da seta e do ícone. */
     static final int GROUP_TEXT_X = ARROW_ZONE + 20;
+    /** Onde o nome da presa começa, a partir da borda da lista (depois do ícone). */
+    static final int ATTACHED_TEXT_X = 19;
 
     enum Kind { ATTACHED, GROUP, MACHINE }
 
@@ -252,7 +254,7 @@ final class RangeList {
             }
             return true;
         }
-        if (rename.doubleClick(row, row.kind() != Kind.ATTACHED && mouseX >= x + RowRename.nameX(row))) {
+        if (rename.doubleClick(row, mouseX >= x + RowRename.nameX(row))) {
             act.accept(row, RangeRowButtons.Action.RENAME);
             return true;
         }
@@ -308,8 +310,8 @@ final class RangeList {
 
     // ------------------------------------------------------------------ desenho
 
-    void render(GuiGraphics g, Font font, RangeView view, EditTarget target, ItemStack attachedIcon, int mouseX,
-            int mouseY) {
+    void render(GuiGraphics g, Font font, RangeView view, EditTarget target, ItemStack attachedIcon,
+            String attachedLabel, int mouseX, int mouseY) {
         g.fill(x + 1, y + 1, x + width - 1, y + height - 1, GuiPaint.PANEL);
         GuiPaint.outline(g, x, y, width, height, GuiPaint.LINE);
         List<Row> rows = rows(view);
@@ -338,7 +340,7 @@ final class RangeList {
             List<RangeRowButtons.Button> placed = selected ? targetButtons(font, view, target) : List.of();
             int textRight = placed.isEmpty() ? right : placed.getLast().x() - 1;
             switch (row.kind()) {
-                case ATTACHED -> renderAttached(g, font, attachedIcon, ry, right);
+                case ATTACHED -> renderAttached(g, font, attachedIcon, attachedLabel, ry, right);
                 case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
                         placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
@@ -371,7 +373,7 @@ final class RangeList {
         rename.endFrame(view, g, mouseX, mouseY);
     }
 
-    private void renderAttached(GuiGraphics g, Font font, ItemStack icon, int ry, int right) {
+    private void renderAttached(GuiGraphics g, Font font, ItemStack icon, String label, int ry, int right) {
         if (!icon.isEmpty()) {
             g.pose().pushPose();
             g.pose().translate(x + 4, ry + 1, 0);
@@ -380,7 +382,10 @@ final class RangeList {
             g.pose().popPose();
         }
         int textX = x + 19;
-        GuiText.draw(g, font, tr("range.attached"), textX, ry + 3, right - textX - 2, GuiPaint.FG);
+        if (!rename.editing(EditTarget.ATTACHED_TARGET)) {
+            GuiText.draw(g, font, label.isEmpty() ? tr("range.attached") : Component.literal(label), textX, ry + 3,
+                    right - textX - 2, GuiPaint.FG);
+        }
     }
 
     /** Um grupo; {@code nameRight} é até onde vai a primeira linha (antes dos botões) e {@code right} a segunda. */

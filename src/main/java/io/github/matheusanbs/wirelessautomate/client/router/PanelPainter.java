@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O desenho do painel do nó fora do cubo e das listas: a linha das abas com o resumo "N redes" e o corpo
@@ -88,11 +89,13 @@ final class PanelPainter {
             targetLine.render(g, font, mx, my, popup == PanelLists.Popup.TARGET);
         }
 
-        Component detail = model.sideName(model.face()).copy().append(" · ").append(model.access(v));
-        if (model.attached(model.face())) {
-            detail = detail.copy().append(" · ").append(tr("face.attached"));
+        if (layout.faceY >= 0) {
+            Component detail = model.sideName(model.face()).copy().append(" · ").append(model.access(v));
+            if (model.attached(model.face())) {
+                detail = detail.copy().append(" · ").append(tr("face.attached"));
+            }
+            GuiText.draw(g, font, detail, x, layout.faceY, w, GuiPaint.FG);
         }
-        GuiText.draw(g, font, detail, x, layout.faceY, w, GuiPaint.FG);
 
         for (Hot hot : layout.hots) {
             if (hot.kind() == Kind.MODE) {
@@ -103,12 +106,25 @@ final class PanelPainter {
             GuiText.wrap(g, font, model.phrase(), x, layout.phraseY, w, 2, GuiPaint.MUTED);
         }
 
-        GuiText.draw(g, font, tr("network.face"), x, layout.networkY + 2, w, GuiPaint.MUTED);
+        if (layout.networkY >= 0) {
+            GuiText.draw(g, font, tr("network.face"), x, layout.networkY + 2, w, GuiPaint.MUTED);
+        }
         Hot net = layout.hot(Kind.NETWORK);
         if (net != null) {
             renderNetworkPill(g, font, net, net.contains(mx, my) || popup == PanelLists.Popup.NETWORK, v);
         }
 
+        if (layout.filterY >= 0) {
+            renderFilter(g, font, mx, my, v, x, w, cardCount, readOnly);
+        }
+        if (layout.prioY >= 0) {
+            renderPriority(g, font, mx, my, popup, v);
+        }
+    }
+
+    /** A linha do Filtro: o resumo com o Editar, ou "sem filtro". */
+    private void renderFilter(GuiGraphics g, Font font, int mx, int my, FaceView v, int x, int w, int cardCount,
+            @Nullable Component readOnly) {
         GuiText.draw(g, font, tr("filter.label"), x, layout.filterY + 3, w, GuiPaint.MUTED);
         Hot filter = layout.hot(Kind.FILTER);
         Hot edit = layout.hot(Kind.EDIT);
@@ -120,7 +136,6 @@ final class PanelPainter {
             int labelW = font.width(tr("filter.label")) + 5;
             GuiText.draw(g, font, panelTr("filter.none"), x + labelW, layout.filterY + 3, w - labelW, GuiPaint.MUTED);
         }
-        renderPriority(g, font, mx, my, popup, v);
     }
 
     /** A linha da prioridade (− valor +) com o botão do redstone. */

@@ -51,6 +51,7 @@ final class ListClicks {
         if (searchBox != null && searchBox.isMouseOver(mx, my)) {
             // de volta à busca: as setas andam no texto, não na árvore
             list.treeNav.clear();
+            list.machineNav.clear();
         }
         if (suggestions.shown() && !(searchBox != null && searchBox.isMouseOver(mx, my))) {
             suggestions.close();
@@ -74,6 +75,7 @@ final class ListClicks {
         ListProfileActions profile = list.profileActions;
         switch (hot.kind()) {
             case LABEL -> list.search.removeLabel(hot.arg());
+            case VIEW -> layout.viewBar().choose(hot.arg() == 1);
             case QUICK -> list.search.toggleQuick(QuickFilter.values()[hot.arg()]);
             case TYPE_CHIP -> list.search.clearType();
             case CLEAR -> list.clearAll();
@@ -82,6 +84,7 @@ final class ListClicks {
             case PASTE_GROUP -> profile.pasteGroup(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> clickRow(nodeViews.get(hot.arg()).key());
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
+            case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.click(hot);
             case FULL_SCREEN -> {
                 if (list.chosen != null) {
                     list.actions.openNode(list.chosen);
@@ -113,9 +116,7 @@ final class ListClicks {
         lastClicked = key;
         lastClickAt = now;
         if (list.multi) {
-            if (!list.selected.remove(key)) {
-                list.selected.add(key);
-            }
+            list.marks.toggleNode(key);
             return;
         }
         if (twice) {

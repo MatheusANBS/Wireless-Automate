@@ -64,7 +64,9 @@ public enum BenchScenario {
     // Reenche a cada 30 ticks, e não 20: o Ultimate esvazia a presa num tick, e com o reenchimento no ritmo da
     // amostra do Tablet (20 ticks) a vazão de cada nó seria a mesma em toda amostra e nada mudaria na Lista.
     TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 30,
-            "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto");
+            "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto"),
+    TABLET_MACHINES("tablet-machines", 100, RouterTier.ULTIMATE, 60, 30,
+            "Tablet por máquinas: a cena do tablet-range com as máquinas vinculadas alternando barril, baú, fornalha e alto-forno (um grupo por bloco), e o jogador falso na visão por máquinas da Lista, os blocos recolhidos e o dos barris aberto");
 
     public final String id;
     public final int defaultNodes;
@@ -100,28 +102,34 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT, RANGE, TABLET_RANGE -> false;
+                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES -> false;
         };
     }
 
     /** Um jogador falso tem o Tablet aberto, sincronizado a cada tick ({@link BenchScene#openTablet}). */
     public boolean tablet() {
-        return this == TABLET || this == TABLET_RANGE;
+        return this == TABLET || this == TABLET_RANGE || this == TABLET_MACHINES;
     }
 
     /**
      * Cada roteador tem o Upgrade de Alcance e {@link #rangeMachines()} barris vinculados num grupo: no {@link #RANGE}
-     * o grupo extrai e nada se move; no {@link #TABLET_RANGE} a máquina presa é a origem e o grupo recebe.
+     * o grupo extrai e nada se move; no {@link #TABLET_RANGE} e no {@link #TABLET_MACHINES} a máquina presa é a origem
+     * e o grupo recebe ({@link #feedsRemotes()}).
      */
     public boolean range() {
-        return this == RANGE || this == TABLET_RANGE;
+        return this == RANGE || feedsRemotes();
+    }
+
+    /** A cena do {@link #TABLET_RANGE}: a máquina presa é a origem e o grupo dos barris vinculados recebe. */
+    public boolean feedsRemotes() {
+        return this == TABLET_RANGE || this == TABLET_MACHINES;
     }
 
     /** Máquinas remotas vinculadas a cada roteador nos cenários de alcance ({@link #range()}); 0 nos outros. */
     public int rangeMachines() {
         return switch (this) {
             case RANGE -> 64;
-            case TABLET_RANGE -> 16;
+            case TABLET_RANGE, TABLET_MACHINES -> 16;
             default -> 0;
         };
     }

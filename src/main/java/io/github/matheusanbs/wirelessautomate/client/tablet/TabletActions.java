@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
+import io.github.matheusanbs.wirelessautomate.menu.TabletMarks;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
@@ -7,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletOpenNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
@@ -61,17 +63,28 @@ final class TabletActions {
         send(new TabletTreePayload(menu.containerId, action, node, group));
     }
 
+    /** Troca a visão da Lista ou abre, recolhe, mostra todas ou poucas máquinas do bloco. */
+    void machines(TabletMachinesPayload.Action action, Optional<ResourceLocation> block) {
+        send(new TabletMachinesPayload(menu.containerId, action, block));
+    }
+
     void openNode(NodeKey key) {
         send(new TabletOpenNodePayload(menu.containerId, key));
     }
 
-    void moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
-        send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys), type, network));
+    void moveNodes(List<NodeKey> keys, TabletMarks marks, Optional<ResourceType> type, Optional<UUID> network) {
+        send(new TabletMoveNodesPayload(menu.containerId, List.copyOf(keys), marks, type, network));
     }
 
     void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
             List<NodeKey> keys) {
-        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine), keys));
+        profile(action, key, machine, keys, TabletMarks.EMPTY);
+    }
+
+    void profile(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
+            List<NodeKey> keys, TabletMarks marks) {
+        send(new TabletProfilePayload(menu.containerId, action, Optional.ofNullable(key), Optional.ofNullable(machine),
+                keys, marks));
     }
 
     void clearIdleNetworks(boolean undo) {

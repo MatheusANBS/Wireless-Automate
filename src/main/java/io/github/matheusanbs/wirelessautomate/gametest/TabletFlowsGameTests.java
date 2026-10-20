@@ -113,6 +113,9 @@ public final class TabletFlowsGameTests {
                 .thenIdle(25)
                 .thenExecute(() -> {
                     helper.assertTrue(menu.pollFlows() == null, "Fluxos na Lista");
+                    // Lista, Fluxos, Mapa e Redes: a quinta aba não existe mais
+                    helper.assertTrue(TabletMenu.TAB_COUNT == 4 && TabletMenu.FLOWS_TAB == 1, "a ordem das abas");
+                    helper.assertFalse(tab(menu, 4), "a aba 4 aceita");
                     helper.assertTrue(tab(menu, TabletMenu.FLOWS_TAB), "a aba Fluxos recusada");
                     helper.assertTrue(watching(player), "não olha na aba Fluxos");
                 })

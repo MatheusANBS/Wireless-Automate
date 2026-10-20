@@ -69,7 +69,7 @@ final class MachineRow {
         if (machine != null && !machine.label().isEmpty()) {
             return Component.literal(machine.label());
         }
-        return Component.literal("#" + RangeList.number(view, index));
+        return Component.literal("#" + MachineTexts.number(view, index));
     }
 
     /** A dica da linha: o nome, as coordenadas, a distância, se segue o perfil, o estado e o que o clique faz. */
@@ -79,12 +79,12 @@ final class MachineRow {
             return Component.empty();
         }
         Component follows = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
-        Component detail = tr("range.machine.detail", RangeList.distance(machine), follows);
-        Component text = RangeList.machineName(view, index).copy()
+        Component detail = tr("range.machine.detail", MachineTexts.distance(machine), follows);
+        Component text = MachineTexts.machineName(view, index).copy()
                 .append("\n").append(tr("range.machine.detail", coordinates(machine.pos()), detail).copy()
                         .withColor(GuiPaint.TOOLTIP_MUTED))
-                .append("\n").append(RangeList.stateText(machine.state()).copy()
-                        .withColor(RangeList.stateColor(machine.state())));
+                .append("\n").append(MachineTexts.stateText(machine.state()).copy()
+                        .withColor(MachineTexts.stateColor(machine.state())));
         if (machine.state() == MachineState.REPLACED) {
             text = text.copy().append("\n").append(RangeRowButtons.updateDetail(view, EditTarget.machine(index)).copy()
                     .withColor(GuiPaint.TOOLTIP_MUTED));
@@ -95,7 +95,7 @@ final class MachineRow {
     /** O fim da segunda linha: a distância, ou o estado em palavras quando ela não está carregada. */
     static Component suffix(MachineView machine) {
         return switch (machine.state()) {
-            case LOADED -> RangeList.distance(machine);
+            case LOADED -> MachineTexts.distance(machine);
             case REPLACED -> tr("range.machine.replaced");
             case UNLOADED, MISSING, OUT_OF_RANGE, OVER_LIMIT ->
                     tr("range.machine.short." + machine.state().name().toLowerCase(Locale.ROOT));
@@ -149,7 +149,7 @@ final class MachineRow {
             return;
         }
         prepare(font, view);
-        GuiPaint.dot(g, x + 8, ry + 7, RangeList.stateColor(machine.state()));
+        GuiPaint.dot(g, x + 8, ry + 7, MachineTexts.stateColor(machine.state()));
         if (eye) {
             int eyeColor = lit.test(machine.pos().asLong()) ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED;
             GuiPaint.eye(g, right - EYE_W + 2, ry + LINE1_Y + 1, eyeColor);

@@ -6,7 +6,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload.Action;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
@@ -51,12 +50,11 @@ final class ListProfileActions {
         send(Action.PASTE_GROUP, null, machine, List.of());
     }
 
+    /** Cola nos marcados: os roteadores (na presa) e as máquinas, os grupos e os blocos. */
     void pasteSelected() {
-        if (list.profile().isPresent() && !list.selected.isEmpty()) {
-            List<NodeKey> keys = new ArrayList<>(list.selected);
-            send(Action.PASTE_SELECTED, null, null,
-                    List.copyOf(keys.size() > TabletProfilePayload.MAX_KEYS ? keys.subList(0, TabletProfilePayload.MAX_KEYS)
-                            : keys));
+        if (list.profile().isPresent() && !list.marks.isEmpty()) {
+            list.actions.profile(Action.PASTE_SELECTED, null, null, list.marks.nodeList(TabletProfilePayload.MAX_KEYS),
+                    list.marks.payload());
         }
     }
 

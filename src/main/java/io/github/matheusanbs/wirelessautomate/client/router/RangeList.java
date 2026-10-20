@@ -1,23 +1,23 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
-import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import static io.github.matheusanbs.wirelessautomate.client.router.MachineTexts.exceptions;
+import static io.github.matheusanbs.wirelessautomate.client.router.MachineTexts.groupName;
+import static io.github.matheusanbs.wirelessautomate.client.router.MachineTexts.tr;
+
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.GroupView;
-import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
  * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
-public final class RangeList {
+final class RangeList {
     static final int ATTACHED_H = 14;
     static final int GROUP_H = 20;
     static final int MACHINE_H = GROUP_H;
@@ -276,78 +276,6 @@ public final class RangeList {
         }
         scroll = Math.max(0, Math.min(scroll - (int) Math.signum(scrollY) * SCROLL_STEP, maxScroll(rows(view))));
         return true;
-    }
-
-    // ------------------------------------------------------------------ textos
-
-    private static Component tr(String key, Object... args) {
-        return Component.translatable("gui.wirelessautomate.router." + key, args);
-    }
-
-    /** O nome do grupo: o dado pelo jogador ou o do bloco. */
-    static Component groupName(GroupView group) {
-        if (!group.name().isEmpty()) {
-            return Component.literal(group.name());
-        }
-        // pelo item, não pelo bloco: o nome de alguns blocos tem lacunas que só o item preenche
-        return RouterBlock.machineName(BuiltInRegistries.BLOCK.get(group.block()));
-    }
-
-    /** O número da máquina dentro do grupo, a partir de 1 (a ordem de vínculo). */
-    static int number(RangeView view, int index) {
-        MachineView machine = view.machine(index);
-        if (machine == null) {
-            return 0;
-        }
-        int n = 0;
-        for (int i = 0; i <= index; i++) {
-            if (view.machines().get(i).group() == machine.group()) {
-                n++;
-            }
-        }
-        return n;
-    }
-
-    /**
-     * O nome de uma máquina fora da lista (a pílula, as dicas e a lista do alvo): o rótulo dado pelo jogador, ou
-     * "Fornalha #3". A única regra do nome, com o {@link MachineRow#rowName} da linha embaixo do grupo.
-     */
-    public static Component machineName(RangeView view, int index) {
-        MachineView machine = view.machine(index);
-        if (machine != null && !machine.label().isEmpty()) {
-            return Component.literal(machine.label());
-        }
-        return blockName(view, index);
-    }
-
-    /** O nome de uma máquina sem rótulo: "Fornalha #3" (também a dica da caixa do rótulo vazia). */
-    static Component blockName(RangeView view, int index) {
-        MachineView machine = view.machine(index);
-        GroupView group = machine == null ? null : view.group(machine.group());
-        Component name = group == null ? Component.literal("?") : groupName(group);
-        return tr("range.machine.name", name, number(view, index));
-    }
-
-    static Component distance(MachineView machine) {
-        return machine.distance() == 1 ? tr("range.distance.one") : tr("range.distance", machine.distance());
-    }
-
-    static Component exceptions(GroupView group) {
-        return group.exceptions() == 1 ? tr("range.group.exceptions.one") : tr("range.group.exceptions", group.exceptions());
-    }
-
-    public static int stateColor(MachineState state) {
-        return switch (state) {
-            case LOADED -> GuiPaint.OK;
-            case UNLOADED -> GuiPaint.WARN;
-            case MISSING -> GuiPaint.DANGER;
-            case REPLACED -> GuiPaint.BRASS;
-            case OUT_OF_RANGE, OVER_LIMIT -> GuiPaint.MUTED;
-        };
-    }
-
-    public static Component stateText(MachineState state) {
-        return tr("range.machine.state." + state.name().toLowerCase(Locale.ROOT));
     }
 
     Component tooltip(RangeView view, Row row, Component attachedName) {

@@ -43,8 +43,9 @@ import org.jetbrains.annotations.Nullable;
  * mouse, o teclado e as dicas para as partes ({@link ListSearch}, {@link ChosenPanel}, {@link ListLayout},
  * {@link ListPainter}, {@link ListClicks}, {@link ListKeys}, {@link ListTooltips}). As linhas são do
  * {@link ListModel} (o modelo) e do {@link ListRows} (o desenho); as da árvore, do {@link TreeRows} (o desenho), do
- * {@link TreeClicks} (o mouse) e do {@link TreeNav} (a escolha e o teclado); as ações do perfil, do
- * {@link ListProfileActions}.
+ * {@link TreeClicks} (o mouse) e do {@link TreeNav} (a escolha e o teclado); as da visão por máquinas, do
+ * {@link MachineRows} (o desenho) e do {@link MachineNav} (o mouse, a escolha e o teclado), com o seletor no
+ * {@link ViewBar}; as ações do perfil, do {@link ListProfileActions}.
  */
 public final class TabletList {
     final TabletMenu menu;
@@ -66,6 +67,8 @@ public final class TabletList {
     final TreeRows treeRows;
     final TreeNav treeNav;
     final TreeClicks treeClicks;
+    final MachineRows machineRows;
+    final MachineNav machineNav;
     final ListProfileActions profileActions;
 
     // lista
@@ -94,6 +97,8 @@ public final class TabletList {
         this.treeRows = new TreeRows(this);
         this.treeNav = new TreeNav(this);
         this.treeClicks = new TreeClicks(this);
+        this.machineRows = new MachineRows(this);
+        this.machineNav = new MachineNav(this);
         this.layout = new ListLayout(this);
         this.painter = new ListPainter(this, layout);
         this.rows = new ListRows(this, layout);
@@ -163,9 +168,24 @@ public final class TabletList {
         chosenPanel.followServerDrop();
     }
 
-    /** Snapshot novo: as sugestões e a seleção que sumiu. */
+    /** A Lista está na visão por máquinas (a página do servidor). */
+    boolean machineView() {
+        return snapshot().machineRows().active();
+    }
+
+    /** A lista não tem linhas na visão aberta. */
+    boolean listEmpty() {
+        return machineView() ? snapshot().machineRows().rows().isEmpty() : snapshot().nodes().isEmpty();
+    }
+
+    /** Snapshot novo: as sugestões, a visão pedida que chegou e a seleção que sumiu. */
     void onSnapshot() {
         search.onSnapshot();
+        layout.viewBar().onSnapshot();
+        if (machineView()) {
+            // a página por máquinas não traz nós: os marcados ficam
+            return;
+        }
         Set<NodeKey> present = new HashSet<>();
         snapshot().nodes().forEach(n -> present.add(n.key()));
         selected.retainAll(present);
@@ -242,6 +262,11 @@ public final class TabletList {
     /** O retângulo da aba (de cima da busca até o fim da tela). */
     void layout(int x, int y, int w, int bottomY) {
         layout.layout(x, y, w, bottomY);
+    }
+
+    /** Posições e áreas de clique refeitas agora (os ganchos). */
+    void arrangeNow() {
+        layout.arrange();
     }
 
     /** A área do tipo no quadro arranjado, ou {@code null}. */
@@ -342,6 +367,11 @@ public final class TabletList {
     public void previewChoose(@Nullable NodeKey key) {
         chosen = key;
         revealKey = key;
+    }
+
+    /** A visão por máquinas: o mouse, o teclado e os ganchos do e2e. */
+    public MachineNav machines() {
+        return machineNav;
     }
 
     public void previewText(String value) {

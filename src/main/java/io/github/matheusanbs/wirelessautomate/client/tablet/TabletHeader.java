@@ -15,14 +15,20 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 /**
- * O cabeçalho da tela do Tablet: o título, as contagens de nós e redes, o botão do tema e a linha que o separa
- * das abas, e o aviso do servidor (4 s), desenhado por cima do cabeçalho.
+ * O cabeçalho da tela do Tablet: o título, as contagens de nós, máquinas e redes (montadas quando o snapshot
+ * chega), o botão do tema e a linha que o separa das abas, e o aviso do servidor (4 s), desenhado por cima do
+ * cabeçalho.
  */
 final class TabletHeader {
     private final TabletLayout layout;
     private int lastNoticeId;
     private long noticeUntil;
     private Component noticeText = Component.empty();
+    private Component meta = Component.empty();
+    private int metaW;
+    private int metaNodes = -1;
+    private int metaMachines = -1;
+    private int metaNetworks = -1;
 
     /** @param noticeId o aviso do snapshot de abertura, que não aparece de novo */
     TabletHeader(TabletLayout layout, int noticeId) {
@@ -38,8 +44,16 @@ final class TabletHeader {
         return layout.top + HEAD_Y + 2;
     }
 
-    /** Snapshot novo: um aviso novo aparece. */
+    /** Snapshot novo: um aviso novo aparece; as contagens, se mudaram. */
     void onSnapshot(TabletSnapshot s) {
+        if (s.totalNodes() != metaNodes || s.machines() != metaMachines || s.networks().size() != metaNetworks) {
+            metaNodes = s.totalNodes();
+            metaMachines = s.machines();
+            metaNetworks = s.networks().size();
+            meta = plural("meta.nodes", metaNodes).copy().append(" · ").append(plural("meta.machines", metaMachines))
+                    .append(" · ").append(plural("meta.networks", metaNetworks));
+            metaW = TabletList.font().width(meta);
+        }
         if (s.noticeId() != lastNoticeId) {
             lastNoticeId = s.noticeId();
             noticeText = s.notice();
@@ -52,11 +66,9 @@ final class TabletHeader {
         int y = layout.top;
         int x1 = layout.x1();
         GuiPaint.text(g, font, tr("title"), x + X0, y + HEAD_Y + 3, GuiPaint.FG);
-        Component meta = plural("meta.nodes", s.totalNodes()).copy().append(" · ")
-                .append(plural("meta.networks", s.networks().size()));
         int titleEnd = X0 + font.width(tr("title")) + 8;
-        int metaW = Math.min(font.width(meta), x1 - ThemeToggle.SIZE - 4 - titleEnd);
-        GuiText.draw(g, font, meta, x + x1 - ThemeToggle.SIZE - 4 - metaW, y + HEAD_Y + 3, metaW, GuiPaint.MUTED);
+        int shownW = Math.min(metaW, x1 - ThemeToggle.SIZE - 4 - titleEnd);
+        GuiText.draw(g, font, meta, x + x1 - ThemeToggle.SIZE - 4 - shownW, y + HEAD_Y + 3, shownW, GuiPaint.MUTED);
         ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         g.fill(x + X0, y + SEP_Y, x + x1, y + SEP_Y + 1, GuiPaint.LINE);
     }

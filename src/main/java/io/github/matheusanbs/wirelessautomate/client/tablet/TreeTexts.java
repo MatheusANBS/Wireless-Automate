@@ -138,7 +138,8 @@ final class TreeTexts {
             case FULL, UNLOADED, NO_UPGRADE -> GuiPaint.WARN;
             case SLEEPING, OUT_OF_RANGE, OVER_LIMIT -> GuiPaint.MUTED;
             case REPLACED -> GuiPaint.BRASS;
-            case MISSING -> GuiPaint.DANGER;
+            case MISSING, NO_NETWORK -> GuiPaint.DANGER;
+            case PAUSED -> GuiPaint.PAUSED;
         };
     }
 
@@ -149,7 +150,8 @@ final class TreeTexts {
             case FULL, NO_UPGRADE -> GuiPaint.WARN;
             case SLEEPING, UNLOADED, OUT_OF_RANGE, OVER_LIMIT -> GuiPaint.MUTED;
             case REPLACED -> GuiPaint.BRASS;
-            case MISSING -> GuiPaint.DANGER;
+            case MISSING, NO_NETWORK -> GuiPaint.DANGER;
+            case PAUSED -> GuiPaint.PAUSED;
         };
     }
 
@@ -157,7 +159,7 @@ final class TreeTexts {
      * A vazão curta, "↓8/s ↑8/s", cada parte na cor do tipo: o que recebe (↓) e o que dá (↑) de cada tipo
      * carregado. Sem movimento, vazia: a linha fica só com o estado em palavras.
      */
-    private static Component rateText(MachineLive live) {
+    static Component rateText(MachineLive live) {
         MutableComponent text = Component.empty();
         for (ResourceType type : LoadedTypes.LIST) {
             appendRate(text, "↓", type, live.received(type));

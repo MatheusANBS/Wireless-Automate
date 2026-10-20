@@ -41,8 +41,12 @@ final class ListRows {
     void render(GuiGraphics g, Font font, int mx, int my) {
         TabletSnapshot s = list.snapshot();
         List<NodeView> nodes = s.nodes();
-        if (nodes.isEmpty()) {
+        if (list.listEmpty()) {
             renderEmpty(g, font);
+            return;
+        }
+        if (list.machineView()) {
+            renderMachines(g, font, mx, my);
             return;
         }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
@@ -62,6 +66,18 @@ final class ListRows {
                 && layout.rowsEndY + LIMIT_ROW <= layout.rowsBottom) {
             GuiText.draw(g, font, tr("list.limit", nodes.size(), s.matchingNodes()), layout.x0 + 4, layout.rowsEndY + 2,
                     layout.listW - 8, GuiPaint.MUTED);
+        }
+        renderScrollbar(g);
+    }
+
+    /** A visão por máquinas: as linhas, a do limite (o servidor cortou no teto) e a rolagem. */
+    private void renderMachines(GuiGraphics g, Font font, int mx, int my) {
+        list.machineRows.render(g, font, layout, mx, my);
+        var page = list.snapshot().machineRows();
+        if (list.machineRows.limited() && layout.drawnUntil >= page.rows().size()
+                && layout.rowsEndY + LIMIT_ROW <= layout.rowsBottom) {
+            GuiText.draw(g, font, tr("list.limit", page.rows().size(), page.totalRows()), layout.x0 + 4,
+                    layout.rowsEndY + 2, layout.listW - 8, GuiPaint.MUTED);
         }
         renderScrollbar(g);
     }

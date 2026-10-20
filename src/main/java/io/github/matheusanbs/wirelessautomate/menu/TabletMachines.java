@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineLive;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.network.IndexRemotes;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -209,8 +210,9 @@ public final class TabletMachines {
             builtMarks.or(marks);
         }
         List<MachineLive> lives = new ArrayList<>(builtKeys.length);
+        NetworkSavedData data = NetworkSavedData.get(server);
         for (int k : builtKeys) {
-            lives.add(live(order, k, shared, now));
+            lives.add(live(order, k, shared, data, now));
         }
         return new TabletMachineRows(true, builtRows, builtRouters, List.copyOf(lives), builtTotalRows, builtMachines,
                 builtBlocks);
@@ -362,9 +364,10 @@ public final class TabletMachines {
 
     /**
      * O estado e a vazão da máquina {@code k}: a vinculada pelo {@link TabletMachineSample}; a presa pelo estado e a
-     * vazão do nó, com a vazão do nó na metade do que ela deu ({@link MachineLive#given}).
+     * vazão do nó, com a vazão do nó na metade do que ela deu ({@link MachineLive#given}), e o "sem rede" e o
+     * "pausado" do nó como a Lista os mostra.
      */
-    private static MachineLive live(MachineOrder order, int k, TabletSample shared, long now) {
+    private static MachineLive live(MachineOrder order, int k, TabletSample shared, NetworkSavedData data, long now) {
         NodeIndex.Entry entry = order.router(k);
         NodeKey key = entry.key();
         RouterBlockEntity router = entry.router();
@@ -374,6 +377,16 @@ public final class TabletMachines {
         }
         if (router == null) {
             return MachineLive.still(MachineStatus.UNLOADED);
+        }
+        switch (TabletNodes.status(entry, true, 0, false, data)) {
+            case NO_NETWORK -> {
+                return MachineLive.still(MachineStatus.NO_NETWORK);
+            }
+            case PAUSED -> {
+                return MachineLive.still(MachineStatus.PAUSED);
+            }
+            default -> {
+            }
         }
         MachineStatus status = shared.active(key) ? MachineStatus.MOVING
                 : shared.full(key) ? MachineStatus.FULL : MachineStatus.SLEEPING;

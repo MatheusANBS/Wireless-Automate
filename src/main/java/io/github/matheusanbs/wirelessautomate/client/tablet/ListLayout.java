@@ -5,16 +5,13 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.client.FrameCache;
 import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
-import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -48,14 +45,17 @@ final class ListLayout {
 
     /**
      * As áreas. Nas da árvore ({@link TreeRows}), o argumento é a linha da {@link ListTree}: a linha inteira
-     * ({@code TREE}), o ▸/▾ de um nó ou de um grupo, o Olho de uma máquina e o "Mostrar menos" de um grupo.
+     * ({@code TREE}), o ▸/▾ de um nó ou de um grupo, o Olho de uma máquina e o "Mostrar menos" de um grupo. Nas da
+     * visão por máquinas ({@link MachineRows}), a linha da página: a linha inteira ({@code MACHINE}), o Olho e o
+     * "Mostrar menos" do bloco.
      */
-    enum Kind { LABEL, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
-        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW;
+    enum Kind { LABEL, VIEW, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
+        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW;
 
         /** Fica por cima da linha onde está. */
         boolean onTop() {
-            return this == PASTE_GROUP || this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW;
+            return this == PASTE_GROUP || this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW
+                    || this == MACHINE_EYE || this == MACHINE_FEW;
         }
     }
 
@@ -71,6 +71,7 @@ final class ListLayout {
     }
 
     private final TabletList list;
+    private final ViewBar viewBar;
 
     // geometria (absoluta), refeita a cada quadro
     int x0;
@@ -96,6 +97,11 @@ final class ListLayout {
 
     ListLayout(TabletList list) {
         this.list = list;
+        this.viewBar = new ViewBar(list, this);
+    }
+
+    ViewBar viewBar() {
+        return viewBar;
     }
 
     /** O retângulo da aba (de cima da busca até o fim da tela). */
@@ -161,7 +167,7 @@ final class ListLayout {
         int y = y0;
         arrangeSearch(font);
         y += SEARCH_H + GAP;
-        int quickBottom = arrangeQuick(font, y);
+        int quickBottom = viewBar.arrange(font, y);
         if (quickBottom > y) {
             y = quickBottom + GAP;
         }
@@ -216,80 +222,24 @@ final class ListLayout {
         list.search.suggestions.place(x0, y0 + SEARCH_H + 1, Math.max(listW, Math.min(SUGGEST_MAX_W, panelX + panelW - x0)));
     }
 
-    private int arrangeQuick(Font font, int y) {
-        List<Integer> kinds = new ArrayList<>();
-        List<Component> texts = new ArrayList<>();
-        List<Component> shorts = new ArrayList<>();
-        TabletSnapshot s = list.snapshot();
-        if (list.search.typeFilter.isPresent()) {
-            kinds.add(-1);
-            texts.add(tr("list.type", ResourceStyle.name(list.search.typeFilter.get())));
-            shorts.add(tr("list.type", ResourceStyle.name(list.search.typeFilter.get())));
-        }
-        for (QuickFilter filter : QuickFilter.values()) {
-            int count = s.quickCounts().count(filter);
-            if (count > 0 || list.search.quick.contains(filter)) {
-                String key = filter.name().toLowerCase(Locale.ROOT);
-                kinds.add(filter.ordinal());
-                texts.add(tr("list.quick." + key, count));
-                shorts.add(tr("list.quick." + key + ".short", count));
-            }
-        }
-        if (kinds.isEmpty()) {
-            return y;
-        }
-        List<Component> shown = quickTexts(font, kinds, texts, shorts);
-        quickLabels.clear();
-        int x = x0;
-        for (int i = 0; i < kinds.size(); i++) {
-            int extra = kinds.get(i) < 0 ? ResourceStyle.ICON + 3 : 8;
-            int w = Math.min(font.width(shown.get(i)) + 4 + extra, x0 + listW - x);
-            if (w <= extra + 6) {
-                break;
-            }
-            quickLabels.add(shown.get(i));
-            hots.add(new Hot(kinds.get(i) < 0 ? Kind.TYPE_CHIP : Kind.QUICK, x, y, w, QUICK_H,
-                    kinds.get(i) < 0 ? 0 : kinds.get(i)));
-            x += w + 3;
-        }
-        return y + QUICK_H;
-    }
-
-    /** Os textos dos filtros que cabem: os inteiros, os curtos ou só o número. */
-    private List<Component> quickTexts(Font font, List<Integer> kinds, List<Component> texts, List<Component> shorts) {
-        int total = 0;
-        for (Component t : texts) {
-            total += font.width(t) + 12;
-        }
-        int shortTotal = 0;
-        for (Component t : shorts) {
-            shortTotal += font.width(t) + 12;
-        }
-        List<Component> shown = total + 3 * (texts.size() - 1) <= listW ? texts : shorts;
-        if (shortTotal + 3 * (texts.size() - 1) > listW) {
-            // nem os nomes curtos cabem: o tipo continua, os filtros ficam só com o número (o nome vai na dica)
-            List<Component> counts = new ArrayList<>();
-            for (int i = 0; i < kinds.size(); i++) {
-                counts.add(kinds.get(i) < 0 ? shorts.get(i) : Component.literal(
-                        Integer.toString(list.snapshot().quickCounts().count(QuickFilter.values()[kinds.get(i)]))));
-            }
-            shown = counts;
-        }
-        return shown;
-    }
-
     /** Altura de uma linha da lista. */
     private int rowHeight(ListTree.Line<ResourceLocation> line) {
         return TreeRows.height(line, line.kind().tree() ? list.model.row(line) : null);
     }
 
-    /** Linhas desenháveis: as da árvore e, se o servidor cortou o resultado, a do limite. */
+    /** Linhas desenháveis: as da árvore (ou as das máquinas) e, se o servidor cortou o resultado, a do limite. */
     int rowCount() {
+        if (list.machineView()) {
+            return list.machineRows.rowCount();
+        }
         TabletSnapshot s = list.snapshot();
         return list.model.tree().lines().size() + (s.matchingNodes() > s.nodes().size() ? 1 : 0);
     }
 
     private int height(int row) {
+        if (list.machineView()) {
+            return list.machineRows.height(row);
+        }
         List<ListTree.Line<ResourceLocation>> lines = list.model.tree().lines();
         return row < lines.size() ? rowHeight(lines.get(row)) : LIMIT_ROW;
     }
@@ -307,6 +257,10 @@ final class ListLayout {
 
     private void arrangeRows(Font font) {
         list.scroll = Math.max(0, Math.min(list.scroll, maxScroll()));
+        if (list.machineView()) {
+            list.machineRows.arrange(font, this);
+            return;
+        }
         List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
         int y = rowsTop;
         drawnUntil = list.scroll;
@@ -444,6 +398,9 @@ final class ListLayout {
      * marcaram na árvore ({@link TreeNav#takeReveal}); -1 sem nenhuma.
      */
     private int revealLine() {
+        if (list.machineView()) {
+            return list.machineNav.takeReveal();
+        }
         if (list.revealKey != null) {
             int row = list.model.tree().lineOfNode(list.model.indexOf(list.revealKey));
             if (row >= 0) {
@@ -478,7 +435,7 @@ final class ListLayout {
     /** O "Limpar a busca" da lista vazia (com busca ou filtro), ou {@code null}. */
     int @Nullable [] emptyClearCenter() {
         TabletSnapshot s = list.snapshot();
-        if (!s.nodes().isEmpty() || s.totalNodes() == 0 || !list.search.filtering()) {
+        if (!list.listEmpty() || s.totalNodes() == 0 || !list.search.filtering()) {
             return null;
         }
         int cy = rowsTop + Math.max(10, (rowsBottom - rowsTop) / 2 - 12) + 26;

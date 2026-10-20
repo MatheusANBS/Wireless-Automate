@@ -2475,6 +2475,9 @@ O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia 
 | ''' + item('signal_crystal') + ''' **Cristal de Sinal** | 1× | 10 minutos |
 | ''' + item('cut_signal_crystal') + ''' **Cristal Lapidado** | 2× | 20 minutos |
 
+A duração da tabela vale no Núcleo Básico e no Avançado. Quanto maior o tier do Núcleo, menos a carga dura: no
+Ultimate, o que duraria 20 minutos dura 3.
+
 O Cristal de Sinal só vem do minério. O **Cristal Lapidado** sai da bancada com quatro Cristais de Sinal em
 cruz em volta de um Fragmento de Ametista, e só aceita cristais **cheios**: cristais gastos não valem.
 
@@ -2531,6 +2534,9 @@ harder to mine). It sits in small veins, most common near **y = −16**. Mine it
 | --- | --- | --- |
 | ''' + item('signal_crystal') + ''' **Signal Crystal** | 1× | 10 minutes |
 | ''' + item('cut_signal_crystal') + ''' **Cut Crystal** | 2× | 20 minutes |
+
+These times are for a Basic or Advanced Core. The higher the Core's tier, the shorter the charge lasts: in an
+Ultimate Core, what would last 20 minutes lasts 3.
 
 The Signal Crystal only comes from the ore. The **Cut Crystal** is crafted from four Signal Crystals in a
 cross around an Amethyst Shard, and only accepts **full** crystals: spent ones don't count.

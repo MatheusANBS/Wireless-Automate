@@ -5,8 +5,10 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -42,6 +44,9 @@ public final class Config {
 
     public static final ModConfigSpec.LongValue CRYSTAL_LIFE_TICKS;
     public static final ModConfigSpec.LongValue CUT_CRYSTAL_LIFE_TICKS;
+    /** Minutos que a carga dura a 100% de geração, um por tier do Núcleo (ver {@link #crystalLifeTicks(int)}). */
+    public static final ModConfigSpec.ConfigValue<List<? extends Integer>> CRYSTAL_LIFE_MINUTES;
+    private static final int MAX_LIFE_MINUTES = 240;
     public static final ModConfigSpec.LongValue RECHARGE_TICKS;
     public static final ModConfigSpec.IntValue CRYSTAL_INTEGRITY;
     public static final ModConfigSpec.IntValue RECAST_CRYSTALS;
@@ -164,6 +169,17 @@ public final class Config {
         CUT_CRYSTAL_LIFE_TICKS = builder
                 .comment("Ticks de geração de um Cristal Lapidado cheio, até ficar Opaco.")
                 .defineInRange("cutCrystalLifeTicks", 24_000L, 1L, Long.MAX_VALUE);
+        List<Integer> lifeMinutes = new ArrayList<>();
+        for (RouterTier tier : RouterTier.values()) {
+            lifeMinutes.add(CoreMath.defaultLifeMinutes(tier.ordinal()));
+        }
+        CRYSTAL_LIFE_MINUTES = builder
+                .comment("Minutos que a carga de um cristal dura no Núcleo de cada tier a 100% de geração, na ordem",
+                        "Básico, Avançado, Elite, Esmeralda, Allthemodium, Vibranium, Unobtainium e Ultimate (1 a 240).",
+                        "Em 20, o cristal dura o crystalLifeTicks (ou o cutCrystalLifeTicks) como está; em 10, metade.")
+                .defineList("crystalLifeMinutes", List.copyOf(lifeMinutes),
+                        () -> CoreMath.defaultLifeMinutes(0),
+                        value -> value instanceof Integer minutes && minutes >= 1 && minutes <= MAX_LIFE_MINUTES);
         RECHARGE_TICKS = builder
                 .comment("Ticks que o Núcleo leva para recarregar um cristal Opaco (gasta redstone).")
                 .defineInRange("rechargeTicks", 600L, 1L, Long.MAX_VALUE);
@@ -324,6 +340,17 @@ public final class Config {
     /** Ticks de geração de um cristal cheio, até ficar Opaco (o Lapidado, {@code cut}, dura o dobro por padrão). */
     public static long crystalLifeTicks(boolean cut) {
         return read(cut ? CUT_CRYSTAL_LIFE_TICKS : CRYSTAL_LIFE_TICKS);
+    }
+
+    /**
+     * Ticks que a carga dura a 100% de geração no Núcleo do tier de posição {@code tierOrdinal}, pela lista
+     * {@code crystalLifeMinutes}; a posição que falta na lista usa o padrão.
+     */
+    public static long crystalLifeTicks(int tierOrdinal) {
+        List<? extends Integer> minutes = read(CRYSTAL_LIFE_MINUTES);
+        int value = tierOrdinal >= 0 && tierOrdinal < minutes.size()
+                ? minutes.get(tierOrdinal) : CoreMath.defaultLifeMinutes(tierOrdinal);
+        return (long) Math.max(1, Math.min(value, MAX_LIFE_MINUTES)) * CoreMath.TICKS_PER_MINUTE;
     }
 
     /** Cargas de um cristal até rachar (cada recarga gasta uma). */

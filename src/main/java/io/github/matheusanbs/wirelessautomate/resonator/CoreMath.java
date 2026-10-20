@@ -24,6 +24,37 @@ public final class CoreMath {
         return DEFAULT_FE_PER_CRYSTAL[Math.max(0, Math.min(tierOrdinal, DEFAULT_FE_PER_CRYSTAL.length - 1))];
     }
 
+    /** Ticks de um minuto de jogo. */
+    public static final int TICKS_PER_MINUTE = 1_200;
+    /**
+     * A vida de referência, 20 min: num Núcleo com essa vida, o cristal dura o {@code crystalLifeTicks} (ou o
+     * {@code cutCrystalLifeTicks}) da config como está. É a vida padrão do Básico e do Avançado.
+     */
+    public static final long REFERENCE_LIFE_TICKS = 20L * TICKS_PER_MINUTE;
+    /** Minutos que a carga dura a 100% de geração, pela posição do tier do Núcleo; ver a spec de 21/10/2026. */
+    private static final int[] DEFAULT_LIFE_MINUTES = {20, 20, 15, 10, 5, 5, 4, 3};
+
+    /** A vida padrão, em minutos, no Núcleo de posição {@code tierOrdinal}; um tier além da tabela repete o último. */
+    public static int defaultLifeMinutes(int tierOrdinal) {
+        return DEFAULT_LIFE_MINUTES[Math.max(0, Math.min(tierOrdinal, DEFAULT_LIFE_MINUTES.length - 1))];
+    }
+
+    /**
+     * A vida de um cristal num Núcleo: a vida dele na config ({@code baseLifeTicks}) na escala da vida do tier
+     * ({@code tierLifeTicks}) sobre a de referência, {@code base × tier / 20 min}. Arredonda para baixo, satura em
+     * {@code Long.MAX_VALUE} e nunca dá menos de 1 tick; sem vida, 0 (o {@link CrystalCharge#drain} não gasta).
+     */
+    public static long crystalLife(long baseLifeTicks, long tierLifeTicks) {
+        if (baseLifeTicks <= 0 || tierLifeTicks <= 0) {
+            return 0;
+        }
+        long product = mulSat(baseLifeTicks, tierLifeTicks);
+        long life = product == Long.MAX_VALUE
+                ? mulSat(baseLifeTicks / REFERENCE_LIFE_TICKS, tierLifeTicks)
+                : product / REFERENCE_LIFE_TICKS;
+        return Math.max(1, life);
+    }
+
     /** Câmaras de cristal: Básico 1 … Ultimate 8. */
     public static int chambers(int tierOrdinal) {
         return tierOrdinal + 1;

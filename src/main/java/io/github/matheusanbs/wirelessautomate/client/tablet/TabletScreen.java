@@ -505,6 +505,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return map.machineCenter(machine);
     }
 
+    /** Quantas máquinas e pixels de linha o Mapa desenha (gancho do e2e). */
+    public int mapMachinesDrawn() {
+        return map.machinesDrawn();
+    }
+
+    /** Um ponto vazio do Mapa, perto do canto de baixo à esquerda (gancho do e2e). */
+    public int[] mapEmptyPoint() {
+        return map.emptyPoint();
+    }
+
     public void previewNetwork(int index) {
         networks.preview(index);
     }

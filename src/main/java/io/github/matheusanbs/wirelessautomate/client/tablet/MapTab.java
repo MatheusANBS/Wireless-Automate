@@ -215,11 +215,20 @@ final class MapTab {
         NodeView node = mapNode();
         TabletPanelPayload payload = list.panelPayload();
         if (node == null || payload == null || !nodes.sameDimension(node)) {
-            machines.prepare(null, null, center(), scale, 0, 0, 0, 0, 0, 0);
+            machines.prepare(null, null, center(), scale, 0, 0, 0, 0);
             return;
         }
-        int[] p = mapPoint(node, scale);
-        machines.prepare(payload, node, center(), scale, mapX0(), mapY0(), mapW(), mapH(), p[0], p[1]);
+        machines.prepare(payload, node, center(), scale, mapX0(), mapY0(), mapW(), mapH());
+    }
+
+    /** Quantas máquinas e pixels de linha o mapa desenha (gancho do e2e). */
+    int machinesDrawn() {
+        return machines.drawn();
+    }
+
+    /** Um ponto do mapa perto do canto de baixo à esquerda, longe dos nós (gancho do e2e). */
+    int[] emptyPoint() {
+        return new int[] {mapX0() + 8, mapY0() + mapH() - 20};
     }
 
     // ------------------------------------------------------------------ desenho

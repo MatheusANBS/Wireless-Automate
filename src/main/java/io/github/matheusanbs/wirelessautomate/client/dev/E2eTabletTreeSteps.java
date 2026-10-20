@@ -115,7 +115,8 @@ final class E2eTabletTreeSteps {
 
     /**
      * O Mapa com o roteador escolhido: as máquinas aparecem (a roda aproxima um passo, para as fornalhas vizinhas não
-     * se encostarem), o clique numa fornalha a põe como alvo do painel, e as capturas, com a dica dela, nos dois temas.
+     * se encostarem), o clique numa fornalha a põe como alvo do painel, as capturas nos dois temas, e o
+     * clique no vazio larga o roteador sem deixar ponto nem linha.
      */
     private static void mapSteps(List<Step> list) {
         int machine = FIRST_FURNACE + 5;
@@ -139,6 +140,11 @@ final class E2eTabletTreeSteps {
             GuiThemes.preview(GuiTheme.DARK);
         }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
         list.add(capture("7n-tablet-mapa-maquinas-escuro"));
+        list.add(new Step("mapa: clicar no vazio larga o roteador, sem ponto nem linha", STEP_TIMEOUT_MS, () -> {
+            int[] c = tabletScreen().mapEmptyPoint();
+            click(tabletScreen(), c[0], c[1]);
+        }, () -> stepTicks >= 2 && tabletScreen().list().chosen() == null && tabletScreen().mapMachinesDrawn() == 0,
+                () -> "escolhido " + tabletScreen().list().chosen() + ", desenha " + tabletScreen().mapMachinesDrawn()));
         list.add(new Step("mapa: tema de volta e a Lista", STEP_TIMEOUT_MS, () -> {
             GuiThemes.preview(themeBefore);
             tabletScreen().previewTab(TabletScreen.Tab.LIST);

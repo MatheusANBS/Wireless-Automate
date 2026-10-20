@@ -41,6 +41,8 @@ final class MapMachines {
     private static final int HALF = 2;
     /** Distância máxima do mouse ao centro para pegar uma máquina, ao quadrado. */
     private static final int PICK = 4 * 4;
+    /** O limite de um ponto projetado, em px, bem fora de qualquer mapa. */
+    private static final double FAR = 1_000_000;
 
     private final MapLines lines = new MapLines();
     private @Nullable TabletPanelPayload built;
@@ -50,8 +52,6 @@ final class MapMachines {
     private int builtY0;
     private int builtW;
     private int builtH;
-    private int builtRouterX;
-    private int builtRouterY;
     private int litVersion = -1;
 
     private @Nullable RangeView view;
@@ -78,15 +78,18 @@ final class MapMachines {
      * {@code null}: nada a mostrar).
      */
     void prepare(@Nullable TabletPanelPayload payload, @Nullable NodeView router, BlockPos center, double scale,
-            int x0, int y0, int w, int h, int routerX, int routerY) {
+            int x0, int y0, int w, int h) {
         if (payload == null || router == null) {
             built = null;
             view = null;
             count = 0;
+            target = -1;
+            lines.clear();
+            litVersion = -1;
             return;
         }
         if (payload == built && center.asLong() == builtCenter && scale == builtScale && x0 == builtX0
-                && y0 == builtY0 && w == builtW && h == builtH && routerX == builtRouterX && routerY == builtRouterY) {
+                && y0 == builtY0 && w == builtW && h == builtH) {
             refreshLit(router);
             return;
         }
@@ -97,15 +100,13 @@ final class MapMachines {
         builtY0 = y0;
         builtW = w;
         builtH = h;
-        builtRouterX = routerX;
-        builtRouterY = routerY;
-        rebuild(payload, center, scale, x0, y0, w, h, routerX, routerY);
+        rebuild(payload, router.key().pos(), center, scale, x0, y0, w, h);
         litVersion = -1;
         refreshLit(router);
     }
 
-    private void rebuild(TabletPanelPayload payload, BlockPos center, double scale, int x0, int y0, int w, int h,
-            int routerX, int routerY) {
+    private void rebuild(TabletPanelPayload payload, BlockPos router, BlockPos center, double scale, int x0, int y0,
+            int w, int h) {
         count = 0;
         target = -1;
         lines.clear();
@@ -128,10 +129,13 @@ final class MapMachines {
         int maxX = x0 + w - 2;
         int maxY = y0 + h - 2;
         EditTarget editing = view.target();
+        // a linha parte da posição real do roteador, mesmo fora do mapa (o ponto dele fica preso à borda)
+        int routerX = project(cx, router.getX(), center.getX(), scale);
+        int routerY = project(cy, router.getZ(), center.getZ(), scale);
         for (int i = 0; i < n; i++) {
             BlockPos pos = view.machines().get(i).pos();
-            int x = (int) Math.round(cx + (pos.getX() - center.getX()) / scale);
-            int y = (int) Math.round(cy + (pos.getZ() - center.getZ()) / scale);
+            int x = project(cx, pos.getX(), center.getX(), scale);
+            int y = project(cy, pos.getZ(), center.getZ(), scale);
             lines.dashed(routerX, routerY, x, y, minX, minY, maxX, maxY);
             if (x - HALF - 2 < minX || x + HALF + 2 > maxX || y - HALF - 2 < minY || y + HALF + 2 > maxY) {
                 continue;
@@ -146,6 +150,14 @@ final class MapMachines {
         }
     }
 
+    /**
+     * O pixel de uma coordenada no mapa, limitado a {@link #FAR} px para cada lado: no zoom máximo, longe da origem,
+     * o valor passaria do {@code int} e voltaria para dentro do mapa.
+     */
+    private static int project(int middle, int coord, int centerCoord, double scale) {
+        return (int) Math.round(Math.clamp(middle + (coord - centerCoord) / scale, -FAR, FAR));
+    }
+
     private void refreshLit(NodeView router) {
         int version = HighlightRenderer.version();
         if (version == litVersion) {
@@ -158,20 +170,9 @@ final class MapMachines {
         }
     }
 
-    /** O ponto (na lista à vista) da máquina sob o mouse, ou -1. */
+    /** O ponto (na lista à vista) da máquina sob o mouse, ou -1; num empate, a máquina-alvo ({@link MapPick}). */
     int at(double mouseX, double mouseY) {
-        int best = -1;
-        double bestDistance = PICK;
-        for (int k = 0; k < count; k++) {
-            double dx = px[k] - mouseX;
-            double dy = py[k] - mouseY;
-            double d = dx * dx + dy * dy;
-            if (d <= bestDistance) {
-                best = k;
-                bestDistance = d;
-            }
-        }
-        return best;
+        return MapPick.nearest(px, py, count, mouseX, mouseY, PICK, target);
     }
 
     /** O clique escolhe a máquina sob o mouse como alvo do painel; devolve se havia uma. */
@@ -303,7 +304,17 @@ final class MapMachines {
         MutableComponent text = RangeList.machineName(view, i).copy();
         text.append("\n").append(coords(i).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         text.append("\n").append(RangeList.stateText(machine.state()).copy().withColor(RangeList.stateColor(machine.state())));
-        return text.append("\n").append(Component.translatable("gui.wirelessautomate.router.range.machine.tooltip")
+        text.append("\n").append(Component.translatable("gui.wirelessautomate.router.range.machine.tooltip")
                 .copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        tipBuilt = built;
+        tipIndex = i;
+        tipTheme = GuiThemes.version();
+        tip = text;
+        return text;
+    }
+
+    /** Quantas máquinas e pixels de linha o mapa desenha (gancho do e2e). */
+    int drawn() {
+        return count + lines.size();
     }
 }

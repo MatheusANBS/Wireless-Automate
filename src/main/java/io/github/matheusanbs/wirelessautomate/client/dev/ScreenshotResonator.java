@@ -121,7 +121,7 @@ final class ScreenshotResonator {
         int rechargeTicks = 600;
         double dial = sample.auto() ? 98.15 : 94.0;
         menu.apply(new ResonatorStatePayload(0, Math.round(capacity * sample.energy()), capacity,
-                CoreMath.perTick(fe, activeYield, efficiency), CoreMath.perTick(fe, allYield, 1.0), dial,
+                CoreMath.perTick(fe, activeYield * 4, efficiency), CoreMath.perTick(fe, allYield * 4, 1.0), dial,
                 (int) Math.round(efficiency * 1000), (int) Math.round(Tuning.ceiling(tier) * 1000), sample.auto(),
                 sample.tuner(), TuneSignal.steps(dial + sample.deviation(), dial),
                 TuneSignal.tuned(dial + sample.deviation(), dial), rechargeTicks * rechargePercent / 100,

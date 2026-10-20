@@ -26,7 +26,7 @@ final class ListTooltips {
 
     /**
      * A dica do ponto, ou {@code null}. Um texto cortado sob o mouse ({@link GuiText#clipAt}) vem inteiro
-     * primeiro e a dica da área depois: a segunda linha de um nó e o cabeçalho do grupo cortados ficam legíveis.
+     * primeiro e a dica da área depois: a segunda linha de um nó cortada fica legível.
      */
     @Nullable Component tooltip(double mx, double my) {
         layout.arrangeForFrame();

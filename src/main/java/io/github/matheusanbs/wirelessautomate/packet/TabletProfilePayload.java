@@ -9,21 +9,19 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
- * Cliente → servidor: o perfil do Tablet. Copiar o perfil de um nó, esquecê-lo, colá-lo num nó, no grupo
- * de uma máquina ou nos marcados, e desfazer o último colar. Cada ação só faz o que o campo dela pede e o
+ * Cliente → servidor: o perfil do Tablet. Copiar o perfil de um nó, esquecê-lo, colá-lo num nó ou nos
+ * marcados, e desfazer o último colar. Cada ação só faz o que o campo dela pede e o
  * servidor confere tudo ({@code TabletMenu#profile}).
  *
  * @param key     COPY e PASTE_ONE: o nó
- * @param machine PASTE_GROUP: o bloco da máquina; o servidor reavalia a consulta atual do jogador
  * @param keys    PASTE_SELECTED: os nós marcados (colar na presa), no máximo {@link #MAX_KEYS}
  * @param marks   PASTE_SELECTED: as máquinas, os grupos e os blocos marcados
  */
 public record TabletProfilePayload(int containerId, Action action, Optional<NodeKey> key,
-        Optional<ResourceLocation> machine, List<NodeKey> keys, TabletMarks marks) implements CustomPacketPayload {
+        List<NodeKey> keys, TabletMarks marks) implements CustomPacketPayload {
     /** Nós marcados por pacote; uma lista maior é recusada na leitura. */
     public static final int MAX_KEYS = 256;
 
@@ -35,8 +33,6 @@ public record TabletProfilePayload(int containerId, Action action, Optional<Node
         FORGET,
         /** Cola o perfil no nó {@code key}. */
         PASTE_ONE,
-        /** Cola em todos os nós da máquina {@code machine} que casam com a consulta atual, menos a origem. */
-        PASTE_GROUP,
         /** Cola nos nós {@code keys} e nos marcados {@code marks}, menos a presa da origem. */
         PASTE_SELECTED,
         /** Devolve os nós do último colar ao que eram. */
@@ -44,9 +40,8 @@ public record TabletProfilePayload(int containerId, Action action, Optional<Node
     }
 
     /** Sem marcados além dos nós. */
-    public TabletProfilePayload(int containerId, Action action, Optional<NodeKey> key, Optional<ResourceLocation> machine,
-            List<NodeKey> keys) {
-        this(containerId, action, key, machine, keys, TabletMarks.EMPTY);
+    public TabletProfilePayload(int containerId, Action action, Optional<NodeKey> key, List<NodeKey> keys) {
+        this(containerId, action, key, keys, TabletMarks.EMPTY);
     }
 
     public static final Type<TabletProfilePayload> TYPE = new Type<>(WirelessAutomate.id("tablet_profile"));
@@ -54,7 +49,6 @@ public record TabletProfilePayload(int containerId, Action action, Optional<Node
             ByteBufCodecs.VAR_INT, TabletProfilePayload::containerId,
             NeoForgeStreamCodecs.enumCodec(Action.class), TabletProfilePayload::action,
             ByteBufCodecs.optional(NodeKey.STREAM_CODEC.<RegistryFriendlyByteBuf>cast()), TabletProfilePayload::key,
-            ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC), TabletProfilePayload::machine,
             NodeKey.STREAM_CODEC.<RegistryFriendlyByteBuf>cast().apply(ByteBufCodecs.list(MAX_KEYS)),
             TabletProfilePayload::keys,
             TabletMarks.STREAM_CODEC, TabletProfilePayload::marks,

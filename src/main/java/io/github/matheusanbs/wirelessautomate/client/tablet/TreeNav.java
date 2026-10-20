@@ -135,7 +135,7 @@ final class TreeNav {
 
     // ------------------------------------------------------------------ teclado
 
-    /** A linha onde as setas estão: o cursor, ou a do nó escolhido . */
+    /** A linha onde as setas estão: o cursor, ou a do nó escolhido. */
     private int current() {
         int line = cursor == null ? -1 : find(cursor);
         return line >= 0 ? line : list.model.tree().lineOfNode(list.model.indexOf(list.chosen));

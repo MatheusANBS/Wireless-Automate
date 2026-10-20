@@ -100,9 +100,10 @@ final class ListTexts {
     }
 
     /**
-     * O nome e a segunda linha do nó {@code index} para uma linha com {@code room} de largura (a pílula do tier, de {@code pillWidth}, só entra se o nome cabe inteiro ao lado dela), montados só quando a
-     * página, o tipo, o tema ou a largura mudam. A segunda linha começa por "presa: Fornalha"; sem lugar para ela
-     * inteira, fica "Fornalha · …" e, ainda sem lugar, só o estado (a dica da linha traz tudo).
+     * O nome e a segunda linha do nó {@code index} para uma linha com {@code room} de largura, montados só quando a
+     * página, o tipo, o tema ou a largura mudam. A pílula do tier ({@code pillWidth}) só entra se o nome cabe
+     * inteiro ao lado dela. A segunda linha começa sempre por "presa: Fornalha"; o que não cabe é cortado com "…"
+     * no fim (o estado já está na bolinha e a dica da linha traz tudo).
      */
     NodeLine nodeLine(Font font, int index, NodeView node, @Nullable ProfileSummary profile, int room,
             int pillWidth) {
@@ -113,23 +114,15 @@ final class ListTexts {
             Component name = nodeName(node);
             boolean pill = font.width(name) + 4 + pillWidth <= room;
             line = new NodeLine(GuiText.fit(font, name, pill ? room - pillWidth - 4 : room),
-                    GuiText.fit(font, secondLine(font, node, profile, room), room), pill);
+                    GuiText.fit(font, secondLine(node, profile), room), pill);
             nodeLines.put(index, room, line);
         }
         return line;
     }
 
-    private Component secondLine(Font font, NodeView node, @Nullable ProfileSummary profile, int room) {
-        Component rest = stateLine(node, profile);
-        MutableComponent attached = tr("list.router.attached", list.nodes.attachedName(node)).copy()
-                .withColor(GuiPaint.MUTED);
-        Component dot = Component.literal(" · ").withColor(GuiPaint.MUTED);
-        Component full = attached.copy().append(dot).append(rest);
-        if (font.width(full) <= room) {
-            return full;
-        }
-        Component named = list.nodes.attachedName(node).copy().withColor(GuiPaint.MUTED).append(dot).append(rest);
-        return font.width(named) <= room ? named : rest;
+    private Component secondLine(NodeView node, @Nullable ProfileSummary profile) {
+        return tr("list.router.attached", list.nodes.attachedName(node)).copy().withColor(GuiPaint.MUTED)
+                .append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(stateLine(node, profile));
     }
 
     private String networkName(UUID id) {

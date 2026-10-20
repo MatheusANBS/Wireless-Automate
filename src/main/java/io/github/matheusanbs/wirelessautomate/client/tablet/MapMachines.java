@@ -5,12 +5,12 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
-import io.github.matheusanbs.wirelessautomate.client.router.RangeList;
+import io.github.matheusanbs.wirelessautomate.client.router.MachineTexts;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineState;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView.MachineView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
@@ -77,7 +77,7 @@ final class MapMachines {
      * Põe os pontos em dia com o painel e a vista. {@code router} é o nó do painel, já na dimensão do mapa (ou
      * {@code null}: nada a mostrar).
      */
-    void prepare(@Nullable TabletPanelPayload payload, @Nullable NodeView router, BlockPos center, double scale,
+    void prepare(@Nullable TabletPanelPayload payload, @Nullable NodeKey router, BlockPos center, double scale,
             int x0, int y0, int w, int h) {
         if (payload == null || router == null) {
             built = null;
@@ -100,7 +100,7 @@ final class MapMachines {
         builtY0 = y0;
         builtW = w;
         builtH = h;
-        rebuild(payload, router.key().pos(), center, scale, x0, y0, w, h);
+        rebuild(payload, router.pos(), center, scale, x0, y0, w, h);
         litVersion = -1;
         refreshLit(router);
     }
@@ -158,7 +158,7 @@ final class MapMachines {
         return (int) Math.round(Math.clamp(middle + (coord - centerCoord) / scale, -FAR, FAR));
     }
 
-    private void refreshLit(NodeView router) {
+    private void refreshLit(NodeKey router) {
         int version = HighlightRenderer.version();
         if (version == litVersion) {
             return;
@@ -166,7 +166,7 @@ final class MapMachines {
         litVersion = version;
         Arrays.fill(lit, false);
         for (int k = 0; k < count; k++) {
-            lit[k] = HighlightRenderer.isLit(router.key().dimension(), view.machines().get(index[k]).pos().asLong());
+            lit[k] = HighlightRenderer.isLit(router.dimension(), view.machines().get(index[k]).pos().asLong());
         }
     }
 
@@ -230,7 +230,7 @@ final class MapMachines {
 
     /** A cor do quadradinho: a neutra na que está bem, a do estado nas outras. */
     private static int fill(MachineState state) {
-        return state == MachineState.LOADED ? GuiPaint.MUTED : RangeList.stateColor(state);
+        return state == MachineState.LOADED ? GuiPaint.MUTED : MachineTexts.stateColor(state);
     }
 
     private static void ring(VertexConsumer buffer, Matrix4f pose, int x0, int y0, int x1, int y1, int color) {
@@ -280,8 +280,8 @@ final class MapMachines {
                     + state.name().toLowerCase(Locale.ROOT));
         };
         infoStateW = font.width(infoState);
-        infoStateColor = RangeList.stateColor(state);
-        infoText = RangeList.machineName(view, machine).copy()
+        infoStateColor = MachineTexts.stateColor(state);
+        infoText = MachineTexts.machineName(view, machine).copy()
                 .append(Component.literal("  ").append(coords(machine)).withColor(GuiPaint.MUTED));
     }
 
@@ -301,9 +301,9 @@ final class MapMachines {
             return tip;
         }
         MachineView machine = view.machines().get(i);
-        MutableComponent text = RangeList.machineName(view, i).copy();
+        MutableComponent text = MachineTexts.machineName(view, i).copy();
         text.append("\n").append(coords(i).copy().withColor(GuiPaint.TOOLTIP_MUTED));
-        text.append("\n").append(RangeList.stateText(machine.state()).copy().withColor(RangeList.stateColor(machine.state())));
+        text.append("\n").append(MachineTexts.stateText(machine.state()).copy().withColor(MachineTexts.stateColor(machine.state())));
         text.append("\n").append(Component.translatable("gui.wirelessautomate.router.range.machine.tooltip")
                 .copy().withColor(GuiPaint.TOOLTIP_MUTED));
         tipBuilt = built;

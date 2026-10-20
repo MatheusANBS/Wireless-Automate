@@ -7,14 +7,18 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import org.jetbrains.annotations.Nullable;
@@ -53,7 +57,19 @@ final class BenchTablet {
         tablet = menu;
         if (scene.scenario == BenchScenario.TABLET_RANGE) {
             openRangeRows(menu);
+        } else if (scene.scenario == BenchScenario.TABLET_MACHINES) {
+            openMachines(menu);
         }
+    }
+
+    /**
+     * No {@link BenchScenario#TABLET_MACHINES}, a Lista na visão por máquinas, pelo mesmo caminho do
+     * {@code TabletMachinesPayload}: com a base inteira acima do teto da página, os blocos começam recolhidos, e o
+     * jogador falso abre o dos barris vinculados.
+     */
+    private static void openMachines(TabletMenu menu) {
+        menu.machines(TabletMachinesPayload.Action.MACHINES, Optional.empty());
+        menu.machines(TabletMachinesPayload.Action.OPEN_BLOCK, Optional.of(BuiltInRegistries.BLOCK.getKey(Blocks.BARREL)));
     }
 
     /**
@@ -120,9 +136,10 @@ final class BenchTablet {
         TabletSnapshot page = menu.snapshot();
         return String.format(Locale.ROOT,
                 "  Tablet: %d cabeçalho(s), %d página(s), %d pacote(s) de estado e vazão depois da abertura;"
-                        + " página com %d nós e %d linhas da árvore (%d casam, %d no índice visível)",
+                        + " página com %d nós, %d linhas da árvore e %d da visão por máquinas (%d casam, %d no índice"
+                        + " visível)",
                 tabletHeaders, tabletPages, tabletLives, page.nodes().size(), page.rows().rows().size(),
-                page.matchingNodes(), page.totalNodes());
+                page.machineRows().rows().size(), page.matchingNodes(), page.totalNodes());
     }
 
     /** Os bytes de um pacote do Tablet pelo codec dele (cabeçalho, página ou o estado e a vazão). */

@@ -38,12 +38,15 @@ import net.minecraft.server.level.ServerPlayer;
  * Monta o {@link TabletSnapshot} de um jogador: percorre o índice na ordem da Lista, conta as facetas e os filtros
  * rápidos e monta a página, as redes e os grupos. A vazão, os nós ativos, os cheios e a ordem vêm da amostra do
  * servidor ({@link TabletSample}), a mesma para todos os jogadores; aqui ficam só quando este jogador amostrou e
- * as versões lidas na última montagem.
+ * as versões lidas na última montagem. Na visão por máquinas ({@link TabletMachines}) com a aba Lista aberta, a página
+ * leva as linhas por bloco em vez dos nós: a passada pelo índice só marca os roteadores visíveis e nos filtros
+ * rápidos. Nas outras abas (o Mapa), a página leva os nós de sempre.
  */
 final class TabletSnapshotBuilder {
     private final ServerPlayer viewer;
     private final TabletQuery query;
     private final TabletTree tree;
+    private final TabletMachines machines;
     private long sampleTick;
     private long buildTick;
     /** {@link NodeIndex#dataVersion()} e versão das redes lidas na última montagem. */
@@ -51,12 +54,24 @@ final class TabletSnapshotBuilder {
     private int builtDataVersion;
     /** Redes já contadas do nó em {@link #countMembership}, reaproveitado. */
     private final List<Totals> counted = new ArrayList<>();
+    private boolean listOpen = true;
 
-    TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query, TabletTree tree) {
+    TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query, TabletTree tree, TabletMachines machines) {
         this.viewer = viewer;
         this.query = query;
         this.tree = tree;
+        this.machines = machines;
         this.sampleTick = viewer.server.getTickCount();
+    }
+
+    /** A aba Lista está aberta: só com ela a visão por máquinas monta a página por bloco; nas outras, os nós. */
+    void listOpen(boolean open) {
+        listOpen = open;
+    }
+
+    /** A página desta montagem é a da visão por máquinas. */
+    private boolean byMachine() {
+        return listOpen && machines.active();
     }
 
     /** Passou a janela da amostra. */
@@ -123,7 +138,11 @@ final class TabletSnapshotBuilder {
         tree.prune(index, data, operator, me);
         List<TabletRows.Row> rows = new ArrayList<>();
         List<TabletRows.MachineLive> lives = new ArrayList<>();
-        List<NodeView> nodes = pageNodes(matches, shared, data, profile, groupSizes, groupCounts, rows, lives, now);
+        boolean byMachine = byMachine();
+        List<NodeView> nodes = byMachine ? List.of()
+                : pageNodes(matches, shared, data, profile, groupSizes, groupCounts, rows, lives, now);
+        TabletMachineRows machineRows = byMachine ? machines.page(shared, index, query, now)
+                : machines.active() ? TabletMachineRows.LIST_CLOSED : TabletMachineRows.EMPTY;
 
         Map<UUID, String> names = new HashMap<>();
         List<NetworkView> networks = new ArrayList<>();
@@ -145,23 +164,27 @@ final class TabletSnapshotBuilder {
                 Optional.ofNullable(data.activeNetwork(me)).filter(id -> data.network(id) != null),
                 query.query(), scan.total, matches.size(),
                 List.copyOf(networks), List.copyOf(groups), facets(scan.machineCounts), facets(scan.networkCounts),
-                new QuickCounts(scan.problemCount, scan.noNetworkCount, scan.unloadedCount),
+                new QuickCounts(scan.problemCount, scan.noNetworkCount, scan.unloadedCount), scan.machineTotal,
                 TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes),
-                rows.isEmpty() ? TabletRows.EMPTY : new TabletRows(List.copyOf(rows), List.copyOf(lives)),
-                List.copyOf(groupCounts),
-                originGroup, notice, noticeId);
+                rows.isEmpty() ? TabletRows.EMPTY : new TabletRows(List.copyOf(rows), List.copyOf(lives)), machineRows,
+                List.copyOf(groupCounts), byMachine ? Optional.empty() : originGroup, notice, noticeId);
     }
 
     /** Uma passada pelo índice, na ordem da Lista: conta as facetas e os filtros rápidos e filtra pela consulta. */
     private Scan scan(List<NodeIndex.Entry> entries, TabletSample shared, NetworkSavedData data,
             Map<UUID, Totals> totals, boolean operator, UUID me, Map<UUID, String> networkNames) {
         Scan scan = new Scan();
+        boolean byMachine = byMachine();
+        if (byMachine) {
+            machines.beginRouters();
+        }
         for (int i = 0, n = entries.size(); i < n; i++) {
             NodeIndex.Entry entry = entries.get(i);
             if (!TabletNodes.visible(entry, data, operator, me)) {
                 continue;
             }
             scan.total++;
+            scan.machineTotal += 1 + entry.remotes().total();
             NodeKey key = entry.key();
             RouterBlockEntity router = entry.router();
             boolean loaded = router != null;
@@ -185,6 +208,9 @@ final class TabletSnapshotBuilder {
                 if (totals.containsKey(id)) {
                     scan.networkCounts.addTo(id, 1);
                 }
+            }
+            if (byMachine && query.matchesQuick(problem, noNetwork, !loaded)) {
+                machines.markRouter(i);
             }
             if (!query.matches(entry, problem, noNetwork, !loaded, networkNames)) {
                 continue;
@@ -236,7 +262,8 @@ final class TabletSnapshotBuilder {
             if (groupCounts.isEmpty() || !groupCounts.getLast().id().equals(entry.machine())) {
                 groupCounts.add(new Facet<>(entry.machine(), groupSizes.get(entry.machine())));
             }
-            if (tree.isOpen(entry.key())) {
+            // a árvore só na visão por roteadores: em Máquinas, com outra aba aberta, a página vai só com os nós
+            if (!machines.active() && tree.isOpen(entry.key())) {
                 tree.appendRows(entry, nodes.size() - 1, TabletSnapshot.MAX_NODES - nodes.size() - rows.size(), rows,
                         lives, shared.machines(), now);
             }
@@ -312,6 +339,8 @@ final class TabletSnapshotBuilder {
         int unloadedCount;
         final List<Match> matches = new ArrayList<>();
         int total;
+        /** Máquinas dos nós visíveis: a presa de cada um mais as remotas. */
+        int machineTotal;
     }
 
     /** Um nó que passou na consulta, com o estado que a lista mostra. */

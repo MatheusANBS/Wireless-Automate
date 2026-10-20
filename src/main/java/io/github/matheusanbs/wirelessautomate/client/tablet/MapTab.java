@@ -13,8 +13,10 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -210,15 +212,45 @@ final class MapTab {
         return machines.center(machine);
     }
 
-    /** Põe as máquinas do nó escolhido em dia com o painel e a vista; sem painel dele ou noutra dimensão, nenhuma. */
+    /**
+     * As máquinas do roteador escolhido, pelo painel dele, e nenhuma sem o painel ou noutra dimensão; o ponto do
+     * roteador fora da página vem do {@link #chosenOffPage}.
+     */
     private void prepareMachines(double scale) {
-        NodeView node = mapNode();
-        TabletPanelPayload payload = list.panelPayload();
-        if (node == null || payload == null || !nodes.sameDimension(node)) {
+        NodeKey key = chosenKey();
+        if (key == null) {
             machines.prepare(null, null, center(), scale, 0, 0, 0, 0);
             return;
         }
-        machines.prepare(payload, node, center(), scale, mapX0(), mapY0(), mapW(), mapH());
+        machines.prepare(list.panelPayload(), key, center(), scale, mapX0(), mapY0(), mapW(), mapH());
+    }
+
+    /** O roteador escolhido, com o painel dele já chegado e na dimensão do mapa, ou {@code null}. */
+    private @Nullable NodeKey chosenKey() {
+        TabletPanelPayload payload = list.panelPayload();
+        NodeKey key = list.chosen;
+        if (key == null || payload == null || !payload.node().equals(Optional.of(key))
+                || !key.dimension().location().equals(snapshot().dimension())) {
+            return null;
+        }
+        return key;
+    }
+
+    /** O ponto do roteador escolhido quando a página não o traz (fora do teto ou da consulta), contornado. */
+    private void chosenOffPage(GuiGraphics g, double scale) {
+        NodeKey key = chosenKey();
+        if (key == null || mapNode() != null) {
+            return;
+        }
+        BlockPos center = center();
+        int px = (int) Math.round(Mth.clamp(mapX0() + mapW() / 2 + (key.pos().getX() - center.getX()) / scale,
+                mapX0() + 4, mapX0() + mapW() - 4));
+        int py = (int) Math.round(Mth.clamp(mapY0() + mapH() / 2 + (key.pos().getZ() - center.getZ()) / scale,
+                mapY0() + 4, mapY0() + mapH() - 4));
+        GuiPaint.outline(g, px - 4, py - 4, 9, 9, GuiPaint.FG);
+        g.fill(px - 3, py - 2, px + 4, py + 3, GuiPaint.RING);
+        g.fill(px - 2, py - 3, px + 3, py + 4, GuiPaint.RING);
+        GuiPaint.dot(g, px - 2, py - 2, GuiPaint.MUTED);
     }
 
     /** Quantas máquinas e pixels de linha o mapa desenha (gancho do e2e). */
@@ -244,6 +276,7 @@ final class MapTab {
         prepareMachines(scale);
         machines.render(g, mouseX, mouseY);
         renderPoints(g, mouseX, mouseY, scale);
+        chosenOffPage(g, scale);
         GuiPaint.textRight(g, font, tr("map.north"), x0 + w - 4, y0 + 4, GuiPaint.DISABLED);
         GuiText.draw(g, font, tr("map.scale", step), x0 + 4, y0 + mapH() - 11, w - 8, GuiPaint.DISABLED);
         renderInfo(g, font, x0, w);

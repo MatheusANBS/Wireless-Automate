@@ -11,10 +11,12 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
@@ -24,8 +26,10 @@ import net.minecraft.network.chat.MutableComponent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Redes do Tablet: a lista de redes à esquerda e a escolhida à direita (nome, dono, nós, membros, cor,
- * privacidade, usar como ativa e remover); a nova rede fica recolhida embaixo da lista.
+ * A aba Redes do Tablet: à esquerda as redes, com os grupos de redes como seções ({@link NetworkList}); à direita a
+ * rede escolhida (nome, dono, nós, membros, cor, privacidade, usar como ativa e remover) ou, com o cabeçalho de um
+ * grupo escolhido, o grupo ({@link GroupDetail}). "Nova rede" e "Novo grupo" ficam embaixo da lista; o que acabou
+ * de ser criado fica escolhido quando chega.
  */
 final class NetworksTab {
     private static final int SWATCH = 10;
@@ -34,9 +38,13 @@ final class NetworksTab {
     private final TabletLayout layout;
     private final Supplier<TabletSnapshot> snapshot;
     private final TabletActions actions;
-    private final SideList side;
     private final NameFields names;
+    private final NetworkList list;
+    private final GroupDetail groups;
     private @Nullable UUID selectedNetwork;
+    /** O que foi pedido e ainda não chegou: um grupo ({@code true}) ou uma rede; os ids que já existiam. */
+    private @Nullable Boolean awaitingGroup;
+    private final Set<UUID> known = new HashSet<>();
     private FlatButton makePrivate;
     private FlatButton makePublic;
     private FlatButton use;
@@ -48,8 +56,9 @@ final class NetworksTab {
         this.layout = layout;
         this.snapshot = snapshot;
         this.actions = actions;
-        this.side = side;
         this.names = names;
+        this.list = new NetworkList(snapshot, side, actions);
+        this.groups = new GroupDetail(layout, snapshot, actions, names);
     }
 
     private TabletSnapshot snapshot() {
@@ -58,6 +67,10 @@ final class NetworksTab {
 
     @Nullable UUID selected() {
         return selectedNetwork;
+    }
+
+    @Nullable UUID selectedGroup() {
+        return groups.selected();
     }
 
     private @Nullable NetworkView selectedNetworkView() {
@@ -73,7 +86,7 @@ final class NetworksTab {
         return selectedNetwork != null && snapshot().activeNetwork().equals(Optional.of(selectedNetwork));
     }
 
-    void addButtons(TabletScreen.Buttons buttons) {
+    void addButtons(TabletScreen.Buttons buttons, Font font) {
         int x = layout.left;
         int y = layout.top;
         int rw = layout.rw();
@@ -94,8 +107,10 @@ final class NetworksTab {
                         names.removeArmed() ? tr("remove.confirm") : tr("network.remove"), names.removeArmed()),
                 () -> names.removeSelected(Action.NETWORK_REMOVE, selectedNetwork))
                 .tooltip(() -> tr("network.remove.tooltip")));
-        buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(tr("network.new")));
-        create = buttons.add(TabletScreen.Tab.NETWORKS, names.createButton(Action.NETWORK_CREATE));
+        groups.addButtons(buttons);
+        buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.NETWORK, tr("network.new"), font));
+        buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.GROUP, tr("group.new"), font));
+        create = buttons.add(TabletScreen.Tab.NETWORKS, names.createButton());
     }
 
     void refresh(boolean shown) {
@@ -105,23 +120,81 @@ final class NetworksTab {
         use.visible = shown && network != null;
         use.active = network != null && !isSelectedActive();
         remove.visible = shown && manage;
+        groups.refresh(shown && groups.selected() != null);
         create.visible = shown && names.newOpen();
     }
 
+    /** O Remover à vista: o da rede ou o do grupo. */
     FlatButton removeButton() {
-        return remove;
+        return remove.visible ? remove : groups.removeButton();
     }
 
-    /** Snapshot novo: a rede escolhida que sumiu sai; sem nenhuma, vale a ativa ou a primeira. */
+    /** Uma rede ou um grupo foi pedido ao servidor: fica escolhido quando chegar. */
+    void created(boolean group) {
+        awaitingGroup = group;
+        known.clear();
+        TabletSnapshot s = snapshot();
+        if (group) {
+            s.groups().forEach(g -> known.add(g.id()));
+        } else {
+            s.networks().forEach(n -> known.add(n.id()));
+        }
+    }
+
+    /**
+     * Snapshot novo: o que acabou de ser criado fica escolhido; a rede ou o grupo escolhido que sumiu sai; sem
+     * nenhum, vale a rede ativa ou a primeira.
+     */
     void onSnapshot(TabletSnapshot s) {
+        if (awaitingGroup != null) {
+            pickCreated(s);
+        }
         if (selectedNetwork != null && s.network(selectedNetwork).isEmpty()) {
             selectedNetwork = null;
             names.clearRename();
         }
-        if (selectedNetwork == null && !s.networks().isEmpty()) {
+        if (groups.selected() != null && groups.selectedView() == null) {
+            groups.select(null);
+            names.clearRename();
+        }
+        if (selectedNetwork == null && groups.selected() == null && !s.networks().isEmpty()) {
             selectedNetwork = s.activeNetwork().filter(id -> s.network(id).isPresent())
                     .orElse(s.networks().get(0).id());
         }
+    }
+
+    private void pickCreated(TabletSnapshot s) {
+        if (awaitingGroup) {
+            for (GroupView g : s.groups()) {
+                if (!known.contains(g.id())) {
+                    pickGroup(g.id());
+                    awaitingGroup = null;
+                    return;
+                }
+            }
+        } else {
+            for (NetworkView n : s.networks()) {
+                if (!known.contains(n.id())) {
+                    pickNetwork(n.id());
+                    awaitingGroup = null;
+                    return;
+                }
+            }
+        }
+    }
+
+    private void pickNetwork(UUID id) {
+        selectedNetwork = id;
+        groups.select(null);
+        names.clearRename();
+        names.disarm();
+    }
+
+    private void pickGroup(UUID id) {
+        selectedNetwork = null;
+        groups.select(id);
+        names.clearRename();
+        names.disarm();
     }
 
     // ------------------------------------------------------------------ ações
@@ -160,15 +233,25 @@ final class NetworksTab {
         return -1;
     }
 
-    /** Cliques na lista, na paleta e no nome. Devolve se tratou. */
-    boolean mouseClicked(double mouseX, double mouseY) {
-        List<NetworkView> networks = snapshot().networks();
-        int row = side.rowAt(mouseX, mouseY, networks.size());
-        if (row >= 0) {
-            selectedNetwork = networks.get(row).id();
-            names.clearRename();
-            names.disarm();
-            return true;
+    /** Cliques na lista e na coluna da direita (a paleta e o nome da rede, ou o grupo). Devolve se tratou. */
+    boolean mouseClicked(Font font, double mouseX, double mouseY) {
+        switch (list.mouseClicked(font, mouseX, mouseY)) {
+            case NETWORK -> {
+                pickNetwork(list.pickedId());
+                return true;
+            }
+            case GROUP -> {
+                pickGroup(list.pickedId());
+                return true;
+            }
+            case NONE -> {
+            }
+        }
+        if (mouseX < layout.left + RX) {
+            return false;
+        }
+        if (groups.selected() != null) {
+            return groups.mouseClicked(font, mouseX, mouseY);
         }
         NetworkView network = selectedNetworkView();
         if (network != null && network.manageable()) {
@@ -185,7 +268,23 @@ final class NetworksTab {
         return false;
     }
 
-    @Nullable Component tooltip(int mouseX, int mouseY) {
+    /** A roda na coluna da direita rola as redes do grupo; na esquerda, a lista. */
+    void mouseScrolled(Font font, double mouseX, int step) {
+        if (mouseX >= layout.left + RX && groups.selected() != null) {
+            groups.mouseScrolled(font, step);
+        } else {
+            list.mouseScrolled(font, step);
+        }
+    }
+
+    @Nullable Component tooltip(Font font, int mouseX, int mouseY) {
+        Component row = list.tooltip(font, mouseX, mouseY);
+        if (row != null) {
+            return row;
+        }
+        if (groups.selected() != null) {
+            return groups.tooltip(font, mouseX, mouseY);
+        }
         NetworkView network = selectedNetworkView();
         if (network != null && network.manageable() && swatchAt(mouseX, mouseY) >= 0) {
             return tr("color.tooltip");
@@ -196,23 +295,36 @@ final class NetworksTab {
         return null;
     }
 
+    // ------------------------------------------------------------------ ganchos do e2e e das capturas
+
     void preview(int index) {
-        selectedNetwork = snapshot().networks().get(index).id();
+        pickNetwork(snapshot().networks().get(index).id());
+    }
+
+    void previewGroup(int index) {
+        pickGroup(snapshot().groups().get(index).id());
+    }
+
+    /** Centro do cabeçalho do grupo na lista, ou {@code null}. */
+    int @Nullable [] groupRowCenter(Font font, UUID id) {
+        list.reveal(font, id);
+        return list.groupCenter(font, id);
+    }
+
+    /** Centro da caixa de marcar da rede no detalhe do grupo escolhido, ou {@code null}. */
+    int @Nullable [] groupNetworkCenter(Font font, UUID id) {
+        return groups.networkCenter(font, id);
     }
 
     // ------------------------------------------------------------------ desenho
 
     void render(GuiGraphics g, Font font, int mouseX, int mouseY) {
-        TabletSnapshot s = snapshot();
-        List<NetworkView> networks = s.networks();
-        side.render(g, font, mouseX, mouseY, networks.size(), i -> {
-            NetworkView n = networks.get(i);
-            boolean active = s.activeNetwork().equals(Optional.of(n.id()));
-            Component mark = active ? tr("mark.active") : n.isPublic() ? tr("mark.public") : null;
-            return new SideList.Row(Component.literal(n.name()), 0xFF000000 | n.color(), n.id().equals(selectedNetwork), mark);
-        }, tr("networks.empty"));
+        list.render(g, font, mouseX, mouseY, selectedNetwork, groups.selected());
         names.renderNewFrame(g);
-
+        if (groups.selected() != null) {
+            groups.render(g, font, mouseX, mouseY);
+            return;
+        }
         int x = layout.left + RX;
         int y = layout.top;
         int rw = layout.rw();

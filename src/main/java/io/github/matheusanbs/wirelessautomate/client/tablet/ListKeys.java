@@ -47,6 +47,8 @@ final class ListKeys {
                 int direction = keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1;
                 if (suggesting) {
                     search.suggestions.move(direction);
+                } else if (list.machineView()) {
+                    list.machineNav.upDown(direction);
                 } else {
                     list.treeNav.upDown(direction);
                 }
@@ -58,7 +60,8 @@ final class ListKeys {
                 } else if (suggesting || search.pending()) {
                     search.suggestions.close();
                     search.sendQuery();
-                } else if (!list.treeNav.enter() && list.chosen != null) {
+                } else if (!(list.machineView() ? list.machineNav.enter() : list.treeNav.enter())
+                        && list.chosen != null) {
                     list.actions.openNode(list.chosen);
                 }
                 return true;
@@ -66,10 +69,16 @@ final class ListKeys {
             case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT -> {
                 // com texto na busca focada, as setas andam no texto; com uma linha da árvore marcada, na árvore
                 EditBox box = search.box();
-                if (!search.text.isEmpty() && box != null && box.isFocused() && !list.treeNav.hasCursor()) {
+                boolean machines = list.machineView();
+                boolean cursor = machines ? list.machineNav.hasCursor() : list.treeNav.hasCursor();
+                if (!search.text.isEmpty() && box != null && box.isFocused() && !cursor) {
                     return false;
                 }
-                list.treeNav.arrow(keyCode == GLFW.GLFW_KEY_LEFT);
+                if (machines) {
+                    list.machineNav.arrow(keyCode == GLFW.GLFW_KEY_LEFT);
+                } else {
+                    list.treeNav.arrow(keyCode == GLFW.GLFW_KEY_LEFT);
+                }
                 return true;
             }
             case GLFW.GLFW_KEY_BACKSPACE -> {

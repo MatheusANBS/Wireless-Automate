@@ -40,9 +40,14 @@ import net.minecraft.resources.ResourceLocation;
  * @param machineFacets as máquinas dos nós visíveis, com quantos nós cada uma tem (sem olhar a consulta)
  * @param networkFacets as redes visíveis das faces dos nós visíveis, com quantos nós cada uma tem
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
+ * @param machines      quantas máquinas os nós que o jogador vê têm (a presa de cada nó mais as remotas), para o
+ *                      cabeçalho
  * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
  * @param rows          as linhas da árvore abaixo dos nós abertos ({@link TabletRows}); elas e os nós dividem o
  *                      teto de {@link #MAX_NODES}
+ * @param machineRows   as linhas da visão por máquinas ({@link TabletMachineRows}); na visão por máquinas, a página
+ *                      não leva nós nem linhas da árvore com a Lista aberta, e leva só os nós (para o Mapa) com
+ *                      outra aba ({@link TabletMachineRows#LIST_CLOSED})
  * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
  * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)
@@ -60,9 +65,11 @@ public record TabletSnapshot(
         List<Facet<ResourceLocation>> machineFacets,
         List<Facet<UUID>> networkFacets,
         QuickCounts quickCounts,
+        int machines,
         Optional<ProfileSummary> profile,
         List<NodeView> nodes,
         TabletRows rows,
+        TabletMachineRows machineRows,
         List<Facet<ResourceLocation>> groupCounts,
         Optional<ResourceLocation> originGroup,
         Component notice,
@@ -327,12 +334,14 @@ public record TabletSnapshot(
      * @param matchingNodes nós que passam na consulta
      * @param groupCounts   quantos nós de cada máquina passam na consulta
      * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
+     * @param machineRows   as linhas da visão por máquinas
      */
     public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes, TabletRows rows,
-            List<Facet<ResourceLocation>> groupCounts, Optional<ResourceLocation> originGroup) {
+            List<Facet<ResourceLocation>> groupCounts, Optional<ResourceLocation> originGroup,
+            TabletMachineRows machineRows) {
         /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
         public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), TabletRows.EMPTY, List.of(),
-                Optional.empty());
+                Optional.empty(), TabletMachineRows.EMPTY);
         public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
                 StreamCodec.of(TabletPageCodec::encodePage, TabletPageCodec::decodePage);
 
@@ -343,7 +352,8 @@ public record TabletSnapshot(
         public boolean sameExceptLive(Page other) {
             if (totalNodes != other.totalNodes || matchingNodes != other.matchingNodes || nodes.size() != other.nodes.size()
                     || !query.equals(other.query) || !groupCounts.equals(other.groupCounts)
-                    || !originGroup.equals(other.originGroup) || !rows.sameExceptLive(other.rows)) {
+                    || !originGroup.equals(other.originGroup) || !rows.sameExceptLive(other.rows)
+                    || !machineRows.sameExceptLive(other.machineRows)) {
                 return false;
             }
             for (int i = 0; i < nodes.size(); i++) {
@@ -365,12 +375,17 @@ public record TabletSnapshot(
 
         /** A mesma página com o estado e a vazão de {@code lives}; ela mesma se o número de nós não bate. */
         public Page withLives(List<Live> lives) {
-            return withLives(lives, rows.lives());
+            return withLives(lives, rowLives());
+        }
+
+        /** O estado e a vazão das linhas de máquina à vista: as da visão por máquinas, ou as da árvore. */
+        public List<TabletRows.MachineLive> rowLives() {
+            return machineRows.active() ? machineRows.lives() : rows.lives();
         }
 
         /**
-         * A mesma página com o estado e a vazão dos nós ({@code lives}) e das linhas de máquina ({@code machines});
-         * ela mesma se o número de nós não bate.
+         * A mesma página com o estado e a vazão dos nós ({@code lives}) e das linhas de máquina ({@code machines}, as
+         * da visão por máquinas ou as da árvore, {@link #rowLives}); ela mesma se o número de nós não bate.
          */
         public Page withLives(List<Live> lives, List<TabletRows.MachineLive> machines) {
             if (lives.size() != nodes.size()) {
@@ -380,20 +395,23 @@ public record TabletSnapshot(
             for (int i = 0; i < nodes.size(); i++) {
                 updated.add(nodes.get(i).withLive(lives.get(i)));
             }
-            return new Page(query, totalNodes, matchingNodes, List.copyOf(updated), rows.withLives(machines), groupCounts,
-                    originGroup);
+            boolean byMachine = machineRows.active();
+            return new Page(query, totalNodes, matchingNodes, List.copyOf(updated),
+                    byMachine ? rows : rows.withLives(machines), groupCounts, originGroup,
+                    byMachine ? machineRows.withLives(machines) : machineRows);
         }
     }
 
     public Page page() {
-        return new Page(query, totalNodes, matchingNodes, nodes, rows, groupCounts, originGroup);
+        return new Page(query, totalNodes, matchingNodes, nodes, rows, groupCounts, originGroup, machineRows);
     }
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, activeNetwork, page.query(),
-                page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, profile,
-                page.nodes(), page.rows(), page.groupCounts(), page.originGroup(), notice, noticeId);
+                page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, machines,
+                profile, page.nodes(), page.rows(), page.machineRows(), page.groupCounts(), page.originGroup(), notice,
+                noticeId);
     }
 
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
@@ -473,6 +491,7 @@ public record TabletSnapshot(
         buf.writeVarInt(s.quickCounts.problem());
         buf.writeVarInt(s.quickCounts.noNetwork());
         buf.writeVarInt(s.quickCounts.unloaded());
+        buf.writeVarInt(s.machines);
         buf.writeOptional(s.profile, (b, p) -> {
             b.writeUtf(ProfileSource.clip(p.sourceName), ProfileSource.MAX_NAME);
             b.writeResourceLocation(p.machine);
@@ -531,6 +550,7 @@ public record TabletSnapshot(
             networkFacets.add(new Facet<>(buf.readUUID(), buf.readVarInt()));
         }
         QuickCounts quickCounts = new QuickCounts(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        int machines = buf.readVarInt();
         Optional<ProfileSummary> profile = buf.readOptional(b -> {
             String sourceName = b.readUtf(ProfileSource.MAX_NAME);
             ResourceLocation machine = b.readResourceLocation();
@@ -546,8 +566,8 @@ public record TabletSnapshot(
         int noticeId = buf.readVarInt();
         return new TabletSnapshot(operator, dimension, active, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
-                List.copyOf(networkFacets), quickCounts, profile, List.of(), TabletRows.EMPTY, List.of(), Optional.empty(),
-                notice, noticeId);
+                List.copyOf(networkFacets), quickCounts, machines, profile, List.of(), TabletRows.EMPTY,
+                TabletMachineRows.EMPTY, List.of(), Optional.empty(), notice, noticeId);
     }
 
     /**

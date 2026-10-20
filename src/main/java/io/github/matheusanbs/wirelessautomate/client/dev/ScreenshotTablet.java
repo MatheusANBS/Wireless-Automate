@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMachineRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FlowStats;
@@ -118,7 +119,7 @@ final class ScreenshotTablet {
                     tabletScreen.previewNetwork(2);
                     tabletScreen.previewNewOpen("Utilidades");
                 }, "t7-tablet-redes-alheia-nova"),
-                new Step(() -> tabletScreen.previewTab(TabletScreen.Tab.GROUPS), "t8-tablet-grupos"));
+                new Step(() -> tabletScreen.previewGroup(0), "t8-tablet-grupos"));
     }
 
     /** Escolhe a "Fornalha 3" na Lista e põe o painel dela, com o acesso dado (a 18 blocos, alcance de 128). */
@@ -263,8 +264,8 @@ final class ScreenshotTablet {
                 : Optional.empty();
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"),
                 Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
-                groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), summary, nodes,
-                TabletRows.EMPTY, List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
+                groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), 63, summary, nodes,
+                TabletRows.EMPTY, TabletMachineRows.EMPTY, List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,

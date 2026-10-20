@@ -51,8 +51,10 @@ import org.jetbrains.annotations.Nullable;
  * tipo (presa, perfis e exceções, chave {@code face_networks}; a {@code networks} antiga, uma rede por
  * tipo, só é lida, para migrar), os papéis (um
  * resumo dos modos das faces por tipo, ver {@link #role}), os modos de cada face (chave {@code face_modes},
- * formato no {@link FaceSummary}; sem a chave, tudo Nenhum), o bloco da máquina, quem colocou e as máquinas
- * vinculadas ({@link IndexRemotes}, só com máquinas).
+ * formato no {@link FaceSummary}; sem a chave, tudo Nenhum), os papéis e a máscara de redes da presa
+ * ({@code attached_roles} e {@code attached_nets}, só diferentes de zero), o bloco da máquina, quem colocou e as
+ * máquinas vinculadas ({@link IndexRemotes}, só com máquinas). Também guarda, só na memória, quantas máquinas a base
+ * tem ({@link #machines()}).
  * Uma entrada pode ficar velha se o bloco sumir sem passar pelo {@code onRemove} (região apagada):
  * quando o chunk dela carrega, a entrada sem roteador ali sai ({@link #chunkLoaded}, pelo bloco do chunk que
  * acabou de carregar, sem carregar nenhum outro), e o Tablet também a apaga quando acha o chunk carregado sem
@@ -100,6 +102,12 @@ public final class NodeIndex extends SavedData {
         private final List<UUID>[] networks = new List[TYPES.length];
         private int roles;
         private long faceModes;
+        private int attachedRoles;
+        private long attachedNets;
+        /** Papéis e redes por máquina já lidos do roteador; falso na entrada lida do arquivo. Não é salvo. */
+        private boolean machineRolesRead;
+        /** As redes distintas na ordem dos bits ({@link NetworkOrder}), feita quando precisa. Não é salvo. */
+        private @Nullable List<UUID> networkOrder;
         private ResourceLocation machine = BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR);
         private @Nullable UUID placedBy;
         private IndexRemotes remotes = IndexRemotes.EMPTY;
@@ -178,6 +186,32 @@ public final class NodeIndex extends SavedData {
             return NodeIndex.faceMode(faceModes, type, side);
         }
 
+        /** Os papéis só das faces da presa ({@link NodeIndex#role}). */
+        public int attachedRoles() {
+            return attachedRoles;
+        }
+
+        /** A máscara das redes das faces da presa ({@link NetworkOrder}). */
+        public long attachedNets() {
+            return attachedNets;
+        }
+
+        /**
+         * Os papéis e as redes por máquina (presa, grupos e exceções) já vieram do roteador. Falso numa entrada lida do
+         * arquivo até o próximo aviso dele: no formato da etapa 3a, sem as chaves, eles leem zero.
+         */
+        public boolean machineRolesRead() {
+            return machineRolesRead;
+        }
+
+        /** As redes distintas do nó na ordem dos bits das máscaras ({@link NetworkOrder}). Só leitura. */
+        public List<UUID> networkOrder() {
+            if (networkOrder == null) {
+                networkOrder = NetworkOrder.of(this);
+            }
+            return networkOrder;
+        }
+
         /** Bloco da máquina onde o roteador está preso (ar se não se sabe). */
         public ResourceLocation machine() {
             return machine;
@@ -228,10 +262,12 @@ public final class NodeIndex extends SavedData {
                 UUID[] now = from.networks(type);
                 if (!networks[type.ordinal()].equals(Arrays.asList(now))) {
                     networks[type.ordinal()] = List.of(now);
+                    networkOrder = null;
                     changed = true;
                 }
             }
-            summary.scan(from);
+            summary.scan(from, networkOrder());
+            machineRolesRead = true;
             if (summary.roles != roles) {
                 roles = summary.roles;
                 changed = true;
@@ -240,8 +276,13 @@ public final class NodeIndex extends SavedData {
                 faceModes = summary.modes;
                 changed = true;
             }
-            if (!remotes.matches(from.remoteMachines())) {
-                remotes = IndexRemotes.of(from.remoteMachines());
+            if (summary.attachedRoles != attachedRoles || summary.attachedNets != attachedNets) {
+                attachedRoles = summary.attachedRoles;
+                attachedNets = summary.attachedNets;
+                changed = true;
+            }
+            if (!remotes.matches(from.remoteMachines(), summary)) {
+                remotes = IndexRemotes.of(from.remoteMachines(), summary);
                 changed = true;
             }
             Level level = from.getLevel();
@@ -298,6 +339,12 @@ public final class NodeIndex extends SavedData {
             if (faceModes != 0) {
                 tag.putLong("face_modes", faceModes);
             }
+            if (attachedRoles != 0) {
+                tag.putInt("attached_roles", attachedRoles);
+            }
+            if (attachedNets != 0) {
+                tag.putLong("attached_nets", attachedNets);
+            }
             tag.putString("machine", machine.toString());
             if (placedBy != null) {
                 tag.putUUID("placedBy", placedBy);
@@ -342,6 +389,8 @@ public final class NodeIndex extends SavedData {
             }
             entry.roles = tag.getInt("roles");
             entry.faceModes = tag.getLong("face_modes");
+            entry.attachedRoles = tag.getInt("attached_roles");
+            entry.attachedNets = tag.getLong("attached_nets");
             ResourceLocation machine = ResourceLocation.tryParse(tag.getString("machine"));
             if (machine != null) {
                 entry.machine = machine;
@@ -361,6 +410,8 @@ public final class NodeIndex extends SavedData {
     private int version;
     /** Muda só quando um dado salvo muda (não ao carregar ou descarregar). Não é salvo. */
     private int dataVersion;
+    /** As máquinas da base: as vinculadas de cada nó ({@link IndexRemotes#total()}) e uma presa por nó. Não é salvo. */
+    private int machines;
 
     public NodeIndex() {
     }
@@ -461,7 +512,9 @@ public final class NodeIndex extends SavedData {
             entry = new Entry(key);
             add(entry);
         }
+        int before = entry.remotes.total();
         boolean changed = entry.read(router, summary);
+        machines += entry.remotes.total() - before;
         boolean loadedChanged = entry.router != router;
         entry.router = router;
         if (created || changed) {
@@ -490,6 +543,7 @@ public final class NodeIndex extends SavedData {
         if (entry == null) {
             return false;
         }
+        machines -= 1 + entry.remotes.total();
         Long2ObjectOpenHashMap<List<Entry>> chunks = byChunk.get(key.dimension);
         long chunk = ChunkPos.asLong(key.pos);
         List<Entry> inChunk = chunks == null ? null : chunks.get(chunk);
@@ -505,6 +559,7 @@ public final class NodeIndex extends SavedData {
 
     private void add(Entry entry) {
         entries.put(entry.key, entry);
+        machines += 1 + entry.remotes.total();
         byChunk.computeIfAbsent(entry.key.dimension, dimension -> new Long2ObjectOpenHashMap<>())
                 .computeIfAbsent(ChunkPos.asLong(entry.key.pos), chunk -> new ArrayList<>(1)).add(entry);
     }
@@ -535,6 +590,11 @@ public final class NodeIndex extends SavedData {
 
     public int size() {
         return entries.size();
+    }
+
+    /** Quantas máquinas a base tem: as vinculadas, inclusive as acima do teto, e uma presa por roteador. */
+    public int machines() {
+        return machines;
     }
 
     @Override

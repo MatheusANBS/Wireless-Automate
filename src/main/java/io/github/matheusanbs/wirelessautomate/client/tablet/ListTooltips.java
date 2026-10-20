@@ -60,6 +60,7 @@ final class ListTooltips {
         }
         return switch (hot.kind()) {
             case LABEL -> tr("list.label.tooltip", list.texts.labelText(list.search.labels.get(hot.arg())));
+            case VIEW -> tr(hot.arg() == 1 ? "view.machines.tooltip" : "view.routers.tooltip");
             case QUICK -> tr("list.quick." + QuickFilter.values()[hot.arg()].name().toLowerCase(Locale.ROOT) + ".tooltip");
             case TYPE_CHIP -> tr("list.type.tooltip");
             case FORGET -> tr("list.profile.forget.tooltip");
@@ -72,6 +73,7 @@ final class ListTooltips {
             case PASTE -> !list.chosenPanel.canEdit() ? readOnlyTip()
                     : list.profile().map(s -> tr("list.paste.tooltip", s.sourceName())).orElse(null);
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.tooltip(hot);
+            case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.tooltip(hot);
             case CLEAR, UNDO -> null;
         };
     }

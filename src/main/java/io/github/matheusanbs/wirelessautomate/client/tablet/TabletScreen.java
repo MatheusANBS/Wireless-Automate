@@ -11,21 +11,15 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -37,31 +31,32 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com cinco abas:
+ * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com quatro abas:
  * <ul>
- *   <li><b>Lista:</b> a busca com sugestões e etiquetas, os filtros rápidos, os nós agrupados pela máquina, cada
+ *   <li><b>Lista:</b> a busca com sugestões e etiquetas, o seletor Roteadores · Máquinas, os filtros rápidos, os
+ *       nós agrupados pela máquina (ou, por máquinas, as máquinas pelo tipo de bloco), cada
  *       roteador com máquinas vinculadas aberto em árvore (a presa, os grupos e as máquinas com estado e vazão), e
  *       o painel do nó escolhido, com copiar e colar o perfil ({@link TabletList}); Selecionar para mover ou
  *       colar em vários nós ({@link SelectBar});
- *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
- *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
  *   <li><b>Fluxos:</b> tempo do mod por tick e o que entra e sai de cada tipo, Por tipo ou Por rede, média
  *       dos últimos 5 s ({@link FlowsTab});
- *   <li><b>Redes:</b> lista à esquerda e a rede escolhida à direita (nome, cor, privacidade, usar
- *       como ativa, remover); nova rede fica recolhida ({@link NetworksTab});
- *   <li><b>Grupos:</b> o mesmo para grupos: pausar e retomar o grupo todo e marcar as redes dele
- *       ({@link GroupsTab}).
+ *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
+ *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
+ *   <li><b>Redes:</b> as redes à esquerda, com os grupos de redes como seções, e à direita a rede escolhida
+ *       (nome, cor, privacidade, usar como ativa, remover) ou o grupo (pausar e retomar o grupo todo e marcar as
+ *       redes dele); Nova rede e Novo grupo embaixo da lista ({@link NetworksTab}).
  * </ul>
  *
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
  * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
  * ({@link TabletResize}), o cabeçalho e o aviso ({@link TabletHeader}), o corpo da aba aberta ({@link TabletBody}:
- * desenho, cliques, roda e dicas) e a dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
+ * desenho, cliques, roda e dicas), os botões de cada aba ({@link TabletTabs}), o teclado ({@link TabletKeys}) e a
+ * dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
  * são desenhados e clicados por geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o
  * estado a cada quadro.
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
-    public enum Tab { LIST, MAP, FLOWS, NETWORKS, GROUPS }
+    public enum Tab { LIST, FLOWS, MAP, NETWORKS }
 
     /** Põe um botão fixo na tela; {@code owner} nulo: visível em todas as abas. */
     @FunctionalInterface
@@ -69,8 +64,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         FlatButton add(@Nullable Tab owner, FlatButton button);
     }
 
-    private final List<FlatButton> buttons = new ArrayList<>();
-    private final Map<Tab, List<FlatButton>> tabWidgets = new EnumMap<>(Tab.class);
     private final TabletLayout layout = new TabletLayout();
     private final TabletActions actions;
     private final TabletList list;
@@ -79,8 +72,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final FlowsTab flows;
     private final NameFields names;
     private final NetworksTab networks;
-    private final GroupsTab groups;
     private final TabletBody body;
+    private final TabletTabs tabs;
+    private final TabletKeys keys;
     private final TabletTips tips;
     private final TabletHeader header;
     private final TabletResize resize = new TabletResize(layout);
@@ -88,8 +82,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private Tab tab = Tab.LIST;
     private int lastVersion = -1;
     private EditBox searchBox;
-    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
-    private int inkVersion = -1;
 
     public TabletScreen(TabletMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -113,23 +105,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);
         });
-        SideList side = new SideList(layout);
-        this.names = new NameFields(layout, actions, () -> networks().selected(), () -> groups().selected(),
-                this::setFocused, this::refresh);
-        this.networks = new NetworksTab(layout, menu::snapshot, actions, side, names);
-        this.groups = new GroupsTab(layout, menu::snapshot, actions, side, names);
-        this.body = new TabletBody(list, map, flows, side, networks, groups, () -> snapshot().networks().size());
-        this.tips = new TabletTips(resize, buttons, body);
+        this.names = new NameFields(layout, actions, () -> networks().selected(), () -> networks().selectedGroup(),
+                this::setFocused, this::refresh, group -> networks().created(group));
+        this.networks = new NetworksTab(layout, menu::snapshot, actions, new SideList(layout), names);
+        this.body = new TabletBody(list, map, flows, networks);
+        this.tabs = new TabletTabs(selectBar, map, networks, names);
+        this.keys = new TabletKeys(this, list, names, () -> tab);
+        this.tips = new TabletTips(resize, tabs.buttons(), body);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
     }
 
     private NetworksTab networks() {
         return networks;
-    }
-
-    private GroupsTab groups() {
-        return groups;
     }
 
     private TabletSnapshot snapshot() {
@@ -146,11 +134,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         imageHeight = h;
         super.init();
         layout.place(leftPos, topPos, w, h);
-        buttons.clear();
-        tabWidgets.clear();
-        for (Tab t : Tab.values()) {
-            tabWidgets.put(t, new ArrayList<>());
-        }
+        tabs.clear();
         int x = leftPos;
         int y = topPos;
 
@@ -170,31 +154,26 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         searchBox.setBordered(false);
         searchBox.setMaxLength(TabletSnapshot.MAX_TEXT);
         searchBox.setTextShadow(false); // tinta sobre porcelana, sem sombra
-        inkVersion = -1;
+        keys.searchBox(searchBox);
         list.attach(searchBox);
         addRenderableWidget(searchBox);
         selectBar.addButtons(this::add, font);
         map.addButtons(this::add);
         flows.addButtons(this::add, font);
-        networks.addButtons(this::add);
-        groups.addButtons(this::add);
+        networks.addButtons(this::add, font);
 
         names.createBoxes(font);
         addRenderableWidget(names.newBox());
         addRenderableWidget(names.renameBox());
         refresh();
         if (tab == Tab.LIST) {
-            focusSearch();
+            keys.focusSearch();
         }
     }
 
     /** {@code owner} nulo: visível em todas as abas. */
     private FlatButton add(@Nullable Tab owner, FlatButton button) {
-        buttons.add(button);
-        if (owner != null) {
-            tabWidgets.get(owner).add(button);
-        }
-        return addRenderableWidget(button);
+        return addRenderableWidget(tabs.register(owner, button));
     }
 
     /** Visibilidade e estado que dependem da aba e do snapshot. */
@@ -203,17 +182,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             lastVersion = menu.version();
             onSnapshot();
         }
-        for (Map.Entry<Tab, List<FlatButton>> entry : tabWidgets.entrySet()) {
-            for (FlatButton button : entry.getValue()) {
-                button.visible = entry.getKey() == tab;
-            }
-        }
-        searchBox.visible = tab == Tab.LIST;
-        selectBar.refresh(tab == Tab.LIST);
-        map.refresh(tab == Tab.MAP);
-        networks.refresh(tab == Tab.NETWORKS);
-        groups.refresh(tab == Tab.GROUPS);
-        names.refresh(tab == Tab.NETWORKS || tab == Tab.GROUPS);
+        tabs.refresh(tab, searchBox);
     }
 
     /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
@@ -221,7 +190,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         TabletSnapshot s = snapshot();
         header.onSnapshot(s);
         networks.onSnapshot(s);
-        groups.onSnapshot(s);
         selectBar.onSnapshot(s);
         list.onSnapshot();
     }
@@ -239,16 +207,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             names.reset();
             setFocused(null);
             if (t == Tab.LIST) {
-                focusSearch();
+                keys.focusSearch();
             }
-        }
-    }
-
-    /** A busca com o cursor: digitar na Lista procura. */
-    private void focusSearch() {
-        if (searchBox != null) {
-            searchBox.visible = true;
-            setFocused(searchBox);
         }
     }
 
@@ -309,7 +269,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (names.renaming() && !names.renameBox().isMouseOver(mouseX, mouseY)) {
             names.finishRename(true);
         }
-        if (names.removeArmed() && !overRemoveButton(mouseX, mouseY)) {
+        if (names.removeArmed() && !tabs.overRemoveButton(tab, mouseX, mouseY)) {
             names.disarm();
         }
         if (tab == Tab.LIST && list.mouseClicked(mouseX, mouseY, button)) {
@@ -325,12 +285,6 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             setFocused(names.newBox());
         }
         return handled;
-    }
-
-    private boolean overRemoveButton(double mouseX, double mouseY) {
-        FlatButton remove = tab == Tab.NETWORKS ? networks.removeButton()
-                : tab == Tab.GROUPS ? groups.removeButton() : null;
-        return remove != null && remove.visible && remove.isMouseOver(mouseX, mouseY);
     }
 
     @Override
@@ -380,65 +334,19 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (tab == Tab.LIST) {
-            if (list.keyPressed(keyCode, scanCode, modifiers)) {
-                return true;
-            }
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                // sem busca nem filtro, Esc fecha o Tablet
-                return super.keyPressed(keyCode, scanCode, modifiers);
-            }
-            if (getFocused() != searchBox) {
-                focusSearch();
-            }
-        }
-        if (getFocused() instanceof EditBox box && box.isFocused()) {
-            boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
-            if (box == names.renameBox() && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
-                names.finishRename(enter);
-            } else if (box == names.newBox() && enter) {
-                names.create(tab == Tab.GROUPS ? Action.GROUP_CREATE : Action.NETWORK_CREATE);
-            } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                setFocused(null);
-            } else {
-                box.keyPressed(keyCode, scanCode, modifiers);
-            }
-            // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return keys.keyPressed(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (tab == Tab.LIST && list.charTyped(codePoint, modifiers)) {
-            return true;
-        }
-        if (tab == Tab.LIST && getFocused() != searchBox) {
-            focusSearch();
-        }
-        if (getFocused() instanceof EditBox box && box.isFocused()) {
-            return box.charTyped(codePoint, modifiers);
-        }
-        return super.charTyped(codePoint, modifiers);
+        return keys.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
     }
 
     // ------------------------------------------------------------------ desenho
 
-    /** Cor do texto e da dica dos campos: o EditBox guarda a cor, então segue o tema por aqui. */
-    private void inkBoxes() {
-        inkVersion = GuiThemes.version();
-        // a dica da busca é desenhada pela lista, que a corta e a mostra também com o cursor na caixa
-        GuiPaint.ink(searchBox);
-        GuiPaint.ink(names.newBox());
-        GuiPaint.ink(names.renameBox());
-    }
-
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        if (inkVersion != GuiThemes.version()) {
-            inkBoxes();
-        }
+        keys.ink();
         refresh();
         GuiText.beginFrame();
         boolean popup = tab == Tab.LIST && list.panel() != null && list.panel().popupOpen();
@@ -498,6 +406,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         list.previewMulti(on, count);
     }
 
+    /** O que o Selecionar marcou, {@code {roteadores, máquinas}} (gancho do e2e). */
+    public int[] markCounts() {
+        return new int[] {list.marks.routers(), list.marks.machineCount()};
+    }
+
+    /** Centro do "Colar nos marcados", ou {@code null} fora da vista (gancho do e2e). */
+    public int @Nullable [] pasteMarkedCenter() {
+        return selectBar.pasteCenter();
+    }
+
     public void previewMapSelect(int index) {
         map.previewSelect(index);
     }
@@ -519,6 +437,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     public void previewNetwork(int index) {
         networks.preview(index);
+    }
+
+    public void previewGroup(int index) {
+        networks.previewGroup(index);
     }
 
     public void previewNewOpen(String text) {
@@ -554,14 +476,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return list.nodeRowCenter(key);
     }
 
-    /** Centro da linha do grupo na lista lateral, ou {@code null}. */
-    int @Nullable [] groupRowCenter(UUID id) {
-        return groups.groupRowCenter(id);
+    /** Centro do cabeçalho do grupo na lista da aba Redes, ou {@code null}. */
+    public int @Nullable [] groupRowCenter(UUID id) {
+        return networks.groupRowCenter(font, id);
     }
 
-    /** Centro da caixa de marcar da rede na coluna do grupo, ou {@code null}. */
+    /** Centro da caixa de marcar da rede no detalhe do grupo escolhido, ou {@code null}. */
     public int @Nullable [] groupNetworkCenter(UUID id) {
-        return groups.groupNetworkCenter(id);
+        return networks.groupNetworkCenter(font, id);
     }
 
     @Nullable EditBox newBox() {

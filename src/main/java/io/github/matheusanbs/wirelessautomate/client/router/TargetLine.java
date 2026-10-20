@@ -57,7 +57,9 @@ final class TargetLine {
 
     /** A pílula do alvo e os botões da máquina; {@code open} é a lista do alvo aberta. */
     void render(GuiGraphics g, Font font, int mx, int my, boolean open) {
-        GuiText.draw(g, font, panelTr("target"), layout.bodyX, layout.targetY + 2, layout.bodyW, GuiPaint.MUTED);
+        if (!layout.compactTarget) {
+            GuiText.draw(g, font, panelTr("target"), layout.bodyX, layout.targetY + 2, layout.bodyW, GuiPaint.MUTED);
+        }
         Hot pill = layout.hot(Kind.TARGET);
         if (pill != null) {
             RangeView.MachineView machine = model.targetMachine();
@@ -96,16 +98,28 @@ final class TargetLine {
             clippedButton(g, font, revert, layout.revertLabel, revert.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
         Hot update = layout.hot(Kind.UPDATE);
-        if (update != null) {
+        if (update != null && layout.compactTarget) {
+            iconButton(g, update, update.contains(mx, my), GuiPaint.OK);
+            RangeRowButtons.arrow(g, update.x() + (update.w() - 6) / 2, update.y() + (update.h() - 6) / 2, false,
+                    GuiPaint.OK);
+        } else if (update != null) {
             clippedButton(g, font, update, tr("range.update"), update.contains(mx, my), GuiPaint.OK);
         }
         Hot unlink = layout.hot(Kind.UNLINK);
         if (unlink != null && model.unlinkArmed()) {
             GuiPaint.box(g, unlink.x(), unlink.y(), unlink.w(), unlink.h(), GuiPaint.DANGER, GuiPaint.DANGER);
             centered(g, font, unlink, tr("range.unlink.armed"), GuiPaint.SELECTED_TEXT);
+        } else if (unlink != null && layout.compactTarget) {
+            iconButton(g, unlink, unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
+            RangeRowButtons.cross(g, unlink.x() + (unlink.w() - 6) / 2, unlink.y() + (unlink.h() - 6) / 2, GuiPaint.FG);
         } else if (unlink != null) {
             clippedButton(g, font, unlink, tr("range.unlink"), unlink.contains(mx, my), GuiPaint.BUTTON_BORDER);
         }
+    }
+
+    /** O fundo de um botão só com o ícone, na linha Editando apertada. */
+    private static void iconButton(GuiGraphics g, Hot b, boolean hovered, int border) {
+        GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, hovered ? GuiPaint.BUTTON_HOVER_BORDER : border);
     }
 
     /** O "No mundo": o Olho e a borda ciano com a máquina acesa; vale também só para ler (é só do cliente). */
@@ -173,12 +187,12 @@ final class TargetLine {
         Component scope;
         if (machine != null) {
             Component state = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
-            scope = tr("range.scope.machine", RangeList.machineName(model.range(), model.snapshot().target().id()),
+            scope = tr("range.scope.machine", MachineTexts.machineName(model.range(), model.snapshot().target().id()),
                     state);
         } else {
             RangeView.GroupView group = model.targetGroup();
             scope = group == null ? panelTr("target.attached")
-                    : tr("range.scope.group", RangeList.groupName(group), group.count() - group.exceptions(), group.count());
+                    : tr("range.scope.group", MachineTexts.groupName(group), group.count() - group.exceptions(), group.count());
         }
         return scope.copy().append("\n").append(panelTr("target.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
     }
@@ -190,12 +204,12 @@ final class TargetLine {
         rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, panelTr("target.attached"), null, 0, false));
         RangeView view = model.range();
         for (RangeView.GroupView group : view.groups()) {
-            rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", RangeList.groupName(group)),
+            rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", MachineTexts.groupName(group)),
                     Component.literal(Integer.toString(group.count())), GuiPaint.MUTED, false));
             for (int i = 0; i < view.machines().size(); i++) {
                 RangeView.MachineView machine = view.machines().get(i);
                 if (machine.group() == group.id()) {
-                    rows.add(new TargetRow(EditTarget.machine(i), RangeList.machineName(view, i),
+                    rows.add(new TargetRow(EditTarget.machine(i), MachineTexts.machineName(view, i),
                             machine.exception() ? panelTr("target.exception") : null, GuiPaint.WARN, true));
                 }
             }
@@ -244,12 +258,12 @@ final class TargetLine {
         EditTarget target = model.snapshot().target();
         RangeView.MachineView machine = model.targetMachine();
         if (machine != null) {
-            label.start(target, machine.pos(), machine.label(), RangeList.blockName(model.range(), target.id()));
+            label.start(target, machine.pos(), machine.label(), MachineTexts.blockName(model.range(), target.id()));
             return;
         }
         RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? model.range().group(target.id()) : null;
         if (group != null) {
-            label.start(target, null, group.name(), RangeList.groupName(group));
+            label.start(target, null, group.name(), MachineTexts.groupName(group));
         }
     }
 

@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.NoticeBand;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
+import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Kind;
@@ -85,6 +86,7 @@ final class ListPainter {
     }
 
     void renderQuick(GuiGraphics g, Font font, int mx, int my) {
+        layout.viewBar().render(g, font, mx, my);
         for (Hot hot : layout.hots) {
             boolean hovered = hot.contains(mx, my);
             if (hot.kind() == Kind.TYPE_CHIP && list.search.typeFilter.isPresent()) {
@@ -157,14 +159,17 @@ final class ListPainter {
                 forget.contains(mx, my) ? GuiPaint.ACCENT : GuiPaint.MUTED);
     }
 
-    /** A linha de baixo da lista: a contagem com Limpar (com busca ou filtro). */
+    /** A linha de baixo da lista: a contagem com Limpar (com busca ou filtro); por máquinas, sempre a contagem. */
     void renderBar(GuiGraphics g, Font font, int mx, int my) {
-        if (list.multi || !list.search.filtering()) {
+        boolean machines = list.machineView() && !list.listEmpty();
+        if (list.multi || !list.search.filtering() && !machines) {
             return;
         }
         Hot clear = layout.hot(Kind.CLEAR, 0);
         int barY = layout.barY();
-        int countW = clear == null ? 0 : clear.x() - 4 - layout.x0;
+        // sem o Limpar, a contagem vai até o Selecionar (e o Apagar todas, com alguma máquina acesa)
+        int buttonsW = 62 + (HighlightRenderer.count() > 0 ? SelectBar.clearLitWidth(font) + 2 : 0);
+        int countW = clear == null ? Math.max(0, layout.listW - buttonsW - 4) : clear.x() - 4 - layout.x0;
         GuiText.draw(g, font, list.texts.countText(), layout.x0, barY + 3, countW, GuiPaint.MUTED);
         if (clear != null) {
             GuiPaint.text(g, font, Component.literal("·"), clear.x() - 4, barY + 3, GuiPaint.MUTED);

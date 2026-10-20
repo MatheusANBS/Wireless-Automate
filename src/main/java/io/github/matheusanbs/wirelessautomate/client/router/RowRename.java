@@ -57,12 +57,12 @@ final class RowRename {
         if (row.kind() == RangeList.Kind.GROUP) {
             RangeView.GroupView group = view.group(row.group());
             if (group != null) {
-                editor.start(row.target(), null, group.name(), RangeList.groupName(group));
+                editor.start(row.target(), null, group.name(), MachineTexts.groupName(group));
             }
         } else if (row.kind() == RangeList.Kind.MACHINE) {
             RangeView.MachineView machine = view.machine(row.machine());
             if (machine != null) {
-                editor.start(row.target(), machine.pos(), machine.label(), RangeList.blockName(view, row.machine()));
+                editor.start(row.target(), machine.pos(), machine.label(), MachineTexts.blockName(view, row.machine()));
             }
         }
     }

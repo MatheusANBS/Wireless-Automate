@@ -58,7 +58,7 @@ final class E2eTabletSteps {
     private E2eTabletSteps() {
     }
 
-    private static final String GROUP_NAME = "E2E Grupo";
+    static final String GROUP_NAME = "E2E Grupo";
     /** Posição do jogador antes de se afastar para abrir B à distância. */
     private static Vec3 beforeTablet = Vec3.ZERO;
     /** Baú com um roteador sem rede, só durante os passos do Tablet (dá o filtro rápido "Sem rede"). */
@@ -83,6 +83,8 @@ final class E2eTabletSteps {
         E2eTabletTreeSteps.treeSteps(list);
         E2eFlowsSteps.flowsSteps(list);
         tabletGroupSteps(list);
+        E2eNetworkSectionSteps.sectionSteps(list);
+        E2eTabletMachinesSteps.machineSteps(list);
         tabletRemoteSteps(list, playerId);
     }
 
@@ -259,11 +261,14 @@ final class E2eTabletSteps {
         }, () -> tabletScreen().getMenu().snapshot().profile().isEmpty(), () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
     }
 
-    /** Tablet: cria um grupo com a rede dos itens, pausa e retoma. */
+    /**
+     * Tablet: na aba Redes, cria um grupo pelo "Novo grupo" (ele fica escolhido, com o detalhe à direita), põe a rede
+     * dos itens nele, pausa e retoma.
+     */
     private static void tabletGroupSteps(List<Step> list) {
         // os widgets da aba só aparecem no quadro seguinte, como para o jogador
-        list.add(new Step("aba Grupos", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.groups")), "aba Grupos")),
+        list.add(new Step("aba Redes", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.networks")), "aba Redes")),
                 () -> find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new"))) != null,
                 () -> "Novo grupo visível"));
         list.add(new Step("novo grupo", STEP_TIMEOUT_MS, () -> {
@@ -271,7 +276,7 @@ final class E2eTabletSteps {
             type(GROUP_NAME);
             tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
         }, () -> group() != null && tabletScreen().getMenu().snapshot().groups().stream()
-                .anyMatch(g -> g.name().equals(GROUP_NAME)),
+                .anyMatch(g -> g.name().equals(GROUP_NAME)) && tabletScreen().groupNetworkCenter(otherNetwork) != null,
                 () -> "grupos na tela " + tabletScreen().getMenu().snapshot().groups()));
         list.add(new Step("rede dos itens no grupo", STEP_TIMEOUT_MS, () -> {
             TabletScreen screen = tabletScreen();

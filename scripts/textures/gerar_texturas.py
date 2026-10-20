@@ -746,13 +746,27 @@ LAPIDADO = ["................", "................", ".......AA.......", "......A
             ".....aabbcc.....", "......abcc......", ".......cd.......", "................", "................", "................"]
 
 
-def _leg_cristal(pal: dict[str, str]) -> dict[str, Cor]:
+# A cor de cada tier de Afinado (a do `GuiPaint.tierColor`): a cinta e as duas gemas.
+COR_TIER_AFINADO = {"elite": "#1FA9A0", "emerald": "#22A84E", "allthemodium": "#E8740A",
+                    "vibranium": "#18B57A", "unobtainium": "#B23FD0", "ultimate": "#7B4FE0"}
+RACHADURA = "#2A2522"
+TIERS_AFINADO = list(COR_TIER_AFINADO)
+
+
+def _cinta_tier(tier: str) -> dict[str, Cor]:
+    """Os três tons da cinta: claro (mistura com branco 0,45), médio (a cor) e escuro (mistura com preto 0,35)."""
+    base = cor(COR_TIER_AFINADO[tier])
+    return {"L": mistura(base, BRANCO, .45), "l": base, "m": mistura(base, cor("#000000"), .35)}
+
+
+def _leg_cristal(pal: dict[str, str], cinta: dict[str, Cor] | None = None) -> dict[str, Cor]:
     return {**legenda(G="grafite.1", L="latao.3", l="latao.2", m="latao.1"),
-            "A": cor(pal["4"]), "a": cor(pal["3"]), "b": cor(pal["2"]), "c": cor(pal["1"]), "d": cor(pal["0"])}
+            "A": cor(pal["4"]), "a": cor(pal["3"]), "b": cor(pal["2"]), "c": cor(pal["1"]), "d": cor(pal["0"]),
+            **(cinta or {})}
 
 
-def _cristal_base(grade: list[str], pal: dict[str, str]) -> Image.Image:
-    return contorno(pinta(grade, _leg_cristal(pal)), CONTORNO)
+def _cristal_base(grade: list[str], pal: dict[str, str], cinta: dict[str, Cor] | None = None) -> Image.Image:
+    return contorno(pinta(grade, _leg_cristal(pal, cinta)), CONTORNO)
 
 
 def _interior_px(img: Image.Image) -> set[tuple[int, int]]:
@@ -780,16 +794,26 @@ def cristal() -> Sprite:
     return animacao(q, 4)
 
 
-def lapidado() -> Sprite:
-    """Cristal Lapidado: o brilho corre pela cinta de latão, o miolo pulsa e uma onda sai da pedra (12 × 3 ticks)."""
+GEMAS_AFINADO = ((7, 3), (8, 11))
+
+
+def lapidado(tier: str | None = None) -> Sprite:
+    """Cristal Lapidado: o brilho corre pela cinta de latão, o miolo pulsa e uma onda sai da pedra (12 × 3 ticks).
+    Com `tier`, é o Afinado: a cinta na cor do tier e duas gemas do material."""
     q = []
+    cinta = _cinta_tier(tier) if tier else None
+    rastro = cinta["L"] if cinta else cor("latao.3")
     for k in range(12):
-        img = _cristal_base(LAPIDADO, CRISTAL_SINAL)
+        img = _cristal_base(LAPIDADO, CRISTAL_SINAL, cinta)
+        if tier:
+            gema = mistura(cor(COR_TIER_AFINADO[tier]), BRANCO, .2)
+            for p in GEMAS_AFINADO:
+                put(img, *p, gema)
         x = 3 + k
         if 3 <= x <= 12:
             put(img, x, 7, BRANCO)
         if 3 <= x - 1 <= 12:
-            put(img, x - 1, 7, cor("latao.3"))
+            put(img, x - 1, 7, rastro)
         t = (1 + math.cos(2 * math.pi * k / 12)) / 2
         for (px, py) in ((6, 4), (5, 5), (6, 5), (7, 3), (4, 6), (5, 6)):
             put(img, px, py, mistura(cor(CRISTAL_SINAL["3"]), BRANCO, .6 * t))
@@ -812,11 +836,13 @@ BRASA_BRUTO = ((4, 11), (9, 11), (8, 10))
 BRASA_LAPIDADO = ((6, 9), (7, 10), (8, 11))
 
 
-def opaco(grade: list[str], brasa_px: tuple[tuple[int, int], ...]) -> Sprite:
-    """O cristal sem carga, na forma da grade dada: pedra cinza com uma brasa fraca que respira (8 × 6 ticks)."""
+def opaco(grade: list[str], brasa_px: tuple[tuple[int, int], ...], tier: str | None = None) -> Sprite:
+    """O cristal sem carga, na forma da grade dada: pedra cinza com uma brasa fraca que respira (8 × 6 ticks).
+    Com `tier`, a cinta do Afinado."""
     q = []
+    cinta = _cinta_tier(tier) if tier else None
     for k in range(8):
-        img = _cristal_base(grade, CRISTAL_OPACO)
+        img = _cristal_base(grade, CRISTAL_OPACO, cinta)
         dentro = _interior_px(img)
         t = (1 + math.cos(2 * math.pi * k / 8)) / 2
         brasa = mistura(cor(CRISTAL_OPACO["1"]), cor("#C9604B"), .55 * t)
@@ -825,6 +851,36 @@ def opaco(grade: list[str], brasa_px: tuple[tuple[int, int], ...]) -> Sprite:
             put(img, *p, brasa)
         q.append(img)
     return animacao(q, 6)
+
+
+# A rachadura escura, de cima para baixo, dentro do corpo de cada forma.
+RACHADURA_BRUTO = ((3, 5), (3, 6), (4, 7), (4, 8), (3, 9), (4, 10))
+RACHADURA_LAPIDADO = ((6, 4), (7, 5), (7, 6), (8, 8), (8, 9), (9, 10))
+
+
+def rachado(grade: list[str], rachadura: tuple[tuple[int, int], ...], tier: str | None = None) -> Sprite:
+    """O cristal sem integridade: a paleta do Opaco, sem brasa nem animação, cortado por uma rachadura escura."""
+    img = _cristal_base(grade, CRISTAL_OPACO, _cinta_tier(tier) if tier else None)
+    dentro = _interior_px(img)
+    for p in rachadura:
+        assert p in dentro, f"rachadura fora do cristal em {p}"
+        put(img, *p, cor(RACHADURA))
+    return parado(img)
+
+
+PO_RESSONANCIA = [".......AA.......", "......AAAB......", ".....AAYABB.....", "....AAAABBBC....",
+                  "...AAYABBBBCC...", "..AAABBBBBYCCC..", ".AABBBBBBCCCCCD.", ".BBBBBCCCCCCCDD.",
+                  "..CCCCCCCCCDDD.."]
+
+
+def po() -> Sprite:
+    """Pó de Ressonância: um monte de pó coral e vermelho com três faíscas douradas."""
+    grade = ["................"] * 5 + PO_RESSONANCIA + ["................"] * 2
+    assert len(grade) == 16 and all(len(l) == 16 for l in grade), "grade do Pó fora de 16 × 16"
+    leg = legenda(G="grafite.1")
+    leg.update({"A": cor("#FF8A70"), "B": cor("#E5604A"), "C": cor("#B8392F"), "D": cor("#7E2420"),
+                "Y": cor("#FFE68A")})
+    return parado(contorno(pinta(grade, leg), CONTORNO))
 
 
 # ---------------------------------------------------------------------------
@@ -847,6 +903,13 @@ def gerar_itens() -> dict[str, Sprite]:
     sprites["item/cut_signal_crystal"] = lapidado()
     sprites["item/signal_crystal_dull"] = opaco(BRUTO, BRASA_BRUTO)
     sprites["item/cut_signal_crystal_dull"] = opaco(LAPIDADO, BRASA_LAPIDADO)
+    sprites["item/signal_crystal_cracked"] = rachado(BRUTO, RACHADURA_BRUTO)
+    sprites["item/cut_signal_crystal_cracked"] = rachado(LAPIDADO, RACHADURA_LAPIDADO)
+    for tier in TIERS_AFINADO:
+        sprites[f"item/tuned_signal_crystal_{tier}"] = lapidado(tier)
+        sprites[f"item/tuned_signal_crystal_{tier}_dull"] = opaco(LAPIDADO, BRASA_LAPIDADO, tier)
+        sprites[f"item/tuned_signal_crystal_{tier}_cracked"] = rachado(LAPIDADO, RACHADURA_LAPIDADO, tier)
+    sprites["item/resonance_dust"] = po()
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -856,16 +919,25 @@ def gerar_itens() -> dict[str, Sprite]:
 
 
 def modelos_itens() -> None:
-    for nome in ("signal_crystal", "cut_signal_crystal"):
-        grava_json(MODELOS / f"models/item/{nome}_dull.json", {
-            "parent": "minecraft:item/generated",
-            "textures": {"layer0": f"wirelessautomate:item/{nome}_dull"},
-        })
+    nomes_cristais = ["signal_crystal", "cut_signal_crystal"] + [f"tuned_signal_crystal_{t}" for t in TIERS_AFINADO]
+    for nome in nomes_cristais:
+        for variante in ("dull", "cracked"):
+            grava_json(MODELOS / f"models/item/{nome}_{variante}.json", {
+                "parent": "minecraft:item/generated",
+                "textures": {"layer0": f"wirelessautomate:item/{nome}_{variante}"},
+            })
+        # O rachado vem por último para ganhar do Opaco (o Minecraft vale o último override que casa).
         grava_json(MODELOS / f"models/item/{nome}.json", {
             "parent": "minecraft:item/generated",
             "textures": {"layer0": f"wirelessautomate:item/{nome}"},
-            "overrides": [{"predicate": {"wirelessautomate:dull": 1}, "model": f"wirelessautomate:item/{nome}_dull"}],
+            "overrides": [{"predicate": {"wirelessautomate:dull": 1}, "model": f"wirelessautomate:item/{nome}_dull"},
+                          {"predicate": {"wirelessautomate:cracked": 1},
+                           "model": f"wirelessautomate:item/{nome}_cracked"}],
         })
+    grava_json(MODELOS / "models/item/resonance_dust.json", {
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": "wirelessautomate:item/resonance_dust"},
+    })
     grava_json(MODELOS / "models/item/range_upgrade.json", {
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
@@ -942,7 +1014,9 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
                   [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide",
                                                 "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
-                                                "cut_signal_crystal_dull"]
+                                                "cut_signal_crystal_dull", "signal_crystal_cracked",
+                                                "cut_signal_crystal_cracked", "resonance_dust"] + \
+                  [f"tuned_signal_crystal_{t}{v}" for t in TIERS_AFINADO for v in ("", "_dull", "_cracked")]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]
         d.text((margem, y), f"{nome}: {sp.quadros} quadros, frametime {sp.frametime}", fill=tinta, font=fonte)

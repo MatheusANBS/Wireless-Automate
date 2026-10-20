@@ -883,6 +883,24 @@ def po() -> Sprite:
     return parado(contorno(pinta(grade, leg), CONTORNO))
 
 
+# O Pó Carregado: o monte do Pó com uma faísca a mais no meio.
+PO_CARREGADO = list(PO_RESSONANCIA)
+PO_CARREGADO[6] = ".AABYBBBBCCCCCD."
+TIERS_PO_CARREGADO = ["allthemodium", "vibranium", "unobtainium", "ultimate"]
+
+
+def po_carregado(tier: str) -> Sprite:
+    """Pó Carregado do tier: o Pó de Ressonância na cor do tier (a do `GuiPaint.tierColor`) com quatro faíscas."""
+    grade = ["................"] * 5 + PO_CARREGADO + ["................"] * 2
+    assert len(grade) == 16 and all(len(l) == 16 for l in grade), "grade do Pó Carregado fora de 16 × 16"
+    base = cor(COR_TIER_AFINADO[tier])
+    preto = cor("#000000")
+    leg = legenda(G="grafite.1")
+    leg.update({"A": mistura(base, BRANCO, .45), "B": base, "C": mistura(base, preto, .3),
+                "D": mistura(base, preto, .55), "Y": cor("#FFE68A")})
+    return parado(contorno(pinta(grade, leg), CONTORNO))
+
+
 # ---------------------------------------------------------------------------
 # Montagem, modelos e folha
 # ---------------------------------------------------------------------------
@@ -910,6 +928,8 @@ def gerar_itens() -> dict[str, Sprite]:
         sprites[f"item/tuned_signal_crystal_{tier}_dull"] = opaco(LAPIDADO, BRASA_LAPIDADO, tier)
         sprites[f"item/tuned_signal_crystal_{tier}_cracked"] = rachado(LAPIDADO, RACHADURA_LAPIDADO, tier)
     sprites["item/resonance_dust"] = po()
+    for tier in TIERS_PO_CARREGADO:
+        sprites[f"item/charged_dust_{tier}"] = po_carregado(tier)
     for modo in ("extract", "insert", "both"):
         sprites[f"gui/port_{modo}"] = porta(modo)
     sprites["gui/port_none"] = porta_nenhum()
@@ -938,6 +958,11 @@ def modelos_itens() -> None:
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "wirelessautomate:item/resonance_dust"},
     })
+    for tier in TIERS_PO_CARREGADO:
+        grava_json(MODELOS / f"models/item/charged_dust_{tier}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/charged_dust_{tier}"},
+        })
     grava_json(MODELOS / "models/item/range_upgrade.json", {
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
@@ -1016,6 +1041,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
                                                 "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \
+                  [f"charged_dust_{t}" for t in TIERS_PO_CARREGADO] + \
                   [f"tuned_signal_crystal_{t}{v}" for t in TIERS_AFINADO for v in ("", "_dull", "_cracked")]
     for nome in nomes_itens:
         sp = itens[f"item/{nome}"]

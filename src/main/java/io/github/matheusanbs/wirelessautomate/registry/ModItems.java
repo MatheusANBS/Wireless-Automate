@@ -10,6 +10,8 @@ import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.CatalystRule;
+import io.github.matheusanbs.wirelessautomate.resonator.ChargedDustItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
@@ -81,6 +83,18 @@ public final class ModItems {
 
     /** O catalisador da recarga do Núcleo do Elite para cima. */
     public static final DeferredItem<Item> RESONANCE_DUST = ITEMS.registerSimpleItem("resonance_dust");
+
+    /** O Pó Carregado, um por tier do Allthemodium ao Ultimate (sempre registrados): o catalisador desses Núcleos. */
+    public static final Map<RouterTier, DeferredItem<ChargedDustItem>> CHARGED_DUSTS = new EnumMap<>(RouterTier.class);
+
+    static {
+        for (RouterTier tier : RouterTier.values()) {
+            if (CatalystRule.needsCharged(tier.ordinal())) {
+                CHARGED_DUSTS.put(tier, ITEMS.registerItem("charged_dust_" + tier.getSerializedName(),
+                        props -> new ChargedDustItem(tier, props), new Item.Properties()));
+            }
+        }
+    }
 
     /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */
     public static final DeferredItem<BlockItem> RESONATOR_CASING = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CASING);

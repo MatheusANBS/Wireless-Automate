@@ -248,8 +248,8 @@ public final class NodeIndex extends SavedData {
          */
         public String searchText() {
             if (searchText == null) {
-                searchText = (name + ' ' + attachedLabel + ' ' + machine + ' ' + key.pos.getX() + ' ' + key.pos.getY() + ' '
-                        + key.pos.getZ()).toLowerCase(Locale.ROOT);
+                searchText = (name + ' ' + attachedLabel + ' ' + machine + ' ' + key.pos.getX() + ' '
+                        + key.pos.getY() + ' ' + key.pos.getZ()).toLowerCase(Locale.ROOT);
             }
             return searchText;
         }

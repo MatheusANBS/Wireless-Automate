@@ -397,8 +397,8 @@ public final class TabletGameTests {
     }
 
     /**
-     * O nome da presa entra no índice (aviso de mudança, arquivo e arquivo antigo sem a chave), na busca do Tablet e na
-     * página, também pelo codec.
+     * O nome da presa entra no índice (aviso de mudança, arquivo e arquivo antigo sem a chave), na busca do Tablet e
+     * na página, também pelo codec.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void attachedLabelInIndexSearchAndPage(GameTestHelper helper) {
@@ -417,11 +417,13 @@ public final class TabletGameTests {
                         chest.setAttachedLabel("Cofre do tesouro");
                         eq(helper, entry.attachedLabel(), "Cofre do tesouro", "nome da presa no índice");
                         TabletSnapshot s = search(menu, "tesouro");
-                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(furnace)), "busca pelo nome da presa");
+                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(furnace)),
+                                "busca pelo nome da presa");
                         eq(helper, node(s, key(chest)).attachedLabel(), "Cofre do tesouro", "nome da presa na página");
                         eq(helper, node(search(menu, ""), key(furnace)).attachedLabel(), "", "outro nó sem nome");
                         chest.setAttachedLabel("");
-                        helper.assertFalse(listed(search(menu, "tesouro"), key(chest)), "achou depois de apagar o nome");
+                        helper.assertFalse(listed(search(menu, "tesouro"), key(chest)),
+                                "achou depois de apagar o nome");
                         chest.setAttachedLabel("Cofre do tesouro");
 
                         var registries = helper.getLevel().registryAccess();
@@ -1240,8 +1242,9 @@ public final class TabletGameTests {
                 for (int t = 0; t < types; t++) {
                     rates.add(t == 0 ? rate + i : 0L);
                 }
-                nodes.add(new NodeView(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 64, -i)), "n" + i, i == 1 ? "Forno 1" : "",
-                        i == 1 ? furnace : chest, RouterTier.BASIC, List.copyOf(networks), 1, status, false, 5L << i,
+                nodes.add(new NodeView(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 64, -i)), "n" + i,
+                        i == 1 ? "Forno 1" : "", i == 1 ? furnace : chest, RouterTier.BASIC,
+                        List.copyOf(networks), 1, status, false, 5L << i,
                         List.copyOf(rates), Optional.empty(), i));
             }
             return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes), TabletRows.EMPTY,

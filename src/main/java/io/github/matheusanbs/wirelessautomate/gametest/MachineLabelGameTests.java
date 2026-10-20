@@ -190,7 +190,8 @@ public final class MachineLabelGameTests {
                         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
                         RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
                         RouterSnapshot decoded = RouterSnapshot.STREAM_CODEC.decode(buf);
-                        helper.assertValueEqual(decoded.attachedLabel(), "Cofre do topo", "nome da presa depois do codec");
+                        helper.assertValueEqual(decoded.attachedLabel(), "Cofre do topo",
+                                "nome da presa depois do codec");
                         helper.assertTrue(decoded.equals(snapshot), "o snapshot mudou no codec");
                         RegistryFriendlyByteBuf body = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
                         RouterSnapshot.BODY_CODEC.encode(body, snapshot);
@@ -203,15 +204,28 @@ public final class MachineLabelGameTests {
                         helper.assertFalse(nameless.sameBody(snapshot), "o nome da presa não conta no corpo");
 
                         helper.assertFalse(ModPayloads.handleRenameTarget(player,
-                                attached(menu, "x".repeat(RenameRouterPayload.MAX_LENGTH + 1))), "aceitou mais de 32 letras");
+                                attached(menu, "x".repeat(RenameRouterPayload.MAX_LENGTH + 1))),
+                                "aceitou mais de 32 letras");
                         helper.assertFalse(ModPayloads.handleRenameTarget(player, new RenameTargetPayload(
                                 menu.containerId + 1, EditTarget.Kind.ATTACHED, 0, Optional.empty(), "Outro menu")),
                                 "aceitou outro menu");
                         helper.assertValueEqual(router.attachedLabel(), "Cofre do topo", "uma recusa mudou o nome");
 
+                        // longe do roteador o menu não vale mais: nada muda
+                        player.moveTo(net.minecraft.world.phys.Vec3.atCenterOf(router.getBlockPos()).add(0, 40, 0));
+                        helper.assertFalse(menu.stillValid(player), "o menu valia longe do roteador");
+                        helper.assertFalse(ModPayloads.handleRenameTarget(player, attached(menu, "Longe")),
+                                "nomeou a presa de longe");
+                        helper.assertFalse(ModPayloads.handleRenameTarget(player, attached(menu, "")),
+                                "apagou o nome da presa de longe");
+                        helper.assertValueEqual(router.attachedLabel(), "Cofre do topo", "o nome mudou de longe");
+                        player.moveTo(net.minecraft.world.phys.Vec3.atCenterOf(router.getBlockPos().above()));
+                        helper.assertTrue(menu.stillValid(player), "o menu não voltou a valer perto");
+
                         // o nome fica quando o bloco preso é trocado
                         helper.setBlock(new BlockPos(1, 1, 1), net.minecraft.world.level.block.Blocks.FURNACE);
-                        helper.assertValueEqual(router.attachedLabel(), "Cofre do topo", "trocar o bloco apagou o nome");
+                        helper.assertValueEqual(router.attachedLabel(), "Cofre do topo",
+                                "trocar o bloco apagou o nome");
 
                         CompoundTag tag = router.saveWithFullMetadata(registries);
                         helper.assertValueEqual(tag.getString("attached_label"), "Cofre do topo", "NBT do roteador");
@@ -225,14 +239,17 @@ public final class MachineLabelGameTests {
                         helper.assertFalse(old.contains("attached_label"), "a chave attached_label ficou vazia");
                         RouterBlockEntity oldCopy = new RouterBlockEntity(router.getBlockPos(), router.getBlockState());
                         oldCopy.loadWithComponents(old, registries);
-                        helper.assertValueEqual(oldCopy.attachedLabel(), "", "o formato antigo sem a chave não lê vazio");
-                        helper.assertTrue(router.renameTarget(EditTarget.ATTACHED_TARGET, "Direto"), "renameTarget da presa");
+                        helper.assertValueEqual(oldCopy.attachedLabel(), "",
+                                "o formato antigo sem a chave não lê vazio");
+                        helper.assertTrue(router.renameTarget(EditTarget.ATTACHED_TARGET, "Direto"),
+                                "renameTarget da presa");
                         helper.assertValueEqual(router.attachedLabel(), "Direto", "nome por renameTarget");
 
                         RenameTargetPayload payload = attached(menu, "Ida e volta");
                         RegistryFriendlyByteBuf out = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
                         RenameTargetPayload.STREAM_CODEC.encode(out, payload);
-                        helper.assertValueEqual(RenameTargetPayload.STREAM_CODEC.decode(out), payload, "codec do payload");
+                        helper.assertValueEqual(RenameTargetPayload.STREAM_CODEC.decode(out), payload,
+                                "codec do payload");
                     } finally {
                         removePlayer(helper, player);
                     }

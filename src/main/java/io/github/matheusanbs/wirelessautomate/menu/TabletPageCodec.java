@@ -193,7 +193,8 @@ final class TabletPageCodec {
                     : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
                             b.readEnum(What.class)));
             int linked = buf.readVarInt();
-            nodes.add(new NodeView(key, name, attachedLabel, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
+            nodes.add(new NodeView(key, name, attachedLabel, machine, tier, List.copyOf(typeNetworks), roles,
+                    live.status(), removed,
                     faceModes, live.rates(), profile, linked));
         }
         TabletRows rows = TabletRows.decode(buf, machines, nodeCount);

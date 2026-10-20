@@ -68,7 +68,7 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
      * @param number   o "#N" da vinculada: a posição dela no grupo do roteador, a partir de 1, como na árvore e na tela
      *                 do roteador; 0 na presa
      * @param pos      a posição ({@code BlockPos.asLong}); a do roteador numa presa de roteador descarregado
-     * @param label    rótulo dado pelo jogador; vazio = a tela usa "#N" (ou o nome do roteador na presa)
+     * @param label    rótulo dado pelo jogador; vazio = a tela usa "#N" (ou o nome do bloco na presa)
      */
     public record Machine(int router, boolean attached, int index, int number, long pos, String label,
             boolean exception)

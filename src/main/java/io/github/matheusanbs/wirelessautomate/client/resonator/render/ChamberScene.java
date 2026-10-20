@@ -31,6 +31,9 @@ final class ChamberScene {
     private static final double BREATH_SECONDS = 2.4;
     /** O tempo desde algo que nunca aconteceu: tudo já aceso, nenhum clarão. */
     private static final double LONG_AGO = 1e9;
+    private static final long NEVER = Long.MIN_VALUE / 2;
+    /** A duração do anel ao fim da recarga, em ticks (0,7 s). */
+    static final int RING_TICKS = 14;
     private static final int SIZE = 5;
     private static final double DULL_SPIN = 0.1;
     /** A face de dentro de uma Porta, um pouco para dentro da câmara. */
@@ -64,6 +67,11 @@ final class ChamberScene {
     private double liveSpin;
     private double dullSpin;
     private boolean started;
+    /** O tick em que o anel de cada câmara começou, ou {@link #NEVER}; criado com as câmaras, nunca por quadro. */
+    private long[] ringAt = new long[0];
+    /** A câmara que recarregava na view anterior, ou -1, e se o anel dela já saiu. */
+    private int rechargingPrev = -1;
+    private boolean ringFired;
     long lastUsed;
 
     ChamberScene(BlockPos core) {
@@ -81,6 +89,12 @@ final class ChamberScene {
                 flowPrev = new float[flowTarget.length];
                 flowNow = new float[flowTarget.length];
             }
+            if (ringAt.length != chambers.length) {
+                ringAt = new long[chambers.length];
+                Arrays.fill(ringAt, NEVER);
+                rechargingPrev = -1;
+            }
+            trackRecharge(gameTime);
             charged = 0;
             for (byte chamber : chambers) {
                 if (chamber == 1 || chamber == 2) {
@@ -123,8 +137,33 @@ final class ChamberScene {
             flowPrev[i] = flowNow[i];
             flowNow[i] += (flowTarget[i] - flowNow[i]) * FLOW_RATE;
         }
+        if (rechargingPrev >= 0 && !ringFired && ChamberCrystals.recharge(rechargingPrev, chambers, gameTime, view) >= 1) {
+            ringAt[rechargingPrev] = gameTime;
+            ringFired = true;
+        }
         particles.tick(this, view, level, gameTime, !conduit);
         lastUsed = gameTime;
+    }
+
+    /**
+     * O anel sai quando a câmara que recarregava deixa de ser Opaco (a view nova) e ainda não saiu pelo progresso
+     * (a recarga do cliente chegou a 1 antes); só então, e nunca por uma câmara esvaziada.
+     */
+    private void trackRecharge(long gameTime) {
+        int now = ChamberCrystals.recharging(chambers, view);
+        if (now == rechargingPrev) {
+            return;
+        }
+        if (rechargingPrev >= 0 && !ringFired && (chambers[rechargingPrev] == 1 || chambers[rechargingPrev] == 2)) {
+            ringAt[rechargingPrev] = gameTime;
+        }
+        rechargingPrev = now;
+        ringFired = false;
+    }
+
+    /** O quanto o anel da câmara {@code i} andou, de 0 a 1 em 0,7 s; fora de 0 a 1 (negativo ou 1 ou mais), não há anel. */
+    float ring(int i, long gameTime, float partialTick) {
+        return i < ringAt.length && ringAt[i] != NEVER ? (gameTime - ringAt[i] + partialTick) / RING_TICKS : -1f;
     }
 
     /** As faces de dentro das Portas montadas nas 98 posições da casca. */

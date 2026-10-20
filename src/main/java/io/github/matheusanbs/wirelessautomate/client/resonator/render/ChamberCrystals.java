@@ -146,7 +146,7 @@ final class ChamberCrystals {
     }
 
     /** De 0 a 1, o quanto a recarga da câmara {@code i} já andou; 0 se ela não recarrega. */
-    private static double recharge(int i, byte[] chambers, double ticks, ChamberView view) {
+    static double recharge(int i, byte[] chambers, double ticks, ChamberView view) {
         if (recharging(chambers, view) != i) {
             return 0;
         }

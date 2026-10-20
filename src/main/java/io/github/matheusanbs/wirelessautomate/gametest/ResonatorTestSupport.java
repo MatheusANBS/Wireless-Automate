@@ -18,6 +18,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
@@ -101,6 +102,21 @@ final class ResonatorTestSupport {
         ServerPlayer player = TestPlayers.inLevel(helper);
         player.setGameMode(GameType.SURVIVAL);
         return player;
+    }
+
+    /**
+     * Põe no inventário de {@code player} o Coração do Ressonador de {@code tier}, que subir o Núcleo pede: fora da
+     * barra de atalhos, para a mão onde o teste põe o cartão não o tirar de lá.
+     */
+    static <P extends Player> P withHeart(P player, RouterTier tier) {
+        var inventory = player.getInventory();
+        for (int slot = 9; slot < inventory.items.size(); slot++) {
+            if (inventory.items.get(slot).isEmpty()) {
+                inventory.items.set(slot, new ItemStack(ModItems.RESONATOR_HEARTS.get(tier).get()));
+                return player;
+            }
+        }
+        throw new IllegalStateException("inventário cheio");
     }
 
     static BlockHitResult hit(BlockPos absolute) {

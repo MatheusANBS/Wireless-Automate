@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.crystal;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
@@ -114,6 +115,42 @@ public final class ResonatorCascadeGameTests {
                 Items.NETHERITE_BLOCK, stab, Items.NETHERITE_BLOCK, stab), ModItems.CONDENSED_CORE.get(), 1,
                 "Núcleo Condensado");
         helper.succeed();
+    }
+
+    /** Os Corações do Básico ao Esmeralda e o Ultimate sem o Allthemodium; os do Allthemodium só com o mod. */
+    @GameTest(template = "empty")
+    public static void coracoesDoRessonador(GameTestHelper helper) {
+        Item matrix = ModItems.PHASE_MATRIX.get();
+        Item stab = ModItems.FIELD_STABILIZER.get();
+        Item condensed = ModItems.CONDENSED_CORE.get();
+        Item redstone = Items.REDSTONE_BLOCK;
+        Item gold = Items.GOLD_BLOCK;
+        Item netherite = Items.NETHERITE_INGOT;
+        Item emerald = Items.EMERALD_BLOCK;
+        Item star = Items.NETHER_STAR;
+        Item block = Items.NETHERITE_BLOCK;
+        assertYields(helper, craft(helper, redstone, matrix, redstone, null, redstone, null, redstone),
+                heart(RouterTier.BASIC), 1, "Coração Básico");
+        assertYields(helper, craft(helper, gold, matrix, gold, matrix, gold, null, gold),
+                heart(RouterTier.ADVANCED), 1, "Coração Avançado");
+        assertYields(helper, craft(helper, netherite, matrix, netherite, matrix, matrix, netherite, netherite),
+                heart(RouterTier.ELITE), 1, "Coração Elite");
+        assertYields(helper, craft(helper, emerald, emerald, emerald, emerald, stab, emerald, emerald, emerald, star),
+                heart(RouterTier.EMERALD), 1, "Coração Esmeralda");
+        assertYields(helper, craft(helper, condensed, block, condensed, block, star, block, condensed, block, star),
+                heart(RouterTier.ULTIMATE), 1, "Coração Ultimate sem o Allthemodium");
+        helper.assertTrue(craft(helper, redstone, matrix, redstone, null, redstone).isEmpty(),
+                "o Coração Básico saiu com 3 blocos de redstone");
+        var recipes = helper.getLevel().getRecipeManager();
+        for (String tier : new String[] {"allthemodium", "vibranium", "unobtainium", "ultimate"}) {
+            helper.assertTrue(recipes.byKey(WirelessAutomate.id("resonator_heart_" + tier)).isEmpty(),
+                    "a receita do Coração " + tier + " carregou sem o Allthemodium");
+        }
+        helper.succeed();
+    }
+
+    private static Item heart(RouterTier tier) {
+        return ModItems.RESONATOR_HEARTS.get(tier).get();
     }
 
     @GameTest(template = "empty")

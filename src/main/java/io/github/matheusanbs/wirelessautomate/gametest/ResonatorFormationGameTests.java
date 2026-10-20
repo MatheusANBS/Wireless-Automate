@@ -316,7 +316,7 @@ public final class ResonatorFormationGameTests {
         assertCrafts(helper, "resonator_glass", grid(null, glass, null, glass, crystal, glass, null, glass, null),
                 ModItems.RESONATOR_GLASS.get(), 4);
         assertCrafts(helper, "resonance_core", grid(casing, casing, casing, casing, cut, casing, casing,
-                Items.DIAMOND, casing), ModItems.RESONANCE_CORE.get(), 1);
+                ModItems.RESONATOR_HEARTS.get(RouterTier.BASIC).get(), casing), ModItems.RESONANCE_CORE.get(), 1);
         assertCrafts(helper, "resonator_energy_port", grid(casing, Items.REDSTONE_BLOCK),
                 ModItems.RESONATOR_ENERGY_PORT.get(), 1);
         assertCrafts(helper, "resonator_crystal_port", grid(casing, Items.HOPPER),

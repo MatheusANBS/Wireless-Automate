@@ -1,0 +1,43 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:condensed_core"
+    },
+    {
+      "item": "wirelessautomate:condensed_core"
+    },
+    {
+      "item": "wirelessautomate:condensed_core"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium_vibranium_alloy"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium_vibranium_alloy"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium_vibranium_alloy"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium_vibranium_alloy"
+    },
+    {
+      "item": "minecraft:nether_star"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:resonator_heart_ultimate",
+    "count": 1
+  }
+}

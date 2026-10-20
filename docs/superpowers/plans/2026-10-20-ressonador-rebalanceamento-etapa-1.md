@@ -14,7 +14,7 @@
 
 - Código, comentários, commits e docs em português; textos nos dois `lang` (`en_us.json`, `pt_br.json`), sempre os dois, na mesma ordem.
 - **Chaves existentes não mudam:** NBT do Núcleo (`redstone`, `crystals` etc.), componente `crystal_charge`, config `resonator.*` e `tiers.<tier>.energyPerTick`. Novas nesta etapa: componente `crystal_integrity`; config `resonator.crystalIntegrity` (padrão 8, 1..64) e `resonator.recastCrystals` (padrão 4, 1..9); `migration.balanceVersion` vai a 3.
-- **Valores** (copiados da spec): FE por cristal Básico 512, Avançado 8.192, Elite 16.384, Esmeralda 262.144, Allthemodium 8.388.608, Vibranium 16.777.216, Unobtainium 268.435.456, Ultimate 536.870.912. Energia do roteador (FE/t): 1.024; 32.768; 131.072; 2.097.152; 83.886.080; 268.435.456; 4.294.967.296; 0 (sem limite).
+- **Valores** (revisão de 21/10, spec `2026-10-21-ressonador-cascata-design.md`; valem no lugar dos da spec de 20/10): FE por cristal Básico 216, Avançado 6.912, Elite 10.000, Esmeralda 160.000, Allthemodium 6.400.000, Vibranium 6.700.000, Unobtainium 184.000.000, Ultimate 268.435.456 (geração máxima 432; 27.648; 60.000; 1.280.000; 64M; 80,4M; 2.576M; 4.294.967.296). Energia do roteador (FE/t): 1.000; 32.768; 64.000; 2.097.152; 67.108.864; 134.217.728; 4.294.967.296; 0 (sem limite).
 - **Rendimento em quartos:** Sinal 4, Lapidado 8, Afinado 8. Em Núcleo Elite ou acima, Sinal e Lapidado valem 1/4 (1 e 2), e o Afinado de tier menor que o do Núcleo vale 2 (como o Lapidado).
 - Allthemodium opcional e sem código: os Afinados do Allthemodium, Vibranium e Unobtainium sempre registrados, mas só na aba criativa, no JEI e nas receitas com o mod (`RouterTier.loaded()`, `neoforge:conditions`), como os cartões.
 - `ModPayloads.VERSION` continua `"25"` nesta etapa (nenhum payload muda).
@@ -23,7 +23,7 @@
 - Texturas: edite `scripts/textures/gerar_texturas.py` (e o `blocos.py` se preciso), nunca os PNGs; rode o gerador.
 - Tamanho (`wa-modular`): `python -I .claude/skills/wa-modular/scripts/medir.py` nos arquivos mudados; servidor até 600 linhas (dividir acima de 1000). O `ResonanceCoreBlockEntity` tem 631 linhas: o que crescer nele vai para classe de pacote nova. Comentários (`wa-comentarios`): `python -I .claude/skills/wa-comentarios/scripts/varrer.py` nos arquivos mudados.
 - Antes de cada commit: `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` (Git Bash, na raiz). Compile antes (`./gradlew compileJava`); com `BUILD FAILED`, pare e conserte. Nunca dois jogos ao mesmo tempo; não mexa em `run/options.txt`.
-- Commits sem linhas de atribuição, com o autor do dono; `git add` só dos arquivos da tarefa (nunca `run/`). Não faça push.
+- Commits sem linhas de atribuição (nada de `Co-Authored-By` nem `Claude-Session`), com o autor do dono; `git add` só dos arquivos da tarefa (nunca `run/`). Não faça push.
 
 ## Mapa de arquivos
 
@@ -66,7 +66,7 @@ Base `B/` = `src/main/java/io/github/matheusanbs/wirelessautomate/`, `T/` = `src
 ```java
 @Test
 void escadaNova() {
-    long[] esperado = {512, 8_192, 16_384, 262_144, 8_388_608, 16_777_216, 268_435_456L, 536_870_912L};
+    long[] esperado = {216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000L, 268_435_456L};
     for (int i = 0; i < esperado.length; i++) {
         assertEquals(esperado[i], CoreMath.defaultFePerCrystal(i), "tier " + i);
     }
@@ -88,11 +88,12 @@ void quartosPorTier() {
 
 @Test
 void perTickEmQuartos() {
-    assertEquals(1_024, CoreMath.perTick(512, 8, 1.0));
-    assertEquals(128, CoreMath.perTick(512, 1, 1.0));
-    assertEquals(921, CoreMath.perTick(512, 8, 0.9));
-    assertEquals(0, CoreMath.perTick(512, 0, 1.0));
-    assertEquals(8_589_934_592L, CoreMath.maxOutput(8, 536_870_912L));
+    assertEquals(432, CoreMath.perTick(216, 8, 1.0));
+    assertEquals(54, CoreMath.perTick(216, 1, 1.0));
+    assertEquals(388, CoreMath.perTick(216, 8, 0.9));
+    assertEquals(0, CoreMath.perTick(216, 0, 1.0));
+    assertEquals(4_294_967_296L, CoreMath.maxOutput(8, 268_435_456L));
+    assertEquals(64_000_000L, CoreMath.maxOutput(5, 6_400_000L));
 }
 ```
 
@@ -108,7 +109,7 @@ public static final int KIND_TUNED = 2;
 public static final int ELITE_ORDINAL = 2;
 
 private static final long[] DEFAULT_FE_PER_CRYSTAL = {
-    512, 8_192, 16_384, 262_144, 8_388_608, 16_777_216, 268_435_456L, 536_870_912L
+    216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000L, 268_435_456L
 };
 
 /** Rendimento em quartos de um cristal numa câmara: 4 é o rendimento 1 do Cristal de Sinal. */
@@ -160,13 +161,13 @@ Atualize o javadoc da tabela (`DEFAULT_FE_PER_CRYSTAL`): "acima do melhor gerado
 - Custo: só na carga da config.
 
 - [ ] **Step 1: GameTests que falham** (lote `wirelessautomate_config_balance3`, template `empty`), no molde dos de migração do `RouterGameTests` (lotes `wirelessautomate_config_migrate_*`):
-  - `migracao3TrocaOPadraoAntigo`: põe `balanceVersion = 2`, o `fePerCrystal` de cada tier no padrão do balanceamento 2 (`{128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728, 1_073_741_824}`) e o `energyPerTick` de cada tier no padrão de hoje (`{1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000, 0}`); chama `Config.migrateBalance()`; confere a escada nova nos dois, `balanceVersion == 3` e o retorno = 15 (8 + 7; o Ultimate do roteador já é 0).
+  - `migracao3TrocaOPadraoAntigo`: põe `balanceVersion = 2`, o `fePerCrystal` de cada tier no padrão do balanceamento 2 (`{128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728, 1_073_741_824}`) e o `energyPerTick` de cada tier no padrão de hoje (`{1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000, 0}`); chama `Config.migrateBalance()`; confere a escada nova nos dois, `balanceVersion == 3` e o retorno = 13 (8 do FE por cristal + 5 da energia do roteador: Avançado, Esmeralda, Allthemodium, Vibranium e Unobtainium; Básico, Elite e Ultimate ficam).
   - `migracao3MantemOQueODonoMudou`: com `fePerCrystal` do Elite em 12.345 e `energyPerTick` do Básico em 777, a migração não toca nesses dois.
   - `chavesNovasTemPadrao`: `Config.crystalIntegrity() == 8` e `Config.recastCrystals() == 4`.
   Todos restauram em `try/finally` e salvam a config (`Config.SPEC.save()`), como os testes de migração que já existem.
 
 - [ ] **Step 2: Implementar**
-  - `ResourceType.ENERGY`: `1_024L, 32_768L, 131_072L, 2_097_152L, 83_886_080L, 268_435_456L, 4_294_967_296L, 0L`, e o javadoc da linha: "A energia de cada tier escoa a geração cheia do Ressonador do mesmo tier por uma face."
+  - `ResourceType.ENERGY`: `1_000L, 32_768L, 64_000L, 2_097_152L, 67_108_864L, 134_217_728L, 4_294_967_296L, 0L`, e o javadoc da linha: "A energia de cada tier escoa a geração cheia do Ressonador do mesmo tier por uma face."
   - `Config`: no bloco `resonator`, depois de `RECHARGE_TICKS`:
 
 ```java

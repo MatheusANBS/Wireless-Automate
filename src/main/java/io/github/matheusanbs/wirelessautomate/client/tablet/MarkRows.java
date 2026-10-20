@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  */
 final class MarkRows {
     private final TabletList list;
-    private @Nullable ListTree<ResourceLocation> treeFor;
+    private @Nullable ListTree treeFor;
     /** Por linha da árvore: a linha do grupo de cima (numa máquina) ou -1. */
     private int[] groupLine = new int[0];
     private @Nullable TabletMachineRows pageFor;
@@ -46,11 +46,11 @@ final class MarkRows {
 
     // ------------------------------------------------------------------ árvore
 
-    private ListTree<ResourceLocation> tree() {
-        ListTree<ResourceLocation> tree = list.model.tree();
+    private ListTree tree() {
+        ListTree tree = list.model.tree();
         if (tree != treeFor) {
             treeFor = tree;
-            List<Line<ResourceLocation>> lines = tree.lines();
+            List<Line> lines = tree.lines();
             groupLine = new int[lines.size()];
             int group = -1;
             for (int i = 0; i < lines.size(); i++) {
@@ -66,18 +66,18 @@ final class MarkRows {
         return tree;
     }
 
-    private NodeKey nodeOf(Line<ResourceLocation> line) {
+    private NodeKey nodeOf(Line line) {
         return list.snapshot().nodes().get(line.node()).key();
     }
 
-    private @Nullable GroupKey groupKey(Line<ResourceLocation> groupLineOf) {
+    private @Nullable GroupKey groupKey(Line groupLineOf) {
         return list.model.row(groupLineOf) instanceof TabletRows.Group group
                 ? new GroupKey(nodeOf(groupLineOf), group.id()) : null;
     }
 
     /** As máquinas à vista abaixo da linha do grupo {@code group}. */
     private List<MachineKey> machinesUnder(int group) {
-        List<Line<ResourceLocation>> lines = tree().lines();
+        List<Line> lines = tree().lines();
         List<MachineKey> keys = new ArrayList<>();
         for (int i = group + 1; i < lines.size() && groupLine[i] == group; i++) {
             if (list.model.row(lines.get(i)) instanceof TabletRows.Machine machine) {
@@ -89,8 +89,8 @@ final class MarkRows {
 
     /** A caixa da linha {@code line} da árvore (a do nó vem do {@link #node}). */
     Box treeBox(int line) {
-        ListTree<ResourceLocation> tree = tree();
-        Line<ResourceLocation> at = tree.lines().get(line);
+        ListTree tree = tree();
+        Line at = tree.lines().get(line);
         return switch (list.model.row(at)) {
             case TabletRows.Attached attached -> marks().machine(MachineKey.attached(nodeOf(at)), null, null)
                     ? Box.ALL : Box.NONE;
@@ -110,8 +110,8 @@ final class MarkRows {
 
     /** O clique numa linha da árvore no Selecionar: marca ou desmarca a presa, o grupo ou a máquina. */
     void clickTree(int line) {
-        ListTree<ResourceLocation> tree = tree();
-        Line<ResourceLocation> at = tree.lines().get(line);
+        ListTree tree = tree();
+        Line at = tree.lines().get(line);
         switch (list.model.row(at)) {
             case TabletRows.Attached attached -> marks().toggleMachine(MachineKey.attached(nodeOf(at)), null, null,
                     List.of());

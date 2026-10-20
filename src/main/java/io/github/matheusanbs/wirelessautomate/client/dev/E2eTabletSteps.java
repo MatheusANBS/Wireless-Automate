@@ -207,16 +207,19 @@ final class E2eTabletSteps {
             int[] c = tabletScreen().list().copyCenter();
             click(tabletScreen(), c[0], c[1]);
         }, () -> tabletScreen().getMenu().snapshot().profile().map(p -> p.origin().equals(nodeB())).orElse(false)
-                && tabletScreen().list().forgetCenter() != null && tabletScreen().list().pasteGroupCenter(CHEST_ID) != null,
+                && tabletScreen().list().forgetCenter() != null,
                 () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
         list.add(capture("7h-tablet-perfil"));
         list.add(clipCheck("Tablet: perfil copiado"));
         list.add(listClipTooltip("Tablet: perfil copiado"));
-        list.add(new Step("Colar nas N cola e mostra o aviso", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("escolher A para colar", STEP_TIMEOUT_MS, () -> {
             aBeforePaste = onServer(server -> RouterPreset.copyOf(router(server, routerA)));
-            int[] c = tabletScreen().list().pasteGroupCenter(CHEST_ID);
+            int[] c = tabletScreen().nodeRowCenter(nodeA());
             click(tabletScreen(), c[0], c[1]);
-        }, () -> {
+        }, () -> tabletScreen().panel() != null && tabletScreen().panel().node().equals(Optional.of(nodeA())),
+                () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
+        list.add(new Step("Ctrl+V cola e mostra o aviso", STEP_TIMEOUT_MS,
+                () -> tabletScreen().keyPressed(GLFW.GLFW_KEY_V, 0, GLFW.GLFW_MOD_CONTROL), () -> {
             PanelNoticePayload notice = PanelNotices.current();
             TabletSnapshot.NodeView a = tabletScreen().getMenu().snapshot().nodes().stream()
                     .filter(n -> n.key().pos().equals(routerA)).findFirst().orElse(null);
@@ -237,6 +240,11 @@ final class E2eTabletSteps {
             click(tabletScreen(), c[0], c[1]);
         }, () -> tabletScreen().getMenu().snapshot().profile().isEmpty(),
                 () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
+        list.add(new Step("escolher B de novo", STEP_TIMEOUT_MS, () -> {
+            int[] c = tabletScreen().nodeRowCenter(nodeB());
+            click(tabletScreen(), c[0], c[1]);
+        }, () -> tabletScreen().panel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB())),
+                () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
         list.add(new Step("Ctrl+C na linha escolhida", STEP_TIMEOUT_MS,
                 () -> tabletScreen().keyPressed(GLFW.GLFW_KEY_C, 0, GLFW.GLFW_MOD_CONTROL),
                 () -> tabletScreen().getMenu().snapshot().profile().map(p -> p.origin().equals(nodeB())).orElse(false),

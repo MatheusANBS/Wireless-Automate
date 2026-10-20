@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload.Action;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -31,7 +30,7 @@ final class TreeNav {
     /** A linha a pôr na vista no próximo arranjo. */
     private @Nullable Key reveal;
     /** A linha do cursor na última árvore em que foi procurada. */
-    private @Nullable ListTree<ResourceLocation> foundIn;
+    private @Nullable ListTree foundIn;
     private @Nullable Key foundKey;
     private int foundLine = -1;
 
@@ -54,7 +53,7 @@ final class TreeNav {
     }
 
     /** A chave da linha da árvore {@code line}. */
-    Key keyOf(Line<ResourceLocation> line) {
+    Key keyOf(Line line) {
         NodeKey node = list.snapshot().nodes().get(line.node()).key();
         return switch (list.model.row(line)) {
             case TabletRows.Attached attached -> new Key(node, Kind.ATTACHED, 0);
@@ -66,14 +65,14 @@ final class TreeNav {
 
     /** A linha da chave na árvore de agora, ou -1; guardada até a árvore ou a chave mudarem. */
     private int find(Key key) {
-        ListTree<ResourceLocation> tree = list.model.tree();
+        ListTree tree = list.model.tree();
         if (tree == foundIn && key.equals(foundKey)) {
             return foundLine;
         }
         foundIn = tree;
         foundKey = key;
         foundLine = -1;
-        List<Line<ResourceLocation>> lines = tree.lines();
+        List<Line> lines = tree.lines();
         for (int i = 0; i < lines.size(); i++) {
             if (lines.get(i).kind() == key.kind() && keyOf(lines.get(i)).equals(key)) {
                 foundLine = i;
@@ -105,7 +104,7 @@ final class TreeNav {
      * rola até o nó, que pode estar bem acima.
      */
     void choose(int index) {
-        Line<ResourceLocation> line = list.model.tree().lines().get(index);
+        Line line = list.model.tree().lines().get(index);
         NodeView node = list.snapshot().nodes().get(line.node());
         if (line.kind() == Kind.NODE) {
             cursor = null;
@@ -136,15 +135,15 @@ final class TreeNav {
 
     // ------------------------------------------------------------------ teclado
 
-    /** A linha onde as setas estão: o cursor, ou a do nó escolhido (o cabeçalho, se ele está recolhido). */
+    /** A linha onde as setas estão: o cursor, ou a do nó escolhido . */
     private int current() {
         int line = cursor == null ? -1 : find(cursor);
-        return line >= 0 ? line : list.model.tree().anchorOfNode(list.model.indexOf(list.chosen));
+        return line >= 0 ? line : list.model.tree().lineOfNode(list.model.indexOf(list.chosen));
     }
 
     /** ↑ ↓: os nós são escolhidos, as linhas da árvore só marcadas. */
     void upDown(int direction) {
-        ListTree<ResourceLocation> tree = list.model.tree();
+        ListTree tree = list.model.tree();
         int next = tree.next(current(), direction);
         if (next >= 0) {
             moveTo(next);
@@ -152,7 +151,7 @@ final class TreeNav {
     }
 
     private void moveTo(int index) {
-        Line<ResourceLocation> line = list.model.tree().lines().get(index);
+        Line line = list.model.tree().lines().get(index);
         if (line.kind() == Kind.NODE) {
             cursor = null;
             list.choose(list.snapshot().nodes().get(line.node()).key());
@@ -176,16 +175,14 @@ final class TreeNav {
 
     /** ← e → ({@link ListTree#left}, {@link ListTree#right}): aqui só se aplica o que o modelo decidiu. */
     void arrow(boolean left) {
-        ListTree<ResourceLocation> tree = list.model.tree();
+        ListTree tree = list.model.tree();
         int index = current();
         ListTree.Arrow arrow = left ? tree.left(index) : tree.right(index);
         if (arrow.step() == ListTree.Step.NONE) {
             return;
         }
-        Line<ResourceLocation> line = tree.lines().get(arrow.line());
+        Line line = tree.lines().get(arrow.line());
         switch (arrow.step()) {
-            case COLLAPSE_HEADER -> list.model.collapse(line.group());
-            case EXPAND_HEADER -> list.model.expand(line.group());
             case CLOSE_NODE -> send(Action.CLOSE, list.snapshot().nodes().get(line.node()).key(), 0);
             case OPEN_NODE -> send(Action.OPEN, list.snapshot().nodes().get(line.node()).key(), 0);
             case COLLAPSE_GROUP -> send(Action.COLLAPSE_GROUP, keyOf(line).node(), keyOf(line).id());

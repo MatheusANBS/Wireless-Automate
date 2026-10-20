@@ -158,8 +158,6 @@ final class E2eTabletMarkSteps {
         return new Step(label, STEP_TIMEOUT_MS, () -> {
             NodeKey key = node.get();
             TabletScreen screen = tabletScreen();
-            screen.getMenu().snapshot().nodes().stream().filter(n -> n.key().equals(key)).findFirst()
-                    .ifPresent(n -> screen.list().previewExpand(n.machine()));
             int[] c = scrollTo(() -> screen.nodeRowCenter(key));
             if (c == null) {
                 throw new StepFailure("o roteador " + key.pos().toShortString() + " fora da vista");

@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.pl
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
@@ -17,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +29,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
@@ -37,15 +40,22 @@ import org.jetbrains.annotations.Nullable;
  */
 final class ListTexts {
     /** O nome e a segunda linha de um nó, medidos na mesma largura. */
-    record NodeLine(GuiText.Fitted name, GuiText.Fitted state) {
+    record NodeLine(GuiText.Fitted name, GuiText.Fitted state, boolean pill) {
     }
+
+    /** A pílula do tier: o nome, a largura com a borda e a cor. */
+    record TierPill(Component name, int width, int color) {
+    }
+
+    static final int PILL_PAD = 3;
 
     private final TabletList list;
     private final Map<ResourceLocation, String> machineNames = new HashMap<>();
+    private final Map<ResourceLocation, ItemStack> blockIcons = new HashMap<>();
+    private final TierPill[] pills = new TierPill[RouterIcons.TIERS.length];
+    private int pillTheme = -1;
     /** As linhas dos nós, por índice do nó na página. */
     private final LineCache<NodeLine> nodeLines = new LineCache<>();
-    /** Os cabeçalhos de grupo, por índice da linha na árvore. */
-    private final LineCache<GuiText.Fitted> headers = new LineCache<>();
 
     ListTexts(TabletList list) {
         this.list = list;
@@ -63,58 +73,63 @@ final class ListTexts {
     }
 
     Component nodeName(NodeView node) {
-        return node.name().isEmpty() ? Component.literal(machineName(node.machine())) : Component.literal(node.name());
+        return list.nodes.nodeName(node);
     }
 
-    /** O nome e a segunda linha do nó {@code index}, montados só quando a página, o tipo, o tema ou a largura mudam. */
-    NodeLine nodeLine(Font font, int index, NodeView node, @Nullable ProfileSummary profile, int width) {
+    /** O ícone do bloco {@code id}, criado uma vez. */
+    ItemStack blockIcon(ResourceLocation id) {
+        return blockIcons.computeIfAbsent(id, key -> {
+            Block block = BuiltInRegistries.BLOCK.get(key);
+            return block == Blocks.AIR ? ItemStack.EMPTY : new ItemStack(block.asItem());
+        });
+    }
+
+    /** A pílula do tier (nome na cor do tier) e a largura dela, refeitas quando o tema muda. */
+    TierPill pill(Font font, RouterTier tier) {
+        if (pillTheme != GuiThemes.version()) {
+            pillTheme = GuiThemes.version();
+            Arrays.fill(pills, null);
+        }
+        TierPill pill = pills[tier.ordinal()];
+        if (pill == null) {
+            Component name = Component.translatable(tier.translationKey());
+            pill = new TierPill(name, font.width(name) + 2 * PILL_PAD + 2, GuiPaint.tierColor(tier));
+            pills[tier.ordinal()] = pill;
+        }
+        return pill;
+    }
+
+    /**
+     * O nome e a segunda linha do nó {@code index} para uma linha com {@code room} de largura (a pílula do tier, de {@code pillWidth}, só entra se o nome cabe inteiro ao lado dela), montados só quando a
+     * página, o tipo, o tema ou a largura mudam. A segunda linha começa por "presa: Fornalha"; sem lugar para ela
+     * inteira, fica "Fornalha · …" e, ainda sem lugar, só o estado (a dica da linha traz tudo).
+     */
+    NodeLine nodeLine(Font font, int index, NodeView node, @Nullable ProfileSummary profile, int room,
+            int pillWidth) {
         TabletSnapshot s = snapshot();
         nodeLines.key(s, null, list.chipType, GuiThemes.version(), s.nodes().size());
-        NodeLine line = nodeLines.get(index, width);
+        NodeLine line = nodeLines.get(index, room);
         if (line == null) {
-            line = new NodeLine(GuiText.fit(font, nodeName(node), width),
-                    GuiText.fit(font, stateLine(node, profile), width));
-            nodeLines.put(index, width, line);
+            Component name = nodeName(node);
+            boolean pill = font.width(name) + 4 + pillWidth <= room;
+            line = new NodeLine(GuiText.fit(font, name, pill ? room - pillWidth - 4 : room),
+                    GuiText.fit(font, secondLine(font, node, profile, room), room), pill);
+            nodeLines.put(index, room, line);
         }
         return line;
     }
 
-    /**
-     * O cabeçalho do grupo na linha {@code index} da árvore (máquina, contagem e quantos diferem do perfil),
-     * montado só quando a página, a árvore, o tema ou a largura mudam.
-     */
-    GuiText.Fitted header(Font font, ListTree<ResourceLocation> tree, int lines, int index,
-            ListTree.Line<ResourceLocation> row, @Nullable ProfileSummary profile, int width) {
-        headers.key(snapshot(), tree, null, GuiThemes.version(), lines);
-        GuiText.Fitted text = headers.get(index, width);
-        if (text == null) {
-            text = GuiText.fit(font, headerText(row, profile), width);
-            headers.put(index, width, text);
+    private Component secondLine(Font font, NodeView node, @Nullable ProfileSummary profile, int room) {
+        Component rest = stateLine(node, profile);
+        MutableComponent attached = tr("list.router.attached", list.nodes.attachedName(node)).copy()
+                .withColor(GuiPaint.MUTED);
+        Component dot = Component.literal(" · ").withColor(GuiPaint.MUTED);
+        Component full = attached.copy().append(dot).append(rest);
+        if (font.width(full) <= room) {
+            return full;
         }
-        return text;
-    }
-
-    private Component headerText(ListTree.Line<ResourceLocation> row, @Nullable ProfileSummary profile) {
-        int count = Math.max(row.count(), snapshot().groupCount(row.group()));
-        MutableComponent text = Component.literal(machineName(row.group())).copy()
-                .append(Component.literal(" · " + count).withColor(GuiPaint.MUTED));
-        int differ = profile == null ? 0 : differing(row.group());
-        if (differ > 0) {
-            text.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(
-                    plural("list.group.differ", differ).copy().withColor(GuiPaint.WARN));
-        }
-        return text;
-    }
-
-    /** Quantos nós recebidos do grupo diferem do perfil (os carregados que compararam). */
-    private int differing(ResourceLocation machine) {
-        int count = 0;
-        for (NodeView node : snapshot().nodes()) {
-            if (node.machine().equals(machine) && node.profile().map(m -> !m.equal()).orElse(false)) {
-                count++;
-            }
-        }
-        return count;
+        Component named = list.nodes.attachedName(node).copy().withColor(GuiPaint.MUTED).append(dot).append(rest);
+        return font.width(named) <= room ? named : rest;
     }
 
     private String networkName(UUID id) {

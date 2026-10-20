@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,7 +84,6 @@ final class MachineRowTexts {
         less = tr("tree.show_few");
         lessW = font.width(less);
         lines = lines(page);
-        ResourceLocation[] presaBlocks = presaBlocks(page);
         int live = 0;
         String blockName = "";
         for (int r = 0; r < n; r++) {
@@ -104,7 +102,7 @@ final class MachineRowTexts {
                     MachineLive state = live < page.lives().size() ? page.lives().get(live) : null;
                     live++;
                     lives[r] = state;
-                    machine(r, page, machine, state, presaBlocks);
+                    machine(r, page, machine, state, blockName);
                 }
                 case TabletMachineRows.More more -> names[r] = tr("tree.more", more.hidden());
             }
@@ -116,14 +114,18 @@ final class MachineRowTexts {
     }
 
     private void machine(int r, TabletMachineRows page, TabletMachineRows.Machine machine, @Nullable MachineLive state,
-            ResourceLocation[] presaBlocks) {
+            String blockName) {
         RouterRef router = page.routers().get(machine.router());
-        Component routerName = routerName(router, presaBlocks[machine.router()]);
+        Component routerName = routerName(router);
         names[r] = !machine.label().isEmpty() ? Component.literal(machine.label())
-                : machine.attached() ? routerName : Component.literal("#" + machine.number());
+                : machine.attached() ? Component.literal(blockName) : Component.literal("#" + machine.number());
         MachineStatus status = state == null ? MachineStatus.UNLOADED : state.status();
-        MutableComponent second = (machine.attached() ? tr("machines.attached") : tr("machines.via", routerName))
-                .copy().withColor(GuiPaint.MUTED).append(SEPARATOR.copy().withColor(GuiPaint.MUTED));
+        MutableComponent second = tr("machines.via", routerName).copy().withColor(GuiPaint.MUTED)
+                .append(SEPARATOR.copy().withColor(GuiPaint.MUTED));
+        if (machine.attached()) {
+            second = tr("machines.attached").copy().withColor(GuiPaint.MUTED)
+                    .append(SEPARATOR.copy().withColor(GuiPaint.MUTED)).append(second);
+        }
         if (calm(status)) {
             BlockPos pos = BlockPos.of(machine.pos());
             second.append(Component.literal(pos.getX() + " " + pos.getY() + " " + pos.getZ()).withColor(GuiPaint.MUTED));
@@ -147,28 +149,13 @@ final class MachineRowTexts {
     }
 
     /**
-     * O nome do roteador: o dado pelo jogador; sem nome, o padrão da Lista (o bloco da presa), se a presa dele está na
-     * página; senão, "roteador".
+     * O nome do roteador: o dado pelo jogador; sem nome, "Roteador &lt;tier&gt;".
      */
-    Component routerName(RouterRef router, @Nullable ResourceLocation presaBlock) {
+    Component routerName(RouterRef router) {
         if (!router.name().isEmpty()) {
             return Component.literal(router.name());
         }
-        return presaBlock != null ? Component.literal(texts.machineName(presaBlock)) : tr("machines.router");
-    }
-
-    /** O bloco da presa de cada roteador da paleta que tem a presa na página, ou {@code null}. */
-    static ResourceLocation[] presaBlocks(TabletMachineRows page) {
-        ResourceLocation[] blocks = new ResourceLocation[page.routers().size()];
-        ResourceLocation block = null;
-        for (TabletMachineRows.Row row : page.rows()) {
-            if (row instanceof TabletMachineRows.Block header) {
-                block = header.block();
-            } else if (row instanceof TabletMachineRows.Machine machine && machine.attached()) {
-                blocks[machine.router()] = block;
-            }
-        }
-        return blocks;
+        return tr("router.default", Component.translatable(router.tier().translationKey()));
     }
 
     private static MachineLines lines(TabletMachineRows page) {

@@ -27,7 +27,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -376,21 +375,6 @@ public final class TabletList {
         search.previewText(value);
     }
 
-    public void previewCollapse(ResourceLocation machine) {
-        model.collapse(machine);
-    }
-
-    /** Abre o grupo da máquina na lista (gancho do e2e). */
-    public void previewExpand(ResourceLocation machine) {
-        model.expand(machine);
-    }
-
-    /** Rola a lista até o cabeçalho do grupo da máquina. */
-    public void previewScrollTo(ResourceLocation machine) {
-        layout.arrange();
-        scroll = Math.max(0, model.tree().headerLine(machine));
-    }
-
     /** Centro da linha do nó, ou {@code null} se ela não está na vista (grupo recolhido ou rolado). */
     int @Nullable [] nodeRowCenter(NodeKey key) {
         layout.arrange();
@@ -434,21 +418,6 @@ public final class TabletList {
 
     public int @Nullable [] typeChipCenter() {
         return center(Kind.TYPE_CHIP, 0);
-    }
-
-    /** O "Colar nas N" do grupo da máquina. */
-    public int @Nullable [] pasteGroupCenter(ResourceLocation machine) {
-        layout.arrange();
-        int row = model.tree().headerLine(machine);
-        Hot hot = row < 0 ? null : layout.hot(Kind.PASTE_GROUP, row);
-        return hot == null ? null : hot.center();
-    }
-
-    int @Nullable [] groupHeaderCenter(ResourceLocation machine) {
-        layout.arrange();
-        int row = model.tree().headerLine(machine);
-        Hot hot = row < 0 ? null : layout.hot(Kind.HEADER, row);
-        return hot == null ? null : new int[] {hot.x() + 20, hot.y() + hot.h() / 2};
     }
 
     public int @Nullable [] copyCenter() {

@@ -74,11 +74,7 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     tabletScreen.list().previewText("");
                     tabletScreen.getMenu().applySnapshot(sampleTablet(true));
-                    tabletScreen.list().previewCollapse(ResourceLocation.withDefaultNamespace("chest"));
-                    tabletScreen.list().previewScrollTo(ResourceLocation.withDefaultNamespace("chest"));
-                    int[] center = tabletScreen.list().pasteGroupCenter(ResourceLocation.withDefaultNamespace("furnace"));
-                    mouseX = center == null ? -1 : center[0];
-                    mouseY = center == null ? -1 : center[1];
+                    mouseX = mouseY = -1;
                 }, "t2c-tablet-perfil"),
                 new Step(() -> {
                     mouseX = mouseY = -1;

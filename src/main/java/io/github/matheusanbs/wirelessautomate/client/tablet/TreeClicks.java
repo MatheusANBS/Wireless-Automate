@@ -15,7 +15,6 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload.Action;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,8 +31,8 @@ final class TreeClicks {
     }
 
     void click(Hot hot) {
-        ListTree<ResourceLocation> tree = list.model.tree();
-        Line<ResourceLocation> line = tree.lines().get(hot.arg());
+        ListTree tree = list.model.tree();
+        Line line = tree.lines().get(hot.arg());
         NodeView node = list.snapshot().nodes().get(line.node());
         switch (hot.kind()) {
             case TREE_TOGGLE -> {
@@ -68,7 +67,7 @@ final class TreeClicks {
 
     /** A dica de uma área da árvore, ou {@code null} se a área não é dela. */
     @Nullable Component tooltip(Hot hot) {
-        Line<ResourceLocation> line = list.model.tree().lines().get(hot.arg());
+        Line line = list.model.tree().lines().get(hot.arg());
         NodeView node = list.snapshot().nodes().get(line.node());
         return switch (hot.kind()) {
             case TREE_TOGGLE -> line.kind() == Kind.NODE
@@ -84,7 +83,7 @@ final class TreeClicks {
         };
     }
 
-    private Component lineTooltip(Line<ResourceLocation> line) {
+    private Component lineTooltip(Line line) {
         TreeTexts texts = list.treeRows.texts;
         int r = line.row();
         return switch (list.model.row(line)) {

@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.LIMIT_ROW;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.plural;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
@@ -18,7 +17,6 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,7 +50,7 @@ final class ListRows {
         List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
         for (Hot hot : layout.hots) {
             switch (hot.kind()) {
-                case HEADER -> renderHeader(g, font, hot, rows.get(hot.arg()), profile, mx, my);
+                case HEADER -> renderHeader(g, font, hot, rows, profile, mx, my);
                 case ROW -> renderNode(g, font, hot, nodes.get(hot.arg()), profile, chips, mx, my);
                 case TREE -> list.treeRows.render(g, font, hot, rows.get(hot.arg()), mx, my);
                 default -> {
@@ -104,8 +102,9 @@ final class ListRows {
         }
     }
 
-    private void renderHeader(GuiGraphics g, Font font, Hot hot, ListTree.Line<ResourceLocation> row,
+    private void renderHeader(GuiGraphics g, Font font, Hot hot, List<ListTree.Line<ResourceLocation>> rows,
             @Nullable ProfileSummary profile, int mx, int my) {
+        ListTree.Line<ResourceLocation> row = rows.get(hot.arg());
         boolean hovered = hot.contains(mx, my);
         g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
         g.fill(hot.x(), hot.y() + hot.h() - 1, hot.x() + hot.w(), hot.y() + hot.h(), GuiPaint.LINE);
@@ -117,15 +116,8 @@ final class ListRows {
         }
         Hot paste = layout.hot(Kind.PASTE_GROUP, hot.arg());
         int right = paste != null ? paste.x() - 3 : hot.x() + hot.w() - 3;
-        int count = Math.max(row.count(), list.snapshot().groupCount(row.group()));
-        MutableComponent text = Component.literal(list.texts.machineName(row.group())).copy()
-                .append(Component.literal(" · " + count).withColor(GuiPaint.MUTED));
-        int differ = profile == null ? 0 : differing(row.group());
-        if (differ > 0) {
-            text.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(
-                    plural("list.group.differ", differ).copy().withColor(GuiPaint.WARN));
-        }
-        GuiText.draw(g, font, text, hot.x() + 11, hot.y() + 2, right - hot.x() - 11, GuiPaint.FG);
+        GuiText.draw(g, font, list.texts.header(font, list.model.tree(), rows.size(), hot.arg(), row, profile,
+                right - hot.x() - 11), hot.x() + 11, hot.y() + 2, GuiPaint.FG);
         if (paste != null && profile != null) {
             boolean same = profile.machine().equals(row.group());
             boolean over = paste.contains(mx, my);
@@ -135,17 +127,6 @@ final class ListRows {
             GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.profileActions.pasteCount(row.group())),
                     paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         }
-    }
-
-    /** Quantos nós recebidos do grupo diferem do perfil (os carregados que compararam). */
-    private int differing(ResourceLocation machine) {
-        int count = 0;
-        for (NodeView node : list.snapshot().nodes()) {
-            if (node.machine().equals(machine) && node.profile().map(m -> !m.equal()).orElse(false)) {
-                count++;
-            }
-        }
-        return count;
     }
 
     /**
@@ -186,9 +167,9 @@ final class ListRows {
             right -= 3 * CHIP + 2 + 4;
             renderChips(g, right + 4, y + 5, node);
         }
-        GuiText.draw(g, font, list.texts.nodeName(node), textX, y + 2, right - textX, GuiPaint.FG);
-        Component state = list.texts.stateLine(node, profile);
-        GuiText.draw(g, font, state, textX, y + 11, right - textX, GuiPaint.MUTED);
+        ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX);
+        GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
+        GuiText.draw(g, font, texts.state(), textX, y + 11, GuiPaint.MUTED);
     }
 
     /** Os seis quadradinhos das faces na aba do painel: Cima, Frente, Esquerda / Baixo, Trás, Direita. */
